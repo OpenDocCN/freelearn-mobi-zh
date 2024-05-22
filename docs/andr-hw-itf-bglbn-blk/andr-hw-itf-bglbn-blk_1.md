@@ -1,4 +1,4 @@
-# 第一章. Android 和 BeagleBone Black 介绍
+# 第一章：Android 和 BeagleBone Black 介绍
 
 在这本书中，你将学习如何将 Android 安装到 microSD 卡上，以便与 BeagleBone Black 配合使用，并创建与连接到 BeagleBone Black 的外部硬件接口的 Android 应用。你将开发软件，通过按钮和传感器从外部世界接收输入，从外部存储芯片存储和检索数据，以及点亮外部 LED。更棒的是，你将学会以灵活的方式进行这些操作，可以轻松集成到你的应用中。
 

@@ -1,4 +1,4 @@
-# 第一章 开始入手
+# 第一章：开始入手
 
 我们将以 Material Design 和 Android 6 Marshmallow 的概述来开篇。谷歌推出的新的 Material Design 概念，在应用的外观和感觉上带来了一场革命。
 

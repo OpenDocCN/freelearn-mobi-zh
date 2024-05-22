@@ -1,4 +1,4 @@
-# 第八章. 添加原生 Java 代码
+# 第八章：添加原生 Java 代码
 
 到目前为止，我们一直在使用 Cocos2d-x 游戏框架编写的编程语言（C++）来创建我们的游戏；然而，由 Google 编写的 Android API 仅在应用程序的 Java 层可用。在本章中，你将学习如何使用**Java Native Interface** (**JNI**)的能力，将我们的原生 C++代码与高端的 Java 核心进行通信。
 

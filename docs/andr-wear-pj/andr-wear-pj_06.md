@@ -1,4 +1,4 @@
-# 任意地点的出行方式 - WearMap 和 Google API 客户端
+# 第六章：任意地点的出行方式 - WearMap 和 Google API 客户端
 
 地图是区域或区域部分的视觉表示。
 

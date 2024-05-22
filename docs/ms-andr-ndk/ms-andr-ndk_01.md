@@ -1,4 +1,4 @@
-# 第一章. 使用命令行工具
+# 第一章：使用命令行工具
 
 在本章中，我们将介绍主要与 Android 应用程序的创建和打包相关的命令行工具。我们将学习如何在 Microsoft Windows、Apple OS X 和 Ubuntu/Debian Linux 上安装和配置 Android NDK，以及如何在 Android 设备上构建和运行你的第一个本地应用程序。使用命令行工具构建项目对于使用 C++进行跨平台移动开发至关重要。
 

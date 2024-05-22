@@ -1,4 +1,4 @@
-# 第二章. 开始一个本地 Android 项目
+# 第二章：开始一个本地 Android 项目
 
 > 拥有最强大工具的人，若不知如何使用，实则手无寸铁。Make、GCC、Ant、Bash、Eclipse……—任何新的 Android 程序员都需要处理这个技术生态系统。幸运的是，其中一些名字可能已经听起来很熟悉。实际上，Android 是基于许多开源组件构建的，由 Android 开发工具包及其特定的工具集：ADB、AAPT、AM、NDK-Build、NDK-GDB...掌握它们将赋予我们创建、构建、部署和调试我们自己的 Android 应用程序的能力。
 

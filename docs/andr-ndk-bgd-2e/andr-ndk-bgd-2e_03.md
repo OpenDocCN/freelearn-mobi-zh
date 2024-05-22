@@ -1,4 +1,4 @@
-# 第三章 用 JNI 实现 Java 与 C/C++的接口
+# 第三章：用 JNI 实现 Java 与 C/C++的接口
 
 > \*Android 与 Java 密不可分。其内核和核心库是原生的，但 Android 应用框架几乎完全是用 Java 编写的，或者至少在 Java 的薄层中包装。不要期望直接在 C/C++中构建你的 Android GUI！大多数 API 只能从 Java 访问。最多，我们可以将其隐藏在封面下... 因此，如果无法将 Java 和 C/C++连接在一起，Android 上的原生 C/C++代码将毫无意义。\
 > 

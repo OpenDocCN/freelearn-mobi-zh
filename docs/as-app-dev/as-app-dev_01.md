@@ -1,4 +1,4 @@
-# 第一章. 安装和配置 Android Studio
+# 第一章：安装和配置 Android Studio
 
 你希望熟悉新的官方 Google IDE Android Studio。你想知道这个环境中可用的功能。你希望制作自己的 Android 应用程序，并希望这些应用程序能够在 Google Play 商店供其他用户使用。你能轻松做到这一点吗？你如何实现这个目标？
 

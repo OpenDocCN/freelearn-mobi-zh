@@ -1,4 +1,4 @@
-# 第六章. 音频
+# 第六章：音频
 
 Cocos2d-x 框架带有一个名为`CocosDenshion`的音频引擎，它从 Cocos2d for iPhone 继承而来。这个引擎封装了播放声音效果和背景音乐的所有复杂性。现在，Cocos2d-x 有一个从零开始构建的新的音频引擎，旨在提供比`CocosDenshion`库更多的灵活性。请注意，没有计划从 Cocos2d-x 框架中消除`CocosDenshion`音频引擎，现在在 Cocos2d-x 中通常会有冗余的组件，以便程序员可以选择更适合他们需求的部分。
 

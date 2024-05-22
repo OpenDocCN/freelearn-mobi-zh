@@ -1,4 +1,4 @@
-# 第八章. 调试
+# 第八章：调试
 
 调试环境是 IDE 最重要的功能之一。使用调试工具可以轻松优化你的应用程序并提高其性能。在 Android Studio 中编程时，你想使用这些调试工具之一吗？Android Studio 包括**Dalvik Debug Monitor Server**（**DDMS**）调试工具。
 
