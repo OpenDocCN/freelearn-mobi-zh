@@ -1,0 +1,1070 @@
+- en: Chapter 4. Organizing a Virtual Filesystem
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will implement low level abstractions to deal with OS-independent
+    access to files and filesystems. We will show how to implement portable and transparent
+    access to Android assets packed inside `.apk` files without falling back on any
+    built-in APIs. This approach is necessary when building multi-platform applications
+    debuggable in a desktop environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mount points
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The concept of mount points can be found in almost every modern filesystem.
+    For a multi-platform C++ program, it is convenient to access files across heterogeneous
+    storage devices in a unified way. For example, on Android, each read-only data
+    file can be stored inside the `.apk` package and the developer is forced to use
+    an Android-specific asset management API. On OSX and iOS, accessing program bundles
+    requires yet another API, on Windows an application should store everything in
+    its folder whose physical path also varies depending on where the application
+    was installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To organize file access across different platforms, we propose a shallow class
+    hierarchy that abstracts away the differences of file management, as shown in
+    the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Mount points](img/image00221.jpeg)![Mount points](img/image00222.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The virtual filesystem is a collection of mount points. Each mount point is
+    an abstraction of a filesystem folder. This organization allows us to hide actual
+    OS-specific file access routines and file name mapping from the application code.
+    This chapter covers the description of filesystems, mount points and stream interfaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We define an `iMountPoint` interface which can resolve virtual file names and
+    create instances of the file reading objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Check whether the virtual file exists at this mount point:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Convert a virtual file name to an absolute filename:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `CreateReader()` member function creates a file reader object which implements
+    the `iRawFile` interface introduced hereinafter in this chapter. This method is
+    usually used only by the `clFileSystem` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The last two member functions get and set the internal name of this mount point.
+    This string is used later in the `clFileSystem` interface to search and identify
+    mount points:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our virtual filesystem is implemented as a linear collection of mount points.
+    The `clFileSystem::CreateReader()` method here creates an `iIStream` object which
+    encapsulates access to file data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Mount()` method adds a physical (by *physical* we mean an OS-specific
+    path) path to the list of mount points. If the `PhysicalPath` value represents
+    a folder of the local filesystem, a `clPhysicalMountPoint` instance is created.
+    If `PhysicalPath` is the name of a `.zip` or `.apk` file, the `clArchiveMountPoint`
+    instance is added to the list of mount points. Definitions of the `clPhysicalMountPoint`
+    and `ArchiveMountPoint` classes can be found in the example `1_ArchiveFileAccess`
+    from the code bundle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`VirtualNameToPhysical()` converts our virtual path to an OS-specific system
+    file path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FileExists()` method inspects each mount point to see if the file exists
+    in one of them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private part of the `clFileSystem` class is responsible for management
+    of the internal list of mount points. The `FindMountPoint()` method searches the
+    mount point containing a file named `FileName`. The `FindMountPointByName()` method
+    is used internally to allow aliasing of file names. `AddMountPoint()` checks if
+    the supplied mount point is unique and, if it is, adds it to the `FMountPoints`
+    container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, the collection of mount points is stored in `std::vector`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we want to access a file in our application code, we do it via the filesystem
+    object `g_FS`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Mount points and streams
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: On Android, the `test.txt` file is most likely to reside in the `.apk` package
+    and a lot of work needs to happen within the `CreateReader()` call. The data for
+    `test.txt` is extracted and an instance of `clMemFileMapper` is created. Let's
+    travel down the hidden pipeline of file operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code for `CreateReader()` is simple. First, we convert the slashes and
+    backslashes in the path to match those of the underlying operating system. Then
+    a mount point is found which hosts the file named `FileName`. Finally, an instance
+    of `clFileMapper` is created. This class implements the `iIStream` interface.
+    Let''s take a closer look at all these classes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here we use the Null Object pattern ([http://en.wikipedia.org/wiki/Null_Object_pattern](http://en.wikipedia.org/wiki/Null_Object_pattern))
+    to define neutral behavior in the case of a non-existent file. The `clNullRawFile`
+    class represents an empty file not tied to any real device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FindMountPoint()` method iterates the collection of mount points to find
+    the one which contains a file with a given name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Iterate mount points in reverse order, so that the most recently mounted paths
+    will be checked first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `clFileSystem` class delegates most of its work to individual `iMountPoint`
+    instances. For example, the check for file existence is performed by finding the
+    appropriate `iMountPoint` object and asking it if a file exists at that point:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The physical file name is also found using the appropriate `iMountPoint` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Physical file names are not used directly to access files. For example, if an
+    archive was mounted and we wanted to access the file in the archive, the physical
+    path of that file is meaningless to the operating system. Instead, everything
+    is abstracted by mount points and physical file names are only used as identifiers
+    in our applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The new mount point is added to the collection only if it is unique; there is
+    no reason to allow duplicates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The code for `clFileSystem::Mount()` selects which mount point type to instantiate:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We use a simple hardcoded logic here. If an path ends with a `.zip` or `.apk`
+    substring, we instantiate `clArchiveMountPoint`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Otherwise, we check if `clPhysicalPath` exists and then create `clPhysicalMountPoint`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the mount point creation succeeds, we set its name and add it to the collection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will return to the mount point implementations later. Right now, we turn
+    to the streams. Actual read access to files is done through the `iIStream` interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following two methods get virtual and physical file names respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Seek()` method sets the absolute reading position; `GetSize()` and `GetPos()`
+    determine the size and the current reading position while `Eof()` checks if the
+    end of the file has been reached:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Read()` method reads the block of data with the specified `Size` into
+    the untyped memory buffer `Buf`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The last two methods use memory mapping for array-like access to the file data.
+    The first one returns a pointer to the shared memory corresponding to this file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The second one returns a pointer to the memory starting from the current file
+    position. This is convenient for seamless switching between block and memory-mapped
+    styles of access:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: To avoid UI thread blocking, these methods should be usually called on the worker
+    threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All work to access the physical files is done within the `clFileMapper` class.
+    It is an implementation of the `iIStream` interface which delegates all the I/O
+    to an object implementing the `iRawFile` interface. `iRawFile` itself is not used
+    directly in the application code, so let''s look at the `clFileMapper` class first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The constructor just stores the reference to the `iRawFile` instance and resets
+    the read pointer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `GetVirtualFileName()` and `GetFileName()` methods use the instance of
+    `iRawFile` to get virtual and physical file names respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Read()` method emulates the `std::ifstream.read` and the `read()` routines
+    from `libc`. It might seem unusual, but reading is done with the `memcpy` call
+    which accesses the memory-mapped file. The description of `iRawFile::GetFileData()`
+    will clarify things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Positioning and memory mapping are all delegated to the underlying `iRawFile`
+    instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private section contains a reference to `iRawFile` and the current reading
+    position:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can declare the `iRawFile` interface, which is very simple:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first four methods get and set the virtual and physical file names:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The essence of this interface is in the following two methods, which get the
+    raw pointer to the file data and the size of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private section contains strings with file names:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: Having declared all the interfaces, we may proceed to their implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing files on the host filesystems
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We start from the `clRawFile` class, which uses OS-specific memory-mapping
+    routines to map files into the memory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Open()` member function does most of the heavy lifting. It stores physical
+    and virtual file names, opens a file handle and creates a mapped view of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With Windows, we use `CreateFileA()` to open the file. As usual, we enclose
+    the OS-specific parts in `#ifdef` blocks.:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once the file is opened, we create a mapping object and retrieve a pointer
+    to file data using the `MapViewOfFile()` system call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If something goes wrong, close the handle and cancel the operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To prevent reading past the end of the file, we should retrieve the size of
+    the file. This is how it''s done with Windows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With Android, we use `open()` to initialize the file handle and `fstat()` to
+    get its size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If `fstat()` succeeds, we can retrieve its size. If the file has non-zero size,
+    we call the `mmap()` function to map the file into memory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Make sure we do not call `mmap()` for zero-sized files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can immediately close the file handle once we have the `mmap`-ed memory
+    block. This is the standard way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Close()` method unmaps the memory block and closes the file handle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With Windows, we use the `UnmapViewOfFile()` and `CloseHandle()` system calls:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With Android, we call the `munmap()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The rest of the `clRawFile` class contains two easy methods that return the
+    file data pointer and file size. The private part declares file handles, file
+    size and the data pointer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To access physical folders in our virtual filesystem using the `clFileSystem`
+    class, we declare the `clPhysicalMountPoint` class representing a single folder
+    on the host filesystem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The constructor of `clPhysicalMountPoint` fixes the physical folder path by
+    adding a trailing path separator which is the slash or the backslash character
+    depending on the conventions of the underlying OS:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FileExists()` method uses an OS-dependent routine to check if the file
+    exists:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`MapName()` converts the virtual file into the physical file name by adding
+    the `FPhysicalName` prefix. The `FS_IsFullPath()` routine is defined in the following
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Instances of `clRawFile` are created in the `clPhysicalMountPoint::CreateReader()`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private part of the class contains a physical name of the folder:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To complete this code, we have to implement some service routines. The first
+    one is `FS_IsFullPath(),` which checks if the path is an absolute one. For Android,
+    this means the path starts from the `/` character and, for Windows, the full path
+    must start with the `<drive>:\` substring, where `<drive>` is the drive letter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`FS_ValidatePath()` replaces each slash or backslash character with the platform-specific
+    `PATH_SEPARATOR`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To check if the file exists, we use the `stat()` routine whose syntax differs
+    slightly with Windows and Android:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`PATH_SEPARATOR` is a platform-specific character constant:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code is enough to access the files stored directly on the host filesystem.
+    Let us proceed with other abstractions to get to Android `.apk` packages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In-memory files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The following implementation of the `iRawFile` interface encapsulates access
+    to untyped memory blocks as file access. We will use this class to access uncompressed
+    data in archives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The parameterized constructor initializes the pointer to a data buffer and
+    its size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The memory mapping is trivial for a memory block, we just return the stored
+    raw pointer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs: []
+  type: TYPE_PRE
+- en: We will return to this class once we deal with archive file reading. Now, let's
+    get familiar with one more important concept required to access `.apk` packages
+    transparently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Aliasing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The file abstractions mentioned in the preceding section are very powerful.
+    They can be used to create nested mount points to access files packed within other
+    files. Let's demonstrate the flexibility of this approach by defining `clAliasMountPoint,`
+    which acts like a symbolic link on Unix or NTFS filesystems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The implementation redirects each `iMountPoint::` method call to another mount
+    point instance while transforming the file name on the fly by prepending each
+    virtual file name we want to access with a specified `FAlias` prefix:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We add the `FileSystem::AddAlias()` member function which decorates an existing
+    mount point''s file names by concatenating them with the `FAlias` prefix:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs: []
+  type: TYPE_PRE
+- en: This mechanism can be used to transparently remap paths such as `assets/` to
+    the root of our filesystem, which is essential to the functionality of our applications
+    on Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before proceeding to the more complex stuff of archive unpacking, let''s take
+    a short break and take a look at how to write to a file. We use the `iOStream`
+    interface which declares only four pure virtual methods. The `GetFileName()` method
+    returns the virtual file name. The `Seek()` method sets the writing position and
+    `GetFilePos()` returns it. The `Write()` method takes an untyped memory buffer
+    and writes it to the output stream:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The only implementation of `iOStream` we provide here is `clMemFileWriter,`
+    which treats an untyped memory block as an output stream. This class is used to
+    access data in `.zip` files. First, the data is unpacked, then it is wrapped using
+    `clMemRawFile`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE69]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The actual underlying memory block is RAII-managed ([https://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization](https://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization))
+    by the `clBlob` object stored inside this class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE70]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Seek()` method increments the current writing position:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE71]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Write()` method redirects to the `clBlob` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE72]'
+  prefs: []
+  type: TYPE_PRE
+- en: The accompanying source code contains the implementation of the `clFileWriter`
+    class which contains the `Open()` method similar to `clRawFile::Open()`. The `Write()`
+    method uses system I/O routines to write data to a physical file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we have enough scaffolding code to proceed further with`.zip` archives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing the archive files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Since `.apk` is just a fancy `.zip` archive, we use the ZLib library by Jean-loup
+    Gailly combined with the MiniZIP library to retrieve compressed files from it.
+    The complete source code is about 500 kilobytes in size so we provide two files,
+    `libcompress.c` and `libcompress.h`, which are easily integrated into any build
+    process. Our goal is to implement the `clArchiveMountPoint` which enumerates files
+    in an archive, decompresses the data for the specific file, and creates a `clMemFileMapper`
+    to read its data. To do this, we need to introduce a helper class, `clArchiveReader`,
+    which reads and decompresses `.zip` archives:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE73]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private `sFileInfo` structure is defined in the `clArchiveReader` class
+    and encapsulates a pack of useful file properties together with the pointer to
+    compressed file data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE74]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private section of the `clArchiveReader` class contains a collection of
+    `sFileInfo` structures in a `FFileInfos` field, a vector of uppercased file names
+    `FFileNames`, a vector of in-archive file names `FReadFileNames`, and an `std::map`
+    object, which maps each file name to an index in the extracted files vector `FExtractedFromArchive`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE75]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FSourceFile` field holds a pointer to the source file stream of the `.apk`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE76]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `OpenArchive()` member function invokes `Enumerate_ZIP()` to fill the `FFileInfos`
+    container. `CloseArchive()` performs some required cleanup:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE77]'
+  prefs: []
+  type: TYPE_PRE
+- en: The long `ExtractSingleFile()` method is described in detail below. It accepts
+    a name of a compressed file from the archive and an `iOStream` object which contains
+    the file data. The `AbortFlag` pointer to an atomic Boolean flag is used for multi-threaded
+    decompression. It is polled from time to time in the decompressor. If the value
+    is set to `true`, the internal decompression loop terminates prematurely and `ExtractSingleFile()`
+    returns `false`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Progress` pointer is used to update the progress of the decompression
+    process, which should be atomic as well. An optional `Password` parameter can
+    be provided, if an archive is encrypted:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE78]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next two methods use the `FFileInfos` vector to check if a file exists
+    within this archive and retrieve its decompressed size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE79]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `GetFileDataIdx()` method first checks if the file was already decompressed.
+    In this case, the pointer from `FExtractedFromArchive` is returned:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE80]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the file was not decompressed yet, the `GetFileData_ZIP()` function is called
+    and an unpacked memory block from `clBlob` is returned:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE81]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `GetFileIdx()` method maps a `FileName` to an internal index into the `FFileInfos`
+    vector. It uses the auxiliary `FFileInfoIdx` object to store the string-to-index
+    correspondences:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE82]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The last two public functions return the number of files in the archive and
+    the name of each file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE83]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private section of the `clArchiveReader` class declares internal methods
+    for decompressed data management. The `Enumerate_ZIP()` method fills the `FFileInfos`
+    container by reading the archive header. The `GetFileData_ZIP()` member function
+    extracts file data from the archive:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE84]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `ClearExtracted()` method is invoked from `CloseArchive()`. It frees the
+    allocated memory for each extracted file. Everything here is RAII-managed using
+    the `clBlob` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE85]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s look into the `GetFileData_ZIP()` method implementation which uses the
+    `ExtractSingleFile()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE86]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `clMemFileWriter` object is created, which contains the decompressed data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE87]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`ExtractSingleFile()` handles decompression. Here we use a blocking call (the
+    `AbortFlag` parameter is `nullptr`) and an empty password:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE88]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the call succeeds, we return the decompressed contents from the `clMemFileWriter`
+    object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE89]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `ExtractSingleFile()` method creates the `zlib` reader object, positions
+    the reader at the beginning of the compressed file data and calls the `ExtractCurrentFile_ZIP()`
+    method to perform the actual decompression:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE90]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We create the internal structure to allow `zlib` to read from our `iIStream`
+    objects. The same thing is done later in `Enumerate_ZIP()`. The `fill_functions()`
+    routine and all related callbacks are described below in this section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE91]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Return `false` if the file is not found within the archive:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE92]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once we have positioned the reader, we call the `ExtractCurrentFile_ZIP()`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE93]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The core of our decompressor lays inside `ExtractCurrentFile_Zip`(). Taking
+    a memory block as an input, it reads decompressed bytes of the file and writes
+    them into the output stream:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE94]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `unzGetCurrentFileInfo64()` function retrieves the uncompressed file size.
+    We use it to count the total progress and write it into the `Progress` parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE95]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `unzOpenCurrentFilePassword()` call initializes the decompression process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE96]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The final part of the method is a loop which reads a packet of decompressed
+    bytes and calls the `iOStream::Write` method of the `Out` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE97]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In our example implementation based on memory-mapped files, we cast the 64-bit
+    file size to `size_t`. This essentially breaks support of files greater than 2Gb
+    in size on 32-bit targets. However, this tradeoff is acceptable in most real-world
+    mobile applications, unless you are writing the universal `.zip` decompressor,
+    of course:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE98]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Optionally we may break from the loop if the `AbortFlag` pointer (set from
+    the other thread) instructs us to do so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE99]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `unzReadCurrentFile()` function performs decompression to the output stream:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE100]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After writing the decompressed data, we update the `Progress` counter accordingly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE101]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the end, we close the `UnzipFile` reader object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE102]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The enumeration of files in an archive is done by yet another member function
+    called `Enumerate_ZIP()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE103]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we fill the callbacks required by `zlib` to read the custom file stream,
+    in this case our `iIStream` objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE104]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, the header of the archive is read in order to determine the number of
+    compressed files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE105]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For each compressed file, we extract the information which we reuse later for
+    decompression:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE106]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In each iteration, we fill the `sFileInfo` structure and store it in the `FFileInfos`
+    vector:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE107]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'All the backslashes in the file name are converted into the characters that
+    separate elements of the path within the archive. The `FFileInfoIdx` map is filled
+    for a quick lookup of the file index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE108]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we clean up the `zlib` reader object and return the success code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE109]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s take a closer look at the `fill_functions()` method. The memory block
+    is contained in `iIStream`, so we implement a number of callbacks required by
+    `zlib` to work with our stream class. The first method `zip_fopen()` does the
+    preparation of `iIStream`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE110]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The reading of bytes from `iIStream` is implemented in `zip_fread()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE111]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `zip_ftell()` function tells the current position in `iIStream`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE112]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `zip_fseek()` routine sets the reading pointer, just like `libc`''s `fseek()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE113]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For the `iIstream` class, `fclose()`, and `ferror()`, analogues are trivial:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE114]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A helper `fill_functions()` routine fills the callback structure used by `zlib`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE115]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That was all on the low-level decompression details. Let us get higher into
+    the territory of more friendly abstractions and wrappers. The `clArchiveMountPoint`
+    class wraps an instance of `clArchiveReader` and implements the `CreateReader()`,
+    `FileExists()`, and `MapName()` methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE116]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `CreateReader()` method instantiates a `clMemRawFile` class and attaches
+    an extracted memory block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE117]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FileExists()` method is an indirection to `clArchiveReader::FileExists()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE118]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `MapName()` implementation is trivial for this type of a mount point:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE119]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private section contains only a reference to a `clArchiveReader` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE120]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The obvious drawback of the simple `clArchiveMountPoint` is its non-asynchronous
+    blocking implementation. The constructor accepts a fully initialized `clArchiveReader`
+    object, which means we need to block until `clArchiveReader:: OpenArchive()` gets
+    its job done. One way to overcome this is to run `OpenArchive()` on a different
+    thread, in a task queue, and create the mount point once the archive is parsed.
+    Of course, all subsequent calls to `CreateReader()` expecting data from this mount
+    point should be postponed until a signal is raised. We encourage the reader to
+    implement this kind of asynchronous mechanism as an exercise using the `clWorkerThread`
+    class discussed in the previous chapter. A more sophisticated archive mount point
+    implementation can accept a constructed `clArchiveReader` and invoke `OpenArchive()`
+    itself. This requires more elaborate architecture as `clFileSystem` and/or `clArchiveMountPoint`
+    classes should have access to a dedicated worker thread. However, it essentially
+    hides all the complexity of time-consuming decompression operations behind the
+    lean interface.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing application assets
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To access the data packed inside the `.apk` package on Android in your C++ code,
+    we need to get the path to `.apk` by using Java code and passing the result into
+    our C++ code using JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `onCreate()` method, pass the value obtained from `getApplication().getApplicationInfo().sourceDir`
+    into our native code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE121]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The implementation of `onCreateNative()` can be found in `1_ArchiveFileAccess\jni\Wrappers.cpp`
+    and looks as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE122]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We use the `ConvertJString()` function to convert `jstring` into `std::string`.
+    The JNI methods `GetStringUTFChars()` and `ReleaseStringUTFChars()` get and release
+    the pointer to an array of UTF8-encoded characters of the string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE123]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The simple usage example is implemented in the `OnStart()` callback inside
+    the `main.cpp` file. It mounts the path, creates an archive mount point on Android,
+    opens the archive `test.zip` and enlists its content. On a desktop, this code
+    runs and reads `test.zip` which is stored at `assets/test.zip`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE124]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Iterate over all the files in this archive and print their names and contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE125]'
+  prefs: []
+  type: TYPE_PRE
+- en: Check the `1_ArchiveFileAccess` example and try it for yourself. It provides
+    a great debugging experience of the Android file access code on your desktop machine.
+    Use `make all` to build for the desktop environment and `ndk-build & ant debug`
+    to build for Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned how to deal with files and `.apk` archives via C++
+    in a platform-independent way. We will use this functionality in the subsequent
+    chapters to access files.
+  prefs: []
+  type: TYPE_NORMAL

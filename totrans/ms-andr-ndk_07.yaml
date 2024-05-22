@@ -1,0 +1,1303 @@
+- en: Chapter 7. Cross-platform UI and Input System
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter, we introduced classes and interfaces for platform-independent
+    rendering. Here, we make a slight detour on our way to a 3D OpenGL renderer and
+    use the SDL library to render elements of the user interface. To render our UI,
+    we need lines, rectangles, textured rectangles, and text strings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will begin this chapter with the description of the `iCanvas` interface designed
+    to render geometric primitives. The most complex part of `iCanvas` is Unicode
+    text rendering, which is implemented using the FreeType library. Font glyphs caching
+    is also a very important topic for complex UIs, which is discussed here. The second
+    part of the chapter describes a multipage graphical user interface suitable for
+    being the cornerstone for building interfaces of multiplatform applications. The
+    chapter is concluded with an SDL application, which demonstrates capabilities
+    of our UI system in action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Right now, we use only the SDL library without any OpenGL, so we will declare
+    the `iCanvas` interface to allow immediate, but not always fast, rendering of
+    geometric primitives and avoid creating the `GLVertexArray` instances described
+    in the previous chapter. Later, we might provide a different `iCanvas` implementation
+    to switch to another renderer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first two methods set the current rendering color specified as a triple
+    of RGB integers or a 4-dimensional vector, which contains an additional alpha
+    transparency value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Clear()` method clears the screen rendering surface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Rect()` and `Line()` methods render a rectangle and a line respectively,
+    as their names suggest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The texture-related group of methods manages the creation and updation of textures.
+    The `CreateTexture()` method returns an integer handle of the created texture.
+    The texture handle `Idx` is passed as an argument to the `UpdateTexture()` member
+    function to upload bitmap data into the texture. The `Pixels` parameter holds
+    a bitmap object with pixel data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `TextureRect()` method renders a quadrilateral using a specified texture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The text rendering is done with a single `TextStr()` call, which specifies
+    the rectangular area in which the text should be fit (or clamped), string to be
+    rendered, font height in points, text color, and font ID from the `TextRenderer`
+    class, which we will describe later:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The last public member function is `Present()`, which ensures that all the
+    primitives are shown on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We provide two implementations of the `iCanvas` interface. One uses the SDL
+    library, the other is based on pure OpenGL calls. The `clSDLCanvas` class contains
+    a pointer to an SDL renderer object `m_Renderer`. The constructor of `clSDLCanvas`
+    takes a pointer to an instance of the `clSDLWindow` class, described in the previous
+    chapter, to create a renderer attached to the window:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `clSDLCanvas` class directly calls the corresponding SDL routines to render
+    rectangles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `SetColor()`, `Clear()`, and `Present()` member functions also call the
+    appropriate SDL routines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have to do some bookkeeping to synchronize our `clBitmap` object with `SDL_Texture`.
+    The internals look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `CreateTexture()` method allocates a new SDL texture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will use the pixel data within the `Pixels` object to update the SDL texture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we assume the pitch of the texture is always equal to the pitch of our
+    raw pixel data. This is not true in general. However, this assumption always holds
+    for power-of-two textures. We suggest that you implement pitch-respecting texture
+    updates as an exercise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the texture is created, we store it in the `m_Texture` container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `UpdateTexture()` method is similar, except that it does not create a new
+    texture and reuses the texture size from the previous one, hence, making updates
+    much faster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To update the texture, we will call the `SDL_LockTexture()` to get a pointer
+    to the texture data and use `memcpy()` to copy bitmap pixels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Again, this only works for textures with the same pitch as in the provided
+    bitmap:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the texture is not required any more, it can be deleted using the `DeleteTexture()`
+    member function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `TextureRect()` method calls the `SDL_RenderCopy()` function to draw a
+    texture mapped rectangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `TextStr()` method renders a UTF-8 encoded string into a rectangular region.
+    It uses the FreeType library and requires some advanced machinery to work. We
+    will discuss its implementation in the following sections. Let''s have a look
+    at the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Basically, the `iCanvas` interface was designed around SDL, and its purpose
+    is to hide the dependency on SDL behind a lightweight interface, so another implementation
+    can be used relatively easily. Here, we implement the `iCanvas` interface using
+    OpenGL and classes we introduced in the previous chapter. Take a look at the `clGLCanvas`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we need to define some GLSL shaders required to render filled and textured
+    rectangles. We can do it naturally using the C++11 raw string literals. The vertex
+    shader does remapping of window normalized coordinates, used in our canvas, into
+    OpenGL normalized device coordinates and is shared between all fragment programs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We take the rectangle 0,0…1,1 and remap it into the required rectangle *X1,Y1-X2,Y2*.
+    This way, we can use a single vertex array object to render any rectangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This fragment shader is used to render a flat colored rectangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A texture-mapped version is marginally more complex. We modulate the constant
+    color with a texture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the constructor of `clGLCanvas`, we will create all persistent OpenGL objects
+    required for rendering:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Initialize our OpenGL wrapper:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The geometry of this rectangle is reused to render rectangles of any dimensions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Link two shader programs from the source code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A private helper function is used to convert integer window coordinates into
+    normalized window coordinates that we use in our shaders:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, the actual rendering code is very straightforward. Let''s render a filled
+    rectangle first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since alpha blending is a very costly operation, enable it only if the alpha
+    channel of the color actually implies transparency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Disable blending again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our implementation is very simple and does not do any state change tracking,
+    which is very costly once you do a lot of `Rect()` calls. We would suggest that
+    you add a method to the `iCanvas` interface, which can render a pack of rectangles
+    at once sorting them into transparent and non-transparent buckets before rendering.
+    This way multiple rectangles can be rendered reasonably fast. By the way, SDL
+    does it in a similar fashion providing the `SDL_FillRects()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since we can use our `clGLTexture` class, texture management functions are
+    now simple:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `UpdateTexture()` and `DeleteTextures()` functions are almost one-liners,
+    except the parameter validity check:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s draw a textured rectangle using these textures. Most of the hassle is
+    similar to `Rect()`, except the texture binding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Bind the required texture to the texture unit `0`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Use the `m_TexRectSP` shader program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Blending is always used for textured rectangles since individual texels can
+    be transparent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: A similar optimization with the OpenGL state changes can be implemented here.
+    We leave it to you to implement this caching mechanism. Now, let's proceed with
+    the text rendering, so we can return to `clGLCanvas::TextStr()` afterwards.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Text rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this section, we describe every essential detail of the text rendering process
+    implemented in the `clTextRenderer` class. Here are the parts of our text renderer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: UTF-8 string decoding ([http://en.wikipedia.org/wiki/UTF-8](http://en.wikipedia.org/wiki/UTF-8))
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Text size calculation, kerning, and advance calculation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Rendering of individual glyph, just like the one in the FreeType example from
+    [Chapter 2](part0024.xhtml#aid-MSDG2 "Chapter 2. Native Libraries"), *Native Libraries*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Fonts and glyphs loading and caching
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: String rendering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We assume all the strings are in the UTF-8 encoding because this way all Latin
+    characters with ASCII codes between 0 and 127 take exactly one byte, and various
+    national symbols take up to four bytes. The only problem with UTF-8 is that FreeType
+    accepts fixed-width 2-byte UCS-2 encoding, so we have to include the decoding
+    routine to convert from UTF-8 to UCS-2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There is a nice article on the absolute minimum every software developer must
+    know about Unicode and character sets. Check it out at [http://www.joelonsoftware.com/articles/Unicode.html](http://www.joelonsoftware.com/articles/Unicode.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We store each character of rendered string in the `FString` field of `clTextRenderer`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A character description is stored in the following structure with the UCS-2
+    character code in the `FChar` field and an internal character index `FIndex`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'An `FGlyph` field holds the FreeType `FT_Glyph` structure with a rendered glyph:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After decoding character codes, we calculate the pixel width and advance for
+    each glyph and store these values in `FWidth` and `FAdvance`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FCacheNode` field is used internally by FreeType font caching subsystem
+    and is described briefly as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The default constructor sets null values for each field:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that we have a structure to hold our characters, we show how to process
+    a string and calculate positions for each character. The subsequent paragraphs
+    of this chapter describe the internal details of `clTextRenderer`, so that when
+    we declare new fields, they are meant to be in the `clTextRenderer` class. We
+    start with high-level routines that can render strings. After this, we get to
+    UTF-8 decoding, and finally, show how to implement fonts management and caching.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calculating glyph positions and string size in pixels
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `LoadStringWithFont()` member function takes a text string, an internal
+    font identifier and desired font height in pixels. It calculates parameters of
+    each element in the `FString` array. This routine is used in rendering and text
+    size calculation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we get the font handle and determine if we need kerning. `FFace` is
+    a field of type `FT_Face` within `clTextRenderer`. The `GetSizedFace()` method
+    retrieves the font matching the desired height. It uses internal font cache to
+    avoid rendering the game glyphs multiple times for a single resolution and is
+    discussed in great detail later in this chapter. Take a look at the following
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we decode the UTF-8 string to UCS-2 and fill the `FString` array:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After `FString` is filled, we render each character and calculate positions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we get the character index for the font and skip the end-of-line and
+    carriage return characters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once we know the index of the character, we may call the `FT_RenderGlyph()`
+    method, but this is quite suboptimal to render a single glyph each time it is
+    encountered. The `GetGlyph()` routine does all the work to extract a glyph from
+    the cache:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the glyph has been loaded successfully, we call the `SetAdvance()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Optionally, we can call the `Kern()` method to adjust the advance of the current
+    character:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The auxiliary `SetAdvance()` method calculates the bounding box of a glyph
+    and stores its width and advance in the `sFTChar` structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The advance is stored as a `22:10` fixed-point value, we convert it to an integer
+    value using a bitwise shift:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FT_Glyph_Get_CBox()` function returns a bounding box; we use its `xMax`
+    field:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For some glyphs, such as a whitespace, the width is zero and we use the `FAdvance`
+    field:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Kern()` routine takes two adjacent characters and calculates the advance
+    correction. Our text renderer does not support automatic ligature substitution,
+    and this might be the place to do it if such a substitution is required:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'No kerning is required at the beginning and at the end of the string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FT_GetKerning()` call calculates the relative offset correction for the
+    current character:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The result is added to the advance value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using the `FString` array, we calculate the rendered string size easily by
+    summing sizes of individual characters. Later, this size value is used to allocate
+    the output bitmap for the string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `StrMinY` and `StrMaxY` variables hold minimum and maximum pixel coordinates
+    of a character in a string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `SizeX` variable holds the number of horizontal pixels in the string bitmap.
+    We iterate the `FString` array and add the advance of each character to `SizeX`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For each character, we get the glyph''s bitmap and update the `SizeX` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After reading off the dimensions of a glyph, we update the minimum and maximum
+    dimensions of the string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we calculate the integer value `Width` of the string by converting
+    the `26:6` fixed-point value `SizeX` to pixels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before doing glyphs rendering, we still should check out yet another important
+    thing. Let's outline the process of UTF-8 characters decoding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Decoding UTF-8
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `DecodeUTF8()` routine mentioned in the preceding section, which was used
+    in `LoadStringWithFont()`, iterates the incoming byte array and uses `DecodeNextUTF8Char()`
+    to get the character code in the UCS-2 encoding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we store a pointer to a buffer and set the current position to zero:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE69]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FLength` field contains the number of bytes in `InStr`. The method `DecodeNextUTF8Char()`
+    uses `FLength` to stop the decoding process when the end of string is reached:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE70]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we will iterate the vector of bytes in `FBuffer` until the zero byte
+    is encountered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE71]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The UCS-2 character code is the only thing we change in the new `sFTChar` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE72]'
+  prefs: []
+  type: TYPE_PRE
+- en: The UTF-8 decoder in `DecodeNextUTF8Char()` is based on the source code from
+    the JSON checker, which can be downloaded from [http://www.json.org/JSON_checker/utf8_decode.c](http://www.json.org/JSON_checker/utf8_decode.c).
+    To save space, we omit rather straightforward bit manipulation. The low-level
+    implementation details can be found in the accompanying source code, just take
+    a look at `TextRenderer.h` and `TextRenderer.cpp`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Glyphs rendering
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `RenderLineOnBitmap()` method takes an allocated bitmap as an output surface
+    and renders a given text string using a specified font identifier. The `LeftToRight`
+    parameter tells us whether the text is written from left to right or from right
+    to left:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE73]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After loading, text rendering is done by iterating the `FString` container
+    once again and calling the `DrawGlyphOnBitmap()` method for each character:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE74]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We track the current horizontal position in the `x` variable by summing advances
+    of each character. For each non-empty glyph, we calculate a *real* onscreen position
+    taking into account the actual text direction specified by the `LeftToRight` argument:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE75]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the direction is right to left, we will correct the position accordingly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE76]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the end of each iteration, we shift the horizontal counter using the advance
+    value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE77]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A wrapper routine `RenderTextWithFont()` precalculates the size of an output
+    bitmap and returns a ready to use image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE78]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we have calculated the text size, we allocate an output bitmap, clear
+    it, and call the `RenderLineOnBitmap()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE79]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `RenderLineOnBitmap()` call fixes the starting position for the right-to-left
+    text:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE80]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `DrawGlyphOnBitmap()` method is similar to the code we used in [Chapter
+    2](part0024.xhtml#aid-MSDG2 "Chapter 2. Native Libraries"), *Native Libraries*.
+    We iterate through all pixels of the glyph''s bitmap and set them using the data
+    returned by FreeType:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE81]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the mask creation mode, we can copy the glyph directly into the output bitmap
+    ignoring the `Color` parameter—that is, only a grayscale mask is rendered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE82]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For colored rendering, we fetch the source pixel and blend it with the specified
+    color according to the mask:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE83]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `BlendColors()` routine performs linear interpolation between color `C1`
+    and `C2`. The right shifts here replace the division by 256\. To avoid floating
+    point arithmetic and conversions, the blend factor varies from 0 to 255, thus
+    the value 255 instead of `1.0f` in the formula:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE84]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, we know how to render glyphs. Let's find out how to load, manage, and cache
+    different fonts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Font initialization and caching
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Until now, we haven't described the details of font management, glyph rendering,
+    and reusing characters' bitmaps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First of all, we will declare a FreeType library handle used by every call
+    to the FreeType API:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE85]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For each font we use, we need a rendered glyph cache and a character map cache.
+    These caches are maintained by an `FTC_Manager` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE86]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we need glyph and character map caches:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE87]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We keep track of byte buffers with loaded font files in the `FAllocatedFonts`
+    field. The key for `std::map` is the name of a font file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE88]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FFontFaceHandles` map is another container of initialized FreeType font
+    handles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE89]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private `LoadFontFile()` method reads a font file using our virtualfilesystem
+    mechanism and adds the initialized font to the containers declared in the preceding
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE90]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We prevent reloading of already loaded fonts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE91]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The new font is read into the `clBlob` object and its data is copied into a
+    separate `Data` buffer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE92]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FT_New_Memory_Face()` function creates a new `FT_Face` object, which is
+    then stored in the `FFontFaceHandles` array:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE93]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Data` buffer is added to `FAllocatedFonts` and the name of the font is
+    added to the `FFontFaces` container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE94]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `clTextRenderer` class we are developing contains the initialization code
+    inside the `InitFreeType()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE95]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We omit the `LoadFT()` method description here because for Windows, it is a
+    simple loading of a FreeType dynamic library file and resolution of function pointers.
+    For Android, this method is empty and returns `true`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE96]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The actual initialization code creates an instance of the FreeType library
+    and allocates caches:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE97]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A cache manager is initialized after FreeType. The `FreeType_Face_Requester`
+    is a function pointer to the method we describe in the following code. It resolves
+    the font filename and does the actual loading of font data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE98]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At last, two caches are initialized similarly to the manager:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE99]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Deinitialization of FreeType is done in the reverse order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE100]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we will clear the `FString` container by calling `FreeString`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE101]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we will deallocate memory blocks with font data inside the `FAllocatedFonts`
+    map:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE102]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the end, we clear the container of font faces and destroy the cache manager
+    and the library instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE103]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FreeString` method destroys the cached glyph for each element of the `FString`
+    vector:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE104]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When FreeType finds out that there is no required font in the cache, it calls
+    our `FreeType_Face_Requester()` callback to initialize a new font face:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE105]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is one of the awkward places where we really need to convert a C-style
+    font face pointer into an integer identifier. We use lower 32 bits as an identifier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE106]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If `FaceIdx` is less than zero, it is a valid pointer and the font was already
+    loaded:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE107]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The method we are describing is a callback for a C language library, so we
+    emulate the `this` pointer using `RequestData`. In the `InitFreeType()` method,
+    we supplied `this` as a parameter to `FTC_Manager_New`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE108]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We extract a filename from the `FFontFaces` array:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE109]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The call to `LoadFontFile()` might return zero if we have already loaded the
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE110]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we haven''t loaded the file, we search for the face in the `FFontFaceHandles`
+    array:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE111]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We are getting close to the complete picture of `clTextRenderer` and only a
+    few methods related to fonts and glyphs remain. The first one is `GetSizedFace()`,
+    which we have used in `LoadStringWithFont()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE112]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To start rendering glyphs at a given font height, we fill the `FTC_ScalerRec`
+    structure to set rendering parameters. The `IntToID()` routine converts an integer
+    identifier to a void pointer conversely to the code in `FreeType_Face_Requester()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE113]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `FTC_Manager_LookupSize()` function searches for the `FT_Size` structure
+    in the cache, which we supply to `FT_ActivateSize()`. After this, our glyphs get
+    rendered with the size equal to the `Height` parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE114]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The second auxiliary method is `GetGlyph()`, which renders a single glyph:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE115]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we convert a UCS-2 code to a character index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE116]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `ImageType` structure is filled with glyph rendering parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE117]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, the `FTC_ImageCache_Lookup()` function searches for the previously rendered
+    glyph and renders one if it has not been rendered yet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE118]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The third method `GetCharIndex()` uses the FreeType character map cache to
+    quickly convert a UCS-2 character code to a glyph index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE119]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `IntToID()` routine is similar to the casting code in `FreeType_Face_Requester()`.
+    All it does is the conversion of an integer font face identifier to a C void pointer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE120]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we need the `GetFontHandle()` method, which loads a font file and
+    returns a new valid font face identifier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE121]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we will try to load the file. The result of zero can be returned if
+    the file is already loaded:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE122]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We search for this font in a FFontFaces container and return its index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE123]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have all components necessary to render Unicode characters on bitmaps. Let's
+    see how we can use this functionality to extend `clCanvas` with text rendering
+    capabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating the text renderer into the canvas
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now that we have the `clTextRenderer` class, we can implement `clGLCanvas::TextStr()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE124]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we render the string to a bitmap:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE125]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A static texture is shared between all calls to `TextStr()`. Not that performant
+    and multithreaded, but very simple:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE126]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we update the static texture from this bitmap:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE127]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After calculating the output size, we will call the `TextureRect()` method
+    to render the bitmap with our text string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE128]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Global access to the single instance of `clTextRenderer` is implemented using
+    the Singleton pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE129]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can now render text using the `iCanvas` interface. Let's draw a graphical
+    user interface where we can put our text.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Organizing the UI system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Having created the `iCanvas` interface for immediate mode rendering, we can
+    switch to the user interface implementation. To create a meaningful application,
+    the ability to render static or even animated graphical information is not always
+    enough. An application must react to user input, which for mobiles often means
+    responding to touch screen events. Here, we create a minimalistic graphical user
+    interface consisting of three basic elements called views:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`clUIView`: This is a logical container and a base class for other views'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`clUIStatic`: This is a static label with a text'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`clUIButton`: This is an object that fires events once it is touched'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Each view is a rectangular region, which is capable of rendering itself and
+    reacting to external events such as timing and user touches. Since we are working
+    with the NDK, and at the same time, we want to debug our software on desktop machines,
+    we must redirect events from an OS-specific queue to the C++ event handling code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The base UI view
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We define the `clUIView` interface for each UI element. This interface includes
+    geometrical properties of the UI view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE130]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This class contains geometric properties of the UI element. The `m_X` and `m_Y`
+    fields contain relative coordinates in parent''s coordinate frame. The `m_ScreenX`
+    and `m_ScreenY` fields contain absolute coordinates in the screen reference frame.
+    The `m_Width` and `m_Height` fields store the width and height of the element
+    respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE131]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The private part of the class contains flags and settings for the child views
+    layout. These settings are used later in the `LayoutChildViews()` method. The
+    `m_ParentFractionX` and `m_ParentFractionY` values are used to override `m_Width`
+    and `m_Height` as a percentage of the parent view size. If the values are greater
+    than one, they are ignored. Their explicit usage is shown in the `LayoutChildViews`.
+    The `m_AlignV` and `m_AlignH` contain different alignment modes for the coordinates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE132]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The last field is the `m_ChildViews` vector with pointers to child views, as
+    the name suggests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE133]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The default constructor sets the initial value for each field:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE134]'
+  prefs: []
+  type: TYPE_PRE
+- en: The class interface contains `Get*` and `Set*` one-liners to access properties
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE135]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, getters and setters for layout parameters follow:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE136]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Add()` and `Remove()` methods provide access to the `m_ChildViews` container:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE137]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Direct read-only access to `m_ChildViews` is provided by the `GetChildViews()`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE138]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Draw()` method calls `PreDrawView()` to render the background layer of
+    this UI element, then it calls `Draw()` for each and every child view, and finally,
+    the call to `PostDrawView()` finishes the rendering process for this UI element:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE139]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `UpdateScreenPositions()` method recalculates absolute screen positions
+    of child views:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE140]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The event handling part consists of `Update()` and `OnTouch()` methods. The
+    `Update()` method informs all the child views a period of time has passed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE141]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `OnTouch()` method accepts screen coordinates and a touch flag:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE142]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Check whether the touch event was handled by any of child views:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE143]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `IsPointOver()` method checks whether the point is inside the view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE144]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The protected part contains two virtual methods to render the contents of the
+    actual `clUIView`. The `PreDrawView()` method is called before rendering child
+    views, so the visible result of this call may be erased by children, for example,
+    a background layer. The `PostDrawView()` method is called after all child views
+    had been rendered, like a decoration on top of the rendered image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE145]'
+  prefs: []
+  type: TYPE_PRE
+- en: This mechanism enables UI rendering and customization. The last thing we need
+    before our UI can come to life is an event dispatching mechanism. Let's implement
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Events
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'At the lowest level, all the events from Android or desktop OSes are handled
+    by the SDL library, and we only have to write the handler for these events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE146]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We add two more case labels to `HandleEvent()` so we can dispatch touch events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE147]'
+  prefs: []
+  type: TYPE_PRE
+- en: Prior to C++11, wrapping C-like function pointers and class member function
+    pointers in a single object was not an easy task requiring some heavy template
+    library such as `boost::bind`. Now, the `std::function` object from the SDL library
+    fits just fine for our purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The only interactive object we implement here is `clUIButton`. When a user
+    taps such an object, a custom action is performed. The code for the action can
+    reside in a standalone function, a member function, or in a lambda expression.
+    For example, we create an `Exit` button, and the code might be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE148]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `clUIButton` class must contain the `std::function` field, and the `OnTouch()`
+    method optionally invokes this function when a tap occurs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing UI classes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `clUIStatic` view is a descendant of `clUIView` with the overridden `PreDrawView()`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE149]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `clUIButton` class adds a custom touch event handling atop of `clUIStatic`
+    rendering:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE150]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, our mini user interface can be used in applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using views in application
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here is a short code snippet that creates a button and exits the application
+    once this button is tapped:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE151]'
+  prefs: []
+  type: TYPE_PRE
+- en: The full source code is in the `1_SDL2UI` example. Besides the details discussed
+    in this chapter, the source code contains a basic layouting mechanism so that
+    views can have relative coordinates and sizes. To get this bonus, take a look
+    at `LayoutController.cpp` and `LayoutController.h`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned how to implement and render basic user interface
+    in C++, render UTF-8 text using the FreeType library, and handle user input in
+    a platform independent way. We will use this functionality in the last chapter
+    to implement a multiplatform gaming application. Now, let's return to the topic
+    of 3D rendering started in [Chapter 6](part0057.xhtml#aid-1MBG21 "Chapter 6. OpenGL
+    ES 3.1 and Cross-platform Rendering"), *OpenGL ES 3.1 and Cross-platform Rendering*,
+    and implement a rendering engine on top of those abstractions.
+  prefs: []
+  type: TYPE_NORMAL
