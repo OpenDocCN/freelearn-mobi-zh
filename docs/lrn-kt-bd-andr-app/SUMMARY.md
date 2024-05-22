@@ -1,3 +1,4 @@
++   [通过构建安卓应用学习 Kotlin](README.md)
 +   [前言](lrn-kt-bd-andr-app_00.md)
 +   [第一章：为 Android 开发进行设置](lrn-kt-bd-andr-app_01.md)
 +   [第二章：为 Kotlin 配置您的环境](lrn-kt-bd-andr-app_02.md)

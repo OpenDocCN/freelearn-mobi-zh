@@ -1,3 +1,4 @@
++   [安卓 NDK 初学者指南第二版](README.md)
 +   [前言](andr-ndk-bgd-2e_00.md)
 +   [第一章：设置你的开发环境](andr-ndk-bgd-2e_01.md)
 +   [第二章：开始一个本地 Android 项目](andr-ndk-bgd-2e_02.md)

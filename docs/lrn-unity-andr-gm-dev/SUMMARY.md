@@ -1,3 +1,4 @@
++   [Unity 安卓游戏开发学习手册](README.md)
 +   [前言](lrn-unity-andr-gm-dev_00.md)
 +   [第一章：向 Unity 和 Android 问好](lrn-unity-andr-gm-dev_01.md)
 +   [第二章：外观美观——图形界面](lrn-unity-andr-gm-dev_02.md)

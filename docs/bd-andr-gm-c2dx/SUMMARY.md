@@ -1,3 +1,4 @@
++   [构建 Cocos2dx 安卓游戏](README.md)
 +   [前言](bd-andr-gm-c2dx_0.md)
 +   [第一章：设置你的开发环境](bd-andr-gm-c2dx_1.md)
 +   [第二章：图形](bd-andr-gm-c2dx_2.md)

@@ -1,3 +1,4 @@
++   [安卓游戏开发手册](README.md)
 +   [前言](andr-gm-dev-hb_00.md)
 +   [第一章：安卓游戏开发](andr-gm-dev-hb_01.md)
 +   [第二章：不同 Android 平台的介绍](andr-gm-dev-hb_02.md)

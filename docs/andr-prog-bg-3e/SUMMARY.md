@@ -1,3 +1,4 @@
++   [安卓编程初学者手册第三版](README.md)
 +   [前言](andr-prog-bg-3e_00.md)
 +   [第一章：开始 Android 和 Java](andr-prog-bg-3e_01.md)
 +   [第二章：初次接触：Java、XML 和 UI 设计师](andr-prog-bg-3e_02.md)

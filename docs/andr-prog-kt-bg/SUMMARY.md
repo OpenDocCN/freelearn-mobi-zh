@@ -1,3 +1,4 @@
++   [Kotlin 安卓编程初学者手册](README.md)
 +   [前言](andr-prog-kt-bg_00.md)
 +   [第一章：开始使用安卓和 Kotlin](andr-prog-kt-bg_01.md)
 +   [第二章：Kotlin，XML 和 UI 设计师](andr-prog-kt-bg_02.md)

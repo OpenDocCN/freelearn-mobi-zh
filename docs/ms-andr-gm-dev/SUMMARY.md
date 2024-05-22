@@ -1,3 +1,4 @@
++   [精通安卓游戏开发](README.md)
 +   [前言](ms-andr-gm-dev_00.md)
 +   [第一章：开始入手](ms-andr-gm-dev_01.md)
 +   [第二章：设计我们的应用程序](ms-andr-gm-dev_02.md)

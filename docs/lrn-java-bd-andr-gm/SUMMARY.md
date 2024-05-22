@@ -1,3 +1,4 @@
++   [通过构建安卓游戏学习 Java](README.md)
 +   [前言](lrn-java-bd-andr-gm_00.md)
 +   [第一章：为什么学习 Java、Android 和游戏？](lrn-java-bd-andr-gm_01.md)
 +   [第二章：开始使用 Android](lrn-java-bd-andr-gm_02.md)

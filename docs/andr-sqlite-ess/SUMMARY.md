@@ -1,3 +1,4 @@
++   [安卓 SQLite 基础知识](README.md)
 +   [前言](andr-sqlite-ess_0.md)
 +   [第一章：进入 SQLite](andr-sqlite-ess_1.md)
 +   [第二章：连接点](andr-sqlite-ess_2.md)
