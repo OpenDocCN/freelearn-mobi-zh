@@ -1,0 +1,3221 @@
+- en: Chapter 7
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android application and forensic analysis
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Information in this chapter
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: • [Analysis techniques](#S0015)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • [FAT forensic analysis](#S0050)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • [YAFFS2 forensic analysis](#S0080)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • [Android app analysis and reference](#S0110)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A lot of material has been discussed up to this point in the book covering not
+    only the history and architecture of Android devices but also complete details
+    on the file systems, ways to secure devices, and methodology to acquire data from
+    them. But data without context and analysis is just noise. Many of the techniques
+    used in traditional forensic investigations are applicable in Android forensics
+    analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analysis techniques
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This section will provide an overview of the analysis techniques followed by
+    sections that demonstrate the procedures for specific file systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Timeline Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Timeline analysis should be a key component to any investigation as the timing
+    of events is nearly always relevant. There are many ways to build a forensic timeline.
+    However, unless created with specialized software, the process can be quite tedious.
+    Several software techniques will be covered in detail later in the chapter including
+    free, open source forensic utilities from both The Sleuth Kit and log2timline.
+    Other forensic tools can create timelines as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For supported file systems (for example, the FAT16/FAT32 file systems found
+    on the SD cards and embedded MultiMediaCard [eMMC]), a number of tools are available
+    which can create the timeline. However, YAFFS2 is not currently supported by any
+    analysis tool and so creating a timeline requires significant manual analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The primary source of timeline information is the file system metadata including
+    the modified (file metadata), accessed, changed (file contents), and created.
+    This metadata is often referred to as MAC times or sometimes MACB where the “B”
+    represents when a file was created (born). File systems track different time stamps
+    and have nuances that must be taken into account when performing forensic analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, Microsoft’s FAT file system has been the subject of many forensic
+    investigations and analyses. The Microsoft Developers Network (MSDN) provides
+    details on file times in FAT and NTFS file systems, stating:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Not all file systems can record creation and last access times, and not all
+    file systems record them in the same manner. For example, the resolution of create
+    time on FAT is 10 ms, while write time has a resolution of 2 s, and access time
+    has a resolution of 1 day, and hence, it is really the access date. The NTFS file
+    system delays updates to the last access time for a file by up to 1 h after the
+    last access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ([File Times, n.d.](#BIB1))
+  prefs: []
+  type: TYPE_NORMAL
+- en: Andre Ross created a useful graphical representation of this on his digfor (DIGital
+    FORensics) blog ([http://digfor.blogspot.com/2008/10/time-and-timestamps.html](http://digfor.blogspot.com/2008/10/time-and-timestamps.html))
+    shown in [Fig. 7.1](#F0010) ([Ross, A., n.d.](#BIB10)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-01-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.1 FAT and NTFS time and time stamps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To further illustrate how FAT time stamps work, digital forensics and incident
+    response firm cmdLab posted a blog entitled “Misinterpretation of File System
+    Timestamps” ([Casey, E., n.d.](#BIB3)), which provides full details on FAT time
+    stamps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The confusion arises from the fact that FAT file systems represent create and
+    last-write time stamps slightly differently. Last-write time stamps are 32-bit
+    little-endian values, interpreted as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-01-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Take as an example the following FAT folder entry with the last-write date
+    highlighted in bold:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-02-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Converting to big endian gives 3a 75 b9 78, which has the following binary
+    representation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 00111010 01110101 10111001 01111000
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This translates to a time stamp of 2009.03.21 23:11:48 as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 7 bits = 0011101 = 29 years since 1980
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 4 bits = 0011 = 3 months
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 5 bits = 10101 = 21 days
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 5 bits = 10111 = 23 h
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 6 bits = 001011 = 11 min
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 5 bits = 11000 = 24 = 48 s
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that 5 bits cannot store all 60 s, so last-write time stamps must be incremented
+    in 2 s intervals, and are always an even number of seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although the create time follows a similar general calculation, it uses an additional
+    8 bits to represent one hundredths of a second. In the same directory listing
+    above, the create time stamp is identical to the last modified time stamp except
+    for an additional byte (75 78 b9 75 3a). The additional byte equates to 117 hundredths
+    of a second, which brings the create time to 2009.03.21 23:11:49.17\. Thus, the
+    create time can have an odd number of seconds, and has a resolution of 10 ms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One tool used in this book for timeline analysis is The Sleuth Kit (TSK), which
+    supports several file systems. The TSK wiki provides the information presented
+    in [Table 7.1](#T0010) to define the meaning of MACB time stamps for the supported
+    file systems ([Carrier, B., n.d.](#BIB2)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.1 MAC Meaning by File System
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0010.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Unfortunately, TSK does not, as of version 3.2.1, fully support YAFFS2\. However,
+    there are some efforts to provide this information. For Android, TSK is effective
+    in analyzing the FAT file systems as well as EXT3 which is found on some devices.
+    TSK does not yet fully support EXT4 but the software is updated frequently and
+    examiners should check the web site [http://www.sleuthkit.org/](http://www.sleuthkit.org/)
+    for the most recent changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: File System Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As discussed throughout this book, the directories and files in the Android
+    file systems are obviously the primary focus of a forensic investigation. The
+    final section of this chapter and book, “Android App Analysis and Reference,”
+    will provide a detailed analysis of Android apps. Combining this information with
+    techniques demonstrated in [Chapter 4](CHP004.html) will provide the most significant
+    results for an investigation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are a number of directories that need to be examined for an investigation.
+    Over time, examiners will need to expand the list to include new directories and
+    files, as Android devices are changing rapidly. The best way to approach this
+    problem is to first run the following command to determine which file systems
+    are mounted on the system, where they are mounted, and what type they are. To
+    demonstrate, let’s look at four different Android phones including a T-Mobile/HTC
+    G1, a Google Nexus One, a Motorola Droid, and an HTC Incredible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start, let’s examine the output of the mount command on the G1 running Android
+    1.5:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-03-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This particular G1 was running a stock firmware and did not have an SD card
+    inserted, so we are left with four file systems to examine, highlighted with emphasis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Similarly, we examine the output of mount on the Nexus One running Android
+    2.1-update1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-04-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this case, there are five file systems on the Nexus One, highlighted with
+    emphasis, which should be the initial focus of an examination. The additional
+    file system is the SD card mounted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we take a look at the Motorola Droid’s mounted file systems when running
+    Android 2.2.1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-05a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-05b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The Motorola Droid also has seven files systems of interest. However, they are
+    slightly different from the Nexus One.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, let’s take a look at the HTC Incredible output previously discussed
+    running Android 2.2:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-06-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The HTC Incredible tops the list with nine file systems of interest. As you
+    can tell, with different Android devices and different versions of Android, the
+    file systems of interest change. However, from the above examination, we have
+    created [Table 7.2](#T0015), which provides a strong starting point for file system
+    examinations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.2 File Systems to Include in an Investigation
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Mount Point | File System Type | Relevance |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /proc | proc | Examine on the phone with the “cat” command. Look for relevant
+    metadata about the system such as file system statistics |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /data/data (on older systems, entire /data is 1 partition/file system) |
+    YAFFS2 | Nearly all app data |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /data (on newer phones /data can be further segemented) | EXT3/EXT4/YAFFS2
+    | App and system data excluding the app data stores found in /data/data |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /cache | YAFFS2/EXT3 | Cache file system used by some apps and by the system
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /mnt/asec | tmpfs | Unencrypted app .apk file, which is stored encrypted
+    on the SD card but decrypted here for running systems to access and utilize |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /app-cache | tmpfs | Temporary file system where com.android.browser (on
+    HTC Incredible) stores cache. Other apps may also use this directory over time
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /mnt/sdcard | vfat | FAT32 file system on removable SD card |'
+  prefs: []
+  type: TYPE_TB
+- en: '| /mnt/emmc | vfat | FAT32 file system on the Embedded MultiMediaCard (eMMC)
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: On a positive note, as these files are allocated, even for unsupported file
+    systems such as YAFFS2, the files can be copied to another medium and examined
+    with existing forensic tools and techniques an examiner owns and has knowledge
+    of. For example, the contents of “/data/data” could be copied from an Android
+    device onto your forensic workstation and then the content could be examined directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: File Carving
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: File carving is a process in which specified file types are searched for and
+    extracted across binary data, often resulting in a forensic image of an entire
+    disk or partition. File carving works by examining the binary data and identifying
+    files based on their known file headers. If the file format has a known footer,
+    it will then scan from the header until it finds the footer (or hits a maximum
+    file length set by the configuration file) and then save the carved file to disk
+    for further examination.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Traditional file carving techniques require that the data are sequential in
+    the image and this cannot produce the full file if it is fragmented. There are
+    many reasons that files are fragmented as the process for saving the file to nonvolatile
+    storage varies by file system type and is heavily influenced by the memory type
+    such as NAND flash. This also means that files that are very large (such as videos)
+    will be more difficult to recover.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Newer file carving techniques are being researched and developed to address
+    the limitations experienced with file fragmentation. One such technique is developed
+    by Digital Assembly, a digital forensics solutions company based in New York.
+    Their technique, called SmartCarving, profiles the fragmentation characteristics
+    of several popular file systems (except YAFFS2, unfortunately) and uses this information
+    to carve even fragmented photos. Their product, Adroit Photo Forensics, can also
+    carve images from unknown file systems ([Digital Assembly, n.d.](#BIB5)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: One popular tool used for carving data files is scalpel, an open source, high
+    performance file carver written by Golden G. Richard III ([Scalpel, n.d.](#BIB12)).
+    Scalpel reads a configuration file for desired file header and footer definitions
+    in order to extract files from a raw image. It is file system independent and
+    will work on FATx, NTFS, EXT2/3, HFS, or raw partitions. Scalpel is written in
+    C and runs on Linux, Windows, OS X, and other operating systems which can compile
+    the C code ([Scalpel, n.d.](#BIB12)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are two ways to acquire scalpel. First, on the forensic workstation,
+    you can install via apt-get:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-07-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This will install the latest version. Alternatively, you can compile from source,
+    which will allow you to install the latest version on Linux or other platforms
+    without waiting for the specific platform maintainer to update the prepackaged
+    version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-08-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The scalpel executable is now in “~/scalpel-1.60” and is simply called scalpel.
+    In addition, there is a sample scalpel.conf in that same directory that is needed
+    by scalpel to run and to extend the supported file definitions. Here’s a starter
+    scalpel.conf for an Android device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-09a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-09b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As you can tell, the headers for this configuration file define the extension
+    or file type (if it is case sensitive), the maximum size to carve, the header
+    definition (in ASCII, hex, and other supported notations), and the footer (if
+    it exists). A targeted file type for carving does not need to define each setting.
+    For additional information, see the sample configuration file in the downloaded
+    source files as there are many additional options that are quite powerful. Your
+    Ubuntu workstation now has the software needed for file carving, which will be
+    covered in the FAT32 and YAFFS2 sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is worth pointing out that a large number of file signatures have already
+    been assembled. Gary Kessler, an independent consultant and practitioner of digital
+    forensics, actively maintains a table of file signatures on his web site ([Kessler,
+    G., n.d.](#BIB9)). He references the “magic file,” which is found on most Unix
+    systems located at “/usr/share/file/magic” on the Ubuntu workstation. On the workstation,
+    you can run the “file” command, which takes a file as an argument and attempts
+    to determine the file type based on the signatures in the magic file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A simple example is looking at an unknown file in “/mnt/emmc/.Trashes,” called
+    “._501,” which cannot be easily identified by the file name (of course, some people
+    might try to hide file types by changing the extension; however, by examining
+    the file signature, this is easily discovered):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-10-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Thus, the eMMC has an OS X file in the Trash, which might indicate that someone
+    connected the Android device to a Mac computer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Strings
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The strings command on the Ubuntu workstation will extract, by default, ASCII
+    printable strings—at least four characters long—from any file, text or binary.
+    While this technique is not terribly elegant or sophisticated, it is quite effective
+    at quickly examining binary data to determine if information of interest might
+    be contained in the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are several options that have a great impact on what strings output.
+    First, let’s take a look at the synopsis section of the command’s man page (manual):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-11-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There are a few options you should always consider using when executing strings.
+    First, the “—all” option tells strings to examine the entire file (on certain
+    files, it only examines certain portions of the file). Second, the “--radix=”
+    option instructs strings to print the offset within the file where the string
+    was found. This is extremely helpful when you combine strings and a hex editor
+    to examine possible evidence found in the file. The radix option can print the
+    offset in octal (--radix=o), hex (--radix=x), or decimal (--radix=d). For most
+    hex editors, you should consider hex or perhaps decimal offsets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The other extremely important option controls the character encoding of the
+    strings, which provides support for Unicode characters in both big-endian and
+    little-endian formats:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-12-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This is important because not only does Android natively support Unicode but
+    it also allows investigating a phone where the default language requires Unicode.
+    Following are a few examples from the previous dd image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-13-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this example, the first lines of results were omitted. However, you can see
+    the dd image is referencing the htcchirp.db at offset 0x880A and, shortly thereafter,
+    we see unlinked (0x900A), deleted (0x980A), and finally htcchirp.db-journal (0xA00A).
+    So what does all this mean? It seems likely that the htcchirp.db database was
+    modified. During that time, it created a special file (htcchirp.db-journal, a
+    journal file) that manages the update and allows the change to roll back if it
+    was not successful. After the journal file was no longer needed, it was deleted.
+    This is important information for understanding what occurred and where deleted
+    data might exist (the journal file takes a complete snapshot of the SQLite page
+    that is being updated and thus, the previous values are stored on the NAND flash).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let’s change the encoding parameter and look for the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-14-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this example, we are looking for 16-bit big-endian characters. In this case,
+    two examples were pulled from the results. In one example at offset 0xC42404,
+    it’s clear some sort of activity related to Chicago occurred. The examiner could
+    simply open a hex edit, jump to offset 0xC42404, and look at the data around this
+    entry in an attempt to understand the activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Equally interesting is the next entry at offset 0x1943020 that references the
+    [bearshare.com](http://bearshare.com) web site and has what appears to be a time
+    stamp. If we convert the number 1295219345 into a date/time based on Unix Epoch,
+    we get Sunday, 16 Jan 2011 23:09:05 GMT. Again, the examiner would need to examine
+    the data more closely to validate any findings, but a good hypothesis is that
+    some web-based activity took place on the Android device at that time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One final example (and the other encodings can be left as an exercise for the
+    reader) reveals the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-15-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This is a great example because it includes not only a (valid) longitude and
+    latitude, but a time stamp (in milliseconds, not seconds, since 1970) that translates
+    to GMT: Sat, 30 Oct 2010 20:20:18 GMT.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Strings is a very powerful command which, when combined with searching and filters,
+    can quickly determine if phone numbers, names, locations, GPS coordinates, dates,
+    and many more pieces of information are easily extractable in a data file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Hex: A Forensic Analyst’s Good Friend'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In many forensic investigations, a logical acquisition or a logical file system
+    analysis from a physical acquisition will provide more than enough data for the
+    case. However, certain cases require a deeper analysis to find deleted data or
+    unknown file structures. This is also necessary when the file system has little
+    or no support in standard forensic tools, such as YAFFS2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understandably, many forensic analysts would prefer to not perform a deeper
+    analysis because it requires significant time, is extremely tedious, and requires
+    a fairly deep understanding and curiosity of data structures. However, the results
+    from this type of analysis are often quite amazing. Important information about
+    that individual case is learned, and this knowledge is generally applicable to
+    many cases in the future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For these reasons, every forensic analyst should be comfortable using a hex
+    editor should the need arise. This allows the analysts to see exactly what data
+    are being stored, look for patterns, and perhaps identify deleted or previously
+    understood data structures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Of course, let’s explain this better with an example. First, make sure you
+    install the following package on your Ubuntu workstation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-16-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This is a very fast curses (terminal)-based hex editor. Of course, you can
+    use any hex editor that is comfortable. Next, let’s use the strings command to
+    look at the mmssms.db file which is located in the /data/data/com.android.providers.telephony/databases
+    directory to see if we can find some deleted text messages. In this sample case,
+    it is known that text messages to 3128781100 were deleted from the device. First,
+    let’s use strings to see if we find that phone number in the SQLite file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-17-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In this command, we use the pipe (“|”) operator, which takes the output from
+    one command and sends it to the next command. In this way we can link many commands
+    together and get very powerful analysis techniques on the fly. Thus, the above
+    command does the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. Runs the strings command on the SQLite database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. Takes the output of the strings command and runs it through the grep program,
+    which filters the output-based patterns provided. In this case, we provide the
+    phone number in question. However, you can create very powerful search strings
+    for grep including regular expressions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3. Take the output from the grep command and see how many lines are returned
+    by piping the output to the word count program (“wc”) and instructing it to count
+    by line instead of by word.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The result is that 417 entries for that phone number were found; obviously
+    indicating that there was indeed communication with the phone number on that device.
+    We next want to take a close look at the messages, so instead of piping the output
+    to the wc program, let’s look at the results directly and include one line of
+    text after the phone number by adding the option “-A 1” to grep (also, we pipe
+    the output to the “less” command to display it one page at a time):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-18-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Thus, we know we have an SQLite database with the targeted number and messages.
+    Let’s use SQLite3 to better understand the database. Here we will use command
+    line (covered in [Chapter 4](CHP004.html)) but you can use a SQLite viewer with
+    a graphical front end if you prefer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs: []
+  type: TYPE_NORMAL
+- en: SQLite language reference
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: While we have mentioned several SQLite tools throughout this book, you may find
+    the SQLite language reference at [http://www.sqlite.org/lang.html](http://www.sqlite.org/lang.html)
+    to be a great resource. For those not familiar with SQL, it provides a thorough
+    overview. If you already have an understanding of SQL, this language reference
+    will help explain, as the page title reads, “SQL as Understood by SQLite.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-19a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-19b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In the above SQLite3 sessions, the following commands were run to better understand
+    the data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '1. SQLite3 mmssms.db: Opens database for querying.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '2. .tables: Lists the tables in the database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '3. .schema sms: Focuses on the sms table, asks database for the structure (schema)
+    of the table. The schema was quite long and was truncated.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '4. .mode line: Sets the display mode to line for easier viewing.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '5. “select ∗ from sms limit 1;”: Instructs SQLite3 to display one record to
+    the screen (limit one) from the sms table showing all columns.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '6. .quit: Exits the program'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Thus, we can now see that there are a number of fields in the sms table, but
+    that after the phone number, there is a personal ID followed by the time stamp.
+    Using a hex editor, let’s see if we can determine the date/time stamp from the
+    message about the phone being activated. First, let’s open the mmssms.db in the
+    hex editor we just installed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-20-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This will then show you the beginning of the file in box hex as well as the
+    printable ASCII strings in the right column:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-21-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can press Control-T (^T) to jump to an offset in the file. In this case,
+    the previous strings command included the “--radix=x,” so we have the offset in
+    hex (0x12108), so time to search:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-22-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The hex editor is extremely responsive and jumps to the offset:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-23-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Looking at the hex data above, we can see the phone number and it ends at 0x12111\.
+    After that, we should see a person field, as it is the next column as specified
+    in the table design (also called the table schema). If the person field is set,
+    it links to the contact table to provide details on the person involved. In this
+    case, no person was set, so SQLite does not record anything. Finally, we look
+    at the next six bytes and we get 0x012AFC97C52C. When translated to decimal, the
+    resulting number is 1284138059052\. Finally, we can use a number of techniques
+    to convert this time (Unix Epoch in milliseconds) to a more easily read date/time.
+    One quick technique for this is to use the built-in date command. However, it
+    only handles Unix Epoch in seconds, not milliseconds, so you can simply divide
+    by 1000 (that is, omit the last three digits):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-24-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The date command automatically displays the date in the current system time
+    zone. Another quick way to convert the time is to use the web site designed to
+    convert Unix Epoch time at [http://www.epochconverter.com/](http://www.epochconverter.com/)
+    that handles both Unix Epoch in seconds and milliseconds ([Epoch Converter, n.d.](#BIB7)).
+    To convert, copy the entire time stamp (not necessary to divide by 1000) into
+    the web site text box and click “Timestamp to Human date” as in [Fig. 7.2](#F0015).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-02-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.2 Time conversion on [http://www.epochconverter.com/](http://www.epochconverter.com/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: One final time stamp conversion technique to mention is the free utility DCode
+    by Digital Detective, a digital forensic software company based in the United
+    Kingdom. DCode supports many formats ([Digital Detective, n.d.](#BIB6)) and can
+    covert from milliseconds as shown in [Fig. 7.3](#F0020).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-03-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.3 DCode time conversion utility by Digital Detective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This example is simply intended to illustrate the importance of data that might
+    only be accessible if the forensic analyst moves beyond the forensic software
+    they use and also examines the data directly. With well-known file systems and
+    perhaps “standard” cases, this is often not necessary. However, mobile forensics,
+    and Android forensics in particular, is a challenging area as many of the file
+    formats, file systems, hardware, and software are not only very new (and not well
+    supported) but also change at an alarming rate. Forensic analysts who dive into
+    hex will find they uncover far more data than simply relying on existing forensic
+    software.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android Directory Structures
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A broad understanding of the Android directory structure is very helpful in
+    the forensic analysis of a device. To perform this analysis, five important root
+    level directories were copied from the HTC Incredible and then displayed with
+    the tree command on the local workstation. Following the hierarchical layout,
+    an explanation of many directories is provided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-25a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-25b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Line 1: At the top is the root directory, which creates the structure and mount
+    points for the other file systems explored previously.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 2: As previously discussed, the HTC Incredible created an “/app-cache”
+    directory of type tmpfs. You can see the browser cache structure. Presumably,
+    over time, other apps may leverage this directory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lines 6–8: Android devices from the start had a dedicated “/cache” directory
+    that originally appeared to be unused. However, this is certainly not the case
+    and the “/cache” partition should be imaged for full analysis. Files including
+    Gmail attachment previews, Browser DRM, some downloads (Market and other), as
+    well as Over The Air (OTA) updates from the wireless carriers can be found here.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 9: The root level “/data” directory has a number of important subdirectories
+    covered next. Note that some phones (such as the HTC Incredible) have a dedicated
+    partition for the “/data/data” subdirectory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 10: The “/data/anr” directory contains stack traces (debugging) from the
+    system and is generally not accessible to the shell user. However, some of the
+    adb debug commands appear to read this data.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 11: The “/data/app” directory contains the .apk files from the Android
+    Market.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 12: The “/data/app-private” directory stores protected apps from the Android
+    Market.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 13: More recent versions of Android have a secure cloud backup API that
+    developers can integrate into their apps. The “/data/backup” directory is used
+    to queue and manage these backups. However, thus far meaningful data has not been
+    recovered from directory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 14: The “/data/btips” (Texas Instrument’s Bluetooth Protocol Stack) directory
+    stores the log files if the associated app (com.ti.btips) crashes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 15: The “/data/davlik-cache” directory contains the Davlik VM’s cached
+    dex files used to run apps.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 16: The “/data/data directory” contains the application specific data,
+    easily the most important area to focus on in an investigation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lines 17–23: One app was kept in the directory hierarchy for demonstration
+    purposes. The directory is named according to the package name and often clearly
+    identifies the developer (Facebook in this case).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 24: For HHGTTG fans (famous advice to intergalactic travelers from the
+    classic novel *The Hitchhiker’s Guide to the Galaxy:* DON’T PANIC), there’s a
+    great directory named “/data/dontpanic,” which is simply a place to store some
+    error log files from the system. Again, a great benefit of an open system is the
+    ability to examine code. Short of that, we would have simply had to guess the
+    purpose or perform significant testing. From the AOSP:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-26a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-26b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Line 25: The “/data/local” directory is important as it allows shell (the user
+    account nonrooted phones run adbd as) read/write access. When an app is installed,
+    it is first copied to “/data/local.” Also, some forensic techniques rely on this
+    directory to upload important files, typically binaries.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 26: The “/data/lost+found” directory shows up in several places in YAFFS2
+    file systems. Again, a quick search (try “grep -R lost+found ∗.c” from the YAFFS2
+    source directory we downloaded) will explain that any files or directories found
+    that do not have a path to the root directory will be placed in this folder.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-27-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Lines 27–35: The “/data/misc” directory contains files related to Bluetooth,
+    dhcp, vpn, Wi-Fi, and more. One important file to point out is “/data/misc/wifi/wpa_supplicant.conf”
+    that contains a list of [Wi-Fi.com](http://Wi-Fi.com) networks to which the device
+    got connected. If the wireless access point required a password, it is stored
+    in plain text in the file (have fun pen testers). Here’s a partial listing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-28a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-28b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Line 36: The “/data/property” directory contains various system properties
+    such as time zone, country, and language.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 37: Beyond the subdirectories you can see /data/system contains several
+    key files. First, the accounts.db contains a list of accounts that require authentication
+    and provides the name, type, password (encrypted), and authentication tokens (among
+    other data). There are also two very important files related to the pass code
+    or PIN for the device. The files are gesture.key and password.key and contain
+    an encoded/encrypted hex value for the pass code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 43: When a process crashes, a special tombstone file can be created. The
+    file is ASCII and thus readable. More information can be found online such as
+    one informative post on [Crazydaks.com](http://Crazydaks.com) ([Debugging in Android,
+    n.d.](#BIB4)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 44: The “/mnt” directory is where the system mounts various file systems,
+    including the SD card, the eMMC, and others.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 45: The “/mnt/asec” directory contains the unencrypted apps that are stored
+    on the SD card. When Android introduced the ability to store apps on the SD card,
+    they encrypted the contents for security reasons. However, when the system is
+    up and running and unencrypted access to the files is necessary, they are decrypted
+    and mounted in “/mnt/asec.”'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 46: The “/mnt/emmc” contains the FAT32 file system that resides on the
+    NAND flash for some devices. Lines 47 through 55 are several examples of eMMC
+    subdirectories.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 51: The “/mnt/emmc/DCIM directory,” album thumbnails are stored here.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 52: The “/mnt/emmc/DCIM/100MEDIA” directory contains any pictures or videos
+    taken by the HTC Incredible.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 53: The “/mnt/emmc/LOST.DIR” directories are found on FAT32 partitions
+    and may contain files or fragments that the file system lost track of (similar
+    to YAFFS2 lost+found directory). This directory should be examined.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 56: If a physical SD card is present, it is mounted at “/mnt/sdcard.”'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 66: As with the eMMC, the “/mnt/sdcard/dcim” directory would store pictures
+    and videos from the device. On the HTC Incredible, they are stored in “/mnt/emmc/DCIM,”
+    so they are not present on the physical SD card.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lines 67–68: The “/mnt/sdcard/download” and “/mnt/sdcard/Downloads” directories
+    contain files downloaded by the browser, e-mail clients, and others.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 72: As mentioned previously, the “/mnt/sdcard/secure/asec” directory is
+    encrypted and is where apps that reside on the SD card (instead of the NAND flash)
+    store data.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 75: The “/system/app” directory contains .apk app files for apps that
+    are provided with the system. This includes apps bundled by Google/Android, the
+    manufacturer (HTC in this case), and the wireless carrier (Verizon in this case).
+    In the case of the HTC Incredible, the directory contains a significant 152 .apk
+    files. It’s important to know this location in case app analysis is required for
+    a case (which means you need access to the apk file). The .apk files present on
+    the reference HTC Incredible were:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-29-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Lines 76 and 117: The “/system/bin” and “/system/xbin” directories contain
+    the Android binary files used on the system. Forensic analysts and security engineers
+    (and most definitely Android researchers) can find many useful and undocumented
+    commands by experimenting with files in these directories.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lines 77–80: The “/system/customize” directories contain carrier-specific customizations
+    for the phone, notably UI.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Line 81: The “/system/etc” directory is where Android stores the typical Linux/Unix
+    configuration (/etc) directory. It contains numerous configuration files worthy
+    of examination—too many to discuss in this book—but can vary from device to device.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are far more directories and files to explore but the above overview provides
+    a good starting point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FAT forensic analysis
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The SD card can be a gold mine for forensic investigators. All the multimedia
+    that has been synced with the phone, or taken with the phone’s camera, is stored
+    here. Items such as pictures, videos, voice recordings, application data, music,
+    Google Map data, and potentially complete backup files from backup apps that use
+    the SD card for storage are recoverable. In addition, investigators can also find
+    cached mms image thumbnails, trash information relating to deleted objects, and
+    downloaded application APKs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, a typical user might use Google Maps to obtain driving directions
+    to a local shopping center. Through forensic examination of the “com.google.android.apps.maps/cache”
+    directory on the SD card, we are able to recover map image tiles and navigation
+    voice prompts. These voice prompts are also stamped with a date and time, so a
+    forensic investigator can literally retrace the location of that device for a
+    given time and date.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s what it looks like after a short trip within a Chicago suburb:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-30-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It is also important to remember that SD cards can be mounted through Android
+    as an external mass storage device. This allows the user to transfer any files
+    between the SD card and his or her personal computer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 6](CHP006.html), we demonstrated how to acquire the two current
+    FAT32 partitions on Android devices that contain data. There are many books and
+    articles which cover the analysis of FAT32 file systems and this section will
+    not attempt to cover those again in detail. However, this section will demonstrate
+    some techniques for examining the FAT32 partitions found on Android devices using
+    the Ubuntu workstation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FAT Timeline Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To build a file system timeline of a FAT32 image, we utilize both The Sleuth
+    Kit (TSK) and another great open source forensic tool called log2timeline. The
+    log2timeline utility, written by Kristinn Gudjonsson, is a framework for automatic
+    creation of a timeline that encompasses various log files and artifacts found
+    on the system. log2timeline can be utilized on many systems and does an excellent
+    job at extracting time stamp information for many file formats for analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we already have TSK setup, we need to take a few steps to install log2timeline.
+    First, it has probably been a while since you first built the Ubuntu workstation
+    so it is a good idea to update any packages which have newer versions and often
+    contain security patches or bug fixes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-31-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The first step updates your software list and the second will actually perform
+    the upgrade. Next, we’ll install log2timeline, which Kristinn has greatly simplified
+    by creating a Ubuntu package for his software.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-32-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The four commands do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. Add the log2timeline custom software repository to the Ubuntu workstations
+    overall list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. Download the public key used to validate the software and add to the list
+    of accepted keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3. Update the software packages list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4. Install log2timeline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For this analysis, we are going to use the forensic image of the 2 GB SD card
+    we imaged in [Chapter 6](CHP006.html). First, the examiner should always ensure
+    that the hash signature of the image matches with the hash taken during forensic
+    imaging to ensure the image is valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-33-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If you recall, the hash of the input device (/dev/sdc in this case) was e5dcc0af1d8a09c9af4d2db98f5f684d20a561666b9ff8df7c8b90a0b9d78770\.
+    The forensic image is now validated. Next, let’s take a quick look at the file
+    first with the file command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-34-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So we are, in fact, dealing with a disk image with a valid partition. Next,
+    we can examine the disk image further with TSK’s mmls:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-35-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'And finally TSK’s fsstat, but note that you have to provide a sector offset
+    of 129 as the FAT partition starts there:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-36a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-36b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In this case, the partition is a FAT16 partition with data on it. So, we are
+    going to first build the timeline with TSK’s fls command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-37-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The options set have the following meaning:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -z CST6CDT—Sets time zone to CST6CDT for US Central Time
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -s 0—Sets the time skew if one is known
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -m /mnt/sdcard—Prefaces the path with this value when writing out the body
+    file
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -f fat16—Sets file system to FAT16
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -r—Recursively traverses all directories to build the timeline
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -o 129—Sets the offset to 129 (a sector size of 512 bytes is assumed but can
+    be changed with the -b option)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -i raw—Sets the image type, in this case a raw image and not another forensic
+    image format
+  prefs: []
+  type: TYPE_NORMAL
+- en: • ~/sd-emmc/viaforensics/af-book/sdcard2-113serialno/sdcard2-113serialno.dc3dd—Image
+    file
+  prefs: []
+  type: TYPE_NORMAL
+- en: • > ~/sdcard.body—Redirects the command’s output to a file instead of displaying
+    on the screen
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Often it is helpful to know how long a command takes (if nothing else, over
+    time you learn when it’s best to go grab that coffee warmer). So, we preface fls
+    with the time command, which will tell us how long the program took to run (real)
+    and the various system time it took (user, sys). You can view the contents of
+    the body file, but in a later step we will convert it to a more readable format.
+    If you want to verify fls-returned results, you can always determine the total
+    lines in the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-38-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So, we have just over 24,000 entries. Next, we need to mount the file system
+    read-only and then we can run log2timeline against it. To mount the file system
+    using the dd image, you use the mount command and a special device called the
+    loopback device. The full command is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-39-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Again, let’s look at each of the options set. First, this command requires
+    administrator rights so we run with sudo. The options are then:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -t vfat
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -o loop,ro,offset=66068—This tells mount to use the loopback device as we
+    are using a physical file instead of an actual device. The ro mounts the e-mail
+    as read-only. Finally, we have to tell mount where to find the partition. From
+    the mmls command, you recall that the offset was a sector 129\. Mount does not
+    know the sector size, so we calculate 129 × 512, which is equal to 66,048
+  prefs: []
+  type: TYPE_NORMAL
+- en: • ~/sd-emmc/viaforensics/af-book/sdcard2-113serialno/sdcard2-113serialno.dc3dd—The
+    dd images
+  prefs: []
+  type: TYPE_NORMAL
+- en: • ~/mnt/sdcard—Where to mount the image
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can validate that the file system is mounted by executing the mount command
+    with no options, which returns the list of all mounted file systems. We pipe this
+    through grep to isolate the file system we are looking for:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-40-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So, we can see the vfat file system is mounted read-only using loopback device
+    “/dev/loop0” and located at “/home/ahoog/mnt/sdcard.” You can see the total size
+    with the df command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-41-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So, only 244 M of the 1.7 G available is in use. Now we are ready to use the
+    timescanner program that comes with log2timeline to extract additional timeline
+    information from the files. We will append the command output to the same body
+    file as fls:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-42-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The options for timescanner are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -d /home/ahoog/mnt/sdcard—Specify the directory to scan for time stamp artifacts
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -z CST6CDT—Again set the time zone to U.S. Central Time
+  prefs: []
+  type: TYPE_NORMAL
+- en: • >> sdcard.body—Append the output to the existing sdcard.body. Please note
+    the double greater than sign (“>>”), which instructs the shell to append to the
+    file (and if it does not exist, creates it). If you forget and use a single “>”,
+    then you will overwrite the fls output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Timescanner only extracted 410 artifacts, which is far less than the number
+    you would extract on a scan of an entire hard drive. However, the 410 artifacts
+    will certainly help build the overall timeline for the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we can create an easy-to-read (and easy-to-share) comma separated
+    values (csv) file of the timeline with TSK’s mactime command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-43-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following options were passed to mactime:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -b sdcard.body—Specifies the body file to convert
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -z CST6CDT—Time zone
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -d—Output of the file in csv format
+  prefs: []
+  type: TYPE_NORMAL
+- en: This only takes a few seconds for just under 25,000 entries but yields over
+    73,000 lines in the csv file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-44-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: You can now easily browse the timeline in a spreadsheet program or even import
+    it into a database for additional analysis. There are several interesting items
+    to point out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, you will likely see many dates near January 1, 1970\. This is caused
+    by time stamps that were set to 0 or not set at all. As Unix Epoch is based on
+    the number of seconds since 01/01/1970 00:00:00 UTC, then an offset would be that
+    exact time. In the above examples, we set the time zone to CST6CDT which, in January,
+    is GMT −6 hours. So, there are many artifacts with a time stamp of “Wed Dec 31
+    1969 18:00:00.” While we are unable to glean specific timeline data on these artifacts,
+    they may nonetheless contain important information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you double-click the sdcard-timeline.csv file from your Ubuntu workstation,
+    Open Office’s Calc program will present a Text Import screen as shown in [Fig.
+    7.4](#F0025). Make sure the “Separated by” is set to comma, then press OK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-04-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.4 Text import of sdcard-timeline.csv into OO Calc.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Calc program will then open and you can browse the timeline, illustrated
+    in [Fig. 7.5](#F0030).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-05-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.5 Viewing timeline in OO Calc.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, most of the files are deleted. However, TSK and other programs
+    can still recover them. One interesting event to examine is when an app was moved
+    to the SD card for testing purposes. The app, Angry Birds, supports running from
+    the SD card, which was tested at 06:17:28 on 02/15/2011, shown in [Fig. 7.6](#F0035).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-06-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.6 Timeline when app moved to SD card.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The timeline clearly shows that a new file is created and modified at 06:17:28
+    in “/mnt/sdcard/.android_secure.”
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One final entry to point out is from log2timeline. As it came across a PDF,
+    the metadata was extracted. We can see the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Mon Nov 29 2010 04:44:47
+  prefs: []
+  type: TYPE_NORMAL
+- en: • 23,159 bytes
+  prefs: []
+  type: TYPE_NORMAL
+- en: • File modified
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Title: (Scanned Document)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Author: [michelle]'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Creator: [HardCopy]'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Produced by: [Lexmark X543]'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• File: /mnt/sdcard/.easc/Attachment/ATT_1291219677612.pdf'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Timeline analysis is extremely powerful, especially if the forensic analyst
+    combines traditional file system time stamped artifacts from Kristinn Gudjonsson’s
+    log2timeline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FAT Additional Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There are many different approaches for further analysis of the FAT partitions.
+    First, the large majority of forensic software in the market supports the FAT
+    file system, and many examiners will have tool sets that they are comfortable
+    with. Beyond the forensic software, we covered several additional techniques in
+    the first section including:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • File system analysis
+  prefs: []
+  type: TYPE_NORMAL
+- en: • File carving
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Strings
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Hex analysis
+  prefs: []
+  type: TYPE_NORMAL
+- en: These techniques are similar even when the file system type is different, so
+    we will provide detailed coverage of them in the YAFFS2 section next. However,
+    some brief concepts are highlighted below.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, the SD card clearly has a significant amount of deleted files. It is
+    advisable to use a forensic tool to recover the data. TSK can recover the data
+    as well as many other forensic software packages. In addition, file-carving techniques
+    should be used to recover files that are not referenced in the File Allocation
+    Table of the partition. Strings and hex analysis are again great ways to quickly
+    locate data of interest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is one more quick technique to mention if the Ubuntu workstation is used
+    for file system analysis. Using the find and file commands, you can list all allocated
+    files by name, path, and file type. You can easily sort them on the fly or import
+    them into a spreadsheet or database for additional analysis. This technique only
+    lists allocated (undeleted) files, but is quite effective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The command is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-45a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-45b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In total, this command found and categorized 4352 allocated files on the SD
+    card. Here’s what each part of the command accomplished:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • find ~/mnt/sdcard—Finds files in the directory where we mounted the SD card
+    image ~/mnt/sdcard
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -type f—Only examines regular files (i.e., doesn’t list directories)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -print0—Terminates each file name with a NULL character instead of the default
+    new line which causes issues when file names have spaces
+  prefs: []
+  type: TYPE_NORMAL
+- en: • “|”—Pipes the output of find to the next program
+  prefs: []
+  type: TYPE_NORMAL
+- en: • xargs—This program builds and executes command lines using data from standard
+    input (i.e., other programs’ output)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • -0—Tells xargs that the data being piped is terminated by NULL character (matches
+    the -print0 from find)
+  prefs: []
+  type: TYPE_NORMAL
+- en: • file—This is the command xargs runs against each line returned by the find
+    command
+  prefs: []
+  type: TYPE_NORMAL
+- en: The find and xargs commands are very powerful ways to examine, interact, or
+    otherwise manipulate a large set of files. By combining timeline and file system
+    analysis, file carving, strings, and hex analysis, an investigator is armed with
+    powerful tools to uncover information critical to the case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FAT Analysts Notes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There are a few remaining notes for the FAT file systems on Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Apps on the SD Card
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: First, as mentioned in [Chapter 6](CHP006.html), as of Android 2.2, users can
+    move supported applications to the SD card to save space in the “/data/data” directory
+    where user data are stored. The app must explicitly support this capability, and
+    typical candidates for this feature are apps that use a lot of storage such as
+    a game. To test this feature, the popular Angry Birds game by Rovio Mobile ([Rovio
+    - Angry Birds, n.d.](#BIB11)) was installed on the reference HTC Incredible. The
+    app was briefly run and then closed. To move the app to the SD card, you select
+    Settings from the home screen, then Applications, and finally Manage Applications
+    as illustrated in [Fig. 7.7](#F0040).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-07-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.7 Manage applications screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can tell, the Angry Birds uses 18.40 MB of space on “/data/data,” which
+    is very precious space. So, the app developer included the necessary support to
+    move the .apk to the SD card. The user can then select the app (Angry birds, in
+    this case) and is then presented with a screen that has information and options
+    about the app, including “Move to SD card” as shown in [Fig. 7.8](#F0045).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-08-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.8 Move to SD card.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From this screen, you can see that the app itself uses 18.39 MB while user data
+    is only 12.00 KB, a clear candidate for moving the .apk to the SD card. And, as
+    illustrated in [Fig. 7.9](#F0050), it’s as simple as clicking the “Move to SD
+    card” button and waiting for the task to complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-09-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.9 App move to SD card complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is great from the user’s perspective. But what does this mean for the forensic
+    examiner or security analyst? A number of steps are taken that are described next
+    and then highlighted in the code listing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. The .apk file is moved from “/data/app” (or “/data/app-private”) to the SD
+    card in an encrypted partition at /mnt/secure/asec (see highlighted parts of next
+    listing) which can only be accessed via the root directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. A new device mapper file system is mounted read-only and the app from “/mnt/secure/asec”
+    is decrypted and accessible to the system at “/mnt/asec/com.rovio.angrybirds-1.”
+    The system must be able to access the unencrypted .apk file to run the app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3. The user data remains in “/data/data” (in this case “/data/data/com.rovio.angrybirds”).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4. If the SD card becomes inaccessible (whether it is removed, damaged, or simply
+    mounted on a host computer for file sharing), the unencrypted volume is unmounted
+    and no longer accessible to the system. This is why the core apps are currently
+    unable to run from the SD card.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The .apk file is encrypted on the SD card to ensure that other apps (or processes)
+    cannot corrupt or maliciously modify the app. However, app developers should not
+    rely on the encryption to prevent people from accessing the .apk file as it is
+    simply a matter of copying it from the unencrypted “/mnt/asec/<app-name>.” The
+    mount and ls commands in the following code illustrate the structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-46-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you need the .apk for analysis (for example, investigating malware), then
+    it is critical to copy the “/mnt/asec” subdirectories during the acquisition process
+    while the SD card is inserted and active on the Android device (that is, not mounted
+    on the forensic workstation for physical acquisition).
+  prefs: []
+  type: TYPE_NORMAL
+- en: nomedia
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: One other common item found on the SD card and eMMC partitions is an empty file
+    named .nomedia that will instruct Android’s media scanner to skip the directory,
+    so that it does not include any of the media files in apps such as Gallery or
+    Music. If a directory does not contain this file, then it is quite possible that
+    images which were previously deleted might have thumbnails which can be found
+    in the media scanner’s directory. This will be covered further in the section
+    on Android App Analysis and Reference.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YAFFS2 forensic analysis
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As discussed in [Chapter 4](CHP004.html), YAFFS2 is an open source, log-structured
+    file system developed specifically for NAND flash, including support for wear-leveling
+    and error-correcting code algorithms. This is great news not only for the phone
+    owners, as YAFFS2 works very well on Android, but also for forensic analysts since
+    a significant amount of old (deleted or updated) data is recoverable. But the
+    good news stops there. As YAFFS2 is a relatively new file system, at this time
+    no commercial forensic software solution supports it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, all is not lost. Using the power of Linux, the openness of YAFFS2,
+    an effective acquisition strategy, and the techniques already discussed including
+    file system analysis, file carving, strings, and hex analysis, a forensic examiner
+    can extract significant amounts of relevant data from the file system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we dive into the analysis of YAFFS2, it’s quite helpful to remember how it
+    is structured. One important concept to recall is how the data are structured
+    physically on the NAND flash via MTD. Generally, YAFFS2 and MTD organize the NAND
+    flash into 128 KB blocks, which consist of 2048 KB chunks of data followed by
+    64 bytes of Out-Of-Band (OOB) data (making the total size on the NAND flash 132 KB),
+    which is used to store disk and some file system metadata, as shown in [Fig. 7.10](#F0055).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-10-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.10 Block (128 KB = 64 × 2k chunks + OOB).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, it is not required that the Android device structure the NAND flash
+    and MTD this way and the best way to verify is to examine the contents of the
+    “/proc/mtd” file, which contains configuration information. Here is the file again
+    from the reference HTC Incredible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-47-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: While we need the OOB data if we want to attempt to mount the YAFFS2 nanddump
+    on the Ubuntu workstation, the 64-byte OOB data will definitely cause problems
+    for most forensic techniques, notably file carving. To alleviate this problem,
+    you can simply remove the OOB with a simple program. The program is written in
+    Python and can be easily adapted to different block and OOB configurations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, let’s open a new file for editing with sudo permissions, so that we can
+    place the program in “/usr/local/bin” which is the best place to save custom scripts
+    and programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-48-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Next, copy the following contents into the editor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-49a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-49b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Then save with Ctrl-O and exit with Ctrl-X. Next, you have to make the Python
+    file executable, so type in the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-50-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'And finally we can run the program against a nanddump file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-51-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Let’s make sure the removeOOB.py results are what we expect. According to “/proc/mtd,”
+    the “/dev/mtd/mtd6” partition has a size of 0x9500000 bytes and an erase size
+    (block size) of 0x20000\. The overall size in bytes is 156,237,824 (simply convert
+    the size from hex to decimal) or roughly 154 MB. Similarly, the erase size is
+    2048 bytes, so if we divide 156,237,824 by 2048, we get 76,288 blocks in the data.
+    This corresponds to the results from removeOOB.py. But there is one more thing
+    we can check. As we know the nanddump has 64 bytes of OOB data after each 2k chunk,
+    the total nanddump size on disk should be (76,288 × 64) + 156,237,824\. The total
+    should then be 161,120,256, which would represent the data chunks and their corresponding
+    OOB. We can see what the size on disk is with a simple “ls –l”:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-52-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As you can see, both the full nanddump and the .dd image (the nanddump with
+    the OOB removed) correspond to the expected sizes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we now have the YAFFS2 nanddump file, dd image, and the logical files (either
+    from tar, adb pull, or by mounting the YAFFS2 partition), we are ready to perform
+    various techniques against the data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YAFFS2 Timeline Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Ideally, this section would detail the use of already-built forensic software
+    that would build YAFFS2 timelines. Unfortunately, YAFFS2 is not yet supported
+    by any forensic timeline tools, so examiners in need of this information must
+    take a more difficult path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Over the next few years, the forensics industry needs to perform far more research
+    into YAFFS2\. However, with Android moving towards EXT4, it is possible that most
+    of the YAFFS2 research will not occur. Hopefully, this will not be the case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, we will present some research that is intended to provide a basic framework
+    to begin YAFFS2 research. This research was done on the simulated NAND flash initially
+    covered in [Chapter 4](CHP004.html). While this approach provides the researcher
+    with the control and privileges needed for effective research, it does not necessarily
+    mimic production environments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As discussed in [Chapter 4](CHP004.html), both YAFFS2 and MTD are involved in
+    writing data to the NAND flash. The YAFFS2 module is responsible for all aspects
+    of the file system. However, the writing of the data to the NAND flash is managed
+    by MTD. Unfortunately, this adds considerable complexity to the analysis as MTD
+    can accept the data from YAFFS2, which needs to be written to the NAND flash and
+    then has the autonomy to write not only the YAFFS2 data but additional MTD data
+    in the manner it sees fit. Some research into the data as it has persisted must
+    take into account not only the YAFFS2 code but the MTD code. Additionally, there
+    can be subtle differences in the YAFFS2 and MTD modules used on different Android
+    devices, which adds yet another layer of complexity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This does not mean understanding the YAFFS2 data found in a nanddump is impossible.
+    To get started, we are going to setup a 64 MB simulated NAND flash device on our
+    Ubuntu workstation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-53-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'You can verify the nandsim is properly setup:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-54-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Before we mount the YAFFS2 file system, we are going to enable various debugging
+    features built into YAFFS2\. There are many debugging options that YAFFS2 supports
+    ([YAFFS Debugging, n.d.](#BIB14)), but we are only going to enable three of them.
+    To do this, we first need to have full root permissions and then we will echo
+    the debugging flags into “/proc/yaffs”:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-55-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The value after echo command first removes any exiting debugging (none) and
+    then enables the os, write, and mtd debugging options. You can view the results
+    of the debugging in the system log located at “/var/log/syslog.” Ideally, open
+    a second terminal window or ssh session and use the tail command to continuously
+    output the tail end of the syslog:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-56-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Next, we create the mount point and mount a YAFFS2 file system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-57-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'At this point, the examiner should create a series of test cases, so that the
+    expected controlled data can be examined on the simulated NAND flash to ultimately
+    determine the structure. For this test, the following steps were taken:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. Create a directory called test in “~/mnt/yaffs2” (mkdir ~/mnt/yaffs2/test)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. Create “~/mnt/yaffs2/test/file1.txt” with the contents “viaforensics” (nano
+    -w ~/mnt/yaffs2/test/file1.txt)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3. Update “~/mnt/yaffs2/test” and append “updated” to file (echo “updated” >>
+    ~/mnt/yaffs2/test/file1.txt)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4. Read “~/mnt/yaffs2/test/file1.txt” (cat ~/mnt/yaffs2/test/file1.txt)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 5. Change the user and group owner for the directory and file (chown -R pulse.rtkit
+    ~/mnt/yaffs2/test)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 6. Change the permission of the directory and file (chmod -R 777 ~/mnt/yaffs2/test)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As these tests are being executed, not only is the file system being updated
+    but the debugging information is written to the syslog. The debugging is very
+    verbose (and we only enabled three of the debugging options), so only two examples
+    are provided here, which correspond to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. Creating the “~/mnt/yafs2/test” directory
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. Change the permission of file1.txt (chmod -R 777 ~/mnt/yaffs2/test)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-58a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-58b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The debugging provides valuable information including object id, sequence number,
+    chunk id, and the detailed process YAFFS2 follows to create the file. If you enable
+    additional debugging you will have even more data to correlate and use in your
+    understanding of YAFFS2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we examine the actual nanddump, there is one other helpful command worth
+    pointing out. The stat command will provide detailed information about a file,
+    directory, or other file system objects. For example, we can run stat against
+    “~/mnt/yaffs2/test” and “~/mnt/yaffs2/test/file1.txt” and use the information
+    in our research:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-59-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We now have the Modified, Access, and Change properties of the file and directory
+    and, combined with the actions we took to create the data, we have enough information
+    to start our research.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It’s time to look at the NAND flash, which requires root access. The following
+    command will skip the rows of the NAND flash, which are all 0xFF and 0x00 making
+    it easier to see trends. Also, only a small portion of the NAND flash is displayed
+    here in hex for space reasons:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-60-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The portion of the NAND flash included covers the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. Create “~/mnt/yaffs2/test” directory
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. Permissions change on file1.txt (chmod -R 777 ~/mnt/yaffs2/test)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The data displayed are part of YAFFS2 ObjectHeaders and contain the metadata
+    for the file system. The names of the files are clearly visible as are the 64-byte
+    OOB areas. One key characteristic about this data is that the integers which represent
+    Unix Epoch time stamps are in little-endian order, which means that you must read
+    the data from right to left.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Number as written to NAND flash: 63 99 d5 d4 (0x6399d5d4)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Converted from little endian to big endian: 4d 5d 99 36 (0x4d5d9936, which
+    is the hex read from right to left)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Converting 0x4d5d9936 (hex) to base 10 is 1297979702
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Unix time stamp 1297979702 in human date/time format is Thu Feb 17 15:55:02
+    CST 2011 (date -d @1297979702)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using this information, we can isolate a number of important artifacts in the
+    nanddump as shown in [Table 7.3](#T0020).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.3 Artifacts from YAFFS2 Nanddump
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0020.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Quite satisfyingly, the data from the debug logs, stat command, and the nanddump
+    of the simulated NAND flash device all correspond. With additional analysis, it
+    would be quite possible to create the MAC times for each file and directory on
+    the NAND flash, which would provide obvious benefit to an examiner. It is also
+    possible to gather full metadata information from ObjectHeaders still found on
+    the NAND flash and—provided garbage collection did not occur on the block—the
+    full content of the time at each point in time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is worth pointing out that in the very limited testing and analysis demonstrated
+    here, it appears the *atime* (accessed time) for the file is not updated every
+    time the file is accessed. This is not really surprising as it would mean that
+    any time a program accesses the file, a new ObjectHeader would have to be written
+    to NAND flash. This would result in a far greater number of writes to the NAND
+    flash and would not only use precious battery power, but would also wear out the
+    NAND flash with metadata updates most users do not really care about. This practice
+    is also not terribly unusual as Microsoft, by default, disabled *atime* update
+    in Microsoft Windows Vista and Windows 7.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To be sure, this analysis is not trivial. It can provide valuable information
+    and is a basis for forensic research on the YAFFS2 file system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YAFFS2 File System Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Hex analysis of the YAFFS2 file system is quite time consuming, so let’s move
+    on to techniques for analyzing the allocated files. Unfortunately, there are again
+    challenges, as it can be quite difficult to mount a YAFFS2 nanddump after it is
+    extracted from an Android device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For this reason, as highlighted in [Chapter 6](CHP006.html), if you have root
+    access on an Android device, it is best to not only acquire the appropriate YAFFS2
+    nanddump files, but to also logically copy important directories from the systems
+    using adb pull, tar, or other method. That way, if you are unable to mount the
+    YAFFS2 nanddump, you still have a logical copy of the files. The nanddump can
+    then be used for timeline creation, other hex analysis, and file carving.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, it is possible to mount some YAFFS2 nanddumps in Linux and, over time,
+    expect more nanddump files to successfully mount. For this section though, we
+    will focus on a nanddump from a Motorola Droid as they can be successfully mounted
+    in Linux with nandsim and the YAFFS2 kernel module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we need to load the appropriate kernel modules and create a 1 GB nandsim
+    device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-61-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We now have a 1 GB nandsim device that is capable of housing the Droid’s “/data”
+    partition. The next step is to use nandwrite to copy both the data and OOB to
+    the simulated NAND flash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-62-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The parameters instruct nandwrite to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • sudo nandwrite—Nandwrite requires root permission
+  prefs: []
+  type: TYPE_NORMAL
+- en: • --autoplace—Use auto oob layout
+  prefs: []
+  type: TYPE_NORMAL
+- en: • --oob—Image contains oob data
+  prefs: []
+  type: TYPE_NORMAL
+- en: • /dev/mtd0—The mtd device to write the nanddump to
+  prefs: []
+  type: TYPE_NORMAL
+- en: • droid_userdata.nanddump—The name of the nanddump file
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If everything went as expected, we should now be able to mount the file system
+    with the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-63-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'There are two primary problems you can encounter during this process. First,
+    YAFFS2 and MTD may not successfully mount the file system and will display this
+    message:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-64-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'There can be many causes for this such as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Differences between device’s YAFFS2 and MTD implementation and your workstation
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Corrupt or invalid nanddump
+  prefs: []
+  type: TYPE_NORMAL
+- en: • File system issues
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second most common issue is that the file system mounts, but there are
+    no files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-65-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This is most likely due to differences between the device’s YAFFS2 and MTD
+    implementation and your workstation, and again can be difficult to debug. There
+    are a few things you can try to resolve the issues. First, if you have a version
+    of mtu-utils greater than 20090606-1, try installing the older version. Here’s
+    how to check your current version and optionally install:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-66-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now that we downgraded the version of MTD, you could try the steps to mount
+    a YAFFS2 nanddump again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other potential option is that your version of YAFFS2 is not consistent
+    enough with the version used on the Android device. In order to get different
+    versions of YAFFS2, you will need to use the source control system of either the
+    YAFFS2 or the Android Open Source Project. You would then compile that source
+    code, remove the existing YAFFS2 kernel module, insert the new one, and try again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If these steps work, here is what you will see:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-67-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So we now have the full “/data” file system from a Motorola Droid accessible
+    on our Ubuntu workstation, which you can then explore and analyze with the forensic
+    tools of your choice. Ultimately, if you are unable to mount the nanddump on the
+    Ubuntu workstation, you should still have the full set of logical files from the
+    acquisition process, so it should not inhibit the analysis of the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YAFFS2 File Carving
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The next technique useful for analyzing YAFFS2 file systems is file carving.
+    Previously in this chapter, we installed and configured scalpel on our Ubuntu
+    workstation. For this example, let’s assume there is a file called htc-datadata.dd
+    in the home directory of the logged-in user on the Ubuntu virtual machine. In
+    that same directory (which you can reference with a ~ in your commands), there
+    is a scalpel configuration containing the entries from the section 1.3 named scalpel-android.conf.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Please note that we are using the **dd image** for file carving, not the nanddump.
+    This is necessary as the OOB data found after each 2k chunk of YAFFS2 data would
+    significantly impact the ability of scalpel to carve valid files. The following
+    command would run scalpel against the dd image and output the files in a folder
+    called htc-scalpel-test in your home directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-68-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this instance, scalpel was able to recover 11,370 files and the output provides
+    specifics on the file types and counts that were recovered. [Fig. 7.11](#F0060)
+    is a screen shot from the Ubuntu workstation looking at one of the JPG directories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-11-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.11 Viewing images recovered using scalpel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The images do not have a high resolution but, especially when viewed directly
+    on the workstation, you can discern the contents. Here are a few things that this
+    small fraction of images shows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The top three pictures are the opening frames from YouTube movies, dragon
+    cartoons in this case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The next picture is a fragment of a Facebook message asking about lunch and
+    recommending sushi.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The remaining pictures appear to be from various news articles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As this demonstrates, file carving can recover important artifacts from YAFFS2
+    and is a valuable tool for forensic analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YAFFS2 Strings Analysis
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We have already demonstrated one example of using strings to find data on an
+    Android device. However, let’s work through another exercise to demonstrate not
+    only the technique but the power of this type of analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For this example, the examiner needs to find location information on the Android
+    device. One term to search for, especially on an Android device, is [maps.google.com](http://maps.google.com)
+    as the Google Maps service is tightly integrated into the operating system. An
+    extremely powerful utility for search is called grep and is used so extensively
+    it is now a verb in technical vernacular (“Did you grep the device for map references?”).
+    It is not only built into the Ubuntu virtual machine but it also supports very
+    powerful regular expressions (often shortened to regex or regexp), which allow
+    sophisticated pattern matching. There are many online resources which introduce
+    both grep and regex with good examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For our example, we are going to use grep for its most basic functionality
+    where we simply search for a string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-69-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The query returned 775 examples—only a few are displayed here for brevity and
+    privacy reasons. However, it is quite easy to determine some of the activity that
+    took place on the device. Specifically:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • A search (the q= in the URL stands for query) for Naperville Crime Prevention
+    was conducted and the URL is valid complete with address, phone number, pictures,
+    directions, and more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • A search for Kennedy Space Center Visitor Complex was also performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The Kennedy Space Center query was then viewed by the mobile maps application
+    and we can even see the IP address.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we take a look at the IP address, which is part of the last query (174.253.2.53),
+    we can use either command line tools or an online IP lookup service ([What Is
+    My IP Address, n.d.](#BIB13)) to find out additional information. The results
+    are shown in [Fig. 7.12](#F0065).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xf07-12-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FIGURE 7.12 Results of IP address lookup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The information from the IP lookup service reveals several important pieces
+    of information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. The device is using the Verizon Wireless network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. The device was located in the Chicago, IL area (it is possible to spoof and
+    fake IP addresses but this is nontrivial and unlikely in most scenarios).
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we have the hex offset for the strings recovered, we could then look at data
+    surrounding this search to determine the general time frame the search took place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YAFFS2 Analyst Notes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The manual analysis required for much of the YAFFS2 forensics is certainly time
+    consuming and a bit daunting, which makes the barrier of entry much higher than
+    the analysis of well-understood and supported file systems. However, there are
+    many resources that are easily accessible to assist an analyst new to this approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, hopefully this book provided a good introduction to using Linux for forensic
+    analysis (please recommend that all of your friends and colleagues should have
+    a copy for their bookshelf).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Perhaps a bit more helpful is that a simple Google search will often result
+    in many helpful posts on blogs, discussion boards, mailing lists, and other such
+    resources. While there is certainly inaccurate information on the Internet, many
+    of the technical people working in these areas post quite accurate and precise
+    information. And, as a bonus, many of the authors are very responsive to inquiries
+    and clarifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, there is an excellent introduction to Linux for law enforcement and forensic
+    analysts, which is available online and at no cost. The web site, Linux LEO: The
+    Law Enforcement and Forensic Examiner’s Introduction to Linux, provides the guide
+    in PDF format and introduces the reader to Linux concepts needed to use the operating
+    system as a forensic tool ([Grundy, B., n.d.](#BIB8)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you use Linux further, you will find that it is quite easy to automate many
+    of the manual tasks. This not only allows you to have great control over how the
+    system works, but the automation can save considerable time. This is a great combination
+    as the busy examiner can process more forensic data with cutting edge tools and
+    at the same time explain exactly what the system did instead of just being able
+    to say that a button was clicked and a report was produced.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The easiest way to start automating common Linux tasks is to simply write a
+    shell script, which is very easy to write and essentially mimic the commands you
+    would type in a terminal session.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, let’s say you have a series of .csv files, which contain the results
+    from running the AFLogical forensic technique on an Android device. You need to
+    send the top row of each file to someone, but it should not contain any data from
+    the device. You could open each file manually, delete the data rows, save the
+    updated file to a new directory, and finally send the information. However, this
+    could take quite some time. Instead, you could write a simple shell script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let’s open a new file for editing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-70-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Then place the following into the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-71-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Then save the file by pressing Ctrl-O and exit with Ctrl-X. Next, we have to
+    make the script executable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-72-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The files we want to sanitize are in a directory called AFLogical on the home
+    directory of the user and, as you can tell, processing these by hand would be
+    quite time consuming:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-73-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can easily process these files simply now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-74-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Now, the AFLogical directory not only has a new subdirectory called sanitized
+    with each of the updated files in it, but also a single file containing the data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-75-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This data can be easily e-mailed or copied to another drive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here’s a more complex example, which will create a nandsim device, mount a blank
+    YAFFS2 file system, generate several files, and then allow the user to unmount
+    the file system. This is a quick way to automate the steps involved in testing
+    YAFFS2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-76a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-76b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Hopefully, the absence of commercial tools which support the YAFFS2 file system
+    is not viewed by the examiner as a situation where no additional data can be recovered.
+    Using free, open source tools available on an Ubuntu workstation clearly provides
+    a powerful means to further the investigation. When combining these techniques
+    with the hex analysis outlined in this chapter, an examiner should find they are
+    well prepared to extract evidence from YAFFS2 partitions on Android devices. When
+    a case involving a medical device that runs embedded Linux with the YAFFS2 file
+    system is placed on your desk you can confidently dive in and figure it out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android app analysis and reference
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While this chapter described many techniques useful for the forensic and security
+    investigation of Android devices, it is helpful to have a reference of where data
+    is stored for key applications. Of course, maintaining a complete reference would
+    be nearly impossible not only due to the sheer number of applications but also
+    due to the variation between specific devices and Android versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the following sections, we analyze 10 important applications from the reference
+    phones used throughout this book and provide the following data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 1. App information
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2. Files and directories (including /data/data, SD card, and eMMC)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3. Important database tables
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4. Analyst notes
+  prefs: []
+  type: TYPE_NORMAL
+- en: Through the app analysis, all time stamps are in Unix Epoch milliseconds, the
+    number of milliseconds since January 1, 1970, unless otherwise noted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The apps tested were installed and used on the device and then analyzed with
+    a custom Python program to automate some of the techniques described previously
+    in this chapter. While significant information is provided, be advised that this
+    is only a reference and likely incomplete. Analysts should use the forensic and
+    security tools as well as the techniques described above for a full analysis of
+    the device they are examining.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Messaging (sms and mms)
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This is the default app shipped with Android that handles SMS and MMS messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Messaging'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.android.providers.telephony'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 2.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Android'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.android.providers.telephony:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-77-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Important database tables and files for mms and sms are shown in [Table 7.4](#T0025).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.4 Important Database Tables and Files from /data/data/com.android.providers.telephony/databases/mmssms.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Database Tables/Files | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| words_content | Content of messages |'
+  prefs: []
+  type: TYPE_TB
+- en: '| part | MMS attachment details including type, name, location on file system
+    if binary (i.e., images), and content of attachment if plain text |'
+  prefs: []
+  type: TYPE_TB
+- en: '| sms | Full SMS messages including to, from, person, time stamp, read status,
+    send/receive status, and message content |'
+  prefs: []
+  type: TYPE_TB
+- en: Analyst Notes
+  prefs:
+  - PREF_H5
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.android.providers.telephony:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The app_parts folder will contain the MMS attachments and can include images,
+    video, or any other supported data. File types are not maintained, so use the
+    file command or other file signature analysis tools to identify.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The telephony database is usually of little interest as it only contains service
+    information for the wireless carrier(s).
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The sms table contains all the messages and should be the primary focus.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Several other tables seem to replicate parts of the sms table’s content, so
+    look at words_content and other tables to aid in your analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• See also: com.android.mms.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: MMS Helper Application
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This app stores some MMS data and appears to be a helper application for the
+    main Messaging app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: com.android.mm'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.android.mms'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 2.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Android'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.android.mms:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-78-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: • PART files in /data/data/com.android.mms/cache
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.android.mms:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • File “bufferFileForMms” might contain buffer data at the time of sending.
+    However, it usually only contains 0x00.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The PART files in cache are small PNG versions of the images found in the
+    Messaging app at /data/data/com.android.providers.telephony/app_parts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Browser
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This is the built-in web browser for Android, based on the open source WebKit
+    project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Internet'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.android.browser'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 2.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Android'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.android.browser:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-79a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-79b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In /app-cache/com.android.browser/cache:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-80-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: Local storage for supported web apps is shown in [Table 7.5](#T0030).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.5 Important Database Tables and Files from /data/data/com.android.browser/app_databases/http_www.google.com_0.localstorage
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Database Tables/Files | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ItemTable | This table is a simple list of key/value pairs; however, potentially
+    contains useful information for sites that were visited and takes advantage of
+    the localstorage feature. |'
+  prefs: []
+  type: TYPE_TB
+- en: Cached geoposition data is shown in [Table 7.6](#T0035).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.6 Important Database Tables and Files from /data/data/com.android.browser/app_geolocation/CachedGeoposition.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0035.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The geolocation permissions database is shown in [Table 7.7](#T0040).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.7 Important Database Tables and Files from /data/data/com.android.browser/app_geolocation/GeolocationPermissions.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Database Tables/Files | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Permissions | This table is list of origins (web sites) and the permission
+    for each (allow). For example, [http://www.google.com](http://www.google.com)
+    and the value 1 means Google’s web site has permission to access geolocation |'
+  prefs: []
+  type: TYPE_TB
+- en: '[Table 7.8](#T0045) shows the browser database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.8 Important Database Tables and Files from /data/data/com.android.browser/databases/browser.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0045.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '[Table 7.9](#T0050) shows the web view database.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.9 Important Database Tables and Files from /data/data/com.android.browser/databases/webview.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0050.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: And the web view cache database is shown in [Table 7.10](#T0055).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.10 Important Database Tables and Files from /data/data/com.android.browser/databases/webviewCache.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0055.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.android.browser:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Check the WebpageIcons.db in app_icons if looking for a particular site and
+    the site has a favicon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The specific app databases can contain very useful information. For example,
+    Google app database has previous search terms, many versions of cached “lon/lat/acc”
+    with time stamps and more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The com.adobe.flashplayer directory contains not only “Flash cookies,” which
+    end in the .sol extension and can be parsed by log2timeline, but also some of
+    the Flash .swf files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The browser database (databases/browser.db) contains a table called bookmarks,
+    which is generally pre-populated with bookmarks from the wireless carriers. This
+    same table also contains the web browser history. There is also a table called
+    Searches, which contains Google searches made from the browser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The web view database (databases/webview.db) contains considerable information
+    not only useful for a forensic examiner but also a security engineer. Cookies
+    are visible and most are not secure, meaning they may be vulnerable to a cookie
+    hijacking attack using a tool such as Firesheep. Form URL and data often contain
+    sensitive information as do httpauth and password.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The web view cache database (databases/webviewCache.db) provides the metadata
+    about the cache files stored in cache directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Most devices save the web view cache data as a subdirectory in /data/data/com.android.browser.
+    However, the HTC Incredible moved this directory to a tmpfs (RAM disk) directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Contacts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This app is the main contacts app provided by Android. While there are many
+    additional apps available, this app provides the core contact functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Contacts'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.android.providers.contacts'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 2.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Android'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.android.providers.contacts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-81-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: There is only one database, contacts2.db, and it has over 30 tables. A few of
+    the key tables are listed in [Table 7.11](#T0060).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.11 Important Database Tables and Files from /data/data/com.android.providers.contacts/databases/contacts2.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0060.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.android.providers.contacts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • This app stores the Call Logs for the device in the calls table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • There are over 30 tables in contacts2.db, so further inspection may be required.
+    The data table contains additional values about contacts and the raw_contacts
+    contains additional data about some contacts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The app is capable of storing contact information from many different accounts
+    including Gmail, Exchange, Facebook, Twitter, and more. Some of the data stored
+    include information from these other apps such as Facebook status messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • If pictures of the contacts are available, they are stored in the files directory
+    and named thumbnail_photo_[NNNNN].jpg. In the reference HTC Incredible, there
+    were over 200 images but duplicates were found.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Media Scanner
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This app scans and stores the metadata of media files available on internal
+    and external storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Media Store'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.android.providers.media'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 2.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Android'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.android.providers.media:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-82-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The structure of each database is similar, as shown in [Table 7.12](#T0065).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.12 Important Database Tables and Files from /data/data/com.android.providers.media/databases/
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0065.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.android.providers.media:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The database names contain the volume ID, if available. For example, on the
+    reference HTC Incredible device, the eMMC FAT32 file system has a volume ID of
+    0xc7f80810.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • If a directory has a file named .nomedia, then the media store will not scan
+    and record the metadata of files in that directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • If an image was deleted, the thumbnail likely still exists. Also, even if
+    the metadata record is deleted, it is likely recoverable due to the YAFFS2 file
+    system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Also scans for audio files, albums, etc.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Other media scanners and apps exist, so check for those. One stores thumbnails
+    on the SD card, which can provide an insight into deleted pictures and videos.
+  prefs: []
+  type: TYPE_NORMAL
+- en: YouTube
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: YouTube is a video viewing web site now owned by Google, for which they have
+    developed a native app for Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: YouTube'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.google.android.youtube'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 1.6.21'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Google'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.google.android.youtube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-83-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'YouTube preferences, including device key(s) and watched videos in /data/data/com.google.android.youtube/shared_prefs/youtube.xml:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-84-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Information about specific movies watched saved in XML file in /data/data/com.google.android.youtube/cache:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-85-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.google.android.youtube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Examine the XML files in the cache directory and in the shared_prefs directory
+    for information on videos viewed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • A snapshot of the opening image to a video can often be found on the device
+    using file carving or other techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cooliris Media Gallery
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This app was developed for the Google Nexus One and provides a media gallery
+    and scanner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Cooliris Media Gallery'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.cooliris.media'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 1.1.30682'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: Google Nexus One'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Cooliris'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.cooliris.media:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-86-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'More importantly, thumbnails are stored on the SD card:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-87-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: For this device, the picasa.db was empty, but presumably the databases will
+    contain useful information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.cooliris.media:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The real value in this app is that media discovered on the device is cached
+    on the SD card in “/mnt/sdcard/Android/data/com.cooliris.media/cache” and should
+    be examined closely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Google Maps
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This is the built-in Google Maps application used to view maps, search for endpoints,
+    and even provide directions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Google Maps'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.google.android.apps.maps'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 4.4.0'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Google'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.google.android.apps.maps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-88a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-88b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This app also stores data on the SD card:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-89a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-89b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: While each database should be examined, on the HTC Incredible, two contained
+    highly useful information. The first is the da_destination_history database as
+    shown in [Table 7.13](#T0070) and the search_history database shown in [Table
+    7.14](#T0075).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.13 Important Database Tables and Files from /data/data/com.google.android.apps.maps/databases/da_destination_history
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0070.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Table 7.14 Important Database Tables and Files from /data/data/com.google.android.apps.maps/databases/search_history.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0075.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The files directory also contains a significant amount of information. For
+    example, the first part of the DATA_LAYER_24 file contains the following strings:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-90-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The data stored on the SD card is used for the turn-by-turn directions for
+    the Google Maps Navigation and the turn-by-turn directions are time stamped:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-91-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.google.android.apps.maps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The app stores a significant amount of information about maps, tiles, searches,
+    and more in the files directory and should be closely examined.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • While each database may not contain information, both search_history.db and
+    da_destination_history should be examined closely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • While the shared_prefs direction contains some information, most is not useful
+    to a forensic examination. However, the authentication token can be recovered,
+    which may be of interest in a security review.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The Navigation function caches map data on the SD card, as well as .wav files
+    of the actual directions. If you look at the time stamps on the file, which are
+    prefaced with a “._speech_nav,” you can determine when the directions were provided
+    and also hear the actual spoken directions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Gmail
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Google provides a native client for their Gmail service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Gmail (Google Mail)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.google.android.gm'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 2.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Google'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /mnt/sdcard/Android/data/com.google.android.apps.maps/:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-92a-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![image](img/F10007Xu07-92b-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: The Gmail app stores a significant amount of information in SQLite databases
+    and a sample of key tables is shown in [Table 7.15](#T0080).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.15 Important Database Tables and Files from /data/data/com.google.android.gm/databases/mailstore.book@viaforensics.com.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0080.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '![Image](img/T10007XtabT0080a.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.google.android.gm:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Each configured Gmail account will have its own SQLite database, which will
+    contain the entire e-mail content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Other databases such as downloads.db, suggestions.db, and gmail.db contain
+    additional information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Some SQLite journal files may be recoverable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The cache/download directory stores downloads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The synced Gmail accounts are also referenced in the Gmail.xml in shared_prefs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Facebook
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This is the office Facebook app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Facebook'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.facebook.katana'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 1.2'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Facebook'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.facebook.katana:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-93-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: There is one primary database as shown in [Table 7.16](#T0085).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Table 7.16 Important Database Tables and Files from /data/data/com.facebook.katana/databases/fb.db
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Image](img/T10007XtabT0085.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.facebook.katana:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• The fb.db contains nearly all of the information and only three of the tables
+    were profiled above. Full table list includes the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • albums
+  prefs: []
+  type: TYPE_NORMAL
+- en: • info_contacts
+  prefs: []
+  type: TYPE_NORMAL
+- en: • notifications
+  prefs: []
+  type: TYPE_NORMAL
+- en: • android_metadata
+  prefs: []
+  type: TYPE_NORMAL
+- en: • key_value
+  prefs: []
+  type: TYPE_NORMAL
+- en: • perf_sessions
+  prefs: []
+  type: TYPE_NORMAL
+- en: • chatconversations
+  prefs: []
+  type: TYPE_NORMAL
+- en: • mailbox_messages
+  prefs: []
+  type: TYPE_NORMAL
+- en: • photos
+  prefs: []
+  type: TYPE_NORMAL
+- en: • chatmessages
+  prefs: []
+  type: TYPE_NORMAL
+- en: • mailbox_messages_display
+  prefs: []
+  type: TYPE_NORMAL
+- en: • search_results
+  prefs: []
+  type: TYPE_NORMAL
+- en: • default_user_images
+  prefs: []
+  type: TYPE_NORMAL
+- en: • mailbox_profiles
+  prefs: []
+  type: TYPE_NORMAL
+- en: • stream_photos
+  prefs: []
+  type: TYPE_NORMAL
+- en: • events
+  prefs: []
+  type: TYPE_NORMAL
+- en: • mailbox_threads
+  prefs: []
+  type: TYPE_NORMAL
+- en: • user_statuses
+  prefs: []
+  type: TYPE_NORMAL
+- en: • friends
+  prefs: []
+  type: TYPE_NORMAL
+- en: • mailbox_users
+  prefs: []
+  type: TYPE_NORMAL
+- en: • user_values
+  prefs: []
+  type: TYPE_NORMAL
+- en: • The files directory contains a significant number of images from the Facebook
+    app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adobe Reader
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: App Info
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: This is the official Abode Reader for PDF files
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App Name: Adobe Reader'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Package name: com.adobe.reader'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Version: 9.0.1'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• Device: HTC Incredible'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '• App developer: Adobe'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Directories, Files, and File Types
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'In /data/data/com.adobe.reader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-94-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important Database Tables and Files
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The com.adobe.reader.preferences.xml preferences file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![image](img/F10007Xu07-95-9781597496513.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Analyst Notes
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Analyst notes for /data/data/com.adobe.reader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: • Cached PDF files are stored in the cache directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: • A list of recent files is stored in cache/com.adobe.reader.preferences.xml.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While the acquisition of Android devices is the focus of much research, development,
+    and discussion, it is really only half of the challenge of Android forensics.
+    Analysis is needed with both logical and physical techniques. However, the amount
+    of analysis needed after a physical acquisition is far greater. The goal of this
+    chapter was to provide techniques that would allow a forensic analyst or security
+    engineer to examine and extract data from acquisitions even if the file systems
+    are not supported by forensic utilities. By leveraging existing forensic utilities,
+    Linux commands and, at times, hex analysis, much of the data required for an investigation
+    are available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: References
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 1\. *File times (Windows)*. (n.d.). Retrieved February 13, 2011, from [http://msdn.microsoft.com/en-us/library/ms724290%28VS.85%29.aspx](http://msdn.microsoft.com/en-us/library/ms724290%28VS.85%29.aspx).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 2\. Carrier, B. (n.d.). Mactime output—SleuthKitWiki. Retrieved February 13,
+    2011, from [http://wiki.sleuthkit.org/index.php?title=Mactime_output](http://wiki.sleuthkit.org/index.php%3Ftitle%3DMactime_output).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3\. Casey, E. (n.d.). Misinterpretation of file system timestamps. Retrieved
+    February 13, 2011, from [http://blog.cmdlabs.com/2009/05/08/misinterpretation-of-file-system-timestamps/](http://blog.cmdlabs.com/2009/05/08/misinterpretation-of-file-system-timestamps/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 4\. *Debugging in Android with tombstones*. (n.d.). Retrieved March 14, 2011,
+    from [http://crazydaks.com/debugging-in-android-with-tombstones.html](http://crazydaks.com/debugging-in-android-with-tombstones.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '5\. *Digital assembly: Adroit photo forensics—SmartCarving™*. (n.d.). Retrieved
+    February 13, 2011, from [http://digital-assembly.com/products/adroit-photo-forensics/features/smartcarving.html](http://digital-assembly.com/products/adroit-photo-forensics/features/smartcarving.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 6\. *Digital Detective—DCode*. (n.d.). Retrieved February 14, 2011, from [http://www.digital-detective.co.uk/freetools/decode.asp](http://www.digital-detective.co.uk/freetools/decode.asp).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 7\. *Epoch converter—epoch & unix timestamp conversion tools*. (n.d.). Retrieved
+    February 14, 2011, from [http://www.epochconverter.com/](http://www.epochconverter.com/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 8\. Grundy, B. (n.d.). Linux LEO. Retrieved February 19, 2011, from [http://www.linuxleo.com](http://www.linuxleo.com).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 9\. Kessler, G. (n.d.). File signatures table. Retrieved February 13, 2011,
+    from [http://www.garykessler.net/library/file_sigs.html](http://www.garykessler.net/library/file_sigs.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '10\. Ross, A. (n.d.). digfor: Time and timestamps. Retrieved February 13, 2011,
+    from [http://digfor.blogspot.com/2008/10/time-and-timestamps.html](http://digfor.blogspot.com/2008/10/time-and-timestamps.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 11\. *Rovio—Angry Birds*. (n.d.). Retrieved February 15, 2011, from [http://www.rovio.com/index.php?page=angry-birds](http://www.rovio.com/index.php%3Fpage%3Dangry-birds).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '12\. *Scalpel: a frugal, high performance file carver*. (n.d.). Retrieved February
+    13, 2011, from [www.digitalforensicssolutions.com/Scalpel/](http://www.digitalforensicssolutions.com/Scalpel/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 13\. *What is my IP address*. (n.d.). Retrieved February 19, 2011, from [http://www.whatismyip.com/](http://www.whatismyip.com/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 14\. *YAFFS debugging*. (n.d.). Retrieved February 17, 2011, from [http://www.yaffs.net/yaffs-debugging](http://www.yaffs.net/yaffs-debugging).
+  prefs: []
+  type: TYPE_NORMAL
