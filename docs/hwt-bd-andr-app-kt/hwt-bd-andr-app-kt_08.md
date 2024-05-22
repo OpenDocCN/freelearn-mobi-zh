@@ -313,7 +313,13 @@ private fun onCreate() {
         .build()
 ```
 
-要启动一个前台服务，并将通知附加到其中，我们调用`startForeground(Int, Notification)`函数，传入一个通知 ID（任何唯一的整数值来标识此服务，不能为 0）和一个通知，其优先级必须设置为`PRIORITY_LOW`或更高。在我们的情况下，我们没有指定优先级，这将使其设置为`PRIORITY_DEFAULT`：```kt    startForeground(NOTIFICATION_ID, notificationBuilder.build())```如果启动，我们的服务现在将显示一个粘性通知。点击通知将启动我们的主活动。但是，我们的服务不会执行任何有用的操作。要为其添加一些功能，我们需要重写`onStartCommand(Intent?, Int, Int)`。当服务通过意图启动时，此函数将被调用，这也给了我们机会读取通过该意图传递的任何额外数据。它还为我们提供了标志（可能设置为`START_FLAG_REDELIVERY`或`START_FLAG_RETRY`）和一个唯一的请求 ID。
+要启动一个前台服务，并将通知附加到其中，我们调用`startForeground(Int, Notification)`函数，传入一个通知 ID（任何唯一的整数值来标识此服务，不能为 0）和一个通知，其优先级必须设置为`PRIORITY_LOW`或更高。在我们的情况下，我们没有指定优先级，这将使其设置为`PRIORITY_DEFAULT`：
+
+```kt
+    startForeground(NOTIFICATION_ID, notificationBuilder.build())
+```
+
+如果启动，我们的服务现在将显示一个粘性通知。点击通知将启动我们的主活动。但是，我们的服务不会执行任何有用的操作。要为其添加一些功能，我们需要重写`onStartCommand(Intent?, Int, Int)`。当服务通过意图启动时，此函数将被调用，这也给了我们机会读取通过该意图传递的任何额外数据。它还为我们提供了标志（可能设置为`START_FLAG_REDELIVERY`或`START_FLAG_RETRY`）和一个唯一的请求 ID。
 
 我们将在本章后面读取额外的数据。在简单的实现中，您不需要担心标志或请求 ID。重要的是要注意，`onStartCommand(Intent?, Int, Int)`在 UI 线程上调用，因此不要在这里执行任何长时间运行的操作，否则您的应用程序将冻结，给用户带来不良体验。相反，我们可以使用新的`HandlerThread`（一个带有 looper 的线程，用于为线程运行消息循环的类）创建一个新的处理程序，并将我们的工作发布到其中。这意味着我们将有一个无限循环运行，等待我们通过`Handler`发布工作。当我们收到启动命令时，我们可以将要执行的工作发布到其中。然后该工作将在该线程上执行。
 
