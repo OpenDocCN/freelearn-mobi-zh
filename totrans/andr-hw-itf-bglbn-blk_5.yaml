@@ -1,64 +1,92 @@
 - en: Chapter 5. Interfacing with High-speed Sensors Using SPI
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第5章. 使用SPI与高速传感器接口
 - en: In the previous chapter, you worked with the I2C bus to communicate with an
     FRAM device that requires far more complex communications than that of the simple
     on/off digital communications used by GPIOs. I2C is very powerful and flexible,
     but it can be quite slow.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一章中，你使用I2C总线与FRAM设备通信，该设备需要比GPIO使用的简单开关数字通信更复杂的通信。I2C非常强大且灵活，但它的速度可能会比较慢。
 - en: 'In this chapter, you will learn how to write an Android app that uses the BBB''s
     SPI capabilities to retrieve environmental data from a high-speed sensor. We will
     cover the following topics:'
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，你将学习如何编写一个Android应用程序，利用BBB的SPI功能从高速传感器获取环境数据。我们将涵盖以下主题：
 - en: Understanding SPI
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 理解SPI
 - en: Multiplexing for SPI on the BBB
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: BBB上的SPI复用
 - en: Representing SPI devices in the Linux kernel
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Linux内核中表示SPI设备
 - en: Building an SPI interface circuit
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 构建SPI接口电路
 - en: Exploring the SPI sensor example app
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 探索SPI传感器示例应用程序
 - en: Understanding SPI
+  id: totrans-8
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 理解SPI
 - en: 'The **Serial Peripheral Interface** (**SPI**) bus is a high-speed, serial bus
     originally developed by Motorola. Its purpose is to facilitate point-to-point
     communication between a single master device and one or more slave device. The
     SPI bus is typically implemented using four signals:'
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: '**串行外围设备接口**（**SPI**）总线是一种由摩托罗拉公司最初开发的高速串行总线。其目的是促进单一主设备与一个或多个从设备之间的点对点通信。SPI总线通常使用四个信号实现：'
 - en: '`SCLK`'
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SCLK`'
 - en: '`MOSI`'
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MOSI`'
 - en: '`MISO`'
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MISO`'
 - en: '`SS`/`CS`'
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SS`/`CS`'
 - en: Like I2C, the master on the SPI bus sets the pace of communication between the
     master and the slave by producing a clock signal. With SPI, this clock signal
     is called the **serial clock** (`SCLK`). Unlike the bidirectional data bus of
@@ -72,37 +100,53 @@
     `MOSI`. There are variants on this four-wire SPI bus scheme, such as a three-wire
     scheme that omits the `SS`/`CS` signal, but the BBB uses a four-wire scheme for
     its SPI buses.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 与I2C类似，SPI总线上的主设备通过产生时钟信号来控制主从设备之间的通信节奏。在SPI中，这个时钟信号被称为**串行时钟**（`SCLK`）。与I2C的双向数据总线不同，SPI为每个设备使用专用的发送和接收数据线。使用专用线使得SPI能够实现远高于I2C的通信速度。主设备通过**主出从入**（`MOSI`）信号向从设备发送数据，并通过**主入从出**（`MISO`）信号从从设备接收数据。**从设备选择**（`SS`）信号，也称为**芯片选择**（`CS`），它告诉从设备是否应该保持唤醒状态并注意`SCLK`上的任何时钟信号以及通过`MOSI`发送给它的数据。这种四线SPI总线方案有变体，例如省略`SS`/`CS`信号的三线方案，但BBB在其SPI总线上使用四线方案。
 - en: '![Understanding SPI](img/00022.jpeg)'
+  id: totrans-15
   prefs: []
   type: TYPE_IMG
+  zh: '![理解SPI](img/00022.jpeg)'
 - en: The SPI master and slave devices on an SPI bus
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: SPI总线上的SPI主设备和从设备
 - en: The BBB can act as either an SPI master or slave, so it does not label its data
     input and output signals for SPI as `MISO` or `MOSI`. Instead, it uses the names
     `D0` and `D1` for these signals. If the BBB acts as the master on the SPI bus,
     `D0` is the `MISO` signal and `D1` is the `MOSI` signal. If the BBB acts as the
     slave on the SPI bus, these are reversed (`D1` is `MISO`, `D0` is `MOSI`). For
     this book, the BBB will always be acting as the SPI master.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: BBB可以作为SPI的主设备或从设备，因此它没有将其SPI的数据输入和输出信号标记为`MISO`或`MOSI`。相反，它使用`D0`和`D1`这些信号的名字。如果BBB在SPI总线上作为主设备，`D0`是`MISO`信号，`D1`是`MOSI`信号。如果BBB在SPI总线上作为从设备，这些信号是相反的（`D1`是`MISO`，`D0`是`MOSI`）。对于本书，BBB将始终作为SPI主设备。
 - en: Tip
+  id: totrans-18
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**How do I remember which BBB SPI signal is input and which is output?**'
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: '**我该如何记住哪个是BBB的SPI输入信号，哪个是输出信号？**'
 - en: It can be confusing to remember which signal is `MISO` and which is `MOSI` when
     the BBB uses the signal names `D0` and `D1`. One way to remember is to think of
     the `0` in `D0` as an *O* (for slave output) and the `1` in `D1` as an *I* (for
     slave input). If the BBB is the SPI master (which will almost always be the case),
     then `D1` is the slave input signal (`MOSI`) and `D0` is the slave output signal
     (`MISO`).
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 当 BBB 使用信号名称 `D0` 和 `D1` 时，记住哪个信号是 `MISO` 和哪个是 `MOSI` 可能会令人困惑。记住的一个方法是，将 `D0`
+    中的 `0` 视为 *O*（代表从设备输出），将 `D1` 中的 `1` 视为 *I*（代表从设备输入）。如果 BBB 是 SPI 主设备（几乎总是这种情况），那么
+    `D1` 就是从设备输入信号（`MOSI`），而 `D0` 就是从设备输出信号（`MISO`）。
 - en: The maximum `SCLK` speed for SPI on the BBB is 48 MHz, but speeds ranging from
     1 MHz to 16 MHz are commonly used. Even at these reduced clock speeds, SPI is
     far superior to the 400 KHz clock speed of I2C buses when considering the amount
@@ -110,51 +154,75 @@
     data on an I2C bus at any time, but both the master and slave can transmit data
     simultaneously on an SPI bus because each device has a dedicated transmission
     signal.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: BBB 上 SPI 的最大 `SCLK` 速度为 48 MHz，但通常使用的速度范围从 1 MHz 到 16 MHz。即使在这些降低的时钟速度下，考虑到每秒可以传输的原始数据量，SPI
+    也远胜于 I2C 总线的 400 KHz 时钟速度。在任何时刻，I2C 总线上只能有一个设备传输数据，但在 SPI 总线上，由于每个设备都有专用的传输信号，主设备和从设备可以同时传输数据。
 - en: Multiplexing for SPI on the BBB
+  id: totrans-22
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: BBB 上的 SPI 复用
 - en: 'The AM335X processor of the BBB provides two SPI buses: SPI0 and SPI1\. Both
     buses are accessible via the P9 header. By default, no SPI buses are muxed. The
     following figure shows each of the potential pins on the P9 header where SPI signals
     can be muxed in different pinmux modes:'
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: BBB 上的 AM335X 处理器提供了两个 SPI 总线：SPI0 和 SPI1。这两条总线都可以通过 P9 头访问。默认情况下，没有将任何 SPI
+    总线进行复用。下图展示了 P9 头上可能的每个引脚，这些引脚可以在不同的 pinmux 模式下复用 SPI 信号：
 - en: '![Multiplexing for SPI on the BBB](img/00023.jpeg)'
+  id: totrans-24
   prefs: []
   type: TYPE_IMG
+  zh: '![BBB 上的 SPI 复用](img/00023.jpeg)'
 - en: Locations of the SPI buses on the P9 header with different pinmux modes
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 在不同 pinmux 模式下 P9 头上 SPI 总线的位置
 - en: 'When deciding how you would like your pins to be muxed using SPI in your projects,
     keep the following in mind:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 在决定如何在你的项目中使用 SPI 复用引脚时，请记住以下事项：
 - en: When in doubt, stick with using the SPI0 bus muxed to the P9.17, P9.18, P9.21,
     and P9.22 pins.
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如有疑问，请坚持使用复用到 P9.17、P9.18、P9.21 和 P9.22 引脚的 SPI0 总线。
 - en: The SPI1 channel conflicts with the I2C bus used by the capemgr (P9.20) and
     audio output (P9.28, P9.29, P9.31). Be aware that muxing these pins to use SPI1
     can disable some other functionality that you are depending upon for a full-featured
     Android system.
+  id: totrans-28
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: SPI1 通道与 capemgr 使用的 I2C 总线（P9.20）和音频输出（P9.28、P9.29、P9.31）冲突。请注意，将这些引脚复用为 SPI1
+    可能会禁用你依赖的一些其他功能，以实现功能齐全的 Android 系统。
 - en: If you are using other cape boards in your projects, make sure that these capes
     don't require the use of the SPI buses. Only one device can exist on each SPI
     bus unless you use a GPIO pin and extra logic circuitry to manually control each
     SPI device's chip select signal.
+  id: totrans-29
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果在你的项目中使用了其他 cape 板，请确保这些 cape 板不需要使用 SPI 总线。除非你使用 GPIO 引脚和额外的逻辑电路手动控制每个 SPI
+    设备的片选信号，否则每条 SPI 总线上只能存在一个设备。
 - en: Representing SPI devices in the Linux kernel
+  id: totrans-30
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在 Linux 内核中表示 SPI 设备
 - en: The Linux kernel provides a general-purpose SPI driver named `spidev`. The `spidev`
     driver is a simple interface that abstracts many of the housekeeping details involved
     in SPI communications. The `spidev` driver is exposed via the `/dev` filesystem
@@ -165,61 +233,90 @@
     (0 for the first bus and 1 for the second bus). For the examples in this book,
     you will only be using the first SPI bus of the SPI0 controller, so `/dev/spidev1.0`
     is the only file with which PacktHAL will interact.
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: Linux 内核提供了一个名为 `spidev` 的通用 SPI 驱动程序。`spidev` 驱动程序是一个简单的接口，它抽象了 SPI 通信中涉及到的许多细节。`spidev`
+    驱动程序通过 `/dev` 文件系统作为 `/dev/spidevX.Y` 文件暴露出来。根据 Device Tree 中配置的 SPI 总线数量，可能存在多个版本的这些
+    `spidev` 文件。`spidev` 文件名中的 `X` 值指的是 SPI 控制器编号（SPI0 为 1，SPI1 为 2），而 `Y` 值指的是该控制器的
+    SPI 总线（第一条总线为 0，第二条总线为 1）。对于本书中的示例，你将只使用 SPI0 控制器的第一条 SPI 总线，因此 PacktHAL 将只与 `/dev/spidev1.0`
+    文件交互。
 - en: Preparing Android for SPI sensor use
+  id: totrans-32
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 为 SPI 传感器使用准备 Android
 - en: In [Chapter 2](part0019_split_000.html#page "Chapter 2. Interfacing with Android"),
     *Interfacing with Android*, you used `adb` to push two prebuilt files to your
     Android system. These two files, `BB-PACKTPUB-00A0.dtbo` and `init.{ro.hardware}.rc`,
     configure your Android system to enable the `spidev` kernel device driver that
     handles SPI bus interfacing, muxes the pins to enable the SPI0 bus, and allow
     your apps to access them.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第2章](part0019_split_000.html#page "Chapter 2. Interfacing with Android")《*与Android接口*》中，你使用`adb`将两个预构建的文件推送到你的Android系统中。这两个文件，`BB-PACKTPUB-00A0.dtbo`和`init.{ro.hardware}.rc`，配置了你的Android系统以启用处理SPI总线接口的`spidev`内核设备驱动，复用引脚以启用SPI0总线，并允许你的应用程序访问它们。
 - en: 'As far as SPI is concerned, the `BB-PACKTPUB-00A0.dtbo` overlay muxes the P9.17,
     P9.18, P9.21, and P9.22 pins into the SPI `CS0`, `D1`, `D0`, and `SCLK` signals,
     respectively. In the `PacktHAL.tgz` file, the source code for the overlay is located
     in the `cape/BB-PACKTPUB-00A0.dts` file. The code responsible for muxing these
     two pins is located in the `bb_spi0_pins` node within `fragment@0`:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 就SPI而言，`BB-PACKTPUB-00A0.dtbo`覆盖将P9.17、P9.18、P9.21和P9.22引脚复用为SPI的`CS0`、`D1`、`D0`和`SCLK`信号。在`PacktHAL.tgz`文件中，覆盖源代码位于`cape/BB-PACKTPUB-00A0.dts`文件中。负责复用这两个引脚的代码位于`fragment@0`中的`bb_spi0_pins`节点内。
 - en: '[PRE0]'
+  id: totrans-35
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'While this sets up the muxing, it doesn''t assign and configure a device driver
     to these pins. The `fragment@2` node performs this kernel driver allocation:'
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然这设置了复用功能，但它并没有为这些引脚分配和配置设备驱动。`fragment@2`节点执行这个内核驱动分配的任务：
 - en: '[PRE1]'
+  id: totrans-37
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Without digging into the fine details, there are three settings in `fragment@2`
     that are of interest to you:'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 不深入研究细节，`fragment@2`中有三个设置是你感兴趣的：
 - en: '`pinctrl-0`'
+  id: totrans-39
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pinctrl-0`'
 - en: '`compatible`'
+  id: totrans-40
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`compatible`'
 - en: '`spi-max-frequency`'
+  id: totrans-41
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`spi-max-frequency`'
 - en: The first is `pinctrl-0`, which ties this node of Device Tree to the pins muxed
     in the `bb_spi0_pins` node. The second is `compatible`, which specifies the particular
     kernel driver, `spidev`, that will handle our hardware device. The last is `spi-max-frequency`,
     which specifies the maximum allowable speed for this SPI bus (16 MHz). 16 MHz
     is the maximum frequency specified for `spidev` in the Device Tree overlays provided
     with the BBB's kernel source.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一个是`pinctrl-0`，它将Device Tree的这个节点与`bb_spi0_pins`节点中复用的引脚连接起来。第二个是`compatible`，它指定了将处理我们硬件设备的特定内核驱动，即`spidev`。最后是`spi-max-frequency`，它指定了此SPI总线的最大允许速度（16
+    MHz）。16 MHz是在BBB的内核源提供的Device Tree覆盖中为`spidev`指定的最大频率。
 - en: The custom `init.{ro.hardware}.rc` file that you pushed to the Android system
     doesn't have to do anything special for PacktHAL's SPI interfacing. By default,
     BBBAndroid uses `chmod` to set the permissions of the `/dev/spidev*` files to
@@ -228,17 +325,23 @@
     to the hardware. For our purposes, though, having the `/dev/spidev*` files accessible
     to every process is necessary to allow our unprivileged example app access to
     the SPI bus.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 你推送到Android系统的自定义`init.{ro.hardware}.rc`文件不需要为PacktHAL的SPI接口做任何特别的事情。默认情况下，BBBAndroid使用`chmod`将`/dev/spidev*`文件的权限设置为777（对所有人完全访问）。这并不是一个安全的做法，因为系统上的任何进程都可能打开一个`spidev`设备并开始读写硬件。然而，对于我们的目的来说，让每个进程都能访问`/dev/spidev*`文件是必要的，以允许我们的非特权示例应用程序访问SPI总线。
 - en: Building an SPI interface circuit
+  id: totrans-44
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 构建一个SPI接口电路
 - en: Now that you have an understanding of where SPI devices are connected to the
     BBB and how the Linux kernel presents an interface to these devices, it is time
     to connect an SPI device to the BBB.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然你已经了解了SPI设备是如何连接到BBB的，以及Linux内核是如何为这些设备提供接口的，现在是时候将一个SPI设备连接到BBB上了。
 - en: As we mentioned in [Chapter 1](part0014_split_000.html#page "Chapter 1. Introduction
     to Android and the BeagleBone Black"), *Introduction to Android and the BeagleBone
     Black*, you will be interfacing with a sensor in this chapter. To be specific,
@@ -246,34 +349,50 @@
     component provides pressure data samples (in 16- to 19-bit resolution) and temperature
     data samples (in 16-bit resolution) for applications used for navigation, weather
     forecasting, and to measure changes in vertical elevation and so on.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们在[第1章](part0014_split_000.html#page "Chapter 1. Introduction to Android
+    and the BeagleBone Black")《*Android与BeagleBone Black简介*》中提到的，本章你将和一个传感器进行接口交互。具体来说，我们将使用博世Sensortec的BMP183数字压力传感器。这个7针组件为用于导航、天气预报以及测量垂直高度变化等应用提供压力数据样本（16位至19位分辨率）和温度数据样本（16位分辨率）。
 - en: This particular chip is only available in a **land grid array** (**LGA**), which
     is a surface mount package that can be difficult to work with when building prototype
     circuits. Luckily for us, the AdaFruit breakout board for the sensor already has
     the chip mounted, which makes prototyping simple and easy.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个特定的芯片仅提供**LGA**（**land grid array**，地表网格阵列）封装，这种表面贴装封装在构建原型电路时可能难以操作。幸运的是，AdaFruit为该传感器提供的开发板已经装好了芯片，这使得原型设计变得简单和容易。
 - en: '![Building an SPI interface circuit](img/00024.jpeg)'
+  id: totrans-48
   prefs: []
   type: TYPE_IMG
+  zh: '![构建SPI接口电路](img/00024.jpeg)'
 - en: 'The sensor breakout board (source: [www.adafruit.com](http://www.adafruit.com))'
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 传感器开发板（来源：[www.adafruit.com](http://www.adafruit.com)）
 - en: The breakout board labels the `SCLK` signal as `SCK`, `MOSI` as `SDI` (serial
     data in), `MISO` as `SDO` (serial data out), and `SS` as `CS` (chip select). To
     power the board, a +3.3 V signal is connected to `VCC` and a ground is connected
     to `GND`. The `3Vo` signal of the breakout board provides a +3.3 V signal and
     is not used in our examples.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 开发板将`SCLK`信号标记为`SCK`，`MOSI`为`SDI`（串行数据输入），`MISO`为`SDO`（串行数据输出），以及`SS`为`CS`（芯片选择）。为了给开发板供电，将+3.3
+    V信号连接到`VCC`，并将地线连接到`GND`。开发板上的`3Vo`信号提供一个+3.3 V信号，在我们的示例中未使用。
 - en: Tip
+  id: totrans-51
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Don''t disassemble your circuit!**'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: '**不要拆开你的电路！**'
 - en: The sensor circuit in this chapter is part of a much larger circuit used in
     [Chapter 6](part0041_split_000.html#page "Chapter 6. Creating a Complete Interfacing
     Solution"), *Creating a Complete Interfacing Solution*. If you build the circuit
@@ -282,27 +401,40 @@
     remaining circuits in this book. This way, it will already be constructed and
     working when you reach [Chapter 6](part0041_split_000.html#page "Chapter 6. Creating
     a Complete Interfacing Solution").
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节中的传感器电路是[第6章](part0041_split_000.html#page "第6章. 创建完整的接口解决方案")*创建完整的接口解决方案*中使用的更大电路的一部分。如果你按照原理图中的位置（在面包板中部）搭建电路，那么在构建本书其余电路时，你可以简单地将传感器开发板和电线留在原位。这样，当你到达[第6章](part0041_split_000.html#page
+    "第6章. 创建完整的接口解决方案")时，它就已经构建好并可以工作了。
 - en: Connecting the sensor
+  id: totrans-54
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 连接传感器
 - en: The following figure shows the connections between the sensor breakout board
     and the BBB. The six main SPI bus signals (+3.3 V, ground, and the SPI `SCLK`,
     `MISO`, `MOSI`, and `SS`) are made using the pins of the P9 connector, so we have
     placed the breadboard on the P9 side of the BBB.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 下图展示了传感器开发板与BBB之间的连接。六个主要的SPI总线信号（+3.3 V、地、以及SPI `SCLK`、`MISO`、`MOSI`和`SS`）使用P9连接器的引脚进行连接，因此我们将面包板放在BBB的P9侧。
 - en: '![Connecting the sensor](img/00025.jpeg)'
+  id: totrans-56
   prefs: []
   type: TYPE_IMG
+  zh: '![连接传感器](img/00025.jpeg)'
 - en: The complete sensor interfacing circuit
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 完整的传感器接口电路
 - en: 'Let''s get started:'
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧：
 - en: Connect P9.1 (ground) to the vertical ground bus of the breadboard and P9.3
     (3.3 V) to the vertical VCC bus of the breadboard. These connections are identical
     to the ones made for the GPIO and I2C breadboard circuits you created in [Chapter
@@ -310,31 +442,43 @@
     *Handling Inputs and Outputs with GPIOs* and [Chapter 4](part0029_split_000.html#page
     "Chapter 4. Storing and Retrieving Data with I2C"), *Storing and Retrieving Data
     with I2C*.
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将P9.1（地）连接到面包板的地线总排，将P9.3（3.3 V）连接到面包板的电源线总排。这些连接与你在[第3章](part0024_split_000.html#page
+    "第3章. 使用GPIO处理输入和输出")*使用GPIO处理输入和输出*和[第4章](part0029_split_000.html#page "第4章.
+    使用I2C存储和检索数据")*使用I2C存储和检索数据*中创建的GPIO和I2C面包板电路的连接相同。
 - en: The four SPI bus signals, `SCLK`, `MISO` (`D0`), `MOSI` (`D1`), and `SS` are
     on the P9.22, P9.21, P9.18, and P9.17 pins, respectively. Wire the P9.22 pin to
     the pin marked SCK on the breakout board, and wire the P9.21 pin to the pin marked
     SDO. Then, wire the P9.18 pin to the pin marked SDI, and wire P9.17 to the pin
     marked CS.
+  id: totrans-60
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 四个SPI总线信号，`SCLK`、`MISO` (`D0`)、`MOSI` (`D1`) 和 `SS` 分别位于P9.22、P9.21、P9.18和P9.17引脚上。将P9.22引脚连接到开发板上标记为SCK的引脚，将P9.21引脚连接到标记为SDO的引脚。然后，将P9.18引脚连接到标记为SDI的引脚，并将P9.17引脚连接到标记为CS的引脚。
 - en: Wire the ground bus to the GND pin of the breakout board and the VCC bus to
     the VCC pin of the breakout board. Leave the 3Vo pin of the breakout board unconnected.
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将地线总排连接到开发板上的GND引脚，以及电源线总排连接到开发板上的VCC引脚。将开发板上的3Vo引脚保持未连接。
 - en: The sensor breakout board is now electrically connected to the BBB and is ready
     for your use. Double-check your wiring against the diagram of the complete sensor
     interfacing circuit to ensure that everything is connected properly.
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 传感器开发板现在电气连接到 BBB，并准备好供您使用。请对照完整的传感器接口电路图再次检查您的布线，以确保一切连接正确。
 - en: Exploring the SPI sensor example app
+  id: totrans-63
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 探索 SPI 传感器示例应用
 - en: In this section, you will examine the example Android app that performs the
     SPI bus interfacing on BBB. The purpose of this application is to demonstrate
     how to use PacktHAL to perform SPI reads and writes from within an actual app
@@ -342,8 +486,12 @@
     data between the SPI bus master (the BBB) and the SPI bus slave (the SPI sensor).
     The low-level details of the hardware interfacing are implemented in PacktHAL,
     so you can quickly and easily get your apps interacting with the sensor.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本节中，您将研究一个示例 Android 应用，该应用在 BBB 上执行 SPI 总线接口。此应用程序的目的是演示如何使用 PacktHAL 在实际应用中使用一组接口函数执行
+    SPI 读写。这些函数允许您在 SPI 总线主设备（BBB）和 SPI 总线从设备（SPI 传感器）之间发送和接收数据。硬件接口的底层细节在 PacktHAL
+    中实现，因此您可以快速轻松地使您的应用与传感器交互。
 - en: Before digging through the SPI app's code, you must install the code to your
     development system and install the app to your Android system. The source code
     for the app and the precompiled `.apk` packages are located in the `chapter5.tgz`
@@ -352,24 +500,37 @@
     in [Chapter 3](part0024_split_000.html#page "Chapter 3. Handling Inputs and Outputs
     with GPIOs"), *Handling Inputs and Outputs with GPIOs* and *Chapter 4, Storing
     and Retrieving Data with I2C*.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 在深入探讨 SPI 应用的代码之前，您必须将代码安装到您的开发系统上，并将应用安装到您的 Android 系统上。应用的源代码和预编译的 `.apk`
+    包位于 `chapter5.tgz` 文件中，可以从 Packt 的网站下载。按照与 [第3章](part0024_split_000.html#page
+    "Chapter 3. Handling Inputs and Outputs with GPIOs")，*使用 GPIO 处理输入和输出* 和 *第4章，使用
+    I2C 存储和检索数据* 中描述的相同过程，下载并将应用添加到您的 Eclipse ADT 环境。
 - en: The app's user interface
+  id: totrans-66
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 应用的用户界面
 - en: The app uses a very simple UI to interact with the sensor. As it is so simple,
     the only activity that the app has (by default) is `MainActivity`. The UI consists
     of only one button and two text views.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 该应用使用一个非常简单的 UI 与传感器交互。由于它非常简单，因此应用默认只有一个 `MainActivity`。UI 只包含一个按钮和两个文本视图。
 - en: '![The app''s user interface](img/00026.jpeg)'
+  id: totrans-68
   prefs: []
   type: TYPE_IMG
+  zh: '![应用的界面](img/00026.jpeg)'
 - en: The sensor sample app screen prior to receiving its first set of samples from
     the sensor
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 在从传感器接收第一组样本之前，传感器示例应用屏幕的外观
 - en: The top text view has the `temperatureTextView` identifier in the `activity_main.xml`
     file, and the bottom text view has the `pressureTextView` identifier. These text
     views will display the temperature and pressure data that is retrieved from the
@@ -378,58 +539,84 @@
     the process of interfacing with the sensor to sample the temperature and pressure
     data and then updating the text displayed in the `temperatureTextView` and `pressureTextView`
     text views.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 `activity_main.xml` 文件中，顶部文本视图的标识符为 `temperatureTextView`，底部文本视图的标识符为 `pressureTextView`。这些文本视图将显示从传感器获取的温度和压力数据。带有**采样**标签的按钮的标识符为
+    `sampleButton`。此按钮有一个 `onClick()` 方法，名为 `onClickSampleButton()`，它将触发与传感器接口的过程，以采样温度和压力数据，并更新
+    `temperatureTextView` 和 `pressureTextView` 文本视图显示的文本。
 - en: Calling the PacktHAL sensor functions
+  id: totrans-71
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 调用 PacktHAL 传感器功能
 - en: The sensor interface functionality in PacktHAL is implemented in a variety of
     C functions in the `jni/bmp183.c` file within the `sensor` app's project. These
     functions not only interface with the sensor, but they also do a variety of conversion
     and calibration tasks.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: PacktHAL 中的传感器接口功能在 `sensor` 应用项目中的 `jni/bmp183.c` 文件中用各种 C 函数实现。这些函数不仅与传感器接口，还执行各种转换和校准任务。
 - en: The `fram` app in the previous chapter used a specific kernel driver (the `24c256`
     EEPROM driver) to interact with the FRAM chip, so the user-space-interfacing logic
     that is implemented in PacktHAL is quite simple. PacktHAL does not use a sensor-specific
     kernel driver to communicate with the sensor, so it must use the generic `spidev`
     driver to communicate. It is up to PacktHAL to prepare, send, receive, and interpret
     the individual bytes of every SPI message that is going to or from the sensor.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一章节中的`fram`应用程序使用了一个特定的内核驱动程序（`24c256` EEPROM驱动程序）与FRAM芯片交互，因此在PacktHAL中实现的用户空间接口逻辑非常简单。PacktHAL没有使用特定的传感器内核驱动程序与传感器通信，因此它必须使用通用的`spidev`驱动程序进行通信。由PacktHAL负责准备、发送、接收和解释每个SPI消息的每个字节，这些消息将发送到传感器或从传感器接收。
 - en: 'While there are a number of functions in PacktHAL to handle these tasks, only
     four of those functions are used by outside code to interact with the sensor:'
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管PacktHAL中有许多函数来处理这些任务，但外部代码只使用其中四个函数与传感器交互：
 - en: '`openSensor()`'
+  id: totrans-75
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`openSensor()`'
 - en: '`getSensorTemperature()`'
+  id: totrans-76
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getSensorTemperature()`'
 - en: '`getSensorPressure()`'
+  id: totrans-77
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getSensorPressure()`'
 - en: '`closeSensor()`'
+  id: totrans-78
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`closeSensor()`'
 - en: 'The prototypes for these functions are located in the `jni/PacktHAL.h` header
     file:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些函数的原型位于`jni/PacktHAL.h`头文件中：
 - en: '[PRE2]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: The `openSensor()` function initializes access to the SPI bus by opening `/dev/spidev1.0`
     and making several `ioctl()` calls to configure the SPI bus' communication parameters
     (such as the clock rate of `SCLK`).
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: '`openSensor()`函数通过打开`/dev/spidev1.0`并执行几个`ioctl()`调用，来初始化对SPI总线的访问并配置SPI总线的通信参数（如`SCLK`的时钟速率）。'
 - en: Once this configuration is performed, all SPI communications performed inside
     of PacktHAL will use this bus. Calling the counterpart `closeSensor()` function
     closes the `/dev/spidev1.0` file, which shuts down the SPI bus and frees it for
@@ -437,12 +624,16 @@
     functions perform all of the preparation of the SPI messages, SPI communication,
     and sample conversion logic required to fetch and convert the samples retrieved
     from the sensor.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成此配置后，PacktHAL内执行的 所有SPI通信都将使用此总线。调用对应的`closeSensor()`函数会关闭`/dev/spidev1.0`文件，这将关闭SPI总线并使其可供系统上的其他进程使用。`getSensorTemperature()`和`getSensorPressure()`函数执行所有SPI消息的准备、SPI通信和样本转换逻辑，以获取并转换从传感器检索的样本。
 - en: Note
+  id: totrans-83
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: If you were using a specialized kernel driver designed to talk to the specific
     sensor that we are using, then the sensor-reading logic inside the PacktHAL code
     would be very simple (only one or two `ioctl()` calls). It is always a balance
@@ -451,8 +642,10 @@
     space code will be. However, it can be very difficult to develop kernel code,
     so you must strike a balance between what is easiest to implement and what will
     provide you with the performance necessary for your hardware design.
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你正在使用一个专门设计的内核驱动程序，用于与我们所使用的特定传感器通信，那么PacktHAL代码中的传感器读取逻辑将会非常简单（仅有一两个`ioctl()`调用）。将HAL代码逻辑放置在内核中与保持在用户空间之间总是需要平衡。你推向内核的代码越多，用户空间代码就越简单快速。然而，开发内核代码可能非常困难，因此你必须权衡什么最容易实现以及什么将为你提供硬件设计所需的性能。
 - en: The `sensor` app has several similarities to apps from previous chapters. Like
     the `fram` app from [Chapter 4](part0029_split_000.html#page "Chapter 4. Storing
     and Retrieving Data with I2C"), *Storing and Retrieving Data with I2C*, the sensor
@@ -460,8 +653,11 @@
     to the underlying sensor-interfacing functions from PacktHAL. Interfacing with
     the hardware is triggered by the `onClick()` handler of a button pressed by the
     app's user, similar to what both the `gpio` and `fram` apps do.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sensor`应用程序与之前章节中的应用程序有几处相似之处。类似于[第4章](part0029_split_000.html#page "Chapter 4. Storing
+    and Retrieving Data with I2C")中的`fram`应用程序，*使用I2C存储和检索数据*，`sensor`应用程序使用从`AsyncTask`派生出来的自己的类`HardwareTask`，通过JNI调用PacktHAL中与底层传感器接口的函数。与硬件的接口是由应用程序用户按下的按钮的`onClick()`处理器触发的，这与`gpio`和`fram`应用程序的做法类似。'
 - en: Much like the GPIO-interfacing functions from PacktHAL that you used in [Chapter
     3](part0024_split_000.html#page "Chapter 3. Handling Inputs and Outputs with GPIOs"),
     *Handling Inputs and Outputs with GPIOs* and *Chapter 4, Storing and Retrieving
@@ -471,15 +667,22 @@
     will trigger the ANR dialog. However, SPI can be used for a wide variety of devices,
     and it is possible to need longer periods of time to send large amounts of data,
     so better safe than sorry.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 就像你在[第三章](part0024_split_000.html#page "Chapter 3. Handling Inputs and Outputs
+    with GPIOs")，*处理GPIO输入输出*和[第四章，使用I2C存储和检索数据]中使用的PacktHAL的GPIO接口函数一样，`HardwareTask`中的传感器接口方法执行得非常快。实际上，并不需要从单独的线程中执行这些方法，因为它们不太可能执行得那么久，以至于会触发ANR对话框。然而，SPI可以用于各种各样的设备，可能需要较长时间来发送大量数据，所以小心为上。
 - en: Tip
+  id: totrans-87
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**When should I use an AsyncTask for hardware interfacing?**'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: '**我在硬件接口时应该在什么时候使用`AsyncTask`？**'
 - en: The short answer to this is "all of the time". We did not want to distract you
     with the details of the `AsyncTask` class when you were working with GPIOs in
     [Chapter 3](part0024_split_000.html#page "Chapter 3. Handling Inputs and Outputs
@@ -488,58 +691,86 @@
     the general rule to follow is to always use `AsyncTask` to perform any sort of
     I/O. I/O is notoriously slow, so any I/O (networking, accessing files on disk,
     and hardware interfacing) should really take place in its own thread via `AsyncTask`.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于这个问题，简短的回答是“一直都要”。在我们介绍GPIOs的[第三章](part0024_split_000.html#page "Chapter 3.
+    Handling Inputs and Outputs with GPIOs")，*处理GPIO输入输出*时，没有详细讲解`AsyncTask`类的细节，以免分散你的注意力，所以`gpio`应用程序在`onClick()`按钮处理程序中调用了PacktHAL函数。然而，要遵循的一般规则是，任何时候执行I/O操作都应该使用`AsyncTask`。I/O操作特别慢，因此任何I/O（网络通信、访问磁盘上的文件和硬件接口）都应该在自己的线程中通过`AsyncTask`完成。
 - en: Using the HardwareTask class
+  id: totrans-90
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 使用`HardwareTask`类
 - en: 'Like the `gpio` and `fram` apps, the `HardwareTask` class in the sensor app
     provides four native methods that are used to call the PacktHAL JNI functions
     related to sensor hardware interfacing:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 与`gpio`和`fram`应用程序一样，传感器应用程序中的`HardwareTask`类提供了四个本地方法，用于调用与传感器硬件接口相关的PacktHAL
+    JNI函数：
 - en: '[PRE3]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: As the details of the SPI bus setup process are encapsulated within the PacktHAL
     functions and hidden from the app, these methods take no parameters. They simply
     call their PacktHAL counterparts via the PacktHAL JNI wrapper functions.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于SPI总线设置过程的细节被封装在PacktHAL函数中，并且对应用程序隐藏，因此这些方法不带参数。它们只是通过PacktHAL JNI包装函数调用其PacktHAL对应方法。
 - en: '![Using the HardwareTask class](img/00027.jpeg)'
+  id: totrans-94
   prefs: []
   type: TYPE_IMG
+  zh: '![使用HardwareTask类](img/00027.jpeg)'
 - en: The thread contexts in which the `HardwareTask` methods and the PacktHAL functions
     are executed
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: '`HardwareTask`方法和PacktHAL函数执行的线程上下文'
 - en: 'In the sensor app, the `onClick()` handler for the sample button in the `MainActivity`
     class instantiates a new `HardwareTask` method. Immediately after this instantiation,
     the `pollSensor()` method of `HardwareTask` is called to request a current set
     of temperature and pressure data from the sensor:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 在传感器应用程序中，`MainActivity`类中的示例按钮的`onClick()`处理程序实例化了一个新的`HardwareTask`方法。在此实例化之后，立即调用`HardwareTask`的`pollSensor()`方法，以请求传感器提供当前的温度和压力数据集：
 - en: '[PRE4]'
+  id: totrans-97
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'The `pollSensor()` method begins the hardware-interfacing process by calling
     the `execution()` method of the base `AsyncTask` class to create a new thread:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pollSensor()`方法通过调用基类`AsyncTask`的`execution()`方法来启动硬件接口过程，并创建一个新线程：'
 - en: '[PRE5]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'The `execute()` method of `AsyncTask` calls the `onPreExecute()` method that
     the `HardwareTask` uses to initialize the SPI bus via its `openSensor()` native
     method. The `sampleButton` method is also disabled for the duration of the thread
     to prevent the possibility of multiple threads trying to use the SPI bus to talk
     to the sensor simultaneously:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AsyncTask`的`execute()`方法调用了`HardwareTask`用来通过其`openSensor()`本地方法初始化SPI总线的`onPreExecute()`方法。同时，在线程执行期间禁用`sampleButton`方法，以防止可能同时有多个线程尝试使用SPI总线与传感器通信。'
 - en: '[PRE6]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Once the `onPreExecute()` method finishes, the `AsyncTask` base class spins
     a new thread and executes the `doInBackground()` method within that thread. For
     the sensor app, this is the proper place to perform any SPI bus communication
@@ -547,11 +778,15 @@
     The `getSensorTemperature()` and `getSensorPressure()` native methods of the `HardwareTask`
     class fetch the latest samples from the sensor via the `getSensorTemperature()`
     and `getSensorPressure()` functions in PacktHAL:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦`onPreExecute()`方法完成，`AsyncTask`基类将启动一个新线程并在该线程中执行`doInBackground()`方法。对于传感器应用，这是执行任何必要的SPI总线通信以从传感器获取当前温度和压力样本的正确位置。`HardwareTask`类的`getSensorTemperature()`和`getSensorPressure()`本地方法通过PacktHAL中的`getSensorTemperature()`和`getSensorPressure()`函数从传感器获取最新的样本。
 - en: '[PRE7]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'After `doInBackground()` is complete, the `AsyncTask` thread terminates. This
     triggers the calling of `doPostExecute()` from the UI thread. Now, as the app
     has finished its SPI communication tasks and received the latest temperature and
@@ -560,44 +795,62 @@
     class. The `doPostExecute()` method then alerts the `MainActivity` class of the
     new data received from the sensor via the `updateSensorData()`method, and it re-enables
     the **Sample** button of `MainActivity`:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 当`doInBackground()`完成后，`AsyncTask`线程终止。这会从UI线程触发调用`doPostExecute()`。现在，应用已经完成了SPI通信任务，并从传感器接收到了最新的温度和压力值，是时候关闭SPI连接了。`doPostExecute()`方法通过`HardwareTask`类的`closeSensor()`本地方法关闭SPI总线。然后，`doPostExecute()`方法通过`updateSensorData()`方法通知`MainActivity`类收到的新传感器数据，并重新启用`MainActivity`的**采样**按钮：
 - en: '[PRE8]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'The `MainActivity` class'' `updateSensorData()` method is responsible for updating
     the displayed values in the `temperatureTextView` and `pressureTextView` text
     views to reflect the newest received sensor values:'
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: '`MainActivity`类的`updateSensorData()`方法负责更新`temperatureTextView`和`pressureTextView`文本视图中的显示值，以反映最新收到的传感器值：'
 - en: '[PRE9]'
+  id: totrans-107
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: At this point, execution of the `sensor` app has returned to its idle state.
     If the user clicks on the **Sample** button once more, another `HardwareTask`
     instance is instantiated and the open-sample-close interaction cycle of the hardware
     will occur again.
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，`sensor`应用的执行已经返回到空闲状态。如果用户再次点击**采样**按钮，将实例化另一个`HardwareTask`实例，硬件的开-采-关交互循环将再次发生。
 - en: Tip
+  id: totrans-109
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Are you ready for a challenge?**'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: '**你准备好迎接挑战了吗？**'
 - en: Now that you have seen all of the pieces of the sensor app, why not change it
     to add some new functionality? For a challenge, try adding a counter that shows
     how many samples have been taken so far and the average temperature and pressure
     from all of the samples taken. We have provided one possible implementation of
     this in the `chapter5_challenge.tgz` file, which is available for download from
     Packt's website.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然你已经看到了传感器应用的所有部分，为什么不对其进行修改以添加一些新功能呢？作为一个挑战，尝试添加一个计数器，显示到目前为止已经采集了多少样本以及所有样本的平均温度和压力。我们在`chapter5_challenge.tgz`文件中提供了一个可能的实现，该文件可在Packt的网站上下载。
 - en: Summary
+  id: totrans-112
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 概述
 - en: In this chapter, we introduced you to the SPI bus. You constructed a circuit
     that connected an SPI pressure and temperature sensor breakout board to the BBB,
     and you learned about the portions of the PacktHAL `init.{ro.hardware}.rc` file's
@@ -607,10 +860,14 @@
     a small set of functions that hide the low-level details. These simplified PacktHAL
     function calls can be made from a class derived from `AsyncTask` to perform more
     complex interfacing tasks simply from within an app.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们向你介绍了SPI总线。你构建了一个电路，将SPI压力和温度传感器开发板连接到BBB，并了解了PacktHAL `init.{ro.hardware}.rc`文件设备树覆盖中负责配置SPI总线和`spidev`设备驱动程序并为应用提供使用的那部分内容。本章中的传感器应用演示了如何使用一组简化函数隐藏应用中的HAL复杂任务。这些简化的PacktHAL函数调用可以从`AsyncTask`派生的类中执行，以便在应用内部简单地执行更复杂的接口任务。
 - en: In the next chapter, you will learn about combining GPIO, I2C, and SPI together
     into an app capable of providing a complete hardware solution that uses a long-lived
     hardware-interfacing thread.
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，你将了解到如何将GPIO、I2C和SPI组合到一个应用中，该应用能够提供一个完整的硬件解决方案，使用一个长生命周期的硬件接口线程。
