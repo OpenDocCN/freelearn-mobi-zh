@@ -1,0 +1,725 @@
+- en: Chapter 4. Locating in the World
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the last chapter you learned how to overlay digital content on the view of
+    the physical world. However, if you move around with your device, point it somewhere
+    else, the virtual content will always stay at the same place on your screen. This
+    is not exactly what happens in AR. The virtual content should stay at the same
+    place relative to the physical world (and you can move around it), not remaining
+    fixed on your screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter we will look at how to achieve **dynamic registration** between
+    digital content and the physical space. If at every time step, we update the position
+    of moving objects in our application, we will create the feeling that digital
+    content sticks to the physical world. Following the position of moving elements
+    in our scene can be defined as **tracking**, and this is what we will use and
+    implement in this chapter. We will use sensor-based AR to update the registration
+    between digital content and physical space. As some of these sensors are commonly
+    of poor quality, we will show you how to improve the measurement you get from
+    them using a technique named **sensor fusion**. To make it more practical, we
+    will show you how to develop the basic building blocks for a simple prototype
+    of one of the most common AR applications using global tracking: an AR Browser
+    (such as Junaio, Layar, or Wikitude).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Knowing where you are – handling GPS
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will look at one of the major approaches for mobile AR and
+    sensor-based AR (see [Chapter 1](ch01.html "Chapter 1. Augmented Reality Concepts
+    and Tools"), *Augmented Reality Concepts and Tools*), which uses **global tracking**.
+    Global tracking refers to tracking in a global reference frame (world coordinate
+    system), which can encompass the whole earth. We will first look at the position
+    aspect, and then the location sensor built on your phone that will be used for
+    AR. We will learn how to retrieve information from it using the Android API and
+    will integrate its position information into JME.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GPS and GNSS
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: So we need to track the position of the user to know where he/she is located
+    in the real world. While we say we track the user, handheld AR applications actually
+    track the position of the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**User tracking versus device tracking**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create a fully-immersive AR application, you ideally need to know where the
+    device is, where the body of the user in reference to the device is, and where
+    the eyes of the user in reference of the body are. This approach has been explored
+    in the past, especially with Head Mounted Displays. For that, you need to track
+    the head of the user, the body of the user, and have all the static transformations
+    between them (calibration). With mobile AR, we are still far from that; maybe
+    in the future, users will wear glasses or clothes equipped with sensors which
+    will allow creating more precise registration and tracking.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So how do we track the position of the device in a global coordinate system?
+    Certainly you, or maybe some of your friends, have used a GPS for car navigation
+    or for going running or hiking. GPS is one example of a common technology used
+    for global tracking, in reference to an earth coordinate system, as shown in the
+    following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![GPS and GNSS](img/8553_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Most mobile phones are now equipped with GPS, so it seems an ideal technology
+    for global tracking in AR. A GPS is the American version of a **global navigation
+    satellite system** (**GNSS**). The technology relies on a constellation of geo-referenced
+    satellites, which can give your position anywhere around the planet using geographic
+    coordinates. GPS is not the only GNSS out there; a Russian version (**GLONASS**)
+    is currently also operational, and a European version (**Galileo**) will be effective
+    around 2020\. However, GPS is currently the most supported GNSS on mobile devices,
+    so we will use this term for the rest of the book when we talk about tracking
+    with GNSS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For common AR applications relying on GPS, you have two things to consider:
+    the digital content location and the device location. If both of them are defined
+    in the same coordinate system, in reference to earth, you will be able to know
+    how they are in reference to each other (see the elliptical pattern in the following
+    figure). With that knowledge, you can model the position of the 3D content in
+    the user coordinate system and update it with each location update from your GPS
+    sensor. As a result, if you move closer to an object (bottom to top), the object
+    will appear closer (and bigger in the image), reproducing the behavior you have
+    in the normal world.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![GPS and GNSS](img/8553_04_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: A small issue we have with this technology is related to the coordinate system
+    used in GPS. Using latitude and longitude coordinates (what a basic GPS delivers)
+    is not the most adapted representation for using AR. When we do 3D graphics, we
+    are used to a Euclidian coordinate system to position digital content; position
+    using the Cartesian coordinate system, defined in terms of X, Y, and Z coordinates.
+    So we need to address this problem by transforming these GPS coordinates to something
+    more adapted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: JME and GPS – tracking the location of your device
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Google Android API offers access to GPS through the Location Manager service.
+    The Location Manager can provide you GPS data, but it can also use the network
+    (for example, Wi-Fi and cellphone network) to pinpoint your location and give
+    you a rough estimation of it. In Android terminology, this is named Location Provider.
+    To use the Location Manager, you need to apply the standard Android mechanism
+    for notifications in Android based on a listener class; `LocationListener` in
+    this case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So open the `LocationAccessJME` project associated with this chapter, which
+    is a modified version of the `SuperimposeJME` project ([Chapter 3](ch03.html "Chapter 3. Superimposing
+    the World"), *Superimposing the World*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we need to modify our Android manifest to allow access to the GPS sensor.
+    They are different quality modes regarding GPS (quality of estimated location),
+    we will authorize all of them. So add these two permissions to your `AndroidManifest.xml`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The project has, same as before, a JME class (`LocationAccessJME`), an activity
+    class (`LocationAccessJMEActivity`), as well as `CameraPreview`. What we need
+    to do is create a `LocationListener` class and a `LocationManager` class that
+    we add to our `LocationAccessJMEActivity` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Inside the `LocationListener` class, we need to override different callback
+    functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `onLocationChanged` callback is the one which is the call for any changes
+    in a user''s location; the location parameter contains both the measured latitude
+    and longitude (in degrees). To pass the converted data to our JME, we will use
+    the same principle as before: call a method in our JME class using the location
+    as argument. So `setUserLocation` will be called each time there is an update
+    of the location of the user, and the new value will be available to the JME class.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we need to access the location manager service and register our location
+    listener to it, using the `requestLocationUpdates` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The parameters of `requestLocationUpdates` are the types of provider we want
+    to use (GPS versus network), update frequency (in milliseconds), and change of
+    position threshold (in meters) as our listener.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On the JME side, we need to define two new variables to our `LocationAccessJME`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also need to define our `setUserLocation` function, which is called from
+    the callback in `LocationListener`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Inside this function we need to transform the position of the camera from latitude/longitude
+    format to a Cartesian coordinate system. There are different techniques to do
+    so; we will use the conversion algorithm from the SatSleuth website ([http://www.satsleuth.com/GPS_ECEF_Datum_transformation.htm](http://www.satsleuth.com/GPS_ECEF_Datum_transformation.htm)),
+    converting our data to an **ECEF** (**Earth-Centered, Earth-Fixed**) format. Now
+    we have `mUserPosition` available in ECEF format in our JME class. Each time a
+    user's location will change, the `onLocationChange` method and `setUserLocation`
+    will be called and we will get an updated value of `mUserPosition`. The question
+    now is how we use this variable in our scenegraph and in relation with geo-referenced
+    digital content (for example, POI)?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The method to use is to reference your content locally from your current position.
+    For doing that, we need to use an additional coordinate system: the **ENU** (**East-North-Up**)
+    coordinate system. For each data you have (for example, a certain number of POIs
+    at 5 km radius from your position), you compute the location from your current
+    position. Let''s have a look at how we can do that on our ninja model, as shown
+    in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The position of the ninja in latitude-longitude format (`locationNinja`) is
+    also converted to the ECEF format (`ECEFNinja`). From there, using the current
+    GPS location (in latitude-longitude format and ECEF format, location, mUserPosition),
+    we compute the position of the ninja in a local coordinate system (`ENUNinja`).
+    Each time the user moves, his or her GPS position will be updated, transformed
+    to ECEF format, and the local position of the content will be updated, which will
+    trigger a different rendering. That''s it! We have implemented GPS-based tracking.
+    An illustration of the relation of the different coordinate systems is represented
+    in the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![JME and GPS – tracking the location of your device](img/8553_04_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The only remaining part is to update the position of the model using the new
+    local position. We can implement that from the `simpleUpdate` function by adding
+    the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: In a real AR application, you may have some 3D content positioned around your
+    current position in a GPS coordinate system, such as having a virtual ninja positioned
+    in Fifth street in New York, or in front of the Eiffel Tower in Paris.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since we want to be sure, you can run this sample independently of where you
+    are currently testing and reading the book (from New York to Timbuktu). We will
+    modify this demo slightly for educational purposes. What we will do is add the
+    ninja model at 10 meters from your initial GPS location (that is, first time the
+    GPS updates), by adding the following call in `setUserLocation`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Time for testing: deploy the application on your mobile and go outside to a
+    location where you should get a nice GPS reception (you should be able to see
+    the sky and avoid a really cloudy day). Don''t forget to activate the GPS on your
+    device. Start the application, move around and you should see the ninja shifting
+    positions. Congratulations, you developed your first instance of tracking for
+    an AR application!'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Knowing where you look – handling inertial sensors
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the previous example and access to GPS location, we can now update a user's
+    location and be able to do a basic tracking in Augmented Reality. However, this
+    tracking is only considering position of the user and not his or her orientation.
+    If, for example, the user rotates the phone, nothing will happen, with changes
+    being effective only if he is moving. For that we need to be able to detect changes
+    in rotation for the user; this is where inertial sensors come in. The inertial
+    sensors can be used to detect changes in orientation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding sensors
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In the current generation of mobile phones, three types of sensors are available
+    and useful for orientation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Accelerometers**: These sensors detect the proper acceleration of your phone,
+    also called **g-force** acceleration. Your phone is generally equipped with multi-axis
+    model to deliver you acceleration in the 3 axes: pitch, roll, and tilt of your
+    phone. They were the first sensors made available on mobile phones and are used
+    for sensor-based games, being cheap to produce. With accelerometers, and a bit
+    of elementary physics, you are able to compute the orientation of the phone. They
+    are, however, rather inaccurate and the measured data is really noisy (which can
+    result in getting jitters in your AR application).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Magnetometers**: They can detect the earth''s magnetic field and act like
+    a compass. Ideally, you can get the north direction with them by measuring the
+    magnetic field in three dimensions and know where your phone points. The challenge
+    with magnetometers is that they can easily be distracted by metallic objects around
+    them, such as a watch on the user''s wrist, and then indicate a wrong north direction.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Gyroscopes**: They measure angular velocity using the **Coriolis Effect**.
+    The ones used in your phone are **multi-axis miniature mechanical system** (**MEMS**)
+    using a vibrating mechanism. They are more accurate than the previous sensors,
+    but their main issue is the drift: the accuracy of measurement decreases over
+    time; after a short period your measure starts getting really inaccurate.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You can combine measurements of each of them to address their limitations, as
+    we will see later in this chapter. Inertial sensors have been used intensively
+    before coming to mobile phones, the most famous usage being in planes for measuring
+    their orientation or velocity, used as an **inertial measurement unit** (**IMU**).
+    As manufacturers always try to cut down costs, quality of the sensors varies considerably
+    between mobile devices. The effect of noise, drift, and inaccuracy will induce
+    your AR content to jump or move without you displacing the phone or it may lead
+    to positioning the content in the wrong orientation. Be sure you test a range
+    of them if you want to deploy your application commercially.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sensors in JME
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Sensor access on Google Android API is made through `SensorManager`, and uses
+    `SensorListener` to retrieve measurements. `SensorManager` doesn''t give you access
+    only to the inertial sensors, but to all the sensors present on your phone. Sensors
+    are divided in three categories in the Android API: motion sensors, environmental
+    sensors, and position sensors. The accelerometers and the gyroscope are defined
+    as motion sensors; the magnetometer is defined as a position sensor. The Android
+    API also implements some software sensors, which combine the values of these different
+    sensors (which may include position sensor too) to provide you with motion and
+    orientation information. The five motion sensors available are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`TYPE_ACCELEROMETER`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_GRAVITY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_GYROSCOPE`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_LINEAR_ACCELERATION`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_ROTATION_VECTOR`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Please refer to the Google Developer Android website [http://developer.android.com/guide/topics/sensors/sensors_overview.html](http://developer.android.com/guide/topics/sensors/sensors_overview.html),
+    for more information about the characteristics of each of them. So let''s open
+    the `SensorAccessJME` project. As we did before, we define a `SensorManager` class
+    and we will add a `Sensor` class for each of these motion sensors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also need to define `SensorListener`, which will handle any sensor changes
+    from the motion sensors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The rotation changes could also solely be handled with Quaternions, but we explicitly
+    used Euler angles for a more intuitive understanding. Privilege quaternions as
+    composing rotations is easier and they don't suffer from "gimbal lock".
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our listener overrides two callbacks: the `onAccuracyChanged` and `onSensorChanged`
+    callbacks. The `onSensorChanged` channel will be called for any changes in the
+    sensors we registered to `SensorManager`. Here we identify which type of sensor
+    changed by querying the type of event with `event.sensor.getType()`. For each
+    type of sensor, you can use the generated measurement to compute the new orientation
+    of the device. In this example we will only show you how to use the value of the
+    `TYPE_ROTATION_VECTOR` sensor (software sensor). The orientation delivered by
+    this sensor needs to be mapped to match the coordinate frame of the virtual camera.
+    We pass Euler angles (heading, pitch, and roll) to the JME application to achieve
+    this in the JME application''s `setRotation` function (the Euler angle is just
+    another representation of orientation and can be calculated from Quaternions and
+    axis-angle representations delivered in the sensor event).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, having our `SensorListener`, we need to query `SensorManager` to get the
+    sensor service and initialize our sensors. In your `onCreate` method add:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After getting access to the sensor service, we query the list of all available
+    sensors and display the results on our logcat. For initializing the sensors, we
+    call our `initSensors` method, and define it as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The function `initSingleSensor` will create an instance of `Sensor` and register
+    our previously created listener with a specific type of sensor passed in argument:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We shouldn''t forget to unregister the listener when we quit the application,
+    so modify your `onStop` method as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, we are now set in our `Activity`. In our `SensorAccessJME` class we add
+    following variables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The variable `mInitialCamRotation` holds the initial camera orientation, `mRotXYZQ`
+    holds the sensor orientation mapped to the camera coordinate system, and `mCurrentCamRotation`
+    stores the final camera rotation which is composed from multiplying `mInitialCamRotation`
+    with `mRotXYZQ`. The `setRotation` function takes the sensor values from the Android
+    activity and maps them to the camera coordinate system. Finally, it multiplies
+    the current rotation values with the initial camera orientation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As a last step, we need to use this rotation value for our virtual camera,
+    the same as we did for our GPS example. In `simpleUpdate` you now add:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, we are now ready to run the application. It''s important to consider that
+    the natural orientation of the device, which defines the coordinate system for
+    motion sensors, is not the same for all devices. If your device is, by default,
+    in the portrait mode and you change it to landscape mode , the coordinate system
+    will be rotated. In our examples we explicitly set the device orientation to landscape.
+    Deploy your application on your device using this default orientation mode. You
+    may need to rotate your device around to see the ninja moving on your screen,
+    as shown in the following screenshots:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Sensors in JME](img/8553_04_04.jpg)![Sensors in JME](img/8553_04_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Improving orientation tracking – handling sensor fusion
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the limitations with sensor-based tracking is the sensors. As we introduced
+    before, some of the sensors are inaccurate, noisy, or have drift. A technique
+    to compensate their individual issue is to combine their values to improve the
+    overall rotation you can get with them. This technique is called sensor fusion.
+    There are different methods for fusing the sensors, we will use the method presented
+    by *Paul Lawitzki* with a source code under MIT License available at [http://www.thousand-thoughts.com/2012/03/android-sensor-fusion-tutorial/](http://www.thousand-thoughts.com/2012/03/android-sensor-fusion-tutorial/).
+    In this section, we will briefly explain how the technique works and how to integrate
+    sensor fusion to our JME AR application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sensor fusion in a nutshell
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The fusion algorithm proposed by *Paul Lawitzki* merges accelerometers, magnetometers,
+    and gyroscope sensor data. Similar to what is done with software sensor of an
+    Android API, accelerometers and magnetometers are first merged to get an absolute
+    orientation (magnetometer, acting as a compass, gives you the true north). To
+    compensate for the noise and inaccuracy of both of them, the gyroscope is used.
+    The gyroscope, being precise but drifting over time, is used at high frequency
+    in the system; the accelerometers and magnetometers are considered over longer
+    periods. Here is an overview of the algorithm:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Sensor fusion in a nutshell](img/8553_04_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: You can find more information about the details of the algorithm (complimentary
+    filter) on *Paul Lawitzki's* webpage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sensor fusion in JME
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Open the `SensorFusionJME` project. The sensor fusion uses a certain number
+    of internal variables that you declare at the beginning of `SensorFusionJMEActivity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also add the code of different subroutines used by the algorithm:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`calculateAccMagOrientation`: Calculates the orientation angles from the accelerometer
+    and magnetometer measurement'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getRotationVectorFromGyro`: Calculates a rotation vector from the gyroscope
+    angular speed measurement'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gyroFunction`: Writes the gyroscope-based orientation into `gyroOrientation`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Two matrix transformation functions**: `getRotationMatrixFromOrientation`
+    and `matrixMultiplication`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The main part of the processing is done in the `calculatedFusedOrientationTask`
+    function. This function generates new fused orientation as part of `TimerTask`,
+    a task that can be scheduled at a specific time. At the end of this function,
+    we will pass the generated data to our JME class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The argument passed to our JME activity bridge function (`setRotationFused`)
+    is the fused orientation defined in the Euler angles format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also need to modify our `onSensorChanged` callback to call the subroutines
+    used by `calculatedFusedOrientationTask`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our activity class, the last change is to specify a task for our timer,
+    specify the schedule rate, and the delay before the first execution. We add that
+    to our `onCreate` method after the call to `initSensors`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On the JME side, we define a new bridge function for updating the rotation
+    (and again converting the sensor orientation into an appropriate orientation of
+    the virtual camera):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: We finally use this function in the same way as for `setRotation` in `simpleUpdate`,
+    updating camera orientation with `fgCam.setAxes(mCurrentCamRotationFused)`. You
+    can now deploy the application and see the results on your device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you combine the `LocationAccessJME` and `SensorAccessJME` examples, you will
+    now get full 6 degrees of freedom (6DOF) tracking, which is the foundation for
+    a classical sensor-based AR application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting content for your AR browser – the Google Places API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After knowing how to obtain your GPS position and the orientation of the phone,
+    you are now ready to integrate great content into the live view of the camera.
+    Would it not be cool to physically explore points of interests, such as landmarks
+    and shops around you? We will now show you how to integrate popular location-based
+    services such as the Google Places API to achieve exactly this. For a successful
+    integration into your application, you will need to perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Query for point of interests (POIs) around your current location
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Parse the results and extract information belonging to the POIs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Visualize the information in your AR view
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Before we start, you have to make sure that you have a valid API key for your
+    application. For that you also need a Google account. You can obtain it by logging
+    in with your Google account under [https://code.google.com/apis/console](https://code.google.com/apis/console).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For testing your application you can either use the default project `API Project`
+    or create a new one. To create a new API key you need to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click on the link **Services** in the menu on the left-hand side.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Activate the Places API status switch.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Access your key by clicking on the **API access** menu entry on the left-hand
+    side menu and looking at the **Simple API Access** area.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You can store the key in the `String mPlacesKey = "<YOUR API KEY HERE>"` variable
+    in the `LocationAccessJME` project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we will show you how to query for POIs around the devices location, and
+    getting some basic information such as their name and position. The integration
+    of this information into the AR view follows the same principles as described
+    in the *JME and GPS – tracking the location of your device* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Querying for POIs around your current location
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Previously in this chapter, you learned how to obtain your current location
+    in the world (latitude and longitude). You can now use this information to obtain
+    the location of POIs around you. The Google Places API allows you to query for
+    landmarks and businesses in the vicinity of the user via HTTP requests and returns
+    the results as JSON or XML strings. All queries will be addressed towards URLs
+    starting with [https://maps.googleapis.com/maps/api/place/](https://maps.googleapis.com/maps/api/place/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: While you could easily make the queries in your web browser, you would want
+    to have both the request sent and the response processed inside your Android application.
+    As calling a URL and waiting for the response can take up several seconds, you
+    would want to implement this request-response processing in a way that does not
+    block the execution of your main program. Here we show you how to do that with
+    threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In your `LocationAccessJME` project, you define some new member variables,
+    which take care of the interaction with the Google Places API. Specifically, you
+    create a `HttpClient` for sending your request and a list `List<POI> mPOIs`, for
+    storing the most important information about POIs. The `POI` class is a simple
+    helper class to store the Google Places reference string (a unique identifier
+    in the Google Places database, the POI name, its latitude, and longitude):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Of course, you can easily extend this class to hold additional information such
+    as street address or image URLs. To query for POIs you make a call to the `sendPlacesQuery`
+    function. We do the call at program startup, but you can easily do it in regular
+    intervals (for example, when the user moves a certain distance) or explicitly
+    on a button click.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this method, we create a new thread for each query to the Google Places service.
+    This is very important for not blocking the execution of the main program. The
+    response of the Places API should be a JSON string, which we pass to a `Handler`
+    instance in the main thread to parse the JSON results, which we will discuss next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing the Google Places APIs results
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Google Places returns its result in the lightweight JSON format (with XML being
+    another option). You can use the `org.json` library delivered as a standard Android
+    package to conveniently parse those results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A typical JSON result for your query will look like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In `handleMessage` of our handler `placesPOIQueryHandler`, we will parse this
+    JSON string into a list of POIs, which then can be visualized in your AR view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: So that is it. You now have your basic POI information and with the latitude,
+    longitude information you can easily instantiate new 3D objects in JME and position
+    them correctly relative to your camera position, just as you did with the ninja.
+    You can also query for more details about the POIs or filter them by various criteria.
+    For more information on the Google Places API please visit [https://developers.google.com/places/documentation/](https://developers.google.com/places/documentation/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you want to include text in the 3D scene, we recommend avoiding the use of
+    3D text objects as they result in a high number of additional polygons to render.
+    Use bitmap text instead, which you render as a texture on a mesh that can be generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter we introduced you to the first popular methods of mobile AR:
+    GPS and sensor-based Augmented Reality. We introduced the basic building blocks
+    of tracking the device location in a global reference frame, dynamically determining
+    the device orientation, improving the robustness of orientation tracking, and
+    finally using the popular Google Places API to retrieve information about POIs
+    around the user which can then be integrated into the AR view.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the next chapter we will introduce you to the second popular way of realizing
+    mobile AR: computer vision-based Augmented Reality.'
+  prefs: []
+  type: TYPE_NORMAL
