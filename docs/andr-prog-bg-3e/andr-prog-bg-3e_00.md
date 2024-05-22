@@ -123,21 +123,3 @@ $ cd css
 提示或重要说明
 
 会出现这样。
-
-# 联系我们
-
-我们的读者的反馈意见总是受欢迎的。
-
-`customercare@packtpub.com.`
-
-**勘误**：尽管我们已经尽一切努力确保内容的准确性，但错误确实会发生。如果您在本书中发现错误，我们将不胜感激地请您向我们报告。请访问[www.packtpub.com/support/errata](http://www.packtpub.com/support/errata)，选择您的书，点击勘误提交表单链接，并输入详细信息。
-
-`copyright@packt.com` 并附上材料链接。
-
-**如果您有兴趣成为作者**：如果您在某个专题上有专业知识，并且有兴趣撰写或为书籍做出贡献，请访问[authors.packtpub.com](http://authors.packtpub.com)。
-
-# 评论
-
-请留下评论。在阅读并使用本书后，为什么不在购买书籍的网站上留下评论呢？潜在的读者可以看到并使用您的公正意见来做出购买决策，我们在 Packt 可以了解您对我们产品的看法，我们的作者可以看到您对他们书籍的反馈。谢谢！
-
-有关 Packt 的更多信息，请访问[packt.com](http://packt.com)。

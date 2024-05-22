@@ -109,39 +109,3 @@ public void onSectionAttached(int number) {
 ### 提示
 
 技巧和窍门会以这种方式出现。
-
-# 读者反馈
-
-我们始终欢迎读者的反馈。请告诉我们您对本书的看法——您喜欢或不喜欢的地方。读者的反馈对我们开发您真正受益的标题非常重要。
-
-要向我们发送一般反馈，只需发送电子邮件至 `<feedback@packtpub.com>`，并在消息主题中提及书名。
-
-如果您在某个专业领域有专长，并且有兴趣撰写或为书籍做出贡献，请参阅我们的作者指南 [www.packtpub.com/authors](http://www.packtpub.com/authors)。
-
-# 客户支持
-
-现在您是 Packt 书籍的自豪所有者，我们有许多事情可以帮助您充分利用您的购买。
-
-## 下载示例代码
-
-您可以从 [`www.packtpub.com`](http://www.packtpub.com) 的帐户中下载您购买的所有 Packt 书籍的示例代码文件。如果您在其他地方购买了本书，您可以访问 [`www.packtpub.com/support`](http://www.packtpub.com/support) 并注册，以便文件直接通过电子邮件发送给您。
-
-## 下载本书的彩色图像
-
-我们还为您提供了一个 PDF 文件，其中包含本书中使用的屏幕截图/图表的彩色图像。彩色图像将帮助您更好地理解输出中的变化。您可以从 [`www.packtpub.com/sites/default/files/downloads/B04299_ColoredImages.pdf`](https://www.packtpub.com/sites/default/files/downloads/B04299_ColoredImages.pdf) 下载此文件。
-
-## 勘误
-
-尽管我们已经尽最大努力确保内容的准确性，但错误确实会发生。如果您在我们的书籍中发现错误，无论是文字还是代码方面的错误，我们将不胜感激地希望您向我们报告。通过这样做，您可以帮助其他读者避免挫折，并帮助我们改进本书的后续版本。如果您发现任何勘误，请访问[`www.packtpub.com/submit-errata`](http://www.packtpub.com/submit-errata)，选择您的书籍，点击**勘误提交表格**链接，并输入您的勘误详情。一旦您的勘误经过验证，您的提交将被接受，并且勘误将被上传到我们的网站上，或者添加到该书籍的勘误列表中的**勘误**部分。您可以通过从[`www.packtpub.com/support`](http://www.packtpub.com/support)选择您的书籍来查看任何现有的勘误。
-
-## 盗版
-
-互联网上的版权盗版是所有媒体的持续问题。在 Packt，我们非常重视对我们的版权和许可的保护。如果您在互联网上发现我们作品的任何非法副本，请立即向我们提供位置地址或网站名称，以便我们采取补救措施。
-
-请通过`<copyright@packtpub.com>`与我们联系，并附上涉嫌盗版材料的链接。
-
-我们感谢您帮助保护我们的作者，以及我们为您提供有价值内容的能力。
-
-## 问题
-
-如果您在阅读本书的过程中遇到任何问题，可以通过`<questions@packtpub.com>`与我们联系，我们将尽力解决。
