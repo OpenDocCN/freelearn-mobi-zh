@@ -56,13 +56,13 @@ JUnit 是一个用于在 Java 和 Android 中编写单元测试的框架。它�
 
 在 Android Studio 中，创建新项目时，`app`模块会在 Gradle 中带有 JUnit 库。这应该在`app/build.gradle`中可见：
 
-```kt
+```
 testImplementation 'junit:junit:4.13.1'
 ```
 
 让我们看看我们需要测试的以下类：
 
-```kt
+```
 class MyClass {
     fun factorial(n: Int): Int {
         return IntArray(n) {
@@ -76,7 +76,7 @@ class MyClass {
 
 这个方法应该返回数字 `n` 的阶乘。我们可以从一个检查值的简单测试开始。为了创建一个新的单元测试，您需要在项目的 `test` 目录中创建一个新的类。大多数开发人员遵循的典型约定是在 `test` 目录中的相同包下为您的类名称添加 `Test` 后缀，并将其放在相同的包下。例如，`com.mypackage.ClassA` 将在 `com.mypackage.ClassATest` 中进行测试：
 
-```kt
+```
 import org.junit.Assert.assertEquals
 import org.junit.Test
 class MyClassTest {
@@ -100,7 +100,7 @@ class MyClassTest {
 
 我们可以编写另一个测试来确保值是正确的，但这意味着我们最终会重复代码。现在我们可以尝试编写一个参数化测试。为了做到这一点，我们需要使用参数化测试运行器。前面的测试有其自己的内置运行器，由 JUnit 提供。参数化运行器将为我们提供的不同值重复运行测试，并且看起来像下面这样。（请注意，出于简洁起见，已删除了导入语句。）
 
-```kt
+```
 @RunWith(Parameterized::class)
 class MyClassTest(
     private val input: Int,
@@ -129,7 +129,7 @@ class MyClassTest(
 
 这实际上将运行六个测试。`@Parameterized` 注解的使用告诉 JUnit 这是一个具有多个参数的测试，并且还允许我们为测试添加一个构造函数，该构造函数将表示我们的阶乘函数的输入值和输出。然后我们使用 `@Parameterized.Parameters` 注解定义了一组参数。这个测试的每个参数都是一个单独的列表，包含输入和期望的输出。当 JUnit 运行这个测试时，它将为每个参数运行一个新的实例，然后执行测试方法。这将产生五个成功和一个失败的结果，当我们测试 *0!* 时会失败，这意味着我们发现了一个错误。我们从未考虑 *n = 0* 的情况。现在，我们可以回到我们的代码来修复失败。我们可以通过用 `fold` 函数替换 `reduce` 函数来做到这一点，`fold` 函数允许我们指定初始值为 `1`：
 
-```kt
+```
 fun factorial(n: Int): Int {
         return IntArray(n) {
             it + 1
@@ -139,7 +139,7 @@ fun factorial(n: Int): Int {
 
 现在运行测试，它们都会通过。但这并不意味着我们在这里就完成了。有很多事情可能会出错。如果 `n` 是一个负数会发生什么？由于我们在处理阶乘，可能会得到非常大的数字。在我们的示例中，我们使用整数，这意味着整数在 *12!* 之后会溢出。通常情况下，我们会在 `MyClassTest` 类中创建新的测试方法，但由于使用了参数化运行器，我们所有的新方法都会运行多次，这将花费我们的时间，因此我们将创建一个新的测试类来检查我们的错误：
 
-```kt
+```
 class MyClassTest2 {
     private val myClass = MyClass()
     @Test(expected = MyClass.FactorialNotFoundException::class)
@@ -151,7 +151,7 @@ class MyClassTest2 {
 
 这将导致被测试的类发生以下变化。
 
-```kt
+```
 class MyClass {
     @Throws(FactorialNotFoundException::class)
     fun factorial(n: Int): Int {
@@ -168,7 +168,7 @@ class MyClass {
 
 让我们解决非常大的阶乘的问题。我们可以使用 `BigInteger` 类，它能够容纳大数字。我们可以更新测试如下（未显示导入语句）：
 
-```kt
+```
 @RunWith(Parameterized::class)
 class MyClassTest(
     private val input: Int,
@@ -199,7 +199,7 @@ class MyClassTest(
 
 现在被测试的类看起来像这样：
 
-```kt
+```
     @Throws(FactorialNotFoundException::class)
     fun factorial(n: Int): BigInteger {
         if (n < 0) {
@@ -219,7 +219,7 @@ class MyClassTest(
 
 让我们更新代码，摆脱`IntArray`：
 
-```kt
+```
     @Throws(FactorialNotFoundException::class)
     fun factorial(n: Int): BigInteger {
         if (n < 0) {
@@ -237,7 +237,7 @@ class MyClassTest(
 
 在某些情况下，您的测试将使用测试或应用程序常见的资源（数据库、文件等）。理想情况下，这不应该发生在单元测试中，但总会有例外。让我们分析一下这种情况，看看 JUnit 如何帮助我们。我们将添加一个`companion`对象，它将存储结果，以模拟这种行为：
 
-```kt
+```
     companion object {
         var result: BigInteger = BigInteger.ONE
     }
@@ -255,7 +255,7 @@ class MyClassTest(
 
 它们在重构代码时通过保持相同的断言并检测新的代码更改是否破坏了它来指导我们。
 
-```kt
+```
     @Before
     fun setUp(){
         MyClass.result = BigInteger.ONE
@@ -275,7 +275,7 @@ class MyClassTest(
 
 如果您发现自己在`@Before`方法中重复相同的语句，可以考虑使用`@Rule`来消除重复。我们可以为前面的示例设置一个测试规则。测试规则应该在`test`或`androidTest`包中，因为它们的使用仅限于测试。它们往往用于多个测试中，因此可以将规则放在`rules`包中（未显示导入语句）：
 
-```kt
+```
 class ResultRule : TestRule {
     override fun apply(
         base: Statement,
@@ -298,7 +298,7 @@ class ResultRule : TestRule {
 
 如果我们执行前面代码的测试，将开始看到一些测试失败。这是因为在第一个测试执行`factorial`函数后，结果将具有执行测试的值，当执行新测试时，阶乘的结果将乘以结果的先前值。通常，这是好的，因为测试告诉我们我们做错了什么，我们应该纠正这个问题，但是对于这个示例，我们将直接在测试中解决这个问题：
 
-```kt
+```
     @JvmField
     @Rule
     val resultRule = ResultRule()
@@ -336,13 +336,13 @@ class ResultRule : TestRule {
 
 该库应该添加到您的`test` Gradle 设置中，如下所示：
 
-```kt
+```
 testImplementation 'org.mockito:mockito-core:3.6.0'
 ```
 
 现在，让我们看一下以下代码示例（请注意，为简洁起见，以下代码片段中的导入语句已被删除）：
 
-```kt
+```
 class StringConcatenator(private val context: Context) {
     fun concatenate(@StringRes stringRes1: Int, 
       @StringRes stringRes2: Int): String {
@@ -354,7 +354,7 @@ class StringConcatenator(private val context: Context) {
 
 在这里，我们有`Context`对象，通常无法进行单元测试，因为它是 Android 框架的一部分。我们可以使用`mockito`创建一个测试替身，并将其注入到`StringConcatenator`对象中。然后，我们可以操纵对`getString()`的调用，以返回我们选择的任何输入。这个过程被称为模拟。
 
-```kt
+```
 class StringConcatenatorTest {
     private val context = Mockito.mock(Context::class.java)
     private val stringConcatenator = StringConcatenator(context)
@@ -375,7 +375,7 @@ class StringConcatenatorTest {
 
 注意
 
-```kt is an escape character present in Kotlin and should not be confused with a quote mark. It allows the developer to give methods any name that they want, including special characters or reserved words.
+``` is an escape character present in Kotlin and should not be confused with a quote mark. It allows the developer to give methods any name that they want, including special characters or reserved words.
 
 In the test, we have created a `mock` context. When the `concatenate` method was tested, we used Mockito to return a specific string when the `getString()` method was called with a particular input. This allowed us to then assert the final result.
 
@@ -393,7 +393,7 @@ return stringConcatenator.concatenate(R.string.string_1,           R.string.stri
 
 }
 
-```kt
+```
 
 We can write the test for it as follows:
 
@@ -431,7 +431,7 @@ assertEquals(expected, result)
 
 }
 
-```kt
+```
 
 Here, we are mocking the previous `StringConcatenator` and instructing the mock to return a specific result. If we run the test, it will fail because Mockito is limited to mocking final classes. Here, it encounters a conflict with Kotlin that makes all classes *final* unless we specify them as *open*. Luckily, there is a configuration we can apply that solves this dilemma without making the classes under test *open*:
 
@@ -444,7 +444,7 @@ Here, we are mocking the previous `StringConcatenator` and instructing the mock 
 
 mock-maker-inline
 
-```kt
+```
 
 In situations where you have callbacks or asynchronous work and cannot use the JUnit assertions, you can use `mockito` to verify the invocation on the callback or lambdas:
 
@@ -472,7 +472,7 @@ callback.onStringReady(concatenateSpecificStrings())
 
 }
 
-```kt
+```
 
 In the preceding example, we have added the `concatenateWithCallback` method, which will invoke the callback with the result of the `concatenateSpecificStrings` method. The test for this method would look something like this:
 
@@ -496,7 +496,7 @@ Mockito.verify(callback).onStringReady(expected)
 
 }
 
-```kt
+```
 
 Here, we are creating a mock `Callback` object, which we can then verify at the end with the expected result. Notice that we had to duplicate the setup of the `concatenateSpecificStrings` method in order to test the `concatenateWithCallback` method. You should never mock the objects you are testing; however, you can use `spy` to change their behavior. We can spy the `stringConcatenator` object in order to change the outcome of the `concatenateSpecificStrings` method:
 
@@ -520,7 +520,7 @@ Mockito.verify(callback).onStringReady(expected)
 
 }
 
-```kt
+```
 
 Mockito also relies on dependency injection to initialize class variables and has a custom build JUnit test runner. This can simplify the initialization of our variables, as follows:
 
@@ -540,7 +540,7 @@ lateinit var specificStringConcatenator: SpecificStringConcatenator
 
 }
 
-```kt
+```
 
 In the preceding example, `MockitoRunner` will inject the variables with the `@Mock` annotation with mocks. Next, it will create a new non-mocked instance of the field with the `@InjectionMocks` annotation. When this instance is created, Mockito will try to inject the mock objects that will match the signature of the constructor of that object.
 
@@ -548,7 +548,7 @@ In the preceding example, `MockitoRunner` will inject the variables with the `@M
 
 You may have noticed, in the preceding example, that the `when` method from Mockito has escaped. This is because of a conflict with the Kotlin programming language. Mockito is built mainly for Java, and when Kotlin was created, it introduced this keyword. Conflicts like this are escaped using the ```字符。这个，连同其他一些小问题，导致在 Kotlin 中使用 Mockito 时有些不便。引入了一些库来包装 Mockito 并在使用时提供更好的体验。其中之一是`mockito-kotlin`。您可以使用以下命令将此库添加到您的模块中：
 
-```kt
+```
 testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
 ```
 
@@ -556,7 +556,7 @@ testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
 
 现在我们可以使用新的库更新之前的测试，从`StringConcatenatorTest`开始（为了简洁起见，导入语句已被删除）：
 
-```kt
+```
 class StringConcatenatorTest {
     private val context = mock<Context>()
     private val stringConcatenator = StringConcatenator(context)
@@ -574,8 +574,7 @@ class StringConcatenatorTest {
 }
 ```
 
-正如你所看到的，```kt character has disappeared, and our mock initialization for the `Context` object has been simplified. We can apply the same thing for the `SpecificConcatenatorTest` class (import statements have been removed for brevity):
-
+正如你所看到的，`` ` ``字符消失了，我们对`Context`对象的模拟初始化也简化了。我们可以对`SpecificConcatenatorTest`类应用同样的东西（为了简洁起见，已经删除了导入语句）:
 ```
 
 @RunWith(MockitoJUnitRunner::class)
@@ -626,7 +625,7 @@ verify(callback).onStringReady(expected)
 
 }
 
-```kt
+```
 
 ## Exercise 9.01: Testing the Sum of Numbers
 
@@ -672,7 +671,7 @@ object InvalidNumberException : Throwable()
 
 }
 
-```kt
+```
 
 Perform the following steps to complete this exercise:
 
@@ -686,7 +685,7 @@ testImplementation 'org.mockito:mockito-core:3.6.0'
 
 testImplementation 'com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0'
 
-```kt
+```
 
 2.  Create a class named `NumberAdder` and copy the preceding code inside it.
 3.  Move the cursor inside the newly created class and, with *Command* + *Shift* + *T* or *Ctrl* + *Shift* + *T*, create a test class called `NumberAdderParameterTest`.
@@ -742,7 +741,7 @@ verify(callback).invoke(expected)
 
 }
 
-```kt
+```
 
 5.  Create a separate test class that handles the exception thrown when there are negative numbers, named `NumberAdderErrorHandlingTest`:
 
@@ -770,7 +769,7 @@ numberAdder.sum（input，callback）
 
 }
 
-```kt
+```
 
 6.  Since *1 + 2 + ...n = n * (n + 1) / 2*, we can use the formula in the code and this would make the execution of the method run faster:
 
@@ -796,7 +795,7 @@ object InvalidNumberException：Throwable（）
 
 }
 
-```kt
+```
 
 Run the tests by right-clicking the package in which the tests are located and selecting `Run all in [package_name]`. An output similar to the following will appear, signifying that the tests have passed:
 
@@ -829,7 +828,7 @@ To aid with integration testing, the requirements are sometimes written in the f
 
 然后我看到主屏幕
 
-```kt
+```
 
 We can use these steps to approach how we can write the integration tests for the feature we are developing.
 
@@ -857,7 +856,7 @@ testImplementation'org.robolectric：robolectric：4.3'
 
 testImplementation'androidx.test.ext：junit：1.1.1'
 
-```kt
+```
 
 The second library will bring a set of `utility` methods and classes required for testing Android components.
 
@@ -893,7 +892,7 @@ object FactorialNotFoundException：Throwable（）
 
 }
 
-```kt
+```
 
 The `TextFormatter` class will look like this:
 
@@ -923,7 +922,7 @@ context.getString（R.string.error）
 
 }
 
-```kt
+```
 
 We can combine these two components in our activity and have something similar to this:
 
@@ -953,7 +952,7 @@ findViewById <TextView>（R.id.text_view）。text = textFormatter.getFactorialR
 
 }
 
-```kt
+```
 
 We can observe three components interacting with each other in this case. We can use Robolectric to test our activity. By testing the activity that creates the components, we can also test the interaction between all three of the components. We can write a test that looks like this:
 
@@ -987,7 +986,7 @@ onView（withId（R.id.button））。perform（click（））
 
 }
 
-```kt
+```
 
 In the preceding example, we can see the AndroidX support for the activity test. The `AndroidJUnit4` test runner will set up Robolectric and create the necessary configurations, while the `launch` method will return a `scenario` object, which we can then play with in order to achieve the necessary conditions for the test.
 
@@ -1013,7 +1012,7 @@ assetDir =“/ assetDir /”
 
 类 MainActivityTest
 
-```kt
+```
 
 We can also specify global configurations in the `test/resources` folder in the `robolectric.properties` file, like so:
 
@@ -1025,7 +1024,7 @@ minSdk = 14
 
 maxSdk = 29
 
-```kt
+```
 
 Another important feature that has recently been added to Robolectric is support for the Espresso library. This allows developers to use the syntax from Espresso in order to interact with views and make assertions on the views. Another library that can be used in combination with Robolectric is `FragmentScenario`, which allows the possibility to test fragments. These libraries can be added in Gradle using the following:
 
@@ -1035,7 +1034,7 @@ testImplementation'androidx.fragment：fragment-testing：1.1.0'
 
 testImplementation'androidx.test.espresso：espresso-core：3.2.0'
 
-```kt
+```
 
 Testing fragments is similar to activities using the `scenario` setup:
 
@@ -1045,7 +1044,7 @@ val scenario = launchFragmentInContainer <MainFragment>（）
 
 scenario.moveToState（Lifecycle.State.CREATED）
 
-```kt
+```
 
 ## Espresso
 
@@ -1055,7 +1054,7 @@ Espresso is a library designed to perform interactions and assertions in a conci
 
 onView（Matcher <View>）。perform（ViewAction）
 
-```kt
+```
 
 For verification, we can use the following:
 
@@ -1063,7 +1062,7 @@ For verification, we can use the following:
 
 onView（Matcher <View>）。check（ViewAssertion）
 
-```kt
+```
 
 We can provide custom `ViewMatchers` if none can be found in the `ViewMatchers` class. Some of the most common ones are `withId` and `withText`. These two allow us to identify views based on their `R.id.myId` identifier or the text identifier. Ideally, the first one should be used to identify a particular view. Another interesting aspect of Espresso is the reliance on the `Hamcrest` library for matchers. This is a Java library that aims to improve testing. This allows multiple matchers to be combined if necessary. Let's say that the same ID is present in different views on your UI. You can narrow your search for a specific view using the following expression:
 
@@ -1071,7 +1070,7 @@ We can provide custom `ViewMatchers` if none can be found in the `ViewMatchers` 
 
 onView（allOf（withId（R.id.edit_text），withParent（withId（R.id.root））））
 
-```kt
+```
 
 The `allOf` expression will evaluate all of the other operators and will pass only if all of the operators inside will pass. The preceding expressions will translate to "Find the view with `id=edit_text` that has the parent with `id=R.id.root`." Other `Hamcrest` operators may include `anyOf`, `both`, `either`, `is`, `isA`, `hasItem`, `equalTo`, `any`, `instanceOf`, `not`, `null`, and `notNull`.
 
@@ -1083,7 +1082,7 @@ Similar to the preceding examples, `ViewAssertions` have their own class. Typica
 
 onView（withId（R.id.text_view））。check（matches（withText（“我的文本”）））
 
-```kt
+```
 
 The preceding example will verify that the view with the `text_view` ID will contain the text `My text`:
 
@@ -1091,7 +1090,7 @@ The preceding example will verify that the view with the `text_view` ID will con
 
 testImplementation'com.nhaarman.mockitokotlin2
 
-```kt
+```
 
 This will click the view with the ID button.
 
@@ -1127,7 +1126,7 @@ onView（withId（R.id.text_view））
 
 }
 
-```kt
+```
 
 In the preceding code sample, we can observe how, using Espresso, we input the number `5` in `EditText`, then click on the button, and then assert the text displayed in `TextView` with the help of the `onView()` method to obtain a reference to the view, and then execute actions using `perform()` or make assertions using `check()`.
 
@@ -1157,7 +1156,7 @@ Develop an application that observes the following requirements:
 
 然后我应该看到文本“错误：无效数字”
 
-```kt
+```
 
 You should implement both unit tests and integration tests using Robolectric and Espresso, and migrate the integration tests to become instrumentation tests.
 
@@ -1193,7 +1192,7 @@ androidTestImplementation 'androidx.test
 
 androidTestImplementation 'androidx.test：rules：1.3.0'
 
-```kt
+```
 
 2.  For Robolectric, we will need to add extra configurations, the first of which is to add the following line to `app/build.gradle` in the `android` closure:
 
@@ -1201,7 +1200,7 @@ androidTestImplementation 'androidx.test：rules：1.3.0'
 
 testOptions.unitTests.includeAndroidResources = true
 
-```kt
+```
 
 3.  Create a `resources` directory in the `test` package.
 4.  Add the `robolectric.properties` file and add the following configuration to that file:
@@ -1210,7 +1209,7 @@ testOptions.unitTests.includeAndroidResources = true
 
 sdk = 28
 
-```kt
+```
 
 5.  Create a folder named `resources` in the test package.
 6.  In `resources`, create a folder named `mockito-extensions`.
@@ -1220,7 +1219,7 @@ sdk = 28
 
 模拟制造商内联
 
-```kt
+```
 
 8.  Create the `NumberAdder` class. This is similar to the one in *Exercise 9.01*:
 
@@ -1248,7 +1247,7 @@ object InvalidNumberException：Throwable（）
 
 }
 
-```kt
+```
 
 9.  Create the tests for `NumberAdder` in the `test` folder. First, create `NumberAdderParameterTest`:
 
@@ -1302,7 +1301,7 @@ verify(callback).invoke(expected)
 
 }
 
-```kt
+```
 
 10.  Then, create the `NumberAdderErrorHandlingTest` test:
 
@@ -1330,7 +1329,7 @@ numberAdder.sum（input，callback）
 
 }
 
-```kt
+```
 
 11.  Create a class that will format the sum and concatenate it with the necessary strings:
 
@@ -1378,7 +1377,7 @@ callback（context.getString
 
 }
 
-```kt
+```
 
 12.  Unit test this class for both the success and error scenarios. Start with the success scenario:
 
@@ -1432,7 +1431,7 @@ verify（callback）.invoke（expected）
 
 }
 
-```kt
+```
 
 Then, create the test for the error scenario:
 
@@ -1460,7 +1459,7 @@ verify（callback）.invoke（expected）
 
 }
 
-```kt
+```
 
 13.  Create the layout for `activity_main.xml`:
 
@@ -1512,7 +1511,7 @@ android：layout_gravity =“center_horizontal”/>
 
 </LinearLayout>
 
-```kt
+```
 
 14.  Create the `MainActivity` class, which will contain all the other components:
 
@@ -1544,7 +1543,7 @@ findViewById<TextView>(R.id.text_view).text = it
 
 }
 
-```kt
+```
 
 15.  Create a test for `MainActivity` and place it in the `test` directory. It will contain two test methods, one for success and one for error:
 
@@ -1606,7 +1605,7 @@ R.string.error_invalid_number))))
 
 }
 
-```kt
+```
 
 If you run the tests by right-clicking the package in which the tests are located and select `Run all in [package_name]`, then an output similar to the following will appear:
 
@@ -1670,7 +1669,7 @@ onView(withId(R.id.text_view)).check(matches               (withText(activity.ge
 
 }
 
-```kt
+```
 
     If you run the tests by right-clicking the package in which the tests are located and select `Run all in [package_name]`, then an output similar to the following will appear:
 
@@ -1722,7 +1721,7 @@ androidTestUtil 'androidx.test:orchestrator:1.3.0'
 
 }
 
-```kt
+```
 
 You can execute the orchestrator test on a connected device using Gradle's `connectedCheck` command, either from `Terminal` or from the list of Gradle commands.
 
@@ -1732,7 +1731,7 @@ In the configuration, you will notice the following line: `testInstrumentationRu
 
 testInstrumentationRunner "com.android.CustomTestRunner"
 
-```kt
+```
 
 `CustomTestRunner` looks like this (import statements not shown in following code snippets):
 
@@ -1758,7 +1757,7 @@ return super.newApplication(cl,           MyApplication::class.java.name, contex
 
 }
 
-```kt
+```
 
 The test classes themselves can be written by applying the JUnit4 syntax with the help of the `androidx.test.ext.junit.runners.AndroidJUnit4` test runner:
 
@@ -1770,7 +1769,7 @@ class MainActivityUiTest {
 
 }
 
-```kt
+```
 
 Another important feature that comes from the AndroidX testing support is the activity rule. When this rule is used with the default constructor, the activity will be launched before each test and will be ready for interactions and assertions:
 
@@ -1782,7 +1781,7 @@ Another important feature that comes from the AndroidX testing support is the ac
 
 var activityRule: ActivityTestRule<MainActivity>       = ActivityTestRule(MainActivity::class.java)
 
-```kt
+```
 
 You can also use the rule to avoid starting the activity and customize the intent used to start it in your test:
 
@@ -1804,7 +1803,7 @@ activityRule.launchActivity(myIntent)
 
 }
 
-```kt
+```
 
 The `@Test` methods themselves run in a dedicated test thread, which is why a library such as Espresso is helpful. Espresso will automatically move every interaction with a view on the UI thread. Espresso can be used for UI tests in a similar way as it is used with Robolectric tests:
 
@@ -1822,7 +1821,7 @@ onView(withId(R.id.text_view))          .check(matches(withText("my test")))
 
 }
 
-```kt
+```
 
 Typically, in UI tests, you will find interactions and assertions that may get repetitive. In order to avoid duplicating multiple scenarios in your code, you can apply a pattern called `Robot` class in which the interactions and assertions can be grouped into specific methods. Your test code will use the robots and assert them. A typical robot will look something like this:
 
@@ -1856,7 +1855,7 @@ return this
 
 }
 
-```kt
+```
 
 The test will look like this:
 
@@ -1876,7 +1875,7 @@ MyScreenRobot()
 
 }
 
-```kt
+```
 
 Because apps can be multithreaded and sometimes it takes a while to load data from various sources (internet, files, local storage, and so on), the UI tests will have to know when the UI is available for interactions. One way to implement this is through the usage of idling resources. These are objects that can be registered to Espresso before the test and injected into your application's components where multithreaded work is done. The apps will mark them as non-idle when the work is in progress and idle when the work is done. It is at this point where Espresso will then start executing the test. One of the most commonly used ones is `CountingIdlingResource`. This specific implementation uses a counter that should be incremented when you want Espresso to wait for your code to complete its execution and decremented when you want to let Espresso verify your code. When the counter reaches `0`, Espresso will resume testing. An example of a component with an idling resource looks something like this:
 
@@ -1896,7 +1895,7 @@ countingIdlingResource.decrement()
 
 }
 
-```kt
+```
 
 The `Application` class can be used to inject the idling resource, like this:
 
@@ -1910,7 +1909,7 @@ val myHeavyliftingComponent = MyHeavyliftingComponent（countingIdlingResource�
 
 }
 
-```kt
+```
 
 Then, in the test, we can access the `Application` class and register the resource to Espresso:
 
@@ -1932,7 +1931,7 @@ IdlingRegistry.getInstance（）.register（myApplication.countingIdlingResource
 
 }
 
-```kt
+```
 
 Espresso comes with a set of extensions that can be used to assert different Android components. One extension is intents testing. This is useful when you want to test an activity in isolation (more appropriate for integration tests). In order to use this, you need to add the library to Gradle:
 
@@ -1940,7 +1939,7 @@ Espresso comes with a set of extensions that can be used to assert different And
 
 androidTestImplementation'androidx.test.espresso：espresso-intents：3.3.0'
 
-```kt
+```
 
 After you add the library, you need to use `IntentsTestRule` in order to set up the necessary intent monitoring. This rule is a subclass of `ActivityTestRule`:
 
@@ -1952,7 +1951,7 @@ After you add the library, you need to use `IntentsTestRule` in order to set up 
 
 var intentsRule：IntentsTestRule <MainActivity> = IntentsTestRule（MainActivity :: class.java）
 
-```kt
+```
 
 In order to assert the values of the intent, you need to trigger the appropriate action and then use the `intended` method:
 
@@ -1966,7 +1965,7 @@ hasComponent（hasShortClassName（“.MainActivity”）），
 
 hasExtra（MainActivity.MY_EXTRA，“myExtraValue”））
 
-```kt
+```
 
 The `intended` method works in a similar way to the `onView` method. It requires a matcher that can be combined with a `Hamcrest` matcher. The intent-related matchers can be found in the `IntentMatchers` class. This class contains methods to assert different methods of the `Intent` class: extras, data, components, bundles, and so on.
 
@@ -1976,7 +1975,7 @@ Another important extension library comes to the aid of `RecyclerView`. The `onD
 
 androidTestImplementation'com.android.support.test.espresso：espresso-contrib：3.0.2'
 
-```kt
+```
 
 This library provides a `RecyclerViewActions` class, which contains a set of methods that allow you to perform actions on items inside `RecyclerView`:
 
@@ -1984,7 +1983,7 @@ This library provides a `RecyclerViewActions` class, which contains a set of met
 
 onView（withId（R.id.recycler_view））。执行（RecyclerViewActions.actionOnItemAtPosition（0，click（）））
 
-```kt
+```
 
 The preceding statement will click the item at position `0`:
 
@@ -1992,7 +1991,7 @@ The preceding statement will click the item at position `0`:
 
 onView（withId（R.id.recycler_view））。执行（RecyclerViewActions.scrollToPosition <RecyclerView.ViewHolder>（10））
 
-```kt
+```
 
 This will scroll to the tenth item in the list:
 
@@ -2000,7 +1999,7 @@ This will scroll to the tenth item in the list:
 
 onView（withText（“myText”））。check（matches（isDisplayed（）））
 
-```kt
+```
 
 The preceding code will check whether a view with the `myText` text is displayed, which will also apply to `RecyclerView` items.
 
@@ -2029,7 +2028,7 @@ androidTestImplementation'androidx.test.ext：junit：1.1.2'
 
 androidTestImplementation'androidx.test：rules：1.3.0'
 
-```kt
+```
 
 2.  Then, start with a `Randomizer` class:
 
@@ -2045,7 +2044,7 @@ return random.nextInt（5）+ 1
 
 }
 
-```kt
+```
 
 3.  Next, create a `Synchronizer` class, which will use `Randomizer` and `Timer` to wait for the random time interval. It will also use `CountingIdlingResource` to mark the start of the task and the end of the task:
 
@@ -2091,7 +2090,7 @@ countingIdlingResource.decrement（）
 
 }
 
-```kt
+```
 
 4.  Now create an `Application` class that will be responsible for creating all the instances of the preceding classes:
 
@@ -2107,7 +2106,7 @@ val 同步器=同步器（随机器，计时器（），计数 IdlingResource）
 
 }
 
-```kt
+```
 
 5.  Add the `MyApplication` class to `AndroidManifest` in the `application` tag with the `android:name` attribute.
 6.  Create an `activity_1` layout file, which will contain a parent layout and a button:
@@ -2138,7 +2137,7 @@ android：text =“@string / press_me”/>
 
 </LinearLayout>
 
-```kt
+```
 
 7.  Create an `activity_2` layout file, which will contain a parent layout and `TextView`:
 
@@ -2166,7 +2165,7 @@ android：layout_gravity =“center”/>
 
 </LinearLayout>
 
-```kt
+```
 
 8.  Create the `Activity1` class, which will implement the logic for the button click:
 
@@ -2198,7 +2197,7 @@ startActivity（Activity2.newIntent（this，it））
 
 }
 
-```kt
+```
 
 9.  Create the `Activity2` class, which will display the received data through the intent:
 
@@ -2234,7 +2233,7 @@ getString（R.string.opened_after_x_seconds，intent.getIntExtra（EXTRA_SECONDS
 
 }
 
-```kt
+```
 
 10.  Create a `FlowTest` class in the `androidTest` directory, which will register `IdlingResource` from the `MyApplication` object and will assert the outcome of the click:
 
@@ -2274,7 +2273,7 @@ onView（withId（R.id.activity_2_text_view））.check（matches（withText（m
 
 }
 
-```kt
+```
 
 11.  Run the test multiple times and check the test results. Notice that the test will have a 20% chance of success, but it will wait until the button is clicked. This means that the idling resource is working. Another thing to observe is that there is an element of randomness here.
 12.  Tests don't like randomness, so we need to eliminate it by making the `Randomizer` class open and create a sub-class in the `androidTest` directory. We can do the same for the `MyApplication` class and provide a different randomizer called `TestRandomizer`:
@@ -2291,7 +2290,7 @@ return 1
 
 }
 
-```kt
+```
 
 13.  Now, modify the `MyApplication` class in a way in which we can override the randomizer from a subclass:
 
@@ -2315,7 +2314,7 @@ open fun createRandomizer（）= Randomizer（Random（））
 
 }
 
-```kt
+```
 
 14.  In the `androidTest` directory, create `TestMyApplication`, which will extend `MyApplication` and override the `createRandomizer` method:
 
@@ -2331,7 +2330,7 @@ open fun createRandomizer（）= Randomizer（Random（））
 
 }
 
-```kt
+```
 
 15.  Finally, create an instrumentation test runner that will use this new `Application` class inside the test:
 
@@ -2357,7 +2356,7 @@ return super.newApplication（cl，TestMyApplication :: class.java.name，contex
 
 }
 
-```kt
+```
 
 16.  Add the new test runner to the Gradle configuration:
 
@@ -2377,7 +2376,7 @@ testInstrumentationRunner "com.android.testable.myapplication.MyApplicationTestR
 
 }
 
-```kt
+```
 
 By running the test now, everything should pass similar to *Figure 9.8*:
 
@@ -2428,7 +2427,7 @@ Perform the following steps to complete this exercise:
 
 testImplementation 'junit:junit:4.13.1'
 
-```kt
+```
 
 2.  Create an `Adder` class with the `sum` method, which will return `0`, to satisfy the compiler:
 
@@ -2440,7 +2439,7 @@ fun sum（n：Int）：Int = 0
 
 }
 
-```kt
+```
 
 3.  Create an `AdderTest` class in the test directory and define our test cases. We will have the following test cases: *n=1*, *n=2*, *n=0*, *n=-1*, *n=10*, *n=20*, and *n=Int.MAX_VALUE*. We can split the successful scenarios into one method and the unsuccessful ones into a separate method:
 
@@ -2478,7 +2477,7 @@ assertEquals（-1，adder.sum（-1））
 
 }
 
-```kt
+```
 
 4.  If we run the tests for the `AdderTest` class, we will see an output similar to the following figure, meaning that all our tests failed:![Figure 9.10: Initial test status for Exercise 9.04    ](img/B15216_09_10.jpg)
 
@@ -2506,7 +2505,7 @@ return result
 
 }
 
-```kt
+```
 
 6.  If we run the tests now, you will see that one will pass and the other will fail, similar to the following figure:![Figure 9.11: Test status after resolving the success scenario for Exercise 9.04    ](img/B15216_09_11.jpg)
 
@@ -2526,7 +2525,7 @@ fun sum（n：Int）：Long {
 
 }
 
-```kt
+```
 
 Running the tests now will drastically reduce the speed to a few milliseconds.
 
@@ -2538,7 +2537,7 @@ Running the tests now will drastically reduce the speed to a few milliseconds.
 
 fun sum（n：Int）：Long {
 
-如果（n> 0）（n *（n.toLong（）+ 1））/ 2 else -1```
+如果（n> 0）（n *（n.toLong（）+ 1））/ 2 else -1
 
 }
 
