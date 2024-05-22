@@ -1,4 +1,4 @@
-# 第三章。Material Design
+# 第三章：Material Design
 
 这一章将教你什么是 Material Design，为什么它是一个很大的改进，以及为什么你应该在你的应用中使用它。
 

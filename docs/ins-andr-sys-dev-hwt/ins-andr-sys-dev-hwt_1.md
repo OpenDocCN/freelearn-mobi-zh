@@ -1,4 +1,4 @@
-# 第一章。即时 Android 系统开发指南
+# 第一章：即时 Android 系统开发指南
 
 欢迎使用*Instant Android Systems Development How-to*。本书将为您提供成为成功的 Android 系统程序员所需的所有必要技能。我们将涵盖一系列主题，从构建源代码到刷写实际的 Android 手机。本书假定读者熟悉并了解 Android 软件开发工具包。要更好地了解如何为 Android 操作系统开发，请读者务必实际执行每个配方中的所有步骤。
 

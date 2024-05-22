@@ -1,4 +1,4 @@
-# 第六章：6. RecyclerView
+# 第六章：RecyclerView
 
 概述
 

@@ -1,4 +1,4 @@
-# 第十六章。适配器和回收器
+# 第十六章：适配器和回收器
 
 在这一章中，我们将取得很大的进展。我们将首先学习适配器和列表的理论。然后，我们将看看如何在 Kotlin 代码中使用`RecyclerAdapter`实例，并将`RecyclerView`小部件添加到布局中，它作为我们 UI 的列表，然后通过 Android API 的明显魔法将它们绑定在一起，以便`RecyclerView`实例显示`RecyclerAdapter`实例的内容，并允许用户滚动查看一个充满`Note`实例的`ArrayList`实例的内容。你可能已经猜到，我们将使用这种技术在 Note to self 应用程序中显示我们的笔记列表。
 

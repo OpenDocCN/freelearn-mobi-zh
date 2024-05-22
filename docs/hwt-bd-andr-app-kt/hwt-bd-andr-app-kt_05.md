@@ -1,4 +1,4 @@
-# 第五章：5. 必要的库：Retrofit、Moshi 和 Glide
+# 第五章：必要的库：Retrofit、Moshi 和 Glide
 
 概述
 

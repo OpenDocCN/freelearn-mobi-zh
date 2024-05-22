@@ -1,4 +1,4 @@
-# 第三章：*第三章*：探索 Android Studio 和项目结构
+# 第三章：探索 Android Studio 和项目结构
 
 在本章中，我们将创建并运行另外两个 Android 项目。这些练习的目的是更深入地探索 Android Studio 和 Android 项目的结构。
 

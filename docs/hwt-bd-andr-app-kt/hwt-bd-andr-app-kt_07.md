@@ -1,4 +1,4 @@
-# 第七章：7. Android 权限和 Google 地图
+# 第七章：Android 权限和 Google 地图
 
 概述
 

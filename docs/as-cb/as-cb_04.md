@@ -1,4 +1,4 @@
-# 第四章。Android Wear
+# 第四章：Android Wear
 
 本章将向您介绍 Android Wear 以及它如何作为手表和其他设备实现的现象。
 

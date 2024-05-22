@@ -1,4 +1,4 @@
-# 第二章。不同 Android 平台的介绍
+# 第二章：不同 Android 平台的介绍
 
 第一款商用发布的 Android 设备是**HTC Dream**。在 2008 年，这款手机推出了一个新的基于 Linux 的操作系统 Android。从那时起，成千上万的制造商开始为他们的设备使用 Android。起初，Android 在移动操作系统中变得流行，如 Symbian、Java ME、Blackberry 和 iOS。新一代技术对于一个新的、轻量级、用户友好和价格实惠的操作系统有了需求。Android 满足了这些要求，并比 Blackberry 和其他竞争操作系统更快地获得了动力。
 

@@ -1,4 +1,4 @@
-# 第一章。欢迎来到 Android Studio
+# 第一章：欢迎来到 Android Studio
 
 在本章中，我们将涵盖与 Android Studio 相关的一些基本任务。在阅读本章和其他章节时，您将学习如何有效地使用 Android Studio。
 

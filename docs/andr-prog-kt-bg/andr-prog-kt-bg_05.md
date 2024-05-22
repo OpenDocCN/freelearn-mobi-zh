@@ -1,4 +1,4 @@
-# 第五章。使用 CardView 和 ScrollView 创建美丽的布局
+# 第五章：使用 CardView 和 ScrollView 创建美丽的布局
 
 这是我们在专注于 Kotlin 和面向对象编程之前关于布局的最后一章。我们将对我们已经看到的一些不同属性进行正式学习，并且还将介绍两种更酷的布局：`ScrollView`和`CardView`。最后，我们将在平板模拟器上运行`CardView`项目。
 

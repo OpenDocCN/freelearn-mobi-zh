@@ -1,4 +1,4 @@
-# 第八章. 3D 模型查看器
+# 第八章：3D 模型查看器
 
 三维模型随处可见，从机械工程的机械零件到医学成像；从视频游戏设计到 3D 打印。 3D 模型与照片、视频、音乐和其他媒体一样丰富多样。然而，虽然浏览器和应用程序对其他媒体类型有原生支持，但对 3D 模型的支持并不多。有一天，3D 查看标准将集成到浏览器中（例如 WebGL 和 WebVR）。在那之前，我们将不得不依赖插件和姊妹应用程序来查看我们的模型。例如，可以在网上找到免费的 OBJ 格式的 3D 文件模型，包括 TF3DM（[`tf3dm.com/`](http://tf3dm.com/)）、TurboSquid（[`www.turbosquid.com/`](http://www.turbosquid.com/)）和其他许多网站（[`www.hongkiat.com/blog/60-excellent-free-3d-model-websites/`](http://www.hongkiat.com/blog/60-excellent-free-3d-model-websites/)）。
 

@@ -1,4 +1,4 @@
-# 第八章：8. 服务、WorkManager 和通知
+# 第八章：服务、WorkManager 和通知
 
 概述
 

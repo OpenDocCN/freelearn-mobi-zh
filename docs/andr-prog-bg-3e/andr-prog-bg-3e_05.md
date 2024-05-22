@@ -1,4 +1,4 @@
-# 第五章：*第五章*：使用 CardView 和 ScrollView 创建美丽的布局
+# 第五章：使用 CardView 和 ScrollView 创建美丽的布局
 
 这是我们在花一些时间更专注于 Java 和面向对象编程之前的最后一个布局章节。我们将正式学习一些我们已经遇到的不同属性，并且我们还将介绍两个更酷的布局：`ScrollView`和`CardView`。最后，我们将在平板模拟器上运行`CardView`项目。
 

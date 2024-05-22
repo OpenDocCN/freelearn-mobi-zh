@@ -1,4 +1,4 @@
-# 第九章：9. 使用 JUnit、Mockito 和 Espresso 进行单元测试和集成测试
+# 第九章：使用 JUnit、Mockito 和 Espresso 进行单元测试和集成测试
 
 概述
 

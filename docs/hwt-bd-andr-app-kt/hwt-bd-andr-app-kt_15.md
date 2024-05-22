@@ -1,4 +1,4 @@
-# 第十五章：15. 使用 CoordinatorLayout 和 MotionLayout 进行动画和过渡
+# 第十五章：使用 CoordinatorLayout 和 MotionLayout 进行动画和过渡
 
 概述
 
