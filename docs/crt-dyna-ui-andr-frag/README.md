@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# 使用安卓片段创建动态 UI
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/483E44769E1E47CD0C380E136A5A54D5`](https://zh.annas-archive.org/md5/483E44769E1E47CD0C380E136A5A54D5)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
