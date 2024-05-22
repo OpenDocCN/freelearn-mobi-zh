@@ -182,7 +182,42 @@ implementation 'androidx.navigation:navigation-ui-ktx:2.3.2'
 
 这将创建导航图：
 
-![图 4.3：Android Studio 新资源文件对话框![图 4.3：Android Studio 新资源文件对话框图 4.3：Android Studio 新资源文件对话框 1.  打开`res/navigation`文件夹中的`mobile_navigation.xml`文件，并使用下面链接中文件的代码进行更新。这里显示了代码的缩略版本。请查看链接以获取您需要使用的完整代码块：```kt    mobile_navigation.xml    8    <fragment    9        android:id="@+id/nav_home"    10        android:name="com.example.navigationdrawer                            .HomeFragment"    11        android:label="@string/home"    12        tools:layout="@layout/fragment_home">    13        <action    14            android:id="@+id/nav_home_to_content"    15            app:destination="@id/nav_content"    16            app:popUpTo="@id/nav_home" />    17    </fragment>    18    19    <fragment    20        android:id="@+id/nav_content"    21        android:name="com.example.navigationdrawer                            .ContentFragment"    22        android:label="@string/content"    23        tools:layout="@layout/fragment_content" />    Th complete code for this step can be found at http://packt.live/38W9maC.    ```这将创建应用程序中的所有目的地。但是，它没有指定这些是主要目的地还是次要目的地。这应该是您在上一章的 fragment Jetpack 导航练习中熟悉的。这里最重要的一点是`app:startDestination="@+id/nav_home`，它指定了导航加载时将显示的内容，并且在`HomeFragment`中有一个可用的操作，可以移动到图中的`nav_content`目的地：```kt            <action                android:id="@+id/nav_home_to_content"                app:destination="@id/nav_content"                app:popUpTo="@id/nav_home" />    ```现在，您将看到如何在`HomeFragment`及其布局中设置这些内容。1.  打开 fragment_home.xml 布局文件。然后通过在右上角选择“设计”选项来在设计视图中打开布局文件：![图 4.4：Android Studio 设计视图标题](img/B15216_04_04.jpg)
+![图 4.3：Android Studio 新资源文件对话框](img/B15216_04_03.jpg) 
+
+1.  打开`res/navigation`文件夹中的`mobile_navigation.xml`文件，并使用下面链接中文件的代码进行更新。这里显示了代码的缩略版本。请查看链接以获取您需要使用的完整代码块：
+
+```kt
+mobile_navigation.xml   
+8    <fragment   
+9        android:id="@+id/nav_home"    
+10        android:name="com.example.navigationdrawer                            .HomeFragment"    
+11        android:label="@string/home"    
+12        tools:layout="@layout/fragment_home">    
+13        <action    
+14            android:id="@+id/nav_home_to_content"    
+15            app:destination="@id/nav_content"    
+16            app:popUpTo="@id/nav_home" />    
+17    </fragment>    
+18    
+19    <fragment    
+20        android:id="@+id/nav_content"    
+21        android:name="com.example.navigationdrawer                            .ContentFragment"    
+22        android:label="@string/content"    
+23        tools:layout="@layout/fragment_content" />    Th complete code for this step can be found at http://packt.live/38W9maC.    
+```
+
+这将创建应用程序中的所有目的地。但是，它没有指定这些是主要目的地还是次要目的地。这应该是您在上一章的 fragment Jetpack 导航练习中熟悉的。这里最重要的一点是`app:startDestination="@+id/nav_home`，它指定了导航加载时将显示的内容，并且在`HomeFragment`中有一个可用的操作，可以移动到图中的`nav_content`目的地：
+
+```kt
+        <action
+            android:id="@+id/nav_home_to_content"
+            app:destination="@id/nav_content"
+            app:popUpTo="@id/nav_home" />    
+```
+    
+现在，您将看到如何在`HomeFragment`及其布局中设置这些内容。1.  打开 fragment_home.xml 布局文件。然后通过在右上角选择“设计”选项来在设计视图中打开布局文件：
+
+![图 4.4：Android Studio 设计视图标题](img/B15216_04_04.jpg)
 
 ```kt
 <style name="button_card"   parent="Widget.MaterialComponents.Button.OutlinedButton">
