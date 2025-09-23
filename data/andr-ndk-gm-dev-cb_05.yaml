@@ -1,0 +1,1932 @@
+- en: Chapter 5. Cross-platform Audio Streaming
+  id: totrans-0
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 第五章 跨平台音频流
+- en: '|   | *Try turning off the sound in your favorite game.* |   |'
+  id: totrans-1
+  prefs: []
+  type: TYPE_TB
+  zh: '|   | *尝试关闭你最喜欢的游戏中的声音。* |   |'
+- en: '|   | --*Viktor Latypov* |'
+  id: totrans-2
+  prefs: []
+  type: TYPE_TB
+  zh: '|   | --*维克多·拉蒂波夫* |'
+- en: 'In this chapter we will cover the following recipes:'
+  id: totrans-3
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 本章我们将介绍以下内容：
+- en: Initializing OpenAL and playing the .wav files
+  id: totrans-4
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 初始化OpenAL并播放.wav文件
+- en: Abstracting basic audio components
+  id: totrans-5
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 抽象基本音频组件
+- en: Streaming sounds
+  id: totrans-6
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 流式声音
+- en: Decoding Ogg Vorbis files
+  id: totrans-7
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 解码Ogg Vorbis文件
+- en: Decoding tracker music using ModPlug
+  id: totrans-8
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 使用ModPlug解码跟踪器音乐
+- en: Introduction
+  id: totrans-9
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 引言
+- en: We are looking for a truly portable implementation of the sound playback for
+    desktop PCs and mobile devices. We propose using the OpenAL library, since it
+    is a well-established library on a desktop, and using it will make easier porting
+    of existing games to Android. In this chapter we organize a small multithreaded
+    sound streaming library.
+  id: totrans-10
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在寻找一种真正可移植的实现方案，以在桌面电脑和移动设备上进行声音播放。我们建议使用OpenAL库，因为它在桌面端已经相当成熟，使用它将使得将现有游戏移植到Android更加容易。在本章中，我们将组织一个小型的多线程声音流媒体库。
+- en: Audio playback is inherently an asynchronous process, so the decoding and control
+    of sound hardware should be done on a separate thread and controlled from other
+    dedicated threads. For example, when a player presses a fire button, or a character
+    in an arcade game hits the ground, we might just ask the system to start playback
+    of an audio file. The latency of this operation in games usually does not matter
+    so much.
+  id: totrans-11
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 音频播放本质上是一个异步过程，因此解码和控制声音硬件应该在单独的线程上完成，并从其他专用线程进行控制。例如，当玩家按下开火按钮，或者在街机游戏中一个角色撞击地面时，我们可能只是要求系统开始播放一个音频文件。在游戏中，这个操作的延迟通常不是很重要。
+- en: 'From the digital perspective, a monaural or monophonic sound (mono for short),
+    is nothing more than a long one-dimensional array of values representing a continuous
+    signal. Stereophonic or multichannel sounds are represented by a few channels
+    and stored as interleaved arrays, where the sample from one channel is followed
+    by the sample from the other channel and so on. OpenAL expects us to submit this
+    data as a sequence of buffers. The main concepts of OpenAL library are devices,
+    contexts, listeners, audio sources, and sound buffers:'
+  id: totrans-12
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 从数字角度来看，单声道或单声道声音（简称mono），不过是表示连续信号的长时间一维数组。立体声或多声道声音由几个声道表示，并以交错数组的形式存储，其中一个声道的采样紧接着另一个声道的采样，依此类推。OpenAL期望我们以一系列缓冲区的形式提交这些数据。OpenAL库的主要概念包括设备、上下文、监听器、音频源和声音缓冲区：
+- en: '![Introduction](img/7785_05_1.jpg)'
+  id: totrans-13
+  prefs: []
+  type: TYPE_IMG
+  zh: '![简介](img/7785_05_1.jpg)'
+- en: The sound produced in a virtual environment is played back through the speakers
+    after processing by a sequence of filters. The material covered in this chapter
+    will allow you to create a portable audio subsystem for your game.
+  id: totrans-14
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在虚拟环境中产生的声音经过一系列滤波器处理后，通过扬声器播放。本章涵盖的内容将允许你为你的游戏创建一个可移植的音频子系统。
+- en: Initializing OpenAL and playing the .wav files
+  id: totrans-15
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 初始化OpenAL并播放.wav文件
+- en: In this recipe, we present the simplest possible example to play uncompressed
+    audio files in **PCM** format (**pulse-code modulation**, [http://en.wikipedia.org/wiki/Pulse-code_modulation](http://en.wikipedia.org/wiki/Pulse-code_modulation)).
+    This example just plays a single file in an infinite loop. We will create a single
+    device, a single device context, and an audio source. All of this is done in a
+    single dedicated thread, but we should not worry about multithreading issues because
+    OpenAL functions are guaranteed to be thread-safe.
+  id: totrans-16
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这个食谱中，我们展示了播放未压缩音频文件的最简单示例，这些文件采用**PCM**格式（**脉冲编码调制**，[http://en.wikipedia.org/wiki/Pulse-code_modulation](http://en.wikipedia.org/wiki/Pulse-code_modulation)）。这个示例只是在无限循环中播放单个文件。我们将创建一个单一设备、一个单一设备上下文和一个音频源。所有这些都在一个专用线程中完成，但我们不应该担心多线程问题，因为OpenAL函数是保证线程安全的。
+- en: Getting ready
+  id: totrans-17
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: The source code and build scripts for the OpenAL library can be found in the
+    `0_OpenAL` folder, and precompiled static libraries are included with each of
+    the examples for this chapter. For Windows, we use dynamic linking with OpenAL.
+    Explanations on how to load files from the Android `.apk` package can be found
+    in the [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
+    a Virtual Filesystem*. The complete source of the example for this recipe can
+    be found in the `0_AL_On_Android` folder.
+  id: totrans-18
+  prefs: []
+  type: TYPE_NORMAL
+  zh: OpenAL库的源代码和构建脚本可以在`0_OpenAL`文件夹中找到，本章的每个示例都包含预编译的静态库。对于Windows，我们使用动态链接与OpenAL。关于如何从Android
+    `.apk`包中加载文件的说明可以在[第4章](ch04.html "第4章. 组织虚拟文件系统")，*组织虚拟文件系统*中找到。此配方的完整示例源代码可以在`0_AL_On_Android`文件夹中找到。
+- en: How to do it…
+  id: totrans-19
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'The class `SoundThread`, where we implement the actual playback, is as follows:'
+  id: totrans-20
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`SoundThread`类，我们在这个类中实现了实际播放，如下所示：'
+- en: '[PRE0]'
+  id: totrans-21
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: 'First we declare handles to the OpenAL audio device and device context:'
+  id: totrans-22
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 首先，我们声明OpenAL音频设备和设备上下文的句柄：
+- en: '[PRE1]'
+  id: totrans-23
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: 'Then, we declare handles to the OpenAL audio source and buffer:'
+  id: totrans-24
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 然后，我们声明OpenAL音频源和缓冲区的句柄：
+- en: '[PRE2]'
+  id: totrans-25
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: 'The `Run()` member function does all the work that includes initialization,
+    de-initialization, and submission of audio data into OpenAL:'
+  id: totrans-26
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`Run()`成员函数执行所有工作，包括初始化、反初始化以及将音频数据提交到OpenAL：'
+- en: '[PRE3]'
+  id: totrans-27
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: 'We initialize the pointers to OpenAL functions:'
+  id: totrans-28
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们初始化指向OpenAL函数的指针：
+- en: '[PRE4]'
+  id: totrans-29
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: 'Then we create the device and device context:'
+  id: totrans-30
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 然后，我们创建设备和设备上下文：
+- en: '[PRE5]'
+  id: totrans-31
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE5]'
+- en: 'Finally, we select our newly created device context as the current one:'
+  id: totrans-32
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 最后，我们将新创建的设备上下文选为当前上下文：
+- en: '[PRE6]'
+  id: totrans-33
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE6]'
+- en: 'Now, we begin the creation of the audio source:'
+  id: totrans-34
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 现在，我们开始创建音频源：
+- en: '[PRE7]'
+  id: totrans-35
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE7]'
+- en: 'We set a constant maximum playback volume of `1.0`, which is called **gain**
+    in OpenAL:'
+  id: totrans-36
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们设置一个常量最大播放音量为`1.0`，在OpenAL中这被称为**增益**：
+- en: '[PRE8]'
+  id: totrans-37
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE8]'
+- en: 'To hear something, we must load the file containing the sound data:'
+  id: totrans-38
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 为了听到声音，我们必须加载包含声音数据的文件：
+- en: '[PRE9]'
+  id: totrans-39
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE9]'
+- en: 'We use our memory-mapped files and ask our iStream object about the file size:'
+  id: totrans-40
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们使用内存映射文件，并询问iStream对象关于文件大小：
+- en: '[PRE10]'
+  id: totrans-41
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE10]'
+- en: 'To avoid handling the complete **RIFF WAVE** file format, we prepare a specific
+    file containing a single block of uncompressed audio data; the format of this
+    data is a 22 kHz monophonic 16-bit sound. We pass `Data+sizeof(sWAVHeader)` as
+    the audio data, and the size of the audio data is obviously `DataSize-sizeof(sWAVHeader)`:'
+  id: totrans-42
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 为了避免处理完整的**RIFF WAVE**文件格式，我们准备了一个包含单个未压缩音频数据块的特定文件；此数据的格式是22 kHz单声道16位声音。我们传递`Data+sizeof(sWAVHeader)`作为音频数据，音频数据的大小显然是`DataSize-sizeof(sWAVHeader)`：
+- en: '[PRE11]'
+  id: totrans-43
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE11]'
+- en: 'Then we call the `IsPlaying()` function in a spin loop to detect when OpenAL
+    stops playing the sound:'
+  id: totrans-44
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 然后，我们在自旋循环中调用`IsPlaying()`函数，以检测OpenAL何时停止播放声音：
+- en: '[PRE12]'
+  id: totrans-45
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE12]'
+- en: 'Once the sound playback is complete, we delete all the objects we have created:'
+  id: totrans-46
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 一旦声音播放完成，我们就删除我们创建的所有对象：
+- en: '[PRE13]'
+  id: totrans-47
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE13]'
+- en: 'Finally, we unload the OpenAL library on Windows:'
+  id: totrans-48
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 最后，在Windows上卸载OpenAL库：
+- en: '[PRE14]'
+  id: totrans-49
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE14]'
+- en: 'On Android, it is very important to free the allocated resource and release
+    the audio device. Otherwise, audio will keep playing in the background. To avoid
+    writing Java code in this small example, we just terminate our native activity
+    with the `exit()` call:'
+  id: totrans-50
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在Android上，释放分配的资源并释放音频设备非常重要。否则，音频会在后台继续播放。为了避免在这个小示例中编写Java代码，我们只需通过`exit()`调用终止本地活动：
+- en: '[PRE15]'
+  id: totrans-51
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE15]'
+- en: 'The code above uses the function `IsPlaying()` to check if the audio source
+    is busy:'
+  id: totrans-52
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 上面的代码使用`IsPlaying()`函数来检查音频源是否忙碌：
+- en: '[PRE16]'
+  id: totrans-53
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE16]'
+- en: 'The function `PlayBuffer()` feeds the audio data to the audio source:'
+  id: totrans-54
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`PlayBuffer()`函数将音频数据提供给音频源：'
+- en: '[PRE17]'
+  id: totrans-55
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE17]'
+- en: 'The code above uses the size of the `sWAVHeader` structure to determine the
+    offset of the audio data:'
+  id: totrans-56
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 上面的代码使用`sWAVHeader`结构的大小来确定音频数据的偏移量：
+- en: Note
+  id: totrans-57
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: 'The alignment of structure fields should be set to `1` for `sWAVHeader`. Our
+    declaration is compatible with Clang and GCC compilers from Android NDK and MinGW.
+    Use #pragma pack for VisualStudio.'
+  id: totrans-58
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+  zh: '`sWAVHeader`的结构字段对齐应设置为`1`。我们的声明与Android NDK和MinGW的Clang和GCC编译器兼容。对于VisualStudio使用#pragma
+    pack。'
+- en: '[PRE18]'
+  id: totrans-59
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE18]'
+- en: Later we reuse this structure for the loading of the`.wav` files.
+  id: totrans-60
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 之后我们重用这个结构来加载`.wav`文件。
+- en: How it works...
+  id: totrans-61
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理...
+- en: 'First, we declare the global variables holding our virtual filesystem and the
+    `SoundThread` object:'
+  id: totrans-62
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们声明保存虚拟文件系统和`SoundThread`对象的的全局变量：
+- en: '[PRE19]'
+  id: totrans-63
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE19]'
+- en: 'We create our usual application template and in the `OnStart()` callback function,
+    we start a thread that initializes the OpenAL library:'
+  id: totrans-64
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们创建常规的应用程序模板，并在`OnStart()`回调函数中启动一个线程来初始化OpenAL库：
+- en: '[PRE20]'
+  id: totrans-65
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE20]'
+- en: See also
+  id: totrans-66
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: '[Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting Common
+    Libraries*'
+  id: totrans-67
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '[第2章](ch02.html "Chapter 2. Porting Common Libraries")，*移植通用库*'
+- en: The *Implementing portable memory-mapped files* recipe in [Chapter 4](ch04.html
+    "Chapter 4. Organizing a Virtual Filesystem"), *Organizing a Virtual Filesystem*
+  id: totrans-68
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 第4章《组织虚拟文件系统》中的*实现可移植的内存映射文件*食谱
+- en: Abstracting basic audio components
+  id: totrans-69
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 抽象基本音频组件
+- en: In the previous recipe, we learned how to initialize OpenAL and how to play
+    the uncompressed `.wav` files. Here, we present the `AudioSource` and `AudioThread`
+    classes which help us to manage the initialization process.
+  id: totrans-70
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在上一个食谱中，我们学习了如何初始化OpenAL以及如何播放未压缩的`.wav`文件。在这里，我们介绍`AudioSource`和`AudioThread`类，它们帮助我们管理初始化过程。
+- en: Getting ready
+  id: totrans-71
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备就绪
+- en: Check out the example `0_AL_On_Android` in the supplementary materials to understand
+    the basic concepts of OpenAL.
+  id: totrans-72
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 查看补充材料中的示例`0_AL_On_Android`，以了解OpenAL的基本概念。
+- en: How to do it…
+  id: totrans-73
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作…
+- en: 'Let''s carefully move the initialization of OpenAL to another thread called
+    `AudioThread`:'
+  id: totrans-74
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 让我们仔细地将OpenAL的初始化移动到另一个名为`AudioThread`的线程中：
+- en: '[PRE21]'
+  id: totrans-75
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE21]'
+- en: 'The code at the beginning of the `Run()` method performs the initialization
+    of a default OpenAL device and creates an audio context:'
+  id: totrans-76
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`Run()`方法开头的代码执行默认OpenAL设备的初始化并创建音频上下文：'
+- en: '[PRE22]'
+  id: totrans-77
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE22]'
+- en: 'We set the flag that tells other threads if they can use our audio subsystem:'
+  id: totrans-78
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们设置一个标志，告诉其他线程它们是否可以使用我们的音频子系统：
+- en: '[PRE23]'
+  id: totrans-79
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE23]'
+- en: 'Then we enter an infinite loop where we call the `Env_Sleep()` function, whose
+    source code is explained as follows, to avoid using 100 percent utilization of
+    CPU:'
+  id: totrans-80
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 然后，我们进入一个无限循环，调用`Env_Sleep()`函数，其源代码如下所述，以避免使用CPU的100%利用率：
+- en: '[PRE24]'
+  id: totrans-81
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE24]'
+- en: Note
+  id: totrans-82
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: In this example, we used a fixed value of 100 milliseconds to put the thread
+    into the sleep mode. When processing audio, it is useful to calculate sleep delays
+    based on the buffer size and sampling rate. For example, a buffer of `65535` bytes
+    that contains 16-bit mono samples at a sampling rate of `44100` Hz gives us approximately
+    *65535 / (44100 × 16 / 8) ≈ 0.7* seconds of audio playback. Stereo playback cuts
+    this time in half.
+  id: totrans-83
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+  zh: 在此示例中，我们使用了100毫秒的固定值将线程置于睡眠模式。在处理音频时，根据缓冲区大小和采样率计算睡眠延迟很有用。例如，一个包含16位单声道样本的`65535`字节的缓冲区，在`44100`赫兹的采样率下，大约可以播放*65535
+    / (44100 × 16 / 8) ≈ 0.7*秒的音频。立体声播放将这个时间减半。
+- en: 'Finally, we release the OpenAL objects:'
+  id: totrans-84
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 最后，我们释放OpenAL对象：
+- en: '[PRE25]'
+  id: totrans-85
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE25]'
+- en: 'The rest of the declaration simply contains all the required fields and the
+    initialization flag:'
+  id: totrans-86
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 声明其余部分简单包含了所有必需的字段和初始化标志：
+- en: '[PRE26]'
+  id: totrans-87
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE26]'
+- en: 'The `Env_Sleep()` function used in the code just makes the thread inactive
+    for a given amount of milliseconds. It is implemented using the `Sleep()` system
+    call in Windows and the `usleep()` function in Android:'
+  id: totrans-88
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 代码中使用的`Env_Sleep()`函数只是让线程在给定毫秒数内不活跃。它在Windows中使用`Sleep()`系统调用，在Android中使用`usleep()`函数实现：
+- en: '[PRE27]'
+  id: totrans-89
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE27]'
+- en: 'Playing the`.wav` files is not enough for us, since we want to support different
+    audio formats. So, we have to split the audio playback and the actual decoding
+    of file formats into two separate entities. We are ready to introduce the `iWaveDataProvider`
+    class whose subclasses serve as data sources for our audio playback classes:'
+  id: totrans-90
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 仅播放`.wav`文件还不够，因为我们想要支持不同的音频格式。因此，我们必须将音频播放和文件格式的实际解码分为两个独立的实体。我们准备引入`iWaveDataProvider`类，其子类作为我们音频播放类的数据源：
+- en: '[PRE28]'
+  id: totrans-91
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE28]'
+- en: 'The main routines of this class enable access to the decoded audio data:'
+  id: totrans-92
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 这个类的主要例程允许访问解码的音频数据：
+- en: '[PRE29]'
+  id: totrans-93
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE29]'
+- en: 'Here is how we can get the internal OpenAL audio format identifier for the
+    data from this provider:'
+  id: totrans-94
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 下面是如何从该提供者获取内部OpenAL音频格式标识符的方法：
+- en: '[PRE30]'
+  id: totrans-95
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE30]'
+- en: 'Also, we store the information about the audio format here:'
+  id: totrans-96
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 同时，我们在这里存储有关音频格式的信息：
+- en: '[PRE31]'
+  id: totrans-97
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE31]'
+- en: 'As we already know, an audio source must be created to produce sounds. This
+    functionality is implemented in the `AudioSource` class, which wraps the OpenAL
+    function calls from the previous recipe. This class uses the `iWaveDataProvider`
+    instance as the audio data source:'
+  id: totrans-98
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 如我们所知，必须创建一个音频源以产生声音。这一功能在`AudioSource`类中实现，该类封装了前一个食谱中的OpenAL函数调用。这个类使用`iWaveDataProvider`实例作为音频数据源：
+- en: '[PRE32]'
+  id: totrans-99
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE32]'
+- en: 'The constructor just creates an OpenAL source handle and sets the default parameters:'
+  id: totrans-100
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 构造函数只是创建了一个OpenAL源句柄并设置了默认参数：
+- en: '[PRE33]'
+  id: totrans-101
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE33]'
+- en: 'The destructor stops the playback and performs the cleanup:'
+  id: totrans-102
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 析构函数停止播放并执行清理工作：
+- en: '[PRE34]'
+  id: totrans-103
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE34]'
+- en: 'The `Play()` method switches the OpenAL source into the playing state:'
+  id: totrans-104
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`Play()`方法将OpenAL源切换到播放状态：'
+- en: '[PRE35]'
+  id: totrans-105
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE35]'
+- en: 'The `Stop()` method switches the OpenAL source into the stopped state. The
+    playback can be resumed after stop ping only from the beginning of the sound buffer:'
+  id: totrans-106
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`Stop()`方法将OpenAL源切换到停止状态。停止后只能从声音缓冲区的开始处恢复播放：'
+- en: '[PRE36]'
+  id: totrans-107
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE36]'
+- en: 'The `IsPlaying()` method checks if the source is playing audio. The implementation
+    comes from the previous recipe:'
+  id: totrans-108
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`IsPlaying()`方法检查源是否正在播放音频。实现来自之前的食谱：'
+- en: '[PRE37]'
+  id: totrans-109
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE37]'
+- en: 'A small `SetVolume()` method changes the playback volume of the source. Accepted
+    float values are in the range of `0.0…1.0`:'
+  id: totrans-110
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 一个小的`SetVolume()`方法改变源的播放音量。接受的浮点值范围是`0.0…1.0`：
+- en: '[PRE38]'
+  id: totrans-111
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE38]'
+- en: 'The main routine, which feeds the data to the audio source, is `BindWaveform()`.
+    This function stores a smart pointer to the data provider and generates an OpenAL
+    buffer object:'
+  id: totrans-112
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 主例程，即向音频源提供数据的`BindWaveform()`。这个函数存储了对数据提供者的智能指针，并生成了一个OpenAL缓冲区对象：
+- en: '[PRE39]'
+  id: totrans-113
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE39]'
+- en: 'The private section of the `AudioSource` class contains a reference to an audio
+    data provider and an internal OpenAL source and buffer handle:'
+  id: totrans-114
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`AudioSource`类的私有部分包含对音频数据提供者的引用以及内部OpenAL源和缓冲区句柄：'
+- en: '[PRE40]'
+  id: totrans-115
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE40]'
+- en: 'To be able to read the sound from the file, we implement the `iWaveDataProvider`
+    interface in the `WavProvider` class:'
+  id: totrans-116
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 为了能够从文件中读取声音，我们在`WavProvider`类中实现了`iWaveDataProvider`接口：
+- en: '[PRE41]'
+  id: totrans-117
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE41]'
+- en: 'The only field this class contains is a smart pointer to a `Blob` object, containing
+    the file data:'
+  id: totrans-118
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 这个类包含的唯一字段是一个指向包含文件数据的`Blob`对象的智能指针：
+- en: '[PRE42]'
+  id: totrans-119
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE42]'
+- en: 'A simple pulse-code modulated `.wav` file consists of the `sWAVHeader` structure
+    at the beginning and the audio data, which can be directly fed into the OpenAL
+    audio source. The constructor of the `WavProvider` class extracts the information
+    about the audio data:'
+  id: totrans-120
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 一个简单的脉冲编码调制`.wav`文件由开头的`sWAVHeader`结构和音频数据组成，可以直接输入到OpenAL音频源中。`WavProvider`类的构造函数提取有关音频数据的信息：
+- en: '[PRE43]'
+  id: totrans-121
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE43]'
+- en: 'The destructor is empty, since our `Blob` object is wrapped into a smart pointer:'
+  id: totrans-122
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 析构函数是空的，因为我们的`Blob`对象被包装成了一个智能指针：
+- en: '[PRE44]'
+  id: totrans-123
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE44]'
+- en: 'The `iWaveDataProvider` interface is simple, and here we just implement two
+    member functions. `GetWaveData()` returns a pointer to the audio data:'
+  id: totrans-124
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`iWaveDataProvider`接口很简单，这里我们只实现两个成员函数。`GetWaveData()`返回指向音频数据的指针：'
+- en: '[PRE45]'
+  id: totrans-125
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE45]'
+- en: 'The `GetWaveDataSize()` method subtracts the file header size from the total
+    file size:'
+  id: totrans-126
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`GetWaveDataSize()`方法从总文件大小中减去文件头大小：'
+- en: '[PRE46]'
+  id: totrans-127
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE46]'
+- en: And we are done with the audio playback and decoding for now.
+  id: totrans-128
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们完成了音频播放和解码。
+- en: How it works…
+  id: totrans-129
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 它是如何工作的…
+- en: Now we can demonstrate how to use all the audio classes together. As usual,
+    we create an empty application template, which can be found in the `1_AL_Abstraction`
+    folder.
+  id: totrans-130
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们可以演示如何一起使用所有音频类。像往常一样，我们创建一个空的应用程序模板，可以在`1_AL_Abstraction`文件夹中找到。
+- en: 'In order to be able to use OpenAL, we must declare a global `AudioThread` instance:'
+  id: totrans-131
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了能够使用OpenAL，我们必须声明一个全局`AudioThread`实例：
+- en: '[PRE47]'
+  id: totrans-132
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE47]'
+- en: 'We start this thread in the `OnStart()` callback function:'
+  id: totrans-133
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在`OnStart()`回调函数中启动这个线程：
+- en: '[PRE48]'
+  id: totrans-134
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE48]'
+- en: 'In this example, we implement the `SoundThread` class whose `Run()` method
+    does all the playback. On this thread, we must wait for `g_Audio` to get initialized:'
+  id: totrans-135
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这个例子中，我们实现了`SoundThread`类，其`Run()`方法处理所有播放。在这个线程上，我们必须等待`g_Audio`初始化完成：
+- en: '[PRE49]'
+  id: totrans-136
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE49]'
+- en: 'Now we can create the audio source:'
+  id: totrans-137
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们可以创建音频源：
+- en: '[PRE50]'
+  id: totrans-138
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE50]'
+- en: 'Finally, we need to create a `WavProvider` object, which decodes audio files,
+    attach it to the `Src` source, start playback and wait for its completion:'
+  id: totrans-139
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，我们需要创建一个`WavProvider`对象，它解码音频文件，将其附加到`Src`源，开始播放并等待其完成：
+- en: '[PRE51]'
+  id: totrans-140
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE51]'
+- en: 'After the sound playback is finished, we reset the `Src` pointer to `NULL`
+    and send the termination signal to the `g_Audio` thread:'
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 音频播放完成后，我们将`Src`指针重置为`NULL`，并向`g_Audio`线程发送终止信号：
+- en: '[PRE52]'
+  id: totrans-142
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE52]'
+- en: 'To obtain the `Data` object, we have to implement the following function, which
+    reads the file contents into a memory block:'
+  id: totrans-143
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了获取`Data`对象，我们必须实现以下函数，它将文件内容读取到内存块中：
+- en: '[PRE53]'
+  id: totrans-144
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE53]'
+- en: We use the global initialized instance of `FileSystem`, the `g_FS` object. Please
+    note that on the Android OS, we cannot use the standard paths and therefore resort
+    to our virtual file system implementation.
+  id: totrans-145
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用全局初始化的`FileSystem`实例，即`g_FS`对象。请注意，在Android OS上，我们不能使用标准路径，因此采用我们的虚拟文件系统实现。
+- en: There's more…
+  id: totrans-146
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多…
+- en: 'We can implement a number of helper routines to ease the use of the `AudioSource`
+    class. The first useful routine is source pausing. OpenAL provides the `alSourcePause()`
+    function, which is not enough, since we have to be in control of all the unqueued
+    buffers being played. This unqueuing is not important at this point as we have
+    only one buffer, but when we get to streaming the sound, we have to take care
+    of the buffers queue. The following code should be added to the `AudioSource`
+    class to implement pausing:'
+  id: totrans-147
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们可以实施一些辅助程序，以简化`AudioSource`类的使用。第一个有用的例程是源暂停。OpenAL提供了`alSourcePause()`函数，但这还不够，因为我们必须控制所有正在播放的未排队缓冲区。此时，这个未排队并不重要，因为我们只有一个缓冲区，但是当我们开始流式传输声音时，我们必须注意缓冲区队列。以下代码应该添加到`AudioSource`类以实现暂停：
+- en: '[PRE54]'
+  id: totrans-148
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE54]'
+- en: 'For infinite sound looping, we can implement the `LoopSound()` method in the
+    `AudioSource` class:'
+  id: totrans-149
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对于无限声音循环，我们可以在`AudioSource`类中实现`LoopSound()`方法：
+- en: '[PRE55]'
+  id: totrans-150
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE55]'
+- en: 'The Android OS runs on multiple hardware architectures, and this can cause
+    some additional difficulties when reading the `.wav` files. If the CPU we are
+    running on has a big-endian architecture, we have to swap the bytes in the fields
+    of the `sWAVHeader` structure. The modified constructor of the `WavProvider` class
+    looks like the following:'
+  id: totrans-151
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安卓操作系统运行在多种硬件架构上，这可能导致在读取`.wav`文件时出现一些额外的困难。如果我们运行的CPU具有大端架构，我们就必须交换`sWAVHeader`结构字段中的字节。修改后的`WavProvider`类的构造函数如下所示：
+- en: '[PRE56]'
+  id: totrans-152
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE56]'
+- en: 'Big-endian memory byte order requires lower and higher bytes of 16-bit values
+    to be swapped:'
+  id: totrans-153
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 大端内存字节顺序要求16位值的低字节和高字节互换：
+- en: '[PRE57]'
+  id: totrans-154
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE57]'
+- en: 'Here we use the `__BIG_ENDIAN__` preprocessor symbol provided by the GCC compiler
+    to detect the big-endian CPU. The two `SwapBytes()` functions change the order
+    of the bytes in the unsigned word and double word:'
+  id: totrans-155
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这里，我们使用GCC编译器提供的`__BIG_ENDIAN__`预处理器符号来检测大端CPU。两个`SwapBytes()`函数改变无符号字和双字的字节顺序：
+- en: '[PRE58]'
+  id: totrans-156
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE58]'
+- en: See also
+  id: totrans-157
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: '*Decoding Ogg Vorbis files*'
+  id: totrans-158
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*解码Ogg Vorbis文件*'
+- en: Streaming sounds
+  id: totrans-159
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 流式声音
+- en: We have learned how to play short audio samples, and now we are ready to organize
+    sound streaming. This recipe explains how to organize a buffer queue to allow
+    on-the-fly sound generation and streaming.
+  id: totrans-160
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们已经学会了如何播放短音频样本，现在我们准备组织声音流。本食谱解释了如何组织一个缓冲区队列，以允许即时声音生成和流式传输。
+- en: Getting ready
+  id: totrans-161
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: We suppose that the reader is already familiar with our `AudioSource` and `iWaveDataProvider`
+    classes described in the previous recipe.
+  id: totrans-162
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们假设读者已经熟悉我们在上一个食谱中描述的`AudioSource`和`iWaveDataProvider`类。
+- en: How to do it…
+  id: totrans-163
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'First, we enrich `iWaveDataProvider` with the additional methods `IsStreaming()`,
+    which indicates that the data from this provider should be read in small chunks,
+    and `StreamWaveData()`, which actually reads a single chunk:'
+  id: totrans-164
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 首先，我们用额外的`IsStreaming()`方法丰富`iWaveDataProvider`，该方法表示应该以小块的方式从这个提供者读取数据，以及`StreamWaveData()`，它实际读取单个块：
+- en: '[PRE59]'
+  id: totrans-165
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE59]'
+- en: 'Next we write a derived class, which contains an intermediate buffer for decoded
+    or generated sound data. It does not implement `StreamWaveData()`, but implements
+    the `GetWaveData()` and `GetWaveDataSize()` methods:'
+  id: totrans-166
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 接下来，我们编写一个派生类，其中包含一个用于解码或生成的声音数据的中间缓冲区。它没有实现`StreamWaveData()`，但实现了`GetWaveData()`和`GetWaveDataSize()`方法：
+- en: '[PRE60]'
+  id: totrans-167
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE60]'
+- en: 'The `FBufferUsed` field holds the number of bytes used in the `FBuffer` vector.
+    Now we modify the `AudioSource` class to support our new streaming data providers.
+    We do not want cracks or interruptions in the playback process, so we use a queue
+    of buffers instead of the single buffer that we used in a single-block sound playback.
+    To do this, we first declare a buffer counter and an array of buffer IDs:'
+  id: totrans-168
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`FBufferUsed`字段保存了`FBuffer`向量中使用的字节数。现在我们修改`AudioSource`类以支持我们的新流式数据提供者。我们不希望在播放过程中出现裂缝或中断，因此我们使用缓冲区队列代替在单块声音播放中使用的单个缓冲区。为此，我们首先声明一个缓冲区计数器和缓冲区ID数组：'
+- en: '[PRE61]'
+  id: totrans-169
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE61]'
+- en: 'We leave the implementations of the `LoopSound()`, `Stop()`, `Pause()`, `IsPlaying()`,
+    and `SetVolume()` member functions, constructor, and destructor unchanged. The
+    `BindWaveform()` method now generates buffers if the associated wave data provider
+    supports streaming:'
+  id: totrans-170
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们将`LoopSound()`、`Stop()`、`Pause()`、`IsPlaying()`和`SetVolume()`成员函数，构造函数和析构函数的实现保持不变。现在`BindWaveform()`方法在关联的波形数据提供者支持流式传输时生成缓冲区：
+- en: '[PRE62]'
+  id: totrans-171
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE62]'
+- en: 'The `Play()` method invokes the `alSourcePlay()` function and adds buffers
+    to the queue in the streaming mode:'
+  id: totrans-172
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`Play()`方法调用`alSourcePlay()`函数，并在流式传输模式下将缓冲区添加到队列中：'
+- en: '[PRE63]'
+  id: totrans-173
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE63]'
+- en: 'Fill both audio buffers and submit them into the OpenAL API:'
+  id: totrans-174
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 将两个音频缓冲区填充好并将它们提交给 OpenAL API：
+- en: '[PRE64]'
+  id: totrans-175
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE64]'
+- en: 'Now that we are using more than one buffer, we change `FBufferID` to `FBufferID[0]`
+    in the `UnqueueAll()` method:'
+  id: totrans-176
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 既然我们使用了不止一个缓冲区，我们将在`UnqueueAll()`方法中将`FBufferID`更改为`FBufferID[0]`：
+- en: '[PRE65]'
+  id: totrans-177
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE65]'
+- en: 'Finally, as streaming is a continuous process and not a fire-and-forget operation,
+    we provide the `Update()` method, which pulls an appropriate amount of data from
+    `iWaveDataProvider`:'
+  id: totrans-178
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 最后，由于流式传输是一个持续的过程，而不是一次性的操作，我们提供了`Update()`方法，它从`iWaveDataProvider`获取适当量的数据：
+- en: '[PRE66]'
+  id: totrans-179
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE66]'
+- en: 'In the `Update()` method, we use the `StreamBuffer()` member function, which
+    does the job of filling the buffer with decoded or generated data from the provider:'
+  id: totrans-180
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在`Update()`方法中，我们使用了`StreamBuffer()`成员函数，它负责用提供者解码或生成的数据填充缓冲区：
+- en: '[PRE67]'
+  id: totrans-181
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE67]'
+- en: 'The `BUFFER_SIZE` constant is set to be big enough to hold the data for a couple
+    of seconds of streamed data:'
+  id: totrans-182
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`BUFFER_SIZE`常数被设置为足够大，以容纳几秒钟的流式数据：'
+- en: '[PRE68]'
+  id: totrans-183
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE68]'
+- en: Note
+  id: totrans-184
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: 'The value `352800` is derived as follows:'
+  id: totrans-185
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+  zh: 值`352800`的推导如下：
+- en: '*2 channels × 44,100 samples per second × 2 bytes per sample × 2 seconds =
+    352,800 bytes*.'
+  id: totrans-186
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+  zh: '*2通道 × 44,100每秒采样数 × 每个样本2字节 × 2秒 = 352,800字节*。'
+- en: How it works…
+  id: totrans-187
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理…
+- en: 'The code in this recipe does not implement the `StreamWaveData()` method. To
+    hear something from the speakers, we write the `ToneGenerator` class, which generates
+    a pure sine wave as the output data. This class is derived from `StreamingWaveDataProvider`:'
+  id: totrans-188
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 本食谱中的代码没有实现`StreamWaveData()`方法。为了从扬声器中听到声音，我们编写了`ToneGenerator`类，它生成纯正弦波作为输出数据。这个类是从`StreamingWaveDataProvider`派生而来的：
+- en: '[PRE69]'
+  id: totrans-189
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE69]'
+- en: 'The parameters of the signal and an internal sample counter are declared first:'
+  id: totrans-190
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先声明信号参数和内部样本计数器：
+- en: '[PRE70]'
+  id: totrans-191
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE70]'
+- en: 'The constructor sets the sound data parameters and pre-allocates the buffer
+    space:'
+  id: totrans-192
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 构造函数设置声音数据参数并预先分配缓冲区空间：
+- en: '[PRE71]'
+  id: totrans-193
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE71]'
+- en: 'The main routine of this class calculates the sine function, keeping track
+    of the current sample index to make the queue of sound buffers contain all the
+    values:'
+  id: totrans-194
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个类的主例程计算正弦函数，跟踪当前样本索引，以使声音缓冲队列包含所有值：
+- en: '[PRE72]'
+  id: totrans-195
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE72]'
+- en: 'The argument `t` for the sine function is calculated from the local index `i`
+    and the phase value named `LastOffset`:'
+  id: totrans-196
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正弦函数的参数`t`是从局部索引`i`和名为`LastOffset`的相位值计算得出的：
+- en: '[PRE73]'
+  id: totrans-197
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE73]'
+- en: 'The following lines convert a single floating-point value to a signed word.
+    Such conversion is necessary because the digital audio hardware only works with
+    integer data:'
+  id: totrans-198
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下几行代码将单个浮点数值转换成有符号字。这种转换是必要的，因为数字音频硬件只能处理整数数据：
+- en: '[PRE74]'
+  id: totrans-199
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE74]'
+- en: 'Next we increment the generated sample counter while keeping it inside the
+    `0…FSignalFreq-1` range:'
+  id: totrans-200
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来，我们在保持生成的样本计数器在`0…FSignalFreq-1`范围内时递增它：
+- en: '[PRE75]'
+  id: totrans-201
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE75]'
+- en: 'At the end, the number of generated bytes is returned:'
+  id: totrans-202
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后，返回生成的字节数：
+- en: '[PRE76]'
+  id: totrans-203
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE76]'
+- en: 'We can now use the `AudioSource` class to stream the sound. Once the audio
+    source is created, we attach a new streaming provider that generates a 440 Hz
+    sine waveform:'
+  id: totrans-204
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，我们可以使用`AudioSource`类来流式传输声音。一旦创建了音频源，我们就附加一个新的流式提供者，它生成440 Hz的正弦波形：
+- en: '[PRE77]'
+  id: totrans-205
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE77]'
+- en: 'In the infinite loop, we constantly update the source, forcing it to generate
+    sound data:'
+  id: totrans-206
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在无限循环中，我们不断更新源，强制它生成声音数据：
+- en: '[PRE78]'
+  id: totrans-207
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE78]'
+- en: There's more…
+  id: totrans-208
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多…
+- en: It is easy to notice that in the `ToneGenerator::StreamWaveData()` member function,
+    we can use any formula, not just the sine function. We encourage the reader to
+    experiment and create some sort of software synthesizer.
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 容易注意到在`ToneGenerator::StreamWaveData()`成员函数中，我们可以使用任何公式，不仅仅是正弦函数。我们鼓励读者进行实验，创建某种软件合成器。
+- en: Decoding Ogg Vorbis files
+  id: totrans-210
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 解码Ogg Vorbis文件
+- en: Ogg Vorbis is a widely used, free, open, and patent-free audio compression format.
+    It is comparable to other formats used to store and play digital music, such as
+    MP3, VQF, and AAC.
+  id: totrans-211
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Ogg Vorbis是一种广泛使用的、免费的、开放的、无专利的音频压缩格式。它可以与其他用于存储和播放数字音乐的格式相媲美，如MP3、VQF和AAC。
+- en: Getting ready
+  id: totrans-212
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备就绪
+- en: The reader should be familiar with the sound streaming technique from the previous
+    recipe. The details on the `.ogg` container file format and the Vorbis audio compression
+    algorithm can be found at [http://xiph.org](http://xiph.org).
+  id: totrans-213
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 读者应该熟悉前一个食谱中的声音流传输技术。关于`.ogg`容器文件格式和Vorbis音频压缩算法的详细信息可以在[http://xiph.org](http://xiph.org)找到。
+- en: How to do it...
+  id: totrans-214
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作…
+- en: 'We add the `IsEOF()` method to the `iWaveDataProvider` interface. This is used
+    to inform `AudioSource` when the sound is finished:'
+  id: totrans-215
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们向`iWaveDataProvider`接口添加了`IsEOF()`方法。这用于通知`AudioSource`声音何时结束：
+- en: '[PRE79]'
+  id: totrans-216
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE79]'
+- en: 'Another method we add is `Seek()`, which rewinds the audio stream:'
+  id: totrans-217
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们添加的另一个方法是`Seek()`，它倒带音频流：
+- en: '[PRE80]'
+  id: totrans-218
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE80]'
+- en: 'In the `DecodingProvider` class, we implement the `StreamWaveData()` member
+    function, which reads the decoded sound data from a source memory block using
+    the `ReadFromFile()` method:'
+  id: totrans-219
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在`DecodingProvider`类中，我们实现了`StreamWaveData()`成员函数，它使用`ReadFromFile()`方法从源内存块中读取解码的音频数据：
+- en: '[PRE81]'
+  id: totrans-220
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE81]'
+- en: 'The `FLoop` flag tells the decoder to rewind if an end of stream is encountered
+    and start playback again from the beginning:'
+  id: totrans-221
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`FLoop`标志告诉解码器，如果遇到流末尾，则倒回并从开始处重新播放：'
+- en: '[PRE82]'
+  id: totrans-222
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE82]'
+- en: 'The main streaming routine attempts to read more data from the source memory
+    block:'
+  id: totrans-223
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 主要的流处理程序尝试从源内存块中读取更多数据：
+- en: '[PRE83]'
+  id: totrans-224
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE83]'
+- en: 'We fill an unused part of the buffer with zeros to avoid the noise:'
+  id: totrans-225
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们用零填充缓冲区的未使用部分以避免噪音：
+- en: '[PRE84]'
+  id: totrans-226
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE84]'
+- en: 'At the end of file, we return zero as the decoded data size:'
+  id: totrans-227
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在文件末尾，我们将解码数据的大小返回为零：
+- en: '[PRE85]'
+  id: totrans-228
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE85]'
+- en: 'Next, we try to read from the source until we collect the `Size` bytes:'
+  id: totrans-229
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 接下来，我们尝试从源读取，直到收集到`Size`个字节：
+- en: '[PRE86]'
+  id: totrans-230
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE86]'
+- en: 'If we have the data, increment the counter:'
+  id: totrans-231
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 如果我们有数据，增加计数器：
+- en: '[PRE87]'
+  id: totrans-232
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE87]'
+- en: 'If the number of bytes is zero, we have reached the end of the file:'
+  id: totrans-233
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 如果字节数为零，我们已经到达文件的末尾：
+- en: '[PRE88]'
+  id: totrans-234
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE88]'
+- en: 'The `FLoop` flag tells us to rewind the stream to the beginning:'
+  id: totrans-235
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`FLoop`标志告诉我们需要将流倒回到开始处：'
+- en: '[PRE89]'
+  id: totrans-236
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE89]'
+- en: 'Otherwise, we have an error in the stream:'
+  id: totrans-237
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 否则，我们在流中有一个错误：
+- en: '[PRE90]'
+  id: totrans-238
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE90]'
+- en: 'The number of bytes buffered is now the number of bytes read from the file:'
+  id: totrans-239
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 当前缓冲的字节数现在是文件中读取的字节数：
+- en: '[PRE91]'
+  id: totrans-240
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE91]'
+- en: 'The `ReadFromFile()` function is purely virtual here, and the implementations
+    are in the derived classes:'
+  id: totrans-241
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`ReadFromFile()`函数在这里是纯虚的，实现都在派生类中：'
+- en: '[PRE92]'
+  id: totrans-242
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE92]'
+- en: 'In [Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting Common
+    Libraries*, we compiled Ogg and Vorbis static libraries. We use them now in the
+    `OggProvider` class, which implements the actual sound data decoding:'
+  id: totrans-243
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在[第2章](ch02.html "第2章. 移植通用库")《移植通用库》中，我们编译了Ogg和Vorbis静态库。我们现在在`OggProvider`类中使用它们，该类实现了实际音频数据的解码：
+- en: '[PRE93]'
+  id: totrans-244
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE93]'
+- en: 'The state of the decoder resides in three variables:'
+  id: totrans-245
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 解码器的状态存在于三个变量中：
+- en: '[PRE94]'
+  id: totrans-246
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE94]'
+- en: 'The constructor initializes Ogg and Vorbis libraries. The `Callbacks` structure
+    contains pointers to the functions, which allows the Ogg library to read the data
+    from our memory block using our virtual filesystem streams:'
+  id: totrans-247
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 构造函数初始化Ogg和Vorbis库。`Callbacks`结构包含指向函数的指针，这允许OGG库使用我们的虚拟文件系统流从我们的内存块中读取数据：
+- en: '[PRE95]'
+  id: totrans-248
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE95]'
+- en: 'Fill in the `Callbacks` structure and initialize the file reader:'
+  id: totrans-249
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 填充`Callbacks`结构并初始化文件阅读器：
+- en: '[PRE96]'
+  id: totrans-250
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE96]'
+- en: 'Declare the `vorbis_info` structure to read the duration of an audio stream.
+    Store the information about the stream:'
+  id: totrans-251
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 声明`vorbis_info`结构以读取音频流的持续时间。存储关于流的信息：
+- en: '[PRE97]'
+  id: totrans-252
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE97]'
+- en: 'The `FBitsPerSample` structure is set to 16 bits, and later we tell the decoder
+    to output the sound data as a 16 bit signal:'
+  id: totrans-253
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`FBitsPerSample`结构被设置为16位，然后我们告诉解码器以16位信号输出音频数据：'
+- en: '[PRE98]'
+  id: totrans-254
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE98]'
+- en: 'In the destructor, `FVorbisFile` is cleared:'
+  id: totrans-255
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在析构函数中，`FVorbisFile`被清除：
+- en: '[PRE99]'
+  id: totrans-256
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE99]'
+- en: 'The `ReadFromFile()` function uses the OGG library for stream decoding:'
+  id: totrans-257
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`ReadFromFile()`函数使用OGG库进行流解码：'
+- en: '[PRE100]'
+  id: totrans-258
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE100]'
+- en: 'Here, we assume that we are running on a little-endian CPU, such as Intel Atom,
+    Intel Core, or some other ARM processor usually encountered in mobile Android
+    devices ([http://en.wikipedia.org/wiki/Endianness](http://en.wikipedia.org/wiki/Endianness)).
+    If this is not the case, for example, the processor is a PowerPC or MIPS in a
+    big-endian mode, you should provide `1` as an argument to the `OGG_ov_read()`
+    function:'
+  id: totrans-259
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在这里，我们假设我们正在小端CPU上运行，例如Intel Atom、Intel Core，或其他通常在移动Android设备中遇到的ARM处理器（[http://en.wikipedia.org/wiki/Endianness](http://en.wikipedia.org/wiki/Endianness)）。如果不是这种情况，例如处理器是PowerPC或MIPS在大端模式下，你应该向`OGG_ov_read()`函数提供一个`1`作为参数：
+- en: '[PRE101]'
+  id: totrans-260
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE101]'
+- en: 'The `Seek()` member function rewinds the stream to the specified time:'
+  id: totrans-261
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`Seek()`成员函数将流倒回到指定的时间：'
+- en: '[PRE102]'
+  id: totrans-262
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE102]'
+- en: 'At the end of the class definition, the `OGG_Callbacks.h` file is included
+    where static callback functions are implemented:'
+  id: totrans-263
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在类的定义末尾，包含了`OGG_Callbacks.h`文件，其中实现了静态回调函数：
+- en: '[PRE103]'
+  id: totrans-264
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE103]'
+- en: The functions in the `OGG_Callbacks.h` file implement a `FILE*`-like interface,
+    which the OGG library uses to read our memory block. We pass an instance of `OggProvider`
+    as the `void* DataSource` argument in all of these functions.
+  id: totrans-265
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`OGG_Callbacks.h`文件中的函数实现了一个类似`FILE*`的接口，OGG库使用它来读取我们的内存块。我们在所有这些函数中将`OggProvider`的实例作为`void*
+    DataSource`参数传递。'
+- en: 'The `OGG_ReadFunc()` function reads the specified number of bytes and checks
+    for the end of the data:'
+  id: totrans-266
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`OGG_ReadFunc()`函数读取指定数量的字节并检查数据的末尾：'
+- en: '[PRE104]'
+  id: totrans-267
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE104]'
+- en: 'The `OGG_SeekFunc()` function sets the current read position equal to the value
+    of `Offset`:'
+  id: totrans-268
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`OGG_SeekFunc()`函数将当前读取位置设置为`Offset`的值：'
+- en: '[PRE105]'
+  id: totrans-269
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE105]'
+- en: 'Prevent the position from outrunning the end of stream:'
+  id: totrans-270
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 防止位置超过流结尾：
+- en: '[PRE106]'
+  id: totrans-271
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE106]'
+- en: 'Since we use the memory block as a data source, the `OGG_CloseFunc()` function
+    returns zero immediately because we don''t need to close any handles:'
+  id: totrans-272
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 由于我们使用内存块作为数据源，`OGG_CloseFunc()`函数立即返回零，因为我们不需要关闭任何句柄：
+- en: '[PRE107]'
+  id: totrans-273
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE107]'
+- en: 'The `OGG_TellFunc()` function returns the current read position:'
+  id: totrans-274
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`OGG_TellFunc()`函数返回当前的读取位置：'
+- en: '[PRE108]'
+  id: totrans-275
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE108]'
+- en: How it works…
+  id: totrans-276
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理…
+- en: 'We initialize the OpenAL as in the previous recipes and bind `OggProvider`
+    as a data source for the `AudioSource` instance:'
+  id: totrans-277
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们像之前的食谱一样初始化OpenAL，并将`OggProvider`绑定到`AudioSource`实例的数据源：
+- en: '[PRE109]'
+  id: totrans-278
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE109]'
+- en: 'Update the audio source in a loop, just as we do with `ToneGenerator`:'
+  id: totrans-279
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在循环中更新音频源，就像我们对`ToneGenerator`所做的那样：
+- en: '[PRE110]'
+  id: totrans-280
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE110]'
+- en: The `LoadFileAsBlob()` function is the same as the one we used to load`.wav`
+    files.
+  id: totrans-281
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`LoadFileAsBlob()`函数与我们用来加载`.wav`文件的函数相同。'
+- en: Decoding tracker music using ModPlug
+  id: totrans-282
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 使用ModPlug解码跟踪器音乐
+- en: Mobile devices are always limited on resources compared to the desktops. These
+    limitations are both in terms of computing power and the amount of available storage.
+    High-quality MPEG-1 Layer 3 or the Ogg Vorbis audio files occupy a lot of space
+    even at modest bitrates. For example, in a 20 Mb game, two tracks of size 5 Mb
+    each would be unacceptable. However, there is a good trade-off between quality
+    and compression. A technology originated in the eighties known as the tracker
+    music — sometimes called chiptune or 8-bit music ([http://en.wikipedia.org/wiki/Music_tracker](http://en.wikipedia.org/wiki/Music_tracker)).
+    Tracker music formats don't use pulse-code modulation to store the entire soundtrack.
+    Instead, they use `notes` and effects, which are applied to `samples` and played
+    in several channels. `Samples` are small PCM encoded sounds of musical instruments.
+    `Notes` correspond to the playback speed of a sample. We use the **libmodplug**
+    library to decode the most popular tracker music file formats, such as `.it`,
+    `.xm`, and `.mod`.
+  id: totrans-283
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与桌面计算机相比，移动设备在资源上总是受限的。这些限制既包括计算能力，也包括可用的存储空间。即使是在适中的比特率下，高质量的MPEG-1 Layer 3或Ogg
+    Vorbis音频文件也会占用大量空间。例如，在一个20 Mb的游戏中，两个各占5 Mb大小的音轨是不可接受的。然而，质量和压缩之间有一个很好的折中方案。一种起源于八十年代的技术，称为跟踪器音乐——有时也被称为芯片音乐或8位音乐（[http://en.wikipedia.org/wiki/Music_tracker](http://en.wikipedia.org/wiki/Music_tracker)）。跟踪器音乐格式不使用脉冲编码调制来存储整个音轨。相反，它们使用`音符`和效果，这些音符和效果被应用到`样本`并在多个通道中播放。`样本`是乐器的小型PCM编码声音。`音符`对应于样本的播放速度。我们使用**libmodplug**库来解码最流行的跟踪器音乐文件格式，如`.it`、`.xm`和`.mod`。
+- en: Getting ready
+  id: totrans-284
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备就绪
+- en: Check out the most recent version of libmodplug at [http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net).
+  id: totrans-285
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在[http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net)查看libmodplug的最新版本。
+- en: How to do it...
+  id: totrans-286
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'The ModPlug library allows us to implement another class derived from `DecodingProvider`,
+    called `ModPlugProvider`. The library supports direct decoding of the memory blocks,
+    so we don''t have to implement any kind of I/O callbacks:'
+  id: totrans-287
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: ModPlug库允许我们实现另一个从`DecodingProvider`派生的类，称为`ModPlugProvider`。该库支持直接解码内存块，因此我们不需要实现任何I/O回调：
+- en: '[PRE111]'
+  id: totrans-288
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE111]'
+- en: 'As a state, this class contains the `ModPlugFile` structure:'
+  id: totrans-289
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 作为状态，这个类包含了`ModPlugFile`结构：
+- en: '[PRE112]'
+  id: totrans-290
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE112]'
+- en: 'The sole constructor initializes the `ModPlugFile` field:'
+  id: totrans-291
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 唯一的构造函数初始化了`ModPlugFile`字段：
+- en: '[PRE113]'
+  id: totrans-292
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE113]'
+- en: 'The destructor unloads the file:'
+  id: totrans-293
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 析构函数卸载文件：
+- en: '[PRE114]'
+  id: totrans-294
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE114]'
+- en: 'The `ReadFromFile()` method calls the ModPlug''s reading function:'
+  id: totrans-295
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '`ReadFromFile()`方法调用ModPlug的读取函数：'
+- en: '[PRE115]'
+  id: totrans-296
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE115]'
+- en: 'To rewind the source stream, we use the `ModPlug_Seek()` member function:'
+  id: totrans-297
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 要重置源流，我们使用`ModPlug_Seek()`成员函数：
+- en: '[PRE116]'
+  id: totrans-298
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE116]'
+- en: How it works...
+  id: totrans-299
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理...
+- en: There is no dedicated sample for module file decoding. For better understanding,
+    we suggest modifying the `3_AL_PlayingOGG` source code. The only required modification
+    is the replacement of `OggProvider` by `ModPlugProvider`. For testing, you have
+    the `test.it` file in the `3_AL_PlayingOGG` folder.
+  id: totrans-300
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 没有专用的样本用于模块文件解码。为了更好地理解，我们建议修改`3_AL_PlayingOGG`源代码。唯一需要的修改是将`OggProvider`替换为`ModPlugProvider`。在测试中，你可以在`3_AL_PlayingOGG`文件夹中找到`test.it`文件。
+- en: See also
+  id: totrans-301
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: '*Decoding Ogg Vorbis files*'
+  id: totrans-302
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '*解码Ogg Vorbis文件*'
