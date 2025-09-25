@@ -1,4 +1,4 @@
-# Android 上的 ARCore
+# 第二章：Android 上的 ARCore
 
 Google 开发了 ARCore，使其可以从多个开发平台（Android [Java]，Web [JavaScript]，Unreal [C++]，和 Unity [C#]）访问，从而为开发者提供了大量的灵活性和选项，以便在各种平台上构建应用程序。虽然每个平台都有其优势和劣势，我们将在后面讨论，但所有平台本质上都扩展了最初作为 Tango 构建的本地 Android SDK。这意味着无论你选择哪个平台，你都需要安装并熟悉使用 Android 开发工具。
 

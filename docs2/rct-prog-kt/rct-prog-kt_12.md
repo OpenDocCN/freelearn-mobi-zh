@@ -1,4 +1,4 @@
-# 反应式 Kotlin 和 Android
+# 第十二章：反应式 Kotlin 和 Android
 
 因此，我们关于 Kotlin 中反应式编程的学习几乎已经完成。我们已经到达了本书的最后一章，但可能是最重要的一章。Android 可能是 Kotlin 最大的平台。在最近的 Google IO—Google IO 17 上，Google 宣布了对 Kotlin 的官方支持，并将 Kotlin 添加为 Android 应用开发的第一个公民。现在，Kotlin 是除了 Java 之外唯一官方支持的 Android 应用开发语言。
 

@@ -1,4 +1,4 @@
-# 使用平台为 Flutter 应用提供动力
+# 第六章：使用平台为 Flutter 应用提供动力
 
 使用 Flutter，您可以同时为 Android 和 iOS 构建应用。它使用 Dart 编程语言来完成这一任务。然而，Dart 不会编译成 Android 的 Dalvik 字节码或 iOS 上的 Objective C 绑定。这表明 Dart 代码默认情况下没有直接访问平台特定 API 的能力。
 

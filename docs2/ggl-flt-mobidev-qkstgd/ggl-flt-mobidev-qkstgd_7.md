@@ -1,4 +1,4 @@
-# Firebase - Flutter 的最佳伙伴
+# 第七章：Firebase - Flutter 的最佳伙伴
 
 使用**Firebase**构建应用是世界上增长最快的科技趋势之一。使用 Firebase，开发者可以快速构建应用，无需管理基础设施，包括身份验证、存储和同步数据、安全托管 Web 资产和云存储。Firebase 有一个免费的基础计划，提供 1 GB 的存储空间和 100 个并发连接。如果您想升级，您可以在此查看计划：[`firebase.google.com/pricing/`](https://firebase.google.com/pricing/)。
 

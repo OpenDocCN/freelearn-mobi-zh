@@ -1,4 +1,4 @@
-# 开始使用 Arrow
+# 第十二章：开始使用 Arrow
 
 **Arrow** ([`arrow-kt.io/`](http://arrow-kt.io/)) 是一个 Kotlin 库，它提供了函数式构造、数据类型和其他抽象。Kotlin 语法强大且灵活，Arrow 利用这一点提供了一些标准中不包含的功能。
 

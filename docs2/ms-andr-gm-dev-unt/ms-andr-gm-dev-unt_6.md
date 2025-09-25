@@ -1,4 +1,4 @@
-# GameScene 和 SceneFlow
+# 第六章：GameScene 和 SceneFlow
 
 到目前为止，我们只处理了 startScene，但在本章中，我们将看到如何向游戏中添加其他场景，并且我们需要一个 MainMenu 场景，从这里我们可以进入其他场景，如选项或成就场景。
 

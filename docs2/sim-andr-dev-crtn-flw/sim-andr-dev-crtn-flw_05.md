@@ -1,4 +1,4 @@
-# *第四章*: 测试 Kotlin 协程
+# 第四章：*第四章*: 测试 Kotlin 协程
 
 在上一章中，你学习了关于协程取消和如何使你的协程可取消的内容。然后，你学习了关于以毫秒或 `try-catch` 和 `CoroutineExceptionHandler` 形式的协程超时。
 

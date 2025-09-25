@@ -1,4 +1,4 @@
-# *第二章*：使用 Jetpack ViewModel 处理 UI 状态
+# 第二章：*第二章*：使用 Jetpack ViewModel 处理 UI 状态
 
 在这一章中，我们将介绍 Jetpack 中最重要的库之一：`ViewModel` 架构组件。我们将了解它是什么，为什么我们需要在我们的应用中使用它，以及我们如何在上一章开始的项目“Restaurants”中实现它。
 

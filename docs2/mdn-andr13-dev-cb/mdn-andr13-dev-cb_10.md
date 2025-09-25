@@ -1,6 +1,6 @@
 
 
-# 使用 Jetpack Compose 实现你的第一个 Wear OS
+# 第十章：使用 Jetpack Compose 实现你的第一个 Wear OS
 
 **Wear OS**是由谷歌为智能手表和其他可穿戴设备开发的操作系统。有几个原因说明为什么在现代 Android 开发中创建 Wear OS 对于 Android 至关重要。首先，这意味着扩展 Android 生态系统；Wear OS 通过允许开发者创建可以通过智能手表或其他可穿戴设备访问的应用和服务来扩展 Android 生态系统。
 

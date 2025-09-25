@@ -1,4 +1,4 @@
-# 箭头类型
+# 第十三章：箭头类型
 
 Arrow 包含了许多传统函数类型的实现，如 `Option`、`Either` 和 `Try`，以及许多其他类型类，如 `functor` 和 `monad`。
 

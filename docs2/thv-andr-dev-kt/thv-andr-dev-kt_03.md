@@ -1,6 +1,6 @@
 
 
-# 设置 WhatsPackt 的消息功能
+# 第二章：设置 WhatsPackt 的消息功能
 
 在上一章中，我们创建了所需的 WhatsPackt 消息应用的结构和 UI。
 

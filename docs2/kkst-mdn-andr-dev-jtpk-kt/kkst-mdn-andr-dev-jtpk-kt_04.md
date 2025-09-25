@@ -1,4 +1,4 @@
-# *第三章*：使用 Retrofit 显示 REST API 的数据
+# 第三章：*第三章*：使用 Retrofit 显示 REST API 的数据
 
 在这一章中，我们将暂时放下 Jetpack 库，通过使用 Android 上一个非常流行的网络库 Retrofit，来专注于在我们的餐厅应用程序中添加真实数据。
 

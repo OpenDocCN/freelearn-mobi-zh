@@ -1,4 +1,4 @@
-# 启用 VirtualBox 特定硬件接口
+# 第十一章：启用 VirtualBox 特定硬件接口
 
 在上一章中，我们对 Android Gralloc HAL 模块进行了深入分析。我们分析了默认的 Gralloc 模块和 Android 模拟器的硬件 GPU 仿真 Gralloc HAL。我们还没有时间走完与图形系统相关的启动过程。在本章中，我们将走完图形系统的启动过程，并探索 VirtualBox 特定的硬件驱动程序。在本章结束时，我们将在 VirtualBox 上拥有一个相对完整的系统。本章我们将涵盖以下主题：
 

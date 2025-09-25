@@ -1,6 +1,6 @@
 
 
-# Jetpack Compose 布局基础
+# 第三章：Jetpack Compose 布局基础
 
 一个好的 UI 和用户体验是我们应用的核心。作为 Android 开发者，我们必须敏锐地意识到这两个领域，并学习如何使用为我们提供的不同工具来创建 UI。Google 引入了 **Jetpack Compose**，这是一种现代的 UI 工具包，可以帮助开发者轻松地创建直观的 UI。
 

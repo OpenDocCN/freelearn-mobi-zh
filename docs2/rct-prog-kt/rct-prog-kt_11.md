@@ -1,4 +1,4 @@
-# 使用 Spring JPA 和 Hibernate 的 REST APIs
+# 第十一章：使用 Spring JPA 和 Hibernate 的 REST APIs
 
 在上一章中，我们学习了如何轻松地创建 REST API。我们学习了如何利用 Spring、Hibernate 和 JPA 的力量，用一行代码就能创建 REST API。那些是强大的 REST API，但它们不是反应式的。本书的主要关注点是教您如何使一切具有反应性，并教您如何创建非阻塞的应用程序和 API。
 

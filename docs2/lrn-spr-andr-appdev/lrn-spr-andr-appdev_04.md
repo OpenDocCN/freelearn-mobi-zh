@@ -1,4 +1,4 @@
-# Android 的 Spring 模块
+# 第四章：Android 的 Spring 模块
 
 本章节将涵盖支持 Spring for Android 的模块和功能，以及在 Android 中使用 REST 作为客户端。有一些模块有助于请求和检索 REST API。它们还提供安全功能，如*基本认证*和*OAuth2*。由于这些安全措施，服务器资源得到保护，因此难以被黑客攻击。即使客户端也需要从资源所有者那里获得权限才能使用受保护服务器的资源。这些模块还集成了强大的基于 OAuth 的授权客户端和主流社交网站（如 Google、Twitter、Facebook 等）的实现。
 

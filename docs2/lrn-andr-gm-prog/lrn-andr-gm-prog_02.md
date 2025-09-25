@@ -1,4 +1,4 @@
-# 熟悉 Android Studio
+# 第二章：熟悉 Android Studio
 
 本章将指导你通过 Android Studio，并在本章结束时，你将成功执行你的第一个 Android 项目。这将是一个对你理解 Android 项目结构至关重要的章节，并将帮助你理解后续章节。你将学习以下内容：
 

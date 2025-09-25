@@ -1,4 +1,4 @@
-# 响应式编程
+# 第八章：响应式编程
 
 响应式编程是一种处理异步事件的异步方法。我们经常遇到异步事件，例如用户与界面的交互或长期操作结果的交付。还有一些库，如 [RxJava](https://github.com/ReactiveX/RxJava) 和 [Reactor](https://github.com/reactor/reactor-core)[,](https://github.com/reactor/reactor-core) [允许我们在 Kotlin 或 Java 中编写响应式代码。](https://github.com/reactor/reactor-core)
 

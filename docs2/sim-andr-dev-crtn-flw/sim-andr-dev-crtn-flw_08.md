@@ -1,4 +1,4 @@
-# *第六章*：处理 Flow 取消和异常
+# 第六章：*第六章*：处理 Flow 取消和异常
 
 在上一章中，我们专注于 Kotlin Flows，并学习了如何在我们的 Android 项目中使用它们。我们学习了如何使用 Flow builders 创建 Kotlin Flows。然后，我们探讨了 Flow operators 以及如何与 Kotlin Flows 一起使用它们。接着，我们学习了缓冲和组合 Flows。最后，我们探讨了 `SharedFlow` 和 `StateFlow`。
 

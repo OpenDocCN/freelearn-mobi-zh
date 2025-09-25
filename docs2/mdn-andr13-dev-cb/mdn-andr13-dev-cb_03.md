@@ -1,6 +1,6 @@
 
 
-# 在 Jetpack Compose 和使用 Hilt 中处理 UI 状态
+# 第三章：在 Jetpack Compose 和使用 Hilt 中处理 UI 状态
 
 所有 Android 应用程序都向用户显示状态，这有助于通知用户结果是什么以及何时发生。Android 应用程序中的 **状态**是任何随时间变化的价值，一个很好的例子是在出现错误时显示消息的 toast。在本章中，读者将学习如何使用新的 Jetpack 库更好地处理 UI 状态。
 

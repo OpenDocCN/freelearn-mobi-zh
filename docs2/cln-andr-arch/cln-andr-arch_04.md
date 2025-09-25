@@ -1,4 +1,4 @@
-# *第三章*: 在 Android 上理解数据展示
+# 第三章：*第三章*: 在 Android 上理解数据展示
 
 在本章中，我们将研究可用于在 `ViewModel` 和 `Lifecycle` 库上展示数据的库。然后，我们将分析 UI 工作的一些方面，并查看 Jetpack Compose 库如何通过其声明式方法彻底改变了 UI 的构建。最后，我们将探讨如何使用带有 `Compose` 扩展的 `Navigation` 库在 Compose 中构建的不同屏幕之间进行导航。
 

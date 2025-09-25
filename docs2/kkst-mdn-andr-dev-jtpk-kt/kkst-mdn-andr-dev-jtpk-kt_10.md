@@ -1,4 +1,4 @@
-# *第八章*：Android 中开始使用 Clean Architecture
+# 第八章：*第八章*：Android 中开始使用 Clean Architecture
 
 在本章中，我们继续改进 Restaurants 应用程序的架构设计之旅。
 
