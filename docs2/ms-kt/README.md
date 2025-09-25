@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# 精通 Kotlin
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/c45f33a5c3e2fa673e835f4a0e69219c`](https://zh.annas-archive.org/md5/c45f33a5c3e2fa673e835f4a0e69219c)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

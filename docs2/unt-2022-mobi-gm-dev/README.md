@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Unity2022 移动游戏开发
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/1632eb0b2399b90ebe5e9eb246847cbc`](https://zh.annas-archive.org/md5/1632eb0b2399b90ebe5e9eb246847cbc)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
