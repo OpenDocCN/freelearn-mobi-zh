@@ -1,4 +1,4 @@
-# 1
+
 
 # 开始使用 Kotlin Android 开发
 
