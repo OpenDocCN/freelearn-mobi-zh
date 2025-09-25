@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# 谷歌 Flutter 移动开发快速启动指南
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/2ff865f719115aa08fbcf9d0c2b760d8`](https://zh.annas-archive.org/md5/2ff865f719115aa08fbcf9d0c2b760d8)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
