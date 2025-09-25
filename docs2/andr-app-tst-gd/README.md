@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# 安卓应用测试指南
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/42ce5f8b2b9113c00daf25a8577a1945`](https://zh.annas-archive.org/md5/42ce5f8b2b9113c00daf25a8577a1945)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
