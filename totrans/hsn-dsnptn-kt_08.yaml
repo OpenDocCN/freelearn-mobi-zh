@@ -1,21 +1,28 @@
 - en: Threads and Coroutines
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 线程和协程
 - en: In this chapter, we'll discuss how our application can efficiently serve thousands
     of requests per second. In the previous chapter, we already had one glimpse at
     it—**reactive streams** use a number of different threads (exposed by the `Schedulers`
     API), and we even had to create a thread once or twice with the `thread()` function.
     But before we dive into nuances, let's first discuss what kind of problems threads
     are able to solve.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将讨论我们的应用程序如何高效地每秒处理数千个请求。在前一章中，我们已经对其有所了解——**响应式流**使用多个不同的线程（由`Schedulers`
+    API公开），我们甚至不得不使用`thread()`函数创建一个线程一次或两次。但在深入细节之前，让我们首先讨论线程能够解决哪些类型的问题。
 - en: In your laptop, you have a CPU with multiple cores, probably four of them. That
     means that it can do four different computations *in parallel*, which is pretty
     amazing, considering that 10 years ago, a single-core CPU was the default and
     even two cores were only for enthusiasts.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在你的笔记本电脑中，你有一个具有多个核心的CPU，可能四个。这意味着它可以同时进行四个不同的计算，这相当令人印象深刻，考虑到10年前，单核CPU是默认的，甚至双核CPU也只针对爱好者。
 - en: But even back then, you were not actually limited to doing only a single task
     at a time, right? You could listen to music and browse the internet at the same
     time, even on a single-core CPU. How does your CPU manage to pull that off? Well,
@@ -23,97 +30,145 @@
     listening to your friend talking, part of the time you're not really reading and
     part of the time you're not really listening. That is until we get at least two
     cores in our brains.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 但即使在那时，你实际上并没有限制于一次只能执行一个任务，对吧？你可以一边听音乐一边浏览互联网，甚至在单核CPU上也能做到。你的CPU是如何做到这一点的呢？嗯，和你的大脑一样。它处理多个任务。当你一边读书一边听朋友说话时，你的一部分时间并不是真的在读书，另一部分时间并不是真的在听。直到我们的大脑中至少有两个核心。
 - en: The servers you run your code on have pretty much the same CPU. Which still
     means they can serve four requests simultaneously. But what if you have 10,000
     requests per second? You can't serve them in parallel, because you don't have
     10,000 CPU cores. But you can try and serve them concurrently.
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 你运行代码的服务器具有几乎相同的CPU。这意味着它们可以同时处理四个请求。但如果你每秒有10,000个请求怎么办？你不能并行处理它们，因为你没有10,000个CPU核心。但你可以尝试并发处理它们。
 - en: 'In this chapter, we will cover the following topics:'
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
 - en: Threads
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 线程
 - en: Coroutines
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 协程
 - en: Channels
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 通道
 - en: Threads
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 线程
 - en: The most basic concurrency model is provided by JVM threads. Threads allow us
     to run code concurrently (but not necessarily in parallel), making better use
     of multiple CPU cores, for example. They are more lightweight than processes.
     One process may spawn hundreds of threads. Unlike processes, sharing data between
     threads is easy. But that also introduces a lot of problems, as we'll see later.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 最基本的并发模型是由JVM线程提供的。线程允许我们并发地运行代码（但不一定是并行），从而更好地利用多个CPU核心，例如。它们比进程更轻量级。一个进程可能产生数百个线程。与进程不同，线程之间共享数据很容易。但这也会带来很多问题，我们稍后会看到。
 - en: 'Let''s see how we create two threads in Java first:'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们先看看如何在Java中创建两个线程：
 - en: '[PRE0]'
+  id: totrans-12
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'The output will look something like this:'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 输出将类似于以下内容：
 - en: '[PRE1]'
+  id: totrans-14
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Note that the output will vary between executions, and at no point is it guaranteed
     to be interleaved.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，输出将在不同的执行之间有所不同，并且在任何时候都没有保证它是交错进行的。
 - en: 'The same code in Kotlin would look as follows:'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: Kotlin中的相同代码如下所示：
 - en: '[PRE2]'
+  id: totrans-17
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'In Kotlin, there''s less boilerplate, because there''s a function that helps
     us create a new thread. Notice that unlike Java, we don''t need to call `start()`
     to launch the thread. It starts by default. If we would like to postpone it for
     later, we can set the `start` parameter to `false`:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Kotlin中，由于有一个帮助我们创建新线程的函数，所以代码更简洁。请注意，与Java不同，我们不需要调用`start()`来启动线程。它默认启动。如果我们想稍后启动它，我们可以将`start`参数设置为`false`：
 - en: '[PRE3]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Another useful concept from Java is *daemon threads*. These threads don't prevent
     JVM from exiting and are very good for non-critical background tasks.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: Java中另一个有用的概念是*守护线程*。这些线程不会阻止JVM退出，非常适合非关键的后台任务。
 - en: 'In Java, the API is not fluent, so we''ll have to assign our thread to a variable,
     set it to be a daemon thread, and then start it:'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Java中，API不是流畅的，所以我们必须将我们的线程分配给一个变量，将其设置为守护线程，然后启动它：
 - en: '[PRE4]'
+  id: totrans-22
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'In Kotlin, this is much simpler:'
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Kotlin中，这要简单得多：
 - en: '[PRE5]'
+  id: totrans-24
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Notice that although we asked this thread to print numbers up to one million,
     it prints only a few hundred. That's because it's a daemon thread. When the parent
     thread stops, it stops too.
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，尽管我们要求这个线程打印到一百万，但它只打印了几百个。这是因为它是一个守护线程。当父线程停止时，它也会停止。
 - en: Thread safety
+  id: totrans-26
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 线程安全
 - en: There are many books written about thread safety and there are good reasons
     for that. Concurrency bugs that are caused by lack of thread safety are the ones
     hardest to track. They're hard to reproduce, because you'll usually need a lot
@@ -122,774 +177,1178 @@
     the surface of this topic. If you're interested in the topic of thread safety
     in the JVM language, you should check out the book *Java Concurrency in Practice* by
     Brian Goetz.
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于线程安全有许多书籍，这是有充分理由的。由缺乏线程安全引起的并发错误是最难追踪的。它们很难重现，因为你通常需要很多线程在同一资源上竞争，以实际发生竞争。因为这本书是关于Kotlin而不是一般的线程安全，所以我们只会触及这个话题的表面。如果您对JVM语言的线程安全主题感兴趣，您应该查看Brian
+    Goetz所著的《Java Concurrency in Practice》这本书。
 - en: 'We''ll start with the following example, which creates 100,000 threads to increment
     a counter:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从以下示例开始，该示例创建100,000个线程来增加计数器：
 - en: '[PRE6]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: If you have a bit of experience with concurrent programming, you'll understand
     right away why this code prints a number that is less than 100,000\. The reason
     is the `++` operation is not atomic. So the more threads that try to increment
     our counter, the more chances for data races.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您对并发编程有一些经验，您会立刻明白为什么这段代码打印的数字小于100,000。原因是`++`操作不是原子的。所以尝试增加我们的计数器的线程越多，数据竞争的机会就越多。
 - en: 'But, unlike Java, there''s no `synchronized` keyword in Kotlin. The reason
     is that Kotlin designers believe that a language shouldn''t be tailored to a particular
     concurrency model. Instead, there''s a `synchronized()` function:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 但是，与Java不同，Kotlin中没有`synchronized`关键字。原因是Kotlin的设计者认为一种语言不应该针对特定的并发模型进行定制。相反，有一个`synchronized()`函数：
 - en: '[PRE7]'
+  id: totrans-32
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Now our code prints `100000`, as expected.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在代码打印出预期的`100000`。
 - en: If you really miss the synchronized methods from Java, there's the `@Synchronized` annotation
     in Kotlin. There's also no `volatile` keyword, but the `@Volatile` annotation
     instead.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您真的很怀念Java中的同步方法，Kotlin中有`@Synchronized`注解。也没有`volatile`关键字，而是使用`@Volatile`注解。
 - en: Threads are expensive
+  id: totrans-35
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 线程很昂贵
 - en: There is a price to pay whenever we create a new thread. Each thread needs a
     new memory stack.
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次我们创建一个新线程时，都需要付出代价。每个线程都需要一个新的内存栈。
 - en: What if we simulate some work inside each thread by putting it to sleep?
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们在每个线程内部模拟一些工作，让它进入休眠状态会怎样？
 - en: 'In the following piece of code, we''ll attempt to create 10,000 threads, each
     sleeping for a relatively short period of time:'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 在以下代码片段中，我们将尝试创建10,000个线程，每个线程休眠相对较短的时间：
 - en: '[PRE8]'
+  id: totrans-39
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Depending on your operation system, this will result in either `OutOfMemoryError`
     or the entire system becoming very slow. Of course, there are ways to limit how
     many threads are run at once, using the **executors API** from Java 5.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据您的操作系统，这可能会导致`OutOfMemoryError`或整个系统变得非常缓慢。当然，有方法可以限制同时运行的线程数量，使用Java 5中的**executors
+    API**。
 - en: 'We create a new thread pool of a specified size:'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们创建一个指定大小的新的线程池：
 - en: '[PRE9]'
+  id: totrans-42
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Now we would like to submit a new task. We''re doing this by calling `pool.submit()`:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们想提交一个新任务。我们通过调用`pool.submit()`来完成这个任务：
 - en: '[PRE10]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Then we need to make sure that the pool terminates, by using the following
     lines:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后我们需要确保池终止，通过以下几行代码：
 - en: '[PRE11]'
+  id: totrans-46
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: Notice that it took us 20 seconds to complete. That's because a new task cannot
     begin until previous tasks *woke up* and completed their job.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，我们花了20秒才完成。这是因为新任务不能开始，直到之前的任务*醒来*并完成它们的工作。
 - en: And that's exactly what happens in multithreaded systems, which is not concurrent
     enough.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 这正是多线程系统中发生的情况，它并不足够并发。
 - en: In the next section, we'll discuss how coroutines try to solve this problem.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一节中，我们将讨论协程如何尝试解决这个问题。
 - en: Coroutines
+  id: totrans-50
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 协程
 - en: In addition to the threading model provided by Java, Kotlin also introduces
     a coroutines model. Coroutines might be considered lightweight threads, and we’ll
     see what advantages they provide over an existing model of threads shortly.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了Java提供的线程模型之外，Kotlin还引入了协程模型。协程可以被认为是轻量级的线程，我们很快就会看到它们相对于现有线程模型的优势。
 - en: 'The first thing you need to know is that coroutines are not part of the language.
     They are simply another library provided by JetBrains. For that reason, if we
     want to use them, we need to specify so in our Gradle configuration file, `build.gradle`:'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 你需要知道的第一件事是，协程不是语言的一部分。它们只是 JetBrains 提供的另一个库。因此，如果我们想使用它们，我们需要在我们的 Gradle 配置文件`build.gradle`中指定：
 - en: '[PRE12]'
+  id: totrans-53
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: As of Kotlin 1.2, coroutines are still considered experimental. This doesn't
     mean that they don't work well, though, as some might think. It only means that
     some parts of the API may still change in the next versions.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 截至 Kotlin 1.2，协程仍然被视为实验性的。但这并不意味着它们工作得不好，尽管有些人可能会这样认为。这只意味着API的一些部分可能在下一个版本中发生变化。
 - en: What could change? For example, in 0.18, an Actor, which we'll discuss later
     in this chapter, exposed a channel member. In 0.21, this member was made private
     and a method was added instead. So instead of calling `actor.channel.send()`,
     you would call `actor.send()`.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 可能会发生什么变化？例如，在0.18版本中，我们将在此章节后面讨论的Actor暴露了一个通道成员。在0.21版本中，这个成员被设置为私有，并添加了一个方法。因此，你将不再调用`actor.channel.send()`，而是调用`actor.send()`。
 - en: It's fine if you're not aware what *actor* or *channel* mean at this point.
     We'll cover those terms in the following sections shortly.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你现在还不清楚*actor*或*channel*是什么，我们将在接下来的几节中简要介绍这些术语。
 - en: 'For that reason, after you add this dependency and start using them, you may
     get warnings during compilation or in your IDE:'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，在你添加这个依赖项并开始使用它们之后，你可能会在编译或你的 IDE 中收到警告：
 - en: '[PRE13]'
+  id: totrans-58
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'You can hide those warnings with the following Gradle configuration:'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以使用以下 Gradle 配置来隐藏这些警告：
 - en: '[PRE14]'
+  id: totrans-60
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Now, let's get started with coroutines.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们开始学习协程。
 - en: Starting coroutines
+  id: totrans-62
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 启动协程
 - en: We've already seen how to start a new thread in Kotlin. Now let's start a new
     coroutine instead.
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经看到了如何在 Kotlin 中启动新线程。现在让我们启动一个新的协程。
 - en: 'We''ll create almost the same example we did with threads. Each coroutine will
     increment some counter, sleep for a while to emulate some kind of IO, and then
     increment it again:'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将创建一个几乎与线程相同的示例。每个协程将增加某个计数器，暂停一段时间来模拟某种I/O，然后再次增加：
 - en: '[PRE15]'
+  id: totrans-65
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: The first way of starting a new coroutine is by using the `launch()` function.
     Again, note that this is simply another function and not a language construct.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 启动新协程的第一种方式是使用`launch()`函数。再次提醒，这只是一个函数，而不是语言构造。
 - en: 'This function receives one argument: `context: CoroutineContext`.'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: '这个函数接收一个参数：`context: CoroutineContext`。'
 - en: Under the hood, coroutines still use a thread pool. For that reason, we can
     specify which thread pool to use. `CommonPool` is a singleton provided by the
     library out of the box.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 在底层，协程仍然使用线程池。因此，我们可以指定要使用哪个线程池。`CommonPool`是库中提供的单例。
 - en: Another interesting point here is called to the `delay()` function we use to
     simulate some IO bound work, like fetching something from a database or over the
     network.
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个有趣的地方是关于我们使用的`delay()`函数，它用于模拟一些I/O密集型工作，比如从数据库或网络上获取数据。
 - en: Like the `Thread.sleep()` method, it puts the current coroutine to sleep. But
     unlike `Thread.sleep()`, other coroutines can work while this one sleeps soundly.
     This is due to the fact that `delay()` is marked with a suspend keyword, which
     we'll discuss in the section *Waiting for coroutines*.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 就像`Thread.sleep()`方法一样，它会使当前协程休眠。但与`Thread.sleep()`不同，其他协程可以在这个协程休眠时继续工作。这是因为`delay()`被标记为带有挂起关键字，我们将在“等待协程”部分讨论它。
 - en: If you run this code, you'll see that the task takes about 200 ms with coroutines,
     while with threads it either took 20 seconds or ran out of memory. And we didn't
     have to change our code that much. That's all thanks to the fact that coroutines
     are highly concurrent in their nature. They can be suspended without blocking
     the thread that runs them. Not blocking a thread is great, because we can use
     less OS threads (which are expensive) to do more work.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你运行这段代码，你会看到使用协程的任务大约需要200毫秒，而使用线程要么需要20秒，要么耗尽内存。而且我们并没有对代码做太多修改。这都要归功于协程在本质上高度并发。它们可以在不阻塞运行它们的线程的情况下被挂起。不阻塞线程是件好事，因为我们可以用更少的操作系统线程（这些线程成本较高）来完成更多的工作。
 - en: 'But of course, they''re not magical. Let''s create a **Factory** for our coroutines,
     which will be able to produce either a short-running or long-running coroutine:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 当然，它们并不是神奇的。让我们为我们的协程创建一个**工厂**，它将能够生成短运行或长运行的协程：
 - en: '[PRE16]'
+  id: totrans-73
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: We don't actually need the **Factory Method** design pattern here, but it's
     a nice reminder. You'll understand why the long-running coroutine is called **greedy**
     very soon.
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们实际上并不需要**工厂方法**设计模式，但这是一个很好的提醒。你很快就会明白为什么长时间运行的协程被称为**贪婪**。
 - en: If you don't remember what the Factory Method is about, you should check [Chapter
     2](part0054.html#1JFUC0-6704093aa34748cfa77c54bdc1a20dc7), *Working with Creational
     Patterns*, section *Factory method* again. In short, it's a method that returns
     an object. Which object does it return in our case? It's a job representing a
     coroutine, of course! We'll explain what job is for shortly.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你忘记了工厂方法（Factory Method）是什么，你应该再次查看[第2章](part0054.html#1JFUC0-6704093aa34748cfa77c54bdc1a20dc7)，*使用创建型模式*，*工厂方法*部分。简而言之，它是一个返回对象的函数。在我们的情况下，它返回什么对象呢？当然是一个代表协程的工作！我们很快就会解释工作是什么。
 - en: Jobs
+  id: totrans-76
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 工作
 - en: The result of running an asynchronous task is called a job. Much like the `Thread`
     object represents an actual OS thread, the `job` object represents an actual coroutine.
     A job has a simple lifecycle.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 运行异步任务的结果被称为工作。就像`Thread`对象代表一个实际的操作系统线程一样，`job`对象代表一个实际的协程。工作有一个简单的生命周期。
 - en: 'It can be either as follows:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 它可以是以下两种情况之一：
 - en: 'New: Created, but not started yet.'
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 新：已创建，但尚未开始。
 - en: 'Active: Just created by `launch()` function, for example. This is the default
     state.'
+  id: totrans-80
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 活动：例如，刚刚由`launch()`函数创建。这是默认状态。
 - en: 'Completed: Everything went well.'
+  id: totrans-81
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 完成：一切顺利。
 - en: 'Canceled: Something went wrong.'
+  id: totrans-82
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 取消：出了点问题。
 - en: 'There are two more states relevant to jobs that have child jobs:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 与有子工作的工作相关的还有两个状态：
 - en: 'Completing: Waiting to finish executing children before completing'
+  id: totrans-84
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 完成：在完成之前等待子协程执行完毕
 - en: 'Canceling: Waiting to finish executing children before canceling'
+  id: totrans-85
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 取消：在取消之前等待子协程执行完毕
 - en: If you want to understand more about parent and child jobs, just jump to the
     *Parent jobs* section in this chapter.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要了解更多关于父工作和子工作，请跳转到本章的*父工作*部分。
 - en: Job also has some useful methods, which we'll discuss in the following sections.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 工作还有一些有用的方法，我们将在接下来的章节中讨论。
 - en: Coroutine starvation
+  id: totrans-88
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 协程饥饿
 - en: 'We''ll call both the `greedyLongCoroutine()` and `shortCoroutine()` methods 10
     times each and wait until they finish:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将分别调用`greedyLongCoroutine()`和`shortCoroutine()`方法10次，并等待它们完成：
 - en: '[PRE17]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'It''s obvious that since coroutines are asynchronous, we''ll see first 10 lines
     of the short coroutine then 10 lines of the long coroutine:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 显然，由于协程是异步的，我们首先会看到短协程的前10行，然后是长协程的前10行：
 - en: '[PRE18]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Oops... That's not what you would expect. It seems like the long coroutines
     block the short coroutines somehow.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 哦，这不是你预期的结果。看起来长协程以某种方式阻塞了短协程。
 - en: The reason for this behavior is that there is still an *event loop* based on
     the *thread pool* behind the coroutines. Since the CPU of my laptop has four cores,
     four long coroutines took all its resources, and until they finish their CPU-bound
     task, no other coroutine can start. To understand this better, let's dive deeper
     into how coroutines work.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种行为的原因是协程背后仍然有一个基于线程池的事件循环。由于我的笔记本电脑有四个核心，四个长协程占用了所有资源，直到它们完成CPU密集型任务，其他协程无法开始。为了更好地理解这一点，让我们深入了解协程是如何工作的。
 - en: Coroutines under the hood
+  id: totrans-95
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 协程的内部机制
 - en: 'So, we''ve mentioned a couple of times the following facts:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，我们提到了几次以下事实：
 - en: Coroutines are like light-weight threads. They need less resources that regular
     threads, so you can create more of them.
+  id: totrans-97
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 协程就像轻量级线程。它们需要的资源比常规线程少，因此你可以创建更多的它们。
 - en: Coroutines use thread pool behind the scenes.
+  id: totrans-98
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 协程在幕后使用线程池。
 - en: Instead of blocking an entire thread, coroutine suspends.
+  id: totrans-99
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 与阻塞整个线程不同，协程会挂起。
 - en: But how does that actually work?
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 但这实际上是如何工作的呢？
 - en: Let's see an abstract example. How would we compose a user profile?
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看一个抽象的例子。我们该如何构建一个用户资料？
 - en: '[PRE19]'
+  id: totrans-102
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Summing up, our function now takes around 1.6 seconds to complete.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 总结起来，我们的函数现在完成大约需要1.6秒。
 - en: But we've learned about threads. Let's refactor this function to use them instead!
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 但我们已经了解了线程。让我们重构这个函数，使用它们来代替！
 - en: '[PRE20]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: Now our function takes on average 1 second, the slowest of the three requests.
     But since we created a thread for each request, our memory footprint is three
     times larger. And we risk running out of memory quickly.
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们的函数平均需要1秒钟，这是三个请求中最慢的一个。但由于我们为每个请求创建了一个线程，我们的内存占用是原来的三倍。而且我们可能会很快耗尽内存。
 - en: 'So, let''s use a thread pool to limit the memory footprint:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，让我们使用线程池来限制内存占用：
 - en: '[PRE21]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: But what happens if we call this function 100 times now? If we have a thread
     pool of 10 threads, the first 10 requests will get into the pool and the 11th
     will get stuck until the first one finishes. That means we can serve three users
     simultaneously, and the fourth one will wait until the first one gets his/her
     results.
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 但如果我们现在调用这个函数100次会发生什么呢？如果我们有一个包含10个线程的线程池，前10个请求将进入池中，第11个请求将卡住，直到第一个请求完成。这意味着我们可以同时服务三个用户，第四个用户将等待直到第一个用户得到他的/她的结果。
 - en: How is that different with coroutines? Coroutines break your methods into even
     smaller methods.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 与协程相比，这有什么不同呢？协程将你的方法分解成更小的方法。
 - en: 'Let''s dive deeper into one of the functions to understand how it''s done:'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们深入了解其中一个函数，了解它是如何完成的：
 - en: '[PRE22]'
+  id: totrans-112
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: That's one function that will take 1 second to execute.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个执行时间将达1秒的函数。
 - en: 'What we can do, though, is mark `httpCall()` with the `suspend` keyword:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管如此，我们可以用`suspend`关键字标记`httpCall()`：
 - en: '[PRE23]'
+  id: totrans-115
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'When Kotlin compiler sees this keyword, it knows it can split and rewrite the
     function into two like this:'
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 当Kotlin编译器看到这个关键字时，它知道它可以像这样拆分并重写函数：
 - en: '[PRE24]'
+  id: totrans-117
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: By doing that rewrite, we are able to release the thread that executes coroutines
     much sooner.
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过这样做重写，我们能够更早地释放执行协程的线程。
 - en: For a single user, that doesn't matter much. He will still get the results after
     1 second.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于单个用户来说，这并不重要。他仍然会在1秒后得到结果。
 - en: But looking at the bigger picture, it means that by using the same amount of
     threads, we can serve 20 times more users, all thanks to the smart way Kotlin
     has rewritten our code.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 但从更大的角度来看，这意味着通过使用相同数量的线程，我们可以服务20倍多的用户，这都要归功于Kotlin以智能的方式重写我们的代码。
 - en: Fixing starvation
+  id: totrans-121
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 解决饥饿问题
 - en: 'Let''s add another method to our Factory using the extension methods:'
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们在我们的工厂中使用扩展方法添加另一个方法：
 - en: '[PRE25]'
+  id: totrans-123
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'We call this method instead in the first loop:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在第一个循环中调用这个方法：
 - en: '[PRE26]'
+  id: totrans-125
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'And when we run it now, we get the output we expected in the first place:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们运行它，我们得到了最初预期的输出：
 - en: '[PRE27]'
+  id: totrans-127
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: Now let's understand what actually happened. We used a new function: `yield()`.
     We could have called `yield()` on every loop iteration, but decided to do that
     every 100th one. It *asks* the pool whether there is anybody else that wants to
     do some work. If there's nobody else, the execution of the current coroutine will
     resume. Otherwise, another coroutine will start or resume from the point where
     it stopped earlier.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们来了解实际上发生了什么。我们使用了一个新的函数：`yield()`。我们本可以在每次循环迭代中都调用`yield()`，但决定每100次迭代才这样做。它会**询问**线程池是否还有其他人想要执行一些工作。如果没有其他人，当前协程的执行将恢复。否则，另一个协程将从它之前停止的地方开始或恢复。
 - en: 'Note that without the `suspend` keyword on our function or a coroutine generator,
     such as `launch()`, we can''t call `yield()`. That''s true for any function marked
     with `suspend`: it should be called either from another `suspend` function or
     from a coroutine.'
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，如果没有在函数或协程生成器（如`launch()`）上使用`suspend`关键字，我们无法调用`yield()`。这对于任何标记为`suspend`的函数都适用：它应该从另一个`suspend`函数或从协程中调用。
 - en: Waiting for a coroutine
+  id: totrans-130
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 等待协程
 - en: Up until now, to let our asynchronous code complete, we've used either `Thread.sleep()`
     or `CountDownLatch`. But there are better options with threads and coroutines.
     Much like Thread, a job has the `join()` function. By invoking it, we can wait
     for the execution of the coroutine to complete.
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，为了让我们的异步代码完成，我们使用了`Thread.sleep()`或`CountDownLatch`。但线程和协程有更好的选择。与线程类似，一个任务也有`join()`函数。通过调用它，我们可以等待协程的执行完成。
 - en: 'Take a look at the following code:'
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 看看下面的代码：
 - en: '[PRE28]'
+  id: totrans-133
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: Although it should have printed 10 lines, it doesn't print anything, actually.
     That's because our main thread terminates before giving a coroutine a chance to
     start.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管它应该打印10行，但实际上并没有打印任何东西。这是因为我们的主线程在给协程一个开始的机会之前就终止了。
 - en: 'By adding the following lines, our example will print the expected results:'
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过添加以下行，我们的示例将打印预期的结果：
 - en: '[PRE29]'
+  id: totrans-136
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: What about this `runBlocking`, you ask? Remember that we could call `yield()`
     only from another coroutine because it's a *suspending function*? The same is
     true for `join()`. Since our main method is not a coroutine, we need to have a
     **bridge** between our regular code, that is not a suspending function and coroutines.
     This function does exactly that.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 你问这个`runBlocking`是什么？记住，我们只能从另一个协程中调用`yield()`，因为它是一个**挂起函数**？`join()`也是同样的道理。由于我们的主方法不是协程，我们需要在我们的常规代码（即不是挂起函数）和协程之间有一个**桥梁**。这个函数正是这样做的。
 - en: Canceling a coroutine
+  id: totrans-138
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 取消协程
 - en: If you are a Java developer, you may know that stopping a thread is quite complicated.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您是Java开发者，您可能知道停止线程相当复杂。
 - en: For example, the `Thread.stop()` method is deprecated. There's `Thread.interrupt()`,
     but not all threads are checking this flag, not to mention setting your own `volatile`
     flag, which is often suggested but is very cumbersome.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，`Thread.stop()`方法已被弃用。有`Thread.interrupt()`，但并非所有线程都会检查这个标志，更不用说设置自己的`volatile`标志了，这通常被建议，但非常繁琐。
 - en: If you're using a thread pool, you'll get `Future`, which has the `cancel(boolean
     mayInterruptIfRunning)` method. In Kotlin, the `launch()` function returns a job.
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您使用线程池，您将得到`Future`，它有`cancel(boolean mayInterruptIfRunning)`方法。在Kotlin中，`launch()`函数返回一个任务。
 - en: This job can be canceled. The same rules as the previous example apply, though.
     If your coroutine never calls another `suspend` method or yields, it will disregard
     `cancel()`.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个任务可以被取消。尽管如此，前一个示例中的规则仍然适用。如果您的协程从未调用另一个`suspend`方法或产生输出，它将忽略`cancel()`。
 - en: 'To demonstrate that, we''ll create one *nice* coroutine that yields once in
     a while:'
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了演示这一点，我们将创建一个偶尔产生输出的*良好*协程：
 - en: '[PRE30]'
+  id: totrans-144
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'And another one that doesn''t yield:'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个不产生输出的协程：
 - en: '[PRE31]'
+  id: totrans-146
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'We''ll try to cancel both:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将尝试取消两者：
 - en: '[PRE32]'
+  id: totrans-148
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'And wait for the results:'
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 等待结果：
 - en: '[PRE33]'
+  id: totrans-150
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'A few interesting points:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 几个有趣的观点：
 - en: Canceling the *nice* coroutine doesn't happen immediately. It may still print
     a line or two before getting canceled.
+  id: totrans-152
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 取消*良好*协程不会立即发生。在取消之前，它可能还会打印一两行。
 - en: We can catch `CancellationException`, but our coroutine will be marked as canceled
     anyway.
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以捕获`CancellationException`，但无论如何，我们的协程将被标记为已取消。
 - en: Returning results
+  id: totrans-154
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 返回结果
 - en: Calling `launch()` is much like calling a function that returns `Unit`. But
     most of our functions return some kind of result. For that purpose, we have the `async()`
     function. It also launches a coroutine, but instead of returning a job, it returns
     `Deferred<T>`, where `T` is the type you expect to get later.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 调用`launch()`就像调用返回`Unit`的函数一样。但我们的大多数函数都返回某种类型的结果。为此，我们有一个`async()`函数。它也会启动一个协程，但它返回的是`Deferred<T>`，其中`T`是您期望稍后获得的数据类型。
 - en: Think of a situation where you would like to fetch the user's profile from one
     source and their history from another. It may be two DB queries, or a network
     call to two remote services, or any combination.
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 想象一下您想要从一个来源获取用户的配置文件，从另一个来源获取他们的历史记录的情况。这可能涉及两个数据库查询，或者是对两个远程服务的网络调用，或者任何组合。
 - en: You must show both the profile and the history, but you don't know which returns
     first. Usually, retrieving the profile is faster. But sometimes there may be a
     delay, since profiles are updated often and the history will return first.
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 您必须展示配置文件和历史记录，但您不知道哪个先返回。通常，检索配置文件更快。但有时可能会有延迟，因为配置文件经常更新，而历史记录会先返回。
 - en: 'We run one coroutine that will return the user''s profile string in our case:'
+  id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们运行一个协程，它将返回用户的配置文件字符串，在我们的例子中：
 - en: '[PRE34]'
+  id: totrans-159
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'We''ll run another to return the history. For simplicity, we''ll just return
     a list of Ints:'
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将运行另一个来返回历史记录。为了简单起见，我们只返回一个整数列表：
 - en: '[PRE35]'
+  id: totrans-161
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'To wait for the results, we use the `await()` function:'
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了等待结果，我们使用`await()`函数：
 - en: '[PRE36]'
+  id: totrans-163
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: Setting timeouts
+  id: totrans-164
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置超时
 - en: What if, as happens in some cases, fetching the user's profile takes too long?
     What if we decided that if the profile takes more than 0.5 seconds to return,
     we'll just show *no profile*?
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果，正如某些情况下发生的那样，获取用户配置文件花费的时间太长怎么办？如果我们决定如果配置文件返回超过0.5秒，我们就只显示*无配置文件*怎么办？
 - en: 'This can be achieved using the `withTimeout()` function:'
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 这可以通过使用`withTimeout()`函数来实现：
 - en: '[PRE37]'
+  id: totrans-167
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: We set the timeout to be 500 milliseconds, and our coroutine will delay for
     between 0 and 1,000 milliseconds, giving it a 50 percent chance to fail.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将超时设置为500毫秒，并且我们的协程将在0到1,000毫秒之间延迟，给它50%的失败机会。
 - en: 'We''ll await results from the coroutine and see what happens:'
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从协程中等待结果并看看会发生什么：
 - en: '[PRE38]'
+  id: totrans-170
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: Here we benefit from the fact that `try` is an expression in Kotlin. So we can
     return a result immediately from it.
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们得益于`try`在Kotlin中是一个表达式的这一事实。因此，我们可以立即从它返回一个结果。
 - en: If the coroutine manages to return before the timeout, the value of `result`
     becomes *profile*. Otherwise, we receive `TimeoutCancellationException`, and set
     the value of `result` to *no profile*.
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果协程在超时之前成功返回，则`result`的值变为*配置文件*。否则，我们收到`TimeoutCancellationException`，并将`result`的值设置为*无配置文件*。
 - en: The interesting part is that our coroutine always receives `TimeoutCancellationException`,
     which we can handle. And in case of a timeout, *returning profile* will never
     be printed.
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 有趣的是，我们的协程总是接收到 `TimeoutCancellationException`，我们可以处理它。如果发生超时，*返回配置文件*将永远不会打印出来。
 - en: A combination of timeouts and try-catch expressions is a really powerful tool
     that allows us to create robust interactions.
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 超时和 try-catch 表达式的组合是一个非常强大的工具，它允许我们创建健壮的交互。
 - en: Parent jobs
+  id: totrans-175
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 父任务
 - en: What if we want to cancel more than one coroutine at the same time? That's where
     parent jobs come into play. Remember that `launch()` receives `CoroutineContext`,
     that's usually `CommonPool`? It can also receive other parameters, which will
     see shortly.
+  id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们想同时取消多个协程呢？这就是父任务发挥作用的地方。记住，`launch()` 接收 `CoroutineContext`，通常是 `CommonPool`？它还可以接收其他参数，我们很快就会看到。
 - en: 'We''ll start with a suspending function that works for some time:'
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从一个工作一段时间的中断函数开始：
 - en: '[PRE39]'
+  id: totrans-178
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: We would like to launch 10 of these and cancel them after only 100 ms.
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们希望启动 10 个这样的协程，并在 100 毫秒后取消它们。
 - en: 'For that, we''ll use a parent job:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了做到这一点，我们将使用一个父任务：
 - en: '[PRE40]'
+  id: totrans-181
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'As you can see, a parent job is simply a job. We pass it to the `async()` function.
     We can use the `+` sign due to the fact that `CoroutineContext` has overloaded
     the `plus()` function. You can also specify it using named arguments:'
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，父任务只是一个任务。我们将其传递给 `async()` 函数。我们可以使用 `+` 号，因为 `CoroutineContext` 覆盖了 `plus()`
+    函数。你也可以使用命名参数来指定它：
 - en: '[PRE41]'
+  id: totrans-183
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: Once we invoke `cancel()` on parent job, all of its children are canceled too.
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们在父任务上调用 `cancel()`，它的所有子任务也会被取消。
 - en: Channels
+  id: totrans-185
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 通道
 - en: Up until now, we learned how to spawn coroutines and control them. But what
     if two coroutines need to communicate with each other?
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们学习了如何生成协程并控制它们。但如果有两个协程需要相互通信呢？
 - en: In Java, threads communicate either by using the `wait()`/`notify()`/`notifyAll()`
     pattern or by using one of the rich set of classes from the java.util.concurrent
     package. For example: `BlockingQueue` or `Exchanger`.
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Java 中，线程通过使用 `wait()`/`notify()`/`notifyAll()` 模式或使用 java.util.concurrent
+    包中的一组丰富的类来通信。例如：`BlockingQueue` 或 `Exchanger`。
 - en: In Kotlin, as you may have noticed, there are no `wait()`/`notify()` methods.
     But there are channels, which are very similar to `BlockingQueue`. But instead
     of blocking a thread, channels suspend a coroutine, which is a lot cheaper.
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Kotlin 中，正如你可能已经注意到的，没有 `wait()`/`notify()` 方法。但是有通道，它们与 `BlockingQueue` 非常相似。但是，通道不是阻塞线程，而是挂起协程，这要便宜得多。
 - en: 'To understand channels better, let''s create a simple game of two players that
     will throw random numbers at each other. If your number is greater, you win. Otherwise,
     you lose the round:'
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了更好地理解通道，让我们创建一个简单的两人游戏，他们将会互相投掷随机数。如果你的数字更大，你就赢了。否则，你将输掉这一轮：
 - en: '[PRE42]'
+  id: totrans-190
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: Each player has two channels. One is used to receive data, the other to send
     it.
+  id: totrans-191
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个玩家有两个通道。一个用于接收数据，另一个用于发送数据。
 - en: We can iterate over a channel with a regular for-loop, which will suspend until
     the next value is received.
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以使用常规的 for 循环遍历通道，它将挂起，直到接收到下一个值。
 - en: When we want to send our results to the other player, we simply use the `send()`
     method.
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们想要将结果发送给另一玩家时，我们只需使用 `send()` 方法。
 - en: 'Now let''s play this game for one second:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们玩一秒钟这个游戏：
 - en: '[PRE43]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'Our output may look something like this:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的结果可能看起来像这样：
 - en: '[PRE44]'
+  id: totrans-197
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: As you can see, channels are a convenient and type-safe way to communicate between
     different coroutines. But we had to define the channels manually, and pass them
     in the correct order. In the next two sections, we'll see how this can be further
     simplified.
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，通道是不同协程之间通信的一种方便且类型安全的途径。但我们不得不手动定义通道，并按正确的顺序传递它们。在接下来的两个部分中，我们将看到如何进一步简化这一点。
 - en: Producers
+  id: totrans-199
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 生产者
 - en: In [Chapter 7](part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7), *Staying
     Reactive*, which was dedicated to reactive programming, we discussed `Observable` and
     `subject` that were producing streams of values. Much in the same way, Kotlin
     provides us with the `produce()` function.
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 [第 7 章](part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7)，*保持响应性*，该章节专门讨论了响应式编程，我们讨论了产生值流的
+    `Observable` 和 `subject`。同样，Kotlin 也为我们提供了 `produce()` 函数。
 - en: 'This function creates coroutine is backed up by `ReceiveChannel<T>`, where
     `T` is the type the coroutine produces:'
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 此函数创建的协程由 `ReceiveChannel<T>` 支持，其中 `T` 是协程产生的类型：
 - en: '[PRE45]'
+  id: totrans-202
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: In Rx there's the `onNext()` method that we covered in [Chapter 7](part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7),
     *Staying Reactive*.
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Rx 中，有我们在 [第 7 章](part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7) 中介绍的
+    `onNext()` 方法，*保持响应性*。
 - en: Producers have a  `send()` function, which is very similar.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 生产者有一个 `send()` 函数，它与它非常相似。
 - en: 'Much like the Rx `Observable` that provided the `subscribe()` method, this
     channel, has the `consumeEach()` function:'
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 与提供了 `subscribe()` 方法的 Rx `Observable` 类似，这个通道有 `consumeEach()` 函数：
 - en: '[PRE46]'
+  id: totrans-206
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'It prints the following:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 它将打印以下内容：
 - en: '[PRE47]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: Another great ability that channels provide is `select()`.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 通道提供的另一个伟大能力是 `select()`。
 - en: 'If we have more than one producer, we can `subscribe` to their channels, and
     take the first result available:'
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们有多个生产者，我们可以 `subscribe` 到它们的通道，并获取第一个可用的结果：
 - en: '[PRE48]'
+  id: totrans-211
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: This will randomly print `First` or `Second`.
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将随机打印 "First" 或 "Second"。
 - en: 'Note that `select()` happens only once. A common mistake is to have select
     on two coroutines that produce a stream of data, without wrapping it in a loop:'
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，`select()` 只发生一次。一个常见的错误是将 `select()` 应用在两个生成数据流的协程上，而没有将其包含在循环中：
 - en: '[PRE49]'
+  id: totrans-214
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: Instead of printing the alphabet, this will only print either "a" or "A," and
     then exit. Make sure your `select()` is wrapped in a loop.
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: 与打印字母表不同，这将只打印 "a" 或 "A"，然后退出。请确保你的 `select()` 被包含在一个循环中。
 - en: 'This will print the first 10 characters it receives:'
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将打印它接收到的第一个 10 个字符：
 - en: '[PRE50]'
+  id: totrans-217
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'Another option is to signal using the `close()` function:'
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个选项是使用 `close()` 函数来发送信号：
 - en: '[PRE51]'
+  id: totrans-219
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'And use `onReceiveOrNull()` inside the receiver:'
+  id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: 在接收器内部使用 `onReceiveOrNull()`：
 - en: '[PRE52]'
+  id: totrans-221
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: '[PRE53]'
+  id: totrans-222
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: This option will print characters until the first of the producers decide to
     close the channel.
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 此选项将打印字符，直到第一个生产者决定关闭通道。
 - en: Actors
+  id: totrans-224
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 演员
 - en: The last *building block* introduced in this chapter is actors. Similar to `producer()`,
     `actor()` is a coroutine bound to a channel. But instead of a channel going *out*
     of the coroutine, there's a channel going *into* the coroutine. If you think that
     was too academic, read on for another explanation.
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章最后介绍的是演员。与 `producer()` 类似，`actor()` 是一个与通道绑定的协程。但与通道从协程 *出去* 不同，这里有一个通道进入协程。如果你觉得这太学术了，请继续阅读，以获得另一种解释。
 - en: So what is an actor, anyway? Let's look at an interaction between Michael and
     me, an imaginary product manager, who happens to be a canary, as you may remember
     from [Chapter 4](part0112.html#3APV00-6704093aa34748cfa77c54bdc1a20dc7), *Getting
@@ -899,95 +1358,148 @@
     into a working code. He's not waiting for my response. He just expects that eventually,
     it will happen—and sooner rather than later. For Michael, I'm an actor. Not because
     I attended an acting school, but because I act upon his request.
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 那么，演员究竟是什么呢？让我们看看迈克尔和我之间的互动，一个想象中的产品经理，你可能还记得从 [第 4 章](part0112.html#3APV00-6704093aa34748cfa77c54bdc1a20dc7)
+    "熟悉行为模式"，他碰巧是一只金丝雀。迈克尔有一系列需要在冲刺/周/月结束前完成的任务。他只是把它们扔给我，希望我能施展魔法，将一些模糊的规格翻译成可工作的代码。他并不等待我的回复。他只是期望这最终会发生——而且越快越好。对迈克尔来说，我是一个演员。不是因为我去过戏剧学校，而是因为我根据他的要求采取行动。
 - en: If you've worked with Scala, or some other programming language that has actors,
     you may be familiar with a slightly different actor model from what we've described.
     In some implementations, actors have both inbound and outbound channels (often
     called mailboxes). But it Kotlin, an actor has only an inbound mailbox.
+  id: totrans-227
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你使用过 Scala 或其他具有演员的编程语言，你可能熟悉与我们描述的略有不同的演员模型。在一些实现中，演员既有入站通道也有出站通道（通常称为邮箱）。但在
+    Kotlin 中，一个演员只有一个入站邮箱。
 - en: 'To create a new actor, we use the `actor()` function:'
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 要创建一个新的演员，我们使用 `actor()` 函数：
 - en: '[PRE54]'
+  id: totrans-229
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: Note that the same way that `select()` works, unless we wrap an actor's `receive()`
     into some kind of loop, it will execute only once. If you'll attempt to send it
     to a closed channel, you get `ClosedSendChannelException`.
+  id: totrans-230
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，与 `select()` 的工作方式相同，除非我们将演员的 `receive()` 包含在某种循环中，否则它只会执行一次。如果你尝试将其发送到已关闭的通道，你会得到
+    `ClosedSendChannelException`。
 - en: 'You communicate with actors using `send()`:'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 你使用 `send()` 与演员进行通信：
 - en: '[PRE55]'
+  id: totrans-232
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Another pattern for an actor is to use the `receiveOrNull()` function:'
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于演员来说，另一种模式是使用 `receiveOrNull()` 函数：
 - en: '[PRE56]'
+  id: totrans-234
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: As you can see, instead of checking whether the actor's channel has been closed,
     our cue is receiving null on the channel. This approach may be preferable, if
     the actor receives tasks from many *managers*.
+  id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: 如您所见，我们不是检查演员的通道是否已关闭，而是在通道上接收到了 null。如果演员从许多 *管理者* 那里接收任务，这种方法可能更可取。
 - en: 'The third option, which is the most preferable one usually, is to iterate over
     the channel:'
+  id: totrans-236
   prefs: []
   type: TYPE_NORMAL
+  zh: 第三种选项，通常是首选，是遍历通道：
 - en: '[PRE57]'
+  id: totrans-237
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: '[PRE58]'
+  id: totrans-238
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: As you can see, this is the cleanest implementation of the three.
+  id: totrans-239
   prefs: []
   type: TYPE_NORMAL
+  zh: 如您所见，这是三种实现中最干净的一种。
 - en: 'Actors are a very useful for background tasks that need to maintain some kind
     of state. For example, you could create an actor that would generate reports.
     It will receive what kind of report to generate, and will make sure that only
     one report is generated at the same time:'
+  id: totrans-240
   prefs: []
   type: TYPE_NORMAL
+  zh: 演员对于需要维护某种状态的后台任务非常有用。例如，你可以创建一个生成报告的演员。它将接收要生成哪种类型的报告，并确保同一时间只生成一个报告：
 - en: '[PRE59]'
+  id: totrans-241
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: It is often a good idea to limit the capacity of messages the actor can receive.
+  id: totrans-242
   prefs: []
   type: TYPE_NORMAL
+  zh: 限制演员可以接收的消息容量通常是一个好主意。
 - en: 'Then we can send this actor what type of report to produce:'
+  id: totrans-243
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们可以发送给这个演员要生成哪种类型的报告：
 - en: '[PRE60]'
+  id: totrans-244
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: Summary
+  id: totrans-245
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In this chapter, we covered how to create threads and coroutines in Kotlin,
     and the benefits of coroutines.
+  id: totrans-246
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们介绍了如何在Kotlin中创建线程和协程，以及协程的好处。
 - en: Kotlin has simplified syntax for creating threads, compared to Java. But they
     still have the overhead of memory and often performance. Coroutines are able to
     solve these issues; use coroutines whenever you need to execute some code concurrently.
+  id: totrans-247
   prefs: []
   type: TYPE_NORMAL
+  zh: 与Java相比，Kotlin创建线程的语法简化了。但它们仍然有内存和性能开销。协程能够解决这些问题；在需要并发执行某些代码时，请使用协程。
 - en: If you want to communicate between two coroutines, use channels.
+  id: totrans-248
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想在两个协程之间进行通信，请使用通道。
 - en: Kotlin also offers actors with the `actor()` function, which also spins a coroutine
     that has an inbound stream attached to it to process events. And if you need to
     create a stream of values, you can use the `produce()` function.
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: Kotlin还提供了`actor()`函数来创建演员，该函数也会启动一个带有附加输入流的协程来处理事件。如果你需要创建一个值流，可以使用`produce()`函数。
 - en: In the next chapter, we'll discuss how we can use these concurrency primitives
     to create scalable and robust systems that suit our needs.
+  id: totrans-250
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将讨论如何使用这些并发原语来创建适合我们需求的可扩展和健壮的系统。

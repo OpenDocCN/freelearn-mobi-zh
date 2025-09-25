@@ -1,1589 +1,2521 @@
 - en: '*Chapter 8*: Designing for Concurrency'
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: '*第8章*：设计并发'
 - en: '**Concurrent design patterns** help us to manage many tasks at once and structure
     their life cycle. By using these patterns efficiently, we can avoid problems such
     as resource leaks and deadlocks.'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: '**并发设计模式**帮助我们同时管理许多任务并结构化它们的生命周期。通过有效地使用这些模式，我们可以避免资源泄露和死锁等问题。'
 - en: 'In this chapter, we''ll discuss concurrent design patterns and how they are
     implemented in **Kotlin**. To do this, we''ll be using the building blocks from
     previous chapters: coroutines, channels, flows, and concepts from **functional
     programming**.'
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将讨论并发设计模式及其在**Kotlin**中的实现方式。为此，我们将使用前几章中的构建块：协程、通道、流以及来自**函数式编程**的概念。
 - en: 'We will be covering the following topics in this chapter:'
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章我们将涵盖以下内容：
 - en: Deferred value
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 延迟值
 - en: Barrier
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 障碍
 - en: Scheduler
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调度器
 - en: Pipeline
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 管道
 - en: Fan out
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 扇出
 - en: Fan in
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 扇入
 - en: Racing
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 竞赛
 - en: Mutex
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 互斥锁
 - en: Sidekick channel
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 辅助通道
 - en: After completing this chapter, you'll be able to work with asynchronous values
     efficiently, coordinate the work of different coroutines, and distribute and aggregate
     work, as well as have the tools needed to resolve any concurrency problems that
     may arise in the process.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成本章学习后，你将能够高效地处理异步值，协调不同协程的工作，以及分配和汇总工作，同时拥有解决过程中可能出现的任何并发问题的工具。
 - en: Technical requirements
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 技术要求
 - en: In addition to the technical requirements from the previous chapters, you will
     also need a **Gradle**-enabled Kotlin project to be able to add the required dependencies.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了前几章的技术要求外，你还需要一个启用了**Gradle**的Kotlin项目，以便能够添加所需的依赖项。
 - en: 'You can find the source code used in this chapter on **GitHub** at the following
     location:'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以在以下位置在**GitHub**上找到本章使用的源代码：
 - en: '[https://github.com/PacktPublishing/Kotlin-Design-Patterns-and-Best-Practices/tree/main/Chapter08](https://github.com/PacktPublishing/Kotlin-Design-Patterns-and-Best-Practices/tree/main/Chapter08)'
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://github.com/PacktPublishing/Kotlin-Design-Patterns-and-Best-Practices/tree/main/Chapter08](https://github.com/PacktPublishing/Kotlin-Design-Patterns-and-Best-Practices/tree/main/Chapter08)'
 - en: Deferred Value
+  id: totrans-18
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 延迟值
 - en: The goal of the **Deferred Value** design pattern is to return a reference to
     a result of an asynchronous computation. A **Future** in **Java** and **Scala**,
     and a **Promise** in **JavaScript** are both implementations of the Deferred Value
     design pattern.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: '**延迟值**设计模式的目的是返回异步计算结果的引用。在**Java**和**Scala**中，**Future**，在**JavaScript**中则是**Promise**，都是延迟值设计模式的实现。'
 - en: We've already discussed `async()` function returns a type called `Deferred`,
     which is also an implementation of this design pattern.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经讨论了`async()`函数返回一个名为`Deferred`的类型，这同样也是该设计模式的一个实现。
 - en: Interestingly enough, the `Deferred` value itself is an implementation of both
     the **Proxy** design pattern that we've seen in [*Chapter 3*](B17816_03_ePub.xhtml#_idTextAnchor080),
     *Understanding Structural Patterns*, and the **State** design pattern from [*Chapter
     4*](B17816_04_ePub.xhtml#_idTextAnchor115), *Getting Familiar with Behavioral
     Patterns*.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 有趣的是，`Deferred`值本身是我们在[*第3章*](B17816_03_ePub.xhtml#_idTextAnchor080)“理解结构型模式”中看到的**代理**设计模式以及[*第4章*](B17816_04_ePub.xhtml#_idTextAnchor115)“熟悉行为型模式”中的**状态**设计模式的实现。
 - en: 'We can create a new container for the result of an asynchronous computation
     using the `CompletableDeferred` constructor:'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以使用`CompletableDeferred`构造函数创建一个新的异步计算结果的容器：
 - en: '[PRE0]'
+  id: totrans-23
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: To populate the `Deferred` value with a result, we use the `complete()` function,
     and if an error occurs in the process, we can use the `completeExceptionally()`
     function to pass the exception to the caller. To understand it better, let's write
     a function that returns an asynchronous result. Half of the time the result will
     contain `OK`, and the other half of the time it will contain an exception.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 要用结果填充`Deferred`值，我们使用`complete()`函数，如果在过程中发生错误，我们可以使用`completeExceptionally()`函数将异常传递给调用者。为了更好地理解它，让我们编写一个返回异步结果的函数。一半的时间结果将包含`OK`，另一半的时间它将包含一个异常。
 - en: '[PRE1]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: '[PRE2]'
+  id: totrans-26
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: '[PRE3]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: '[PRE4]'
+  id: totrans-28
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: '[PRE5]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: '[PRE6]'
+  id: totrans-30
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: '[PRE7]'
+  id: totrans-31
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: '[PRE8]'
+  id: totrans-32
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: '[PRE9]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: '[PRE10]'
+  id: totrans-34
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: '[PRE11]'
+  id: totrans-35
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: '[PRE12]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: '[PRE13]'
+  id: totrans-37
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: '[PRE14]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: '[PRE15]'
+  id: totrans-39
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: You can see that we return the `Deferred` value almost immediately, then we
     start an asynchronous computation using `launch` and simulate some computation
     using the `delay()` function.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以看到我们几乎立即返回`Deferred`值，然后我们开始使用`launch`启动异步计算，并使用`delay()`函数模拟一些计算。
 - en: 'Since the process is asynchronous, the results won''t be ready immediately.
     To wait for the results, we can use the `await()` function that we''ve already
     discussed in [*Chapter 6*](B17816_06_ePub.xhtml#_idTextAnchor164), *Threads and
     Coroutines*:'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于过程是异步的，结果不会立即准备好。为了等待结果，我们可以使用我们已经在 [*第 6 章*](B17816_06_ePub.xhtml#_idTextAnchor164)
+    中讨论过的 `await()` 函数，*线程和协程*：
 - en: '[PRE16]'
+  id: totrans-42
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: '[PRE17]'
+  id: totrans-43
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: '[PRE18]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: '[PRE19]'
+  id: totrans-45
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'It''s important to make sure that you always complete your `Deferred` value
     by calling either of the `complete()` or `completeExceptionally()` functions.
     Otherwise, your program may wait indefinitely for the results. It is also possible
     to cancel `deferred` if you''re no longer interested in its results. To do this,
     simply call `cancel()` on it:'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 确保您始终通过调用 `complete()` 或 `completeExceptionally()` 函数之一来完成您的 `Deferred` 值非常重要。否则，您的程序可能会无限期地等待结果。如果您不再对
+    `deferred` 的结果感兴趣，也可以取消它。为此，只需调用其上的 `cancel()` 即可：
 - en: '[PRE20]'
+  id: totrans-47
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: You'll rarely need to create your own deferred value. Usually, you would work
     with the one returned from the `async()` function.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 您很少需要创建自己的 deferred 值。通常，您会使用 `async()` 函数返回的那个。
 - en: Next, let's discuss how to wait for multiple asynchronous results at once.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，让我们讨论如何一次性等待多个异步结果。
 - en: Barrier
+  id: totrans-50
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 屏障
 - en: The **Barrier** design pattern provides us with the ability to wait for multiple
     concurrent tasks to complete before proceeding further. A common use case for
     this is composing objects from different sources.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: '**屏障**设计模式为我们提供了在进一步操作之前等待多个并发任务完成的机制。这种用法的一个常见场景是从不同的来源组合对象。'
 - en: 'For example, take the following class:'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，考虑以下类：
 - en: '[PRE21]'
+  id: totrans-53
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: '[PRE22]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: '[PRE23]'
+  id: totrans-55
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: '[PRE24]'
+  id: totrans-56
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: '[PRE25]'
+  id: totrans-57
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Let''s assume that the `catchphrase` data comes from one service and the `picture`
     data comes from another. We would like to fetch these two pieces of data concurrently:'
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 假设 `catchphrase` 数据来自一个服务，而 `picture` 数据来自另一个服务。我们希望并发获取这两份数据：
 - en: '[PRE26]'
+  id: totrans-59
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: '[PRE27]'
+  id: totrans-60
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: '[PRE28]'
+  id: totrans-61
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: '[PRE29]'
+  id: totrans-62
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: '[PRE30]'
+  id: totrans-63
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: '[PRE31]'
+  id: totrans-64
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: '[PRE32]'
+  id: totrans-65
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: '[PRE33]'
+  id: totrans-66
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'The most basic way to implement concurrent fetching would be as follows:'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 实现并发获取的最基本方式如下：
 - en: '[PRE34]'
+  id: totrans-68
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: '[PRE35]'
+  id: totrans-69
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: '[PRE36]'
+  id: totrans-70
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: '[PRE37]'
+  id: totrans-71
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: '[PRE38]'
+  id: totrans-72
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: But this solution has a major problem – we don't start fetching the `picture`
     data until the `catchphrase` data was fetched. In other words, the code is unnecessarily
     *sequential*. Let's see how this can be improved.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 但这个解决方案有一个主要问题——我们只有在 `catchphrase` 数据被获取之后才开始获取 `picture` 数据。换句话说，代码是不必要地 *顺序的*。让我们看看如何改进这一点。
 - en: Using data classes as barriers
+  id: totrans-74
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 使用数据类作为屏障
 - en: 'We can slightly alter the previous code to achieve the concurrency we want:'
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以稍微修改之前的代码，以实现我们想要的并发：
 - en: '[PRE39]'
+  id: totrans-76
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: '[PRE40]'
+  id: totrans-77
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: '[PRE41]'
+  id: totrans-78
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: '[PRE42]'
+  id: totrans-79
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: '[PRE43]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: Moving the `await` function into the invocation of the data class constructor
     allows us to start all of the coroutines at once and then wait for them to complete,
     just as we wanted.
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 将 `await` 函数移动到数据类构造函数的调用中，使我们能够同时启动所有协程，然后等待它们完成，正如我们想要的。
 - en: 'The additional benefit of using data classes as barriers is the ability to
     *destructure* them easily:'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用数据类作为屏障的额外好处是能够轻松地进行 *解构*：
 - en: '[PRE44]'
+  id: totrans-83
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: '[PRE45]'
+  id: totrans-84
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: This works well if the type of data we receive from different asynchronous tasks
     is heterogeneous. In some cases, we receive the same types of data from different
     sources.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们从不同的异步任务中接收到的数据类型是异构的，这效果很好。在某些情况下，我们从不同的来源接收相同类型的数据。
 - en: 'For example, let''s ask `Michael` (our canary product owner), `Taylor` (our
     barista), and `Me` who our favorite movie character is:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，让我们询问 `Michael`（我们的金丝雀产品所有者），`Taylor`（我们的咖啡师），以及 `Me` 我们最喜欢的电影角色是谁：
 - en: '[PRE46]'
+  id: totrans-87
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: '[PRE47]'
+  id: totrans-88
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: '[PRE48]'
+  id: totrans-89
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: '[PRE49]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: '[PRE50]'
+  id: totrans-91
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: '[PRE51]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: '[PRE52]'
+  id: totrans-93
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: '[PRE53]'
+  id: totrans-94
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: '[PRE54]'
+  id: totrans-95
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: '[PRE55]'
+  id: totrans-96
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: '[PRE56]'
+  id: totrans-97
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: '[PRE57]'
+  id: totrans-98
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: '[PRE58]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: '[PRE59]'
+  id: totrans-100
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: '[PRE60]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: '[PRE61]'
+  id: totrans-102
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: '[PRE62]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: '[PRE63]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: '[PRE64]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: '[PRE65]'
+  id: totrans-106
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: '[PRE66]'
+  id: totrans-107
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: '[PRE67]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: '[PRE68]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: '[PRE69]'
+  id: totrans-110
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: Here, we have three very similar objects that differ only in the contents of
     the asynchronous results they return.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们有三个非常相似的对象，它们之间的区别仅在于它们返回的异步结果的内容。
 - en: 'In this case, we can use a list to gather the results:'
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这种情况下，我们可以使用一个列表来收集结果：
 - en: '[PRE70]'
+  id: totrans-113
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: '[PRE71]'
+  id: totrans-114
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: '[PRE72]'
+  id: totrans-115
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: '[PRE73]'
+  id: totrans-116
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: '[PRE74]'
+  id: totrans-117
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'Notice the type of the list. It''s a collection of the `Deferred` elements
     of the `FavoriteCharacter` type. On such collections, there''s an `awaitAll()`
     function available that acts as a barrier as well:'
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意列表的类型。它是一个包含 `FavoriteCharacter` 类型 `Deferred` 元素的集合。在这样的集合上，有一个可用的 `awaitAll()`
+    函数，它也充当一个屏障：
 - en: '[PRE75]'
+  id: totrans-119
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: When working with a set of homogenous asynchronous results and you need all
     of them to complete before proceeding further, use `awaitAll()`.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 当处理一组同构的异步结果，并且需要在进一步操作之前等待所有结果完成时，请使用 `awaitAll()`。
 - en: The Barrier design pattern creates a rendezvous point for multiple asynchronous
     tasks. The next pattern will help us abstract the execution of those tasks.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 屏障设计模式为多个异步任务创建了一个 rendezvous 点。下一个模式将帮助我们抽象这些任务的执行。
 - en: Scheduler
+  id: totrans-122
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 调度器
 - en: The goal of the **Scheduler** design pattern is to decouple *what* is being
     run from *how* it's being run and optimize the use of resources when doing so.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: '**调度器** 设计模式的目标是将 *做什么* 与 *怎么做* 解耦，并在这样做时优化资源的使用。'
 - en: In Kotlin, **Dispatchers** are an implementation of the Scheduler design pattern
     that decouple the coroutine (that is, the *what*) from underlying thread pools
     (that is, the *how*).
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Kotlin 中，**分发器** 是调度器设计模式的一种实现，它将协程（即，*做什么*）与底层的线程池（即，*怎么做*）解耦。
 - en: We've already seen dispatchers briefly in [*Chapter 6*](B17816_06_ePub.xhtml#_idTextAnchor164),
     *Threads and Coroutines*.
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经在 [*第 6 章*](B17816_06_ePub.xhtml#_idTextAnchor164)，*线程和协程* 中简要介绍了分发器。
 - en: 'To remind you, the coroutine builders such as `launch()` and `async()` can
     specify which dispatcher to use. Here''s an example of how you specify it explicitly:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了提醒你，协程构建器如 `launch()` 和 `async()` 可以指定要使用哪个分发器。以下是如何明确指定它的一个示例：
 - en: '[PRE76]'
+  id: totrans-127
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: '[PRE77]'
+  id: totrans-128
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: '[PRE78]'
+  id: totrans-129
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: '[PRE79]'
+  id: totrans-130
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: '[PRE80]'
+  id: totrans-131
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: '[PRE81]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: '[PRE82]'
+  id: totrans-133
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: '[PRE83]'
+  id: totrans-134
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: '[PRE84]'
+  id: totrans-135
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: '[PRE85]'
+  id: totrans-136
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE85]'
 - en: '[PRE86]'
+  id: totrans-137
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE86]'
 - en: '[PRE87]'
+  id: totrans-138
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE87]'
 - en: 'The default dispatcher creates as many threads as you have CPUs in the underlying
     thread pool. Another dispatcher that is available to you is the **IO Dispatcher**:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 默认分发器会根据底层线程池中的 CPU 数量创建线程。你还可以使用另一个分发器，即 **IO 分发器**：
 - en: '[PRE88]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE88]'
 - en: '[PRE89]'
+  id: totrans-141
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE89]'
 - en: '[PRE90]'
+  id: totrans-142
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE90]'
 - en: '[PRE91]'
+  id: totrans-143
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE91]'
 - en: '[PRE92]'
+  id: totrans-144
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE92]'
 - en: '[PRE93]'
+  id: totrans-145
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE93]'
 - en: 'This will output the following:'
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将输出以下内容：
 - en: '[PRE94]'
+  id: totrans-147
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE94]'
 - en: '[PRE95]'
+  id: totrans-148
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE95]'
 - en: '[PRE96]'
+  id: totrans-149
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE96]'
 - en: '[PRE97]'
+  id: totrans-150
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE97]'
 - en: '[PRE98]'
+  id: totrans-151
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE98]'
 - en: '[PRE99]'
+  id: totrans-152
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE99]'
 - en: '[PRE100]'
+  id: totrans-153
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE100]'
 - en: '[PRE101]'
+  id: totrans-154
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE101]'
 - en: The IO Dispatcher is used for potentially long-running or blocking operations
     and will create up to 64 threads for that purpose. Since our example code doesn't
     do much, the IO Dispatcher doesn't need to create many threads. That's why you'll
     see only a small number of workers used in this example.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: IO 分发器用于可能运行时间较长或阻塞的操作，并将为此创建多达 64 个线程。由于我们的示例代码没有做太多，IO 分发器不需要创建很多线程。这就是为什么你在这个例子中只会看到少量工作者。
 - en: Creating your own schedulers
+  id: totrans-156
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 创建自己的调度器
 - en: We are not limited to the dispatchers Kotlin provides. We can also define dispatchers
     of our own.
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不仅限于 Kotlin 提供的分发器。我们还可以定义自己的分发器。
 - en: 'Here is an example of creating a dispatcher that would use a dedicated thread
     pool of `4` threads based on `ForkJoinPool`, which is efficient for *divide-and-conquer*
     tasks:'
+  id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是一个创建分发器的例子，该分发器将使用基于 `ForkJoinPool` 的专用线程池，其中包含 `4` 个线程，这对于 *分而治之* 任务是高效的：
 - en: '[PRE102]'
+  id: totrans-159
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE102]'
 - en: '[PRE103]'
+  id: totrans-160
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE103]'
 - en: '[PRE104]'
+  id: totrans-161
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE104]'
 - en: '[PRE105]'
+  id: totrans-162
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE105]'
 - en: '[PRE106]'
+  id: totrans-163
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE106]'
 - en: '[PRE107]'
+  id: totrans-164
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE107]'
 - en: If you create your own dispatcher, make sure that you either release it with
     `close()` or reuse it, as creating a new dispatcher and holding to it is expensive
     in terms of resources.
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你创建了自己的分发器，请确保你使用 `close()` 释放它或者重用它，因为创建新的分发器并持有它会在资源方面造成开销。
 - en: Pipeline
+  id: totrans-166
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 管道
 - en: The **Pipeline** design pattern allows us to scale heterogeneous work, consisting
     of multiple steps of varying complexity across multiple CPUs, by breaking the
     work into smaller, concurrent pieces. Let's look at the following example to understand
     it better.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: '**管道** 设计模式允许我们通过将工作分解成更小的、并发的部分来扩展异构工作，这些工作由多个具有不同复杂性的步骤组成，跨越多个 CPU。让我们通过以下示例来更好地理解它。'
 - en: Back in [*Chapter 4*](B17816_04_ePub.xhtml#_idTextAnchor115), *Getting Familiar
     with Behavioral Patterns*, we wrote an HTML page parser. It was assumed that the
     HTML pages themselves were already fetched for us, though. What we would like
     to design now is a process that would create a possibly infinite stream of pages.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 回到 [*第 4 章*](B17816_04_ePub.xhtml#_idTextAnchor115)，*熟悉行为模式*，我们编写了一个 HTML 页面解析器。假设
+    HTML 页面本身已经被我们获取了。我们现在想要设计一个可能无限生成页面的过程。
 - en: 'First, we would like to fetch news pages once in a while. For that, we''ll
     have a producer:'
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们希望偶尔抓取新闻页面。为此，我们将有一个生产者：
 - en: '[PRE108]'
+  id: totrans-170
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE108]'
 - en: '[PRE109]'
+  id: totrans-171
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE109]'
 - en: '[PRE110]'
+  id: totrans-172
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE110]'
 - en: '[PRE111]'
+  id: totrans-173
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE111]'
 - en: '[PRE112]'
+  id: totrans-174
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE112]'
 - en: '[PRE113]'
+  id: totrans-175
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE113]'
 - en: '[PRE114]'
+  id: totrans-176
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE114]'
 - en: '[PRE115]'
+  id: totrans-177
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE115]'
 - en: '[PRE116]'
+  id: totrans-178
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE116]'
 - en: '[PRE117]'
+  id: totrans-179
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE117]'
 - en: '[PRE118]'
+  id: totrans-180
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE118]'
 - en: '[PRE119]'
+  id: totrans-181
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE119]'
 - en: '[PRE120]'
+  id: totrans-182
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE120]'
 - en: '[PRE121]'
+  id: totrans-183
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE121]'
 - en: '[PRE122]'
+  id: totrans-184
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE122]'
 - en: '[PRE123]'
+  id: totrans-185
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE123]'
 - en: '[PRE124]'
+  id: totrans-186
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE124]'
 - en: The `isActive` flag will be true as long as the coroutine is running and hasn't
     been canceled. It is a good practice to check this property in loops that may
     run for a long time so they can be stopped between iterations if needed.
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: '`isActive` 标志将在协程运行且未被取消的情况下为真。在可能运行时间较长的循环中检查这个属性是一个好习惯，这样它们就可以在迭代之间停止，如果需要的话。'
 - en: Each time we receive new titles, we send them downstream. Since tech news isn't
     updated very often, we can check for updates only once in a while by using `delay()`.
     In the actual code, the delay would probably be minutes, if not hours.
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次我们收到新的标题时，我们会将它们发送到下游。由于技术新闻更新并不频繁，我们可以通过使用 `delay()` 来偶尔检查更新。在实际代码中，延迟可能是几分钟，甚至几小时。
 - en: 'The next step is creating a **Document Object Model** (**DOM**) out of those
     raw strings containing HTML. For that, we''ll have a second producer, with this
     one receiving a channel that connects it to the first one:'
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一步是创建一个由包含 HTML 的原始字符串组成的 **文档对象模型**（**DOM**）。为此，我们将有一个第二个生产者，这个生产者接收一个连接到第一个生产者的通道：
 - en: '[PRE125]'
+  id: totrans-190
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE125]'
 - en: '[PRE126]'
+  id: totrans-191
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE126]'
 - en: '[PRE127]'
+  id: totrans-192
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE127]'
 - en: '[PRE128]'
+  id: totrans-193
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE128]'
 - en: '[PRE129]'
+  id: totrans-194
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE129]'
 - en: '[PRE130]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE130]'
 - en: '[PRE131]'
+  id: totrans-196
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE131]'
 - en: '[PRE132]'
+  id: totrans-197
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE132]'
 - en: '[PRE133]'
+  id: totrans-198
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE133]'
 - en: '[PRE134]'
+  id: totrans-199
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE134]'
 - en: We can use the `for` loop to iterate over the channel as long as it's still
     open. This is a very elegant way of consuming data from an asynchronous source
     without the need to define callbacks.
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 只要通道仍然打开，我们就可以使用`for`循环遍历通道。这是一种非常优雅地从异步源消费数据的方式，无需定义回调函数。
 - en: 'We''ll have a third function that receives the parsed documents and extracts
     the title out of each one:'
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将有一个第三个函数，它接收解析后的文档并从每个文档中提取标题：
 - en: '[PRE135]'
+  id: totrans-202
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE135]'
 - en: '[PRE136]'
+  id: totrans-203
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE136]'
 - en: '[PRE137]'
+  id: totrans-204
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE137]'
 - en: '[PRE138]'
+  id: totrans-205
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE138]'
 - en: '[PRE139]'
+  id: totrans-206
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE139]'
 - en: '[PRE140]'
+  id: totrans-207
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE140]'
 - en: '[PRE141]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE141]'
 - en: '[PRE142]'
+  id: totrans-209
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE142]'
 - en: '[PRE143]'
+  id: totrans-210
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE143]'
 - en: '[PRE144]'
+  id: totrans-211
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE144]'
 - en: '[PRE145]'
+  id: totrans-212
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE145]'
 - en: '[PRE146]'
+  id: totrans-213
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE146]'
 - en: We're looking for the headers, and so we use `getElementsByTagName("H1")`. For
     each header found, we turn it into its string representation.
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们正在寻找标题，所以我们使用`getElementsByTagName("H1")`。对于找到的每个标题，我们将其转换为字符串表示形式。
 - en: Now, we will move on toward composing our coroutines into pipelines.
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将继续将我们的协程组合成管道。
 - en: Composing a pipeline
+  id: totrans-216
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 构建管道
 - en: 'Now that we''ve familiarized ourselves with the components of the pipeline,
     let''s see how we can combine multiple components together:'
+  id: totrans-217
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们已经熟悉了管道的组件，让我们看看如何将多个组件组合在一起：
 - en: '[PRE147]'
+  id: totrans-218
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE147]'
 - en: '[PRE148]'
+  id: totrans-219
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE148]'
 - en: '[PRE149]'
+  id: totrans-220
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE149]'
 - en: '[PRE150]'
+  id: totrans-221
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE150]'
 - en: '[PRE151]'
+  id: totrans-222
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE151]'
 - en: '[PRE152]'
+  id: totrans-223
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE152]'
 - en: '[PRE153]'
+  id: totrans-224
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE153]'
 - en: '[PRE154]'
+  id: totrans-225
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE154]'
 - en: 'The resulting pipeline will look as follows:'
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 生成的管道将如下所示：
 - en: '[PRE155]'
+  id: totrans-227
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE155]'
 - en: A pipeline is a great way to break a long process into smaller steps. Note that
     each resulting coroutine is a *pure function*, so it's also easy to test and reason
     about.
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 管道是将一个长过程分解成更小步骤的绝佳方式。请注意，每个生成的协程都是一个*纯函数*，因此它也易于测试和推理。
 - en: The entire pipeline could be stopped by calling `cancel()` on the first coroutine
     in line.
+  id: totrans-229
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以通过在第一协程上调用`cancel()`来停止整个管道。
 - en: Fan Out
+  id: totrans-230
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Fan Out
 - en: 'The goal of the **Fan Out** design pattern is to distribute work between multiple
     concurrent processors, also known as *workers*. To understand it better, let''s
     look again at the previous section but consider the following problem:'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: Fan Out设计模式的目的是在多个并发处理器之间分配工作，也称为*工作者*。为了更好地理解它，让我们再次查看前面的部分，但考虑以下问题：
 - en: '*What if the amount of work at the different steps in our pipeline is very
     different?*'
+  id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: '*如果我们在管道中不同步骤的工作量非常不同怎么办？*'
 - en: For example, it takes a lot more time to *fetch* the HTML content than to *parse*
     it. In such a case, we may want to distribute that heavy work between multiple
     coroutines. In the previous example, only a single coroutine was reading from
     each channel. But multiple coroutines can consume from a single channel too, thus
     dividing the work.
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，获取HTML内容比解析它花费的时间要多得多。在这种情况下，我们可能希望将这项繁重的工作分配给多个协程。在先前的例子中，只有一个协程从每个通道读取。但多个协程也可以从单个通道消费，从而分担工作。
 - en: 'To simplify the problem we''re about to discuss, let''s have only one coroutine
     producing some results:'
+  id: totrans-234
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了简化我们即将讨论的问题，让我们只有一个协程产生一些结果：
 - en: '[PRE156]'
+  id: totrans-235
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE156]'
 - en: '[PRE157]'
+  id: totrans-236
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE157]'
 - en: '[PRE158]'
+  id: totrans-237
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE158]'
 - en: '[PRE159]'
+  id: totrans-238
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE159]'
 - en: '[PRE160]'
+  id: totrans-239
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE160]'
 - en: '[PRE161]'
+  id: totrans-240
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE161]'
 - en: 'And we''ll have a function that creates a new coroutine that reads those results:'
+  id: totrans-241
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将有一个函数来创建一个新的协程，该协程读取这些结果：
 - en: '[PRE162]'
+  id: totrans-242
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE162]'
 - en: '[PRE163]'
+  id: totrans-243
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE163]'
 - en: '[PRE164]'
+  id: totrans-244
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE164]'
 - en: '[PRE165]'
+  id: totrans-245
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE165]'
 - en: '[PRE166]'
+  id: totrans-246
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE166]'
 - en: '[PRE167]'
+  id: totrans-247
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE167]'
 - en: '[PRE168]'
+  id: totrans-248
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE168]'
 - en: '[PRE169]'
+  id: totrans-249
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE169]'
 - en: This function will generate a coroutine that is executed on the `Default` dispatcher.
     Each coroutine will listen to a channel and print every message it receives to
     the console.
+  id: totrans-250
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个函数将生成一个在`Default`调度器上执行的协程。每个协程将监听一个通道，并将接收到的每条消息打印到控制台。
 - en: 'Now, let''s start our producer. Remember that all the following pieces of code
     need to be wrapped in the `runBlocking` function, but for simplicity, we omitted
     that part:'
+  id: totrans-251
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们启动我们的生产者。记住，所有以下代码片段都需要包裹在`runBlocking`函数中，但为了简单起见，我们省略了这部分：
 - en: '[PRE170]'
+  id: totrans-252
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE170]'
 - en: 'Then, we can create multiple workers that distribute the work between themselves
     by reading from the same channel:'
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们可以创建多个工作者，他们通过从相同的通道读取来相互分配工作：
 - en: '[PRE171]'
+  id: totrans-254
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE171]'
 - en: '[PRE172]'
+  id: totrans-255
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE172]'
 - en: '[PRE173]'
+  id: totrans-256
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE173]'
 - en: 'Let''s now examine a part of the output of this program:'
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们检查这个程序的输出的一部分：
 - en: '[PRE174]'
+  id: totrans-258
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE174]'
 - en: '[PRE175]'
+  id: totrans-259
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE175]'
 - en: '[PRE176]'
+  id: totrans-260
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE176]'
 - en: '[PRE177]'
+  id: totrans-261
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE177]'
 - en: '[PRE178]'
+  id: totrans-262
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE178]'
 - en: Note that no two workers receive the same message and the messages are not being
     printed in the order they were sent. The Fan Out design pattern allows us to efficiently
     distribute the work across a number of coroutines, threads, and CPUs.
+  id: totrans-263
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，没有两个工作进程收到相同的信息，并且消息的打印顺序与发送顺序不同。Fan Out设计模式允许我们高效地将工作分配给多个协程、线程和CPU。
 - en: Next, let's discuss an accompanying design pattern that often goes hand-in-hand
     with Fan Out.
+  id: totrans-264
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，让我们讨论一个与Fan Out经常一起出现的伴随设计模式。
 - en: Fan In
+  id: totrans-265
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Fan In
 - en: The goal of the **Fan In** design pattern is to combine results from multiple
     workers. This design pattern is helpful when our workers produce results and we
     need to gather them.
+  id: totrans-266
   prefs: []
   type: TYPE_NORMAL
+  zh: Fan In设计模式的目的是将多个工作者的结果合并起来。当我们的工作者产生结果而我们又需要收集它们时，这个设计模式非常有用。
 - en: This design pattern is the opposite of the Fan Out design pattern we discussed
     in the previous section. Instead of multiple coroutines *reading* from the same
     channel, multiple coroutines can *write* their results to the same channel.
+  id: totrans-267
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种设计模式是我们在上一节中讨论的扇出设计模式的对立面。不是多个协程从同一个通道中 *读取*，而是多个协程可以将它们的结果 *写入* 到同一个通道。
 - en: 'Combining the Fan Out and Fan In design patterns is a good base for **MapReduce**
     algorithms. To demonstrate this, we''ll slightly change the workers from the previous
     example, as follows:'
+  id: totrans-268
   prefs: []
   type: TYPE_NORMAL
+  zh: 结合扇出和扇入设计模式是 **MapReduce** 算法的好基础。为了演示这一点，我们将对前一个例子中的工作进程进行轻微的修改，如下所示：
 - en: '[PRE179]'
+  id: totrans-269
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE179]'
 - en: '[PRE180]'
+  id: totrans-270
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE180]'
 - en: '[PRE181]'
+  id: totrans-271
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE181]'
 - en: '[PRE182]'
+  id: totrans-272
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE182]'
 - en: '[PRE183]'
+  id: totrans-273
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE183]'
 - en: '[PRE184]'
+  id: totrans-274
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE184]'
 - en: '[PRE185]'
+  id: totrans-275
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE185]'
 - en: '[PRE186]'
+  id: totrans-276
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE186]'
 - en: Now, once done, each worker sends the results of its calculation to `resultChannel`.
+  id: totrans-277
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，一旦完成，每个工作进程将其计算结果发送到 `resultChannel`。
 - en: Note that this pattern is different from the actor and producer builders we've
     seen before. Actors each have their own channels, while in this case, `resultChannel`
     is shared across all the workers.
+  id: totrans-278
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，这种模式与我们之前看到的演员和生产者构建器不同。每个演员都有自己的通道，而在这个例子中，`resultChannel` 是所有工作进程共享的。
 - en: 'To collect the results from the workers, we''ll use the following code:'
+  id: totrans-279
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了收集来自工作进程的结果，我们将使用以下代码：
 - en: '[PRE187]'
+  id: totrans-280
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE187]'
 - en: '[PRE188]'
+  id: totrans-281
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE188]'
 - en: '[PRE189]'
+  id: totrans-282
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE189]'
 - en: '[PRE190]'
+  id: totrans-283
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE190]'
 - en: '[PRE191]'
+  id: totrans-284
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE191]'
 - en: '[PRE192]'
+  id: totrans-285
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE192]'
 - en: '[PRE193]'
+  id: totrans-286
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE193]'
 - en: '[PRE194]'
+  id: totrans-287
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE194]'
 - en: '[PRE195]'
+  id: totrans-288
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE195]'
 - en: '[PRE196]'
+  id: totrans-289
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE196]'
 - en: 'Let''s now clarify what this code does:'
+  id: totrans-290
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们现在明确一下这段代码的作用：
 - en: First, we create `resultChannel`, which all our workers will share.
+  id: totrans-291
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，我们创建 `resultChannel`，所有我们的工作进程都将共享。
 - en: Then, we supply it to each worker. We have ten workers in total. Each worker
     repeats the message it received twice and sends it on `resultChannel`.
+  id: totrans-292
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，我们将它提供给每个工作进程。我们总共有十个工作进程。每个工作进程将其接收到的消息重复两次，并将其发送到 `resultChannel`。
 - en: Finally, we consume the results from the channel in our main coroutine. This
     way, we accumulate results from multiple concurrent workers in the same place.
+  id: totrans-293
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，我们在主协程中从通道中消费结果。这样，我们就可以在同一个地方累积来自多个并发工作进程的结果。
 - en: 'Here''s a sample of the output from the preceding code:'
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是前面代码的输出样本：
 - en: '[PRE197]'
+  id: totrans-295
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE197]'
 - en: '[PRE198]'
+  id: totrans-296
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE198]'
 - en: '[PRE199]'
+  id: totrans-297
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE199]'
 - en: '[PRE200]'
+  id: totrans-298
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE200]'
 - en: '[PRE201]'
+  id: totrans-299
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE201]'
 - en: '[PRE202]'
+  id: totrans-300
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE202]'
 - en: '[PRE203]'
+  id: totrans-301
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE203]'
 - en: Next, let's discuss another design pattern, which will help us improve the responsiveness
     of our code in some cases.
+  id: totrans-302
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，让我们讨论另一种设计模式，它将有助于我们在某些情况下提高代码的响应性。
 - en: Racing
+  id: totrans-303
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 竞赛
 - en: '**Racing** is a design pattern that runs multiple jobs concurrently, picking
     the result that returns first as the *winner* and discarding others as *losers*.'
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: '**竞赛**是一种并发运行多个作业的设计模式，选择第一个返回的结果作为 *赢家*，并将其他作为 *输家*。'
 - en: We can implement Racing in Kotlin using the `select()` function on channels.
+  id: totrans-305
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以使用 Kotlin 中的 `select()` 函数在通道上实现竞赛。
 - en: Let's imagine you are building a weather application. For redundancy, you fetch
     the weather from two different sources, *Precise Weather* and *Weather Today*.
     We'll describe them as two producers that return their name and temperature.
+  id: totrans-306
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们想象你正在构建一个天气应用程序。为了冗余，你从两个不同的来源获取天气，*Precise Weather* 和 *Weather Today*。我们将它们描述为两个返回其名称和温度的生产者。
 - en: If we have more than one producer, we can subscribe to their channels and take
     the first result that is available.
+  id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们有多个生产者，我们可以订阅它们的通道，并获取第一个可用的结果。
 - en: 'First, let''s declare the two weather producers:'
+  id: totrans-308
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们声明两个天气生产者：
 - en: '[PRE204]'
+  id: totrans-309
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE204]'
 - en: '[PRE205]'
+  id: totrans-310
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE205]'
 - en: '[PRE206]'
+  id: totrans-311
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE206]'
 - en: '[PRE207]'
+  id: totrans-312
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE207]'
 - en: '[PRE208]'
+  id: totrans-313
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE208]'
 - en: '[PRE209]'
+  id: totrans-314
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE209]'
 - en: '[PRE210]'
+  id: totrans-315
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE210]'
 - en: '[PRE211]'
+  id: totrans-316
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE211]'
 - en: Their logic is pretty much the same. Both wait for a random number of milliseconds
     and then return a temperature reading and the name of the source.
+  id: totrans-317
   prefs: []
   type: TYPE_NORMAL
+  zh: 它们的逻辑几乎相同。两者都等待随机的毫秒数，然后返回温度读数和来源名称。
 - en: 'We can listen to both channels simultaneously using the `select` expression:'
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以使用 `select` 表达式同时监听两个通道：
 - en: '[PRE212]'
+  id: totrans-319
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE212]'
 - en: '[PRE213]'
+  id: totrans-320
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE213]'
 - en: '[PRE214]'
+  id: totrans-321
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE214]'
 - en: '[PRE215]'
+  id: totrans-322
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE215]'
 - en: '[PRE216]'
+  id: totrans-323
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE216]'
 - en: '[PRE217]'
+  id: totrans-324
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE217]'
 - en: '[PRE218]'
+  id: totrans-325
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE218]'
 - en: '[PRE219]'
+  id: totrans-326
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE219]'
 - en: '[PRE220]'
+  id: totrans-327
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE220]'
 - en: '[PRE221]'
+  id: totrans-328
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE221]'
 - en: '[PRE222]'
+  id: totrans-329
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE222]'
 - en: Using the `onReceive()` function allows us to listen to multiple channels simultaneously.
+  id: totrans-330
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用 `onReceive()` 函数允许我们同时监听多个通道。
 - en: Running this code multiple times will randomly print `(Precise Weather, +25c)`and
     `(Weather Today, +24c)`, as there is an equal chance for both of them to arrive
     first.
+  id: totrans-331
   prefs: []
   type: TYPE_NORMAL
+  zh: 运行此代码多次将随机打印 `(Precise Weather, +25c)` 和 `(Weather Today, +24c)`，因为它们到达第一个的机会是均等的。
 - en: Racing is a very useful concept when you are willing to sacrifice resources
     in order to get the most responsiveness from your system and we achieved that
     using Kotlin's `select` expression. Now, let's explore the `select` expression
     a little further to discover another concurrent design pattern that it implements.
+  id: totrans-332
   prefs: []
   type: TYPE_NORMAL
+  zh: 竞赛是一个非常有用的概念，当你愿意牺牲资源以从你的系统中获得最大的响应性时，我们就使用 Kotlin 的 `select` 表达式实现了这一点。现在，让我们进一步探索
+    `select` 表达式，以发现它实现的另一个并发设计模式。
 - en: Unbiased select
+  id: totrans-333
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 无偏选择
 - en: When using the `select` clause, the order is important. Because it is inherently
     biased, if two events happen at the same time, it will select the first clause.
+  id: totrans-334
   prefs: []
   type: TYPE_NORMAL
+  zh: 当使用 `select` 子句时，顺序很重要。因为它固有的偏差，如果两个事件同时发生，它将选择第一个子句。
 - en: Let's see what that means in the following example.
+  id: totrans-335
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看以下示例中的含义。
 - en: 'We''ll have only one producer this time, which sends over a channel which movie
     we should watch next:'
+  id: totrans-336
   prefs: []
   type: TYPE_NORMAL
+  zh: 这次我们只有一个生产者，它通过通道发送我们应该观看的下一部电影：
 - en: '[PRE223]'
+  id: totrans-337
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE223]'
 - en: '[PRE224]'
+  id: totrans-338
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE224]'
 - en: '[PRE225]'
+  id: totrans-339
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE225]'
 - en: '[PRE226]'
+  id: totrans-340
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE226]'
 - en: '[PRE227]'
+  id: totrans-341
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE227]'
 - en: Since we defined a non-zero capacity on the channel, the value will be available
     as soon as this coroutine runs.
+  id: totrans-342
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于我们在通道上定义了非零容量，值将在这个协程运行时立即可用。
 - en: 'Now, let''s start the two producers and use a `select` expression to see which
     of the two movies will be selected:'
+  id: totrans-343
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们启动两个生产者，并使用`select`表达式来查看哪部电影将被选中：
 - en: '[PRE228]'
+  id: totrans-344
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE228]'
 - en: '[PRE229]'
+  id: totrans-345
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE229]'
 - en: '[PRE230]'
+  id: totrans-346
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE230]'
 - en: '[PRE231]'
+  id: totrans-347
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE231]'
 - en: '[PRE232]'
+  id: totrans-348
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE232]'
 - en: '[PRE233]'
+  id: totrans-349
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE233]'
 - en: '[PRE234]'
+  id: totrans-350
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE234]'
 - en: '[PRE235]'
+  id: totrans-351
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE235]'
 - en: '[PRE236]'
+  id: totrans-352
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE236]'
 - en: '[PRE237]'
+  id: totrans-353
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE237]'
 - en: '[PRE238]'
+  id: totrans-354
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE238]'
 - en: 'No matter how many times you run this code, the winner will always be the same:
     `Quick&Angry 7`. This is because if both values are ready at the same time, the
     `select` clause will always pick the first channel available in the order they
     are declared.'
+  id: totrans-355
   prefs: []
   type: TYPE_NORMAL
+  zh: 无论你运行此代码多少次，获胜者总是相同的：`Quick&Angry 7`。这是因为如果两个值同时准备好，`select`子句总是会选择它们声明的第一个通道。
 - en: 'Now, let''s use `selectUnbiased` instead of the `select` clause:'
+  id: totrans-356
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们使用`selectUnbiased`而不是`select`子句：
 - en: '[PRE239]'
+  id: totrans-357
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE239]'
 - en: '[PRE240]'
+  id: totrans-358
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE240]'
 - en: '[PRE241]'
+  id: totrans-359
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE241]'
 - en: '[PRE242]'
+  id: totrans-360
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE242]'
 - en: '[PRE243]'
+  id: totrans-361
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE243]'
 - en: '[PRE244]'
+  id: totrans-362
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE244]'
 - en: 'Running this code now will sometimes produce `Quick&Angry 7` and sometimes
     produce `Revengers: Penultimatum`. Unlike the regular `select` clause, `selectUnbiased`
     doesn''t care about the order. If more than one result is available, it will pick
     one randomly.'
+  id: totrans-363
   prefs: []
   type: TYPE_NORMAL
+  zh: '现在运行此代码有时会产生`Quick&Angry 7`，有时会产生`Revengers: Penultimatum`。与常规的`select`子句不同，`selectUnbiased`不关心顺序。如果有多个结果可用，它将随机选择一个。'
 - en: Mutex
+  id: totrans-364
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 互斥锁
 - en: Also known as **mutual exclusions**, **mutex** provides a means to protect a
     shared state that can be accessed by multiple coroutines at once.
+  id: totrans-365
   prefs: []
   type: TYPE_NORMAL
+  zh: 也称为**互斥**，**互斥锁**提供了一种保护共享状态的方法，该状态可以被多个协程同时访问。
 - en: 'Let''s start with the same old dreaded `counter` example, where multiple concurrent
     tasks try to update the same `counter`:'
+  id: totrans-366
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从那个古老的令人讨厌的`counter`例子开始，其中多个并发任务尝试更新同一个`counter`：
 - en: '[PRE245]'
+  id: totrans-367
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE245]'
 - en: '[PRE246]'
+  id: totrans-368
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE246]'
 - en: '[PRE247]'
+  id: totrans-369
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE247]'
 - en: '[PRE248]'
+  id: totrans-370
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE248]'
 - en: '[PRE249]'
+  id: totrans-371
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE249]'
 - en: '[PRE250]'
+  id: totrans-372
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE250]'
 - en: '[PRE251]'
+  id: totrans-373
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE251]'
 - en: '[PRE252]'
+  id: totrans-374
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE252]'
 - en: '[PRE253]'
+  id: totrans-375
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE253]'
 - en: '[PRE254]'
+  id: totrans-376
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE254]'
 - en: As you've probably guessed, the result that is printed is less than 10,000 –
     *totally embarrassing!*
+  id: totrans-377
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你可能猜到的，打印出的结果小于10,000 – *完全尴尬！*
 - en: To solve this, we can introduce a locking mechanism that will allow only a single
     coroutine to interact with the variable at once, making the operation *atomic*.
+  id: totrans-378
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了解决这个问题，我们可以引入一个锁定机制，它将允许只有一个协程一次与变量交互，使操作*原子化*。
 - en: 'Each coroutine will try to obtain the ownership of the `counter`. If another
     coroutine is updating the `counter`, our coroutine will wait patiently and then
     try to acquire the lock again. Once updated, it must release the lock so that
     other coroutines can proceed:'
+  id: totrans-379
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个协程都会尝试获取`counter`的所有权。如果另一个协程正在更新`counter`，我们的协程将耐心等待，然后再次尝试获取锁。一旦更新完成，它必须释放锁，以便其他协程可以继续：
 - en: '[PRE255]'
+  id: totrans-380
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE255]'
 - en: '[PRE256]'
+  id: totrans-381
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE256]'
 - en: '[PRE257]'
+  id: totrans-382
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE257]'
 - en: '[PRE258]'
+  id: totrans-383
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE258]'
 - en: '[PRE259]'
+  id: totrans-384
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE259]'
 - en: '[PRE260]'
+  id: totrans-385
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE260]'
 - en: '[PRE261]'
+  id: totrans-386
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE261]'
 - en: '[PRE262]'
+  id: totrans-387
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE262]'
 - en: '[PRE263]'
+  id: totrans-388
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE263]'
 - en: '[PRE264]'
+  id: totrans-389
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE264]'
 - en: '[PRE265]'
+  id: totrans-390
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE265]'
 - en: 'Now, our example always prints the correct number: `10,000`.'
+  id: totrans-391
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们的例子总是打印出正确的数字：`10,000`。
 - en: Mutex in Kotlin is different from the Java mutex. In Java, `lock()` on a mutex
     blocks the thread, until the lock can be acquired. A Kotlin mutex suspends the
     coroutine instead, providing better concurrency. Locks in Kotlin are cheaper.
+  id: totrans-392
   prefs: []
   type: TYPE_NORMAL
+  zh: Kotlin中的互斥锁与Java中的互斥锁不同。在Java中，互斥锁上的`lock()`会阻塞线程，直到锁可以被获取。而Kotlin互斥锁会挂起协程，从而提供更好的并发性。Kotlin中的锁更便宜。
 - en: This is good for simple cases. But what if the code within the critical section,
     that is, between `lock()` and `unlock()`, throws an exception?
+  id: totrans-393
   prefs: []
   type: TYPE_NORMAL
+  zh: 这对于简单情况很好。但如果在临界区（即`lock()`和`unlock()`之间）的代码抛出异常怎么办？
 - en: 'We would have to wrap our code in `try...catch`, which is not very convenient:'
+  id: totrans-394
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不得不将我们的代码包裹在`try...catch`中，这并不方便：
 - en: '[PRE266]'
+  id: totrans-395
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE266]'
 - en: '[PRE267]'
+  id: totrans-396
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE267]'
 - en: '[PRE268]'
+  id: totrans-397
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE268]'
 - en: '[PRE269]'
+  id: totrans-398
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE269]'
 - en: '[PRE270]'
+  id: totrans-399
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE270]'
 - en: '[PRE271]'
+  id: totrans-400
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE271]'
 - en: '[PRE272]'
+  id: totrans-401
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE272]'
 - en: However, if we omit the `finally` block, our lock will never be released and
     it will block all other coroutines from proceeding and creating a deadlock.
+  id: totrans-402
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，如果我们省略了`finally`块，我们的锁将永远不会释放，这将阻止所有其他协程继续进行并导致死锁。
 - en: 'Exactly for this purpose, Kotlin also introduces `withLock()`:'
+  id: totrans-403
   prefs: []
   type: TYPE_NORMAL
+  zh: 正是为了这个目的，Kotlin还引入了`withLock()`：
 - en: '[PRE273]'
+  id: totrans-404
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE273]'
 - en: '[PRE274]'
+  id: totrans-405
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE274]'
 - en: '[PRE275]'
+  id: totrans-406
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE275]'
 - en: Notice how much more concise this syntax is compared with the previous example.
+  id: totrans-407
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，与之前的例子相比，这个语法要简洁得多。
 - en: Sidekick channel
+  id: totrans-408
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Sidekick channel
 - en: The **Sidekick channel** design pattern allows us to offload some work from
     our main worker to a *back worker*.
+  id: totrans-409
   prefs: []
   type: TYPE_NORMAL
+  zh: '**Sidekick channel**设计模式允许我们将一些工作从主工作线程卸载到*后台工作线程*。'
 - en: Up until now, we've only discussed the use of `select` as a *receiver*. But
     we can also use `select` to *send* items to another channel. Let's look at the
     following example.
+  id: totrans-410
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们只讨论了将`select`用作*接收者*的使用。但我们也可以使用`select`将项目*发送*到另一个通道。让我们看看以下示例。
 - en: 'First, we''ll declare `batman` as an actor coroutine that processes 10 messages
     per second:'
+  id: totrans-411
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将`batman`声明为一个处理每秒10条消息的actor协程：
 - en: '[PRE276]'
+  id: totrans-412
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE276]'
 - en: '[PRE277]'
+  id: totrans-413
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE277]'
 - en: '[PRE278]'
+  id: totrans-414
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE278]'
 - en: '[PRE279]'
+  id: totrans-415
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE279]'
 - en: '[PRE280]'
+  id: totrans-416
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE280]'
 - en: '[PRE281]'
+  id: totrans-417
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE281]'
 - en: 'Next, we''ll declare `robin` as another actor coroutine that is a bit slower
     and processes only four messages per second:'
+  id: totrans-418
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们将声明 `robin` 作为另一个协程演员，它稍微慢一些，每秒只处理四条消息：
 - en: '[PRE282]'
+  id: totrans-419
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE282]'
 - en: '[PRE283]'
+  id: totrans-420
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE283]'
 - en: '[PRE284]'
+  id: totrans-421
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE284]'
 - en: '[PRE285]'
+  id: totrans-422
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE285]'
 - en: '[PRE286]'
+  id: totrans-423
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE286]'
 - en: '[PRE287]'
+  id: totrans-424
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE287]'
 - en: So, we have a superhero and his sidekick as two actors. Since the superhero
     is more experienced, it usually takes him less time to beat the villain he's facing.
+  id: totrans-425
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，我们有两个演员：一个超级英雄和他的助手。由于超级英雄更有经验，他通常需要更少的时间来击败他面对的反派。
 - en: 'But in some cases, he still has his hands full, so a sidekick needs to step
     in. We''ll throw five villains at the pair with a few delays and see how they
     fare:'
+  id: totrans-426
   prefs: []
   type: TYPE_NORMAL
+  zh: 但在某些情况下，他仍然手头很忙，所以需要一个助手介入。我们将向这对组合投掷五个反派，并观察他们的表现：
 - en: '[PRE288]'
+  id: totrans-427
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE288]'
 - en: '[PRE289]'
+  id: totrans-428
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE289]'
 - en: '[PRE290]'
+  id: totrans-429
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE290]'
 - en: '[PRE291]'
+  id: totrans-430
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE291]'
 - en: '[PRE292]'
+  id: totrans-431
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE292]'
 - en: '[PRE293]'
+  id: totrans-432
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE293]'
 - en: '[PRE294]'
+  id: totrans-433
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE294]'
 - en: '[PRE295]'
+  id: totrans-434
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE295]'
 - en: '[PRE296]'
+  id: totrans-435
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE296]'
 - en: '[PRE297]'
+  id: totrans-436
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE297]'
 - en: '[PRE298]'
+  id: totrans-437
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE298]'
 - en: '[PRE299]'
+  id: totrans-438
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE299]'
 - en: '[PRE300]'
+  id: totrans-439
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE300]'
 - en: '[PRE301]'
+  id: totrans-440
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE301]'
 - en: Notice that the type of parameter for `select` refers to what is *returned*
     from the block and not what is being *sent* to the channels. That's the reason
     we use `Pair<String, String>` here.
+  id: totrans-441
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，`select` 表达式的参数类型指的是从块中**返回**的内容，而不是被**发送**到通道的内容。这就是我们在这里使用 `Pair<String,
+    String>` 的原因。
 - en: 'This code prints the following:'
+  id: totrans-442
   prefs: []
   type: TYPE_NORMAL
+  zh: 这段代码打印以下内容：
 - en: '[PRE302]'
+  id: totrans-443
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE302]'
 - en: '[PRE303]'
+  id: totrans-444
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE303]'
 - en: '[PRE304]'
+  id: totrans-445
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE304]'
 - en: '[PRE305]'
+  id: totrans-446
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE305]'
 - en: '[PRE306]'
+  id: totrans-447
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE306]'
 - en: '[PRE307]'
+  id: totrans-448
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE307]'
 - en: '[PRE308]'
+  id: totrans-449
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE308]'
 - en: '[PRE309]'
+  id: totrans-450
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE309]'
 - en: '[PRE310]'
+  id: totrans-451
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE310]'
 - en: '[PRE311]'
+  id: totrans-452
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE311]'
 - en: Using a sidekick channel is a useful technique to provide fallback values. Consider
     using one in cases when you need to consume a consistent stream of data and cannot
     easily scale your consumers.
+  id: totrans-453
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用助手通道是一种有用的技术，可以提供回退值。考虑在需要消费一致数据流且无法轻松扩展消费者的情况下使用它。
 - en: Summary
+  id: totrans-454
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In this chapter, we covered various design patterns related to *concurrency*
     in Kotlin. Most of them are based on coroutines, channels, deferred values, or
     a combination of these building blocks.
+  id: totrans-455
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们介绍了与 Kotlin 中**并发**相关的各种设计模式。大多数模式都是基于协程、通道、延迟值或这些构建块的组合。
 - en: Deferred values are used as placeholders for asynchronous values. The Barrier
     design pattern allows multiple asynchronous tasks to rendezvous before proceeding
     further. The Scheduler design pattern decouples the code of tasks from the way
     they are executed at runtime.
+  id: totrans-456
   prefs: []
   type: TYPE_NORMAL
+  zh: 延迟值用作异步值的占位符。屏障设计模式允许多个异步任务在继续之前进行会合。调度器设计模式将任务代码与其在运行时执行的方式解耦。
 - en: The Pipeline, Fan In, and Fan Out design patterns help us distribute the work
     and collect the results. Mutex helps us to control the number of tasks that are
     being executed at the same time. The Racing design pattern allows us to improve
     the responsiveness of our application. Finally, the Sidekick Channel design pattern
     offloads work onto a backup task in case the main task is not able to process
     the incoming events quickly enough.
+  id: totrans-457
   prefs: []
   type: TYPE_NORMAL
+  zh: 管道、扇入和扇出设计模式帮助我们分配工作并收集结果。互斥锁帮助我们控制同时执行的任务数量。竞态设计模式允许我们提高应用程序的响应性。最后，助手通道设计模式在主任务无法快速处理传入事件时，将工作卸载到备用任务上。
 - en: All of these patterns should help you to manage the concurrency of your application
     in an efficient and extensible manner. In the next chapter, we'll discuss Kotlin's
     idioms and best practices, as well as some of the anti-patterns that emerged with
     the language.
+  id: totrans-458
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有这些模式都应该帮助你以高效和可扩展的方式管理应用程序的并发。在下一章中，我们将讨论 Kotlin 的惯用用法和最佳实践，以及随着语言出现的某些反模式。
 - en: Questions
+  id: totrans-459
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 问题
 - en: What does it mean when we say that the `select` expression in Kotlin is *biased*?
+  id: totrans-460
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当我们说 Kotlin 中的 `select` 表达式是**有偏好的**时，这是什么意思？
 - en: When should you use a *mutex* instead of a *channel*?
+  id: totrans-461
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你应该在什么情况下使用**互斥锁**而不是**通道**？
 - en: Which of the concurrent design patterns could help you implement a MapReduce
     or divide-and-conquer algorithm efficiently?
+  id: totrans-462
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 哪些并发设计模式可以帮助你有效地实现 MapReduce 或分而治之算法？

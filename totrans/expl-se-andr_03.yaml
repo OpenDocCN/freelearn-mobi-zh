@@ -1,35 +1,49 @@
 - en: Chapter 3. Android Is Weird
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第3章。Android很奇怪
 - en: 'It really is. Although it is built on the familiar Linux kernel, Android has
     a completely custom user space, and while many of its functionalities are rewrites
     of their GNU cousins, some are either new or have significantly different functions
     than their desktop counterparts. Because of these differences, these systems had
     to be modified to support SELinux. In this chapter, we will:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 确实如此。尽管它是建立在熟悉的Linux内核之上，但Android拥有一个完全定制的用户空间，并且虽然其中许多功能是GNU亲缘功能的重写，但也有一些是全新的，或者与桌面版本有显著不同的功能。由于这些差异，这些系统必须进行修改以支持SELinux。在本章中，我们将：
 - en: Introduce the Android security model
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 介绍Android安全模型
 - en: Investigate binder, zygote, and the property service
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调查binder、zygote和属性服务
 - en: Cover which SELinux elements were added to complement these systems and why
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 涵盖为补充这些系统而添加的SELinux元素及其原因
 - en: The coverage of these systems will be moderate, but we will present more intricate
     details of each system later, when appropriate, in our exploratory investigation
     of SE for Android.
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些系统的覆盖范围将适中，但当我们进行Android SE的探索性研究时，我们将适当地详细介绍每个系统的更复杂细节。
 - en: Android's security model
+  id: totrans-6
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Android的安全模型
 - en: Android's core security model is based on Linux DAC, including capabilities.
     Android, however, uses the Linux concept of UID/GID in a very non-traditional
     way. Each process on the system has its own UID rather than the UID of whoever
@@ -43,8 +57,11 @@
     system. In fact, Android didn't have support for multiple human users until its
     Jelly Bean 4.3 release. It was always intended for devices with a single human
     user… at least in operation.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: Android的核心安全模型基于Linux DAC，包括能力。然而，Android却以非常非传统的方式使用Linux的UID/GID概念。系统上的每个进程都有自己的UID，而不是启动它的那个人的UID。这些UID（通常是唯一的）提供了沙箱和进程隔离。尽管如此，也有一些情况下进程可以共享UID和GID。通常，当一个进程与另一个进程共享UID时，是因为它们都需要系统上的相同权限集并共享数据。对于GID来说，这也可能是可能的。然而，Android中的一些GID实际上用于获取访问底层系统（如SD卡文件系统）的权限。简而言之，UID用于隔离进程，而不是系统的人类用户。事实上，Android直到其Jelly
+    Bean 4.3版本才支持多个人类用户。它始终是为单个人类用户设计的设备……至少在操作上。
 - en: Within this security model, there are two process classes. The first is called
     system component services. These are the services declared in the system init
     scripts. They tend to be highly privileged and thus almost never share a UID with
@@ -56,8 +73,11 @@
     UID, and is highly privileged. Almost all of these systems share a common theme;
     they have a UID that is either root or is set to the owner of many sensitive kernel
     objects, such as sockets, pipes, and files.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个安全模型中，有两种进程类别。第一种被称为系统组件服务。这些是在系统init脚本中声明的服务。它们通常具有高度特权，因此几乎从不与其他进程共享UID。一个系统组件服务的例子是**无线电接口层守护进程**（**RILD**）。RILD负责处理Android用户空间与设备上的调制解调器之间的消息。由于其执行的性质，它通常以UID
+    root运行。没有要求进程必须是纯原生代码。系统服务器有非原生组件，以系统UID运行，并且具有高度特权。几乎所有这些系统都有一个共同的主题；它们有一个UID，要么是root，要么被设置为许多敏感内核对象的所有者，如套接字、管道和文件。
 - en: The second class is applications. Applications are typically written in Java,
     although this is not a requirement; this is similar to how system component services
     are typically written in native code without it being a requirement. These applications
@@ -67,8 +87,10 @@
     on the system, and the applications run with no capabilities. In order to access
     a system resource, an application must have its supplementary group appended to
     or it must be arbitrated by a separate process.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 第二类是应用程序。应用程序通常用Java编写，尽管这并非强制要求；这类似于系统组件服务通常用本地代码编写，尽管也不是强制要求。这些应用程序在安装时自动分配UID，并且系统为这个目的保留了这些UID。包管理器负责向应用程序分配UID。这些UID与系统上的任何敏感或危险内容都没有关联，并且应用程序运行时没有能力。为了访问系统资源，应用程序必须将其补充组附加到或由一个单独的过程仲裁。
 - en: A simple example of utilizing the supplementary group is seen when an application
     needs to use the SD card. For applications to access the SD card, they must have
     `SDCARD_RW` in their supplementary GIDs. These permissions are enforced with standard
@@ -79,8 +101,11 @@
     a supplementary GID. This mapping is maintained in a file in the system, specifically
     `/system/etc/permissions/platform.xml`. You will see an application of these permission
     strings in a later chapter.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 当一个应用程序需要使用SD卡时，我们可以看到一个利用补充组的简单例子。为了访问SD卡，应用程序必须在其补充GID中具有`SDCARD_RW`。这些权限由内核通过标准的Linux
+    DAC权限强制执行。补充组由包管理器在应用程序安装期间根据声明的权限分配。Android中的应用程序必须在应用程序的清单中声明一个名为`uses-permission`的内容。这个权限作为一个字符串出现，它映射到一个补充GID。这种映射在系统中的一个文件中维护，具体是`/system/etc/permissions/platform.xml`文件。你将在后面的章节中看到这些权限字符串的应用实例。
 - en: The second way an application gains access to a system resource is through another
     process. The application wishing to use a system resource must get another process
     to do this on its behalf. Most requests are handled by a process known as the
@@ -98,19 +123,27 @@
     application to access protected objects in a way that can threaten the security
     of the device, applications, or user data. The owners of the devices should always
     ensure they are comfortable with the application using the declared permissions.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用程序获取系统资源的第二种方式是通过另一个进程。希望使用系统资源的应用程序必须让另一个进程代表它执行此操作。大多数请求由一个称为**系统服务器**的进程处理。系统服务器检查发起仲裁请求的应用程序是否在其清单文件中声明了匹配的权限字符串。如果是，则允许其继续，否则会抛出安全异常。即使在Android中，仲裁访问也使用DAC模型，本质上如此。虽然对象所有者通过权限字符串控制对象上的访问规则，但任何受保护对象的消费者都可以请求权限字符串以获取访问权限。本质上，任何人都可以编写请求任何权限字符串的应用程序。在安装应用程序时，用户会看到应用程序请求的权限列表，他们可以选择全部接受或拒绝。如果用户的意图是安装应用程序，则必须授予所有请求的权限。如果用户不够小心，他们可能会无意中允许该应用程序以可能威胁设备、应用程序或用户数据安全的方式访问受保护的对象。设备的所有者应始终确保他们对应用程序使用声明的权限感到满意。
 - en: Note
+  id: totrans-12
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: For examples or further discussion, refer to [http://developer.android.com/guide/topics/security/permissions.html](http://developer.android.com/guide/topics/security/permissions.html).
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 有关示例或进一步讨论，请参阅[http://developer.android.com/guide/topics/security/permissions.html](http://developer.android.com/guide/topics/security/permissions.html)。
 - en: Binder
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Binder
 - en: The arbitrated access method discussed before requires some form of **Interprocess
     Communication** (**IPC**), and while Android does use Unix domain sockets, it
     also brings its own IPC mechanism that is used more widely throughout the system.
@@ -120,16 +153,23 @@
     many OpenBinder engineers, binder went with them to Android. However, Android
     has a complete, from scratch rewrite of the binder code base that is specific
     to Linux.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前讨论的仲裁访问方法需要某种形式的**进程间通信**（**IPC**），虽然Android使用Unix域套接字，但它也带来了自己的IPC机制，该机制在整个系统中被更广泛地使用。这种IPC机制称为binder，是Android操作系统的核心IPC机制。它具有从BeOS和Palm
+    OS的OpenBinder实现的历史相关性，并且由于最初的Android开发团队由许多OpenBinder工程师组成，binder随着他们一起进入了Android。然而，Android对binder代码库进行了完全从头开始的重新编写，该代码库针对Linux。
 - en: Note
+  id: totrans-16
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Binder is currently not completely mainstreamed into the Linux kernel, and many
     of Android's kernel changes are still staged.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: Binder目前尚未完全融入Linux内核，Android的许多内核更改仍在进行中。
 - en: There is some controversy around binder and its mainline adoption. Some people
     argue against the amount of heavy lifting it does within the driver in contrast
     to competing implementations such as `dbus`. However, it will likely be a long
@@ -137,17 +177,23 @@
     stays an Android-specific technology, is mainstreamed in the Linux kernel, or
     is eventually replaced by another technology in Android, binder is here to stay
     for the foreseeable future.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在binder及其主线采用方面存在一些争议。有些人反对它在驱动程序中承担的大量工作，与`dbus`等竞争实现相比。然而，我们可能还需要很长时间才能看到这场辩论的解决。无论binder是否继续作为Android特定的技术，是否在Linux内核中主流化，或者最终被Android中的另一种技术所取代，binder在可预见的未来都将存在。
 - en: Binder's architecture
+  id: totrans-19
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Binder的架构
 - en: 'Binder IPC follows a client/server architecture. A service publishes an interface
     and clients consume from that interface. Clients can bind to services via one
     of the two methods: known address or service name.'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: Binder IPC遵循客户端/服务器架构。服务发布一个接口，客户端从该接口消费。客户端可以通过两种方法之一绑定到服务：已知地址或服务名称。
 - en: Each binder interface in the system is known as a binder node. Each binder node
     has an address. When clients want to use an interface, they must bind to a binder
     node via this address. This is analogous to browsing a webpage via its IP address.
@@ -159,8 +205,10 @@
     assigned. Also, this indirection allows the runtime ability to reseat service
     implementations using just the published service names without the necessity to
     utilize the token.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 系统中的每个binder接口都称为binder节点。每个binder节点都有一个地址。当客户端想要使用一个接口时，他们必须通过这个地址绑定到binder节点。这类似于通过IP地址浏览网页。然而，与通常在长时间内固定的IP地址不同，binder地址可能会根据发布服务的重启或设备启动时的服务启动顺序而改变。进程的顺序并不完全保证，因此进程服务的发布可能会导致分配不同的binder令牌（一个在进程间共享的简单binder对象）。此外，这种间接性允许运行时仅使用发布的服务名称重新设置服务实现，而无需利用令牌。
 - en: The way this redirection functions is similar to how DNS provides the resolution
     from name to IP address for networked device accesses. Binder has something called
     the context manager (also known as the service manager). The context manager lives
@@ -172,8 +220,13 @@
     the binder interface, the processes then perform binder transactions using a well-established
     binder protocol. This protocol allows synchronous transactions analog to a method
     call.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种重定向的方式类似于 DNS 为网络设备访问提供从名称到 IP 地址的解析。binder 有一个称为上下文管理器（也称为服务管理器）的东西。上下文管理器位于固定的节点地址
+    `0`。发布服务的会将名称和 binder 令牌发送给上下文管理器，然后，当客户端需要通过名称查找服务时，他们会检查 binder 节点 0 并将名称解析为
+    binder 令牌。binder 令牌是这个地址或 ID 的正确名称，它唯一地指向一个 binder 接口。在客户端绑定到 binder 对象（这是一个实现
+    binder 接口的进程）之后，进程然后使用一个经过良好建立的 binder 协议执行 binder 事务。此协议允许类似于方法调用的同步事务。
 - en: Since binder is a kernel driver, it has some nice features that determine what
     one can do across the interface. For starters, it allows the transmission of file
     descriptors. It also manages a thread pool for dispatching service methods. Additionally,
@@ -183,32 +236,48 @@
     Linux credentials like UID, GID, and **Process ID** (**PID**). Binder also allows
     the service and client to know when the other has terminated via its link to death
     functionality.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于 binder 是一个内核驱动程序，它具有一些很好的特性，这些特性决定了跨接口可以做什么。首先，它允许传输文件描述符。它还管理一个线程池来调度服务方法。此外，它采用了一种称为零拷贝的方法，其中
+    binder 不会在进程之间复制任何事务数据...而是共享它们。binder 还提供了对象的引用计数，并允许服务查询客户端应用的 Linux 凭证，如 UID、GID
+    和 **进程 ID**（**PID**）。binder 还允许服务和客户端通过其与死亡功能的链接知道对方何时终止。
 - en: 'Typically in Android, you don''t work with binder directly. Instead, you work
     with a service rather via a service and its **Android Interface Description Language**
     (**AIDL**) interface. The final chapter will provide detailed examples of AIDL
     in practice for our custom SE for Android system, but in the meantime, the following
     is a simple example of an AIDL interface providing the means for remote processes
     to execute the `getAccountName()` and `putAccountName()` functions:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常在 Android 中，你不会直接与 binder 一起工作。相反，你通过服务及其 **Android 接口描述语言**（**AIDL**）接口来工作。最后一章将提供关于
+    AIDL 在我们自定义 Android 系统中的实践详细示例，但在此期间，以下是一个简单的 AIDL 接口示例，它提供了远程进程执行 `getAccountName()`
+    和 `putAccountName()` 函数的手段：
 - en: '[PRE0]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'The beauty in working with an AIDL interface is that it is used to generate
     a significant amount of code to manage data and processes that would otherwise
     have to be done by hand. For example, the following is only a small portion of
     the code generated from the preceding AIDL sample:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 与 AIDL 接口一起工作的美妙之处在于，它可以生成大量代码来管理数据和处理过程，这些原本可能需要手动完成。例如，以下只是从前面的 AIDL 示例生成的代码的一小部分：
 - en: '[PRE1]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Binder and security
+  id: totrans-28
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Binder 和安全性
 - en: The security implications of binder are quite large. You should be able to control
     who becomes the context manager, as a rogue context manager could compromise the
     whole system by sending clients to rogue services, rather than the proper ones.
@@ -220,8 +289,10 @@
     on behalf of other processes. The credentials exposed in this kind of masquerading
     are of the process you are doing the work for, not of the privileged entity. This
     is analogous to a power of attorney, used when someone is acting on your behalf.
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 绑定器的安全影响相当大。你应该能够控制谁成为上下文管理者，因为一个恶意上下文管理者可能会通过将客户端发送到恶意服务而不是正确服务来破坏整个系统。除此之外，你可能还想控制哪些客户端可以绑定到哪些绑定器对象。最后，你可能希望控制是否可以通过绑定器发送文件描述符。绑定器还具有允许某人通过接口伪造凭据的能力，该接口设计用于良好的用途。例如，一些特权系统进程，如**活动管理器服务**（**AMS**），代表其他进程执行操作。在这种伪装中暴露的凭据是你正在为其工作的进程的，而不是特权实体的。这类似于代理权，当某人代表你行事时使用。
 - en: Android's binder IPC mechanism was traditionally controlled with DAC permissions.
     However, as we saw in [Chapter 1](ch01.html "Chapter 1. Linux Access Controls"),
     *Linux Access Controls*, these permissions have some flaws. It follows that binder
@@ -233,18 +304,24 @@
     access decisions. The details of this patch are outside the scope of this book.
     It suffices that binder was patched, and SELinux can now control its capabilities
     with MAC.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: Android的绑定器IPC机制传统上使用DAC权限进行控制。然而，正如我们在[第1章](ch01.html "第1章。Linux访问控制")中看到的，*Linux访问控制*，这些权限存在一些缺陷。因此，绑定器需要修改以支持SELinux，因为绑定器驱动程序没有实现任何额外的安全模块的钩子。为此，斯蒂芬·斯莫利向谷歌发送了一个补丁，实现了这些功能。该补丁为所谓的**Linux安全模块**（**LSM**）框架的消费者实现了新的钩子。该框架允许LSMs（如SELinux）被调用并做出访问决策。这个补丁的细节超出了本书的范围。只需知道绑定器已被修补，SELinux现在可以使用MAC来控制其功能。
 - en: Note
+  id: totrans-31
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Stephen Smalley is a computer security researcher at the Trusted Systems Research
     organization of the United States **National Security Agency** (**NSA**) and leads
     the SE Android project. The patch he sent to Google to modify the binder for SELinux
     hooks can be viewed at [https://android-review.googlesource.com/45984](https://android-review.googlesource.com/45984).
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 斯蒂芬·斯莫利是美国国家安全局（**NSA**）可信系统研究组织的计算机安全研究员，并领导SE Android项目。他发送给谷歌以修改绑定器以实现SELinux钩子的补丁可以在[https://android-review.googlesource.com/45984](https://android-review.googlesource.com/45984)查看。
 - en: 'Because of the integration of SELinux and binder, SE for Android has an additional
     class with access vectors (a fancy way of saying, "things it can do.") In previous
     examples from [Chapter 2](ch02.html "Chapter 2. Mandatory Access Controls and
@@ -254,28 +331,42 @@
     [Chapter 2](ch02.html "Chapter 2. Mandatory Access Controls and SELinux"), *Mandatory
     Access Controls and SELinux*, was `eat`. The following access vectors are available
     for binder:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于SELinux和绑定器的集成，Android的SE有一个额外的具有访问向量的类（这是一种说法，“它能做什么的事情。”）。在[第2章](ch02.html
+    "第2章。强制访问控制和SELinux")中的先前示例中，*强制访问控制和SELinux*，目标类是`food`。同样，绑定器的SELinux类是`binder`。它定义了以下列表中列出的访问向量。如果你还记得，[第2章](ch02.html
+    "第2章。强制访问控制和SELinux")中`food`的访问向量是`eat`。以下访问向量可用于绑定器：
 - en: '`impersonate`: This creates fake credentials over a binder interface'
+  id: totrans-34
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`impersonate`: 这在绑定器接口上创建伪造的凭据'
 - en: '`call`: This binds a client to a binder interface and uses it'
+  id: totrans-35
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`call`: 这将客户端绑定到绑定器接口并使用它'
 - en: '`set_context_mgr`: This sets the context manager'
+  id: totrans-36
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`set_context_mgr`: 这设置上下文管理者'
 - en: '`transfer`: This transfers a file descriptor'
+  id: totrans-37
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`transfer`: 这将传输一个文件描述符'
 - en: Zygote – application spawn
+  id: totrans-38
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Zygote – 应用生成
 - en: Non-native applications in Android historically make use of the Dalvik **virtual
     machine** (**VM**) and run a proprietary byte code called DEX. Applications are
     also spawned from a common process called zygote through a mechanism called fork
@@ -283,33 +374,47 @@
     classes, such as `java.util.*`, loaded into the VM. Fork and specialize is the
     mechanism of going from a zygote to a child process of zygote that executes some
     application code.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android中，非本地应用历史上使用Dalvik **虚拟机**（**VM**）并运行一种名为DEX的专有字节码。应用也是通过名为zygote的通用进程通过fork和specialize机制产生的。Zygote本身是一个进程，它将Dalvik
+    VM和一些通用类，如`java.util.*`，加载到VM中。fork和specialize是从zygote到执行某些应用代码的zygote子进程的机制。
 - en: Note
+  id: totrans-40
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Versions of Android since Android 4.4 are replacing this with the **Android
     RunTime** (**ART**). It is speculated that Android L will not use the Dalvik VM
     at all.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 自Android 4.4以来的Android版本正在用**Android RunTime**（**ART**）替换它。据推测，Android L将根本不使用Dalvik
+    VM。
 - en: The first part of this process involves a socket connection. Zygote listens
     over this socket for an application's spawn requests. Some of the arguments include
     the package name of the application that should be loaded and a flag that indicates
     whether the application is the system server or not. Once the spawn command is
     received, the fork can proceed.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个过程的第一个部分涉及套接字连接。Zygote通过这个套接字监听应用的生成请求。一些参数包括要加载的应用的包名和一个标志，表示应用是否是系统服务器。一旦收到生成命令，fork就可以继续了。
 - en: Note
+  id: totrans-43
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: A great way to start tracing back this initial socket connection is with the
     `app_process` tool. This command starts a process with Dalvik. For more information,
     navigate to `frameworks/base/cmds/app_process/app_main.cpp`.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 追踪这个初始套接字连接的一个好方法是使用`app_process`工具。这个命令会启动一个带有Dalvik的进程。更多信息，请导航到`frameworks/base/cmds/app_process/app_main.cpp`。
 - en: After the fork, the now parent zygote returns to listen on the socket for more
     requests. The child process is executing and a few things need to happen. The
     first thing that needs to happen is a UID and GID switch. Zygote runs with the
@@ -323,12 +428,17 @@
     in the zygote loads the class, and other system interactions, such as intent delivery,
     are used to start an activity. These parts of zygote are beyond the scope of this
     book.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 在fork之后，现在的父zygote返回到套接字上监听更多请求。子进程正在执行，需要发生几件事情。首先需要发生的事情是UID和GID切换。Zygote以root
+    UID运行，因此为了满足Android安全模型，它必须将子进程的UID和GID设置为非root。子进程将设置UID和GID为包管理器定义的，以及补充GIDs。它还设置了进程的资源限制和调度策略。然后它将应用程序的能力集清零（无能力）。在系统服务的情况下，能力集不会被清除，而是作为通过套接字发送的参数之一设置。在此之后，子进程开始运行。zygote中更后面的代码加载类，以及其他系统交互，如intent传递，用于启动活动。这些zygote的部分超出了本书的范围。
 - en: The property service
+  id: totrans-46
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 属性服务
 - en: The property service in Android provides a shared mapping of key-value pairs
     between all processes. All processes on an Android system share some pages of
     memory dedicated to this system. However, the mapping in all processes is `READ
@@ -340,8 +450,10 @@
     intended to be used for small values, not a generic large-value store. What follows
     is only a very basic introduction to the property service. A thorough investigation
     will be conducted later.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: Android中的属性服务在所有进程之间提供了一个共享的键值对映射。Android系统上的所有进程共享一些专门用于此系统的内存页面。然而，除了init进程具有`READ/WRITE`映射外，所有进程中的映射都是`只读`的。属性服务系统位于init中，它的任务是更新或添加到这个键值映射中的值。为了更改一个值，你必须通过属性服务进行，但任何人都可以读取一个值。如果你使用属性服务，请不要存储敏感信息。它主要被设计用于存储小值，而不是一个通用的存储大量值的存储库。以下是对属性服务的一个非常基础的介绍。稍后将会进行更深入的研究。
 - en: To set a property, you must send a request using a Unix domain socket to the
     property service. Property service will then parse the request and set the value
     if the permissions allow it to do so. Properties have period-delimited segments,
@@ -355,8 +467,10 @@
     otherwise it must be a match for either UID or GID. In very new Android versions,
     or those with the patch applied from [https://android-review.googlesource.com/#/c/98428/](https://android-review.googlesource.com/#/c/98428/),
     both the permission checking and hardcoded DAC have been replaced by SELinux controls.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 要设置一个属性，你必须使用Unix域套接字向属性服务发送一个请求。如果权限允许，属性服务将解析请求并设置值。属性有以句点分隔的段，类似于包名，它们在构建时静态地分配了权限。权限和属性服务代码可以在`system/core/property_service.c`中一起找到。通过这个接口期望的参数包括一个命令、属性名和属性值。对于那些好奇的人来说，这些都在结构`prop_msg`中定义，该结构在`bionic/libc/include/sys/_system_properties.h`中定义。在接收到消息后，属性服务将检查对等套接字的凭据与权限的静态映射进行比较。如果UID是root，它可以写入任何东西，否则它必须与UID或GID匹配。在非常新的Android版本中，或者那些应用了从[https://android-review.googlesource.com/#/c/98428/](https://android-review.googlesource.com/#/c/98428/)补丁的版本中，权限检查和硬编码的DAC都被SELinux控制所取代。
 - en: Since the permission to set a value is controlled by user space using DAC, it
     follows that the property set mechanisms share the inherent rooting vulnerability
     flaw. With this in mind, the property service code was augmented in SELinux. Since
@@ -364,16 +478,23 @@
     something called a user space object manager. This just means the user space application
     checks with SELinux in the kernel to ensure it can perform an activity… in this
     case, set on a property.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于设置值的权限是由用户空间使用DAC控制的，因此可以推断出属性设置机制共享固有的root漏洞缺陷。考虑到这一点，属性服务代码在SELinux中得到了增强。由于这是一个用户空间进程，它通过内核使用SELinux
+    API来编程一个称为用户空间对象管理器的程序。这仅仅意味着用户空间应用程序会通过内核中的SELinux来检查，以确保它可以执行活动……在这种情况下，设置属性。
 - en: Summary
+  id: totrans-50
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: Android has some very unique properties. From its use of the common UID and
     GID model to promote its security goals, to its custom binder IPC mechanism, these
     systems have implications on the security and functionality of the device. In
     the next chapter, these systems will come back into play as we get the UDOO up
     and running and enable SE for Android on it.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: Android有一些非常独特的属性。从它使用常见的UID和GID模型来促进其安全目标，到其定制的binder IPC机制，这些系统对设备的安全性和功能都有影响。在下一章中，当我们将UDOO启动并运行，并在其上启用Android的SE时，这些系统将再次发挥作用。
