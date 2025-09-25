@@ -1,4 +1,4 @@
-# 第八章 控制通过 NFC 的 Arduino 板
+# 第八章：控制通过 NFC 的 Arduino 板
 
 在本章中，我们将看到将 Arduino **近场通信**（**NFC**）盾牌从 Seeed Studio 集成到具有 NFC 功能的 Android 应用程序的能力，该应用程序使用**Android Beam**技术将消息从 Android 应用程序发送到 NFC 盾牌天线。NFC 允许两个靠近的设备之间进行即时通信，这使得它成为打开门锁或支付服务的完美技术。
 

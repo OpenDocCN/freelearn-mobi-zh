@@ -1,4 +1,4 @@
-# 第十一章 探索基于总线通信
+# 第十一章：探索基于总线通信
 
 在前面的章节中，我们使用不同的技术在不同 Android 应用程序组件（`Activity`、`Fragment`、`Service`、`BroadcastReceiver`等）之间传播数据/事件/通知：
 

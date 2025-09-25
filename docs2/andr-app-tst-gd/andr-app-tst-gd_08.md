@@ -1,4 +1,4 @@
-# 第八章 持续集成
+# 第八章：持续集成
 
 **持续集成**是软件工程中的一种敏捷技术，旨在通过持续应用集成和测试来提高软件质量并减少集成更改所需的时间，这与开发周期结束时进行集成和测试的传统方法形成对比。这篇文章最初由马丁·福勒在 2000 年撰写([`www.martinfowler.com/articles/continuousIntegration.html`](http://www.martinfowler.com/articles/continuousIntegration.html))，描述了在一个大型软件项目中实施持续集成的经验。
 
