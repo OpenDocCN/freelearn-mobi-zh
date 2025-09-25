@@ -1,4 +1,4 @@
-# 在 VirtualBox 上创建您的设备
+# 第八章：在 VirtualBox 上创建您的设备
 
 我们已经学习了如何使用 x86emu 定制和增强现有设备以支持新功能。x86emu 设备是在以下 Android 模拟器之上创建的设备：goldfish 和 ranchu。从本章到第十一章[启用 VirtualBox 特定硬件接口]，我们将转向一个高级主题：移植 Android 系统。对于 AOSP 不支持的平台，我们能做什么？
 
