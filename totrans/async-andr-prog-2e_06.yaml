@@ -1,840 +1,1225 @@
 - en: Chapter 6. Scheduling Work with AlarmManager
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第6章. 使用AlarmManager安排工作
 - en: Maintaining the responsiveness of foreground apps has been our primary focus
     throughout this book, and we've explored numerous ways to shift work away from
     the main thread and run work in the background.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在整本书中，我们一直将保持前台应用程序的响应性作为我们的主要关注点，我们已经探索了许多将工作从主线程移开并在后台运行的方法。
 - en: In all of our discussions so far, we wanted to get the work done as soon as
     possible, so although we moved it to a background thread, we still performed the
     work concurrently with ongoing main thread operations, such as updating the user
     interface and responding to user interaction.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们迄今为止的所有讨论中，我们都希望尽快完成工作，因此尽管我们将它移动到了后台线程，但我们仍然与正在进行的线程操作并发执行工作，例如更新用户界面和响应用户交互。
 - en: In this chapter we will learn how to defer work with `AlarmManager` to run at
     some distant time in the future, initiating work without user intervention, and
     even waking up the device from an idle state if it is really necessary. Meanwhile,
     we will introduce you to some power saving features introduced with Android Marshmallow
     6 and explain how to adapt your application to this new paradigm.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将学习如何使用`AlarmManager`将工作推迟到未来某个时间运行，无需用户干预，甚至在必要时从空闲状态唤醒设备。同时，我们将向您介绍Android
+    Marshmallow 6引入的一些节能特性，并解释如何使您的应用程序适应这一新范式。
 - en: 'In this chapter we will cover the following topics:'
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
 - en: Scheduling alarms with AlarmManager
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用AlarmManager安排闹钟
 - en: Canceling alarms
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 取消闹钟
 - en: Scheduling repeating alarms
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安排重复闹钟
 - en: Scheduling alarms in Doze Mode
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Doze模式下安排闹钟
 - en: Setting up an alarm clock
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置闹钟
 - en: Debugging AlarmManager alarms
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调试AlarmManager闹钟
 - en: Handling alarms with Activities
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用Activity处理闹钟
 - en: Handling alarms with BroadcastReceivers
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用BroadcastReceivers处理闹钟
 - en: Staying awake with WakeLocks
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用WakeLock保持唤醒状态
 - en: Restoring alarms on system boot
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 系统启动时恢复闹钟
 - en: Applications of AlarmManager
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: AlarmManager的应用
 - en: Introducing AlarmManager
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 介绍AlarmManager
 - en: In [Chapter 2](ch02.html "Chapter 2. Performing Work with Looper, Handler, and
     HandlerThread"), *Performing Work with Looper, Handler, and HandlerThread,* we
     learned how to schedule work on a `HandlerThread` using `postDelayed`, `postAtTime`,
     `sendMessageDelayed`, and `sendMessageAtTime`. These mechanisms are fine for short-term
     scheduling of work while our application is running in the foreground.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第2章](ch02.html "第2章. 使用Looper、Handler和HandlerThread执行工作")中，*使用Looper、Handler和HandlerThread执行工作*，我们学习了如何使用`postDelayed`、`postAtTime`、`sendMessageDelayed`和`sendMessageAtTime`在`HandlerThread`上安排工作。这些机制在我们应用程序在前台运行时对短期调度工作来说是不错的。
 - en: However, if we want to schedule an operation to run at some point in the distant
     future, we'll run into problems. First, our application may be terminated before
     that time arrives, removing any chance of the Handler running those scheduled
     operations. Second, the device may be asleep, and with its CPU powered down it
     cannot run our scheduled tasks.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，如果我们想要在遥远的未来某个时间点安排一个操作运行，我们可能会遇到问题。首先，我们的应用程序可能在到达那个时间之前被终止，从而消除了Handler运行这些计划操作的机会。其次，设备可能处于睡眠状态，并且当其CPU关闭时，它无法运行我们计划的任务。
 - en: Note
+  id: totrans-19
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: 'The solution to this is to use an alternative scheduling approach, one that
     is designed to overcome these problems: `AlarmManager`.'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 解决这个问题的方法是使用一种替代的调度方法，它被设计用来克服这些问题：`AlarmManager`。
 - en: '`android.app.AlarmManager` is a class that has been available in the Android
     SDK since the first version, delivering an advanced API to fire off Intents in
     the future at one specific time or time window defined by the user. The schedules
     are managed by the Android system, taking into account the device power cycles
     and states to keep energy consumption at a low level.'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: '`android.app.AlarmManager`是一个自Android SDK第一版以来就存在的类，它提供了一个高级API，可以在用户定义的特定时间或时间窗口将来触发Intent。这些计划由Android系统管理，考虑到设备的电源周期和状态，以保持低能耗。'
 - en: Moreover, `AlarmManager` is a system service that provides scheduling capabilities
     far beyond those of Handler. Being a system service, AlarmManager cannot be terminated
     and has the capacity, under certain conditions, to wake the device from sleep
     to deliver scheduled alarms.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，`AlarmManager`是一个提供比Handler更强大调度能力的系统服务。作为一个系统服务，AlarmManager不能被终止，并且在某些条件下，它可以从睡眠状态唤醒设备以发送计划好的闹钟。
 - en: 'The leading features of `android.app.AlarmManager` are as follows:'
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: '`android.app.AlarmManager`的主要特性如下：'
 - en: '**Ability to wake up the device from idle states**: The user is able to control
     how the system should handle your alarm when it is in energy saving mode'
+  id: totrans-24
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**从空闲状态唤醒设备的能力**：用户能够控制系统应该如何处理在节能模式下设置的闹钟'
 - en: '**Cancel Alarms**: a mechanism to cancel a previously created alarm based on
     Intent comparison'
+  id: totrans-25
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**取消闹钟**：一种基于Intent比较取消先前创建的闹钟的机制'
 - en: '**Update Alarms**: a mechanism to update an existing scheduled alarm'
+  id: totrans-26
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**更新闹钟**：一种更新现有预定闹钟的机制'
 - en: '**Exact and Inexact Alarms**: an API that is able to control the exactness
     of our scheduling'
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**精确和不精确闹钟**：一个能够控制我们调度精确度的API'
 - en: '**Scheduling managed by the Android system**: The alarms will fire even when
     your application is not running, and without consuming any application resources
     to manage the timers'
+  id: totrans-28
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**由Android系统管理的调度**：即使您的应用程序没有运行，闹钟也会触发，并且不会消耗任何应用程序资源来管理计时器'
 - en: Scheduling alarms with AlarmManager
+  id: totrans-29
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用AlarmManager安排闹钟
 - en: 'As we said before, all the alarm operations are managed through the singleton
     object `AlarmManager`, an Android global system service that can be retrieved
     by any class with access to a `Context` instance. As an example, in an `Activity`
     we can get the `AlarmManager` from any member method by using the following code:'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们之前所说的，所有的闹钟操作都是通过单例对象`AlarmManager`管理的，这是一个Android全局系统服务，任何可以访问`Context`实例的类都可以获取它。例如，在一个`Activity`中，我们可以通过以下代码从任何成员方法中获取`AlarmManager`：
 - en: '[PRE0]'
+  id: totrans-31
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Once we have a reference to the `AlarmManager`, we can schedule an alarm to
     deliver a `PendingIntent` object to a `Service`, an `Activity` or `BroadcastReceiver`,
     at a time of our choosing. The simplest way to do that is using the `set` method:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们有了`AlarmManager`的引用，我们就可以在所选时间安排一个闹钟，将`PendingIntent`对象传递给`Service`、`Activity`或`BroadcastReceiver`。最简单的方法是使用`set`方法：
 - en: '[PRE1]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: When we set an alarm, we must also specify a `type` flag—the first parameter
     to the `set` method. The `type` flag sets the conditions under which the alarm
     should fire and which clock to use for our schedule.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们设置闹钟时，我们必须也指定一个`type`标志——`set`方法的第一个参数。`type`标志设置闹钟应该触发的条件以及我们为计划使用哪个时钟。
 - en: There are two conditions and two clocks, resulting in four possible `type` settings.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 有两种条件和两种时钟，导致四种可能的`type`设置。
 - en: The first condition specifies whether or not the device will be woken up if
     it is in a sleeping state at the time of the scheduled alarm—whether the alarm
     is a `wakeup` alarm or not.
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一个条件指定当设备在预定闹钟时间处于睡眠状态时，设备是否会唤醒——闹钟是否为`wakeup`闹钟。
 - en: 'The clocks provide a reference time against which we set our schedules, defining
     exactly what we mean when we set a value to `triggerAtMillis`. We could base our
     schedules on the following time references:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 时钟为我们设置的计划提供了一个参考时间，定义了当我们设置`triggerAtMillis`的值时我们确切的意思。我们可以基于以下时间参考来制定计划：
 - en: 'The elapsed-time system clock—`android.os.SystemClock`—measures time as the
     number of milliseconds that have passed since the device booted, including any
     time spent in deep sleep. The current time according to the system clock can be
     found using this code term:'
+  id: totrans-38
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 已过时间系统时钟——`android.os.SystemClock`——测量自设备启动以来经过的毫秒数，包括任何在深度睡眠中度过的时间。根据系统时钟，当前时间可以通过以下代码找到：
 - en: '[PRE2]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'The real-time clock (Unix Time) - measures time in milliseconds since the Unix
     epoch. The current time according to the real-time clock can be found as follows:'
+  id: totrans-40
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实时时钟（Unix时间）- 以毫秒为单位测量自Unix纪元以来的时间。根据实时时钟，当前时间可以通过以下方式找到：
 - en: '[PRE3]'
+  id: totrans-41
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Note
+  id: totrans-42
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: In Java, `System.currentTimeMillis()` returns the number of milliseconds since
     midnight on January 1, 1970, Coordinated Universal Time (UTC)—a point in time
     known as the Unix epoch.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Java中，`System.currentTimeMillis()`返回自1970年1月1日午夜协调世界时（UTC）以来的毫秒数——一个被称为Unix纪元的时间点。
 - en: UTC is the internationally recognized successor to **Greenwich Mean Time** (**GMT**)
     and forms the basis for expressing international time zones, which are typically
     defined as positive or negative offsets from UTC.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: UTC是国际上公认的**格林威治标准时间**（**GMT**）的继任者，并构成了表达国际时区的基础，这些时区通常定义为相对于UTC的正数或负数偏移。
 - en: 'Given these two conditions and two clocks, these are the four possible `type`
     values we can use when setting alarms:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 给定这两种条件和两种时钟，这些是我们设置闹钟时可以使用的四种可能的`type`值：
 - en: '`android.app.AlarmManager.ELAPSED_REALTIME`: This schedules the alarm relative
     to the system clock. If the device is asleep at the scheduled time it will not
     be delivered immediately; instead, the alarm will be delivered the next time the
     device wakes.'
+  id: totrans-46
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android.app.AlarmManager.ELAPSED_REALTIME`：这将在系统时钟相对于的相对时间安排闹钟。如果设备在预定时间处于睡眠状态，它将不会立即交付；相反，闹钟将在设备下一次唤醒时交付。'
 - en: '`android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP`: This schedules the alarm
     relative to the system clock. If the device is asleep, it will be woken to deliver
     the alarm at the scheduled time.'
+  id: totrans-47
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP`：这将在系统时钟相对于的相对时间安排闹钟。如果设备处于睡眠状态，它将被唤醒以在预定时间交付闹钟。'
 - en: '`android.app.AlarmManager.RTC`: This schedules the alarm in UTC relative to
     the Unix epoch. If the device is asleep at the scheduled time, the alarm will
     be delivered when the device is next woken.'
+  id: totrans-48
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android.app.AlarmManager.RTC`：这将在UTC相对于Unix纪元安排闹钟。如果设备在预定时间处于睡眠状态，闹钟将在设备下一次唤醒时交付。'
 - en: '`android.app.AlarmManager.RTC_WAKEUP`: This schedules the alarm relative to
     the Unix epoch. If the device is asleep it will be awoken, and the alarm is delivered
     at the scheduled time.'
+  id: totrans-49
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android.app.AlarmManager.RTC_WAKEUP`：这将在Unix纪元相对于的相对时间安排闹钟。如果设备在预定时间处于睡眠状态，它将被唤醒，并且闹钟将在预定时间交付。'
 - en: 'We will start setting an alarm at a particular time, to go off 24 hours after
     the initial boot. We''ll use the `TimeUnit` class from the `java.lang.concurrent`
     package to calculate times in milliseconds. To set the previous alarm, we need
     to calculate the number of milliseconds in 24 hours, as shown in the following
     code:'
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将开始设置一个特定时间的闹钟，在初始启动后的24小时后响起。我们将使用`java.lang.concurrent`包中的`TimeUnit`类来计算毫秒时间。为了设置之前的闹钟，我们需要计算24小时中的毫秒数，如下面的代码所示：
 - en: '[PRE4]'
+  id: totrans-51
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'We can set an alarm to go off five minutes from now, using the system time,
     by adding five minutes to the current time. Using the system clock, it looks like
     this:'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以使用系统时间设置一个五分钟后的闹钟，通过将五分钟加到当前时间。使用系统时钟，它看起来像这样：
 - en: '[PRE5]'
+  id: totrans-53
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'To set an alarm for 9:00 pm today (or tomorrow, if it''s already past 9:00
     pm today), we can use the `Calendar` class to do some time calculations:'
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 要设置一个今天晚上9:00的闹钟（或者如果今天已经过了9:00，则是明天），我们可以使用`Calendar`类进行一些时间计算：
 - en: '[PRE6]'
+  id: totrans-55
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'None of the examples so far will wake the device if it is sleeping at the time
     of the alarm. To do that, we need to use one of the `WAKEUP` alarm conditions,
     for example:'
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止的任何示例都不会在闹钟时间设备处于睡眠状态时唤醒设备。为了做到这一点，我们需要使用其中一个`WAKEUP`闹钟条件，例如：
 - en: '[PRE7]'
+  id: totrans-57
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: It is also important to understand that when the alarm clock time is in the
     past, the alarm will sound immediately after we invoke the `AlarmManager` set
     alarm functions.
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 也很重要的是要理解，当闹钟时间在过去的任何时候，闹钟将在我们调用`AlarmManager`设置闹钟功能后立即响起。
 - en: Setting alarms in recent Android versions
+  id: totrans-59
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 在最近的Android版本中设置闹钟
 - en: If our application targets an API level below 19 (KitKat), scheduled alarms
     will run exactly at the alarm time. For applications targeting KitKat or later,
     the schedule is considered inexact and the system may re-order or group alarms
     to minimize wake-ups and save battery.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们的应用程序针对的API级别低于19（KitKat），计划中的闹钟将在闹钟时间准时运行。对于针对KitKat或更高版本的应用程序，计划被认为是近似的，系统可能会重新排序或分组闹钟以最小化唤醒次数并节省电池。
 - en: After API Level 23, the Android Development team went a little further and Doze
     mode was introduced on the Android System to reduce battery consumption when the
     device is unplugged from the power adapter, motionless, and not used by the user
     for a long period of time.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 从API级别23开始，Android开发团队又前进了一步，在Android系统中引入了Doze模式，以减少设备从电源适配器断开、静止不动且用户长时间未使用时的电池消耗。
 - en: 'The Doze system will try to decrease the device''s wake-up frequency deferring
     background jobs, network updates, syncs, and our precious alarm until the device
     exits Doze mode or a recurring maintenance window runs to execute pending jobs,
     certain alarms, or synchronization with the network. After the maintenance window
     finishes, the device would enter Doze mode again if it was not used in the meantime:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: Doze系统将尝试减少设备的唤醒频率，推迟后台任务、网络更新、同步以及我们宝贵的闹钟，直到设备退出Doze模式或定期维护窗口运行以执行挂起的任务、某些闹钟或与网络的同步。维护窗口完成后，如果在此期间未使用设备，设备将再次进入Doze模式：
 - en: '![Setting alarms in recent Android versions](img/Image_B05062_06_02.jpg)'
+  id: totrans-63
   prefs: []
   type: TYPE_IMG
+  zh: '![在最近的Android版本中设置闹钟](img/Image_B05062_06_02.jpg)'
 - en: 'Figure 6.1: Doze Mode Timeline'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 图6.1：Doze模式时间线
 - en: Doze mode is likely to impact your application and will defer your alarms until
     a maintenance window comes in, unless you use the methods `setAndAllowWhileIdle()`
     and `setExactAndAllowWhileIdle()` to allow the execution of your alarms in a deep
     idle state.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: Doze 模式可能会影响您的应用程序，并将您的警报推迟到维护窗口出现，除非您使用 `setAndAllowWhileIdle()` 和 `setExactAndAllowWhileIdle()`
+    方法来允许在深度空闲状态下执行警报。
 - en: Moreover, the number of times that the Doze Mode maintenance window runs will
     be less frequent in cases of long-term inactivity, so the impact of this new mechanism
     on our scheduling will increase, hence causing more unpredictable jitters at the
     alarm time.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，在长期不活跃的情况下，Doze 模式维护窗口运行的次数将更少，因此这种新机制对我们调度的影响会增加，从而导致警报时间的不确定性增加。
 - en: During the doze mode the applications are also not allowed to access the network,
     the WakeLocks are ignored and Wi-Fi scans are not executed.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Doze 模式期间，应用程序也不允许访问网络，WakeLocks 被忽略，并且不会执行 Wi-Fi 扫描。
 - en: 'If we need precision scheduling and you are targeting Marshmallow or later,
     we shall use the new `setExactAndAllowWhileIdle()` method introduced at API level
     23:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们需要精确调度，并且您针对的是 Marshmallow 或更高版本，我们应该使用在 API 级别 23 中引入的新的 `setExactAndAllowWhileIdle()`
+    方法：
 - en: '[PRE8]'
+  id: totrans-69
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Note
+  id: totrans-70
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The Android system has protection that prevents abuse for exact alarms that
     fire off too frequently. `AlarmManager` only wakes up the device and dispatches
     one alarm per minute, and in low power mode it can be as low as one every 15 mins.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 系统有保护措施，防止频繁触发精确警报的滥用。`AlarmManager` 只唤醒设备并每分钟调度一个警报，在低功耗模式下，每 15 分钟可能只有一次。
 - en: 'If your application targets a version between KitKat (API Level 19) and Marshmallow
     (API Level 23), the `setExact` method is enough for timing precision:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您的应用程序针对的版本在 KitKat（API Level 19）和 Marshmallow（API Level 23）之间，`setExact`
+    方法就足够用于时间精度：
 - en: '[PRE9]'
+  id: totrans-73
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'But we''ll need to check that the methods exist before we try to call it; otherwise,
     our app will crash when run under earlier API levels. Lets sketch out our new
     exact alarm code:'
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 但在我们尝试调用它之前，我们需要检查这些方法是否存在；否则，我们的应用程序在早期 API 级别运行时将会崩溃。让我们绘制我们的新精确警报代码：
 - en: '[PRE10]'
+  id: totrans-75
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: This will deliver our alarm at exactly the specified time on all platforms.
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将在所有平台上在指定的时间精确发出警报。
 - en: Don't forget that you should only use exact scheduling when you really need
     it, for example, to deliver alerts to the user at a specific time. For most other
     cases, allowing the system to adjust our schedule a little to preserve battery
     life is usually acceptable.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 不要忘记，您只有在真正需要时才应使用精确调度，例如，在特定时间向用户发送警报。对于大多数其他情况，允许系统稍微调整我们的计划以保护电池寿命通常是可接受的。
 - en: Android Marshmallow API Level 23 also comes with the `setAndAllowWhileIdle`
     function, which allows us to create an alarm to sound in Doze mode, but with less
     exactness compared to `setExactAndAllowWhileIdle()`.
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: Android Marshmallow API Level 23 还提供了 `setAndAllowWhileIdle` 函数，允许我们在 Doze 模式下创建一个警报，但与
+    `setExactAndAllowWhileIdle()` 相比，精确度较低。
 - en: 'The system will try to batch these kinds of alarm across the entire system,
     minimizing the number of times the device wakes up, and hence reducing the energy
     consumption of the system. Here is the code to create an alarm that triggers,
     even in Doze mode, 10 hours from now:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 系统将尝试在整个系统中批量处理这类警报，以最小化设备唤醒的次数，从而减少系统的能耗。以下是创建一个在 10 小时后触发的警报的代码：
 - en: '[PRE11]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: Testing your alarms in Doze Mode
+  id: totrans-81
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 在 Doze 模式下测试您的警报
 - en: In order to test your application's behavior in doze mode, the Android SDK team
     added some new commands to the dumpsys tool to manually change the device's power
     state from the command line.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了测试您的应用程序在 Doze 模式下的行为，Android SDK 团队向 dumpsys 工具添加了一些新命令，以便从命令行手动更改设备的电源状态。
 - en: 'It is also important to remember that Doze mode requires that your device is
     unplugged from the charger. To force the device to a state where it is disconnected
     from the charger, we should run the following command on a command line with access
     to SDK Tools:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 还需要记住，Doze 模式要求您的设备从充电器上拔下。为了强制设备进入未连接充电器的状态，我们应该在具有访问 SDK 工具的命令行上运行以下命令：
 - en: '[PRE12]'
+  id: totrans-84
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Then, to enter idle mode, we should turn off the screen and run the following
     commands:'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，为了进入空闲模式，我们应该关闭屏幕并运行以下命令：
 - en: '[PRE13]'
+  id: totrans-86
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'After the device is put in idle mode, we can enable the maintenance window
     by running the following command:'
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 将设备置于空闲模式后，我们可以通过运行以下命令来启用维护窗口：
 - en: '[PRE14]'
+  id: totrans-88
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'If we run the same step again the device goes back to an idle state; however,
     if we want to go back to an active state, we should run the next command:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们再次运行相同的步骤，设备将返回到空闲状态；然而，如果我们想返回到活动状态，我们应该运行下一个命令：
 - en: '[PRE15]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: With these handy commands we are able to verify that the alarm sounds even in
     deep idle states.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用这些便捷的命令，我们能够验证即使在深度空闲状态下，闹钟也会响起。
 - en: Setting a Window alarm
+  id: totrans-92
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 设置窗口闹钟
 - en: One more addition in KitKat is `setWindow()`, which introduces a compromise
     between exact and inexact alarms by allowing us to specify the time window within
     which the alarm must be delivered. This still allows the system some freedom to
     play with the schedules for efficiency, but lets us choose just how much freedom
     to allow.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: KitKat中增加的一个功能是`setWindow()`，它通过允许我们指定闹钟必须送达的时间窗口，在精确和不精确闹钟之间提供了一个折中方案。这仍然允许系统在效率方面进行一些调整，但让我们可以选择允许多少自由度。
 - en: 'Here''s how we would use `sentindo()` to schedule an alarm to be delivered
     within a 3 minute window—at the earliest 5 minutes from now and at the latest
     8 minutes from now—using the real-time clock:'
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是如何使用`sentindo()`在3分钟窗口内安排闹钟的示例——最早从现在起5分钟，最晚从现在起8分钟——使用实时时钟：
 - en: '[PRE16]'
+  id: totrans-95
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: Debugging AlarmManager alarms
+  id: totrans-96
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 调试AlarmManager闹钟
 - en: 'The Android System comes with a handy diagnostic tool that outputs to the developer
     a list of registered alarms on the device. To get a list, we run the following
     command from the command line:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: Android系统附带了一个便捷的诊断工具，它会向开发者输出设备上注册的闹钟列表。要获取列表，我们从命令行运行以下命令：
 - en: '[PRE17]'
+  id: totrans-98
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'After we have created the exact 5 minute alarm on Android API Level 23, the
     system will output our registered alarm on the command output:'
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们为Android API Level 23创建精确的5分钟闹钟后，系统将在命令输出中输出我们的注册闹钟。
 - en: '[PRE18]'
+  id: totrans-100
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: The Alarm system tries to organize the alarm execution in batches for battery
     saving purposes, so in the first line we have information about the alarm batch
     that our alarm belongs to.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 闹钟系统试图通过批量执行闹钟以节省电池，因此第一行包含我们的闹钟所属的闹钟批量的信息。
 - en: 'The details of the batch output format are shown in the following list:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 批处理输出格式的详细信息如下所示列表：
 - en: '`bfce57`: Batch internal identifier number'
+  id: totrans-103
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`bfce57`：批处理内部标识号。'
 - en: '`num=1`: Number of alarms in this batch'
+  id: totrans-104
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`num=1`：此批处理中的闹钟数量。'
 - en: '`start=6199180`: It refers to the time, in terms of elapsed milliseconds since
     system boot, at which the batch should be started'
+  id: totrans-105
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`start=6199180`：它指的是批处理应该开始的时间，以系统启动以来的已流逝毫秒数表示。'
 - en: '`end=6199180`: It refers to the time, in terms of elapsed milliseconds since
     system boot, at which the batch will end'
+  id: totrans-106
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`end=6199180`：它指的是批处理结束的时间，以系统启动以来的已流逝毫秒数表示。'
 - en: 'Inside the batch, our alarm gets detailed over the following fields:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 在批处理内部，我们的闹钟在以下字段中得到了详细描述：
 - en: '`d38d44`: An internal identifier number used by the system'
+  id: totrans-108
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`d38d44`：系统使用的内部标识号。'
 - en: '`type 0 (RTC_WAKEUP)`: Alarm type'
+  id: totrans-109
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`type 0 (RTC_WAKEUP)`：闹钟类型。'
 - en: '`when`: Alarm time based on the clock time (milliseconds since epoch)'
+  id: totrans-110
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`when`：基于时钟时间的闹钟时间（自纪元以来的毫秒数）。'
 - en: '`tag=*walarm*:my_alarm`: Action specified on Intent'
+  id: totrans-111
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`tag=*walarm*:my_alarm`：在Intent中指定的操作。'
 - en: '`com.packpublishing.asynchronousandroid`: Application package that created
     the alarm'
+  id: totrans-112
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`com.packpublishing.asynchronousandroid`：创建闹钟的应用程序包。'
 - en: '`whenElapsed=+58s670ms`: Refers to the time since the system started at which
     this alarm will be triggered'
+  id: totrans-113
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`whenElapsed=+58s670ms`：指的是自系统启动以来，此闹钟将被触发的时刻。'
 - en: '`when= 2015-12-03 22:23:39`: The date/time at which this alarm will be triggered'
+  id: totrans-114
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`when= 2015-12-03 22:23:39`：此闹钟将被触发的日期/时间。'
 - en: '`window= 180000`: Refers to the value specified in the window field when the
     `setWindow()` method is used'
+  id: totrans-115
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`window= 180000`：当使用`setWindow()`方法时，指的是窗口字段中指定的值。'
 - en: '`repeatInterval=0`: Used in repeating alarms to specify the interval between
     repeats'
+  id: totrans-116
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`repeatInterval=0`：在重复闹钟中用于指定重复之间的间隔。'
 - en: '`count=0`: Number of times the alarm sounded'
+  id: totrans-117
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`count=0`：闹钟响起的次数。'
 - en: '`operation= PendingIntent...`: Pending intent that will be triggered'
+  id: totrans-118
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`operation= PendingIntent...`：将被触发的挂起意图。'
 - en: Canceling alarms
+  id: totrans-119
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 取消闹钟
 - en: Once the alarm is set, it can be canceled very easily by invoking the `AlarmManger.cancel`
     method with an intent that matches the alarm that we want to cancel.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦设置了闹钟，可以通过调用`AlarmManger.cancel`方法并使用与要取消的闹钟匹配的意图来非常容易地取消闹钟。
 - en: The process of matching uses the `filterEquals` method of Intent, which compares
     the action, data, type, class, component, package, and categories of both `Intent`
     to test for equivalence. Any extras we may have set in the Intent are not taken
     into account.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 匹配过程使用 Intent 的 `filterEquals` 方法，该方法比较两个 `Intent` 的动作、数据、类型、类、组件、包和类别，以测试等价性。我们可能在
+    Intent 中设置的任何 extras 都不考虑在内。
 - en: 'In the following code, we will show you how to create an alarm that fires off
     in 1 hour and the cancel code to dismiss it using different intent instances:'
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下面的代码中，我们将向您展示如何创建一个在 1 小时后触发的闹钟，以及取消代码，使用不同的 intent 实例来取消它：
 - en: '[PRE19]'
+  id: totrans-123
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Since in our example we use the same method to construct the set and cancel
     `PendingIntent`, both will have the same action and match, so if the `AlarmManager.cancel`
     runs and it finds a match, the Android system will remove the alarm previously
     set from the list of enabled alarms.
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于在我们的示例中我们使用相同的方法来构建设置和取消 `PendingIntent`，因此两者都将具有相同的动作和匹配，所以如果 `AlarmManager.cancel`
+    运行并找到匹配项，Android 系统将从已启用闹钟列表中删除之前设置的闹钟。
 - en: Note
+  id: totrans-125
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: To debug the cancellation of your alarm you could verify again with an `adb
     shell dumpsys` alarm that the alarm disappeared from the system alarm batches.
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 要调试您的闹钟取消操作，您可以使用 `adb shell dumpsys` alarm 再次验证闹钟是否已从系统闹钟批次中消失。
 - en: It is important to realize that whenever we create alarm using a pending intent
     with the `FLAG_UPDATE_CURRENT`, we implicitly update any existing alarm with the
     new Intent and its extras.
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 重要的是要意识到，无论何时我们使用带有 `FLAG_UPDATE_CURRENT` 的 pending intent 创建闹钟，我们都会隐式更新任何现有的闹钟，使用新的
+    Intent 和其 extras。
 - en: Scheduling repeating alarms
+  id: totrans-128
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置重复闹钟
 - en: 'As well as setting a one-off alarm, we have the option to schedule repeating
     alarms using `setRepeating()` and `setInexactRepeating()`. Both methods take an
     additional parameter that defines the interval in milliseconds at which to repeat
     the alarm. Generally, it is advisable to avoid `setRepeating()` and always use
     `setInexactRepeating()`, allowing the system to optimize device wake-ups and giving
     more consistent behavior on devices running different Android versions:'
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了设置一次性闹钟外，我们还有使用 `setRepeating()` 和 `setInexactRepeating()` 来安排重复闹钟的选项。这两种方法都接受一个额外的参数，该参数定义了重复闹钟的间隔（以毫秒为单位）。通常，建议避免使用
+    `setRepeating()`，始终使用 `setInexactRepeating()`，允许系统优化设备唤醒，并在运行不同 Android 版本的设备上提供更一致的行为：
 - en: '[PRE20]'
+  id: totrans-130
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: '`AlarmManager` provides some handy constants for typical repeat intervals:'
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AlarmManager` 提供了一些方便的常量用于典型的重复间隔：'
 - en: '[PRE21]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Let''s now build up an example that creates a repeating alarm to be delivered
     approximately 2 hours from now, then repeating every 15 minutes or so thereafter
     like this:'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们构建一个示例，创建一个大约 2 小时后送达的重复闹钟，然后每隔大约 15 分钟重复一次，如下所示：
 - en: '[PRE22]'
+  id: totrans-134
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'From API level 19, all repeating alarms are inexact—that is, if our application
     targets KitKat or above, our repeat alarms will be inexact even if we use `setRepeating()`.
     To have similar inexact behavior across all the Android versions you should use
     the `setInexactRepeating()`(API Level 3) rather than `setRepeating()`:'
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 从 API 级别 19 开始，所有重复闹钟都是不精确的——也就是说，即使我们的应用程序针对 KitKat 或更高版本，即使我们使用 `setRepeating()`，我们的重复闹钟也会是不精确的。为了在所有
+    Android 版本中实现类似的不精确行为，您应该使用 `setInexactRepeating()`（API 级别 3）而不是 `setRepeating()`：
 - en: '[PRE23]'
+  id: totrans-136
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: The inexact repeating tells the system that your alarm time could be adjusted
     to reduce the device waking up frequently and increase the system's overall power
     efficiency.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 不精确重复告诉系统，您的闹钟时间可能会调整以减少设备频繁唤醒并提高系统的整体电源效率。
 - en: If we really need exact repeat alarms, we can use `setExact()`/`setExactAndAllowWhileIdle()`,
     instead, and schedule the next alarm while handling the current one.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们真的需要精确重复闹钟，我们可以使用 `setExact()`/`setExactAndAllowWhileIdle()`，而不是使用 `setExact()`，并在处理当前闹钟的同时安排下一个闹钟。
 - en: 'Later, we might increase the repeating alarm interval and even change the `Intent`
     Extras by calling the `setRepeating()` with an Intent that matches the previous
     Intent and the flag `FLAG_UPDATE_CURRENT`, as shown in the following code:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 之后，我们可能会增加重复闹钟的间隔，甚至可以通过调用带有匹配先前 Intent 和 `FLAG_UPDATE_CURRENT` 标志的 Intent 的
+    `setRepeating()` 来更改 `Intent` Extras，如下面的代码所示：
 - en: '[PRE24]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Scheduling an alarm clock
+  id: totrans-141
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置闹钟
 - en: 'From API Level 21, `setAlarmClock`, which sets a new alarm and displays a status
     bar alarm icon, was introduced in the `AlarmManager` class:'
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 从 API 级别 21 开始，`setAlarmClock`，该函数设置一个新的闹钟并显示状态栏闹钟图标，被引入到 `AlarmManager` 类中：
 - en: '[PRE25]'
+  id: totrans-143
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'In the next example we are going to create an alarm clock that goes off tomorrow
     at 10:00 pm:'
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一个示例中，我们将创建一个闹钟，明天晚上 10:00 分响起：
 - en: '[PRE26]'
+  id: totrans-145
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'If you are using a recent device, once we set the previous alarm we see the
     clock icon on the system status bar:'
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你使用的是最新设备，一旦我们设置了之前的警报，我们会在系统状态栏上看到时钟图标：
 - en: '![Scheduling an alarm clock](img/Image_B05062_06_01.jpg)'
+  id: totrans-147
   prefs: []
   type: TYPE_IMG
+  zh: '![设置闹钟](img/Image_B05062_06_01.jpg)'
 - en: 'To cancel the alarm clock, we have to invoke the `cancel` method with a matching
     intent:'
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 要取消闹钟，我们必须使用匹配的意图调用`cancel`方法：
 - en: '[PRE27]'
+  id: totrans-149
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: Handling alarms
+  id: totrans-150
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 处理警报
 - en: So far we have learned how to schedule exact and inexact alarms over the `AlarmManager
     Service` singleton, so at this point we are ready to take a look at how to handle
     the alarm in any Android application component.
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们已经学习了如何在`AlarmManager`单例服务上安排精确和不精确的警报，因此在这个时候，我们准备看看如何在任何Android应用程序组件中处理警报。
 - en: 'Essentially, we can schedule anything that can be started with a `PendingIntent`,
     which means we can use alarms to start Activities, Services, and `BroadcastReceivers`.
     To specify the target of our alarm, we need to use the static factory methods
     of `PendingIntent`:'
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 实际上，我们可以安排任何可以用`PendingIntent`启动的事情，这意味着我们可以使用警报来启动活动、服务和`BroadcastReceivers`。为了指定我们的警报目标，我们需要使用`PendingIntent`的静态工厂方法：
 - en: '[PRE28]'
+  id: totrans-153
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: All static methods offered to create a pending intent, receiving as arguments
     a Context object, an integer request code to identify the pending intent, an Intent
     or an array of Intents that will be delivered to the component, and finally an
     integer to specify the `PendingIntent` flags.
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有提供的静态方法都用于创建一个挂起意图，接收一个Context对象、一个用于标识挂起意图的整数请求代码、一个Intent或Intent数组，这些Intent将被发送到组件，最后是一个整数，用于指定`PendingIntent`标志。
 - en: 'The `PendingIntent` flags used on the factory method play an important role
     in Intent handling, so it is crucial to understand the flags that we can use to
     indicate how the system should process an intent that already exists, to make
     an Intent immutable or to set an intent that is only delivered once:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 在工厂方法上使用的`PendingIntent`标志在Intent处理中起着重要作用，因此理解我们可以用来指示系统如何处理已存在的intent、使intent不可变或设置只发送一次的intent的标志至关重要：
 - en: '`FLAG_CANCEL_CURRENT`: Indicates that the system should invalidate and generates
     a new Intent.'
+  id: totrans-156
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FLAG_CANCEL_CURRENT`：表示系统应使现有意图无效并生成一个新的Intent。'
 - en: '`FLAG_NO_CREATE`: If the `PendingIntent` does not already exist, a new intent
     is not created and factory method returns `null`.'
+  id: totrans-157
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FLAG_NO_CREATE`：如果`PendingIntent`尚不存在，则不会创建新的意图，并且工厂方法返回`null`。'
 - en: '`FLAG_ONE_SHOT`: Indicates that the pending intent created can only be used
     once.'
+  id: totrans-158
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FLAG_ONE_SHOT`：表示创建的挂起意图只能使用一次。'
 - en: '`FLAG_UPDATE_CURRENT`: Indicates that if the pending intent already exists,
     the Pending Intent is replaced with this one, including all the extras.'
+  id: totrans-159
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FLAG_UPDATE_CURRENT`：表示如果挂起意图已经存在，则挂起意图将被此意图替换，包括所有附加信息。'
 - en: '`FLAG_IMMUTABLE`: Indicates that the pending intent created cannot be modified
     afterwards. This flag is only available since API Level 23.'
+  id: totrans-160
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FLAG_IMMUTABLE`：表示创建的挂起意图之后不能被修改。此标志仅从API级别23开始可用。'
 - en: In most cases we want to completely replace an existing Intent with a new one,
     so using `FLAG_UPDATE_CURRENT` is the right flag value to use.
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 在大多数情况下，我们希望完全用新的intent替换现有的intent，因此使用`FLAG_UPDATE_CURRENT`是正确的标志值。
 - en: In the following sections, we'll see build up examples for each type of `PendingIntent`
     that can be used with `AlarmManager`.
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 在接下来的章节中，我们将为可以使用`AlarmManager`的每种类型的`PendingIntent`构建示例。
 - en: Handling alarms with Activities
+  id: totrans-163
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用活动处理警报
 - en: Starting an `Activity` from an alarm is as simple as registering the alarm with
     a `PendingIntent` created by invoking the static `getActivity` method of `PendingIntent`.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 从警报启动`Activity`就像使用通过调用`PendingIntent`的静态`getActivity`方法创建的`PendingIntent`注册警报一样简单。
 - en: When the alarm is delivered, the `Activity` will be started and brought to the
     foreground, displacing any app that was currently in use. Keep in mind that this
     is likely to surprise and perhaps annoy users!
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 当警报送达时，`Activity`将被启动并带到前台，取代任何当前正在使用的应用程序。请注意，这可能会让用户感到惊讶，甚至可能让他们感到烦恼！
 - en: 'When starting Activities with alarms, we will probably want to set `Intent.FLAG_ACTIVITY_CLEAR_TOP`;
     so that if the application is already running, and our target `Activity` is already
     on the back stack, the new intent will be delivered to the old `Activity` and
     all the other activities on top of it will be closed:'
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 当启动带有警报的活动时，我们可能希望设置`Intent.FLAG_ACTIVITY_CLEAR_TOP`；这样，如果应用程序已经在运行，并且我们的目标`Activity`已经在后台栈中，新的意图将被发送到旧的`Activity`，并且其上所有其他活动都将被关闭：
 - en: '[PRE29]'
+  id: totrans-167
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: Not all Activities are suited to being started with `getActivity`. We might
     need to start an `Activity` that normally appears deep within the app, where pressing
     back does not exit to the home screen, but returns to the next `Activity` on the
     back-stack.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 并非所有Activity都适合用`getActivity`启动。我们可能需要启动一个通常出现在应用深处的`Activity`，在那里按下后退不会退出到主屏幕，而是返回到后栈中的下一个`Activity`。
 - en: Let's imagine a situation where we want to start an `Activity` that is going
     to display the details about the model, and we want have an `Activity` that lists
     the models on the backstack.
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们设想一个情况，我们想要启动一个将显示模型详细信息的`Activity`，并且我们想要在后台栈中有一个列出模型的`Activity`。
 - en: 'This is where `getActivities` comes in. With `getActivities`, we can push more
     than one `Activity` onto the back-stack of the application, allowing us to populate
     the back-stack to create the desired navigation flow when the user presses "back".
     To do this, we create our `PendingIntent` by sending an array of Intents to `getActivities`:'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 这就是`getActivities`发挥作用的地方。通过`getActivities`，我们可以将多个`Activity`推送到应用程序的后栈，允许我们填充后栈以在用户按下“后退”时创建所需的导航流程。为此，我们通过向`getActivities`发送Intent数组来创建我们的`PendingIntent`：
 - en: '[PRE30]'
+  id: totrans-171
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'The array of Intents specifies the `Activity` to launch, in order. The logical
     sequence of events when this alarm is delivered is as follows:'
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: Intent数组指定了按顺序启动的`Activity`。当这个警报被传递时，事件发生的逻辑顺序如下：
 - en: If the application is already running, any Activities on the back-stack above
     `ListActivity` are finished and removed, because we set the `Intent.FLAG_ACTIVITY_CLEAR_TOP`
     flag.
+  id: totrans-173
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果应用程序已经在运行，那么在`ListActivity`之上的后栈中的任何Activity都将被完成并移除，因为我们设置了`Intent.FLAG_ACTIVITY_CLEAR_TOP`标志。
 - en: '`ListActivity` is (re)started.'
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`ListActivity`被（重新）启动。'
 - en: '`DetailActivity` is started and placed on the back-stack above `ListActivity`.
     The `DetailActivity` becomes the foreground `Activity`.'
+  id: totrans-175
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`DetailActivity`被启动并放置在`ListActivity`的后栈之上。`DetailActivity`成为前台`Activity`。'
 - en: Handling alarms with `Activity` is good to know about, but is not a technique
     we will use often, since it is so intrusive. We are much more likely to want to
     handle alarms in the background, which we'll look at next.
+  id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`Activity`处理警报是一个值得了解的知识点，但不是我们经常使用的技巧，因为它非常侵入性。我们更有可能希望在后台处理警报，我们将在下一节中探讨这一点。
 - en: Handling alarms with BroadcastReceiver
+  id: totrans-177
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用BroadcastReceiver处理警报
 - en: We met `BroadcastReceiver` already in [Chapter 5](ch05.html "Chapter 5. Interacting
     with Services"), *Interacting with Services*, where we used it in an `Activity`
     to receive broadcasts from a `Service`. In this section, we'll use `BroadcastReceiver`
     to handle alarms set on the `AlarmManager`.
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经在[第5章](ch05.html "第5章。与服务交互")中遇到了`BroadcastReceiver`，在*与服务交互*中，我们使用它在一个`Activity`中接收来自`Service`的广播。在本节中，我们将使用`BroadcastReceiver`来处理在`AlarmManager`上设置的警报。
 - en: '`BroadcastReceivers` can be registered and unregistered dynamically at runtime
     like we did in [Chapter 5](ch05.html "Chapter 5. Interacting with Services"),
     *Interacting with Services*, with `Service`, or statically in the Android manifest
     file with a `<receiver>` element, and can receive alarms regardless of how they
     are registered.'
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: '`BroadcastReceivers`可以在运行时动态注册和注销，就像我们在[第5章](ch05.html "第5章。与服务交互")中做的那样，与`Service`一起，或者使用Android清单文件中的`<receiver>`元素静态注册，并且可以接收无论如何注册的警报。'
 - en: It is more common to use a statically registered receiver for alarms, because
     these are known to the system and can be invoked by alarms to start an application
     if it is not currently running.
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用静态注册的接收器处理警报更为常见，因为这些对系统来说是已知的，并且可以在应用程序当前未运行时通过警报启动应用程序。
 - en: 'Let''s implement a static defined `BroadcastReceiver` that is able to dispatch
     an SMS to a phone number when an alarm sounds. First we will define our `BroadcastReceiver`
     in the manifest file:'
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们实现一个静态定义的`BroadcastReceiver`，当警报响起时能够向一个电话号码发送短信。首先，我们将在清单文件中定义我们的`BroadcastReceiver`：
 - en: '[PRE31]'
+  id: totrans-182
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: The `<intent-filter>` element gives us the opportunity to say which Intents
     we want to receive by specifying the action, data, and categories that should
     match.
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: '`<intent-filter>`元素给我们提供了机会，通过指定应该匹配的动作、数据和类别来说明我们想要接收哪些Intent。'
 - en: Now its time to write the code to set up the schedule. To do that, we will create
     an Activity that is going to provide a form to set the destination number, the
     number of hours to defer the message dispatch, and the message text to send.
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在是时候编写代码来设置日程安排了。为此，我们将创建一个提供设置目的地号码、延迟消息发送的小时数和要发送的消息文本的表单的`Activity`。
 - en: 'On the `SMSDispatchActivity` activity we will build a `PendingIntent` for the
     `sms_dispatcher` action, passing the arguments required over the Intent extras:'
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`SMSDispatchActivity`活动上，我们将为`sms_dispatcher`动作创建一个`PendingIntent`，通过Intent附加信息传递所需的参数：
 - en: '[PRE32]'
+  id: totrans-186
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: When this alarm is due, `AlarmManager` will wake the device even in deep idle
     states—if it isn't already awake—and deliver the Intent to the `BroadcastReceiver`
     is `onReceive` method. The Alarm Manager will hold a wake lock as long as the
@@ -842,416 +1227,619 @@
     will remain awake at least until `onReceive` completes, which means we can be
     sure of getting some work done before the device will be allowed to return to
     sleep.
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 当这个闹钟到期时，`AlarmManager`即使在深度空闲状态下也会唤醒设备（如果它还没有醒来）并将Intent传递给`BroadcastReceiver`的`onReceive`方法。闹钟管理器将保持唤醒锁，直到闹钟接收器的`onReceive()`运行。因此，它保证了设备至少会保持唤醒状态，直到`onReceive`完成，这意味着我们可以在设备被允许返回睡眠之前完成一些工作。
 - en: Working with BroadcastReceiver
+  id: totrans-188
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 与`BroadcastReceiver`一起工作
 - en: When the system delivers an alarm to our `BroadcastReceiver` it does so on the
     main thread, so the usual main thread limitations apply; we cannot perform networking
     and we should not perform heavy processing or use blocking operations.
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 当系统向我们的`BroadcastReceiver`发送闹钟时，它是在主线程上进行的，因此适用通常的主线程限制；我们不能执行网络操作，也不应该执行重型处理或使用阻塞操作。
 - en: In addition, a statically registered `BroadcastReceiver` has a very limited
     lifecycle. It cannot create user interface elements other than toasts or notifications
     posted via `NotificationManager`, the `onReceive` method must complete within
     10 seconds or its process may be killed, and once `onReceive` completes, the receiver's
     life is over.
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，静态注册的`BroadcastReceiver`具有非常有限的生命周期。它不能创建除了吐司或通过`NotificationManager`发布的通知之外的用户界面元素，`onReceive`方法必须在10秒内完成，否则其进程可能会被杀死，并且一旦`onReceive`完成，接收器的生命周期就结束了。
 - en: 'Since the work that we need in response is not intensive, we can simply complete
     it during `onReceive`:'
+  id: totrans-191
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于我们需要的工作不是密集型的，我们可以在`onReceive`期间简单地完成它：
 - en: '[PRE33]'
+  id: totrans-192
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: That's it; once the alarm fires off, the `BroadcastReceiver.onReceive` gets
     called dispatching an SMS to the destination number with the text specified on
     the UI Form.
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: 就这样；一旦闹钟触发，`BroadcastReceiver.onReceive`将被调用，将短信发送到目标号码，文本由UI表单指定。
 - en: We can make this more useful by delivering a notification to the user when we
     receive the message delivery report from the mobile network.
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以通过在收到来自移动网络的消息投递报告时向用户发送通知来使这更有用。
 - en: 'First, we will add a new action on the `AndroidManifest.xml` to be processed
     by our `BroadcastReceiver`:'
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将在`AndroidManifest.xml`中添加一个新的动作，由我们的`BroadcastReceiver`处理：
 - en: '[PRE34]'
+  id: totrans-196
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Next, we will change the `onReceive` method to process both kinds of `Intent`:'
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们将更改`onReceive`方法以处理两种类型的`Intent`：
 - en: '[PRE35]'
+  id: totrans-198
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Next, update the code to dispatch the message to set up a new `PendingIntent`
     for the message delivery report:'
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，更新代码以调度消息以设置新的`PendingIntent`用于消息投递报告：
 - en: '[PRE36]'
+  id: totrans-200
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Finally, we add the code to process the message delivery report intent and
     inform the user, in the notification drawer, if the message was delivered with
     success:'
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们添加代码来处理消息投递报告意图，并在通知抽屉中通知用户，如果消息已成功投递：
 - en: '[PRE37]'
+  id: totrans-202
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: Although we can spend up to 10 seconds doing work in our `BroadcastReceiver`,
     we really shouldn't—if the app is in the foreground when the alarm is triggered
     the user will suffer noticeable lag if `onReceive` takes more than a hundred milliseconds
     to complete on the main Thread. Exceeding the 10 second budget will cause the
     system to kill the application and report a background ANR.
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然我们可以在`BroadcastReceiver`中花费最多10秒进行工作，但我们实际上不应该这样做——如果当闹钟触发时应用处于前台，那么如果`onReceive`在主线程上完成超过一百毫秒，用户将感受到明显的延迟。超过10秒的预算将导致系统终止应用并报告后台ANR。
 - en: Moreover, if we try to execute the `onReceive` work in a background thread and
     the `onReceive` returns, the Android system is allowed to recycle the component.
     Whenever no other Android component is running, the system could consider the
     process to be empty and aggressively kill it, stopping our background work immediately.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，如果我们尝试在后台线程中执行`onReceive`工作并且`onReceive`返回，Android系统允许回收组件。每当没有其他Android组件运行时，系统可能会考虑进程为空，并积极将其杀死，立即停止我们的后台工作。
 - en: To avoid the UI glitching, and the `BroadcastReceiver` recycling, on Android
     API Level 11, the `BroacastReceiver.goAsync` method was announced to delegate
     work to a background thread for up to 10 seconds – we'll discuss this in the next
     section.
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了避免UI闪烁和 `BroadcastReceiver` 回收，在Android API Level 11上，`BroacastReceiver.goAsync`
+    方法被宣布将工作委托给后台线程，最多10秒——我们将在下一节中讨论这一点。
 - en: Asynchronous work with goAsync
+  id: totrans-206
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 使用 `goAsync` 进行异步工作
 - en: 'If our application targets a minimum API level of 11, we can use a feature
     of `BroadcastReceiver.goAsync` to handle the `onReceive` execution in a parallel
     line of execution:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们的应用程序针对最低API级别11，我们可以使用 `BroadcastReceiver.goAsync` 的一个功能来并行执行 `onReceive`
+    执行：
 - en: '[PRE38]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: With `goAsync` we can extend the lifetime of a `BroadcastReceiver` instance
     beyond the completion of its `onReceive` method, provided the whole operation
     still completes within the 10 second budget.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用 `goAsync`，我们可以在整个操作仍在10秒预算内完成的情况下，将 `BroadcastReceiver` 实例的生存期延长到其 `onReceive`
+    方法的完成之后。
 - en: If we invoke `goAsync`, the system will not consider the `BroadcastReceiver`
     to have finished when `onReceive` completes. Instead, the `BroadcastReceiver`
     lives on until we call finish on the `PendingResult` returned to us by `goAsync`.
     We must ensure that finish is called within the 10 second budget, otherwise the
     system will kill the process with a background ANR.
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们调用 `goAsync`，系统在 `onReceive` 方法完成后不会认为 `BroadcastReceiver` 已经完成。相反，`BroadcastReceiver`
+    会继续存在，直到我们调用返回给我们的 `PendingResult` 上的 `finish` 方法。我们必须确保在10秒预算内调用 `finish`，否则系统将使用后台ANR杀死进程。
 - en: Using `goAsync`, we can offload work to background threads using any appropriate
     concurrency construct—for example, an `AsyncTask`—and the device is guaranteed
     to remain awake until we call finish on the `PendingResult`.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用 `goAsync`，我们可以使用任何适当的并发结构（例如，`AsyncTask`）将工作卸载到后台线程，并且设备保证会保持唤醒状态，直到我们调用
+    `PendingResult` 上的 `finish`。
 - en: 'Let''s update our SMS dispatcher to send the message asynchronously:'
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们更新我们的短信调度器以异步发送消息：
 - en: '[PRE39]'
+  id: totrans-213
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: Note
+  id: totrans-214
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: '`AsyncTaskCompat` has been available in the Android Support Library since version
     21.0.0 and allows the developer to execute multiple `AsyncTask` in parallel on
     a pool of threads in a backward compatible fashion.'
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AsyncTaskCompat` 自Android Support Library 21.0.0版本以来可用，允许开发者以向后兼容的方式在多个线程池上并行执行多个
+    `AsyncTask`。'
 - en: This is nice, though its utility is limited by the 10 second budget and the
     effects of fragmentation (it is only available to API level 11 or above). In the
     next section, we'll look at scheduling long-running operations with services.
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 这很好，尽管其效用受到10秒预算和碎片化（它仅适用于API级别11及以上）的影响。在下一节中，我们将探讨使用服务安排长时间运行的操作。
 - en: Handling alarms with Services
+  id: totrans-217
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用服务处理闹钟
 - en: 'Just like starting Activities, starting a Service from an alarm involves scheduling
     an appropriate `PendingIntent` instance, this time using the static `getService`
     method:'
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 就像启动活动一样，从闹钟启动 `Service` 涉及安排适当的 `PendingIntent` 实例，这次使用静态的 `getService` 方法：
 - en: '[PRE40]'
+  id: totrans-219
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'As you already know, the Service should be globally defined on the Android
     Manifest with a service element. Given that we are calling it explicitly using
     the class name, we only need to define the service class:'
+  id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如你所知道的那样，`Service` 应该在AndroidManifest.xml中全局定义，使用服务元素。鉴于我们正在使用类名显式调用它，我们只需要定义服务类：
 - en: '[PRE41]'
+  id: totrans-221
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: We almost certainly want our Service to do its work off the main thread, so
     sending work to an `IntentService` this way seems ideal, and an `IntentService`
     will also stop itself when the work is finished. This works reliably if the device
     is awake.
+  id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们几乎肯定希望我们的 `Service` 在主线程之外执行其工作，因此通过这种方式将工作发送到 `IntentService` 似乎是理想的，`IntentService`
+    也会在完成工作后停止自己。如果设备是唤醒状态，这会可靠地工作。
 - en: However, if the device is asleep we have a potential problem. `AlarmManager`
     documentation tells us that the only guarantee we have about the wakefulness of
     the device is that it will remain awake until a `BroadcastReceiver` is `onReceive`
     method completes.
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，如果设备处于睡眠状态，我们可能会遇到潜在问题。`AlarmManager` 文档告诉我们，关于设备唤醒状态的唯一保证是它将保持唤醒状态，直到 `BroadcastReceiver`
+    的 `onReceive` 方法完成。
 - en: Since directly starting a `Service` does not involve a `BroadcastReceiver`,
     and in any case is an asynchronous operation, there is no guarantee that the `Service`
     will have started up before the device returns to sleep, so the work may not get
     done until the device is next awakened.
+  id: totrans-224
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于直接启动 `Service` 不涉及 `BroadcastReceiver`，并且无论如何都是异步操作，因此无法保证设备返回睡眠状态之前 `Service`
+    已经启动，因此工作可能直到设备下一次唤醒才完成。
 - en: This is almost certainly not the behavior we want. We want to ensure that the
     Service starts up and completes its work, regardless of whether the device was
     awake when the alarm was delivered. To do that, we'll need a `BroadcastReceiver`
     and a little explicit power management, as we'll see next.
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 这几乎肯定不是我们想要的行为。我们想要确保 `Service` 启动并完成其工作，无论设备在闹钟送达时是否处于唤醒状态。为此，我们需要一个 `BroadcastReceiver`
+    和一点显式的电源管理，正如我们接下来将要看到的。
 - en: Staying awake with WakeLocks
+  id: totrans-226
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 使用 WakeLock 保持唤醒
 - en: Earlier in this chapter we learned that we can use a `BroadcastReceiver` to
     handle alarms, and even do work in the background for up to 10 seconds, though
     only on devices running API level 11 or greater.
+  id: totrans-227
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章的早期，我们了解到我们可以使用 `BroadcastReceiver` 来处理闹钟，甚至可以在后台工作长达 10 秒，尽管这仅限于运行 API 级别
+    11 或更高版本的设备。
 - en: In the previous section, we saw that handling alarms directly with services
     is not a reliable solution for scheduling long-running work, since there is no
     guarantee that our `Service` will start up before the device returns to sleep.
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一节中，我们看到直接使用服务处理闹钟并不是调度长时间运行工作的可靠解决方案，因为没有保证我们的 `Service` 在设备返回睡眠状态之前启动。
 - en: We have a problem! If we want to perform long-running work in response to alarms,
     we need a solution that overcomes these limitations.
+  id: totrans-229
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们遇到了问题！如果我们想要在闹钟响应时执行长时间运行的工作，我们需要一种克服这些限制的解决方案。
 - en: What we really want is to start a `Service` to handle the work in the background,
     and to keep the device awake until the `Service` has finished its work. Fortunately,
     we can do that by combining the waking guarantees of `BroadcastReceiver` to get
     the `Service` started, then keep the device awake with explicit power management
     using `PowerManager` and `WakeLock`.
+  id: totrans-230
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们真正想要的是启动一个 `Service` 来处理后台工作，并保持设备唤醒，直到 `Service` 完成其工作。幸运的是，我们可以通过结合 `BroadcastReceiver`
+    的唤醒保证来启动 `Service`，然后使用 `PowerManager` 和 `WakeLock` 进行显式的电源管理来保持设备唤醒。
 - en: 'As you might guess, `WakeLock` is a way to force the device to stay awake.
     `WakeLocks` come in various flavors, allowing apps to keep the screen on at varying
     brightness levels or just to keep the CPU powered up in order to do background
     work. To use `WakeLocks`, our application must request an additional permission
     in the manifest:'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所猜，`WakeLock` 是一种强制设备保持唤醒状态的方法。`WakeLocks` 有多种类型，允许应用程序在不同的亮度级别上保持屏幕开启，或者仅仅为了在后台工作而保持
+    CPU 运行。为了使用 `WakeLocks`，我们的应用程序必须在清单中请求额外的权限：
 - en: '[PRE42]'
+  id: totrans-232
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'There are four different kinds of wakelock that may affect the system power
     management differently:'
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 系统可能受到四种不同类型的唤醒锁（wakelock）的影响，它们对系统电源管理的影响各不相同：
 - en: '`PowerManager.PARTIAL_WAKE_LOCK`: Ensures that the CPU is on, leaving the screen
     and the keyboard in the current state (idle or awake).'
+  id: totrans-234
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PowerManager.PARTIAL_WAKE_LOCK`：确保 CPU 开启，屏幕和键盘保持当前状态（空闲或唤醒）。'
 - en: '`PowerManager.SCREEN_DIM_WAKE_LOCK`: Ensures that the CPU is on, the screen
     is on and may be in a dimmed state, and the keyboard could remain off.'
+  id: totrans-235
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PowerManager.SCREEN_DIM_WAKE_LOCK`：确保 CPU 开启，屏幕开启，可能处于暗淡状态，键盘可以保持关闭。'
 - en: '`PowerManager.SCREEN_BRIGHT_WAKE_LOCK`: Ensures that the CPU is on, the screen
     is on full brightness, and the keyboard could remain off.'
+  id: totrans-236
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PowerManager.SCREEN_BRIGHT_WAKE_LOCK`：确保 CPU 开启，屏幕全亮度，键盘可以保持关闭。'
 - en: '`PowerManager.FULL_WAKE_LOCK`: Ensures that the CPU is on and the screen and
     keyboard backlight are at full brightness.'
+  id: totrans-237
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PowerManager.FULL_WAKE_LOCK`：确保 CPU 开启，屏幕和键盘背光处于全亮度。'
 - en: 'To keep the CPU powered up while we do background work in a `Service`, we only
     need `PARTIAL_WAKE_LOCK`, which won''t keep the screen on, and which we can request
     from the `PowerManager` like this:'
+  id: totrans-238
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了在我们使用 `Service` 进行后台工作时保持 CPU 运行，我们只需要 `PARTIAL_WAKE_LOCK`，它不会保持屏幕开启，并且我们可以像这样从
+    `PowerManager` 请求它：
 - en: '[PRE43]'
+  id: totrans-239
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: We'll need to acquire a `WakeLock` during our `BroadcastReceiver` is `onReceive`
     method, and find some way to hand it to our `Service` so that the `Service` can
     release the lock once its work is done.
+  id: totrans-240
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要在 `BroadcastReceiver` 的 `onReceive` 方法中获取一个 `WakeLock`，并找到一种方法将其传递给我们的 `Service`，以便
+    `Service` 在完成其工作后可以释放锁。
 - en: Unfortunately, `WakeLock` instances are not parcelable, so we can't just send
     them to the `Service` in an Intent. The simplest solution is to manage the `WakeLock`
     instance as a static property that both the `BroadcastReceiver` and the target
     Service can reach.
+  id: totrans-241
   prefs: []
   type: TYPE_NORMAL
+  zh: 不幸的是，`WakeLock` 实例是不可序列化的，所以我们不能仅仅通过 Intent 将它们发送到 `Service`。最简单的解决方案是将 `WakeLock`
+    实例作为一个静态属性来管理，这样 `BroadcastReceiver` 和目标 Service 都可以访问它。
 - en: This is not difficult to implement, but we don't actually need to implement
     it ourselves—we can use the handy v4 support library class, `WakefulBroadcastReceiver`.
+  id: totrans-242
   prefs: []
   type: TYPE_NORMAL
+  zh: 这并不难实现，但实际上我们不需要自己实现它——我们可以使用方便的v4支持库类`WakefulBroadcastReceiver`。
 - en: '`WakefulBroadcastReceiver` exposes two static methods that take care of acquiring
     and releasing a partial `WakeLock`. We can acquire the `WakeLock` and start the
     `Service` with a single call to `startWakefulService`:'
+  id: totrans-243
   prefs: []
   type: TYPE_NORMAL
+  zh: '`WakefulBroadcastReceiver`公开了两个静态方法，负责获取和释放部分`WakeLock`。我们可以通过一个对`startWakefulService`的调用获取`WakeLock`并启动`Service`：'
 - en: '[PRE44]'
+  id: totrans-244
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'And when our Service has finished its work, it can release the `WakeLock` with
     the corresponding call to `completeWakefulIntent`:'
+  id: totrans-245
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们的`Service`完成其工作后，它可以通过对`completeWakefulIntent`的相应调用释放`WakeLock`：
 - en: '[PRE45]'
+  id: totrans-246
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'Now, we will update our SMS schedule `BroadcastReceiver` to acquire the `wakelock`
     and dispatch the intent over the `startWakefulService`:'
+  id: totrans-247
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将更新我们的SMS计划`BroadcastReceiver`以获取`wakelock`并通过`startWakefulService`分发意图：
 - en: '[PRE46]'
+  id: totrans-248
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'We must make sure to release the `WakeLock` once the Service has finished its
     work, otherwise we''ll drain the battery by keeping the CPU powered up unnecessarily.
     Let''s implement the `IntentService` that receives the intent from the wakeful
     `BroadcastReceiver` and sends the message in the service background thread:'
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须确保在`Service`完成其工作后释放`WakeLock`，否则我们会在不必要地保持CPU供电的情况下耗尽电池。让我们实现`IntentService`，它从唤醒的`BroadcastReceiver`接收意图并在服务后台线程发送消息：
 - en: '[PRE47]'
+  id: totrans-250
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: This is great—by using a statically registered `BroadcastReceiver` we've ensured
     that we receive the alarm, even if our application is not running when the alarm
     is due. When we receive the alarm, we acquire a `WakeLock`, keeping the device
     awake while our `Service` starts up and does its potentially long-running work.
+  id: totrans-251
   prefs: []
   type: TYPE_NORMAL
+  zh: 这很棒——通过使用静态注册的`BroadcastReceiver`，我们确保即使在闹钟时间到来时我们的应用程序没有运行，我们也能接收到闹钟。当我们接收到闹钟时，我们获取一个`WakeLock`，在`Service`启动并执行可能长时间运行的工作期间保持设备唤醒。
 - en: Once our work is done, we release the `WakeLock` to allow the device to sleep
     again and conserve power.
+  id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们的工作完成，我们释放`WakeLock`以允许设备再次睡眠并节省电力。
 - en: Resetting alarms after a system reboot
+  id: totrans-253
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 系统重启后的闹钟重置
 - en: The `AlarmManager` service is a convenient class to schedule working on your
     Android application; however, when the device shuts down or reboots, all your
     alarms will be lost since the system does not retain them between system restarts.
+  id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AlarmManager`服务是一个方便的类，可以安排在Android应用程序上执行工作；然而，当设备关闭或重启时，由于系统在系统重启之间不会保留它们，所以所有的闹钟都会丢失。'
 - en: 'To reset the alarm, we should persist your alarms and create a `BroadcastReceiver`
     that sets our alarms whenever a system boot happens:'
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 要重置闹钟，我们应该持久化你的闹钟并创建一个`BroadcastReceiver`，在系统启动时设置我们的闹钟：
 - en: '[PRE48]'
+  id: totrans-256
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: In order to store our alarms, we created a `POJO` class `SMSSchedule` as the
     model for our schedules.
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了存储我们的闹钟，我们创建了一个`POJO`类`SMSSchedule`作为我们计划的模型。
 - en: 'Second, in the Android Manifest we have to register our `BroadcastReceiver`
     to receive the boot event:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 其次，在AndroidManifest中，我们必须注册我们的`BroadcastReceiver`以接收启动事件：
 - en: '[PRE49]'
+  id: totrans-259
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'Finally, we will add the permission to receive the boot complete event:'
+  id: totrans-260
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们将添加接收启动完成事件的权限：
 - en: '[PRE50]'
+  id: totrans-261
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: Now after a system reboot, we re-create our alarms and they fire off even after
     a system reboot. We also advise that the alarms using `ELAPSED_REALTIME` should
     be adjusted after a system reboot since the the clock where those alarms are based
     is going to be restarted.
+  id: totrans-262
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，在系统重启后，我们重新创建我们的闹钟，即使在系统重启后它们也会触发。我们还建议在系统重启后调整使用`ELAPSED_REALTIME`的闹钟，因为基于那些闹钟的时钟将被重新启动。
 - en: Applications of AlarmManager
+  id: totrans-263
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: AlarmManager的应用
 - en: '`AlarmManager` allows us to schedule work to run without user intervention.'
+  id: totrans-264
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AlarmManager`允许我们在没有用户干预的情况下安排工作运行。'
 - en: This means that we can arrange to do work pre-emptively, for example, to prepare
     data that our application will need to present to the user when they next open
     the application, or to alert the user to new or updated information with notifications.
+  id: totrans-265
   prefs: []
   type: TYPE_NORMAL
+  zh: 这意味着我们可以预先安排工作，例如，准备数据，以便我们的应用程序在用户下次打开应用程序时向用户展示，或者通过通知提醒用户有关新或更新的信息。
 - en: Ideal use cases include things like periodically checking for new e-mails, SMS
     scheduling, time notifications, periodic data processing, downloading new editions
     of periodical publications (for example, daily newspapers and magazines), or uploading
     data from the device to a cloud backup service.
+  id: totrans-266
   prefs: []
   type: TYPE_NORMAL
+  zh: 理想的使用案例包括定期检查新电子邮件、短信调度、时间通知、定期数据处理、下载新版的期刊出版物（例如，日报和杂志），或将设备上的数据上传到云备份服务。
 - en: The `AlarmManager` is able to start future work effectively but the API should
     be used carefully to keep your application battery power consumption at low levels.
     To achieve that, the developer should try to keep the alarm frequency under certain
     levels and use the exact set functions that force the device to wake up only in
     cases where it is really necessary.
+  id: totrans-267
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AlarmManager` 能够有效地启动未来的工作，但应该谨慎使用 API 以保持应用程序的电池功耗处于低水平。为了实现这一点，开发者应尽量保持警报频率在一定的水平以下，并使用确切的设置函数，只有在真正必要时才强制设备唤醒。'
 - en: Summary
+  id: totrans-268
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In this chapter, we learned to schedule work for our applications to perform
     at some time in the distant future, either as a one-shot operation or at regular
     intervals.
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们学习了如何为我们的应用程序安排在遥远的未来某个时间执行工作，无论是作为一次性操作还是定期执行。
 - en: We learned to set alarms relative to the system clock or real time, how to wake
     the device up from a deep sleep and doze mode, how to cancel alarms when we no
     longer need them, and how to set exact alarms on the most recent Android versions.
+  id: totrans-270
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们学习了如何设置与系统时钟或实时相关的警报，如何唤醒设备从深度睡眠和 Doze 模式，如何在我们不再需要它们时取消警报，以及如何在最新的 Android
+    版本上设置精确的警报。
 - en: In the meantime, we introduced the reader to Doze Mode, a new power management
     feature that saves battery cycles by deferring jobs and tasks to a maintenance
     window. We learned how to test our alarms taking into account the new power management
     states introduced by the doze mode.
+  id: totrans-271
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，我们向读者介绍了 Doze 模式，这是一种新的电源管理功能，通过将作业和任务推迟到维护窗口来节省电池周期。我们学习了如何测试我们的警报，考虑到由
+    Doze 模式引入的新电源管理状态。
 - en: We learned how to debug alarms created with `AlarmManager` and how to analyze
     the information printed from the `dumpsys` commands.
+  id: totrans-272
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们学习了如何调试使用 `AlarmManager` 创建的警报，以及如何分析 `dumpsys` 命令打印出的信息。
 - en: Our exploration covered various options for responding to alarms, including
     bringing an `Activity` to the foreground or doing work directly in a `BroadcastReceiver`,
     synchronously or asynchronously.
+  id: totrans-273
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的探索涵盖了响应警报的各种选项，包括将 `Activity` 带到前台或直接在 `BroadcastReceiver` 中执行工作，同步或异步。
 - en: Finally, we arranged for an `IntentService` to be launched with a `WakeLock`
     to keep the CPU from powering down while our long-running background work is completed,
     and to finish we learned how to re-create the alarms after a system boot using
     a boot `BroadcastReceiver`.
+  id: totrans-274
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们安排了一个 `IntentService` 使用 `WakeLock` 启动，以防止在完成长时间运行的后台工作期间 CPU 关闭电源，并在结束时学习了如何使用启动
+    `BroadcastReceiver` 在系统启动后重新创建警报。
 - en: The `AlarmManager` is a very useful class to schedule work in the background
     but it has some major disadvantages. First, it does not take into account the
     device current context, like if the device is connected to the charger, or whether
     the device is connected to a Wi-Fi network. Second, we can only schedule our background
     work based on the time condition.
+  id: totrans-275
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AlarmManager` 是一个非常有用的类，可以用于在后台安排工作，但它也有一些主要的缺点。首先，它没有考虑到设备的当前上下文，比如设备是否连接到充电器，或者设备是否连接到
+    Wi-Fi 网络。其次，我们只能根据时间条件来安排我们的后台工作。'
 - en: To solve these issues, the Android team introduced in Android Lollipop API Level
     5.0 the `JobScheduler` API; an API that allows the execution of background work
     based on a number of time and context criteria.
+  id: totrans-276
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了解决这些问题，Android 团队在 Android Lollipop API 级别 5.0 中引入了 `JobScheduler` API；这是一个允许根据多个时间和上下文标准执行后台工作的
+    API。
 - en: In the next chapter we are going to explain how to exercise the `JobScheduler`
     API to schedule tasks that will only run when the appropriate energy and environment
     device conditions are met.
+  id: totrans-277
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将解释如何使用 `JobScheduler` API 来安排只有在适当的能源和环境设备条件满足时才会运行的任务。

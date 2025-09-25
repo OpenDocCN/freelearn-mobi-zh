@@ -1,275 +1,393 @@
 - en: Chapter 11. Exploring Bus-based Communications
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第11章 探索基于总线通信
 - en: 'In previous chapters, we have been using different techniques to disseminate
     data/events/notifications between several Android application components (`Activity`,
     `Fragment`, `Service`, `BroadcastReceiver, …`):'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们使用不同的技术在不同Android应用程序组件（`Activity`、`Fragment`、`Service`、`BroadcastReceiver`等）之间传播数据/事件/通知：
 - en: Intents were sent through the system carrying communication messages or notifications
     to notify a `Service` or `Activity` to start
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 意图通过系统发送，携带通信消息或通知，以通知`Service`或`Activity`启动
 - en: Broadcast Intents were used to report a result back from background processes
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用广播意图从后台进程报告结果
 - en: Handlers were used to communicate between different processes and thread executions
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 处理器被用来在不同的进程和线程执行之间进行通信
 - en: These techniques usually involved a tight coupling between the component that
     sends the message and the component that receives it. Typically, the sender dispatches
     a message to a certain receiver and deals with the receiver lifecycle in order
     to detect any receiver unavailability.
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些技术通常涉及发送消息的组件和接收消息的组件之间的紧密耦合。通常，发送者将消息调度到特定的接收者，并处理接收者的生命周期以检测任何接收者不可用的情况。
 - en: In this chapter, we are going to present to the reader a new construct and pattern,
     delivered by the `EventBus` library, that most of the time simplifies communication
     between the different application components by decoupling the event producer
     and event consumer component.
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将向读者介绍一个由 `EventBus` 库提供的新构造和模式，这个模式在大多数情况下通过解耦事件生产者和事件消费者组件来简化不同应用程序组件之间的通信。
 - en: 'In this chapter, we will cover the following topics:'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章将涵盖以下主题：
 - en: Introducing bus-based communication
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 介绍基于总线的通信
 - en: Setting up an `EventBus` library in your project
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在你的项目中设置 `EventBus` 库
 - en: Defining and dispatching events in the Bus
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在总线中定义和调度事件
 - en: Registering subscribers
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 注册订阅者
 - en: Processing events asynchronously with `threadMode`
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用 `threadMode` 异步处理事件
 - en: Posting and removing sticking events
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 发布和移除粘性事件
 - en: Introduction to bus-based communication
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 基于总线的通信简介
 - en: 'The Bus based communication software pattern, also known as Publish/Subscribe,
     is a pattern that allows sender and receiver entities to communicate without requiring
     them to explicitly know each other. This communication model suppresses the tight
     coupling between components and allows the delivery of messages from one receiver
     to more than one final recipient. There are five different entities involved in
     the communication pattern: publisher, subscriber, event, bus, and broker.'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 基于总线的通信软件模式，也称为发布/订阅，是一种允许发送者和接收者实体在不要求它们显式知道对方的情况下进行通信的模式。这种通信模型抑制了组件之间的紧密耦合，并允许将消息从单个接收者传递到多个最终接收者。在通信模式中涉及五个不同的实体：发布者、订阅者、事件、总线和代理。
 - en: The **publisher** submits events to a shared messaging pipeline, named **bus**,
     controlled by an entity called **broker**, that governs the stream of events submitted
     and forwards them to a list of interested entities, called **subscribers**, that
     previously registered in the broker to receive certain kinds of event.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: '**发布者**将事件提交到由称为**代理**的实体控制的共享消息管道，称为**总线**，该代理管理提交的事件流，并将它们转发到之前在代理中注册以接收特定类型事件的实体列表，称为**订阅者**。'
 - en: In order to receive certain kinds of event, the subscriber should express interest
     in these events by creating a subscription in the broker and the broker should
     keep a list of enabled subscriptions and forward the events to all of the subscribers.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了接收某些类型的事件，订阅者应在代理中创建一个订阅，代理应保持一个启用订阅的列表，并将事件转发给所有订阅者。
 - en: If a consumer loses interest in one kind of event, it terminates the subscription,
     and as a consequence, the broker will stop forwarding the unsubscribed events
     related to the subscriber.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果消费者对某一种事件失去兴趣，它将终止订阅，因此，代理将停止转发与订阅者相关的未订阅事件。
 - en: '![Introduction to bus-based communication](img/Image_B05062_11_01.jpg)'
+  id: totrans-19
   prefs: []
   type: TYPE_IMG
+  zh: '![基于总线的通信简介](img/Image_B05062_11_01.jpg)'
 - en: In this loosely coupled communication model, the publisher submits event A in
     the shared bus without knowing the exact subscriber that will consume the event.
     In the same way, the subscriber does not know about the sender entity that submitted
     the event unless something is sent in event A to identify the event's origin.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这种松散耦合的通信模型中，发布者在共享的`Bus`中提交事件A，而不了解将消费该事件的精确订阅者。同样，订阅者不知道提交事件的发送实体，除非事件A中发送了某些内容来识别事件的来源。
 - en: On Android specifically, it could simplify the communication between `Fragments`,
     `Activities`, `Services`, or any other business logic object, such as persistence
     service, that manages your application or UI state. In our examples, we will use
     the library to send notifications between activies and fragments. However, the
     same kind of construct could be applied to communicate between services and broadcast
     receivers.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android特定情况下，它可以简化`Fragments`、`Activities`、`Services`或任何其他业务逻辑对象（如持久化服务）之间的通信，这些对象管理您的应用程序或UI状态。在我们的示例中，我们将使用该库在活动之间发送通知。然而，同样的结构也可以应用于服务与广播接收器之间的通信。
 - en: EventBus library
+  id: totrans-22
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: EventBus库
 - en: Although there are several open source libraries that are able to deliver this
     kind of pattern in Android, we will base our code examples on the popular event
     bus library ([http://greenrobot.org/eventbus/](http://greenrobot.org/eventbus/))
     since it offers advanced features and high performance.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管有几个开源库能够实现这种模式在Android上的传递，但我们将基于流行的`event bus`库（[http://greenrobot.org/eventbus/](http://greenrobot.org/eventbus/））编写代码示例，因为它提供了高级功能和高性能。
 - en: The high performance library is optimized for the Android OS and it has been
     used by many popular applications on Google Play.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 该高性能库针对Android操作系统进行了优化，并且已被Google Play上许多流行的应用程序使用。
 - en: 'These are the advanced features delivered by the `EventBus` library that you
     should be aware of:'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些是`EventBus`库提供的先进功能，您应该了解：
 - en: Annotation-based subscription – You can define an subscription method by annotating
     an Android `Activity`, `Service`, or `Fragment` instance method
+  id: totrans-26
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基于注解的订阅 - 您可以通过注解Android `Activity`、`Service`或`Fragment`实例方法来定义订阅方法
 - en: Background and main thread event delivery – The subscriber could define in which
     thread the event will be delivered regardless of whether it was generated in a
     background or main thread
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 背景和主线程事件传递 - 订阅者可以定义事件将在哪个线程中传递，无论它是在后台还是主线程生成
 - en: 'Event and subscriber inheritance – We can construct events or subscribers by
     extending (Java subclass) other events or subscribers:'
+  id: totrans-28
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 事件和订阅者继承 - 我们可以通过扩展（Java子类）其他事件或订阅者来构建事件或订阅者：
 - en: '[PRE0]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'No configuration required – The library, by default, allows us to use a ready-to-use
     default `Bus` that does not require explicit instantiation, and can be used to
     submit events from anywhere in the application:'
+  id: totrans-30
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 无需配置 - 默认情况下，该库允许我们使用一个现成的默认`Bus`，无需显式实例化，并且可以从应用程序的任何地方提交事件：
 - en: '[PRE1]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Before we start using it, we will add the GreenRobot `Eventbus` dependency
     to our module or application `build.gradle` file:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始使用它之前，我们将向我们的模块或应用程序`build.gradle`文件中添加GreenRobot `Eventbus`依赖项：
 - en: '[PRE2]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Before we go deeper, we will present a simple example in which we use the library
     to publish a simple event from a `BroadcastReceiver` to an `Activity`. Thus, the
     `Activity` receiver method will deliver a notification on the screen.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们深入探讨之前，我们将展示一个简单示例，其中我们使用该库从`BroadcastReceiver`向`Activity`发布一个简单事件。因此，`Activity`接收方法将在屏幕上提供通知。
 - en: First, we will create a `BroadcastListener` that listens for network changes
     and submits an event in the `Bus` when the mobile network is not available and
     an event with a detailed network state when the device mobile network is available.
     The events will be propagated in the `Bus` and delivered to all the subscribers
     interested in them, which in our case, will be an `Activity` that will display
     a message on the screen that shows the mobile network state.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将创建一个`BroadcastListener`，它监听网络变化，并在移动网络不可用时在`Bus`中提交一个事件，当设备移动网络可用时，提交一个包含详细网络状态的事件。这些事件将在`Bus`中传播，并传递给所有感兴趣的订阅者，在我们的例子中，将是一个`Activity`，它将在屏幕上显示显示移动网络状态的消息。
 - en: Defining events
+  id: totrans-36
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 定义事件
 - en: 'First, we will define the POJO classes that would be submitted in the `Bus`
     by the publisher to notify the interested entities whether the mobile network
     connectivity is available or not:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将定义由发布者提交给`Bus`的POJO类，以通知感兴趣的实体移动网络连接是否可用：
 - en: '[PRE3]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: The `MobileNetConnectedEvent` event is a POJO class that will be sent when the
     mobile network is available and will carry a string message with the detailed
     network state.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: '`MobileNetConnectedEvent`事件是一个POJO类，当移动网络可用时将发送，并携带包含详细网络状态的字符串消息。'
 - en: The `MobileNetDisconnectedEvent` is an event that does not carry any information
     but it will notify the event subscriber that connection with the network was lost.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: '`MobileNetDisconnectedEvent`是一个不携带任何信息的事件，但它将通知事件订阅者网络连接已丢失。'
 - en: Submitting events
+  id: totrans-41
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 提交事件
 - en: 'Now with events defined, we will create the `BroadcastListener` that is going
     to receive Intents from the Android OS when any network connectivity changes (Wi-Fi,
     Mobile, …) occur on the device, and submits the events in the Bus when the mobile
     connectivity has changed:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在定义了事件后，我们将创建一个`BroadcastListener`，它将在设备上检测到任何网络连接变化（Wi-Fi、移动网络等）时从Android
+    OS接收Intent，并在移动连接发生变化时将事件提交到Bus中：
 - en: '[PRE4]'
+  id: totrans-43
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: As we described before, the default and ready-to-use `EventBus` could be retrieved
     from anywhere in our application, so, when a network change event is received
     regarding the mobile network, we just get the default Bus by invoking `EventBus.getDefault()`
     and we submit an event to it by calling the `Bus.post(Object event)` function.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们之前描述的，默认的、可立即使用的`EventBus`可以从我们的应用程序的任何地方检索，因此，当收到关于移动网络的网络变化事件时，我们只需通过调用`EventBus.getDefault()`来获取默认的Bus，并通过调用`Bus.post(Object
+    event)`函数向其提交事件。
 - en: Note that we will identify a network based on the `NetworkInfo` received in
     the `ConnectivityManager.EXTRA_NETWORK_INFO` Intent extra.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，我们将根据在`ConnectivityManager.EXTRA_NETWORK_INFO` Intent额外信息中接收到的`NetworkInfo`来识别网络。
 - en: When a network change related to the mobile network is detected, we submit either
     `MobileNetConnectedEvent` or a `MobileNetDisconnectedEvent` in the default `Bus`.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 当检测到与移动网络相关的网络变化时，我们在默认的`Bus`中提交`MobileNetConnectedEvent`或`MobileNetDisconnectedEvent`。
 - en: Registering sbscribers
+  id: totrans-47
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 注册订阅者
 - en: With the `Publisher`/`Sender` class and event class already specified, all that
     remains is to register our `Activity` class to receive both events and print the
     event sent on the screen.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 已经指定了`Publisher`/`Sender`类和事件类，剩下的只是将我们的`Activity`类注册以接收这两个事件并在屏幕上打印发送的事件。
 - en: Like we stated before, to receive any event from the `Bus`, the `Subscriber`
     entity, which could be any Java class on your code, will have to register on the
     Bus and subscribe to the event that it is interested in.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们之前所述，为了从`Bus`接收任何事件，`Subscriber`实体（可以是代码中的任何Java类）必须注册到Bus上并订阅它感兴趣的事件。
 - en: 'Any object will have to register on the Bus by calling the register function
     and provide a single on`<EventName>(EventType)` method annotated with `org.greenrobot.eventbus.Subscribe`
     for all the kind of event that it is interested in:'
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 任何对象都必须通过调用`register`函数在Bus上注册，并提供一个带有`@org.greenrobot.eventbus.Subscribe`注解的单一`on<eventName>(EventType)`方法，以便对它感兴趣的所有类型的事件进行注册：
 - en: '[PRE5]'
+  id: totrans-51
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Let''s implement the functions that are going to handle the `MobileNetDisconnectedEvent`
     and the `MobileNetConnectedEvent` event in our Activity:'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们实现将在我们的Activity中处理`MobileNetDisconnectedEvent`和`MobileNetConnectedEvent`事件的函数：
 - en: '[PRE6]'
+  id: totrans-53
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Both public callbacks have the @Subscribe annotation and an `MobileNetDisconnectedEvent`/`MobileNetConnectedEvent`
     object as the only method argument. Hence, whenever any of these events are posted
     on the Bus by our `BroadcastReceiver` sender and the `Activity` has already subscribed
     to them, our callbacks are notified, appending a new message on the UI console
     screen.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 这两个公共回调都有`@Subscribe`注解，并且只有一个`MobileNetDisconnectedEvent`/`MobileNetConnectedEvent`对象作为方法参数。因此，每当我们的`BroadcastReceiver`发送者将这些事件发布到Bus上，并且`Activity`已经订阅了它们时，我们的回调会被通知，并在UI控制台屏幕上添加一条新消息。
 - en: 'Finally, to register our `Activity` on the default Bus, we will override the
     `onStart` and `onStop Activity` functions to register and unregister, respectively:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，为了在我们的默认Bus上注册我们的`Activity`，我们将重写`onStart`和`onStop Activity`函数以分别进行注册和注销：
 - en: '[PRE7]'
+  id: totrans-56
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Once we register our class object, the Bus will transverse the `Activity` methods
     using the reflection API and check for any methods that are annotated with the
     `Subscribe` annotation. Once it finds any `@Subscribe` annotated methods with
     a POJO Event as an argument, it will register the instance method to be invoked
     when the event is published on the `Bus`.
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们注册了我们的类对象，Bus将通过反射API遍历`Activity`方法，并检查是否有任何带有`Subscribe`注解的方法。一旦找到任何带有`@Subscribe`注解的方法，并且方法参数为POJO事件，它将注册实例方法，以便在事件在`Bus`上发布时调用。
 - en: As soon as our `Activity` is destroyed, we terminate the bus subscription and
     the `Bus` will stop sending the events. In any Android component, such as `Activity`,
     Fragment, and `Service`, we should register and unregister on the Bus according
@@ -277,36 +395,48 @@
     from the Bus, otherwise the Bus will maintain a reference to the registered component
     and prevent it from being garbage collected. As a result, it will generate a memory
     leak in the application.
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们的`Activity`被销毁，我们将终止总线订阅，`Bus`将停止发送事件。在任何Android组件中，例如`Activity`、Fragment和`Service`，我们应该根据组件的生命周期在总线上注册和注销。从总线中注销组件非常重要，否则总线将保持对已注册组件的引用，从而阻止其被垃圾回收。结果，它将在应用程序中产生内存泄漏。
 - en: Thread mode
+  id: totrans-59
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 线程模式
 - en: '`EventBus`, by default, delivers the event in the subscriber in the same thread
     where the sender posted the event. Although this delivery scheme might work for
     most use cases, such as events that perform Android UI changes, when a long operation
     is executed in the event callback, the subscriber might block the main thread
     and prevent the system from running the UI rendering in time and drop some UI
     frames as a result.'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 默认情况下，`EventBus`在发送者发布事件的同一线程中向订阅者传递事件。尽管这种传递方案可能适用于大多数用例，例如执行Android UI更改的事件，但当在事件回调中执行长时间操作时，订阅者可能会阻塞主线程，从而阻止系统及时运行UI渲染，并导致丢失一些UI帧。
 - en: To cope with time-consuming operations that might happen during the event delivery,
     the `EventBus` library allows us to define the Thread in which the `Bus` will
     call to deliver the event to the subscriber (`ThreadMode`).
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了应对在事件传递过程中可能发生的耗时操作，`EventBus`库允许我们定义`Bus`将调用以将事件传递给订阅者的线程（`ThreadMode`）。
 - en: 'There are four modes supported by `EventBus` that we can use to control the
     event delivering behavior:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: '`EventBus`支持四种模式，我们可以使用这些模式来控制事件传递行为：'
 - en: '`ThreadMode.POSTING` – The subscribers callback will be invoked in the same
     thread where the sender posted the event. This is default behavior and the events
     will be delivery synchronously to all the entities that subscribed to the dispatched
     event.'
+  id: totrans-63
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ThreadMode.POSTING` – 订阅者的回调将在发送者发布事件的同一线程中调用。这是默认行为，事件将同步发送到所有订阅了已分发事件的实体。'
 - en: '`ThreadMode.MAIN` - The Bus will invoke the subscriber''s callback in the main
     UI thread. Thus, if the sender is running in the background thread when it posts
     the event to the `Bus`, the bus will queue the message in the main `Looper` and
@@ -315,40 +445,53 @@
     Looper, Handler, and HandlerThread"), *Performing Work with Looper, Handler, and
     HandlerThread*. When the event is produced in the main thread it behaves as the
     `ThreadMode.POSTING` mode.'
+  id: totrans-64
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ThreadMode.MAIN` - 总线将在主UI线程中调用订阅者的回调。因此，如果发送者在后台线程中运行时向`Bus`发布事件，总线将在主`Looper`中排队消息，事件将在主线程中传递。有关`Looper`和Handler如何工作的更多详细信息，请参阅[第2章](ch02.html
+    "第2章。使用Looper、Handler和HandlerThread执行工作")，*使用Looper、Handler和HandlerThread执行工作*。当事件在主线程中产生时，它表现得像`ThreadMode.POSTING`模式。'
 - en: '`ThreadMode.BACKGROUND` – The bus will invoke the subscriber''s callback in
     a background thread that prevents the event handling from blocking the UI thread.
     Notice that `EventBus` uses only one background thread to invoke all the callbacks,
     so, any long-running component could defer the delivery of subsequent events.
     When the event is produced in the background thread it is in the `ThreadMode.POSTING`
     mode.'
+  id: totrans-65
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ThreadMode.BACKGROUND` – 总线将在一个后台线程中调用订阅者的回调，这可以防止事件处理阻塞UI线程。请注意，`EventBus`仅使用一个后台线程来调用所有回调，因此，任何长时间运行的组件可能会延迟后续事件的传递。当事件在后台线程中产生时，它处于`ThreadMode.POSTING`模式。'
 - en: '`ThreadMode.ASYNC`- The Bus will invoke the subscriber''s callback using a
     group of threads managed by the Bus. The thread pool of worker threads, created
     from `Executors.newCachedThreadPool`, is going to be recycled and might be used
     to execute blocking operations, such as network or long computing operations.'
+  id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ThreadMode.ASYNC`- 总线将使用由总线管理的线程组调用订阅者的回调。从`Executors.newCachedThreadPool`创建的工作线程池将被回收，并可能用于执行阻塞操作，例如网络或长时间计算操作。'
 - en: You should set the thread mode required for your example based on the kind of
     processing required to consume the Event. For example, when the consumer updates
     the UI a `ThreadMode.MAIN` should be explicitly specified if the producer could
     post an event from the background thread. In other use cases, if the consumer
     does blocking or intensive operations you should use the `ThreadMode.ASYNC` mode
     to span the events over a group of threads.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该根据消费事件所需的处理类型设置你的示例所需的线程模式。例如，当消费者更新UI时，如果生产者可以从后台线程发布事件，则应显式指定`ThreadMode.MAIN`。在其他情况下，如果消费者执行阻塞或密集型操作，你应该使用`ThreadMode.ASYNC`模式来跨多个线程处理事件。
 - en: 'To explicitly determine in which thread the method is to be called by `EventBus`,
     we must specify the `threadMode` property in the `Subscribe` annotation:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了显式确定`EventBus`在哪个线程上调用方法，我们必须在`Subscribe`注解中指定`threadMode`属性：
 - en: '[PRE8]'
+  id: totrans-69
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Typically, an Android application requires tasks to run background work to obtain
     dynamic data from the network service or from a content service. The data retrieved
     is then dispatched to the main thread to be presented in the UI main thread. In
@@ -356,304 +499,430 @@
     client) to accomplish this. In our next example, we are going to use `ThreadMode.BACKGROUND`
     mode to perform an IO blocking operation that retrieves product information using
     an `EventBus` asynchronous background thread pool.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，Android应用程序需要运行后台任务以从网络服务或内容服务获取动态数据。检索到的数据随后被调度到主线程以在UI主线程中展示。在之前的章节中，我们使用了不同的技术（AsyncTask、Loader和HTTP异步客户端）来完成这项任务。在我们的下一个示例中，我们将使用`ThreadMode.BACKGROUND`模式来执行一个IO阻塞操作，使用`EventBus`异步后台线程池检索产品信息。
 - en: With the results from the previous operation, we will build an event with product
     details that will be reported back to the main UI thread to update the product
     on the screen.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 基于前一次操作的结果，我们将构建一个包含产品详情的事件，并将其报告回主UI线程以更新屏幕上的产品。
 - en: Our `Activity` will present a `Fragment` with the product details and **Next**
     and **Previous** buttons to browse between the product list. As explained before,
     we will use the `EventBus` to dispatch an event details request to a background
     thread and we will use an event to publish the results back from the Activity
     background method to the `DetailsFragment` fragment.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的`Activity`将展示一个包含产品详情以及**下一页**和**上一页**按钮的`Fragment`，以便在产品列表之间浏览。正如之前所解释的，我们将使用`EventBus`将事件详情请求调度到后台线程，并使用事件将`Activity`后台方法的结果发布回`DetailsFragment`片段。
 - en: 'First, we will define the `RetrieveProductEvent` and `ProductDetailEvent` POJOs
     used to model a product details request and to model the product details:'
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将定义用于建模产品详情请求和产品详情的`RetrieveProductEvent`和`ProductDetailEvent` POJOs：
 - en: '[PRE9]'
+  id: totrans-74
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Then, we will create the `Fragment` that is going to register on the `Bus`
     and subscribe to receive the `ProductDetailEvent` events with the product data.
     As you know, it''s essential to register and unregister the `Fragment` on the
     bus in order to prevent leaked memory resources, so, we will use the `Fragement`
     `onResume` and the `onPause` lifecycle callbacks to `accomplish` that:'
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们将创建一个将注册到`Bus`并订阅接收带有产品数据的`ProductDetailEvent`事件的`Fragment`。正如你所知，为了防止内存资源泄漏，注册和注销`Fragment`在总线上是至关重要的，因此，我们将使用`Fragment`的`onResume`和`onPause`生命周期回调来实现这一点：
 - en: '[PRE10]'
+  id: totrans-76
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Given that we want to update the UI when we receive the `ProductDetailEvent`,
     we will create a subscriber that runs on `ThreadMode.MAIN` thread mode, and therefore,
     receives the event callback in the main `Thread`:'
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于我们希望在接收到`ProductDetailEvent`时更新UI，我们将创建一个在`ThreadMode.MAIN`线程模式下运行的订阅者，因此，它将在主`Thread`中接收事件回调：
 - en: '[PRE11]'
+  id: totrans-78
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Following that, we will create the Activity that loads the `DetailsFragment`
     and will request to load the first product (`productId=0`) from the product catalogue:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 随后，我们将创建一个加载`DetailsFragment`的`Activity`，并从产品目录请求加载第一个产品（`productId=0`）：
 - en: '[PRE12]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: The `Activity` will create a `FragmentTransaction` to the `DetailsFragment`
     and commit it to the `FragmentManager`. To conclude, it will post an event on
     the bus to load the first new product `RetrieveProductEvent(productId)`.
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Activity`将为`DetailsFragment`创建一个`FragmentTransaction`并将其提交给`FragmentManager`。最后，它将在总线（bus）上发布一个事件以加载第一个新产品的事件`RetrieveProductEvent(productId)`。'
 - en: 'Next, we are going to implement the subscriber method that is going to process
     the `RetrieveProductEvent`, obtain the product details for the specified identifier
     in the background, and dispatch the new product details event to all the interested
     entities:'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们将实现处理`RetrieveProductEvent`的订阅者方法，在后台获取指定标识符的产品详情，并将新的产品详情事件分发给所有感兴趣的实体：
 - en: '[PRE13]'
+  id: totrans-83
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: Using `ThreadMode.ASYNC`, we will force the `EventBus` to invoke the callback
     on one of the Threads available in the `EventBus` asynchronous thread pool. This
     thread mode is used to perform asynchronous operations that might block for some
     time or take some time to execute, such as long computation calculations or network
     operations.
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`ThreadMode.ASYNC`，我们将强制`EventBus`在`EventBus`异步线程池中的一个线程上调用回调。这种线程模式用于执行可能需要阻塞一段时间或执行时间较长的异步操作，例如长时间的计算或网络操作。
 - en: Based on the thread mode defined by you, `EventBus` will manage all the thread
     switching required to deliver to events in the right group of threads or thread,
     regardless of whether the event is dispatched from the main thread or a background
     thread.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据您定义的线程模式，`EventBus`将管理所有必要的线程切换，以确保事件被发送到正确的线程组或单个线程，无论事件是从主线程还是后台线程分发的。
 - en: When the details of the product requested are loaded, the returned `ProductDetailEvent`
     object is posted on the Bus for further processing.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 当请求的产品详情加载完成后，返回的`ProductDetailEvent`对象将被发布到总线上以进行进一步处理。
 - en: Given that the `DetailsFragment` has the function onProductDetailEvent subscribed
     to receive the `ProductDetailEvent` in the main thread, the bus broker will call
     the function in the UI thread updating the `brandTv`, `nameTv`, `priceTv`, and
     `TextView` widgets with the product details.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于`DetailsFragment`已订阅`onProductDetailEvent`函数以在主线程接收`ProductDetailEvent`，总线代理将调用UI线程中的函数来更新`brandTv`、`nameTv`、`priceTv`和`TextView`小部件的产品详情。
 - en: With the `EventBus threadMode` feature, we could submit events to the main thread
     from any thread in the application and we can even hand over work to background
     lines of execution using a clean and simple interface.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`EventBus threadMode`功能，我们可以从应用程序中的任何线程提交事件到主线程，我们甚至可以使用干净简单的接口将工作交给后台执行行。
 - en: 'Just to conclude the example, we will add two buttons to browse between the
     product list sequence. The **Next** button will submit a `RetrieveProductEvent`
     request to get the next product on the list and the **Previous** button will submit
     a `RetrieveProductEvent` to get the previous product on the list:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 只为了结束这个例子，我们将添加两个按钮来浏览产品列表序列。**下一页**按钮将提交一个`RetrieveProductEvent`请求以获取列表中的下一个产品，而**上一页**按钮将提交一个`RetrieveProductEvent`以获取列表中的上一个产品：
 - en: '[PRE14]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Using the `Publish`/`Subscribe` pattern delivered by EventBus, we were able
     to update the `DetailFragment` without sharing a strict interface with the `Activity`.
     Moreover, the event might have come from any other Android component and the result
     would have been dispatched in the main thread by Event Bus.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过EventBus提供的`Publish`/`Subscribe`模式，我们能够更新`DetailFragment`，而无需与`Activity`共享严格的接口。此外，事件可能来自任何其他Android组件，并且结果将通过Event
+    Bus在主线程中分发。
 - en: Posting sticking events
+  id: totrans-92
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 发布粘性事件
 - en: Whenever we publish an event on the bus, the EventBus broker automatically delivers
     the event to all the current subscribers, and by default, will immediately clear
     the transient event. The new subscribers that register after the event is delivered
     to the current subscribers will not get the event.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当我们向总线发布一个事件时，EventBus代理会自动将事件发送给所有当前订阅者，并且默认情况下会立即清除临时事件。在事件发送给当前订阅者之后注册的新订阅者将不会接收到该事件。
 - en: There are situations when a new subscriber registers on the bus and no new event
     is produced or submitted on the Bus for a long period of time. As such, the subscriber
     will wait until the next event appears on the bus to produce any output from it.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时，新订阅者在总线上注册，但长时间内没有在总线上产生或提交新事件。因此，订阅者将等待总线上出现下一个事件，然后从中产生任何输出。
 - en: Furthermore, when the new subscriber is responsible for updating an Android
     UI component like an `Activity` or a `Fragment`, the subscribers have to wait
     for a new event to occur, hence, it might delay the UI update for a significant
     amount of time.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，当新订阅者负责更新Android UI组件（如`Activity`或`Fragment`）时，订阅者必须等待新事件的发生，因此，这可能会延迟UI更新很长时间。
 - en: To solve this problem, the `EventBus` allows us to create `Sticky` events that
     are kept in the memory and delivered to subscribers once they register on the
     Bus. `EventBus` will keep the latest event of certain types in the memory and
     deliver it during the registration whenever the subscriber creates a subscription
     with sticky delivered on.
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了解决这个问题，`EventBus`允许我们创建粘性事件，这些事件被保存在内存中，一旦它们在Bus上注册，就会传递给订阅者。`EventBus`将在内存中保留特定类型事件的最新事件，并在注册期间传递它，只要订阅者创建了一个带有粘性传递的订阅。
 - en: 'To deliver a sticky event on the bus, the only thing that we need to do is
     invoke the `Bus.postSticky` function rather than the post function:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在Bus上传递粘性事件，我们只需要调用`Bus.postSticky`函数而不是post函数：
 - en: '[PRE15]'
+  id: totrans-98
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'And create a `Subscriber` method with the `sticky` property enabled:'
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 并创建一个带有`sticky`属性启用的`Subscriber`方法：
 - en: '[PRE16]'
+  id: totrans-100
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'As an example, the `LocationManager` service allows us to create a `LocationListener`
     that receives the current geographical location when the device''s location changes
     by a certain `minDistance`:'
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，`LocationManager`服务允许我们创建一个`LocationListener`，当设备的位置通过一定的`minDistance`发生变化时，接收当前的地理位置：
 - en: '[PRE17]'
+  id: totrans-102
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'If we use `LocationListener` to publish non-sticky `LocationEvent`s on the
     Bus and the device''s location does not change for a long period of time, new
     subscribers will have to wait until the device position changes to receive the
     current position from the Bus:'
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们使用`LocationListener`在Bus上发布非粘性`LocationEvent`，并且设备的位置在一段时间内没有变化，新订阅者将不得不等待直到设备位置改变，才能从Bus接收当前位置：
 - en: '[PRE18]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Moreover, to reduce the device's energy consumption, the minimum time between
     location updates (`minTime`) should be significant enough to be noticeable by
     the application user in order to remove the waiting time for the next event the
     will have the sticky event technique.
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，为了减少设备的能耗，位置更新的最小时间间隔（`minTime`）应该足够长，以便应用程序用户能够注意到，以便消除下一次事件等待粘性事件技术的时间。
 - en: If we register our `Subscriber` method with sticky delivery enabled, the new
     sticky registration will immediately get the latest position from the bus, stopping
     the subscriber from waiting for the next location update posted by the `LocationListener`.
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们注册带有粘性传递启用的`Subscriber`方法，新的粘性注册将立即从Bus获取最新位置，停止订阅者等待`LocationListener`发布的下一次位置更新。
 - en: 'To demonstrate this, first we will create an `Activity` that manages its own
     `LocationListener`, receives location updates, and posts sticky `LocationEvent`
     events on the Bus:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了演示这一点，首先我们将创建一个`Activity`，该`Activity`管理自己的`LocationListener`，接收位置更新，并在Bus上发布粘性`LocationEvent`事件：
 - en: '[PRE19]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: In the preceding code, we register our anonymous listener to receive location
     updates when the `Activity` enters the foreground and we unregister the listener
     when the `Activity` is paused, to either be destroyed or moved away from the foreground.
     We register our listener to receive updates almost every five seconds and when
     the position changes by 100 meters.
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的代码中，我们注册我们的匿名监听器以在`Activity`进入前台时接收位置更新，并在`Activity`暂停时注销监听器，以便被销毁或移出前台。我们注册监听器以几乎每五秒接收一次更新，并且当位置变化100米时。
 - en: In the meantime, when the last known position is available from the GPS Location
     Provider, we post a sticky event on the Bus to deliver the last known position
     for future subscribers.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，当从GPS位置提供程序获得最后已知位置时，我们在Bus上发布一个粘性事件，以将最后已知位置传递给未来的订阅者。
 - en: Our `LocationListener`, once again, will convert a Location object received
     by an `onLocationChanged` callback to a `LocationEvent` object and submit a sticky
     event on the bus with the callback. This sticky event will update the `EventBus`
     cached `LocationEvent` and all sticky `Subscriber` methods will immediately get
     this event once they subscribe.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的`LocationListener`再次将`onLocationChanged`回调接收到的位置对象转换为`LocationEvent`对象，并在Bus上提交一个粘性事件。这个粘性事件将更新`EventBus`缓存的`LocationEvent`，一旦订阅者订阅，所有粘性`Subscriber`方法将立即获得此事件。
 - en: Note that we start from the assumption that the GPS Provider is enabled on the
     device. For a more complete example, before you try to use the `LocationManager`,
     verify whether the GPS Location is available or not and ask the user to enable
     it on the device settings when the provider is not available.
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，我们假设设备上已启用GPS提供程序。为了更完整的示例，在您尝试使用`LocationManager`之前，请验证GPS位置是否可用，并在提供程序不可用时，要求用户在设备设置中启用它。
 - en: Beyond that, in order to receive location updates, the `android.permission.ACCESS_COARSE_LOCATION`
     or `android.permission.ACCESS_FINE_LOCATION` permissions must be declared in the
     application permissions or requested at the runtime for API Levels greater than
     23 (Marshmallow). The full source code is available from the Packt Publishing
     website. Take a look at the complete source code to appreciate how to request
     the required Android OS permissions.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，为了接收位置更新，必须在应用程序权限中声明`android.permission.ACCESS_COARSE_LOCATION`或`android.permission.ACCESS_FINE_LOCATION`权限，或者在API级别大于23（Marshmallow）的运行时请求这些权限。完整的源代码可在Packt
+    Publishing网站上找到。查看完整的源代码可以了解如何请求所需的Android操作系统权限。
 - en: 'Next, we will create a button that launches new `LocationEvent` subscribers
     that register and unregister on the `Bus` immediately:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们将创建一个按钮，该按钮启动新的`LocationEvent`订阅者，它们在`Bus`上立即注册和注销：
 - en: '[PRE20]'
+  id: totrans-115
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: The code in the button's `OnClickListener` will register a new `Runnable` object
     instance on the Bus and unregister after that. During registration, the sticky
     `Subscriber` method, `onLocationEvent`, will immediately get invoked with the
     previously posted Location sticky object dispatched on the bus by our `LocationListener`.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 按钮的`OnClickListener`中的代码将在总线上注册一个新的`Runnable`对象实例，并在之后注销。在注册期间，粘性`Subscriber`方法`onLocationEvent`将立即被调用，以处理通过我们的`LocationListener`在总线上发布的先前发布的Location粘性对象。
 - en: As soon as it receives a `LocationEvent`, the `onLocationEvent` method will
     update the UI with the last position longitute and latitude and print the position
     on the Android Log. With this approach, a sticky `Subscriber` method will not
     have to wait until the position changes to receive a device position and update
     the UI.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦接收到`LocationEvent`，`onLocationEvent`方法将使用最后的位置经纬度更新UI，并在Android日志上打印位置。使用这种方法，粘性`Subscriber`方法无需等待位置变化即可接收设备位置并更新UI。
 - en: Removing sticky events
+  id: totrans-118
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 移除粘性事件
 - en: 'In some use cases, it could be convienient to invalidate a sticky event from
     the Bus and prevent a cached event from getting delivered to the following Subscribers.
     EventBus allows us to clear the sticky events by calling the following functions:'
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 在某些用例中，可能需要从总线中使粘性事件无效，并防止缓存的事件被传递给后续的订阅者。EventBus允许我们通过调用以下函数来清除粘性事件：
 - en: '`removeStickyEvent(<MyEventClass>)` – Removes and gets the recent sticky event
     for the given event type'
+  id: totrans-120
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`removeStickyEvent(<MyEventClass>)` – 移除并获取给定事件类型的最近粘性事件'
 - en: '`removeStickyEvent(Object event)` - Removes the sticky event if it equals the
     passed event'
+  id: totrans-121
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`removeStickyEvent(Object event)` - 如果传入的事件等于指定的事件，则移除粘性事件'
 - en: '`removeAllStickyEvents()` - Removes the sticky events for all types'
+  id: totrans-122
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`removeAllStickyEvents()` - 移除所有类型的粘性事件'
 - en: 'Let''s use one `removeStickyEvent` function to remove the latest sticky `LocationEvent`
     from the bus:'
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们使用一个`removeStickyEvent`函数来从总线上移除最新的粘性`LocationEvent`：
 - en: '[PRE21]'
+  id: totrans-124
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: After we remove the sticky event from the bus, the latest `LocationEvent` will
     be removed from the bus and no event is delivered during the registration to new
     `LocationEvent` subscribers.
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们从总线中移除粘性事件之后，最新的`LocationEvent`将从总线中移除，并且在向新的`LocationEvent`订阅者注册期间不会传递任何事件。
 - en: Summary
+  id: totrans-126
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In this chapter, we learned about the publish/subscribe messaging pattern used
     to communicate between decoupled entities on an Android application. This pattern
     must be applied to send event notifications or data to one or more Android component
     recipients.
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们学习了在Android应用程序中用于在解耦实体之间通信的发布/订阅消息模式。此模式必须应用于向一个或多个Android组件接收者发送事件通知或数据。
 - en: Next, we introduced to the reader the `EventBus`, an optimized open source library
     that delivers the publish-subscribe pattern for the Android platform and provides
     advanced features such as sticky events and asynchronous event delivery.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们向读者介绍了`EventBus`，这是一个优化的开源库，为Android平台提供发布/订阅模式，并提供了如粘性事件和异步事件传递等高级功能。
 - en: Following that, we learned how set up the library, how to model events, and
     how to dispatch events on the default `Bus`. The Bus, a shared entity that receives
     the events, will act as a broker and proxy for the events to the final recipients
     that previously subscribed to them.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 随后，我们学习了如何设置库，如何建模事件，以及如何在默认的`Bus`上分发事件。总线作为一个接收事件的共享实体，将充当事件的中介和代理，将事件传递给之前订阅它们的最终接收者。
 - en: We took a detailed look at `Eventbus` `threadMode` feature of EventBus that
     allows us to define the thread in which the `Bus` delivers the event to the subscriber.
     Hence, we were able to consume events in different threads (background, main thread,
     and asynchronous threads) from the posting thread.
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们详细研究了EventBus的`threadMode`特性，该特性允许我们定义`Bus`将事件传递给订阅者的线程。因此，我们能够从发布线程中消费来自不同线程（后台线程、主线程和异步线程）的事件。
 - en: To finish our journey, we learned about sticky events, events that are cached
     on the Bus and delivered to new sticky subscribers during the registration and
     prevent such methods from waiting for the next event, in case of the absence of
     new data.
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了完成我们的旅程，我们学习了粘性事件，这些事件被缓存到Bus中，并在注册期间传递给新的粘性订阅者，从而防止这些方法在没有新数据的情况下等待下一个事件。

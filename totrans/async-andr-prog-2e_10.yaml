@@ -1,617 +1,920 @@
 - en: Chapter 10. Network Interactions with GCM
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第10章：使用GCM的网络交互
 - en: In previous chapters, in order to update any kind of dynamic data that our examples
     required, we explicitly initiated a connection to a remote server, waking up the
     network radio and other resources required to perform the network operation. The
     application might fetch either fresh data or exactly the same data if nothing
     has changed since the last fetch.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，为了更新我们示例所需的任何类型的动态数据，我们明确地启动了一个与远程服务器的连接，唤醒了网络射频和其他执行网络操作所需的资源。应用程序可能会获取新鲜数据，或者如果自上次获取以来没有变化，则获取完全相同的数据。
 - en: Although this communication-fetching model might work for most use cases, it
     could consume battery resources and internet bandwidth in vain when the data does
     not change often.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然这种通信-获取模型可能适用于大多数用例，但当数据不经常更改时，它可能会无谓地消耗电池资源和互联网带宽。
 - en: This technique, commonly known as **data polling**, may also increase the server
     load when a great number of clients try to fetch or verify whether any data has
     changed.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种通常称为**数据轮询**的技术，当大量客户端尝试获取或验证数据是否已更改时，也可能增加服务器的负载。
 - en: An alternative to the polling technique is **data pushing**. In this technique,
     the server tells the application when new data is available or when the data has
     changed. When the data consumer (application) gets notified, it will initiate
     a new interaction with the server to retrieve the fresh data.
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 轮询技术的替代方法是**数据推送**。在这种技术中，服务器告诉应用程序何时有新数据可用或数据已更改。当数据消费者（应用程序）收到通知时，它将启动与服务器的新交互以检索新鲜数据。
 - en: Since fewer synchronizations are required, it will lead to fewer network interactions,
     which will lead to less battery resources consumed.
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于所需的同步较少，这将导致更少的网络交互，进而导致消耗更少的电池资源。
 - en: In this chapter, we will introduce you to **Google Cloud Messaging** (**GCM**),
     a service delivered by Google Play Services that will help you to build applications
     that require data pushing or pulling messaging services. GCM delivers a framework
     to deliver push messages to multiple devices or group of devices in a battery-efficient
     way.
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将向您介绍**Google Cloud Messaging**（**GCM**），这是由Google Play服务提供的一项服务，可以帮助您构建需要数据推送或拉取消息服务的应用程序。GCM提供了一种框架，以节能的方式向多个设备或设备组发送推送消息。
 - en: 'In this chapter, we will cover the following topics:'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
 - en: Polling versus pushing messaging
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 轮询与推送消息对比
 - en: How to setup and configure **GCM** for your application
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如何为您的应用程序设置和配置**GCM**
 - en: Receiving downstream messages from the server with GCM
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用GCM接收来自服务器的下行消息
 - en: Receiving downstream messages from GCM topic streams
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 从GCM主题流接收下行消息
 - en: Sending upstream messages to your server with GCM
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用GCM向您的服务器发送上行消息
 - en: Registering one shot and periodic network tasks with `GcmNetworkManager`
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用`GcmNetworkManager`注册一次性网络任务和周期性网络任务
 - en: Introduction to GCM
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: GCM简介
 - en: Since every network interaction with your server could wake the wireless radio
     interface up, on a device with limited energy resources it is crucial to minimize
     the number of times that your application tries to hit the network to sync data.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于每次与您的服务器进行网络交互都可能唤醒无线射频接口，在能源资源有限的设备上，最小化您的应用程序尝试连接网络以同步数据的次数至关重要。
 - en: For applications that require regular updates and up-to-date data, like a messaging
     application, polling in the background by setting an alarm for every x minutes,
     then waking up the radio and downloading your data could drain the battery in
     a matter of hours.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于需要定期更新和最新数据的应用程序，如消息应用，通过每x分钟设置一个闹钟在后台轮询，然后唤醒射频并下载数据，可能会在几小时内耗尽电池。
 - en: '![Introduction to GCM](img/Image_B05062_10_01.jpg)'
+  id: totrans-17
   prefs: []
   type: TYPE_IMG
+  zh: '![GCM简介](img/Image_B05062_10_01.jpg)'
 - en: Figure 1 - Polling data from remote server
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 图1 - 从远程服务器轮询数据
 - en: The GCM offers us a platform to efficiently deliver notifications, with less
     than 4096 bytes, when there is new data to be consumed or to synchronize. This
     interaction model reduces the network interactions, and there is no need to constantly
     poll the server to discover data changes.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: GCM为我们提供了一个平台，以小于4096字节的方式高效地发送通知，当有新数据要消费或同步时。这种交互模型减少了网络交互，无需不断轮询服务器以发现数据变化。
 - en: '![Introduction to GCM](img/Image_B05062_10_02.jpg)'
+  id: totrans-20
   prefs: []
   type: TYPE_IMG
+  zh: '![GCM简介](img/Image_B05062_10_02.jpg)'
 - en: Beyond the ability to dispatch downstream messages from your server (using HTTP
     or XMPP protocol messages) to your Android application, the GCM framework provides
     a battery-efficient communication channel to dispatch upstream messages from your
     application to a XMPP server managed by you.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了从您的服务器（使用HTTP或XMPP协议消息）向您的Android应用程序发送下游消息的能力之外，GCM框架还提供了一个省电的通信通道，用于从您的应用程序向由您管理的XMPP服务器发送上游消息。
 - en: The GCM client that runs on the Android device provides a reliable and battery-efficient
     connection between your GCM server and the device. The connection maintained is
     highly optimized to minimize bandwidth and battery consumption. Therefore, the
     use of GCM for applications that require high-frequency network data updates,
     such as real-time messaging, is extremely recommended.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android设备上运行的GCM客户端提供了一个可靠且省电的连接，连接您的GCM服务器和设备。保持的连接高度优化，以最小化带宽和电池消耗。因此，对于需要高频网络数据更新的应用程序，如实时消息，使用GCM极为推荐。
 - en: Beyond that, when the device is offline and is not able to contact the GCM service,
     the platform is able to retain the messages in queues until a maximum number of
     20 queued messages, and ensure the delivery of the messages as soon as the device
     goes online again.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，当设备离线且无法联系GCM服务时，平台能够保留队列中的消息，直到达到最多20条队列消息，并确保设备再次上线后立即投递消息。
 - en: Setting up and configuring GCM for your application
+  id: totrans-24
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 为您的应用程序设置和配置GCM。
 - en: 'To setup Google Cloud Messaging on your application you will have to register
     with GCM and set up a Google API Project on your Google Developers Console ([https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)):'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在您的应用程序上设置Google云消息，您需要在GCM上注册并在您的Google开发者控制台（[https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)）上设置一个Google
+    API项目：
 - en: First pick **Android App Platform**
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先选择 **Android应用程序平台**。
 - en: Specify your application name
+  id: totrans-27
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 指定您的应用程序名称。
 - en: 'Example: `Asynchronous Android`'
+  id: totrans-28
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 示例：`Asynchronous Android`
 - en: Supply your application package name
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 提供您的应用程序包名。
 - en: 'Example: `com.packpublishing.asynchronousandroid`'
+  id: totrans-30
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 示例：`com.packpublishing.asynchronousandroid`
 - en: Select **Cloud Messaging Services** and **Enable Google Cloud Messaging**
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 选择 **云消息服务** 并 **启用Google云消息**。
 - en: Generate the configuration files and download the JSON configuration file `google-services.json`
     to your computer.
+  id: totrans-32
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 生成配置文件并将 JSON 配置文件 `google-services.json` 下载到您的计算机上。
 - en: Save your credentials (Server APIKey, SenderId) to authenticate with the GCM
     platform
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将您的凭证（服务器API密钥、发送者ID）保存下来，以便在GCM平台上进行身份验证。
 - en: Once you have registered your application with GCM, get the `google-services.json`
     configuration file and copy the file into the `app/` or `mobile/` directory of
     your Android Studio Project.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦您已在GCM上注册了您的应用程序，获取 `google-services.json` 配置文件并将其复制到您的Android Studio项目的 `app/`
+    或 `mobile/` 目录中。
 - en: 'Next, add the Google Play Services SDK to your project level and app-level
     `<PROJECT_DIRECTORY>/build.gradle` file and rebuild your Android Studio Project:'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，将Google Play服务SDK添加到您的项目级别和应用程序级别的 `<PROJECT_DIRECTORY>/build.gradle` 文件中，并重新构建您的Android
+    Studio项目：
 - en: '[PRE0]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Update the application module build `< PROJECT_DIRECTORY >/app/build.gradle`:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 更新应用程序模块构建 `<PROJECT_DIRECTORY>/app/build.gradle`：
 - en: '[PRE1]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: To use GCM on your Android application you need to have a device with Android
     API 8 or higher with the Google Play Store installed, or a device with API level
     9 if you want to use the new GCM features delivered by the Google Play Services.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在您的Android应用程序上使用GCM，您需要一个安装了Android API 8或更高版本且已安装Google Play商店的设备，或者如果您想使用Google
+    Play服务提供的GCM新功能，则需要一个API级别为9的设备。
 - en: With the Google Services library dependencies declared on our build files, we
     can start to bootstrap the GCM infrastructure on our application.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的构建文件中声明了Google服务库依赖项后，我们就可以开始在应用程序上启动GCM基础设施。
 - en: 'To use GCM in your application, you have to register for the following permissions
     on your application `AndroidManifest.xml` file:'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在您的应用程序中使用GCM，您必须在您的 `AndroidManifest.xml` 文件中注册以下权限：
 - en: '[PRE2]'
+  id: totrans-42
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Note
+  id: totrans-43
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Notice that you should replace `<Package>` with your unique application package,
     such as `com.packpublishing.asynchronousandroid`.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，您应将 `<Package>` 替换为您独特的应用程序包名，例如 `com.packpublishing.asynchronousandroid`。
 - en: Registering the GCM Receiver
+  id: totrans-45
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 注册GCM接收器
 - en: 'In order to receive Broadcast Intents from the GCM Platform, we will add the
     GCM `GcmReceiver`, a `WakefulBroadcastReceiver` subclass provided by the GCM library,
     to our `AndroidManifest.xml` application element:'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了从 GCM 平台接收广播意图，我们将向 `AndroidManifest.xml` 应用程序元素添加 GCM `GcmReceiver`，这是 GCM
+    库提供的 `WakefulBroadcastReceiver` 子类：
 - en: '[PRE3]'
+  id: totrans-47
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: This `BroadcastReceiver` receives an Intent when a new downstream message arrives
     from the GCM Server, so it is required to subscribe to Intents with action `com.google.android.c2dm.intent.RECEIVE`.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 此 `BroadcastReceiver` 在从 GCM 服务器接收到新的下行消息时接收一个意图，因此需要订阅具有操作 `com.google.android.c2dm.intent.RECEIVE`
+    的意图。
 - en: Setting up a registration service
+  id: totrans-49
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 设置注册服务
 - en: In order to receive downstream messages from the GCM platform, the Android application
     requires a registration token. The registration token, a secret ID issued by the
     GCM server, must be obtained to identify the device on the service.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了从 GCM 平台接收下行消息，Android 应用程序需要一个注册令牌。注册令牌是由 GCM 服务器签发的秘密 ID，必须获取以在服务中标识设备。
 - en: 'To obtain a registration token we will define an `IntentService` that will
     retrieve the registration token using Instance ID API. Let''s start by defining
     it on the `AndroidManisfest.xml`:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了获取注册令牌，我们将定义一个 `IntentService`，它将使用实例 ID API 获取注册令牌。让我们首先在 `AndroidManisfest.xml`
+    中定义它：
 - en: '[PRE4]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: Our `IntentService` subclass will retrieve a new registration token in the background
     using the `SenderId` returned from the GCM registration. Once the new registration
     token is received, it will be dispatched to our servers to be stored safely. The
     token is our pass key to access the GCM service, so, in order to submit notifications,
     the server has to present this token. On the device, the registration will be
     implicitly stored securely by the GCM framework.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的 `IntentService` 子类将在后台使用从 GCM 注册返回的 `SenderId` 获取新的注册令牌。一旦接收到新的注册令牌，它将被发送到我们的服务器以安全存储。该令牌是我们的通行证，用于访问
+    GCM 服务，因此，为了提交通知，服务器必须提供此令牌。在设备上，注册将由 GCM 框架隐式安全存储。
 - en: '[PRE5]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Once a registration token is received with success, we update the default application
     shared preferences file, setting the `SENT_TOKEN_TO_SERVER` to `true`. This property
     indicates whether the generated token has been sent to your server. If the property
     is false, we send the token to your server. Otherwise, your server should have
     already received the token.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦成功接收到注册令牌，我们更新默认应用程序共享首选项文件，将 `SENT_TOKEN_TO_SERVER` 设置为 `true`。此属性指示生成的令牌是否已发送到您的服务器。如果属性为
+    false，我们将发送令牌到您的服务器。否则，您的服务器应该已经收到了令牌。
 - en: If an exception happens while fetching the new token or updating our registration
     token on our server during the `sendRegistrationToServer` call, we will set the
     `SENT_TOKEN_TO_SERVER` as `false`, ensuring that a new attempt is going be executed
     later.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果在调用 `sendRegistrationToServer` 期间获取新令牌或更新我们服务器上的注册令牌时发生异常，我们将设置 `SENT_TOKEN_TO_SERVER`
+    为 `false`，确保稍后执行新的尝试。
 - en: Though you would want to persist the registration to your backend server, for
     now, we will print the registration token to the log output. You can pick the
     value using `logcat` for future use in our examples.
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管您可能希望将注册信息持久化到您的后端服务器，但到目前为止，我们将打印注册令牌到日志输出。您可以使用 `logcat` 选择该值以供将来在我们的示例中使用。
 - en: '[PRE6]'
+  id: totrans-58
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: InstanceID listener
+  id: totrans-59
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 实例 ID 监听器
 - en: The first time we get `InstanceID` through `InstanceID.getInstance`, a UUID
     Application identifier is generated to identify the application on the GCM platform.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一次通过 `InstanceID.getInstance` 获取 `InstanceID` 时，会生成一个 UUID 应用标识符以在 GCM 平台上标识应用程序。
 - en: 'The instance ID may become invalid, if:'
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果以下情况发生，实例 ID 可能会变得无效：
 - en: The application explicitly deletes Instance ID (`Instance.deleteToken`)
+  id: totrans-62
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 应用程序明确删除实例 ID (`Instance.deleteToken`)
 - en: The device is factory reset
+  id: totrans-63
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设备进行了出厂重置
 - en: The application is uninstalled
+  id: totrans-64
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 应用程序被卸载
 - en: The user clears application data
+  id: totrans-65
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 用户清除应用程序数据
 - en: 'To receive a notification, each time the registration token requires a refresh,
     we will create a service that extends `InstanceIDListenerService`, registers to
     `com.google.android.gms.iid.InstanceID` intent, and includes it on the `AndroidManifest.xml`:'
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了接收通知，每次注册令牌需要刷新时，我们将创建一个扩展 `InstanceIDListenerService` 的服务，注册到 `com.google.android.gms.iid.InstanceID`
+    意图，并将其包含在 `AndroidManifest.xml` 中：
 - en: '[PRE7]'
+  id: totrans-67
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: The `onTokenRefresh` callback will be invoked when the registration token needs
     to be refreshed. This may occur if the security of the previous token has been
     compromised, such as with a suspicious use of the token. This procedure is usually
     initiated by the `instanceID` provider.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 当注册令牌需要刷新时，将调用 `onTokenRefresh` 回调。这可能发生在前一个令牌的安全受到损害的情况下，例如令牌被可疑使用。此过程通常由 `instanceID`
+    提供商启动。
 - en: Instance ID API is used to manage security tokens that authorize your application
     or your server to interact with the GCM Service.
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: Instance ID API 用于管理授权您的应用程序或您的服务器与 GCM 服务交互的安全令牌。
 - en: '![InstanceID listener](img/Image_B05062_10_03.jpg)'
+  id: totrans-70
   prefs: []
   type: TYPE_IMG
+  zh: '![InstanceID 监听器](img/Image_B05062_10_03.jpg)'
 - en: Beyond the creation of new tokens, the `InstanceID` singleton instance is able
     to delete tokens or even invalidate an `InstanceID`.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了创建新的令牌外，`InstanceID` 单例实例还能够删除令牌或甚至使 `InstanceID` 失效。
 - en: '[PRE8]'
+  id: totrans-72
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Receiving downstream messages
+  id: totrans-73
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 接收下行消息
 - en: With the basic blocks required to set up the GCM client already in place, in
     our first GCM example we will send a simple downstream message through the GCM
     Platform and print it as a notification on the Android Notification drawer.
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 在设置 GCM 客户端所需的基本块已经就绪的情况下，在我们的第一个 GCM 示例中，我们将通过 GCM 平台发送一条简单的下行消息，并将其作为通知打印到
+    Android 通知抽屉中。
 - en: To handle GCM messages, we will have to implement a service that extends from
     `GcmListenerService` and override the `onMessageReceived(String,Bundle)` method.
     Since `GcmReceiver` extends `WakefulBroadcastReceiver`, it is guaranteed that
     the CPU is going to be awake until the service completes the delivery.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了处理 GCM 消息，我们需要实现一个继承自 `GcmListenerService` 的服务，并重写 `onMessageReceived(String,Bundle)`
+    方法。由于 `GcmReceiver` 继承自 `WakefulBroadcastReceiver`，可以保证 CPU 将会保持唤醒状态直到服务完成消息的投递。
 - en: Our `GcmListenerService` subclass will receive a message from GCM and create
     an Android Notification as soon as it receives it.
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的 `GcmListenerService` 子类将在接收到消息后立即创建一个 Android 通知。
 - en: '[PRE9]'
+  id: totrans-77
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'We also need to register our `GcmListenerService` service class in the `AndroidManifest.xml`
     registering the service to receive the `com.google.android.c2dm.intent.RECEIVE`
     action:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还需要在 `AndroidManifest.xml` 中注册我们的 `GcmListenerService` 服务类，将服务注册为接收 `com.google.android.c2dm.intent.RECEIVE`
+    动作：
 - en: '[PRE10]'
+  id: totrans-79
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: To instigate the initial registration with GCM, we will create an Activity that
     will start the `RegistrationService's` `IntentService` to retrieve the required
     token. However, before we try to retrieve the token, we will have to check if
     the Google Play Services is available on the device, and that the version installed
     on this device is no older than the one required by this client.
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了启动与 GCM 的初始注册，我们将创建一个 Activity，该 Activity 将启动 `RegistrationService` 的 `IntentService`
+    以检索所需的令牌。然而，在我们尝试检索令牌之前，我们必须检查设备上是否提供了 Google Play 服务，并且安装的版本不早于客户端要求的版本。
 - en: 'Let''s get started by implementing the `Activty.onCreate` method, triggering
     interaction with the GCM platform:'
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从实现 `Activty.onCreate` 方法开始，触发与 GCM 平台的交互：
 - en: '[PRE11]'
+  id: totrans-82
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Before we start the registration service, `checkPlayServices` will verify if
     the Google Play Services is installed on the device. If the service is not available,
     a dialog box is shown to the user that allows the users to download it from the
     Play Store or enable it on the device system settings:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们开始注册服务之前，`checkPlayServices` 将验证设备上是否安装了 Google Play 服务。如果服务不可用，将向用户显示一个对话框，允许用户从
+    Play 商店下载它或在设备系统设置中启用它：
 - en: '[PRE12]'
+  id: totrans-84
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: When the `isGooglePlayServicesAvailable` returns success, we return true from
     the function and initiate the registration service.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 当 `isGooglePlayServicesAvailable` 返回成功时，我们从函数中返回 true 并启动注册服务。
 - en: When the function returns an error that can be resolved by the user, such as
     `SERVICE_VERSION_UPDATE_REQUIRED`, a localized dialog is shown to the user to
     correct the problem. The dialog could redirect the user to the Play Store if Google
     Play Services is out of date or missing, or to system settings if Google Play
     Services is disabled on the device.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 当函数返回一个可以通过用户操作解决的问题时，例如 `SERVICE_VERSION_UPDATE_REQUIRED`，将向用户显示一个本地化对话框以纠正问题。如果
+    Google Play 服务过时或缺失，对话框可能会将用户重定向到 Play 商店，或者如果设备上已禁用 Google Play 服务，则重定向到系统设置。
 - en: If the returned cannot be solved by a user action, we simply finish the current
     `Activity` and print a log message because the device will not be able to register
     in GCM and receive the downstream message.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果返回的错误不能通过用户操作解决，我们只需结束当前的 `Activity` 并打印一条日志消息，因为设备将无法在 GCM 中注册并接收下行消息。
 - en: Yes! We finished the application GCM bootstrap, and as soon as we start the
     `Activity` and register with GCM, the device will be ready to receive downstream
     messages from GCM.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 是的！我们完成了GCM引导程序的应用程序，一旦我们启动`Activity`并注册到GCM，设备就准备好接收GCM的下行消息。
 - en: Remember that our registration service will print a registration token to the
     log output, so don't forget to note it when you run the `MyChatActivity` for the
     first time.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 记住，我们的注册服务会将注册令牌打印到日志输出中，所以当你第一次运行`MyChatActivity`时，不要忘记记录它。
 - en: '[PRE13]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: To interact with GCM you could set up an HTTP or XMPP backend server that uses
     the server credentials to connect to the GCM Service. For simplicity and testing
     we will build and submit HTTP messages directly.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 要与GCM交互，你可以设置一个使用服务器凭证连接到GCM服务的HTTP或XMPP后端服务器。为了简单和测试，我们将直接构建和提交HTTP消息。
 - en: 'To send a downstream message to our device we will have to send HTTP POST a
     message with a JSON object in the payload, setting the field to `to` with our
     noted registration token and a `data` object field with our custom notification
     properties: `title` and `body` and `type.`'
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 要向我们的设备发送下行消息，我们必须发送一个包含JSON对象的HTTP POST消息，在有效载荷中设置`to`字段为我们的注册令牌，以及一个`data`对象字段，包含我们的自定义通知属性：`title`、`body`和`type`。
 - en: 'Here is a JSON-formatted message that will generate an Android notification
     as soon as `NotificationGCMHandler` receives it from GCM:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里是一个JSON格式的消息，一旦`NotificationGCMHandler`从GCM接收到它，就会生成一个Android通知：
 - en: '[PRE14]'
+  id: totrans-94
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'To submit HTTP messages to the GCM platform, you can use the curl command or
     use the chrome web application Postman ([http://www.getpostman.com/](http://www.getpostman.com/)).
     Here is the curl command that will submit the previous message to GCM:'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 要将HTTP消息提交到GCM平台，你可以使用curl命令或使用chrome网络应用程序Postman（[http://www.getpostman.com/](http://www.getpostman.com/)）。以下是提交先前消息到GCM的curl命令：
 - en: '[PRE15]'
+  id: totrans-96
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: Don't forget to replace the `<Server API Key>` with the API key generated on
     the Google Cloud Console registration and replace `<DeviceRegistrationToken>`
     with the token generated for your device. Notice that the downstream data messages
     have a maximum 4KB payload.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 不要忘记将`<Server API Key>`替换为在Google Cloud Console注册时生成的API密钥，并将`<DeviceRegistrationToken>`替换为你设备生成的令牌。请注意，下游数据消息的最大有效载荷为4KB。
 - en: 'If everything goes well with your GCM setup, your data object properties are
     passed to your `onMessageReceived()` method in the data bundle object and the
     GCM service will send you back a HTTP Response (200) with a message body similar
     to the one below:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你的GCM设置一切顺利，你的数据对象属性将传递到数据包对象中的`onMessageReceived()`方法，GCM服务将返回一个包含类似以下消息体的HTTP响应（200）：
 - en: '[PRE16]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: Receiving messages from topic
+  id: totrans-100
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 接收主题消息
 - en: The downstream messages allow us to send send short (4KB) messages to alert
     the user of new updates, new content or even reminders.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 下行消息允许我们发送短（4KB）消息来提醒用户有新的更新、新内容或甚至提醒。
 - en: A downstream message is a one-way communication channel where the users can
     receive messages, but they cannot respond to them directly or take any immediate
     action.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 下行消息是一个单向通信通道，用户可以接收消息，但不能直接响应它们或采取任何立即行动。
 - en: To build interactive experiences, such as a chat system, we will have to support
     a bidirectional communication where the user can receive downstream messages and
     also send upstream messages to other devices or groups of devices.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 要构建交互式体验，例如聊天系统，我们必须支持双向通信，用户可以接收下行消息，也可以向其他设备或设备组发送上行消息。
 - en: In our next example, we will build a simple group messaging system based on
     the GCM upstream messaging and topic messaging features. The group messaging system
     will allow multiple devices to publish text messages to a shared message channel.
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的下一个示例中，我们将基于GCM上行消息和主题消息功能构建一个简单的群组消息系统。群组消息系统将允许多个设备向共享消息通道发布文本消息。
 - en: GCM topic messaging allows your backend server to send a message to devices
     that have a particular topic. Once the GCM receives a message to a particular
     topic, it will route and deliver the message to the subscribed devices transparently
     using the list of subscribed devices managed on the GCM platform.
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: GCM主题消息允许你的后端服务器向具有特定主题的设备发送消息。一旦GCM收到特定主题的消息，它将透明地使用在GCM平台上管理的已订阅设备列表路由和传递消息。
 - en: 'A topic is identified by the name that follows the next regular expression:'
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 主题由以下正则表达式后面的名称标识：
 - en: '[PRE17]'
+  id: totrans-107
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: To start receiving messages related to a particular topic name, a GCM-registered
     client application will have to subscribe in GCM with its own registration token
     and the desired topic stream.
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 要开始接收与特定主题名称相关的消息，一个GCM注册客户端应用程序必须使用自己的注册令牌和所需的主题流在GCM中进行订阅。
 - en: 'First of all, we will update our `RegistrationIntentService` to subscribe our
     application to the `"/topics/forum"` message stream using the registration token
     received:'
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将更新我们的 `RegistrationIntentService`，使用接收到的注册令牌将我们的应用程序订阅到 `"/topics/forum"`
+    消息流：
 - en: '[PRE18]'
+  id: totrans-110
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: To unsubscribe the device from the GCM "forum" topic, we can invoke `GcmPubSub`'s
     `unsubscribe()` with the registration token and topic name.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 要将设备从GCM "论坛" 主题中取消订阅，我们可以使用注册令牌和主题名称调用 `GcmPubSub` 的 `unsubscribe()` 方法。
 - en: The topic messages are delivered to our `GcmListenerService` (`NotificationGCMHandler`)
     in the same way the push notification GCM messages were delivered in our previous
     example. The topic messages are delivered to our application, with the `from`
     field storing the topic name `/topics/forum`.
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 主题消息以与我们在上一个示例中推送通知GCM消息相同的方式发送到我们的 `GcmListenerService` (`NotificationGCMHandler`)。主题消息发送到我们的应用程序，其中
+    `from` 字段存储主题名称 `/topics/forum`。
 - en: 'I will give you an idea of what a typical topic message for our topic could
     look like:'
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 我将给出一个关于我们主题的典型主题消息的示例：
 - en: '[PRE19]'
+  id: totrans-114
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: The data object field is the field on the message that we might use to pass
     custom properties to the application. In our example, it carries information about
     the username and text written by the user.
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 数据对象字段是消息上的字段，我们可能用它来向应用程序传递自定义属性。在我们的示例中，它携带有关用户编写的用户名和文本的信息。
 - en: Next, and taking into account that `NotificationGCMHandler` will receive the
     topic messages sent from the GCM, we will update it to handle the topic messages
     received, and broadcast each topic message to any local `BroadcastReceiver`.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，考虑到 `NotificationGCMHandler` 将接收从GCM发送的主题消息，我们将更新它以处理接收到的主题消息，并将每个主题消息广播到任何本地
+    `BroadcastReceiver`。
 - en: 'Our `NotificationGCMHandler` will simply wrap the topic messages on the Intents
     and dispatch them to the local Activity within your process. This asynchronous
     communication technique, already explained in previous chapters, is faster and
     more secure as your messages don''t leave your application:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的 `NotificationGCMHandler` 将简单地封装主题消息到Intent中，并将它们调度到您进程内的本地Activity。这种异步通信技术，在之前的章节中已解释，由于您的消息不会离开您的应用程序，因此更快、更安全：
 - en: '[PRE20]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: With our `GcmListenerService` forwarding the messages received from our messaging
     topic, it is time to build the Activity that is going to display the messages
     received and publish messages to the group chat using the GCM upstream messages.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 随着 `GcmListenerService` 将从我们的消息主题接收到的消息转发，现在是时候构建一个将要显示接收到的消息并使用GCM上行消息将消息发布到群聊的Activity了。
 - en: 'Starting from the work done in the previous chapter, we will create a `MessagingActivity`
     that will also verify that Google Play Services is available and start the `RegistrationIntentService`
     when no registration token is available:'
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 从上一章完成的工作开始，我们将创建一个 `MessagingActivity`，它还将验证Google Play服务是否可用，并在没有注册令牌的情况下启动
+    `RegistrationIntentService`：
 - en: '[PRE21]'
+  id: totrans-121
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: To receive and display the topic messages in our Activity, we will create an
     anonymous `BroadcastReceiver` subclass that dynamically registers and unregisters
     the reception of local Intents whose action is `MSG_DELIVERY`.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在我们的Activity中接收和显示主题消息，我们将创建一个匿名 `BroadcastReceiver` 子类，该类可以动态注册和注销接收动作为 `MSG_DELIVERY`
+    的本地Intent。
 - en: 'Since we only want to receive the topic messages when the Activity is in the
     foreground, we will register and unregister to the local broadcasts on `onResume`
     and `onPause` callbacks:'
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于我们只想在Activity处于前台时接收主题消息，我们将在 `onResume` 和 `onPause` 回调中注册和注销到本地广播：
 - en: '[PRE22]'
+  id: totrans-124
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: All that remains is to display our group chat messages on the UI and implement
     the `BroacastReceiver` that receives the broadcast Intents and updates the UI
     with the message username and text.
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 剩下的工作就是在UI上显示我们的群聊消息，并实现接收广播Intent并使用消息用户名和文本更新UI的 `BroadcastReceiver`。
 - en: 'To process the Broadcast Intent, we must override the `onReceive` method of
     `BroacastReceiver` in order to receive local `Intent`:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 要处理广播Intent，我们必须覆盖 `BroadcastReceiver` 的 `onReceive` 方法以接收本地 `Intent`：
 - en: '[PRE23]'
+  id: totrans-127
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Now, if you submit a topic message to the GCM using the following `curl` command,
     you will see a new message popping up on the UI `TextView`:'
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，如果您使用以下 `curl` 命令向GCM提交主题消息，您将在UI `TextView`上看到一个新消息弹出：
 - en: '[PRE24]'
+  id: totrans-129
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Sending upstream messages
+  id: totrans-130
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 发送上行消息
 - en: Although we are able to receive the chat group messages, we are not able to
     interact with the message stream from the application. Additionally, to send and
     process upstream messages with the GCM platform, an application server that implements
     the XMPP Connection Server protocol is required to connect to the GCM servers
     and receive upstream XMPP messages.
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管我们能够接收聊天群组消息，但我们无法与应用程序的消息流进行交互。此外，为了使用GCM平台发送和处理上游消息，需要一个实现XMPP连接服务器协议的应用程序服务器来连接到GCM服务器并接收上游XMPP消息。
 - en: To deal with our group messages we built a very basic XMPP server that processes
     the upstream messages from the device and forwards the message to the topic message.
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了处理我们的群组消息，我们构建了一个非常基本的XMPP服务器，该服务器处理来自设备的上游消息，并将消息转发到主题消息。
 - en: The basic XMPP Server source code is available from the Packt Publishing website.
     Grab it from the Packt website, and, before you run it, update the static fields
     with your `SenderID` and your `ServerKey` in the `GCMServer.java` class file.
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 基本XMPP服务器源代码可在Packt Publishing网站上找到。从Packt网站获取它，在运行之前，请更新`GCMServer.java`类文件中的静态字段，包括你的`SenderID`和`ServerKey`。
 - en: '[PRE25]'
+  id: totrans-134
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: The server will connect to the GCM platform, initiate a XMPP session, and process
     all the messages delivered to the `<SENDER_ID>@gcm.googleapis.com`.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 服务器将连接到GCM平台，启动一个XMPP会话，并处理发送到`<SENDER_ID>@gcm.googleapis.com`的所有消息。
 - en: 'To generate an upstream message, we created a `EditText` on the UI and created
     a button that, once fired, will send an upstream message. To send an upstream
     message on the GCM platform, the application needs to provide the following fields:'
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 要生成上游消息，我们在UI上创建了一个`EditText`，并创建了一个按钮，一旦触发，就会发送上游消息。要在GCM平台上发送上游消息，应用程序需要提供以下字段：
 - en: 'The address of our server on the GCM platform: `<SENDER_ID>@gcm.googleapis.com`.'
+  id: totrans-137
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 我们在GCM平台上的服务器地址是`<SENDER_ID>@gcm.googleapis.com`。
 - en: A unique message identifier (`message_id`)
+  id: totrans-138
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 唯一的消息标识符（`message_id`）
 - en: A message payload with a custom key/value pairs
+  id: totrans-139
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 带有自定义键/值对的报文负载
 - en: 'Now, let''s update `MessagingActivity` to send the upstream message based on
     the `EditText` input field. Since the upstream dispatch requires network access,
     and as you know we cannot perform networking on the main `Thread`, we must perform
@@ -620,130 +923,184 @@
     the network operation in the background, catching any exception that happen during
     the upstream request. This special purpose class could be used in background tasks
     that don''t produce any results:'
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们更新`MessagingActivity`以根据`EditText`输入字段发送上游消息。由于上游分发需要网络访问，而且正如你所知，我们无法在主`Thread`上执行网络操作，我们必须使用`AsyncTask`子类在主线程之外执行。在`Activity`类中，我们实现了一个基本的异步结构`AsyncJob`，用于在后台执行网络操作，并捕获上游请求过程中发生的任何异常。这个特殊用途的类可以用于不产生任何结果的背景任务：
 - en: '[PRE26]'
+  id: totrans-141
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: With `AsyncJob`, we declared three abstract methods that any `AsyncJob` subclass
     should provide implementations. `runOnBackground` should implement the background
     task, `OnFailure` should be used to handle execution exceptions, and the `onSuccess`
     callback is invoked to inform the developer that the job has been successfully
     completed.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`AsyncJob`，我们声明了三个抽象方法，任何`AsyncJob`子类都应该提供实现。`runOnBackground`应该实现后台任务，`OnFailure`应该用于处理执行异常，而`onSuccess`回调被调用以通知开发者任务已成功完成。
 - en: 'Now we are ready to implement the `OnClicklistener` that will build up an upstream
     message and dispatch it to our XMPP server in the background:'
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们已经准备好实现`OnClicklistener`，它将在后台构建上游消息并将其发送到我们的XMPP服务器：
 - en: '[PRE27]'
+  id: totrans-144
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: In our example, we created a `Bundle` object with all the payload data that
     we want to dispatch. Beyond that, we created a unique message ID using the `java.util.Random.nextInt`
     instance method.
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例中，我们创建了一个包含所有要分发的有效载荷数据的`Bundle`对象。除此之外，我们还使用`java.util.Random.nextInt`实例方法创建了一个唯一的消息ID。
 - en: This message receives as parameters the address following the format `<SENDER_ID>@gcm.googleapis.com`,
     the unique message ID string generated from the random integer, and the bundle
     with your payload.
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 此消息接收以下参数：遵循格式`<SENDER_ID>@gcm.googleapis.com`的地址、从随机整数生成的唯一消息ID字符串，以及包含你的有效载荷的bundle。
 - en: Once we invoke the `GoogleCloudMessaging.send`, if an active connection is available,
     the new upstream message will be sent immediately, otherwise the message will
     be queued. Once the connectivity is re-established, the queued messages are dispatched
     to the GCM servers.
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们调用`GoogleCloudMessaging.send`，如果有一个活跃的连接可用，新的上游消息将立即发送，否则消息将被排队。一旦重新建立连接，排队中的消息将被发送到GCM服务器。
 - en: Note
+  id: totrans-148
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: If the client attempts to send more messages after the 20-message limit is reached,
     it returns an error.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果客户端在达到20条消息限制后尝试发送更多消息，它将返回一个错误。
 - en: The `GoogleCloudMessaging` API will reuse and manage the connection to the GCM
     platform in an efficient way, maximizing the device battery life transparently
     for us.
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: '`GoogleCloudMessaging` API将以高效的方式重用和管理与GCM平台的连接，为我们透明地最大化设备电池寿命。'
 - en: As soon as the message is received by our XMPP server, the message is dispatched
     to `/topics/forum` and, consequently, it will update the UI message stream with
     the message we typed.
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦消息被我们的XMPP服务器接收，消息将被发送到`/topics/forum`，因此它将更新我们输入的消息的UI消息流。
 - en: GcmListenerService delivery callbacks
+  id: totrans-152
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: GcmListenerService投递回调
 - en: 'In some situations, when there is no connectivity with the GCM servers due
     to lack of network connectivity, the message could remain on the local queues
     for a long period of time. So, in order to discard a message that remains on the
     queue without being sent to the GCM Service within the time specified, the `GoogleCloudMessaging`
     API provides an additional send method that could receive a TTL (Time to Live)
     time to set the message expire time:'
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: 在某些情况下，由于缺乏网络连接，无法与GCM服务器建立连接时，消息可能会在本地队列中长时间保留。因此，为了在指定时间内丢弃未发送到GCM服务的消息，`GoogleCloudMessaging`
+    API提供了一个额外的发送方法，该方法可以接收一个TTL（生存时间）时间来设置消息过期时间：
 - en: '[PRE28]'
+  id: totrans-154
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: This works great when you have messages that are only relevant if they arrive
     within a certain time frame. With a time to live of 0, we'll attempt to send and
     return an error immediately if we're not connected. This situation does not apply
     for our example, so we will keep the original code with the send method that does
     not discard an old unsent message.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 当您有只在特定时间范围内相关的消息时，这效果很好。如果生存时间为0，我们将在不连接的情况下立即尝试发送并返回错误。这种情况不适用于我们的示例，因此我们将保留原始代码，使用不丢弃旧未发送消息的发送方法。
 - en: It is important to understand that the application GCM client is only able to
     queue a maximum of 20 messages when there is no connection to the GCM platform
     for a long period of time.
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 重要的是要理解，当长时间没有连接到GCM平台时，应用GCM客户端只能最多排队20条消息。
 - en: 'Beyond the upstream expiration feature, the `GcmListenerService` also allows
     us to receive the upstream messages'' dispatch statuses by overriding the `onMessageSent`
     and `onSendError` callbacks:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了上游过期功能之外，`GcmListenerService`还允许我们通过重写`onMessageSent`和`onSendError`回调来接收上游消息的投递状态：
 - en: '[PRE29]'
+  id: totrans-158
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: The `onMessageSent` callback is invoked when the message is delivered to the
     GCM and the is called when there is an error dispatching the message to the GCM
     connection server. Notice that both callbacks are invoked with the message identifier
     as argument, so you should use this identifier to pinpoint the message that was
     sent or failed with an error.
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 当消息被投递到GCM并且有错误将消息投递到GCM连接服务器时，将调用`onMessageSent`回调。请注意，这两个回调都带有消息标识符作为参数，因此您应该使用此标识符来定位已发送或因错误而失败的消息。
 - en: For efficiency reasons, the GCM message delivery reports are delivered in batches,
     so don't expect to receive the callback execution immediately after you upload
     a single message.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于效率原因，GCM消息投递报告是以批量形式交付的，因此不要期望在您上传单条消息后立即收到回调执行。
 - en: 'To receive upstream messages'' dispatch statuses in our chat example, we will
     update our `NotificationGCMHandler` and override the `onMessageSent` and `onSendError`:'
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在我们的聊天示例中接收上游消息的投递状态，我们将更新我们的`NotificationGCMHandler`并重写`onMessageSent`和`onSendError`：
 - en: '[PRE30]'
+  id: totrans-162
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: The callback methods defined in our `GcmListenerService` callbacks we print
     a message to the application log output with the message that was sent or failed.
     The dispatch of a message could fail if the message expiration time is reached
     or when a maximum size of upstream queued messages has been reached.
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的`GcmListenerService`回调中定义的回调方法将打印一条消息到应用程序日志输出，其中包含已发送或失败的消息。如果消息过期时间到达或达到上游排队消息的最大大小时，消息的投递可能会失败。
 - en: Sweet! We've finished our group chat based on the GCM platform. During our journey
     we learned how to send a topic message upstream and downstream using a battery-efficient
     API that maintains a network connection with the Google servers. The API allows
     us to create bidirectional communication channels between the server and a device,
     or between a group of devices.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 太好了！我们已经完成了基于 GCM 平台的群聊。在我们的旅程中，我们学习了如何使用一个电池高效的 API 向上和向下发送主题消息，该 API 维护与 Google
+    服务器的网络连接。该 API 允许我们在服务器和设备之间，或设备组之间创建双向通信通道。
 - en: Executing tasks with GCM Network Manager
+  id: totrans-165
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用 GCM 网络管理器执行任务
 - en: Beyond the messaging framework, the GCM library comes with `GcmNetworkManager`,
     an API that allows us to efficiently schedule recurrent or periodic tasks on all
     the devices that run API level 9 (Android 2.1) and above. For devices running
@@ -752,221 +1109,327 @@
     the JobScheduler API"), *Exploring the JobScheduler API*. In the same way as the
     `JobScheduler` API, it will try to batch the jobs and reduce the number of wakeups
     from idle state to improve the battery life of your user's device.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了消息框架之外，GCM 库还包含 `GcmNetworkManager`，这是一个 API，允许我们在 API 级别 9（Android 2.1）及以上运行的设备上高效地安排重复或周期性任务。对于运行
+    API 级别 21（Lollipop）及以上的设备，GCM 网络管理器内部使用本地的 `JobScheduler` API，这在 [第 7 章](ch07.html
+    "第 7 章。探索 JobScheduler API") 中详细介绍了，*探索 JobScheduler API*。与 `JobScheduler` API
+    一样，它将尝试批量处理作业并减少从空闲状态唤醒的次数，以改善用户设备的电池寿命。
 - en: Moreover, with GCM Network Manager we are also able to set criteria that should
     meet to start the job execution, such as when the device is in a charging state
     or an unmetered WIFI connectivity is available. Although the GCM API offers us
     the same criteria offered by the `JobScheduler` API, it can be used on older and
     newer devices that have Google Play Services installed.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，使用 GCM 网络管理器，我们还可以设置启动作业执行应满足的条件，例如当设备处于充电状态或可不计费 WIFI 连接可用时。尽管 GCM API 提供了与
+    `JobScheduler` API 相同的标准，但它可以用于安装了 Google Play 服务的旧设备和新设备。
 - en: So, before you try to use it, you need to make sure that Google Play Services
     version is available on the device using the `GoogleApiAvailability` class, as
     we did for the GCM example.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，在尝试使用它之前，您需要确保设备上可用的 Google Play 服务版本，使用 `GoogleApiAvailability` 类，就像我们在
+    GCM 示例中所做的那样。
 - en: Take a look at the `checkPlayServices()` function from our previous example
     to a more complete solution. The previous function will display dialog when any
     user action is required to update or install Google Play Services.
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看我们之前示例中的 `checkPlayServices()` 函数，以获得更完整的解决方案。之前的函数将在需要任何用户操作来更新或安装 Google
+    Play 服务时显示对话框。
 - en: 'We can schedule a task execution on GCM Network Manager to run under certain
     conditions, such as:'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以在 GCM 网络管理器上安排任务执行，在以下条件下运行，例如：
 - en: When certain network connectivity is available (any network available, unmetered
     network connectivity)
+  id: totrans-171
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当有特定的网络连接可用（任何网络可用，不计费的网络连接）
 - en: When the device is plugged to the charger
+  id: totrans-172
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当设备连接到充电器时
 - en: A task that runs within a predefined time window in the future
+  id: totrans-173
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在未来预定义的时间窗口内运行的任务
 - en: Specify the task to run even after a reboot
+  id: totrans-174
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 指定即使在重启后也要运行的任务
 - en: While the criteria supported are the same as the Scheduler API covered previously
     and available on devices that run on Android Lollipop, this API requires some
     extra mandatory criteria that you should specify to register a service task execution
     on the GCM Network.
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然支持的标准与之前覆盖的 Scheduler API 相同，并且适用于运行 Android Lollipop 的设备，但此 API 需要一些额外的必填标准，您应指定以在
+    GCM 网络上注册服务任务执行。
 - en: 'To build and construct a GCM task, two Builder classes are available: The `OneoffTask.Builder`
     used to create single shot tasks, and the `PeriodicTask.Builder` used register
     a task that runs recurrently at regular intervals.'
+  id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 要构建和构造一个 GCM 任务，有两个 Builder 类可用：用于创建单次任务的 `OneoffTask.Builder`，以及用于注册定期以固定间隔运行的任务的
+    `PeriodicTask.Builder`。
 - en: Building a one shot task
+  id: totrans-177
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 构建一次性任务
 - en: 'A `OneoffTask` is a task that will execute once, within a specified time window
     in the future. The options available to configure a `OneoffTask` from the `OneoffTask.Builder`
     are:'
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OneoffTask` 是一个将在未来指定的时间窗口内执行一次的任务。从 `OneoffTask.Builder` 配置 `OneoffTask`
+    可用的选项包括：'
 - en: Execution Window Range (Mandatory)
+  id: totrans-179
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 执行窗口范围（必填）
 - en: Tag Identifier (Mandatory)
+  id: totrans-180
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 标签标识符（必填）
 - en: '`GcmTaskService` subclass that runs our task(Mandatory)'
+  id: totrans-181
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 运行我们的任务所需的 `GcmTaskService` 子类（必填）
 - en: Extra Arguments (Optional)
+  id: totrans-182
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 额外参数（可选）
 - en: Job Persistence (Optional)
+  id: totrans-183
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 任务持久性（可选）
 - en: Required Network (Optional)
+  id: totrans-184
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 必需网络（可选）
 - en: Charging Required (Optional)
+  id: totrans-185
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 充电需求（可选）
 - en: Update Current Task (Optional)
+  id: totrans-186
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 更新当前任务（可选）
 - en: In our next example, we will make use of GCM Network Manager to schedule the
     backup of account settings. The account settings, when updated, are stored in
     a local file and, once the backup runs, the account details will be pushed to
     our XMPP server over an upstream message. For saving our account settings, we
     will create an Activity that displays a form to fill our personal details.
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的下一个示例中，我们将使用GCM网络管理器来安排账户设置的备份。当账户设置更新时，它们将存储在本地文件中，一旦备份运行，账户详情将通过上游消息推送到我们的XMPP服务器。为了保存我们的账户设置，我们将创建一个Activity，显示一个表单来填写我们的个人详情。
 - en: The form will have a button that, once clicked, will save our account details
     on a local file and register a GCM Network task execution to push our details
     to our network XMPP Server.
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 表单将包含一个按钮，点击后会将我们的账户详情保存到本地文件，并注册一个GCM网络任务执行，将我们的详情推送到我们的网络XMPP服务器。
 - en: To extend the battery life and reduce our metered mobile internet usage, we
     will register our backup task to run only when the WIFI network is available and
     the device is charging, at most 4 hours after scheduling.
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了延长电池寿命并减少我们的计费移动互联网使用，我们将我们的备份任务注册为仅在WIFI网络可用且设备正在充电时运行，最多在调度后4小时内。
 - en: 'Before we register our task on GCM Network Manager, we will add our `GcmTaskService`
     to the application manifest:'
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们将任务注册到GCM网络管理器之前，我们将我们的`GcmTaskService`添加到应用程序清单中：
 - en: '[PRE31]'
+  id: totrans-191
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: In the Android Manifest we added Intent filters required to receive GCM start
     broadcasts and, to protect our service from being started by programmes other
     than Google Play Services, we added the `com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE`
     permission.
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android清单中，我们添加了接收GCM启动广播所需的Intent过滤器，并且为了保护我们的服务不被除Google Play Services之外的其他程序启动，我们添加了`com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE`权限。
 - en: Next, we are ready to register a one-off task to backup the account details
     stored locally on the application default shared preference file. Whenever the
     user updates the account details and taps the save button on the UI, the account
     details will be stored locally and a `OneoffTask` task is built and registered
     on GCM NM to publish the changes on our network servers.
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们准备注册一个一次性任务来备份存储在应用程序默认共享偏好文件中的本地账户详情。每当用户更新账户详情并在UI上点击保存按钮时，账户详情将被本地存储，并在GCM
+    NM上构建和注册一个`OneoffTask`任务来发布更改到我们的网络服务器。
 - en: 'Let''s see what the save button `OnClickListener` looks like:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看保存按钮的`OnClickListener`是什么样的：
 - en: '[PRE32]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: To register tasks from your `Activity`, we obtained an instance of `GcmNetworkManage`r
     using the `Activity` context. Next, we created a `OneoffTask.Builder` object and
     set the task to start the `MyBackupService` service to complete the task and to
     run the task at least 4 hours after the scheduling.
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 要从您的`Activity`注册任务，我们使用`Activity`上下文获取`GcmNetworkManage`r的实例。接下来，我们创建了一个`OneoffTask.Builder`对象，并将任务设置为启动`MyBackupService`服务以完成任务，并在调度后至少4小时运行任务。
 - en: Notice that the framework will start your job as soon as all the criteria are
     met and taking into account other jobs scheduled to run. As explained before,
     the GCM NM will delay the job execution and batch jobs to reduce the number of
     CPU wakeups from idle state.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意，框架将在所有条件都满足并且考虑到其他计划运行的任务的情况下立即启动您的作业。如前所述，GCM NM将延迟作业执行并批量作业以减少从空闲状态唤醒CPU的次数。
 - en: 'Now, we will create the `MyBackupService` that extends from `GcmTaskService`
     and implements the following method:'
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将创建一个扩展自`GcmTaskService`并实现以下方法的`MyBackupService`：
 - en: '[PRE33]'
+  id: totrans-199
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Our `OnRunTask` method will publish our account detail updates to our XMPP
     server:'
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的`OnRunTask`方法将发布我们的账户详情更新到我们的XMPP服务器：
 - en: '[PRE34]'
+  id: totrans-201
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: To execute the `onRunTask` method, the `GcmTaskService` started by GCM NM will
     spawn a background thread with `THREAD_PRIORITY_BACKGROUND` priority and will
     keep the device awake holding CPU `Wakelock` for at most 3 minutes. After 3 minutes
     of execution, if your task has not returned, GCM NM considers that your task has
     timed out, and will release the CPU `Wakelock`.
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了执行`onRunTask`方法，GCM NM启动的`GcmTaskService`将使用`THREAD_PRIORITY_BACKGROUND`优先级创建一个后台线程，并保持设备唤醒，持有CPU
+    `Wakelock`最多3分钟。执行3分钟后，如果您的任务没有返回，GCM NM认为您的任务已超时，并将释放CPU `Wakelock`。
 - en: Note
+  id: totrans-203
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: If your service receives more than one request at once, you should serialize
     the job execution with a synchronized section to avoid thread safety issues.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您的服务一次接收多个请求，您应该使用同步段序列化作业执行，以避免线程安全问题。
 - en: The result code returned by `onRunTask` will determine the task execution success
     (`RESULT_SUCCESS`), failure (`RESULT_FAILURE`) or failure with reschedule (`RESULT_RESCHEDULE`).
     In our particular example, if an exception is thrown during the upstream message
     submission the result code `RESULT_RESCHEDULE` returned will force the task to
     be re-executed again after a back-off period (exponential).
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: '`onRunTask` 返回的结果代码将决定任务的执行成功（`RESULT_SUCCESS`）、失败（`RESULT_FAILURE`）或失败后重新安排（`RESULT_RESCHEDULE`）。在我们的特定示例中，如果在提交上行消息期间抛出异常，返回的结果代码
+    `RESULT_RESCHEDULE` 将强制任务在退避期（指数退避）后再次执行。'
 - en: Summary
+  id: totrans-206
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In this chapter we learned how to send and receive data using a battery-efficient
     communication channel provide by GCM Platform.
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们学习了如何使用GCM平台提供的节能通信通道发送和接收数据。
 - en: First, we learned the differences between polling and push/pull communication
     techniques to interact with network servers. The push and pull messaging used
     by GCM is able to reduce the battery efficiency of your application by avoiding
     redundant server queries to keep the user's data up to date.
+  id: totrans-208
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们学习了轮询和推送/拉取通信技术之间的区别，以与网络服务器交互。GCM使用的推送和拉取消息能够通过避免重复的服务器查询来更新用户数据，从而降低应用程序的电池效率。
 - en: In the meantime, we learned how to setup and configure the GCM library on our
     application. To interact with Google Services, our device obtained a `instanceID`
     and registration token to authenticate and identify our device on the GCM service.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，我们学习了如何在我们的应用程序中设置和配置GCM库。为了与Google服务交互，我们的设备获得了一个 `instanceID` 和注册令牌，以在GCM服务上验证和识别我们的设备。
 - en: Next, we learned how handle notification messages and topic messages on our
     application and we interacted with a custom XMPP server using GCM upstream messages.
     At the same time, we built group chat system that is able to aggregate messages
     from different users in a unified stream of messages displayed on the screen.
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们学习了如何在我们的应用程序中处理通知消息和主题消息，并使用GCM上行消息与自定义XMPP服务器进行交互。同时，我们构建了一个群聊系统，该系统能够从不同的用户那里聚合消息，并在屏幕上显示一个统一的消息流。
 - en: Finally, we learned how to use GCM Network Manager to schedule network tasks
     that run when certain criteria are meet on the device such as the device is connected
     to the WIFI network.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们学习了如何使用GCM网络管理器来安排网络任务，这些任务在设备满足某些条件时运行，例如设备连接到WIFI网络。
 - en: In the next chapter, we will introduce the reader to the `RXJava`, a library
     used to compose asynchronous and event-based tasks on Java by using observable
     data streams.
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将向读者介绍 `RXJava`，这是一个用于通过可观察数据流在Java中组合异步和基于事件的任务的库。
