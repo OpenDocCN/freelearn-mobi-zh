@@ -254,13 +254,13 @@ TLS 使用受信任的 CA 颁发的数字证书来验证服务器的身份。这
 
 用户登录并使用 HTTPS over TLS 提供用户名和密码。用户名和密码由冒号连接成字符串：
 
-```kt
+```java
 username:password
 ```
 
 字符串随后被编码为 Base64 并作为 **HTTP 基本认证**的一部分传递到 HTTP 标头。由于它是 HTTPS，因此标头也是加密的。登录请求等同于以下命令：
 
-```kt
+```java
 curl -i http://api.example.com/api/sign-in \
   -H "Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ="
 ```
@@ -283,7 +283,7 @@ IdP 确认用户名和密码确实存在且匹配，然后向客户端发出一�
 
 经身份验证的用户发起业务请求。客户端将带有附加到 HTTP 头部的访问令牌作为`Bearer`令牌发送请求到服务器：
 
-```kt
+```java
 curl -i http://api.example.com/api/business-request \
   -H "Authorization: Bearer mytoken123"
 ```
@@ -504,7 +504,7 @@ ABAC 授予与用户、资源和环境相关的属性权限。它提供了最灵
 
 工程师采用的一种常见技术是重写 Kotlin 数据类的`toString`函数：
 
-```kt
+```java
 data class UserAccount(
     val username: String,
     val password: String,
@@ -518,7 +518,7 @@ data class UserAccount(
 
 这种方法有效，但因为它需要编写大量的重写函数，所以不可扩展。作为替代，值包装器可以有效地工作，如下所示：
 
-```kt
+```java
 data class Secret<T> (val value: T) {
     override fun toString(): String = "*"
 }
@@ -530,7 +530,7 @@ data class Secret<T> (val value: T) {
 
 1.  设置的第一步是其 Gradle 插件：
 
-    ```kt
+    ```java
     plugins {
         id("dev.zacsweers.redacted") version "1.10.0"
     }
@@ -538,7 +538,7 @@ data class Secret<T> (val value: T) {
 
 1.  其次，定义一个自定义的`Redacted`注解类：
 
-    ```kt
+    ```java
     @Retention(AnnotationRetention.SOURCE)
     @Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS)
     annotation class Redacted
@@ -546,7 +546,7 @@ data class Secret<T> (val value: T) {
 
 1.  然后，配置插件以使用此注解，并在`build.gradle.kts`中配置屏蔽字符：
 
-    ```kt
+    ```java
     redacted {
         redactedAnnotation = "redacted/Redacted"
         replacementString = "*"
@@ -555,7 +555,7 @@ data class Secret<T> (val value: T) {
 
 我们有以下用`Redacted`注解的数据类：
 
-```kt
+```java
 @Redacted
 data class BankAccount(
     val iban: String,
@@ -573,7 +573,7 @@ data class UserAccount(
 
 fun main() {
 
-```kt
+```java
     println("${BankAccount("Iban", "bic", "holderName")}")
     println("${UserAccount("username", "password", LocalDate.now())}")
     println(
@@ -584,7 +584,7 @@ fun main() {
 
 我们有以下结果：
 
-```kt
+```java
 BankAccount(*)
 UserAccount(username=*, password=*, createdAt=2024-10-09)
 Secret wrapper: *

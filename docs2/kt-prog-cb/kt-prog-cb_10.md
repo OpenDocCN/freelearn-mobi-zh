@@ -34,7 +34,7 @@ SQLite 是一个关系型数据库。Android 自带内置的 SQLite 数据库。
 
 我们将使用 Android Studio 3.0 进行编码。首先，我们需要将`anko-sqlite`添加到我们的`build.gradle`文件中：
 
-```kt
+```java
 dependencies {
     compile "org.jetbrains.anko:anko-sqlite:$anko_version"
 }
@@ -50,7 +50,7 @@ Anko 为我们内置的 SQLite API 提供了一个包装器，这有助于消除
 
 查看以下代码，这是一个简单的数据库辅助工具，我将在示例中使用它：
 
-```kt
+```java
 class DatabaseHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "SupportDatabase", null, 1) {
     companion object {
         private var instance: DatabaseHelper? = null
@@ -83,7 +83,7 @@ class DatabaseHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "SupportDataba
 
 我们可以通过将其添加为上下文的扩展属性来提供对数据库的访问。这允许任何需要上下文的类访问数据库。以下代码将数据库添加为上下文的扩展属性：
 
-```kt
+```java
 // Access property for Context
 val Context.database: DatabaseHelper
     get() = DatabaseHelper.getInstance(getApplicationContext())
@@ -93,7 +93,7 @@ val Context.database: DatabaseHelper
 
 现在，这是我的活动代码，其中包含姓名和消息字段，在按下 Enter 按钮时，详细信息将存储在数据库中：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,7 +172,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  对于`Requests`表，我们有`name`和`message`字段，我们可以在数据库助手的`onCreate`方法中直接创建它们，如下所示：
 
-```kt
+```java
 db.createTable("Requests", true,
     "id" to INTEGER + PRIMARY_KEY + UNIQUE,
     "name" to TEXT,
@@ -183,7 +183,7 @@ db.createTable("Requests", true,
 
     这里提供了我们的`Customer`数据类的代码：
 
-```kt
+```java
 data class Customer(val id: Int, val name: String, val phone_num: String) {
     companion object {
         val COLUMN_ID = "id"
@@ -196,7 +196,7 @@ data class Customer(val id: Int, val name: String, val phone_num: String) {
 
 1.  现在，我们将使用这个数据类来创建我们的表，如下所示：
 
-```kt
+```java
 db.createTable(Customer.TABLE_NAME,
         true,
         Customer.COLUMN_ID to INTEGER + PRIMARY_KEY,
@@ -206,7 +206,7 @@ db.createTable(Customer.TABLE_NAME,
 
 1.  以下是在为 drop tables 填充代码后，我们的数据库助手最终的样子：
 
-```kt
+```java
 class DatabaseHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "SupportDatabase", null, 1) {
     companion object {
         private var instance: DatabaseHelper? = null
@@ -262,7 +262,7 @@ val Context.database: DatabaseHelper
 
 1.  要注入对象，你只需在变量前添加`@Inject`注解，然后对象就会被注入到那里。让我们看看以下示例：
 
-```kt
+```java
 @Inject
 lateinit var mPresenter:AddActivityMvpPresenter
 ```
@@ -271,7 +271,7 @@ lateinit var mPresenter:AddActivityMvpPresenter
 
 1.  另一种方法是构造函数注入。为了理解它，让我们看看以下代码：
 
-```kt
+```java
 @Module
 class AddActivityModule {
   @Provides @ControllerScope
@@ -281,7 +281,7 @@ class AddActivityModule {
 
 1.  如你所见，我们在`providesAddActivityPresenter`中发送了`AddActivityPresenter`，但模块没有提供它。除非你按照以下方式提供`AddActivityPresnter`，否则这通常不会起作用：
 
-```kt
+```java
 class AddActivityPresenter @Inject constructor(var mDataManager:DataManager):AddActivityMvpPresenter
 ```
 
@@ -303,7 +303,7 @@ class AddActivityPresenter @Inject constructor(var mDataManager:DataManager):Add
 
 1.  现在，让我们将一个按钮添加到第一个食谱中现有的布局中；点击时，它应该从我们的`Requests`表中检索所有数据。查看以下更新后的代码，其中我添加了一个带有点击监听器的按钮：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -378,7 +378,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  我正在使用 Anko DSL 来创建我的活动的布局。正如我们在之前的食谱中讨论的那样，我们在`database.use{...}`块内执行所有数据库操作。要从数据库中读取数据，我们使用`select`函数。语法如下：
 
-```kt
+```java
 db.select(tableName, vararg columns) // where db is an instance of the SQLiteDatabase
 ```
 
@@ -390,7 +390,7 @@ db.select(tableName, vararg columns) // where db is an instance of the SQLiteDat
 
 这是输出：
 
-```kt
+```java
 11-18 18:21:34.709 12523-12523/android.my_company.com.helloworldapp D/request: name 1: request 1
 11-18 18:21:34.709 12523-12523/android.my_company.com.helloworldapp D/request: name 2: request 2
 11-18 18:21:34.709 12523-12523/android.my_company.com.helloworldapp D/request: name 3 : request 3
@@ -422,7 +422,7 @@ db.select(tableName, vararg columns) // where db is an instance of the SQLiteDat
 
 1.  让我们尝试另一个例子。在这个例子中，我们将使用 `where` 子句从数据库中选择数据：
 
-```kt
+```java
 select("Requests")
     .whereArgs("(id > {userId})",
         "userId" to 1)
@@ -430,14 +430,14 @@ select("Requests")
 
 这是上一个查询的输出：
 
-```kt
+```java
 11-18 21:11:04.328 18149-18149/android.my_company.com.helloworldapp D/request: name 2: request 2
 11-18 21:11:04.329 18149-18149/android.my_company.com.helloworldapp D/request: name 3 : request 3
 ```
 
 1.  在获取查询结果后，我们还需要解析结果。我们从查询中获取一个游标，并使用 Anko 提供的方法，我们可以轻松地将它们解析到常规类中。在上一个例子中，我们创建了一个名为 `Request` 的类：
 
-```kt
+```java
 class Request(val id: Int, val name: String, val message: String)
 ```
 
@@ -451,7 +451,7 @@ class Request(val id: Int, val name: String, val message: String)
 
 我们在上一个例子中使用了 `parseList`。你可以传递行解析器或映射解析器，你也可以使用你自定义类的 `classParser`，它传递一个行解析器，如下所示：
 
-```kt
+```java
 val rowParser = classParser<Person>()
 ```
 
@@ -469,7 +469,7 @@ val rowParser = classParser<Person>()
 
 1.  让我们从创建一个 `Customer` 类开始，作为我们的 `customers` 表的模型：
 
-```kt
+```java
 data class Customer(val id: Int, val name: String, val phone_num: String) {
     companion object {
         val COLUMN_ID = "id"
@@ -482,7 +482,7 @@ data class Customer(val id: Int, val name: String, val phone_num: String) {
 
 1.  现在，我们将编写代码在数据库辅助类中创建 `customers` 表。查看以下代码：
 
-```kt
+```java
 class DatabaseHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "SupportDatabase", null, 1) {
     companion object {
         private var instance: DatabaseHelper? = null
@@ -516,7 +516,7 @@ val Context.database: DatabaseHelper
 
 1.  现在，我们将创建一个表单来输入客户，并使用`select`函数显示数据库表中的所有客户。我们将使用`parseList`方法获取结果游标中的行作为`List`。我们需要在`parseList`方法中传递一个行解析器或映射解析器。这样做最简单的方法是使用 Anko 提供的`classParser`，并使用我们的`Customer`类构造函数来获取行解析器，如下所示：
 
-```kt
+```java
 var customers = database.use {
     select(Customer.TABLE_NAME)
     .parseList(classParser<Customer>())
@@ -527,7 +527,7 @@ var customers = database.use {
 
 下面是我的包含 DSL 布局的活动版本：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -619,13 +619,13 @@ class MainActivity : AppCompatActivity() {
 
 1.  在上一个教程中，我们使用`parseList`获取行列表作为对象。如果我们只需要获取一行作为对象，那么我们需要使用`parseSingle`。以下为`parseSingle`的语法：
 
-```kt
+```java
 parseSingle(rowParser): T
 ```
 
 1.  现在我们以以下方式在我们的前一个代码中使用它：
 
-```kt
+```java
 btn_read.onClick {
     var c = database.use {
         select(Customer.TABLE_NAME)
@@ -639,7 +639,7 @@ btn_read.onClick {
 
 1.  我们使用`parseSingle`是因为我们将在游标中只得到一行，但如果从游标中获取零行，即我们得到一个空游标，那么我们会得到一个异常：
 
-```kt
+```java
 android.database.sqlite.SQLiteException: parseSingle accepts only cursors with a single entry
 ```
 
@@ -651,7 +651,7 @@ android.database.sqlite.SQLiteException: parseSingle accepts only cursors with a
 
 下面是如何在我们的代码中使用它的示例：
 
-```kt
+```java
 btn_read.onClick {
     var c = database.use {
         select(Customer.TABLE_NAME)
@@ -667,7 +667,7 @@ btn_read.onClick {
 
 如果表为空，则输出如下：
 
-```kt
+```java
 11-18 21:11:04.329 18149-18149/android.my_company.com.helloworldapp D/customer: null (null)
 ```
 
@@ -679,7 +679,7 @@ btn_read.onClick {
 
 我将使用 Android Studio 3 来编写代码。你可以通过在你的`build.gradle`文件中添加以下行来将`anko-sqlite`依赖项添加到你的项目中开始：
 
-```kt
+```java
 dependencies {
     compile "org.jetbrains.anko:anko-sqlite:$anko_version"
 }
@@ -693,7 +693,7 @@ dependencies {
 
 1.  让我们从我们的数据库助手开始，我们将创建一个包含`name`、`message`和`id`字段的`Requests`表，如下所示：
 
-```kt
+```java
 class DatabaseHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "SupportDatabase", null, 1) {
     companion object {
         private var instance: DatabaseHelper? = null
@@ -726,7 +726,7 @@ val Context.database: DatabaseHelper
 
 1.  现在，让我们创建一个活动，其中包含一个表单，用于接收姓名和消息并将其存储在数据库中。我正在使用 Anko DSL 布局来布局活动：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -780,7 +780,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  注意前面代码片段中加粗的代码。我们将在`database.use {...}`块内执行所有操作，因为它具有并发安全性，并且在块执行后关闭数据库。如果你已经完成了*创建数据库表*的食谱，你会注意到表创建和插入相当相似。语法如下：
 
-```kt
+```java
 db.insert(TABLE_NAME, 
     COLUMN_NAME_1 to VALUE_1,
     COLUMN_NAME_2 to VALUE_2,
@@ -810,7 +810,7 @@ db.insert(TABLE_NAME,
 
 1.  Kotlin 没有静态成员或变量，因此为了声明类的静态成员，我们使用`companion object`。查看以下示例：
 
-```kt
+```java
 class SomeClass {
 
     companion object {
@@ -824,14 +824,14 @@ class SomeClass {
 
 1.  访问前一个类的`companion`对象的成员和方法与访问任何静态成员或方法相同：
 
-```kt
+```java
 var x = SomeClass.intro
 toast(SomeClass.infoIntro())
 ```
 
 1.  现在假设我们想要一个单例类，即每次只有一个对象/实例的类？做好准备，这个很有趣。以下是在几行代码内创建单例类的方法：
 
-```kt
+```java
 object SomeClass {
 
     var intro = "I am some class. Pleased to meet you!"
@@ -843,7 +843,7 @@ object SomeClass {
 
 此外，我们就像在前面示例中使用静态成员一样使用它：
 
-```kt
+```java
 var x = SomeClass.intro
 toast(SomeClass.infoIntro())
 ```
@@ -852,7 +852,7 @@ toast(SomeClass.infoIntro())
 
 在 Kotlin 中，反编译字节码是了解幕后发生的事情的绝佳方法。如果我们反编译我们创建的对象的字节码，我们会得到以下代码，这表明在幕后，对象只是一个每次只有一个实例的类：
 
-```kt
+```java
 public final class SomeClass {
    @NotNull
    private static String intro;
@@ -892,7 +892,7 @@ Dagger 2 是 Android 社区中最好的依赖注入框架，也是开源的。�
 
 我们将使用 Android Studio 3.0 进行编码。首先，我们需要将 Dagger 2 包含到项目中，通过在`build.gradle`文件中添加以下行来实现：
 
-```kt
+```java
 compile "com.google.dagger:dagger:$daggerVersion"
 kapt "com.google.dagger:dagger-compiler:$daggerVersion"
 ```
@@ -915,7 +915,7 @@ kapt "com.google.dagger:dagger-compiler:$daggerVersion"
 
 1.  我们将查看一个网络模块的示例，该模块将提供诸如`HttpCache`、`HttpLoggingInterceptor`、GSON 对象等对象：
 
-```kt
+```java
 @Module
 class NetworkModule {
     @Provides @Singleton
@@ -960,7 +960,7 @@ class NetworkModule {
 
 1.  现在，让我们看看`Dagger`组件的示例：
 
-```kt
+```java
 @Component(dependencies = arrayOf(ApplicationComponent::class)
         , modules = arrayOf(AddActivityModule::class))
 interface AddActivityComponent {
@@ -974,7 +974,7 @@ interface AddActivityComponent {
 
 1.  一旦定义，我们就可以将其注入到我们的`AddActivity`中，如下所示：
 
-```kt
+```java
 class AddActivity : BaseActivity<AddActivityMvpView,AddActivityMvpPresenter>(),AddActivityMvpView {
 
     @Inject
@@ -996,7 +996,7 @@ class AddActivity : BaseActivity<AddActivityMvpView,AddActivityMvpPresenter>(),A
 
 除了那个模块类之外，你还可以在构造函数级别实例化对象。让我们看看以下示例：
 
-```kt
+```java
 class AddActivityPresenter @Inject constructor(var mDataManager:DataManager)
 ```
 
@@ -1016,7 +1016,7 @@ Android 世界有许多需要注解处理的库。您只需注解代码，它就
 
 1.  首先，将以下行添加到您的`build.gradle`文件中；同时，您需要添加`kotlin-kapt`插件，并将`annotationProcessor`替换为`kapt`。`kapt`是`annotationProcessor`的 Java 等价物，因此无论您在哪里使用了`annotationProcessor`，都需要将其替换为`kapt`：
 
-```kt
+```java
 apply plugin: 'kotlin-kapt'  
 dependencies {  ...  
     compile "com.jakewharton:butterknife:$butterknife-version"  
@@ -1025,19 +1025,19 @@ dependencies {  ...
 
 1.  在 Java 中，我们使用了 Butterknife 库，如下所示：
 
-```kt
+```java
 @BindView(R.id.headline) TextView headline;
 ```
 
 在 Kotlin 中，我们可以这样做：
 
-```kt
+```java
 @BindView(R.id.headline) lateinit var headline: TextView
 ```
 
 注意，我们已经使用了`lateinit`修饰符，这将使我们免于声明它为可空。我们还可以实现点击监听器，如下所示：
 
-```kt
+```java
 @OnClick(R.id.button) 
 internal fun sayHello() {  
     Toast.makeText(this, "Hello, World!", LENGTH_SHORT).show() 

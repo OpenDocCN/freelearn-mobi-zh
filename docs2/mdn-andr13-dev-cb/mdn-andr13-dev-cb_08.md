@@ -42,31 +42,31 @@ Paging 库为开发者提供了令人难以置信的功能。如果您的代码�
 
 1.  让我们继续添加以下必需的依赖项。此外，由于我们将进行网络调用，我们需要添加一个库来处理这个问题。关于正确的版本控制，请查看*技术要求*部分以获取代码和正确的版本。我们将提供`2.x.x`，这样你可以在升级或已经在你的项目中使用`Retrofit`和 Coil 时检查兼容性。Coil 是一个快速、轻量级且灵活的图像加载库。它旨在简化从各种来源（如网络、本地存储或内容提供者）加载图像并在 ImageView 或其他图像相关 UI 组件中显示图像的过程：
 
-    ```kt
+    ```java
     //Retrofit
     ```
 
-    ```kt
+    ```java
     implementation 'com.squareup.retrofit2:retrofit:2.x.x'
     ```
 
-    ```kt
+    ```java
     implementation 'com.squareup.retrofit2:converter-gson:2.x.x'
     ```
 
-    ```kt
+    ```java
     //Coil you can also use Glide in this case
     ```
 
-    ```kt
+    ```java
     implementation 'com.google.accompanist:accompanist-coil:0.x.x'
     ```
 
-    ```kt
+    ```java
     //Paging 3.0
     ```
 
-    ```kt
+    ```java
     implementation 'Androidx.Paging:Paging-compose:1.x.x'
     ```
 
@@ -74,323 +74,323 @@ Paging 库为开发者提供了令人难以置信的功能。如果您的代码�
 
 1.  此外，当使用 API 时，开发者往往会忘记在清单中添加`Android.permission.INTERNET`权限，所以现在让我们先做这件事，以免忘记：
 
-    ```kt
+    ```java
     <uses-permission Android:name="Android.permission.INTERNET"/>
     ```
 
 1.  现在，创建一个名为`data`的包；我们将把我们的模型和服务文件添加到这个包中。此外，确保你阅读了新闻 API 的**文档**部分，以了解 API 的工作原理：
 
-    ```kt
+    ```java
     data class NewsArticle(
     ```
 
-    ```kt
+    ```java
         val author: String,
     ```
 
-    ```kt
+    ```java
         val content: String,val title: String ...)
     ```
 
 1.  现在我们来创建我们的`NewsArticleResponse`数据类，我们将在`NewsApiService`接口中实现它。我们的 API 调用类型是`@GET()`，这意味着“获取”。关于`GET`的更详细解释可以在*如何工作*部分找到。我们的调用旨在返回一个包含`NewsArticleResponse`数据类形式的调用对象：
 
-    ```kt
+    ```java
     data class NewsArticleResponse(
     ```
 
-    ```kt
+    ```java
         val articles: List<NewsArticle>,
     ```
 
-    ```kt
+    ```java
         val status: String,
     ```
 
-    ```kt
+    ```java
         val totalResults: Int
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     interface NewsApiService{
     ```
 
-    ```kt
+    ```java
         @GET("everything?q=apple&sortBy=popularity&apiKey=        ${YOURAPIKEY}&pageSize=20")
     ```
 
-    ```kt
+    ```java
         suspend fun getNews(
     ```
 
-    ```kt
+    ```java
             @Query("page") page: Int
     ```
 
-    ```kt
+    ```java
         ): NewsArticleResponse
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  创建另一个名为`NewsArticlePagingSource()`的类；我们的类将使用`NewsApiService`作为输入参数。当通过 API 公开任何大型数据集时，我们需要提供一个机制来分页资源列表。为了实现它，我们需要传递分页键的类型和要加载数据的类型，在我们的例子中是`NewsArticle`：
 
-    ```kt
+    ```java
     class NewsArticlePagingSource(
     ```
 
-    ```kt
+    ```java
         private val newsApiService: NewsApiService,
     ```
 
-    ```kt
+    ```java
     ): PagingSource<Int, NewsArticle>() {
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，让我们继续并重写由`PagingSource`和`load()`挂起函数提供的`getRefreshKey()`。我们将在*加载数据和显示分页数据*食谱中详细讨论`load()`和`PagingSource`挂起函数：
 
-    ```kt
+    ```java
     class NewsArticlePagingSource(
     ```
 
-    ```kt
+    ```java
         private val newsApiService: NewsApiService,
     ```
 
-    ```kt
+    ```java
     ) : PagingSource<Int, NewsArticle>() {
     ```
 
-    ```kt
+    ```java
         override fun getRefreshKey(state: PagingState<Int,
     ```
 
-    ```kt
+    ```java
         NewsArticle>): Int? {
     ```
 
-    ```kt
+    ```java
             return state.anchorPosition?.let {
     ```
 
-    ```kt
+    ```java
             anchorPosition ->
     ```
 
-    ```kt
+    ```java
                 state.closestPageToPosition(
     ```
 
-    ```kt
+    ```java
                     anchorPosition)?.prevKey?.plus(1)
     ```
 
-    ```kt
+    ```java
                     ?: state.closestPageToPosition(
     ```
 
-    ```kt
+    ```java
                         anchorPosition)?.nextKey?.minus(1)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override suspend fun load(params:
     ```
 
-    ```kt
+    ```java
         LoadParams<Int>): LoadResult<Int, NewsArticle> {
     ```
 
-    ```kt
+    ```java
             return try {
     ```
 
-    ```kt
+    ```java
                 val page = params.key ?: 1
     ```
 
-    ```kt
+    ```java
                 val response = newsApiService.getNews(
     ```
 
-    ```kt
+    ```java
                     page = page)
     ```
 
-    ```kt
+    ```java
                 LoadResult.Page(
     ```
 
-    ```kt
+    ```java
                     data = response.articles,
     ```
 
-    ```kt
+    ```java
                     prevKey = if (page == 1) null else
     ```
 
-    ```kt
+    ```java
                         page.minus(1),
     ```
 
-    ```kt
+    ```java
                     nextKey = if
     ```
 
-    ```kt
+    ```java
                         (response.articles.isEmpty()) null
     ```
 
-    ```kt
+    ```java
                             else page.plus(1),
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             } catch (e: Exception) {
     ```
 
-    ```kt
+    ```java
                 LoadResult.Error(e)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，让我们创建我们的仓库；仓库是一个将数据源（如网络服务或 Room 数据库）与应用程序的其他部分隔离的类。由于我们没有 Room 数据库，我们将使用网络服务数据：
 
-    ```kt
+    ```java
     class NewsArticleRepository @Inject constructor(
     ```
 
-    ```kt
+    ```java
         private val newsApiService: NewsApiService
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         fun getNewsArticle() = Pager(
     ```
 
-    ```kt
+    ```java
             config = PagingConfig(
     ```
 
-    ```kt
+    ```java
                 pageSize = 20,
     ```
 
-    ```kt
+    ```java
             ),
     ```
 
-    ```kt
+    ```java
             PagingSourceFactory = {
     ```
 
-    ```kt
+    ```java
                 NewsArticlePagingSource(newsApiService)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         ).flow
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在我们的项目中，我们将使用 Hilt 进行依赖注入并构建所需模块。对于本节，你可以参考*第三章*中的步骤，*在 Jetpack Compose 中处理 UI 状态和使用 Hilt*，了解如何将 Hilt 添加到你的项目中以及如何创建所需的模块。此外，如果你遇到困难，可以通过 *技术要求* 部分访问整个代码：
 
-    ```kt
+    ```java
     @Module
     ```
 
-    ```kt
+    ```java
     @InstallIn(SingletonComponent::class)
     ```
 
-    ```kt
+    ```java
     class RetrofitModule{
     ```
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Provides
     ```
 
-    ```kt
+    ```java
         fun provideRetrofitInstance(): NewsApiService =
     ```
 
-    ```kt
+    ```java
         Retrofit.Builder()
     ```
 
-    ```kt
+    ```java
             .baseUrl(BASE_URL)
     ```
 
-    ```kt
+    ```java
             .addConverterFactory(
     ```
 
-    ```kt
+    ```java
                 GsonConverterFactory.create())
     ```
 
-    ```kt
+    ```java
             .build()
     ```
 
-    ```kt
+    ```java
             .create(NewsApiService::class.java)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -398,7 +398,7 @@ Paging 库为开发者提供了令人难以置信的功能。如果您的代码�
 
 我们可以使用 `cachedIn(viewModelScope)` 简单地缓存我们的 API 结果。此外，为了通知 `PagingData` 的任何更改，你可以使用 `CombinedLoadState` 回调来处理加载状态：
 
-```kt
+```java
 @HiltViewModel
 class NewsViewModel @Inject constructor(
     private val repository: NewsArticleRepository,
@@ -444,7 +444,7 @@ class NewsViewModel @Inject constructor(
 
 `Paging Source`组件是`Repository`层中的主要组件，如*图 8**.2 所示。该对象通常为每份数据声明一个源，并处理如何从该源重试数据。如果你注意到，这正是我们在示例中做的：
 
-```kt
+```java
   class NewsArticleRepository @Inject constructor(
       private val newsApiService: NewsApiService
 ) { . . .
@@ -472,47 +472,47 @@ class NewsViewModel @Inject constructor(
 
 1.  当您想要访问状态时，将此信息传递给您的 UI。您可以使用 `PagingDataAdapter` 提供的 `addLoadStateListener` 函数的 `loadedStateFlow` 流轻松地做到这一点：
 
-    ```kt
+    ```java
     lifecycleScope.launch {
     ```
 
-    ```kt
+    ```java
         thePagingAdapter.loadStateFlow.collectLatest {
     ```
 
-    ```kt
+    ```java
             loadStates ->
     ```
 
-    ```kt
+    ```java
         progressBar.isVisible = loadStates.refresh is
     ```
 
-    ```kt
+    ```java
             LoadState.Loading
     ```
 
-    ```kt
+    ```java
         retry.isVisible = loadState.refresh !is
     ```
 
-    ```kt
+    ```java
             LoadState.Loading
     ```
 
-    ```kt
+    ```java
         errorMessage.isVisible = loadState.refresh is
     ```
 
-    ```kt
+    ```java
             LoadState.Error
     ```
 
-    ```kt
+    ```java
       }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -520,27 +520,27 @@ class NewsViewModel @Inject constructor(
 
 1.  根据您应用程序的具体事件，过滤加载状态流可能是有意义的。这确保了您的应用程序 UI 在正确的时间更新，以避免问题。因此，使用协程，我们等待刷新加载状态更新：
 
-    ```kt
+    ```java
     lifecycleScope.launchWhenCreated{
     ```
 
-    ```kt
+    ```java
         yourAdapter.loadStateFlow
     ```
 
-    ```kt
+    ```java
             .distinctUntilChangedBy { it.refresh }
     ```
 
-    ```kt
+    ```java
             .filter { it.refresh is LoadState.NotLoading }
     ```
 
-    ```kt
+    ```java
             .collect { binding.list.scrollToPosition(0) }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -578,413 +578,413 @@ Paging 库为开发者提供了令人难以置信的功能，但有时您会遇�
 
 1.  对于这个菜谱，让我们继续添加 `lifecycle-ViewModel` 依赖项，因为我们将会用到它：
 
-    ```kt
+    ```java
     implementation "Androidx.lifecycle:lifecycle-viewmodel-compose:2.x.x"
     ```
 
 1.  让我们继续创建一个新的包并称其为 `data`。在我们的 `data` 包中，我们将添加我们将在卡片上显示的项目。目前，我们只将显示学生的 `姓名、学校` 和 `专业`：
 
-    ```kt
+    ```java
     data class StudentProfile(
     ```
 
-    ```kt
+    ```java
         val name: String,
     ```
 
-    ```kt
+    ```java
         val school: String,
     ```
 
-    ```kt
+    ```java
         val major: String
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  现在我们有了我们的 `data` 类，我们将继续构建我们的仓库，由于在我们的示例中我们没有使用 API，我们将使用我们的远程数据源，我们可以尝试加载，比如说，50 到 100 个配置文件。然后，在 `data` 中添加另一个类并称其为 `StudentRepository`：
 
-    ```kt
+    ```java
     class StudentRepository {
     ```
 
-    ```kt
+    ```java
         private val ourDataSource = (1..100).map {
     ```
 
-    ```kt
+    ```java
             StudentProfile(
     ```
 
-    ```kt
+    ```java
                 name = "Student $it",
     ```
 
-    ```kt
+    ```java
                 school = "MIT $it",
     ```
 
-    ```kt
+    ```java
                 major = "Computer Science $it"
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         suspend fun getStudents(page: Int, pageSize: Int):
     ```
 
-    ```kt
+    ```java
         Result<List<StudentProfile>> {
     ```
 
-    ```kt
+    ```java
             delay(timeMillis = 2000L) //the delay added is
     ```
 
-    ```kt
+    ```java
                 just to mimic a network connection.
     ```
 
-    ```kt
+    ```java
             val start = page * pageSize
     ```
 
-    ```kt
+    ```java
             return if (start + pageSize <=
     ```
 
-    ```kt
+    ```java
             ourDataSource.size) {
     ```
 
-    ```kt
+    ```java
                 Result.success(
     ```
 
-    ```kt
+    ```java
                     ourDataSource.slice(start until start
     ```
 
-    ```kt
+    ```java
                         + pageSize)
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             } else Result.success(emptyList())
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  既然我们已经创建了我们的仓库，让我们继续创建我们的自定义分页。我们将通过创建一个新的接口并称其为 `StudentPaginator` 来完成此操作：
 
-    ```kt
+    ```java
     interface StudentPaginator<Key, Student> {
     ```
 
-    ```kt
+    ```java
         suspend fun loadNextStudent()
     ```
 
-    ```kt
+    ```java
         fun reset()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  由于 `StudentPaginator` 是一个接口，我们必须创建一个类来实现我们刚刚创建的两个函数。现在，让我们继续创建 `StudentPaginatorImpl` 并实现我们的接口：
 
-    ```kt
+    ```java
     class StudentPaginatorImpl<Key, Student>(
     ```
 
-    ```kt
+    ```java
     ) : StudentPaginator<Key, Student> {
     ```
 
-    ```kt
+    ```java
         override suspend fun loadNextStudent() {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun reset() {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  接下来，你需要处理 `StudentPaginator` 实现类中需要处理的内容。例如，在我们的构造函数中，我们需要创建一个键来监听 `load`、`request`、`error`、`success` 和 `next key`，然后在 `reset()` 函数中能够重置我们的分页。你可以在 *技术要求* 部分查看完整的代码。你可能也会注意到它看起来与本章第一个菜谱中的分页源很相似：
 
-    ```kt
+    ```java
     class StudentPaginatorImpl<Key, Student>(
     ```
 
-    ```kt
+    ```java
         private val key: Key,
     ```
 
-    ```kt
+    ```java
         private inline val loadUpdated: (Boolean) -> Unit,
     ```
 
-    ```kt
+    ```java
         private inline val request: suspend (nextKey: Key)
     ```
 
-    ```kt
+    ```java
         ->
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
-    ```kt
+    ```java
     ) : StudentPaginator<Key, Student> {
     ```
 
-    ```kt
+    ```java
         private var currentKey = key
     ```
 
-    ```kt
+    ```java
         private var stateRequesting = false
     ```
 
-    ```kt
+    ```java
         override suspend fun loadNextStudent() {
     ```
 
-    ```kt
+    ```java
             if (stateRequesting) {
     ```
 
-    ```kt
+    ```java
                 return
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             stateRequesting = true
     ```
 
-    ```kt
+    ```java
          . . .
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun reset() {
     ```
 
-    ```kt
+    ```java
             currentKey = key
     ```
 
-    ```kt
+    ```java
         }
     ```
 
 1.  让我们继续创建一个新的包并称其为 `uistate`。在 `uistate` 中，我们将创建一个新的数据类并称其为 `UIState` 以帮助我们处理 UI 状态：
 
-    ```kt
+    ```java
     data class UIState(
     ```
 
-    ```kt
+    ```java
         val page: Int = 0,
     ```
 
-    ```kt
+    ```java
         val loading: Boolean = false,
     ```
 
-    ```kt
+    ```java
         val studentProfile: List<StudentProfile> =
     ```
 
-    ```kt
+    ```java
             emptyList(),
     ```
 
-    ```kt
+    ```java
         val error: String? = null,
     ```
 
-    ```kt
+    ```java
         val end: Boolean = false,
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  现在让我们继续并最终确定我们的 Kotlin 中的 `ViewModel` `init` 块，这是我们用于初始化的块。我们还创建了 `val ourPaginator`，并将其声明给 `StudentPaginatorImpl` 类，并使用我们用于 UI 的数据来处理输入：
 
-    ```kt
+    ```java
     class StudentViewModel() : ViewModel() {
     ```
 
-    ```kt
+    ```java
         var state by mutableStateOf(UIState())
     ```
 
-    ```kt
+    ```java
         private val studentRepository =
     ```
 
-    ```kt
+    ```java
             StudentRepository()
     ```
 
-    ```kt
+    ```java
         init {
     ```
 
-    ```kt
+    ```java
             loadStudentProfile()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         private val ourPaginator = StudentPaginatorImpl(
     ```
 
-    ```kt
+    ```java
             key = state.page,
     ```
 
-    ```kt
+    ```java
             loadUpdated = { state = state.copy(loading =
     ```
 
-    ```kt
+    ```java
                 it) },
     ```
 
-    ```kt
+    ```java
             request = { studentRepository.getStudents(it,
     ```
 
-    ```kt
+    ```java
                 24) },
     ```
 
-    ```kt
+    ```java
             nextKey = { state.page + 1 },
     ```
 
-    ```kt
+    ```java
             error = { state = state.copy(error =
     ```
 
-    ```kt
+    ```java
                 it?.localizedMessage) },
     ```
 
-    ```kt
+    ```java
             success = { student, newKey ->
     ```
 
-    ```kt
+    ```java
                 state = state.copy(
     ```
 
-    ```kt
+    ```java
                     studentProfile = state.studentProfile
     ```
 
-    ```kt
+    ```java
                         + student,
     ```
 
-    ```kt
+    ```java
                     page = newKey,
     ```
 
-    ```kt
+    ```java
                     end = student.isEmpty()
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         fun loadStudentProfile(){
     ```
 
-    ```kt
+    ```java
             viewModelScope.launch {
     ```
 
-    ```kt
+    ```java
                 ourPaginator.loadNextStudent()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1006,7 +1006,7 @@ Paging 库为开发者提供了令人难以置信的功能，但有时您会遇�
 
 我们的主要关注点是`StudentPaginatorImpl`类——你会注意到我们传递了一个键、一个`loadUpdated`值和一个请求，这是一个返回我们的`Student`类型结果的挂起函数；我们还传递了`nextkey`，它告诉我们我们的位置。然后，在出现错误的情况下，我们有可抛出的错误和一个`suspend`值`success`，它提供了`success`结果：
 
-```kt
+```java
 class StudentPaginatorImpl<Key, Student>(
     private val key: Key,
     private inline val loadUpdated: (Boolean) -> Unit,
@@ -1022,7 +1022,7 @@ class StudentPaginatorImpl<Key, Student>(
 
 因此，当我们从`loadNextStudent()`接口重写我们的函数时，我们首先检查当前状态请求，并将初始值作为`false`返回，但在状态检查之后更新它。我们还确保通过将`currentKey`设置为`nextKey`来重置键。
 
-```kt
+```java
 currentKey = nextKey(studentProfiles)
 success(studentProfiles, currentKey)
 loadUpdated(false)
@@ -1046,105 +1046,105 @@ loadUpdated(false)
 
 1.  你可能已经注意到在我们的第一个菜谱中，我们重写了`load()`方法，这是我们用来指示如何从对应的数据源检索分页数据的方法：
 
-    ```kt
+    ```java
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, NewsArticle> {
     ```
 
-    ```kt
+    ```java
         return try {
     ```
 
-    ```kt
+    ```java
             val page = params.key ?: 1
     ```
 
-    ```kt
+    ```java
             val response = newsApiService.getNews(page =
     ```
 
-    ```kt
+    ```java
                 page)
     ```
 
-    ```kt
+    ```java
             LoadResult.Page(
     ```
 
-    ```kt
+    ```java
                 data = response.articles,
     ```
 
-    ```kt
+    ```java
                 prevKey = if (page == 1) null else
     ```
 
-    ```kt
+    ```java
                     page.minus(1),
     ```
 
-    ```kt
+    ```java
                 nextKey = if (response.articles.isEmpty())
     ```
 
-    ```kt
+    ```java
                     null else page.plus(1),
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         } catch (e: Exception) {
     ```
 
-    ```kt
+    ```java
             LoadResult.Error(e)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  如果我们在重写`getRefreshKey()`时`val page = params.key ?: 1`未定义，我们则从页码`1`开始刷新；我们尝试从我们的上一个键或下一个键中找到锚定位置最近的页码。我们还需要确保我们处理可能存在的`null`值的情况：
 
-    ```kt
+    ```java
     override fun getRefreshKey(state: PagingState<Int, NewsArticle>): Int? {
     ```
 
-    ```kt
+    ```java
         return state.anchorPosition?.let { anchorPosition
     ```
 
-    ```kt
+    ```java
             ->
     ```
 
-    ```kt
+    ```java
             state.closestPageToPosition(anchorPosition)?
     ```
 
-    ```kt
+    ```java
                 .prevKey?.plus(1)
     ```
 
-    ```kt
+    ```java
                 ?: state.closestPageToPosition(
     ```
 
-    ```kt
+    ```java
                     anchorPosition)?.nextKey?.minus(1)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1182,67 +1182,67 @@ loadUpdated(false)
 
 1.  首先，我们需要将转换放在一个 `map{PagingData ->}` 内部。在 Kotlin 中，一个映射将给定的 lambda 函数应用于每个元素，并返回一个 lambda 结果的列表：
 
-    ```kt
+    ```java
     yourPager.flow
     ```
 
-    ```kt
+    ```java
         .map { PagingData ->
     ```
 
-    ```kt
+    ```java
             // here is where the transformations are
     ```
 
-    ```kt
+    ```java
                applied to the items in the paged data.
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  其次，当我们想要转换数据或过滤时，一旦我们访问到我们的 `PagingData` 对象，我们就可以在分页列表中的每个单独的项目上再次使用 `map()`。一个典型的用例是当你想要将数据库或网络层对象映射到可能在 UI 层特别使用的对象上：
 
-    ```kt
+    ```java
     yourPager.flow
     ```
 
-    ```kt
+    ```java
         .map { PagingData ->
     ```
 
-    ```kt
+    ```java
             PagingData.map { sports -> SportsModel(sports)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们需要将过滤操作放在 `map` 内部，因为过滤应用于 `PagingData` 对象。然后一旦从我们的 `PagingData` 中过滤出数据，新的实例将被分页到 UI 层并显示：
 
-    ```kt
+    ```java
     yourPager.flow
     ```
 
-    ```kt
+    ```java
         .map { PagingData ->
     ```
 
-    ```kt
+    ```java
             PagingData.filter { sports ->
     ```
 
-    ```kt
+    ```java
                 !sports.displayInUi }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1280,45 +1280,45 @@ loadUpdated(false)
 
 1.  第一步是替换刷新键，这是因为我们需要定义如何从加载数据的中间部分恢复刷新。我们将通过首先实现`getRefreshKey()`来完成这项工作，它使用`PagingState.anchorPosition`作为最近索引来映射正确的初始键：
 
-    ```kt
+    ```java
     override fun getRefreshKey(PagingState: PagingState): String? {
     ```
 
-    ```kt
+    ```java
         return PagingState.anchorPosition?.let { position
     ```
 
-    ```kt
+    ```java
             ->
     ```
 
-    ```kt
+    ```java
                 PagingState.getClosestItemToPosition(
     ```
 
-    ```kt
+    ```java
                     position)?.id
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  接下来，我们需要确保我们替换位置数据源：
 
-    ```kt
+    ```java
     override fun getRefreshKey(PagingState: PagingState): Int? {
     ```
 
-    ```kt
+    ```java
         return PagingState.anchorPosition
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1326,27 +1326,27 @@ loadUpdated(false)
 
 1.  最后，为了确保您从分页 2 的`PageList`迁移，您需要迁移到`PagingData`。最显著的变化是`PagedList.Config`不是`PagingConfig`。此外，`Pager()`暴露了一个带有其流的可观察的`Flow<PagingData>`：
 
-    ```kt
+    ```java
     val yourFlow = Pager(
     ```
 
-    ```kt
+    ```java
         PagingConfig(pageSize = 24)
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         YourPagingSource(yourBackend, yourQuery)
     ```
 
-    ```kt
+    ```java
     }.flow
     ```
 
-    ```kt
+    ```java
         .cachedIn(viewModelScope)
     ```
 
@@ -1374,19 +1374,19 @@ loadUpdated(false)
 
 1.  将以下测试库添加到你的`build.gradle`应用中：
 
-    ```kt
+    ```java
     testImplementation 'org.assertj:assertj-core:3.x.x'
     ```
 
-    ```kt
+    ```java
     testImplementation "org.mockito:mockito-core:3.x.x"
     ```
 
-    ```kt
+    ```java
     testImplementation 'Androidx.arch.core:core-testing:2.x.x'
     ```
 
-    ```kt
+    ```java
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.x.x'
     ```
 
@@ -1396,161 +1396,161 @@ loadUpdated(false)
 
 1.  在类内部，让我们继续添加`Mock`来模拟我们的`ApiService`接口，并创建一个`lateinit var newsApiService`，我们将在`@Before`步骤中初始化它：
 
-    ```kt
+    ```java
     @Mock
     ```
 
-    ```kt
+    ```java
     private lateinit var newsApiService: NewsApiService
     ```
 
-    ```kt
+    ```java
     lateinit var newsPagingSource: NewsArticlePagingSource
     ```
 
 1.  现在，让我们继续创建我们的`@Before`，这样我们就可以运行我们的`CoroutineDispatchers`，它被所有标准构建器（如 async）和启动到我们的`@Before`步骤：
 
-    ```kt
+    ```java
     @Before
     ```
 
-    ```kt
+    ```java
     fun setup() {
     ```
 
-    ```kt
+    ```java
         Dispatchers.setMain(testDispatcher)
     ```
 
-    ```kt
+    ```java
         newsPagingSource =
     ```
 
-    ```kt
+    ```java
             NewsArticlePagingSource(newsApiService)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们需要编写的第一个测试是检查失败发生的情况。因此，让我们继续设置我们的测试。`403`响应是一个禁止状态码，表示服务器理解了你的请求但没有授权它：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun `news article Paging Source load failure http error`() = runBlockingTest {
     ```
 
-    ```kt
+    ```java
         //setup
     ```
 
-    ```kt
+    ```java
         val error = HttpException(
     ```
 
-    ```kt
+    ```java
             Response.error<ResponseBody>(
     ```
 
-    ```kt
+    ```java
                 403, "some content".toResponseBody(
     ```
 
-    ```kt
+    ```java
                     "plain/text".toMediaTypeOrNull())
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         ) . . .
     ```
 
 1.  为了继续我们的测试，我们需要使用`Mockito.doThrow(error)`：
 
-    ```kt
+    ```java
     Mockito.doThrow(error)
     ```
 
-    ```kt
+    ```java
         .`when`(newsApiService)
     ```
 
-    ```kt
+    ```java
         .getNews(
     ```
 
-    ```kt
+    ```java
             1
     ```
 
-    ```kt
+    ```java
         ). . .
     ```
 
 1.  然后，最后，我们触发`PagingSource.LoadResult.Error`并传入类型，然后断言：
 
-    ```kt
+    ```java
     //assert
     ```
 
-    ```kt
+    ```java
     assertEquals(
     ```
 
-    ```kt
+    ```java
         expectedResult, newsPagingSource.load(
     ```
 
-    ```kt
+    ```java
             PagingSource.LoadParams.Refresh(
     ```
 
-    ```kt
+    ```java
                 key = null,
     ```
 
-    ```kt
+    ```java
                 loadSize = 1,
     ```
 
-    ```kt
+    ```java
                 placeholdersEnabled = false
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  你可以添加两个额外的测试，然后添加`tearDown`来清理协程：
 
-    ```kt
+    ```java
     @After
     ```
 
-    ```kt
+    ```java
     fun tearDown() {
     ```
 
-    ```kt
+    ```java
         testDispatcher.cleanupTestCoroutines()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1558,7 +1558,7 @@ loadUpdated(false)
 
 我们在单元测试中使用`Mock`，其基本思想是基于测试对象可能依赖于其他复杂对象的观念。基于这一点，通过模拟对象，我们可以更容易地隔离我们想要的对象的行为，这确保了它具有与我们的真实对象相同的行为，从而使测试变得更容易：
 
-```kt
+```java
 @Mock
 private lateinit var newsApiService: NewsApiService
 ```

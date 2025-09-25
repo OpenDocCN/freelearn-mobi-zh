@@ -64,14 +64,14 @@
 
 1.  打开 `PauseScreenBehaviour` 脚本，并将以下属性添加到脚本中：
 
-    ```kt
+    ```java
     [Tooltip("Reference to the on screen controls menu")]
     public GameObject onScreenControls;
     ```
 
 1.  之后，更新 **SetPauseMenu** 函数以包含以下新行：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will turn our pause menu on or off
     /// </summary>
@@ -94,7 +94,7 @@
 
 1.  打开 `PauseScreenBehaviour` 脚本，并更新 `Start` 函数，替换原始行：
 
-    ```kt
+    ```java
     void Start()
     {
         /* Must be reset in Start or else game will be
@@ -140,7 +140,7 @@
 
 1.  打开代码编辑器，定位到 `MobileJoystick` 脚本，并在 `Start` 函数中添加以下属性及其初始化：
 
-    ```kt
+    ```java
     /// <summary>
     /// A reference to this object's RectTransform
     /// component
@@ -161,19 +161,19 @@
 
 1.  要在拖动摇杆时让摇杆执行某些操作，我们可以在脚本中添加一个接口，用于拖动和停止拖动时。为此，我们需要在脚本顶部添加以下 `using` 语句：
 
-    ```kt
+    ```java
     using UnityEngine.EventSystems; /* IDragHandler, IEndDragHandler */
     ```
 
 1.  之后，我们在类定义中添加以下加粗代码：
 
-    ```kt
+    ```java
     public class MobileJoystick : MonoBehaviour, IDragHandler, IEndDragHandler
     ```
 
 1.  现在，我们会得到一些错误，因为我们还没有实际定义接口中给出的函数，让我们现在就定义它们：
 
-    ```kt
+    ```java
        /// <summary>
        /// Will allow the user to move the joystick
        /// </summary>
@@ -225,7 +225,7 @@
 
 1.  现在它们功能上已经工作，让我们让它们真正影响游戏。我们需要有一种方式来传达 `MobileJoystick` 的信息。为此，让我们添加一个新的属性：
 
-    ```kt
+    ```java
         /// <summary>
         /// Gets the value of the joystick in a -1 to 1
         /// manner in the same way that Input.GetAxis does
@@ -235,20 +235,20 @@
 
 1.  接下来，将以下行添加到 `OnDrag` 函数中：
 
-    ```kt
+    ```java
     // Update the axis value to the new position
     axisValue = newAnchorPos / (parentSize.x / 2);
     ```
 
 1.  然后，将以下行添加到 `OnEndDrag` 函数中：
 
-    ```kt
+    ```java
     axisValue = Vector2.zero;
     ```
 
 1.  现在我们需要进入`PlayerBehaviour`脚本。从那里，我们将添加一个新变量来告诉我们是否有`MobileJoystick`：
 
-    ```kt
+    ```java
         private MobileJoystick joystick;
         // Start is called before the first frame update
         public void Start()
@@ -266,7 +266,7 @@
 
 1.  接下来，我们需要更新`FixedUpdate`函数，进行以下更改：
 
-    ```kt
+    ```java
     /// <summary>
     /// FixedUpdate is a prime place to put physics
     /// calculations
@@ -362,7 +362,7 @@
 
 1.  从`Scripts``UISafeAreaHandler`。双击它以打开你的代码编辑器并使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     public class UISafeAreaHandler : MonoBehaviour
     {

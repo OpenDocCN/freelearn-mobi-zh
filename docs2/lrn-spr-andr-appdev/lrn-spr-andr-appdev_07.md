@@ -16,25 +16,25 @@
 
 要运行本章中的代码，你需要集成`coroutines-core`库。为此，你应该将以下行添加到`build.gradle`文件的`repositories`块中：
 
-```kt
+```java
 jcenter()
 ```
 
 你还应该在`dependencies`块中添加以下行：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.30.2'
 ```
 
 添加以下行以集成`kotlinx-coroutines-android`库：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:0.30.2'
 ```
 
 如果你使用的是低于 1.3 的 Kotlin 版本，你还应该在`build.gradle`文件中添加以下行：
 
-```kt
+```java
 kotlin {
     experimental {
         coroutines "enable"
@@ -44,14 +44,14 @@ kotlin {
 
 要集成 Spring Android 库，你应该添加以下行：
 
-```kt
+```java
 implementation 'org.springframework.android:spring-android-rest-template:2.0.0.M3'
 implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.8.6'
 ```
 
 你还应该添加`repositories`块，如下所示：
 
-```kt
+```java
 repositories {
     maven {
         url 'https://repo.spring.io/libs-milestone'
@@ -85,7 +85,7 @@ repositories {
 
 让我们想象一下，我们有一个长期操作，如下面的代码所示：
 
-```kt
+```java
 class Image
 
 fun loadImage() : Image {
@@ -96,7 +96,7 @@ fun loadImage() : Image {
 
 `loadImage` 函数需要三秒钟并返回 `Image` 类的实例。我们还有一个 `showImages` 函数，它接受三个 `Image` 类的实例，如下所示：
 
-```kt
+```java
 fun showImages(image1: Image, image2: Image, image3: Image) {
     // .......
 }
@@ -104,7 +104,7 @@ fun showImages(image1: Image, image2: Image, image3: Image) {
 
 因此，我们有三个可以并行执行的独立任务。我们在这里可以创建三个协程，每个协程将执行 `loadImage` 函数。要创建一个新的协程，我们可以使用称为**协程构建器**的函数之一，例如 `async` 或 `launch`：
 
-```kt
+```java
 val subTask1 = GlobalScope.async { loadImage() }
 val subTask2 = GlobalScope.async { loadImage() }
 val subTask3 = GlobalScope.async { loadImage() }
@@ -112,7 +112,7 @@ val subTask3 = GlobalScope.async { loadImage() }
 
 `async` 函数返回一个 `Deferred` 类型的实例。这个类封装了一个将在未来返回结果的任务。当调用 `Deferred` 类实例的 `await` 函数时，`caller` 函数会暂停。这意味着具有此函数调用栈的线程不会被阻塞，只是被挂起。以下代码片段显示了这可能看起来像什么：
 
-```kt
+```java
 showImages(subTask1.await(), subTask2.await(), subTask3.await())
 ```
 
@@ -142,7 +142,7 @@ showImages(subTask1.await(), subTask2.await(), subTask3.await())
 
 `runBlocking` 协程构建器可用于测试。它创建一个使用当前线程的协程。JUnit 框架中的测试可能如下所示：
 
-```kt
+```java
 class ExampleUnitTest {
 
     @Test
@@ -155,7 +155,7 @@ class ExampleUnitTest {
 
 此代码片段使用 `async` 协程构建器加载图像，并检查 `image` 是否不为空。`runBlocking` 函数的源代码如下所示：
 
-```kt
+```java
 @Throws(InterruptedException::class)
 public fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, block: suspend CoroutineScope.() -> T): T {
     val currentThread = Thread.currentThread()
@@ -183,7 +183,7 @@ public fun <T> runBlocking(context: CoroutineContext = EmptyCoroutineContext, bl
 
 `CoroutineScope` 接口如下所示：
 
-```kt
+```java
 public interface CoroutineScope {
 
     @Deprecated(level = DeprecationLevel.HIDDEN, message = "Deprecated in favor of top-level extension property")
@@ -198,7 +198,7 @@ public interface CoroutineScope {
 
 协程作用域代表一个具有生命周期的对象的作用域，例如活动或组件。`coroutines-core` 库为整个应用程序提供了一个作用域，如果我们想启动一个与应用程序运行时间一样长的协程，我们可以使用它。整个应用程序的作用域由 `GlobalScope` 对象表示，如下所示：
 
-```kt
+```java
 object GlobalScope : CoroutineScope {
 
     @Deprecated(level = DeprecationLevel.HIDDEN, message = "Deprecated in favor of top-level extension property")
@@ -224,7 +224,7 @@ Android Studio 将打开“配置活动”窗口，您可以在其中更改活�
 
 新创建的 `XKCDActivity` 类将如下所示：
 
-```kt
+```java
 class XKCDActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -236,7 +236,7 @@ class XKCDActivity : AppCompatActivity() {
 
 如果我们想从这个类中启动一个生命周期感知的协程，我们应该实现 `CoroutineScope` 接口，如下所示：
 
-```kt
+```java
 class XKCDActivity : AppCompatActivity(), CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main
@@ -250,7 +250,7 @@ class XKCDActivity : AppCompatActivity(), CoroutineScope {
 
 `CoroutineScope` 接口如下所示：
 
-```kt
+```java
 public interface CoroutineScope {
 
     @Deprecated(level = DeprecationLevel.HIDDEN, message = "Deprecated in favor of top-level extension property")
@@ -277,7 +277,7 @@ public interface CoroutineScope {
 
 `XKCDActivity` 有自己的协程作用域，但它不是生命周期感知的。这意味着如果在活动的作用域中启动了一个协程，当活动被销毁时，该协程不会被销毁。我们可以通过以下方式修复这个问题：
 
-```kt
+```java
 class XKCDActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var lifecycleAwareJob: Job
     override val coroutineContext: CoroutineContext
@@ -298,7 +298,7 @@ class XKCDActivity : AppCompatActivity(), CoroutineScope {
 
 `lifecycleAwareJob`将被用作所有协程的父级，并在活动被销毁时取消所有子协程。以下示例代码显示了如何使用这种方法：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_xkcd)
@@ -318,7 +318,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 通道是一个如下所示的接口：
 
-```kt
+```java
 public interface Channel<E> : SendChannel<E>, ReceiveChannel<E> {
     //.....
 }
@@ -326,7 +326,7 @@ public interface Channel<E> : SendChannel<E>, ReceiveChannel<E> {
 
 `SendChannel`接口如下所示：
 
-```kt
+```java
 public interface SendChannel<in E> {
 
     @ExperimentalCoroutinesApi
@@ -354,7 +354,7 @@ public interface SendChannel<in E> {
 
 虽然`SendChannel`接口允许我们将一个值放入通道中，但`ReceiveChannel`接口允许我们从通道中获取值。`ReceiveChannel`接口如下所示：
 
-```kt
+```java
 public interface ReceiveChannel<out E> {
 
     @ExperimentalCoroutinesApi
@@ -388,7 +388,7 @@ public interface ReceiveChannel<out E> {
 
 让我们看看以下示例代码：
 
-```kt
+```java
 fun channelBasics() = runBlocking<Unit> {
     val channel = Channel<Int>()
     launch {
@@ -411,7 +411,7 @@ fun channelBasics() = runBlocking<Unit> {
 
 输出如下所示：
 
-```kt
+```java
 send 0 21 Oct 2018 13:30:12 GMT
  receive 0 21 Oct 2018 13:30:15 GMT
  send 1 21 Oct 2018 13:30:16 GMT
@@ -422,7 +422,7 @@ send 0 21 Oct 2018 13:30:12 GMT
 
 我们可以使用`for`循环从通道接收值，如下所示：
 
-```kt
+```java
 fun channelIterator() = runBlocking<Unit> {
     val channel = Channel<Int>()
     launch {
@@ -438,7 +438,7 @@ fun channelIterator() = runBlocking<Unit> {
 
 输出如下所示：
 
-```kt
+```java
  0
  1
  2
@@ -451,7 +451,7 @@ fun channelIterator() = runBlocking<Unit> {
 
 `producer`函数被称为**通道构建器**，它返回一个`ReceiveChannel`类的实例。此函数如下所示：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 public fun <E> CoroutineScope.produce(
     context: CoroutineContext = EmptyCoroutineContext,
@@ -468,7 +468,7 @@ public fun <E> CoroutineScope.produce(
 
 如前所述的代码片段所示，`produce`函数包含一个`ProducerScope`类型的接收参数。`ProducerScope`接口如下所示：
 
-```kt
+```java
 public interface ProducerScope<in E> : CoroutineScope, SendChannel<E> {
     val channel: SendChannel<E>
 }
@@ -478,7 +478,7 @@ public interface ProducerScope<in E> : CoroutineScope, SendChannel<E> {
 
 使用`producer`函数的一个示例可能如下所示：
 
-```kt
+```java
 suspend fun numbersProduce(): ReceiveChannel<Int> = GlobalScope.produce {
     launch {
         (0..10).forEach {
@@ -490,7 +490,7 @@ suspend fun numbersProduce(): ReceiveChannel<Int> = GlobalScope.produce {
 
 我们可以这样使用`numbersProduce`函数：
 
-```kt
+```java
 fun producerExample() = runBlocking<Unit> {
     val numbers = numbersProduce()
     for (value in numbers) {
@@ -504,7 +504,7 @@ fun producerExample() = runBlocking<Unit> {
 
 `actor`函数包含一个`ActorScope`类型的接收参数。`actor`函数的源代码如下所示：
 
-```kt
+```java
 public fun <E> CoroutineScope.actor(
     context: CoroutineContext = EmptyCoroutineContext,
     capacity: Int = 0,
@@ -525,7 +525,7 @@ public fun <E> CoroutineScope.actor(
 
 `ActorScope`接口看起来与`ProducerScope`接口相似，但它实现了`ReceiveChannel`接口：
 
-```kt
+```java
 public interface ActorScope<E> : CoroutineScope, ReceiveChannel<E> {
     val channel: Channel<E>
 }
@@ -533,7 +533,7 @@ public interface ActorScope<E> : CoroutineScope, ReceiveChannel<E> {
 
 如你所知，从不同的协程中访问可变数据并不是一个好主意。为了处理这个问题，我们可以使用通道和`actor`函数，如下所示：
 
-```kt
+```java
 suspend fun numberConsumer() = GlobalScope.actor<Int> {
     var counter = 0
     for (value in channel) {
@@ -547,7 +547,7 @@ suspend fun numberConsumer() = GlobalScope.actor<Int> {
 
 可以这样使用`numbersCounter`函数：
 
-```kt
+```java
 @Test
 fun actorExample() = runBlocking<Unit> {
     val actor = numberConsumer()
@@ -563,7 +563,7 @@ fun actorExample() = runBlocking<Unit> {
 
 输出如下所示：
 
-```kt
+```java
  0
  1
  3
@@ -585,7 +585,7 @@ fun actorExample() = runBlocking<Unit> {
 
 让我们假设我们必须使用以下函数来加载用户的详细信息：
 
-```kt
+```java
 suspend fun loadUserDetails(): User {
     delay(3000)
     return User(0, "avatar")
@@ -594,7 +594,7 @@ suspend fun loadUserDetails(): User {
 
 `loadUserDetails`函数从`coroutines-core`库调用`delay`函数，并返回`User`类的一个实例。`delay`函数挂起当前协程的调用。当用户准备好时，我们必须将`avatar`属性的值传递给`loadImage`函数：
 
-```kt
+```java
 suspend fun loadImage(avatar: String): Image {
     delay(3000)
     return Image()
@@ -605,7 +605,7 @@ suspend fun loadImage(avatar: String): Image {
 
 以下代码展示了如何使用协程依次执行这些函数：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
     val user = async { loadUserDetails() }.await()
     val image = async { loadImage(user.avatar) }.await()
@@ -635,7 +635,7 @@ fun main(args: Array<String>) = runBlocking {
 
 在以下示例代码中，`loadImage`函数使用回调来返回结果：
 
-```kt
+```java
 fun loadImage(callback: (Image) -> Unit) {
     executor.submit {
         Thread.sleep(3000)
@@ -650,7 +650,7 @@ fun loadImage(callback: (Image) -> Unit) {
 
 此函数可以这样使用：
 
-```kt
+```java
 fun main(args: Array<String>) {
     loadImage { image ->
         showImage(image)
@@ -666,7 +666,7 @@ fun main(args: Array<String>) {
 
 让我们假设我们正在从服务器请求用户列表。之后，我们发送另一个请求以获取关于用户的详细信息，然后加载一个头像。在代码中，这可能看起来如下：
 
-```kt
+```java
 fun loadListOfFriends(callback: (List<ShortUser>) -> Unit) {
     executor.submit {
         Thread.sleep(3000)
@@ -677,7 +677,7 @@ fun loadListOfFriends(callback: (List<ShortUser>) -> Unit) {
 
 `loadListOfFriends`函数接受一个 lambda，该 lambda 接受`ShortUser`类实例的列表，如下所示：
 
-```kt
+```java
 fun loadUserDetails(id: Int, callback: (User) -> Unit) {
     executor.submit {
         Thread.sleep(3000)
@@ -688,7 +688,7 @@ fun loadUserDetails(id: Int, callback: (User) -> Unit) {
 
 `loadUserDetails`函数接受一个 lambda 和一个用户的标识符，如下所示：
 
-```kt
+```java
 fun loadImage(avatar: String, callback: (Image) -> Unit) {
     executor.submit {
         Thread.sleep(3000)
@@ -700,7 +700,7 @@ fun loadImage(avatar: String, callback: (Image) -> Unit) {
 
 `loadImage`函数接受头像的路径和 lambda。以下示例代码演示了当我们使用带有回调的方法时最常见的常见问题。当并发任务需要相互传递数据时，我们遇到了代码复杂性和可读性的问题：
 
-```kt
+```java
 fun main(args: Array<String>) {
     loadListOfFriends {users ->
         loadUserDetails(users.first().id) {user ->
@@ -730,7 +730,7 @@ fun main(args: Array<String>) {
 
 以下示例代码演示了如何创建和使用单线程执行器：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val executor = Executors.newSingleThreadExecutor()
     executor.submit { loadImage() }

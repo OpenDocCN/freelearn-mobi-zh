@@ -22,7 +22,7 @@
 
 `sum`函数接受两个`Int`类型的值并将它们相加。以常规方式声明，我们必须提供一个带有花括号和显式`return`的主体：
 
-```kt
+```java
 fun sum(a:Int, b:Int): Int {
    return a + b
 }
@@ -30,7 +30,7 @@ fun sum(a:Int, b:Int): Int {
 
 我们的`sum`函数其主体在花括号内声明，并包含一个`return`子句。但如果我们的函数只是一个表达式，它也可以写成一行：
 
-```kt
+```java
 fun sum(a:Int, b:Int): Int = a + b
 ```
 
@@ -38,7 +38,7 @@ fun sum(a:Int, b:Int): Int = a + b
 
 如果你想要减少更多字符，你还可以使用类型推断：
 
-```kt
+```java
 fun sum(a:Int, b:Int) = a + b
 ```
 
@@ -48,7 +48,7 @@ fun sum(a:Int, b:Int) = a + b
 
 一个函数可以有零个或多个参数。我们的函数`basicFunction`接受两个参数，如下面的代码所示：
 
-```kt
+```java
 fun basicFunction(name: String, size: Int) {
 
 }
@@ -60,7 +60,7 @@ fun basicFunction(name: String, size: Int) {
 
 当参数有两种我们已经讨论过的类型时，事情变得有趣——`vararg`和 lambda：
 
-```kt
+```java
 fun aVarargFun(vararg names: String) {
    names.forEach(::println)
 }
@@ -73,7 +73,7 @@ fun main(args: Array<String>) {
 
 一个带有`vararg`修饰符的参数的函数可以用零个或多个值来调用：
 
-```kt
+```java
 fun multipleVarargs(vararg names: String, vararg sizes: Int) {
 // Compilation error, "Multiple vararg-parameters are prohibited"
 }
@@ -87,7 +87,7 @@ fun multipleVarargs(vararg names: String, vararg sizes: Int) {
 
 我们在第二章“开始函数式编程”的“一等和高级函数”部分介绍了这个`unless`函数。让我们看看以下代码：
 
-```kt
+```java
 fun unless(condition: Boolean, block: () -> Unit) {
    if (!condition) block()
 }
@@ -99,19 +99,19 @@ unless(someBoolean) {
 
 现在，如果我们结合`vararg`和 lambda 会发生什么？让我们在下面的代码片段中检查一下：
 
-```kt
+```java
 fun <T, R> transform(vararg ts: T, f: (T) -> R): List<R> = ts.map(f)
 ```
 
 Lambda 可以放在带有`vararg`参数的函数的末尾：
 
-```kt
+```java
 transform(1, 2, 3, 4) { i -> i.toString() }
 ```
 
 让我们稍微冒险一点，一个 lambda 的`vararg`参数：
 
-```kt
+```java
 fun <T> emit(t: T, vararg listeners: (T) -> Unit) = listeners.forEach { listener ->
     listener(t)
 }
@@ -121,7 +121,7 @@ emit(1){i -> println(i)} //Compilation error. Passing value as a vararg is only 
 
 我们不能将 lambda 放在括号外，但我们可以将多个 lambda 放在括号内：
 
-```kt
+```java
 emit(1, ::println, {i -> println(i * 2)})
 ```
 
@@ -141,7 +141,7 @@ emit(1, ::println, {i -> println(i * 2)})
 
 让我们以 `data class` 构造函数为例：
 
-```kt
+```java
 typealias Kg = Double
 typealias cm = Int
 
@@ -155,13 +155,13 @@ data class Customer(val firstName: String,
 
 正常调用将看起来像这样：
 
-```kt
+```java
 val customer1 = Customer("John", "Carl", "Doe", "XX234", 82.3, 180)
 ```
 
 但包括命名参数将增加读者/维护者可获得的信息量，并减少心理工作。我们也可以以更方便或更有意义的顺序传递参数：
 
-```kt
+```java
 val customer2 = Customer(
       lastName = "Doe",
       firstName = "John",
@@ -173,7 +173,7 @@ val customer2 = Customer(
 
 当与 `vararg` 参数结合使用时，命名参数非常有用：
 
-```kt
+```java
 fun paramAfterVararg(courseId: Int, vararg students: String, roomTemperature: Double) {
     //Do something here
 }
@@ -185,7 +185,7 @@ paramAfterVararg(68, "Abel", "Barbara", "Carl", "Diane", roomTemperature = 18.0)
 
 通常当我们定义高阶函数时，我们从不为 lambda(s) 命名参数：
 
-```kt
+```java
 fun high(f: (Int, String) -> Unit) {
    f(1, "Romeo")
 }
@@ -197,7 +197,7 @@ high { q, w ->
 
 但可以添加它们。因此，`f` lambda 现在有了命名的参数——`age` 和 `name`：
 
-```kt
+```java
 fun high(f: (age:Int, name:String) -> Unit) {
    f(1, "Romeo")
 }
@@ -205,7 +205,7 @@ fun high(f: (age:Int, name:String) -> Unit) {
 
 这不会改变任何行为，只是为了更清晰地说明这个 lambda 的预期用途：
 
-```kt
+```java
 fun high(f: (age:Int, name:String) -> Unit) {
    f(age = 3, name = "Luciana") //compilation error
 }
@@ -217,7 +217,7 @@ fun high(f: (age:Int, name:String) -> Unit) {
 
 在 Kotlin 中，函数参数可以有默认值。对于 `Programmer`，`favouriteLanguage` 和 `yearsOfExperience` 数据类有默认值（记住，构造函数也是一个函数）：
 
-```kt
+```java
 data class Programmer(val firstName: String,
                  val lastName: String,
                  val favouriteLanguage: String = "Kotlin",
@@ -226,13 +226,13 @@ data class Programmer(val firstName: String,
 
 因此，`Programmer` 可以只使用两个参数来创建：
 
-```kt
+```java
 val programmer1 = Programmer("John", "Doe")
 ```
 
 但如果你想要传递 `yearsOfExperience`，它必须作为一个命名参数：
 
-```kt
+```java
 val programmer2 = Programmer("John", "Doe", 12) //Error
 
 val programmer2 = Programmer("John", "Doe", yearsOfExperience = 12) //OK
@@ -240,7 +240,7 @@ val programmer2 = Programmer("John", "Doe", yearsOfExperience = 12) //OK
 
 如果你想要传递所有参数，你仍然可以这样做，但如果你不使用命名参数，它们必须以正确的顺序提供：
 
-```kt
+```java
 val programmer3 = Programmer("John", "Doe", "TypeScript", 1)
 ```
 
@@ -248,7 +248,7 @@ val programmer3 = Programmer("John", "Doe", "TypeScript", 1)
 
 毫无疑问，Kotlin 最好的特性之一是扩展函数。扩展函数允许你使用新函数修改现有类型：
 
-```kt
+```java
 fun String.sendToConsole() = println(this)
 
 fun main(args: Array<String>) {
@@ -262,7 +262,7 @@ fun main(args: Array<String>) {
 
 除了点（`.`）和`this`，扩展函数与普通函数具有相同的语法规则和功能。实际上，在幕后，扩展函数是一个普通函数，其第一个参数是接收者类型的值。因此，我们的`sendToConsole()`扩展函数等同于以下代码：
 
-```kt
+```java
 fun sendToConsole(string: String) = println(string)
 
 sendToConsole("Hello world! (from a normal function)")
@@ -270,7 +270,7 @@ sendToConsole("Hello world! (from a normal function)")
 
 因此，实际上我们并没有通过新函数修改类型。扩展函数是一种非常优雅地编写实用函数的方法，易于编写，使用起来非常有趣，阅读起来也很愉快——双赢。这也意味着扩展函数有一个限制——它们不能访问`this`的私有成员，而一个合适的成员函数可以访问实例内的所有内容：
 
-```kt
+```java
 class Human(private val name: String)
 
 fun Human.speak(): String = "${this.name} makes a noise" //Cannot access 'name': it is private in 'Human'
@@ -284,7 +284,7 @@ fun Human.speak(): String = "${this.name} makes a noise" //Cannot access 'name':
 
 开放类`Canine`有一个子类`Dog`。一个独立的函数`printSpeak`接收一个类型为`Canine`的参数，并打印函数`speak(): String`的结果内容：
 
-```kt
+```java
 open class Canine {
    open fun speak() = "<generic canine noise>"
 }
@@ -302,7 +302,7 @@ fun printSpeak(canine: Canine) {
 
 `printSpeak`函数可以用任何`is-a` `Canine`类的实例调用，无论是`Canine`本身还是任何子类：
 
-```kt
+```java
 printSpeak(Canine())
 printSpeak(Dog())
 ```
@@ -317,7 +317,7 @@ printSpeak(Dog())
 
 与前面的示例一样，`Feline`是一个由`Cat`类扩展的开放类。但现在`speak`是一个扩展函数：
 
-```kt
+```java
 open class Feline
 
 fun Feline.speak() = "<generic feline noise>"
@@ -333,7 +333,7 @@ fun printSpeak(feline: Feline) {
 
 扩展函数不需要标记为`override`，因为我们没有覆盖任何内容：
 
-```kt
+```java
 printSpeak(Feline())
 printSpeak(Cat()
 ```
@@ -344,7 +344,7 @@ printSpeak(Cat()
 
 在这种情况下，两次调用都产生相同的结果。虽然一开始看起来很混乱，但一旦分析清楚，就会变得清晰。我们调用了两次`Feline.speak()`函数；这是因为我们传递给`printSpeak(Feline)`函数的每个参数都是一个`Feline`：
 
-```kt
+```java
 open class Primate(val name: String)
 
 fun Primate.speak() = "$name: <generic primate noise>"
@@ -373,7 +373,7 @@ printSpeak(GiantApe("Kong"))
 
 `Caregiver`公开类内部定义了针对两个不同类`Feline`和`Primate`的扩展函数：
 
-```kt
+```java
 open class Caregiver(val name: String) {
    open fun Feline.react() = "PURRR!!!"
 
@@ -399,7 +399,7 @@ open class Caregiver(val name: String) {
 
 +   在扩展函数内部，`this`意味着接收器类型的实例，就像我们工具函数中第一个参数的优雅语法一样：
 
-```kt
+```java
 class Dispatcher {
    val dispatcher: Dispatcher = this
 
@@ -412,7 +412,7 @@ class Dispatcher {
 
 回到我们的*动物园*示例，我们实例化了一个`Caregiver`，一个`Cat`和一个`Primate`，并且我们使用这两个动物实例调用了`Caregiver.takeCare`函数：
 
-```kt
+```java
 val adam = Caregiver("Adam")
 
 val fulgencio = Cat()
@@ -429,7 +429,7 @@ adam.takeCare(koko)
 
 任何动物园都需要兽医。类`Vet`扩展了`Caregiver`：
 
-```kt
+```java
 open class Vet(name: String): Caregiver(name) {
    override fun Feline.react() = "*runs away from $name*"
 }
@@ -437,7 +437,7 @@ open class Vet(name: String): Caregiver(name) {
 
 我们使用不同的实现覆盖了`Feline.react()`函数。我们还直接使用了`Vet`类的名称，因为`Feline`类没有属性名：
 
-```kt
+```java
 val brenda = Vet("Brenda")
 
 listOf(adam, brenda).forEach { caregiver ->
@@ -458,7 +458,7 @@ listOf(adam, brenda).forEach { caregiver ->
 
 `Worker`类有一个`work(): String`函数和一个私有函数`rest(): String`。我们还有两个具有相同签名的扩展函数，`work`和`rest`：
 
-```kt
+```java
 class Worker {
    fun work() = "*working hard*"
 
@@ -478,7 +478,7 @@ fun Worker.rest() = "*playing video games*"
 
 使用扩展函数也可以重载现有的成员函数：
 
-```kt
+```java
 val worker = Worker()
 
 println(worker.work())
@@ -498,7 +498,7 @@ println(worker.rest())
 
 我们可以向对象 `Builder` 添加一个 `buildBridge` 扩展函数：
 
-```kt
+```java
 object Builder {
 
 }
@@ -508,7 +508,7 @@ fun Builder.buildBridge() = "A shinny new bridge"
 
 我们可以包含伴随对象。类 `Designer` 有两个内部对象，`companion` 对象和 `Desk` 对象：
 
-```kt
+```java
 class Designer {
    companion object {
 
@@ -526,7 +526,7 @@ fun Designer.Desk.portofolio() = listOf("Project1", "Project2")
 
 调用此函数的工作方式与任何正常对象成员函数一样：
 
-```kt
+```java
 Designer.fastPrototype()
 Designer.Desk.portofolio().forEach(::println)
 ```
@@ -537,7 +537,7 @@ Designer.Desk.portofolio().forEach(::println)
 
 让我们在 `Int` 类型上添加一个 `中缀` 扩展函数，`superOperation`（这只是一个带有花哨名称的常规求和）：
 
-```kt
+```java
 infix fun Int.superOperation(i: Int) = this + i
 
 fun main(args: Array<String>) {
@@ -552,13 +552,13 @@ fun main(args: Array<String>) {
 
 Kluent 断言看起来像自然的英语表达：
 
-```kt
+```java
 "Kotlin" shouldStartWith "Ko"
 ```
 
 Kluent 还提供了一个反引号版本，以增强可读性：
 
-```kt
+```java
 "Kotlin" `should start with` "Ko"
 ```
 
@@ -568,7 +568,7 @@ Kluent 还提供了一个反引号版本，以增强可读性：
 
 你可以将许多 `中缀` 函数链式调用以生成内部 DSL，或者重新创建经典梗：
 
-```kt
+```java
 object All {
    infix fun your(base: Pair<Base, Us>) {}
 }
@@ -594,7 +594,7 @@ fun main(args: Array<String>) {
 
 Kotlin 允许你使用函数定义自己的或现有类型的操作行为，无论是普通函数还是扩展函数，只要使用 `operator` 修饰符标记即可：
 
-```kt
+```java
 class Wolf(val name:String) {
    operator fun plus(wolf: Wolf) = Pack(mapOf(name to this, wolf.name to wolf))
 }
@@ -617,7 +617,7 @@ fun main(args: Array<String>) {
 
 `Pack.plus` 扩展函数接收一个 `Wolf` 参数并返回一个新的 `Pack`。注意，`MutableMap` 也具有加号（`+`）操作符：
 
-```kt
+```java
 operator fun Pack.plus(wolf: Wolf) = Pack(this.members.toMutableMap() + (wolf.name to wolf))
 
 val biggerPack = northPack + Wolf("Bad Wolf")
@@ -651,7 +651,7 @@ val biggerPack = northPack + Wolf("Bad Wolf")
 
 回到 第二章，*开始函数式编程*，在 *一等和高级函数* 部分，当我们介绍 lambda 函数时，展示了 `Function1` 的定义：
 
-```kt
+```java
 /** A function that takes 1 argument. */
 public interface Function1<in P1, out R> : Function<R> {
     /** Invokes the function with the specified argument. */
@@ -663,7 +663,7 @@ public interface Function1<in P1, out R> : Function<R> {
 
 `Wolf` 类有一个 `invoke` 操作符：
 
-```kt
+```java
 enum class WolfActions {
    SLEEP, WALK, BITE
 }
@@ -700,7 +700,7 @@ fun main(args: Array<String>) {
 
 使用 `Pack.get` 操作符，我们可以将 `Pack` 当作数组使用：
 
-```kt
+```java
 operator fun Pack.get(name: String) = members[name]!!
 
 val badWolf = biggerPack["Bad Wolf"]
@@ -718,7 +718,7 @@ val badWolf = biggerPack["Bad Wolf"]
 
 `set` 操作符具有类似的语法：
 
-```kt
+```java
 enum class WolfRelationships {
    FRIEND, SIBLING, ENEMY, PARTNER
 }
@@ -746,7 +746,7 @@ talbot[WolfRelationships.ENEMY] = badWolf
 
 我们可以向 `Wolf` 类添加一个 `not` 运算符：
 
-```kt
+```java
 operator fun Wolf.not() = "$name is angry!!!"
 
 !talbot // talbot.not()
@@ -777,7 +777,7 @@ Kotlin 提供了许多功能来创建内部 DSL（在宿主 GPL 内部运行的 
 
 我们编写一个 `FxApp` 类，它扩展了 `tornadofx.App` 并接收一个 `tornadofx.View` 类（一个类引用，而不是一个实例）：
 
-```kt
+```java
 import javafx.application.Application
 import tornadofx.*
 
@@ -805,7 +805,7 @@ class FxView: View() {
 
 让我们从 Kotlin 标准库的一个例子开始：
 
-```kt
+```java
 val joinWithPipe = with(listOf("One", "Two", "Three")){
    joinToString(separator = "|")
 }
@@ -815,7 +815,7 @@ val joinWithPipe = with(listOf("One", "Two", "Three")){
 
 让我们看看 `with` 声明：
 
-```kt
+```java
 public inline fun <T, R> with(receiver: T, block: T.() -> R): R {
     return receiver.block()
 }
@@ -827,7 +827,7 @@ public inline fun <T, R> with(receiver: T, block: T.() -> R): R {
 
 再举一个例子怎么样？让我们看看它：
 
-```kt
+```java
 val html = buildString {
    append("<html>\n")
    append("\t<body>\n")
@@ -845,14 +845,14 @@ l>")
 
 `buildString` 函数接收一个 `StringBuilder.() -> Unit` 参数并返回一个 `String`；其声明非常简单：
 
-```kt
+```java
 public inline fun buildString(builderAction: StringBuilder.() -> Unit): String =
         StringBuilder().apply(builderAction).toString()
 ```
 
 `apply` 函数是一个类似于 `with` 的扩展函数，但它返回的是接收器实例，而不是 `R`。通常，`apply` 用于 *初始化* 和 *实例*：
 
-```kt
+```java
 public inline fun <T> T.apply(block: T.() -> Unit): T {    
     block()
     return this
@@ -867,7 +867,7 @@ public inline fun <T> T.apply(block: T.() -> Unit): T {
 
 我想创建一种方式来记录我的自行车及其组件。在原型阶段，我会使用 XML，但以后我们可以改为不同的实现：
 
-```kt
+```java
 <bicycle description="Fast carbon commuter">
     <bar material="ALUMINIUM" type="FLAT">
     </bar>
@@ -886,7 +886,7 @@ public inline fun <T> T.apply(block: T.() -> Unit): T {
 
 最后，我的 `bicycle` DSL 应该看起来像这样：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val commuter = bicycle {
       description("Fast carbon commuter")
@@ -918,7 +918,7 @@ fun main(args: Array<String>) {
 
 让我们从程序开始：
 
-```kt
+```java
 interface Element {
    fun render(builder: StringBuilder, indent: String)
 }
@@ -926,7 +926,7 @@ interface Element {
 
 在我的 DSL 中的 `bicycle` 的所有部分都将扩展/实现 `Element` 接口：
 
-```kt
+```java
 @DslMarker
 annotation class ElementMarker
 
@@ -965,7 +965,7 @@ abstract class Part(private val name: String) : Element {
 
 在这个例子中，我们可以使用 `frame`：
 
-```kt
+```java
 val commuter = bicycle {
    description("Fast carbon commuter")
    bar {
@@ -977,7 +977,7 @@ val commuter = bicycle {
 
 仍然可以使用 `this` 来显式执行：
 
-```kt
+```java
 val commuter = bicycle {
    description("Fast carbon commuter")
    bar {
@@ -989,7 +989,7 @@ val commuter = bicycle {
 
 现在，几个枚举来描述材料、杆类型和刹车：
 
-```kt
+```java
 enum class Material {
    CARBON, STEEL, TITANIUM, ALUMINIUM
 }
@@ -1005,7 +1005,7 @@ enum class Brake {
 
 其中一些部分有 `material` 属性：
 
-```kt
+```java
 abstract class PartWithMaterial(name: String) : Part(name) {
    var material: Material
       get() = Material.valueOf(attributes["material"]!!)
@@ -1017,7 +1017,7 @@ abstract class PartWithMaterial(name: String) : Part(name) {
 
 我们使用 `Material` 枚举的 `material` 属性，并将其存储在 `attributes` 映射中，转换值来来回回：
 
-```kt
+```java
 class Bicycle : Part("bicycle") {
 
    fun description(description: String) {
@@ -1036,7 +1036,7 @@ class Bicycle : Part("bicycle") {
 
 `Frame` 有一个后轮的函数：
 
-```kt
+```java
 class Frame : PartWithMaterial("frame") {
    fun backWheel(init: Wheel.() -> Unit) = initElement(Wheel(), init)
 }
@@ -1044,7 +1044,7 @@ class Frame : PartWithMaterial("frame") {
 
 `Wheel` 有一个使用 `Brake` 枚举的 `brake` 属性：
 
-```kt
+```java
 class Wheel : PartWithMaterial("wheel") {
    var brake: Brake
       get() = Brake.valueOf(attributes["brake"]!!)
@@ -1056,7 +1056,7 @@ class Wheel : PartWithMaterial("wheel") {
 
 `Bar` 有一个用于其类型的属性，使用 `BarType` 枚举：
 
-```kt
+```java
 class Bar : PartWithMaterial("bar") {
 
    var barType: BarType
@@ -1069,7 +1069,7 @@ class Bar : PartWithMaterial("bar") {
 
 `Fork` 定义了一个前轮的函数：
 
-```kt
+```java
 class Fork : PartWithMaterial("fork") {
    fun frontWheel(init: Wheel.() -> Unit) = initElement(Wheel(), init)
 }
@@ -1077,7 +1077,7 @@ class Fork : PartWithMaterial("fork") {
 
 我们接近完成，我们现在需要的只是我们的 DSL 的入口函数：
 
-```kt
+```java
 fun bicycle(init: Bicycle.() -> Unit): Bicycle {
    val cycle = Bicycle()
    cycle.init()
@@ -1093,7 +1093,7 @@ fun bicycle(init: Bicycle.() -> Unit): Bicycle {
 
 这样的函数：
 
-```kt
+```java
 fun <T> time(body: () -> T): Pair<T, Long> {
    val startTime = System.nanoTime()
    val v = body()
@@ -1109,7 +1109,7 @@ fun main(args: Array<String>) {
 
 一旦编译，它将看起来像这样：
 
-```kt
+```java
 val (_, time) = time(object : Function0<Unit> {
    override fun invoke() {
       Thread.sleep(1000)
@@ -1119,7 +1119,7 @@ val (_, time) = time(object : Function0<Unit> {
 
 如果性能对你来说很重要（关键任务应用、游戏、视频流），你可以将高阶函数标记为 `inline`：
 
-```kt
+```java
 inline fun <T> inTime(body: () -> T): Pair<T, Long> {
    val startTime = System.nanoTime()
    val v = body()
@@ -1136,7 +1136,7 @@ fun main(args: Array<String>) {
 
 一旦编译，它将看起来像这样：
 
-```kt
+```java
 val startTime = System.nanoTime()
 val v = Thread.sleep(1000)
 val endTime = System.nanoTime()
@@ -1155,7 +1155,7 @@ val (_, inTime) = (v to endTime - startTime)
 
 `UserService` 存储了一个监听器列表 `(User) -> Unit`：
 
-```kt
+```java
 data class User(val name: String)
 
 class UserService {
@@ -1170,7 +1170,7 @@ class UserService {
 
 将`addListener`改为内联函数将产生编译错误：
 
-```kt
+```java
 inline fun addListener(listener: (User) -> Unit) {
    listeners += listener //compilation error: Illegal use of inline-parameter listener
 }
@@ -1180,7 +1180,7 @@ inline fun addListener(listener: (User) -> Unit) {
 
 我们可以使用`noinline`修饰符来解决这个问题：
 
-```kt
+```java
 //Warning: Expected performance impact of inlining addListener can be insignificant
 inline fun addListener(noinline listener: (User) -> Unit) { 
    listeners += listener
@@ -1193,7 +1193,7 @@ inline fun addListener(noinline listener: (User) -> Unit) {
 
 在这个例子中，我们无法在`buildUser` lambda 中使用`transform`：
 
-```kt
+```java
 inline fun transformName(transform: (name: String) -> String): List<User> {
 
    val buildUser = { name: String ->
@@ -1206,7 +1206,7 @@ inline fun transformName(transform: (name: String) -> String): List<User> {
 
 为了解决这个问题，我们需要一个`crossinline`修饰符（或者我们可以使用`noinline`，但会损失相关的性能）：
 
-```kt
+```java
 inline fun transformName(crossinline transform: (name: String) -> String): List<User> {
 
    val buildUser = { name: String ->
@@ -1239,7 +1239,7 @@ fun main(args: Array<String>) {
 
 我们使用递归编写了经典算法，如斐波那契（我们正在重用第二章，“函数式编程入门”中的`tailrecFib`）：
 
-```kt
+```java
 fun tailrecFib(n: Long): Long {
    tailrec fun go(n: Long, prev: Long, cur: Long): Long {
       return if (n == 0L) {
@@ -1255,7 +1255,7 @@ fun tailrecFib(n: Long): Long {
 
 以及阶乘（同样，这里重用第二章，“函数式编程入门”中的`tailrecFactorial`）：
 
-```kt
+```java
 fun tailrecFactorial(n: Long): Long {
    tailrec fun go(n: Long, acc: Long): Long {
       return if (n <= 0) {
@@ -1273,7 +1273,7 @@ fun tailrecFactorial(n: Long): Long {
 
 我们还考虑了另一个例子，即`FunList`：
 
-```kt
+```java
 sealed class FunList<out T> {
    object Nil : FunList<Nothing>()
 
@@ -1317,7 +1317,7 @@ sealed class FunList<out T> {
 
 由于我们使用`fold`函数进行递归操作，我们可以使用`unfold`函数：
 
-```kt
+```java
 fun <T, S> unfold(s: S, f: (S) -> Pair<T, S>?): Sequence<T> {
    val result = f(s)
    return if (result != null) {
@@ -1334,7 +1334,7 @@ fun <T, S> unfold(s: S, f: (S) -> Pair<T, S>?): Sequence<T> {
 
 使用 `unfold`，我们可以创建一个函数，多次重复单个元素：
 
-```kt
+```java
 fun <T> elements(element: T, numOfValues: Int): Sequence<T> {
    return unfold(1) { i ->
       if (numOfValues > i)
@@ -1354,7 +1354,7 @@ fun main(args: Array<String>) {
 
 这是可以的，但并不非常有趣。那么返回一个阶乘序列怎么样？我们为你准备好了：
 
-```kt
+```java
 fun factorial(size: Int): Sequence<Long> {
    return sequenceOf(1L) + unfold(1L to 1) { (acc, n) ->
       if (size > n) {
@@ -1370,7 +1370,7 @@ fun factorial(size: Int): Sequence<Long> {
 
 斐波那契序列看起来类似：
 
-```kt
+```java
 fun fib(size: Int): Sequence<Long> {
    return sequenceOf(1L) + unfold(Triple(0L, 1L, 1)) { (cur, next</span>, n) ->
       if (size > n) {

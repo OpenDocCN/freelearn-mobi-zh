@@ -68,7 +68,7 @@
 
 1.  在`domain`模块的`build.gradle`文件中，移除对`kapt`和 Hilt 插件的引用：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -77,7 +77,7 @@
 
 1.  在同一个文件中，从`dependencies`块中删除 Hilt 的引用：
 
-    ```kt
+    ```java
     dependencies {
         implementation coroutines.coroutinesAndroid
         testImplementation test.junit
@@ -88,7 +88,7 @@
 
 1.  从`GetPostsWithUsersWithInteractionUseCase`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class GetPostsWithUsersWithInteractionUseCase(
         configuration: Configuration,
         private val postRepository: PostRepository,
@@ -105,7 +105,7 @@
 
 1.  从`GetPostUseCase`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class GetPostUseCase(
         configuration: Configuration,
         private val postRepository: PostRepository
@@ -117,7 +117,7 @@
 
 1.  从`GetUserUseCase`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class GetUserUseCase(
         configuration: Configuration,
         private val userRepository: UserRepository
@@ -129,7 +129,7 @@
 
 1.  从`UpdateInteractionUseCase`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class UpdateInteractionUseCase(
         configuration: Configuration,
         private val interactionRepository: 
@@ -144,7 +144,7 @@
 
 1.  在`UseCaseModule`类中的 app 模块，为`GetPostsWithUsersWithInteractionUseCase`提供依赖：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class UseCaseModule {
@@ -170,7 +170,7 @@
 
 1.  在同一个类中，为`GetPostUseCase`提供依赖：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class UseCaseModule {
@@ -190,7 +190,7 @@
 
 1.  在同一个类中，为`GetUserUseCase`提供依赖：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class UseCaseModule {
@@ -210,7 +210,7 @@
 
 1.  在同一个类中，为`UpdateInteractionUseCase`提供依赖：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class UseCaseModule {
@@ -231,7 +231,7 @@
 
 1.  在`data-repository`模块的`build.gradle`文件中，移除对`kapt`和 Hilt 插件的引用：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -240,7 +240,7 @@
 
 1.  在同一个文件中，从`dependencies`块中删除 Hilt 的引用：
 
-    ```kt
+    ```java
     dependencies {
         implementation(project(path: ":domain"))
         implementation coroutines.coroutinesAndroid
@@ -254,7 +254,7 @@
 
 1.  从`InteractionRepositoryImpl`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class InteractionRepositoryImpl(
         private val interactionDataSource: LocalInteractionDataSource
     ) : InteractionRepository {
@@ -264,7 +264,7 @@
 
 1.  从`PostRepositoryImpl`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class PostRepositoryImpl(
         private val remotePostDataSource: 
             RemotePostDataSource,
@@ -277,7 +277,7 @@
 
 1.  从`UserRepositoryImpl`中删除`@Inject`的引用：
 
-    ```kt
+    ```java
     class UserRepositoryImpl(
         private val remoteUserDataSource: 
             RemoteUserDataSource,
@@ -290,7 +290,7 @@
 
 1.  在`RepositoryModule`类中，将`bindPostRespository`方法替换为`@Provides`方法：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class RepositoryModule {
@@ -310,7 +310,7 @@
 
 1.  在同一个文件中，将`bindUserRepository`方法替换为`@Provides`方法：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class RepositoryModule {
@@ -329,7 +329,7 @@
 
 1.  在同一个文件中，将`bindInteractionRepositorymethod`替换为`@Provides`方法：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class RepositoryModule {
@@ -362,7 +362,7 @@
 
 为了将 Espresso 及其相关库添加到项目中，需要在任何模块的`build.gradle`文件中添加以下内容：
 
-```kt
+```java
 dependencies {
     …
     androidTestImplementation "androidx.test:core:1.4.0"
@@ -379,7 +379,7 @@ dependencies {
 
 以下是一个使用 Espresso 编写的测试示例：
 
-```kt
+```java
     @Test
     fun myTest(){
         ActivityScenario.launch(MainActivity::class.java).
@@ -394,7 +394,7 @@ dependencies {
 
 另一个有助于测试的有用补充是协调器。当我们需要删除测试生成的数据，这些数据可能保存在内存中或持久化在设备上，进而可能影响其他测试并导致它们故障时，协调器非常有用。协调器的作用是在每次执行测试之前卸载应用程序，这样每个测试都将在一个新安装的应用程序上进行。为了将协调器添加到应用程序中，您需要在模块的`build.gradle`文件中添加它：
 
-```kt
+```java
 android {
     …
     defaultConfig {
@@ -411,7 +411,7 @@ android {
 
 这将在测试执行中添加协调器配置，并在每次测试后传递删除应用程序数据的指令。要将协调器依赖项添加到项目中，需要以下操作：
 
-```kt
+```java
 dependencies {
     …
     androidTestUtil "androidx.test:orchestrator: 1.4.1"
@@ -420,7 +420,7 @@ dependencies {
 
 Espresso 还附带了许多扩展，其中之一是`IdlingResource`的概念。当运行本地测试（在开发机上运行的测试）和仪器化测试时，它们会在专门的一组线程上运行。Espresso 测试库将监控应用程序的主线程，当它空闲时，将执行所需的断言。如果应用程序使用后台线程，Espresso 需要一种方式来通知这一点。我们可以使用`IdlingResource`来指示 Espresso 在继续执行之前等待某个动作完成。`IdlingResource`的一个例子是`CountingIdlingResource`，它将为 Espresso 需要等待的每个操作保持一个计数器。在每次长时间运行的操作之前，计数器会增加，操作完成后会减少。在每次测试之前，`IdlingResource`需要注册，测试完成后注销：
 
-```kt
+```java
 class MyClass(private val countingIdlingResource: 
     CountingIdlingResource) {
     fun doOperation() {
@@ -433,7 +433,7 @@ class MyClass(private val countingIdlingResource:
 
 在前面的例子中，我们在`doOperation`方法开始时增加`CountingIdlingResource`的计数，在执行我们打算进行的长时间操作之后减少。为了注册和注销`IdlingResource`，我们可以执行以下操作：
 
-```kt
+```java
     lateinit var countingIdlingResource : CountingIdlingResource
     @Before
     fun setUp(){
@@ -451,7 +451,7 @@ class MyClass(private val countingIdlingResource:
 
 因为`IdlingResource`是 Espresso 的一部分，但在执行应用程序代码内的操作时需要使用它，所以我们希望避免在相关代码中使用`IdlingResource`。为此，我们可以通过装饰包含操作的类，然后使用依赖注入将装饰过的依赖注入到测试中。为了装饰代码，我们需要有一个操作抽象。以下是一个例子：
 
-```kt
+```java
 interface MyInterface {
     fun doOperation()
 }
@@ -464,7 +464,7 @@ class MyClass : MyInterface {
 
 在前面的例子中，我们创建了一个定义`doOperation`方法的接口，然后我们通过将长时间运行的操作实现为类来使用该接口。现在我们可以创建一个属于`androidTest`文件夹的类，它将装饰当前类的实现：
 
-```kt
+```java
 class MyDecoratedClass(
     private val myInterface: MyInterface,
     private val countingIdlingResource: 
@@ -482,7 +482,7 @@ class MyDecoratedClass(
 
 如果我们想要将新依赖项注入到测试中，我们首先需要定义一个新的扩展 `Application` 的类，该类将包含包含测试依赖项的依赖项图。如果我们使用 Hilt，它已经以 `HiltTestApplication` 的形式提供了这样的类。如果我们想要将 Hilt 集成到受测测试中，我们需要将以下依赖项添加到模块的 `build.gradle` 文件中：
 
-```kt
+```java
 dependencies {
     androidTestImplementation "com.google.dagger:hilt-
         android-testing:2.40.5"
@@ -493,7 +493,7 @@ dependencies {
 
 要将 `HiltTestApplication` 类提供给测试，我们需要更改受测测试运行器。一个新测试运行器的示例如下：
 
-```kt
+```java
 class MyTestRunner : AndroidJUnitRunner() {
     override fun newApplication(cl: ClassLoader?, name: 
         String?, context: Context?): Application {
@@ -505,7 +505,7 @@ class MyTestRunner : AndroidJUnitRunner() {
 
 在此示例中，我们扩展了 `AndroidJUnitRunner`，并在 `newApplication` 方法中调用 `super` 方法，并将 `HiltTestApplication` 作为 `name` 传递。这意味着当测试执行时，将使用 `HiltTestApplication` 而不是我们在主代码中定义的 `Application` 类。我们现在需要更改模块的 `build.gradle` 文件中的配置以使用前面的运行器：
 
-```kt
+```java
 android {
     …
     defaultConfig {
@@ -519,7 +519,7 @@ android {
 
 这允许受测测试使用我们创建的运行器。现在假设我们有一个以下模块，它将提供初始依赖项：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class MyModule {
@@ -530,7 +530,7 @@ abstract class MyModule {
 
 在这里，我们使用简单的绑定将实现连接到抽象。在 `androidTest` 文件夹中，我们可以创建一个新的模块，在其中用装饰实例替换此实例：
 
-```kt
+```java
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
@@ -549,7 +549,7 @@ class MyDecoratedModule {
 
 在此示例中，我们使用了 `@TestInstallIn` 注解，这将使此模块中的依赖项与测试应用程序的生命周期保持一致，并替换上一个模块中的依赖项。然后我们可以为 `IdlingResource` 和 `MyDecoratedClass` 提供依赖项，后者将包装 `MyClass` 并使用 `IdlingResource`。如果我们想要这些更改在测试中生效，我们需要以下更改：
 
-```kt
+```java
 @HiltAndroidTest
 class MyActivityTest {
     @get:Rule(order = 0)
@@ -574,7 +574,7 @@ class MyActivityTest {
 
 Jetpack Compose 自带测试库，需要将以下配置添加到模块的 `build.gradle` 文件中：
 
-```kt
+```java
 dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-
         junit4:1.0.5"
@@ -585,7 +585,7 @@ dependencies {
 
 要为 Jetpack Compose 组件编写测试，当我们想要测试单个可组合方法时，需要使用 `createComposeRule` 定义一个 Compose 测试规则，或者如果我们想要测试整个活动的 Compose 内容，则使用 `createAndroidComposeRule`。一个示例如下：
 
-```kt
+```java
 class MyTest {
     @get:Rule
     var composeTestRule = createAndroidComposeRule
@@ -595,7 +595,7 @@ class MyTest {
 
 在前面的例子中，我们定义了一个测试规则，该规则将负责测试 `MyActivity` 内部的 Compose 内容。如果我们想让测试与用户界面交互或断言它显示正确的信息，我们将有如下结构：
 
-```kt
+```java
     @Test
     fun testDisplayList() {
         composeTestRule.onNode()
@@ -606,7 +606,7 @@ class MyTest {
 
 在这个例子中，我们使用 `onNode` 方法来定位特定的元素，例如 `Text` 或 `Button`。然后我们有 `assertIsDisplayed` 方法，用于检查节点是否显示。最后，我们有 `performClick` 方法，它将点击元素。Jetpack Compose 使用它自己的 `IdlingResource` 类型，可以在 Compose 测试规则中注册，类似于以下示例：
 
-```kt
+```java
     lateinit var idlingResource: IdlingResource
     @Before
     fun setUp() {
@@ -654,7 +654,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在顶级`build.gradle`文件中，添加以下库版本：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             …
@@ -670,7 +670,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在相同的文件中，确保添加以下`androidTest`依赖项：
 
-    ```kt
+    ```java
     buildscript {
         ext {
            …
@@ -715,7 +715,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在应用模块的`build.gradle`文件中，添加所需的测试依赖项：
 
-    ```kt
+    ```java
     dependencies{
         …
         androidTestImplementation androidTest.junit
@@ -736,7 +736,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在应用模块的`androidTest`文件夹中，在`java/{package-name}`文件夹内创建`PostAppTestRunner`类：
 
-    ```kt
+    ```java
     class PostAppTestRunner : AndroidJUnitRunner() {
         override fun newApplication(cl: ClassLoader?, 
             name: String?, context: Context?): Application {
@@ -749,7 +749,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在应用模块的`build.gradle`文件中，设置以下测试配置。确保将`{package-name}`替换为`PostAppTestRunner`所在的包：
 
-    ```kt
+    ```java
     android {
         …
         defaultConfig {
@@ -769,7 +769,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在`idling`包内，创建一个名为`ComposeCountingIdlingResource`的新类：
 
-    ```kt
+    ```java
     class ComposeCountingIdlingResource(name: String) : 
         IdlingResource {
         private val countingIdlingResource = 
@@ -787,7 +787,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在相同的包中，创建一个名为`IdlingUtils`的文件，包含以下方法：
 
-    ```kt
+    ```java
     fun <T> Flow<T>.attachIdling(
         countingIdlingResource:  
             ComposeCountingIdlingResource
@@ -804,7 +804,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在`repository`包中，创建一个名为`IdlingInteractionRepository`的类：
 
-    ```kt
+    ```java
     class IdlingInteractionRepository(
         private val interactionRepository: InteractionRepository,
         private val countingIdlingResource: ComposeCountingIdlingResource
@@ -826,7 +826,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在相同的包中，创建一个名为`IdlingPostRepository`的类：
 
-    ```kt
+    ```java
     class IdlingPostRepository(
         private val postRepository: PostRepository,
         private val countingIdlingResource: 
@@ -845,7 +845,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在相同的包中，创建一个名为`IdlingUserRepository`的类：
 
-    ```kt
+    ```java
     class IdlingUserRepository(
         private val userRepository: UserRepository,
         private val countingIdlingResource: 
@@ -864,7 +864,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在`injection`包中，创建`IdlingRepositoryModule`类：
 
-    ```kt
+    ```java
     @Module
     @TestInstallIn(
         components = [SingletonComponent::class],
@@ -876,7 +876,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在 `IdlingRepositoryModule` 类中，提供一个对 `ComposeCountingIdlingResource` 的依赖，这将是一个跨所有仓库的单例：
 
-    ```kt
+    ```java
     @Module
     @TestInstallIn(
         components = [SingletonComponent::class],
@@ -896,7 +896,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在同一文件中，提供一个对 `IdlingPostRepository` 的依赖：
 
-    ```kt
+    ```java
     @Module
     @TestInstallIn(
         components = [SingletonComponent::class],
@@ -924,7 +924,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在同一文件中，提供一个对 `IdlingUserRepository` 的依赖：
 
-    ```kt
+    ```java
     @Module
     @TestInstallIn(
         components = [SingletonComponent::class],
@@ -952,7 +952,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在同一文件中，提供一个对 `IdlingInteractionRepository` 的依赖：
 
-    ```kt
+    ```java
     @Module
     @TestInstallIn(
         components = [SingletonComponent::class],
@@ -980,7 +980,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在 `remote` 包中，创建一个名为 `MockRemoteUserDataSource` 的类，并创建一个代表测试数据的 `User` 对象列表：
 
-    ```kt
+    ```java
     class MockRemoteUserDataSource @Inject constructor() : 
         RemoteUserDataSource {
         private val users = listOf(
@@ -1008,7 +1008,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在同一包中，创建一个名为 `MockRemotePostDataSource` 的类，并创建一个代表测试数据的 `Post` 对象列表：
 
-    ```kt
+    ```java
     class MockRemotePostDataSource @Inject constructor() : 
         RemotePostDataSource {
         private val posts = listOf(
@@ -1048,7 +1048,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在 `injection` 包中，创建一个名为 `MockRemoteDataSourceModule` 的类，它将负责将之前的两个实现绑定到抽象：
 
-    ```kt
+    ```java
     @Module
     @TestInstallIn(
         components = [SingletonComponent::class],
@@ -1068,7 +1068,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在 `test` 包中，创建一个名为 `MainActivityTest` 的类：
 
-    ```kt
+    ```java
     @HiltAndroidTest
     class MainActivityTest {
         @get:Rule(order = 0)
@@ -1097,7 +1097,7 @@ Figure 10.4 – 练习 10.02 的预期输出
 
 1.  在 `MainActivityTest` 类中，添加一个测试，该测试将断言所需的数据显示在屏幕上：
 
-    ```kt
+    ```java
     @HiltAndroidTest
     class MainActivityTest {
         …

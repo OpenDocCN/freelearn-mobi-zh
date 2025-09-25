@@ -44,7 +44,7 @@
 
 Hilt 使用 Java 特性；确保你的项目在 `app/build.gradle` 中，并且你有以下编译选项：
 
-```kt
+```java
 android {
     ...
     compileOptions {
@@ -58,95 +58,95 @@ android {
 
 1.  首先，我们必须将 `Hilt-android-gradle-plugin` 插件添加到我们项目的根文件 `build.gradle(Project:SampleLogin)` 中：
 
-    ```kt
+    ```java
     plugins {
     ```
 
-    ```kt
+    ```java
         id 'com.google.dagger.Hilt.android' version '2.44'
     ```
 
-    ```kt
+    ```java
     apply false
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  然后，在我们的 `app/build.gradle` 文件中添加以下依赖项，并同步项目。它应该没有问题地运行：
 
-    ```kt
+    ```java
     plugins {
     ```
 
-    ```kt
+    ```java
         id 'kotlin-kapt'
     ```
 
-    ```kt
+    ```java
         id 'dagger.Hilt.android.plugin'
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     dependencies {
     ```
 
-    ```kt
+    ```java
         implementation "com.google.dagger:Hilt-
     ```
 
-    ```kt
+    ```java
             android:2.44"
     ```
 
-    ```kt
+    ```java
         kapt "com.google.dagger:Hilt-compiler:2.44"
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，让我们继续添加 `Application` 类。所有使用 Hilt 的应用程序都必须有一个被 `@HiltAndroidApp` 注解的 `Application` 类，并且我们需要调用在 `Manifest` 中创建的 `Application` 类：
 
-    ```kt
+    ```java
     @HiltAndroidApp
     ```
 
-    ```kt
+    ```java
     class LoginApp : Application()
     ```
 
 1.  在我们的 `Manifest` 文件夹中，让我们添加 `LoginApp`：
 
-    ```kt
+    ```java
     <application
     ```
 
-    ```kt
+    ```java
         android:name=".LoginApp"
     ```
 
-    ```kt
+    ```java
       ...
     ```
 
 1.  现在我们已经完成了设置，我们需要通过给我们的类添加所需的注解来开始使用 Hilt。在 `MainActivity.kt` 中，我们需要添加 `@AndroidEntryPoint` 注解：
 
-    ```kt
+    ```java
     @AndroidEntryPoint
     ```
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
     ```
 
-    ```kt
+    ```java
       ...
     ```
 
@@ -218,145 +218,145 @@ Jetpack Compose 使用单向数据流设计模式；这意味着数据或状态�
 
 1.  将包命名为`Login`；在`LoginContent`文件中添加新的类，`LoginViewModel`。接下来创建一个`ViewModel`类：
 
-    ```kt
+    ```java
     class LoginViewModel {...}
     ```
 
 1.  现在我们已经创建了`LoginViewModel`类，我们需要添加`HiltViewModel`的 DI 注解并确保我们扩展了`ViewModel`类：
 
-    ```kt
+    ```java
     @HiltViewModel
     ```
 
-    ```kt
+    ```java
     class LoginViewModel @Inject constructor(
     ```
 
-    ```kt
+    ```java
     ): ViewModel(){. . .}
     ```
 
 1.  在我们的`ViewModel`构造函数中，我们需要添加`stateHandle: SavedStateHandle`，这将帮助我们维护和从保存的状态中检索对象。这些值即使在系统杀死进程后仍然持续存在，并且可以通过相同的对象保持可用：
 
-    ```kt
+    ```java
     @HiltViewModel
     ```
 
-    ```kt
+    ```java
     class LoginViewModel @Inject constructor(
     ```
 
-    ```kt
+    ```java
         stateHandle: SavedStateHandle
     ```
 
-    ```kt
+    ```java
     ) : ViewModel() {...}
     ```
 
 1.  在我们构建`ViewModel`之前，让我们继续创建一个数据类，`AuthenticationState()`。这个类在我们的测试中非常有用，因为我们需要能够测试大多数验证案例。一个`View`状态类，加上拥有单一事实来源，有许多优点，并且是**模型-视图-意图**（**MVI**）的原则之一：
 
-    ```kt
+    ```java
     data class AuthenticationState(
     ```
 
-    ```kt
+    ```java
         val userName: String = "",
     ```
 
-    ```kt
+    ```java
         val password: String = "",
     ```
 
-    ```kt
+    ```java
         val loading: Boolean = false,
     ```
 
-    ```kt
+    ```java
         var togglePasswordVisibility: Boolean = true
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         companion object {
     ```
 
-    ```kt
+    ```java
             val EMPTY_STATE = AuthenticationState()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，让我们继续创建一个辅助类，`MutableSavedState<T>()`，它将接受`savedStateHandle`、一个键和一个默认值。这个类充当`MutableStateFlow()`，但保存数据和值，并在应用程序死亡时通过`SavedStateHandle`检索它们：
 
-    ```kt
+    ```java
     class MutableSavedState<T>(
     ```
 
-    ```kt
+    ```java
         private val savedStateHandle: SavedStateHandle,
     ```
 
-    ```kt
+    ```java
         private val key: String,
     ```
 
-    ```kt
+    ```java
         defValue: T,
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
      . . .
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，让我们继续创建当用户在我们的`LoginViewModel`中输入用户名和密码时将被调用的回调：
 
-    ```kt
+    ```java
     private val username = MutableSavedState(
     ```
 
-    ```kt
+    ```java
         stateHandle,
     ```
 
-    ```kt
+    ```java
         "UserName",
     ```
 
-    ```kt
+    ```java
         defValue = ""
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     fun userNameChanged(userName: String){
     ```
 
-    ```kt
+    ```java
         username.value = userName
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -364,93 +364,93 @@ Jetpack Compose 使用单向数据流设计模式；这意味着数据或状态�
 
 1.  现在，我们需要创建一个`combineFlows`辅助类。在 Kotlin 中，你可以组合超过两个流程；协程`flow`是一种按顺序发出多个值的类型，与返回单个值的`suspend`函数相反。有关如何组合流程的更多详细信息，请参阅`combine(flow1, flow2, flow3, flow4) {t1, t2, t3, t4 -> resultMapper}.stateIn(scope)`：
 
-    ```kt
+    ```java
     fun <T1, T2, T3, T4, T5, T6, R> combine(
     ```
 
-    ```kt
+    ```java
         flow: Flow<T1>,
     ```
 
-    ```kt
+    ```java
         flow2: Flow<T2>,
     ```
 
-    ```kt
+    ```java
         flow3: Flow<T3>,
     ```
 
-    ```kt
+    ```java
         flow4: Flow<T4>,
     ```
 
-    ```kt
+    ```java
         flow5: Flow<T5>,
     ```
 
-    ```kt
+    ```java
         flow6: Flow<T6>,
     ```
 
-    ```kt
+    ```java
         transform: suspend (T1, T2, T3, T4, T5, T6) -> R
     ```
 
-    ```kt
+    ```java
     ): Flow<R> = combine(
     ```
 
-    ```kt
+    ```java
             combine(flow, flow2, flow3, ::Triple),
     ```
 
-    ```kt
+    ```java
             combine(flow4, flow5, flow6, ::Triple)
     ```
 
-    ```kt
+    ```java
     ) { t1, t2 ->
     ```
 
-    ```kt
+    ```java
         transform(
     ```
 
-    ```kt
+    ```java
             t1.first,
     ```
 
-    ```kt
+    ```java
             t1.second,
     ```
 
-    ```kt
+    ```java
             t1.third,
     ```
 
-    ```kt
+    ```java
             t2.first,
     ```
 
-    ```kt
+    ```java
             t2.second,
     ```
 
-    ```kt
+    ```java
             t2.third
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 更多信息请参阅此处 – [`stackoverflow.com/questions/67939183/kotlin-combine-more-than-2-flows`](https://stackoverflow.com/questions/67939183/kotlin-combine-more-than-2-flows)：
 
-```kt
+```java
 val state = combineFlows(
     username.flow,
     password.flow,
@@ -468,19 +468,19 @@ val state = combineFlows(
 
 1.  现在，让我们继续创建我们的协程辅助类，命名为`SampleLoginDispatchers()`；它将帮助我们测试代码并确保我们的代码易于阅读。此外，我们使用协程调度器，这些调度器有助于确定相应的协程应该使用哪个线程进行执行：
 
-    ```kt
+    ```java
     .stateIn(
     ```
 
-    ```kt
+    ```java
        coroutineScope = viewModelScope + dispatchers.main,
     ```
 
-    ```kt
+    ```java
        initialValue = AuthenticationState.EMPTY_STATE
     ```
 
-    ```kt
+    ```java
     )
     ```
 
@@ -488,101 +488,101 @@ val state = combineFlows(
 
 1.  Android 中的`SharingStarted`协程流程操作符用于在多个收集器之间共享流程的执行。它通常用于创建一个“热”流程，这意味着流程一旦创建就开始发出数据，并且数据被所有活跃的流程收集器共享。这些可以是连续的相同命令的发射，并且没有任何效果：
 
-    ```kt
+    ```java
     fun <T> Flow<T>.stateIn(
     ```
 
-    ```kt
+    ```java
         coroutineScope: CoroutineScope,
     ```
 
-    ```kt
+    ```java
         initialValue: T
     ```
 
-    ```kt
+    ```java
     ): StateFlow<T> = stateIn(
     ```
 
-    ```kt
+    ```java
         scope = coroutineScope,
     ```
 
-    ```kt
+    ```java
         started = SharingStarted.WhileSubscribed(5000),
     ```
 
-    ```kt
+    ```java
         initialValue = initialValue
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  有四种类型的分发器。在我们的例子中，我们只会使用三种。此外，你可以注入单个分发器，而不需要类，因此这可以基于个人偏好。看看四种类型分发器是如何工作的：
 
-    ```kt
+    ```java
     class SampleLoginDispatchers(
     ```
 
-    ```kt
+    ```java
         val default: CoroutineDispatcher,
     ```
 
-    ```kt
+    ```java
         val main: CoroutineDispatcher,
     ```
 
-    ```kt
+    ```java
         val io: CoroutineDispatcher
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         companion object {
     ```
 
-    ```kt
+    ```java
             fun createTestDispatchers(coroutineDispatcher:
     ```
 
-    ```kt
+    ```java
             CoroutineDispatcher): SampleLoginDispatchers {
     ```
 
-    ```kt
+    ```java
                 return SampleLoginDispatchers(
     ```
 
-    ```kt
+    ```java
                     default = coroutineDispatcher,
     ```
 
-    ```kt
+    ```java
                     main = coroutineDispatcher,
     ```
 
-    ```kt
+    ```java
                     io = coroutineDispatcher
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -590,265 +590,265 @@ val state = combineFlows(
 
 1.  创建一个新的包，并将其命名为 `di`。在这个包中，创建一个新的对象，并将其命名为 `AppModule`；我们将通过依赖图将我们的分发器提供给 `ViewModel` 构造函数：
 
-    ```kt
+    ```java
     @Module
     ```
 
-    ```kt
+    ```java
     @InstallIn(SingletonComponent::class)
     ```
 
-    ```kt
+    ```java
     object AppModule {
     ```
 
-    ```kt
+    ```java
         @Provides
     ```
 
-    ```kt
+    ```java
         fun provideSlimeDispatchers():
     ```
 
-    ```kt
+    ```java
         SampleLoginDispatchers {
     ```
 
-    ```kt
+    ```java
             return SampleLoginDispatchers(
     ```
 
-    ```kt
+    ```java
             default = Dispatchers.Default,
     ```
 
-    ```kt
+    ```java
             main = Dispatchers.Main,
     ```
 
-    ```kt
+    ```java
             io = Dispatchers.IO
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们现在需要前往 `LoginContent` 并修改代码——也就是说，通过添加与我们的 `ViewModel` 对应的回调，并且每当我们有视图——例如，`UserNameField()`——我们将使用回调。请参阅示例代码：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun LoginContent(
     ```
 
-    ```kt
+    ```java
         modifier: Modifier = Modifier,
     ```
 
-    ```kt
+    ```java
         uiState: AuthenticationState,
     ```
 
-    ```kt
+    ```java
         onUsernameUpdated: (String) -> Unit,
     ```
 
-    ```kt
+    ```java
         onPasswordUpdated: (String) -> Unit,
     ```
 
-    ```kt
+    ```java
         onLogin: () -> Unit,
     ```
 
-    ```kt
+    ```java
         passwordToggleVisibility: (Boolean) -> Unit
     ```
 
-    ```kt
+    ```java
     ){
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
-    ```kt
+    ```java
     UserNameField(authState = uiState, onValueChanged =
     ```
 
-    ```kt
+    ```java
     onUsernameUpdated)
     ```
 
-    ```kt
+    ```java
     PasswordInputField(
     ```
 
-    ```kt
+    ```java
         text = stringResource(id = R.string.password),
     ```
 
-    ```kt
+    ```java
         authState = uiState,
     ```
 
-    ```kt
+    ```java
         onValueChanged = onPasswordUpdated,
     ```
 
-    ```kt
+    ```java
         passwordToggleVisibility =
     ```
 
-    ```kt
+    ```java
             passwordToggleVisibility
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     LoginButton(
     ```
 
-    ```kt
+    ```java
         text = stringResource(id = R.string.sign_in),
     ```
 
-    ```kt
+    ```java
         enabled = if (uiState.isValidForm()) {
     ```
 
-    ```kt
+    ```java
             !uiState.loading
     ```
 
-    ```kt
+    ```java
         } else {
     ```
 
-    ```kt
+    ```java
             false
     ```
 
-    ```kt
+    ```java
         },
     ```
 
-    ```kt
+    ```java
         onLoginClicked = {
     ```
 
-    ```kt
+    ```java
             onLogin.invoke()
     ```
 
-    ```kt
+    ```java
         },
     ```
 
-    ```kt
+    ```java
         isLoading = uiState.loading
     ```
 
-    ```kt
+    ```java
     ). . .}
     ```
 
 1.  现在，在我们的 `LoginContentScreen` 组合函数中，我们将传递我们的 `LoginViewModel`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun LoginContentScreen(
     ```
 
-    ```kt
+    ```java
         loginViewModel: LoginViewModel,
     ```
 
-    ```kt
+    ```java
         onRegisterNavigateTo: () -> Unit
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         val viewState by
     ```
 
-    ```kt
+    ```java
             loginViewModel.state.collectAsState()
     ```
 
-    ```kt
+    ```java
         LoginContent(
     ```
 
-    ```kt
+    ```java
             uiState = viewState,
     ```
 
-    ```kt
+    ```java
             onUsernameUpdated =
     ```
 
-    ```kt
+    ```java
                 loginViewModel::userNameChanged,
     ```
 
-    ```kt
+    ```java
              onPasswordUpdated =
     ```
 
-    ```kt
+    ```java
                 loginViewModel::passwordChanged,
     ```
 
-    ```kt
+    ```java
              onLogin = loginViewModel::login,
     ```
 
-    ```kt
+    ```java
              passwordToggleVisibility =
     ```
 
-    ```kt
+    ```java
                  loginViewModel::passwordVisibility,
     ```
 
-    ```kt
+    ```java
              onRegister = onRegisterNavigateTo
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，在 `MainActivity` 中，我们现在可以继续调用 `LoginContentScreen`，传入我们的 `ViewModel`，并指定当用户点击 `onRegister` 时我们想要执行的操作：
 
-    ```kt
+    ```java
     LoginContentScreen(loginViewModel = HiltViewModel(), onRegisterNavigateTo = {. . .}
     ```
 
@@ -910,161 +910,161 @@ Jetpack Compose 使用单向数据流设计模式。这意味着数据或状态�
 
 1.  一旦你同步了你的项目，错误就会消失，你应该能够在`MainActivity`或你想使用`ComposeView`的地方使用这个视图：
 
-    ```kt
+    ```java
     <androidx.Compose.ui.platform.ComposeView
     ```
 
-    ```kt
+    ```java
         android:id="@+id/alert_dialog"
     ```
 
-    ```kt
+    ```java
         android:layout_width="match_parent"
     ```
 
-    ```kt
+    ```java
         android:layout_height="match_parent"/>
     ```
 
 1.  让我们也在`build.gradle(Module:app)`中添加`viewBinding`，这样我们就可以在`MainActivity`中轻松访问我们的视图。如果你已经设置了`viewBinding`，你可以跳过这部分：
 
-    ```kt
+    ```java
     buildFeatures{
     ```
 
-    ```kt
+    ```java
         viewBinding true
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  一旦我们同步了项目，我们就可以在`MainActivity`中通过绑定访问`ComposeView`。此外，它将有一个`setContent{}`方法，你可以设置所有你的可组合元素并将其包裹在主题中：
 
-    ```kt
+    ```java
     class MainActivity : AppCompatActivity() {
     ```
 
-    ```kt
+    ```java
         private lateinit var activityBinding:
     ```
 
-    ```kt
+    ```java
         ActivityMainBinding
     ```
 
-    ```kt
+    ```java
         override fun onCreate(savedInstanceState: Bundle?)
     ```
 
-    ```kt
+    ```java
         {
     ```
 
-    ```kt
+    ```java
             super.onCreate(savedInstanceState)
     ```
 
-    ```kt
+    ```java
             activityBinding =
     ```
 
-    ```kt
+    ```java
                ActivityMainBinding.inflate(layoutInflater)
     ```
 
-    ```kt
+    ```java
             setContentView(activityBinding.root)
     ```
 
-    ```kt
+    ```java
             activityBinding.alertDialog.setContent {
     ```
 
-    ```kt
+    ```java
                 GreetingAlertDialog()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们的`GreetingAlertDialog()`将包含一个`AlertDialog()`可组合元素、一个标题和文本，它将我们的消息作为一个简单的文本元素提供。标题将说`Hello`，因为这是一个问候，消息将是`Hello，感谢您成为 Android 社区的一员`。你可以根据需要自定义它：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun SimpleAlertDialog() {
     ```
 
-    ```kt
+    ```java
         AlertDialog(
     ```
 
-    ```kt
+    ```java
             onDismissRequest = { },
     ```
 
-    ```kt
+    ```java
             confirmButton = {
     ```
 
-    ```kt
+    ```java
                 TextButton(onClick = {})
     ```
 
-    ```kt
+    ```java
                 { Text(text = "OK") }
     ```
 
-    ```kt
+    ```java
             },
     ```
 
-    ```kt
+    ```java
             dismissButton = {
     ```
 
-    ```kt
+    ```java
                 TextButton(onClick = {})
     ```
 
-    ```kt
+    ```java
                 { Text(text = "OK") }
     ```
 
-    ```kt
+    ```java
             },
     ```
 
-    ```kt
+    ```java
             title = { Text(text = "Hello") },
     ```
 
-    ```kt
+    ```java
             text = { Text(text = "Hello, and thank you for
     ```
 
-    ```kt
+    ```java
             being part of the Android community") }
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1074,43 +1074,43 @@ Jetpack Compose 使用单向数据流设计模式。这意味着数据或状态�
 
 1.  你还可以创建一个继承自`AbstractComposeView`的自定义视图：
 
-    ```kt
+    ```java
     class ComposeAlertDialogComponent @JvmOverloads constructor(
     ```
 
-    ```kt
+    ```java
         context: Context,
     ```
 
-    ```kt
+    ```java
         attrs: AttributeSet? = null,
     ```
 
-    ```kt
+    ```java
         defStyle: Int = 0
     ```
 
-    ```kt
+    ```java
     ) : AbstractComposeView(context, attrs, defStyle) {
     ```
 
-    ```kt
+    ```java
             @Composable
     ```
 
-    ```kt
+    ```java
         override fun Content() {
     ```
 
-    ```kt
+    ```java
             GreetingAlertDialog()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1148,43 +1148,43 @@ Jetpack Compose 仍然非常新，许多公司开始使用它。此外，谷歌�
 
 1.  我们可以看看一个简单的例子以及重组是如何发生的：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun UserDetails(
     ```
 
-    ```kt
+    ```java
         name: String,
     ```
 
-    ```kt
+    ```java
         gender: String,
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         Box() {
     ```
 
-    ```kt
+    ```java
             Text(name)
     ```
 
-    ```kt
+    ```java
             Spacer()
     ```
 
-    ```kt
+    ```java
             Text(gender)
     ```
 
-    ```kt
+    ```java
         }}
     ```
 
@@ -1282,155 +1282,155 @@ Compose 团队正在推出 Jetpack Compose Composition Tracing，这是第一个
 
 1.  因此，对于这一步，让我们回到我们的主包（`com.name.SampleLogin`）并创建一个新的包，命名为`util`。在`util`内部，让我们创建一个新的类，命名为`TestTags`，它将是一个对象。在这里，我们将有另一个对象，命名为`LoginContent`，并创建我们可以调用在视图中的常量值：
 
-    ```kt
+    ```java
     object TestTags {
     ```
 
-    ```kt
+    ```java
         object LoginContent {
     ```
 
-    ```kt
+    ```java
             const val SIGN_IN_BUTTON = "sign_in_button"
     ```
 
-    ```kt
+    ```java
             const val LOGO_IMAGE = "logo_image_button"
     ```
 
-    ```kt
+    ```java
             const val ANDROID_TEXT = "community_text"
     ```
 
-    ```kt
+    ```java
             const val USERNAME_FIELD = "username_fields"
     ```
 
-    ```kt
+    ```java
             const val PASSWORD_FIELD = "password_fields"
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在我们已经创建了测试标签，让我们回到我们的`LoginContent`并添加它们到`Modifier()`中的所有视图中，这样在测试时，使用我们添加的测试标签来识别视图会更容易。请看以下代码片段：
 
-    ```kt
+    ```java
     Image(
     ```
 
-    ```kt
+    ```java
         modifier = modifier.testTag(LOGO_IMAGE),
     ```
 
-    ```kt
+    ```java
         painter = painterResource(id =
     ```
 
-    ```kt
+    ```java
             R.drawable.ic_launcher_foreground),
     ```
 
-    ```kt
+    ```java
         contentDescription = "Logo"
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  在我们的`LoginContentTest`类内部，现在让我们继续设置我们的测试环境。我们需要创建`@get:Rule`，它注解引用规则或返回规则的字段。在规则下，让我们创建`ComposeRuleTest`并初始化它：
 
-    ```kt
+    ```java
     @get:Rule
     ```
 
-    ```kt
+    ```java
     val ComposeRuleTest = createAndroidComposeRule<MainActivity>()
     ```
 
 1.  添加以下函数以帮助我们设置内容。我们应该在我们的`Test`注解函数中调用此函数：
 
-    ```kt
+    ```java
     private fun initCompose() {
     ```
 
-    ```kt
+    ```java
         ComposeRuleTest.activity.setContent {
     ```
 
-    ```kt
+    ```java
             SampleLoginTheme {
     ```
 
-    ```kt
+    ```java
                 LoginContent()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，让我们继续添加我们的第一个测试。对于我们将要编写的测试，我们将验证视图是否以我们预期的样子显示在屏幕上：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun assertSignInButtonIsDisplayed(){
     ```
 
-    ```kt
+    ```java
         initCompose()
     ```
 
-    ```kt
+    ```java
         ComposeRuleTest.onNodeWithTag(SIGN_IN_BUTTON,
     ```
 
-    ```kt
+    ```java
         true).assertIsDisplayed()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun assertUserInputFieldIsDisplayed(){
     ```
 
-    ```kt
+    ```java
         initCompose()
     ```
 
-    ```kt
+    ```java
         ComposeRuleTest.onNodeWithTag(USERNAME_FIELD,
     ```
 
-    ```kt
+    ```java
         true).assertIsDisplayed()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1492,77 +1492,77 @@ UI 部分或元素可以是从单个 Composable 到全屏的任何内容。如�
 
 1.  我们将使用 `cashapp/turbine` 测试库来测试协程流程，以测试我们创建的流程。因此，您需要在 `build.gradle` 中包含处理代码片段：
 
-    ```kt
+    ```java
     repositories {
     ```
 
-    ```kt
+    ```java
       mavenCentral()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     dependencies {
     ```
 
-    ```kt
+    ```java
       testImplementation 'app.cash.turbine:turbine:0.x.x'
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  一旦创建了类，就可以设置 `@Before`，它将在每个测试之前运行：
 
-    ```kt
+    ```java
     class LoginViewModelTest {
     ```
 
-    ```kt
+    ```java
        private lateinit var loginViewModel: LoginViewModel
     ```
 
-    ```kt
+    ```java
        @Before
     ```
 
-    ```kt
+    ```java
        fun setUp(){
     ```
 
-    ```kt
+    ```java
           loginViewModel = LoginViewModel(
     ```
 
-    ```kt
+    ```java
              dispatchers =
     ```
 
-    ```kt
+    ```java
              SampleLoginDispatchers.createTestDispatchers(
     ```
 
-    ```kt
+    ```java
              UnconfinedTestDispatcher()),
     ```
 
-    ```kt
+    ```java
              stateHandle = SavedStateHandle()
     ```
 
-    ```kt
+    ```java
           )
     ```
 
-    ```kt
+    ```java
        }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1570,77 +1570,77 @@ UI 部分或元素可以是从单个 Composable 到全屏的任何内容。如�
 
 1.  现在我们已经准备好了设置，让我们继续创建我们的测试，验证认证状态的变化：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun `test authentication state changes`() = runTest {...}
     ```
 
 1.  在我们的 `Test` 函数中，我们现在需要访问 `loginViewModel` 函数并将假值传递给参数：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun `test authentication state changes`() = runTest {
     ```
 
-    ```kt
+    ```java
         loginViewModel.userNameChanged("Madona")
     ```
 
-    ```kt
+    ```java
         loginViewModel.passwordChanged("home")
     ```
 
-    ```kt
+    ```java
         loginViewModel.passwordVisibility(true)
     ```
 
-    ```kt
+    ```java
         loginViewModel.state.test {
     ```
 
-    ```kt
+    ```java
             val stateChange = awaitItem()
     ```
 
-    ```kt
+    ```java
             Truth.assertThat(stateChange).isEqualTo(
     ```
 
-    ```kt
+    ```java
                 AuthenticationState(
     ```
 
-    ```kt
+    ```java
                     userName = "Madona",
     ```
 
-    ```kt
+    ```java
                     password = "home",
     ```
 
-    ```kt
+    ```java
                     togglePasswordVisibility = true
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 

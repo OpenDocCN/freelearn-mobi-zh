@@ -66,7 +66,7 @@
 
 代码块如下设置：
 
-```kt
+```java
 val daysOfYear: IntRange = 1..365
 for(day in daysOfYear.reversed()) {
     println("Remaining days: $day")
@@ -75,7 +75,7 @@ for(day in daysOfYear.reversed()) {
 
 当我们希望将您的注意力引到代码块的一个特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 val sequence = sequenceOf("a", "b", "c", "d", "e", "f", "g", "h")
 val transformedSequence = sequence.map {
     println("Applying map function for $it")
@@ -85,7 +85,7 @@ val transformedSequence = sequence.map {
 
 任何命令行输入或输出都应如下编写：
 
-```kt
+```java
 [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 ```
 

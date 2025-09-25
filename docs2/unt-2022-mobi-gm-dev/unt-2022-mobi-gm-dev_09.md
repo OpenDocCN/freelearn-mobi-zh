@@ -84,7 +84,7 @@
 
 1.  接下来，为该类添加以下代码：
 
-```kt
+```java
 using UnityEngine;
 using NotificationSamples; /* GameNotificationManager */
 public class NotificationsController : MonoBehaviour
@@ -124,7 +124,7 @@ public class NotificationsController : MonoBehaviour
 
 1.  打开 `NotificationsController` 脚本，并向其中添加以下函数：
 
-    ```kt
+    ```java
     public void ShowNotification(string title, string body,
     DateTime deliveryTime)
     {
@@ -145,13 +145,13 @@ public class NotificationsController : MonoBehaviour
 
 1.  此函数需要使用 `System` 命名空间中的 `DateTime` 类，因此请在 `NotificationsController` 文件顶部添加以下行：
 
-    ```kt
+    ```java
     using System; /* DateTime */
     ```
 
 1.  在测试中调用函数，以确保一切设置正确，让我们在 `Start` 函数中调用该函数，添加以下突出显示的代码：
 
-    ```kt
+    ```java
     // Start is called before the first frame update
     private void Start()
     {
@@ -194,7 +194,7 @@ public class NotificationsController : MonoBehaviour
 
 1.  通常情况下，这类通知应该在玩家上次玩完游戏后的一天发送。我们可以通过修改函数来实现这一点：
 
-    ```kt
+    ```java
         // Start is called before the first frame update
         private void Start()
         {
@@ -224,7 +224,7 @@ public class NotificationsController : MonoBehaviour
 
 1.  更新脚本，添加以下加粗显示的代码：
 
-    ```kt
+    ```java
     private static bool addedReminder = false;
         // Start is called before the first frame update
         private void Start()
@@ -301,7 +301,7 @@ Unity 包含一些默认的视觉效果，用于与通知一起使用，但通�
 
 1.  然后，返回到`NotificationsController`脚本并更新`ShowNotification`函数以使用我们新的图标：
 
-    ```kt
+    ```java
     public void ShowNotification(string title, string body, DateTime deliveryTime)
     {
         IGameNotification notification =
@@ -333,7 +333,7 @@ Unity 包含一些默认的视觉效果，用于与通知一起使用，但通�
 
 您还可以通过使用如下类似的行来修改其他属性，例如 iOS 中使用的徽章数字：
 
-```kt
+```java
 notification.BadgeNumber = 5;
 ```
 
@@ -351,7 +351,7 @@ notification.BadgeNumber = 5;
 
 1.  打开`NotificationsController`脚本并转到`ShowNotification`函数。更新如下：
 
-    ```kt
+    ```java
     public int? ShowNotification(string title, string body, DateTime deliveryTime)
     {
         IGameNotification notification =
@@ -376,7 +376,7 @@ notification.BadgeNumber = 5;
 
 1.  现在我们已经更新了脚本，让我们现在展示一个示例，说明我们如何取消一个通知。转到`Start`函数并更新如下：
 
-    ```kt
+    ```java
     // Start is called before the first frame update
     private void Start()
     {

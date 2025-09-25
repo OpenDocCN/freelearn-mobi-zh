@@ -48,7 +48,7 @@
 
 1.  让我们创建两个列表，`listA` 和 `listB`，如下所示：
 
-```kt
+```java
 var listA= mutableListOf<String>("a","a","b")
 var listB= mutableListOf<String>("a","c")
 ```
@@ -57,7 +57,7 @@ var listB= mutableListOf<String>("a","c")
 
 1.  现在，我们将尝试将 `listA` 的内容添加到 `listB` 中。为此，我们将需要 `addAll()` 方法：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val listA= mutableListOf<String>("a","a","b")
     val listB= mutableListOf<String>("a","c")
@@ -68,13 +68,13 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 [a, c, a, a, b]
 ```
 
 1.  合并两个列表的另一种方法是使用 `union`。这返回组合集合的唯一元素：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val listA= mutableListOf<String>("a","a","b")
     val listB= mutableListOf<String>("a","c")
@@ -85,13 +85,13 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 [a, c, b]
 ```
 
 1.  同样，可变集合也可以合并，唯一的区别是集合中的 `addAll` 将类似于我们使用 `union` 方法将获得的结果；由于它是一个集合，只允许唯一值：
 
-```kt
+```java
 val setA= mutableSetOf<String>("a","b","c")
 val setB= mutableSetOf<String>("a","b","c","d")
 setB.addAll(setA)
@@ -101,14 +101,14 @@ println(setB.union(setA))
 
 这是输出结果：
 
-```kt
+```java
 [a, b, c, d]
 [a, b, c, d]
 ```
 
 如果你想要合并两个映射，你需要 `putAll()` 方法，因为 `addAll` 和 `union` 对于 `map` 来说是不存在的：
 
-```kt
+```java
 val mapA= mutableMapOf<String,Int>("a" to 1, "b" to 2)
 val mapB= mutableMapOf<String,Int>("a" to 2, "d" to 4)
 mapA.putAll(mapB)
@@ -117,7 +117,7 @@ println(mapA)
 
 这是输出结果：
 
-```kt
+```java
 {a=2, b=2, d=4}
 ```
 
@@ -141,7 +141,7 @@ Kotlin 提供了一个`partition`函数。根据`partition`函数的文档，它
 
 1.  在此示例中，我们将创建一个数字列表，并希望将此列表拆分为两个子列表：一个包含奇数，另一个包含偶数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val listA= listOf(1,2,3,4,5,6)
     val pair=listA.partition {
@@ -153,7 +153,7 @@ fun main(args: Array<String>) {
 
 这是输出：
 
-```kt
+```java
 ([2, 4, 6], [1, 3, 5])
 ```
 
@@ -161,7 +161,7 @@ fun main(args: Array<String>) {
 
 1.  `partition`函数也可以以类似的方式与`set`集合一起使用：
 
-```kt
+```java
 val setA= setOf(1,2,3,4,5,6)
 val pair=setA.partition {
     it%2==0
@@ -172,7 +172,7 @@ println(pair)
 
 这里是输出：
 
-```kt
+```java
 ([2, 4, 6], [1, 3, 5])
 ```
 
@@ -180,7 +180,7 @@ println(pair)
 
 让我们看看 Kotlin 中`partition`函数的实现：
 
-```kt
+```java
 public inline fun <T> Iterable<T>.partition(predicate: (T) -> Boolean): Pair<List<T>, List<T>> {
     val first = ArrayList<T>()
     val second = ArrayList<T>()
@@ -201,14 +201,14 @@ public inline fun <T> Iterable<T>.partition(predicate: (T) -> Boolean): Pair<Lis
 
 `partition`函数与数组一起使用时也以类似的方式工作。以下是它的不同用法。每个用法都类似，只是产生不同类型的列表：
 
-```kt
+```java
 // Produces two lists
 inline fun <T> Array<out T>.partition(
     predicate: (T) -> Boolean
 ): Pair<List<T>, List<T>>
 ```
 
-```kt
+```java
 // Breaks original list of Byte and produces two lists of Byte
 inline fun ByteArray.partition(
     predicate: (Byte) -> Boolean
@@ -216,49 +216,49 @@ inline fun ByteArray.partition(
 
 ```
 
-```kt
+```java
 // Breaks original list of Short and produces two lists of Short
 inline fun ShortArray.partition(
     predicate: (Short) -> Boolean
 ): Pair<List<Short>, List<Short>>
 ```
 
-```kt
+```java
 // Breaks original list of Int and produces two lists of Int
 inline fun IntArray.partition(
     predicate: (Int) -> Boolean
 ): Pair<List<Int>, List<Int>>
 ```
 
-```kt
+```java
 // Breaks original list of Long and produces two lists of Long
 inline fun LongArray.partition(
     predicate: (Long) -> Boolean
 ): Pair<List<Long>, List<Long>>
 ```
 
-```kt
+```java
 // Breaks original list of Float and produces two lists of Float
 inline fun FloatArray.partition(
     predicate: (Float) -> Boolean
 ): Pair<List<Float>, List<Float>>
 ```
 
-```kt
+```java
 // Breaks original list of Double and produces two lists of Double
 inline fun DoubleArray.partition(
     predicate: (Double) -> Boolean
 ): Pair<List<Double>, List<Double>>
 ```
 
-```kt
+```java
 // Breaks original list of Boolean and produces two lists of Boolean
 inline fun BooleanArray.partition(
     predicate: (Boolean) -> Boolean
 ): Pair<List<Boolean>, List<Boolean>>
 ```
 
-```kt
+```java
 // Breaks original list of Char and produces two lists of Char
 inline fun CharArray.partition(
     predicate: (Char) -> Boolean
@@ -279,7 +279,7 @@ inline fun CharArray.partition(
 
 1.  让我们创建一个具有年龄属性的`Person`类。我们将根据年龄对人员对象列表进行排序：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val p1=Person(91)
     val p2=Person(10)
@@ -294,7 +294,7 @@ class Person(var age:Int)
 
 1.  要根据指定的比较器对列表进行排序，我们需要使用`sortedBy`函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val p1=Person(91)
     val p2=Person(10)
@@ -310,7 +310,7 @@ class Person(var age:Int)
 
 1.  Kotlin 还提供了一个`sortedWith`方法，您可以在其中指定自己的比较器实现：
 
-```kt
+```java
 fun main(args: Array<String>)
 {
   val p1=Person(91)
@@ -339,7 +339,7 @@ class Person(var age:Int)
 
 现在，让我们看看`sortBy`函数的实现：
 
-```kt
+```java
 public inline fun <T, R : Comparable<R>> Iterable<T>.sortedBy(crossinline selector: (T) -> R?): List<T> {
     return sortedWith(compareBy(selector))
 }
@@ -347,7 +347,7 @@ public inline fun <T, R : Comparable<R>> Iterable<T>.sortedBy(crossinline select
 
 `sortBy`函数在其内部调用`sortedWith`方法，如下所示：*
 
-```kt
+```java
 public fun <T> Iterable<T>.sortedWith(comparator: Comparator<in T>): List<T> {
     if (this is Collection) {
        if (size <= 1) return this.toList()
@@ -372,7 +372,7 @@ public fun <T> Iterable<T>.sortedWith(comparator: Comparator<in T>): List<T> {
 
 1.  首先，我们将尝试对一个简单的整数列表进行排序：
 
-```kt
+```java
 val listOfInt= listOf(1,2,3,4,5)
 var sortedList=listOfInt.sortedDescending()
 sortedList.forEach {
@@ -382,13 +382,13 @@ sortedList.forEach {
 
 这是输出：
 
-```kt
+```java
 5 4 3 2 1
 ```
 
 1.  现在，让我们使用前面菜谱中的`Person`列表。为了按降序排序，我们将这样做：
 
-```kt
+```java
 val p1=Person(91)
 val p2=Person(10)
 val p3=Person(78)
@@ -403,7 +403,7 @@ sortedListOfPerson.forEach {
 
 这里是输出：
 
-```kt
+```java
 91 78 10
 ```
 
@@ -411,7 +411,7 @@ sortedListOfPerson.forEach {
 
 `sortedByDescending`的工作方式有点像`sortedBy`。内部，两者都使用`sortedWith`函数：
 
-```kt
+```java
 public inline fun <T, R : Comparable<R>> Iterable<T>.sortedByDescending(crossinline selector: (T) -> R?): List<T> {
     return sortedWith(compareByDescending(selector))
 }
@@ -419,7 +419,7 @@ public inline fun <T, R : Comparable<R>> Iterable<T>.sortedByDescending(crossinl
 
 以下是对`compareByDescending`的实现：
 
-```kt
+```java
 @kotlin.internal.InlineOnly
 public inline fun <T> compareByDescending(crossinline selector: (T) -> Comparable<*>?): Comparator<T> =
         Comparator { a, b -> compareValuesBy(b, a, selector) }
@@ -435,7 +435,7 @@ public inline fun <T> compareByDescending(crossinline selector: (T) -> Comparabl
 
 我将使用 Android Studio 来完成这个任务，JSONObject 由 Android SDK 提供。我们将使用 Gson 进行 JSON 解析。您可以通过将以下行添加到您的`build.gradle`文件中来将其添加到您的项目中：
 
-```kt
+```java
 compile 'com.google.code.gson:gson:2.8.0'
 ```
 
@@ -445,7 +445,7 @@ compile 'com.google.code.gson:gson:2.8.0'
 
 1.  首先，我们将使用以下方式创建一个模拟的 JSON 数据，使用原始字符串：
 
-```kt
+```java
 val jsonStr="""
     {
      "name": "Aanand Shekhar",
@@ -457,13 +457,13 @@ val jsonStr="""
 
 1.  接下来，我们将创建一个数据类来保存这些数据。以下是我们的数据类看起来像这样：
 
-```kt
+```java
 data class Information(val name:String,val age:Int, val isAwesome:Boolean)
 ```
 
 1.  最后，我们将使用`Gson`来解析 JSON 字符串：
 
-```kt
+```java
 val information:Information= Gson().fromJson<Information>(jsonStr,Information::class.java)
 ```
 
@@ -489,7 +489,7 @@ val information:Information= Gson().fromJson<Information>(jsonStr,Information::c
 
 例如，我们知道偶数项将遵循`it%2==0`。因此，相应的过滤方法将如下所示：
 
-```kt
+```java
 val listOfNumbers=listOf(1,2,3,4,5,6,7,8,9)
 var evenList=listOfNumbers.filter {
     it%2==0
@@ -503,7 +503,7 @@ println(evenList)
 
 另一个酷炫的 lambda 函数是`map`。它转换列表并返回一个新的列表：
 
-```kt
+```java
 val listOfNumbers=listOf(1,2,3,4,5,6,7,8,9)
 var transformedList=listOfNumbers.map {
     it*2
@@ -515,7 +515,7 @@ println(transformedList)
 
 `map`函数的一个变体是`mapIndexed`。它在其构造中提供了索引和项：
 
-```kt
+```java
 val listOfNumbers=listOf(1,2,3,4,5)
 val map=listOfNumbers.mapIndexed { index, it
     -> it*index}
@@ -538,19 +538,19 @@ println(map)
 
 1.  让我们创建一个具有年龄属性（可以是 null）的`Person`类：
 
-```kt
+```java
 class Person(var age:Int?)
 ```
 
 1.  现在，让我们创建一个`Person`对象列表：
 
-```kt
+```java
 val listOfPersons=listOf(Person(10), Person(20), Person(2), Person(null))
 ```
 
 1.  最后，我们希望按升序对它们进行排序，同时保持 null 项在末尾：
 
-```kt
+```java
 val sortedList=listOfPersons.sortedWith(compareBy(nullsLast<Int>(),{it.age}))
 sortedList.forEach {
     print(" ${it.age} ")
@@ -560,7 +560,7 @@ sortedList.forEach {
 
 输出如下：
 
-```kt
+```java
 2 10 20 null 
 ```
 
@@ -580,7 +580,7 @@ sortedList.forEach {
 
 如果一个元素或表达式的值在定义时没有被评估，而是在首次访问时才被评估，那么它被称为**延迟评估**。有许多情况它都很有用。例如，你可能有一个列表 A，你想要从它创建一个过滤后的列表，让我们称它为列表 B。如果你做如下操作，过滤操作将在 B 的声明期间执行：
 
-```kt
+```java
 val A= listOf(1,2,3,4)
 var B=A.filter {
     it%2==0
@@ -599,7 +599,7 @@ var B=A.filter {
 
 1.  在给定的例子中，让我们首先根据元素是奇数还是偶数来过滤列表：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val A= listOf(1,2,3,4)
     var B=A.filter {
@@ -611,7 +611,7 @@ fun main(args: Array<String>) {
 
 这是输出：
 
-```kt
+```java
 checking 1
 checking 2
 checking 3
@@ -622,7 +622,7 @@ checking 4
 
 1.  现在，让我们将列表转换为序列。将列表转换为序列只需一步之遥；您可以使用 `.asSequence()` 方法或通过 `Sequence{ createIterator() }` 将任何列表转换为序列：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val A= listOf(1,2,3,4).asSequence()
     var B=A.filter {
@@ -634,7 +634,7 @@ fun main(args: Array<String>) {
 
 1.  如果您运行前面的代码，您在控制台中将看不到任何输出，因为对象尚未创建。它将在列表 B 首次访问时创建：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val A= listOf(1,2,3,4).asSequence()
     var B=A.filter {
@@ -660,7 +660,7 @@ fun main(args: Array<String>) {
 
 Kotlin 中的序列可能是无界的，并且当列表的长度事先未知时（类似于 Java 8 中的 Streams）会使用它。由于它可以无限大，因此需要惰性求值来处理这种类型的结构。考虑以下示例：
 
-```kt
+```java
 val seq= generateSequence(1){it*2}
 seq.take(10).forEach {
     print(" ${it} ")
@@ -683,7 +683,7 @@ seq.take(10).forEach {
 
 1.  让我们看看 `padStart` 函数的一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val string="abcdef"
     val pad=string.padStart(10,'-')
@@ -693,13 +693,13 @@ fun main(args: Array<String>) {
 
 这是输出：
 
-```kt
+```java
  ----abcdef
 ```
 
 1.  接下来，我们看看 `padEnd` 的一个例子：
 
-```kt
+```java
 val string="abcdef"
 val pad=string.padEnd(10,'-')
 println(pad)
@@ -707,7 +707,7 @@ println(pad)
 
 这里是输出：
 
-```kt
+```java
  abcdef----
 ```
 
@@ -717,7 +717,7 @@ println(pad)
 
 另一个需要注意的关键点是，默认情况下，填充字符是空格字符。这是 `padStart` 函数的实现：
 
-```kt
+```java
 public fun String.padStart(length: Int, padChar: Char = ' '): String
         = (this as CharSequence).padStart(length, padChar).toString()
 ```
@@ -740,7 +740,7 @@ public fun String.padStart(length: Int, padChar: Char = ' '): String
 
 `[[1,2,3],[1,2,3],[1,2,3]] -> [1,2,3,1,2,3,1,2,3]`
 
-```kt
+```java
 fun main(args: Array<String>) {
     val a= arrayOf(arrayOf(1,2,3),arrayOf(1,2,3),arrayOf(1,2,3))
     a.flatten().forEach { print(" ${it} ") }
@@ -753,7 +753,7 @@ fun main(args: Array<String>) {
 
 `[[1,2,3],[1,2,3],[1,2,3]] -> [1,2,3,1,2,3,1,2,3]`
 
-```kt
+```java
 fun main(args: Array<String>) {
     val a= listOf(listOf(1,2,3),listOf(1,2,3),listOf(1,2,3))
     a.flatten().forEach { print(" ${it} ") }
@@ -764,7 +764,7 @@ fun main(args: Array<String>) {
 
 让我们看看 `flatten()` 函数的实现：
 
-```kt
+```java
 public fun <T> Iterable<Iterable<T>>.flatten(): List<T> {
     val result = ArrayList<T>()
     for (element in this) {
@@ -790,13 +790,13 @@ public fun <T> Iterable<Iterable<T>>.flatten(): List<T> {
 
 1.  首先，让我们创建 `Student` 类：
 
-```kt
+```java
 class Student(val age:Int, val GPA: Double)
 ```
 
 1.  然后，创建一个 `Student` 对象的列表：
 
-```kt
+```java
 val studentA=Student(11,2.0)
 val studentB=Student(11,2.1)
 val studentC=Student(11,1.3)
@@ -806,13 +806,13 @@ val studentsList=listOf<Student>(studentA,studentB,studentC,studentD)
 
 1.  要按多个字段排序，我们只需这样做：
 
-```kt
+```java
 val sortedList=studentsList.sortedWith(compareBy({it.age},{it.GPA}))
 ```
 
 1.  如果我们现在打印它，我们将得到以下输出：
 
-```kt
+```java
 sortedList.forEach {
     println("age: ${it.age}, GPA: ${it.GPA} ")
 }
@@ -827,7 +827,7 @@ sortedList.forEach {
 
 我们使用了 `sortedWith` 函数，它接受一个比较器。比较器由 `compareBy` 函数提供。`compareBy` 有一个可以接受多个函数的重载：
 
-```kt
+```java
 public fun <T> compareBy(vararg selectors: (T) -> Comparable<*>?):Comparator<T>
 ```
 
@@ -849,7 +849,7 @@ public fun <T> compareBy(vararg selectors: (T) -> Comparable<*>?):Comparator<T>
 
 `take(n)`: 返回前 n 个元素的列表：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list= listOf(1,2,3,4,5)
     val limitedList=list.take(3)
@@ -861,7 +861,7 @@ fun main(args: Array<String>) {
 
 `takeLast(n)`: 返回包含最后 [n] 个元素的列表：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list= listOf(1,2,3,4,5)
     val limitedList=list.takeLast(3)
@@ -873,7 +873,7 @@ fun main(args: Array<String>) {
 
 `takeWhile{ predicate }`: 返回包含满足给定 [谓词] 的第一个元素的列表：
 
-```kt
+```java
 val list= listOf(1,2,3,4,5)
 val limitedList=list.takeWhile { it<3 }
 println(limitedList)
@@ -885,7 +885,7 @@ println(limitedList)
 
 `takeIf { 谓词 }`：如果它满足给定的 [谓词]，则返回 `this` 值，如果不满足，则返回 `null`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list= listOf(1,2,3,4,5)
     var limitedList=list.takeIf { it .contains(1) }
@@ -901,7 +901,7 @@ fun main(args: Array<String>) {
 
 在某些情况下，如棋盘游戏、图像等，二维数组对于数据表示非常有用。在 Java 中，我们可以通过以下方式表示二维数组：
 
-```kt
+```java
 int[][] data = new int[size][size];
 ```
 
@@ -917,19 +917,19 @@ int[][] data = new int[size][size];
 
 1.  我们可以使用以下语法在 Kotlin 中创建一个简单的二维数组：
 
-```kt
+```java
 val array = Array(n, {IntArray(n)})
 ```
 
 在这里，`n` 代表数组的维度。在这里，我们使用了 Kotlin 的 `Array` 类，它代表一个数组（特别是当针对 JVM 平台时，是 Java 数组）。我们通过传递大小和初始化器来初始化 `Array` 对象：
 
-```kt
+```java
 public inline constructor(size: Int, init: (Int) -> T)
 ```
 
 1.  我们的维度是 `n`，作为初始化器，我们传递一个一维数组，然后它提供了一个二维数组的结构。如果你想要使用特定的值初始化二维数组，你需要将其传递给初始化器。考虑以下示例：
 
-```kt
+```java
 Array<IntArray>(10,{IntArray(10,{-1})})
 ```
 
@@ -937,7 +937,7 @@ Array<IntArray>(10,{IntArray(10,{-1})})
 
 1.  我们还可以使用 `arrayOf` 构造函数通过传递两个一维数组来创建一个二维数组：
 
-```kt
+```java
 val even: IntArray = intArrayOf(2, 4, 6)
 val odd: IntArray = intArrayOf(1, 3, 5)
 
@@ -957,20 +957,20 @@ lala.forEach {
 
 你也可以通过扩展 Kotlin 的代码来创建自己的函数。例如，创建一个方法，如下所示：
 
-```kt
+```java
 inline fun <reified inside> array2d(sizeOuter: Int, sizeInner: Int, noinline innerInit: (Int)->inside): Array<Array<inside>>
        = Array(sizeOuter) { Array<inside>(sizeInner, innerInit) }
 ```
 
 这可以通过以下操作轻松创建二维数组：
 
-```kt
+```java
 array2d(10,10,{0})
 ```
 
 你也可以以类似的方式创建一个列表的列表。以下是一个列表的列表的示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val a= listOf(listOf(1,2,3), listOf(4,5,6), listOf(7,8,9))
     a.forEach {
@@ -982,7 +982,7 @@ fun main(args: Array<String>) {
 
 这是它的输出：
 
-```kt
+```java
 [1, 2, 3] [4, 5, 6] [7, 8, 9] 
 ```
 
@@ -1000,7 +1000,7 @@ fun main(args: Array<String>) {
 
 1.  首先，让我们看看如何删除集合中的前 *n* 个项目。我们将使用列表，但它也可以与数组一起使用。此外，我们将使用 `kotlin.stdlib`，它包含本食谱中所需的函数。这里要使用的函数是 `drop`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list= listOf<Int>(1,2,3,4,5,6,7,8,9)
     var droppedList=list.drop(2)
@@ -1014,7 +1014,7 @@ fun main(args: Array<String>) {
 
 1.  要跳过集合中的最后 *n* 个项目，你需要使用 `dropLast` 函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list= listOf<Int>(1,2,3,4,5,6,7,8,9)
     var droppedList=list.dropLast(2)
@@ -1028,7 +1028,7 @@ fun main(args: Array<String>) {
 
 1.  这个 lambda 函数在谓词返回 true 时删除项目：
 
-```kt
+```java
 val list= listOf<Int>(1,2,3,4,5,6,7,8,9,1,2,3)
 val droppedList=list.dropWhile { it<3 }
 droppedList.forEach {
@@ -1040,7 +1040,7 @@ droppedList.forEach {
 
 1.  此函数在满足条件的情况下删除末尾的项目。
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list= listOf<Int&gt;(1,2,3,4,5,6,7,8,9,3,1,2)
     val droppedList=list.dropLastWhile { it<3 }

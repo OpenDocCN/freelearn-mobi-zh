@@ -86,7 +86,7 @@ Kotlin 不仅允许对属性进行委托，还允许有委托类。
 
 `Delegates.notNull` 函数就是为了在这种情况下帮助你。看看以下程序：
 
-```kt
+```java
 var notNullStr:String by Delegates.notNull<String>() 
 
 fun main(args: Array<String>) { 
@@ -101,7 +101,7 @@ fun main(args: Array<String>) {
 
 因此，让我们通过添加另一个属性来修改程序，我们将在使用之前不初始化它，看看会发生什么：
 
-```kt
+```java
 var notNullStr:String by Delegates.notNull<String>() 
 var notInit:String by Delegates.notNull<String>() 
 
@@ -122,7 +122,7 @@ fun main(args: Array<String>) {
 
 因此，让我们通过将 `by Delegates.notNull()` 替换为 `lateinit` 来修改最后一个程序。以下是修改后的程序：
 
-```kt
+```java
 lateinit var notNullStr1:String 
 lateinit var notInit1:String 
 
@@ -151,7 +151,7 @@ fun main(args: Array<String>) {
 
 以下是一个代码示例：
 
-```kt
+```java
 val myLazyVal:String by lazy { 
     println("Just Initialised") 
     "My Lazy Val" 
@@ -181,7 +181,7 @@ fun main(args: Array<String>) {
 
 看看下面的例子：
 
-```kt
+```java
 var myStr:String by Delegates.observable("<Initial Value>") { 
     property, oldValue, newValue -> 
     println("Property `${property.name}` changed value from "$oldValue" to "$newValue"") 
@@ -201,7 +201,7 @@ fun main(args: Array<String>) {
 
 在输出中，我们可以看到，每次我们更改值时，都会打印出属性的旧值和新值。这个程序中的 `Delegates.observable` 块负责输出中的日志。所以现在，让我们仔细看看 `Delegates.observable` 块，并了解它是如何工作的：
 
-```kt
+```java
 var myStr:String by Delegates.observable("<Initial Value>") { 
     property, oldValue, newValue -> 
     println("Property `${property.name}` changed value from "$oldValue" to "$newValue"") 
@@ -232,7 +232,7 @@ var myStr:String by Delegates.observable("<Initial Value>") {
 
 以下是一个示例：
 
-```kt
+```java
 var myIntEven:Int by Delegates.vetoable(0) { 
     property, oldValue, newValue -> 
     println("${property.name} $oldValue -> $newValue") 
@@ -258,7 +258,7 @@ fun main(args: Array<String>) {
 
 有趣，不是吗？让我们看看`Delegates.vetoable`的另一个示例。看看以下代码：
 
-```kt
+```java
 var myCounter:Int by Delegates.vetoable(0) { 
     property, oldValue, newValue -> 
     println("${property.name} $oldValue -> $newValue") 
@@ -291,7 +291,7 @@ fun main(args: Array<String>) {
 
 因此，我们学习了如何使用标准委托，但 Kotlin 必须提供更多关于委托的功能。映射委托是委托带来的那些令人惊叹的功能之一。那么，它是什么呢？它是在函数/类构造函数中传递一个映射作为单个参数，而不是传递多个参数的自由。让我们看看。以下是一个应用*映射委托*的程序：
 
-```kt
+```java
 data class Book (val delegate:Map<String,Any?>) { 
     val name:String by delegate 
     val authors:String by delegate 
@@ -343,7 +343,7 @@ fun main(args: Array<String>) {
 
 看看下面的程序：
 
-```kt
+```java
 var myEven:Int by makeEven(0) { 
     property, oldValue, newValue, wasEven -> 
     println("${property.name} $oldValue -> $newValue, Even:$wasEven") 
@@ -371,7 +371,7 @@ fun main(args: Array<String>) {
 
 想知道我们是如何创建代理的吗？以下是代码：
 
-```kt
+```java
 abstract class MakeEven(initialValue: Int):ReadWriteProperty<Any?,Int> { 
     private var value:Int = initialValue 
 
@@ -404,7 +404,7 @@ abstract class MakeEven(initialValue: Int):ReadWriteProperty<Any?,Int> {
 
 因此，委托几乎已经准备好了，但抽象方法怎么办？我们需要扩展这个类来应用委托，对吧？但记住我们使用它的代码，像 `by makeEven(0) {...}`，所以那里必须有一个函数，不是吗？是的，有一个函数，以下是其定义：
 
-```kt
+```java
  inline fun makeEven(initialValue: Int, crossinline onAssignment:(property: KProperty<*>, oldValue: Int, newValue: Int, wasEven:Boolean)->Unit):ReadWriteProperty<Any?, Int> 
         =object : MakeEven(initialValue){ 
     override fun afterAssignmentCall(property: KProperty<*>, oldValue: Int, newValue: Int, wasEven: Boolean) 
@@ -420,7 +420,7 @@ abstract class MakeEven(initialValue: Int):ReadWriteProperty<Any?,Int> {
 
 委托很强大，我们已经看到了这一点，但想想一个常见的情况，在方法内部我们声明并初始化一个属性，然后应用一个逻辑，这个逻辑要么使用属性，要么不使用它继续执行。例如，以下是这样的程序：
 
-```kt
+```java
 fun useDelegate(shouldPrint:Boolean) { 
     val localDelegate = "Delegate Used" 
     if(shouldPrint) { 
@@ -437,7 +437,7 @@ fun useDelegate(shouldPrint:Boolean) {
 
 所以，以下是一个更新的程序：
 
-```kt
+```java
 fun useDelegate(shouldPrint:Boolean) { 
     val localDelegate by lazy { 
         "Delegate Used" 
@@ -462,7 +462,7 @@ fun useDelegate(shouldPrint:Boolean) {
 
 下面是相应的代码：
 
-```kt
+```java
 interface Person { 
     fun printName() 
 } 

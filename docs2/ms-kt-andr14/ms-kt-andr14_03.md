@@ -148,7 +148,7 @@ Android 是由 Google 开发的移动操作系统，运行在超过 20 亿台设
 
     +   **build.gradle (Module: app)**: 这是应用程序模块的 Gradle 文件。在这里，我们配置应用程序模块。为了理解这个文件，让我们看看为我们项目生成的文件：
 
-        ```kt
+        ```java
         plugins {
             id 'com.android.application'
             id 'org.jetbrains.kotlin.android'

@@ -52,7 +52,7 @@ OpenGL ES 供应商库应遵循以下命名约定。如果供应商库是一个�
 
 我已经从下面的日志中移除了时间戳，以便我们有一个更好的格式：
 
-```kt
+```java
 I SurfaceFlinger: SurfaceFlinger is starting 
 I SurfaceFlinger: SurfaceFlinger's main thread ready to run. Initializing graphics H/W... 
 D libEGL  : loaded /system/lib/egl/libGLES_mesa.so 
@@ -87,7 +87,7 @@ E SurfaceFlinger: hwcomposer module not found
 
 如我们所见，当 `SurfaceFlinger` 的主线程准备运行时，它会在 x86vbox 设备启动期间加载 `/system/lib/egl/libGLES_mesa.so` 库。之后，它加载并初始化 `gralloc.default.so` Gralloc 模块：
 
-```kt
+```java
 I SurfaceFlinger: EGL information: 
 I SurfaceFlinger: vendor    : Android 
 I SurfaceFlinger: version   : 1.4 Android META-EGL 
@@ -99,7 +99,7 @@ I SurfaceFlinger: EGLSurface: 8-8-8-8, config=0xb46a3800
 
 接下来，`SurfaceFlinger` 初始化 EGL 库，正如前面的日志消息所示。我们环境中的 EGL 版本是 1.4：
 
-```kt
+```java
 I SurfaceFlinger: OpenGL ES informations: 
 I SurfaceFlinger: vendor    : VMware, Inc. 
 I SurfaceFlinger: renderer  : Gallium 0.4 on llvmpipe (LLVM 3.7, 256 bits) 
@@ -131,7 +131,7 @@ D SurfaceFlinger: shader cache generated - 24 shaders in 25.081509 ms
 
 从前面的调试日志中，我们将从看到第一个与图形系统和 `SurfaceFlinger` 相关的调试信息的位置开始，如下所示：
 
-```kt
+```java
 I SurfaceFlinger: SurfaceFlinger is starting 
 I SurfaceFlinger: SurfaceFlinger's main thread ready to run. Initializing graphics H/W... 
 
@@ -149,7 +149,7 @@ OpenGL ES 库的加载
 
 在`SurfaceFlinger:init`中，如以下代码片段所示，它首先调用 EGL 函数`eglGetDisplay`。之后，它尝试创建一个硬件合成器实例。使用显示实例`mEGLDisplay`和硬件合成器`mHwc`，它使用底层的 OpenGL ES 实现创建了一个渲染引擎：
 
-```kt
+```java
 void SurfaceFlinger::init() { 
     ALOGI(  "SurfaceFlinger's main thread ready to run. " 
             "Initializing graphics H/W..."); 
@@ -178,7 +178,7 @@ void SurfaceFlinger::init() {
 
 让我们先分析 EGL 函数`eglGetDisplay`。`eglGetDisplay`函数在`frameworks/native/opengl/libs/EGL/eglApi.cpp`文件中实现，如下面的代码片段所示：
 
-```kt
+```java
 EGLDisplay eglGetDisplay(EGLNativeDisplayType display) 
 { 
     clearError(); 
@@ -200,7 +200,7 @@ EGLDisplay eglGetDisplay(EGLNativeDisplayType display)
 
 在`eglGetDisplay`函数中，它首先检查要初始化的显示索引。在当前的 Android 代码中，`EGL_DEFAULT_DISPLAY`参数为 0，`NUM_DISPLAYS`的定义为 1。这意味着当前 Android 实现只能支持一个显示。这里是什么意思呢？例如，如果你有一台笔记本电脑，你可以将其连接到投影仪。在这种情况下，你可以同时拥有两个显示。现在一些新电脑甚至可以同时连接三个显示。在检查显示数量后，它调用`egl_init_drivers`函数来加载 OpenGL ES 库：
 
-```kt
+```java
 static EGLBoolean egl_init_drivers_locked() { 
     if (sEarlyInitState) { 
         // initialized by static ctor. should be set here. 
@@ -237,7 +237,7 @@ EGLBoolean egl_init_drivers() {
 
 `egl_init_drivers`函数获取一个互斥锁并调用另一个函数`egl_init_drivers_locked`来加载 OpenGL ES 库。在`egl_init_drivers_locked`函数中，它获取一个`Loader`类的实例，该类使用**单例模式**定义。之后，它初始化全局变量`gEGLImpl`，该变量定义为`egl_connection_t`数据结构：
 
-```kt
+```java
 struct egl_connection_t { 
     enum { 
         GLESv1_INDEX = 0, 
@@ -272,7 +272,7 @@ struct egl_connection_t {
 
 在`cnx`数据结构初始化后，它调用`loader.open`函数来加载库。让我们看看`loader.open`函数：
 
-```kt
+```java
 void* Loader::open(egl_connection_t* cnx) 
 { 
     void* dso; 
@@ -321,7 +321,7 @@ void* Loader::open(egl_connection_t* cnx)
 
 让我们分析`load_driver`函数，这是找到和加载 OpenGL ES 用户空间驱动程序的函数：
 
-```kt
+```java
 void *Loader::load_driver(const char* kind, 
         egl_connection_t* cnx, uint32_t mask) 
 { 
@@ -410,14 +410,14 @@ void *Loader::load_driver(const char* kind,
 
 在加载 OpenGL ES 供应商库之后，`SurfaceFlinger:init`将创建渲染引擎：
 
-```kt
+```java
 mRenderEngine = RenderEngine::create(mEGLDisplay, mHwc->getVisualID()); 
 
 ```
 
 在`RenderEngine::create`内部，它将调用`RenderEngine::chooseEglConfig`，这将打印出 EGL 的调试信息：
 
-```kt
+```java
 EGLConfig RenderEngine::chooseEglConfig(EGLDisplay display, int format) { 
     status_t err; 
     EGLConfig config; 
@@ -443,7 +443,7 @@ EGLConfig RenderEngine::chooseEglConfig(EGLDisplay display, int format) {
 
 在`RenderEngine::create`的末尾，它将打印出以下 OpenGL ES 初始化信息：
 
-```kt
+```java
 RenderEngine* RenderEngine::create(EGLDisplay display, int hwcFormat) { 
     EGLConfig config = EGL_NO_CONFIG; 
     if (!findExtension( 
@@ -502,7 +502,7 @@ uvesafb 是一个与 VESA 2.0 兼容的图形卡一起工作的用户空间 VESA
 
 要构建`fbtest`，我们可以从 GitHub 获取它，并在 AOSP 构建环境中构建：
 
-```kt
+```java
 $ cd {your AOSP root folder}
 $ source build/envsetup.sh
 $ lunch x86vbox-eng  
@@ -511,7 +511,7 @@ $ lunch x86vbox-eng
 
 在我们设置好 AOSP 构建环境后，我们可以使用以下命令检出并构建`fbtest`源代码：
 
-```kt
+```java
 $ cd $HOME
 $ git clone https://github.com/shugaoye/fbtest
 $ cd fbtest
@@ -522,7 +522,7 @@ $ make
 
 注意，我已经修改了 Makefile，并且它依赖于 AOSP 环境变量`$OUT`，如下所示：
 
-```kt
+```java
 # Paths and settings 
 TARGET_PRODUCT = x86vbox 
 ANDROID_ROOT   = $(OUT)/../../../.. 
@@ -551,7 +551,7 @@ AR            = $(CROSS_COMPILE)ar
 
 我们使用以下命令加载`uvesafb`模块：
 
-```kt
+```java
 (debug-late)@android: /android # system/xbin/modprobe uvesafb  
 
 ```
@@ -560,7 +560,7 @@ AR            = $(CROSS_COMPILE)ar
 
 在加载`uvesafb`模块后，我们可以找到`/dev/fb0`设备。我们可以使用`fbset`来更改帧缓冲设备设置。例如，我们可以根据需要切换到不同的支持分辨率。让我们运行`fbset`命令看看会发生什么。如果我们不带任何参数运行`fbset`，我们可以看到以下输出：
 
-```kt
+```java
 (debug-late)@android:/android # fbset 
 
 mode "640x480-60" 
@@ -577,7 +577,7 @@ endmode
 
 我们可以用分辨率的名称尝试更改分辨率，如下所示：
 
-```kt
+```java
 (debug-late)@android:/android # fbset vga 
 fbset: /etc/fb.modes: No such file or directory 
 fbset: unknown video mode 'vga'   
@@ -586,7 +586,7 @@ fbset: unknown video mode 'vga'
 
 我们得到了一个错误信息，告诉我们分辨率在`/etc/fb.modes`文件中未定义。我们需要创建此文件来更改分辨率。我们可以在`/etc/fb.modes`中添加以下分辨率，如下所示：
 
-```kt
+```java
 mode "640x480-60" 
         # D: 23.845 MHz, H: 29.844 kHz, V: 60.048 Hz  
         geometry 640 480 640 9830 16  
@@ -607,14 +607,14 @@ endmode
 
 现在我们可以测试分辨率更改。如果我们运行以下命令，我们可以切换到具有真彩色的更高分辨率：
 
-```kt
+```java
 (debug-late)@android:/android # fbset 1024x768-60  
 
 ```
 
 在我们加载帧缓冲驱动程序并测试配置更改后，我们可以通过在屏幕上绘制一些东西来测试帧缓冲。使用我们在本节中构建的 `fbtest` 命令，我们可以运行一系列帧缓冲测试用例。首先，让我们找出 `fbtest` 可以运行多少个测试用例：
 
-```kt
+```java
 (debug-late)@android:/android # fbtest -f /dev/fb0 -l
 Listing all tests 
 test001: Draw a 16x12 checkerboard pattern 
@@ -634,7 +634,7 @@ test012: Filling squares
 
 如果我们在 `fbtest` 中使用 `-l` 选项，它将打印出可用的测试用例列表。我们可以看到我们有 12 个测试用例：
 
-```kt
+```java
 (debug-late)@android:/android # fbtest -f /dev/fb0 test002  
 
 ```
@@ -647,7 +647,7 @@ test012: Filling squares
 
 在 x86vbox 中初始化 `uvesafb` 是在启动脚本 `init.sh` 中完成的。如果我们回顾第八章创建您的虚拟机设备中关于 HAL 初始化的讨论，我们可以看到 `init.sh` 中的以下代码。我们在第八章创建您的虚拟机设备中简要讨论了图形 HAL 的初始化，现在我们可以深入了解细节：
 
-```kt
+```java
 function init_uvesafb() 
 { 
     case "$PRODUCT" in 
@@ -687,7 +687,7 @@ function init_hal_gralloc()
 
 在我们当前的设置中，让我们看看 `/proc/fb` 的内容。我们可以从调试控制台或 adb 控制台来检查这一点。在帧缓冲设备初始化之前，`/proc/fb` 的内容是空的。在我们的情况下，它是空的，因为没有帧缓冲设备可用，直到执行 `init.sh` 脚本。如果输出为空，`init.sh` 脚本将调用 `init_uvesafb` 函数来初始化 `uvesafb`。在帧缓冲设备初始化后，我们可以看到 `/proc/fb` 的内容如下：
 
-```kt
+```java
 root@x86vbox:/ # cat /proc/fb 
 0 VESA VGA  
 
@@ -697,7 +697,7 @@ root@x86vbox:/ # cat /proc/fb
 
 在 `init_uvesafb` 中，加载 `uvesafb` 的实际命令可以扩展到以下之一：
 
-```kt
+```java
 # modprobe uvesafb mode_option=1024x768-32 mtrr=3 scroll=redraw  
 
 ```
@@ -718,7 +718,7 @@ root@x86vbox:/ # cat /proc/fb
 
 在加载 `uvesafb` 之后，我们可以使用以下命令找到所有支持的分辨率：
 
-```kt
+```java
 # cat /sys/bus/platform/drivers/uvesafb/uvesafb.0/vbe_modes
 640x400-8, 0x0100 
 640x480-8, 0x0101 
@@ -766,7 +766,7 @@ VirtualBox 为主机和虚拟机集成提供的附加功能通常包含在一个
 
 对于虚拟机端，有一个包含设备驱动程序二进制工具和源代码的单独分发包，称为 VirtualBox 虚拟机增强功能。有针对 Windows、Linux 和 OS X 的单独 VirtualBox 虚拟机增强功能。没有针对 Android 的虚拟机增强功能。然而，由于 Android 使用 Linux 内核，我们可以使用 Linux 的源代码构建 Android 的内核驱动程序。安装 VirtualBox 扩展包后，我们可以找到一个名为 `VBoxGuestAdditions.iso` 的镜像文件，如下所示：
 
-```kt
+```java
 $ cd /usr/share/virtualbox
 $ ls
 nls                    src                     VBoxSysInfo.sh
@@ -777,7 +777,7 @@ rdesktop-vrdp.tar.gz   **VBoxGuestAdditions.iso**
 
 我们可以提取这个镜像文件，并在 VirtualBox 虚拟机增强功能中找到以下文件：
 
-```kt
+```java
 $ ls
 deffiles    routines.sh      vboxadd-x11                       x86
 installer   vboxadd          **VBoxGuestAdditions-amd64.tar.bz2**
@@ -805,7 +805,7 @@ VirtualBox 虚拟机增强功能
 
 Guest Additions 中的驱动程序的唯一依赖项是内核源代码。为 Android 构建驱动程序非常简单。要构建 Guest Additions，你可以从你的 VirtualBox 安装中获取源代码，或者你可以从我的 GitHub 上获取一个版本，如下所示：
 
-```kt
+```java
 $ source build/envsetup.sh
 $ lunch x86vbox-eng
 $ cd $HOME
@@ -817,7 +817,7 @@ $ make BUILD_TARGET_ARCH=x86 KERN_DIR=$OUT/obj/KERNEL_OBJ
 
 在我们成功构建驱动程序后，我们可以按照以下方式找到驱动模块：
 
-```kt
+```java
 $ ls
 build_in_tmp  Makefile   vboxguest.ko  vboxsf.ko  vboxvideo.ko
 LICENSE       vboxguest  vboxsf        vboxvideo  
@@ -826,7 +826,7 @@ LICENSE       vboxguest  vboxsf        vboxvideo
 
 我们可以在我们的 `x86vbox` 设备文件夹下的 `vbox` 文件夹中存储内核模块，因此我们可以在构建过程中将它们复制到文件系统中：
 
-```kt
+```java
 $ croot
 $ cd device/generic/x86vbox
 $ ls vbox
@@ -836,7 +836,7 @@ vboxguest.ko  vboxsf.ko  vboxvideo.ko
 
 在我们获得 Guest Additions 的可加载模块后，我们可以将它们添加到我们的 x86vbox 设备 Makefile `x86vbox.mk` 中，如下所示：
 
-```kt
+```java
 ... 
 PRODUCT_COPY_FILES += \ 
     device/generic/x86vbox/vbox/vboxguest.ko:system/vendor/vbox/vboxguest.ko \ 
@@ -854,7 +854,7 @@ PRODUCT_COPY_FILES += \
 
 要使用 `vboxsf.ko`，我们需要一个名为 `mount.vboxsf` 的工具，它可以用来将主机文件系统上的共享文件夹挂载到 Android 文件系统。这个 `mount.vboxsf` 工具是 VirtualBox Guest Additions 提供的实用工具之一。我们将其放在我们的 x86vbox 设备文件夹中，如下所示：
 
-```kt
+```java
 $ ls mount.vboxsf/ 
 Android.mk  mount.vboxsf.c  vbsfmount.h 
 
@@ -862,7 +862,7 @@ Android.mk  mount.vboxsf.c  vbsfmount.h
 
 它包括一个 C 文件和一个头文件。我们创建了以下 Android Makefile 来构建它：
 
-```kt
+```java
 LOCAL_PATH:= $(call my-dir) 
 include $(CLEAR_VARS) 
 
@@ -880,7 +880,7 @@ include $(BUILD_EXECUTABLE)
 
 为了将其包含在系统镜像中，我们还需要将其添加到 `x86vbox.mk` Makefile 中，如下所示：
 
-```kt
+```java
 ... 
 PRODUCT_PACKAGES += \ 
     mount.vboxsf \ 
@@ -890,7 +890,7 @@ PRODUCT_PACKAGES += \
 
 为了在系统启动时加载 `vboxsf.ko`，我们需要将 `vboxsf.ko` 的加载添加到 `initrd.img` 中的启动脚本。如果我们回想一下 第六章，*使用自定义 Ramdisk 调试启动过程*，我们讨论了 `initrd.img` 中的 init 脚本。shell 脚本函数 `load_modules` 被调用以在第一阶段启动时加载大部分设备驱动程序。我们可以更改此脚本以加载 VirtualBox 设备驱动程序，如下所示：
 
-```kt
+```java
 load_modules() 
 { 
    if [ -z "$FOUND" ]; then 
@@ -919,7 +919,7 @@ load_modules()
 
 要在内核命令行上定义这两个内核参数，我们需要更改 `$HOME/.VirtualBox/TFTP/pxelinux.cfg/default` 下的 PXE 启动脚本，如下所示：
 
-```kt
+```java
 label 1\. x86vbox (2 stages boot) 
 menu x86vbox_initrd 
 kernel x86vbox/kernel 
@@ -929,7 +929,7 @@ append ip=dhcp console=ttyS3,115200 androidboot.selinux=permissive buildvariant=
 
 注意两个变量 `SDCARD` 和 `VBOX_GUEST_ADDITIONS`。它们是我们添加的两个新内核参数，用于支持加载 VirtualBox 设备驱动程序。为了挂载共享文件夹，我们在脚本中添加以下命令：
 
-```kt
+```java
 /android/system/bin/mount.vboxsf sdcard /android$SDCARD 
 
 ```
@@ -962,7 +962,7 @@ Android-x86 项目是第一个将 Mesa/DRM 引入 Android 平台的开源项目�
 
 要加载`vboxvideo.ko`，我们需要在`load_modules`中添加以下这三行：
 
-```kt
+```java
    if [ -n "$VBOX_VIDEO_DRIVER" ]; then 
        modprobe ttm 
        modprobe drm_kms_helper 
@@ -973,7 +973,7 @@ Android-x86 项目是第一个将 Mesa/DRM 引入 Android 平台的开源项目�
 
 `ttm`和`drm_kms_helper`内核模块是`vboxvideo.ko`所需的两个内核模块。我们还使用`VBOX_VIDEO_DRIVER`内核参数来配置`vboxvideo.ko`的加载。使用这个内核参数，我们可以在 uvesafb 帧缓冲和 VirtualBox 帧缓冲之间切换。系统启动后，我们可以看到以下日志消息。我们可以看到`vboxvideo`已成功加载：
 
-```kt
+```java
 [   25.240357] vboxguest: misc device minor 53, IRQ 20, I/O port d040, MMIO at) 
 [   25.261044] [drm] Initialized drm 1.1.0 20060810                             
 [   25.290777] [drm] VRAM 08000000                                              
@@ -989,7 +989,7 @@ Android-x86 项目是第一个将 Mesa/DRM 引入 Android 平台的开源项目�
 
 从日志消息中，我们可以看到`vboxvideo`创建了一个`vboxdrmfb`帧缓冲设备。我们可以使用`fbset`来检查帧缓冲设置，就像我们之前做的那样。我们可以看到，对于`vboxdrmfb`，硬件加速被设置为 true：
 
-```kt
+```java
 (debug-late)@android:/android # fbset 
 
 mode "800x600-0" 
@@ -1004,7 +1004,7 @@ endmode
 
 我们也可以检查 `/proc/fb` 的输出。由于输出是 `0 vboxdrmfb`，`init.sh` 中的 `init_hal_gralloc` 脚本函数不会加载 `uvesafb`：
 
-```kt
+```java
 (debug-late)@android:/android # cat /proc/fb 
 0 vboxdrmfb                                        
 
@@ -1018,7 +1018,7 @@ endmode
 
 我们可以使用以下命令从 GitHub 和 AOSP 获取源代码：
 
-```kt
+```java
 $ repo init https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch11_aosp
 $ repo sync  
 
@@ -1026,7 +1026,7 @@ $ repo sync
 
 在我们获取本章的源代码后，我们可以设置环境和构建系统，如下所示：
 
-```kt
+```java
 $ source build/envsetup.sh
 $ lunch x86vbox-eng
 $ make -j4 
@@ -1035,7 +1035,7 @@ $ make -j4
 
 要构建 `initrd.img`，我们可以运行以下命令：
 
-```kt
+```java
 $ make initrd USE_SQUASHFS=0  
 
 ```

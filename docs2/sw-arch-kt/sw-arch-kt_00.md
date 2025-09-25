@@ -79,7 +79,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 class Person(val name: String, val address: Address) {
     fun getAddressCity(): String {
         return address.city

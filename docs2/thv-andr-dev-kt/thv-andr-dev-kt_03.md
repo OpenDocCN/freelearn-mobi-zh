@@ -102,7 +102,7 @@ Ktor 的 WebSocket 客户端允许轻松设置和管理 WebSocket 连接，处�
 
 1.  在我们应用程序的 **:feature:chat** 模块的 **build.gradle** 文件中，为 WebSocket 客户端添加以下 Ktor 依赖项。确保将 **$ktor_version** 替换为最新版本（对于本书中的示例，我们使用版本 2.2.4）：
 
-    ```kt
+    ```java
     dependencies {
         implementation "io.ktor:ktor-client-
             websockets:2.2.4"
@@ -120,7 +120,7 @@ Ktor 的 WebSocket 客户端允许轻松设置和管理 WebSocket 连接，处�
 
 1.  在您的**AndroidManifest.xml**文件中，添加访问互联网所需的权限，因为我们需要它来连接 WebSocket 和接收/发送消息：
 
-    ```kt
+    ```java
     <uses-permission android:name=
         "android.permission.INTERNET" />
     ```
@@ -139,7 +139,7 @@ Flow 是 Kotlin 协程库的一部分，它是一种可以按顺序发出多个�
 
 Flow API 非常简单易用。例如，想象我们有一个发出三个字符串的流：
 
-```kt
+```java
 fun main() = runBlocking {
     // Define a simple flow that emits three strings
     val helloFlow = flow {
@@ -164,7 +164,7 @@ fun main() = runBlocking {
 
 如果你运行这段代码，你应该看到以下输出：
 
-```kt
+```java
 Hello
 from
 Flow!
@@ -178,7 +178,7 @@ Flow!
 
 要创建一个具有 WebSocket 支持的 `HttpClient` 实例，我们将在 `feature.chat.data.network` 包中创建一个名为 `WebSocketClient` 的新文件（你需要创建数据和网络包，因为它们还不存在）并包含以下代码：
 
-```kt
+```java
 object WebsocketClient {
     val client = HttpClient(OkHttp) {
         install(WebSockets)
@@ -196,7 +196,7 @@ object WebsocketClient {
 
 要开始创建我们的 WebSocket，我们需要一个 `WebSocketSession` 实例。`WebSocketSession` 代表客户端和服务器之间单一的 WebSocket 连接，提供发送和接收消息的方法，以及管理连接的生命周期。在我们的实现中，当我们调用 `connect()` 方法时，将创建一个 `WebSocketSession` 实例，如下所示：
 
-```kt
+```java
 class MessagesSocketDataSource @Inject constructor(
     private val httpClient: HttpClient,
 ) {
@@ -242,7 +242,7 @@ class MessagesSocketDataSource @Inject constructor(
 
 我们可以像这样添加它们：
 
-```kt
+```java
 suspend fun sendMessage(message: String) {
     webSocketSession.send(Frame.Text(message))
 }
@@ -266,7 +266,7 @@ suspend fun disconnect() {
 
 现在我们知道了如何关闭我们的 WebSocket 连接，我们需要定义 `handleMessages` 扩展函数来处理连接存活期间的所有消息：
 
-```kt
+```java
 private suspend fun
 DefaultClientWebSocketSession.handleMessage(frame: Frame):
 WebsocketMessageModel? {
@@ -287,13 +287,13 @@ WebsocketMessageModel? {
 
 我们可以在 WebSocket 中配置一个转换器，使我们能够轻松反序列化我们的消息。首先，我们需要向我们的 `build.gradle` 文件中添加新的依赖项：
 
-```kt
+```java
 implementation("io.ktor:ktor-serialization-kotlinx-json:2.2.4)
 ```
 
 然后，我们准备在 WebSocket 插件中设置 `contentConverter`：
 
-```kt
+```java
 object WebsocketClient {
     val client = HttpClient(OkHttp) {
         install(WebSockets) {
@@ -308,7 +308,7 @@ object WebsocketClient {
 
 此外，我们必须为那些我们希望由转换器反序列化的数据类添加 `@Serializable` 注解。在我们的例子中，我们将创建一个 `WebsocketMessageModel` 类，如下所示：
 
-```kt
+```java
 @Serializable
 class WebsocketMessageModel(
     val id: String,
@@ -324,7 +324,7 @@ class WebsocketMessageModel(
 
 我们流程链中的最后一步是将 `WebsocketMessageModel` 类转换为领域。由于我们还没有领域模型，我们应该首先创建它：
 
-```kt
+```java
 data class Message(
     val id: String,
     val senderName: String,
@@ -343,7 +343,7 @@ data class Message(
 
 现在，我们可以将映射器实现为 `WebsocketMessageModel` 类的一个函数：
 
-```kt
+```java
 @Serializable
 class WebsocketMessageModel(
     val id: String,
@@ -384,7 +384,7 @@ class WebsocketMessageModel(
 
 我们还需要将领域 `Message` 对象转换为 `WebsocketMessageModel` 类。为此，我们需要向 `WebsocketMessageModel` 类中添加一个新函数：
 
-```kt
+```java
 companion object {
     const val TYPE_TEXT = "TEXT"
     const val TYPE_IMAGE = "IMAGE"
@@ -407,7 +407,7 @@ companion object {
 
 然后，在 `send` 函数中，我们将按以下步骤进行：
 
-```kt
+```java
 suspend fun sendMessage(message: Message) {
     val websocketMessage =
         WebsocketMessageModel.fromDomain(message)
@@ -489,7 +489,7 @@ suspend fun sendMessage(message: Message) {
 
 我们已经构建了`MessagesWebsocketDataSource`组件，下一个组件是仓库。仓库组件将仅与`MessagesWebsocketDataSource`（目前如此；我们将在下一章中为它制定更大的计划）。我们将称之为`MessagesRepository`。让我们开始构建它：
 
-```kt
+```java
 class MessagesRepository @Inject constructor(
     private val dataSource: MessagesSocketDataSource
 ) {
@@ -515,7 +515,7 @@ DIP 是 OOP 和设计模式中的 SOLID 原则之一。DIP 指出，高级模块
 
 让我们创建我们的`IMessagesRepository`接口：
 
-```kt
+```java
 interface IMessagesRepository {
     suspend fun getMessages(): Flow<Message>
     suspend fun sendMessage(message: Message)
@@ -525,7 +525,7 @@ interface IMessagesRepository {
 
 然后，我们将修改我们的`MessagesRepository`类以实现此接口，并在其函数中添加重写：
 
-```kt
+```java
 class MessagesRepository @Inject constructor(
     private val dataSource: MessagesSocketDataSource
 ): IMessagesRepository {
@@ -553,7 +553,7 @@ SRP（单一职责原则）是 OOP 和设计模式中的 SOLID 原则之一。�
 
 首先，我们将实现`RetrieveMessages`用例：
 
-```kt
+```java
 class RetrieveMessages @Inject constructor(
     private val repository: IMessagesRepository
 ) {
@@ -569,7 +569,7 @@ class RetrieveMessages @Inject constructor(
 
 第二，我们将实现`SendMessage`用例：
 
-```kt
+```java
 class SendMessage @Inject constructor(
     private val repository: IMessagesRepository
 ) {
@@ -583,7 +583,7 @@ class SendMessage @Inject constructor(
 
 最后，我们将编写`DisconnectMessages`用例：
 
-```kt
+```java
 class DisconnectMessages @Inject constructor(
     private val repository: IMessagesRepository
 ) {
@@ -603,7 +603,7 @@ class DisconnectMessages @Inject constructor(
 
 我们的`ChatViewModel`类将负责处理`ChatScreen`组件（我们在*第一章*中之前构建）所需的数据。这些数据将来自我们刚刚创建的用例。因此，首先，我们的`ChatViewModel`类将具有这些用例作为依赖项：
 
-```kt
+```java
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val retrieveMessages: RetrieveMessages,
@@ -616,7 +616,7 @@ class ChatViewModel @Inject constructor(
 
 然后，我们需要一个属性来保存状态。这个属性需要从视图中可观察，但只读（这样视图就不能修改它）。我们将通过创建两个不同的属性来解决此问题。第一个属性是`_messages`：
 
-```kt
+```java
 private val _messages =
 MutableStateFlow<List<Message>>(emptyList())
 ```
@@ -625,7 +625,7 @@ MutableStateFlow<List<Message>>(emptyList())
 
 第二个属性将是`messages`：
 
-```kt
+```java
 val messages: StateFlow<List<Message>> = _messages
 ```
 
@@ -633,7 +633,7 @@ val messages: StateFlow<List<Message>> = _messages
 
 现在，我们需要实现`loadAndUpdateMessages`函数，该函数将调用`RetrieveMessages`用例：
 
-```kt
+```java
 private var messageCollectionJob: Job? = null
 fun loadAndUpdateMessages() {
     messageCollectionJob =
@@ -660,7 +660,7 @@ fun loadAndUpdateMessages() {
 
 接下来，为了使映射更易于阅读，我们将创建两个扩展函数：
 
-```kt
+```java
 private fun DomainMessage.toUI(): Message {
     return Message(
         id = id,
@@ -685,7 +685,7 @@ MessageContent {
 
 因此，在检索和映射消息时，我们只需调用以下内容：
 
-```kt
+```java
 retrieveMessages()
     .map { it.toUI() }
 ```
@@ -694,7 +694,7 @@ retrieveMessages()
 
 接着，我们应该添加一个发送新消息的函数。基本思路是在`Dispatchers.IO`上下文中启动协程以发送消息。由于这是一个网络操作，建议使用 I/O 分派器，并将我们从用户那里获取的`String`对象映射到域对象，如下面的代码块所示：
 
-```kt
+```java
 fun onSendMessage(messageText: String) {
     viewModelScope.launch(Dispatchers.IO) {
         val message = Message(messageText) // We will add
@@ -709,7 +709,7 @@ fun onSendMessage(messageText: String) {
 
 最后，我们可以使用`onCleared`函数断开与消息检索的连接：
 
-```kt
+```java
 override fun onCleared() {
     messageCollectionJob?.cancel()
     viewModelScope.launch(Dispatchers.IO) {
@@ -722,7 +722,7 @@ override fun onCleared() {
 
 这就是`ChatViewModel`组件目前的样子：
 
-```kt
+```java
 import com.packt.feature.chat.domain.models.Message as
 DomainMessage
 // We are using this import with an alias to make it easier
@@ -787,7 +787,7 @@ class ChatViewModel @Inject constructor(
 
 现在我们已经准备好了`ChatViewModel`组件，我们需要将其连接到视图。我们将对`ChatScreen`组件进行必要的更改，以便它连接到我们的`ChatViewModel`组件。作为第一步，我们已经将`ViewModel`添加到参数中：
 
-```kt
+```java
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
@@ -799,7 +799,7 @@ fun ChatScreen(
 
 然后，我们还将添加一个`LaunchEffect`可组合组件，用于启动消息的加载：
 
-```kt
+```java
 LaunchedEffect(Unit) {
     viewModel.loadAndUpdateMessages()
 }
@@ -807,13 +807,13 @@ LaunchedEffect(Unit) {
 
 接下来，`SendMessageBox`可组合组件接受一个 lambda 参数，我们将使用`ViewModel`函数发送消息：
 
-```kt
+```java
 SendMessageBox { viewModel.onSendMessage(it) }
 ```
 
 之后，我们在`SendMessageBox`组合组件定义中添加以下新参数，并在其`IconButton`的`onClick`属性中调用它：
 
-```kt
+```java
 @Composable
 fun SendMessageBox(sendMessage: (String)->Unit) {
     Box(modifier = Modifier
@@ -852,13 +852,13 @@ fun SendMessageBox(sendMessage: (String)->Unit) {
 
 最后，我们将`messages`属性注入到`ListOfMessages`组合组件中：
 
-```kt
+```java
 ListOfMessages(paddingValues = paddingValues, messages = messages)
 ```
 
 当然，这也需要在组合定义和代码中进行更改：
 
-```kt
+```java
 @Composable
 fun ListOfMessages(messages: List<Message>, paddingValues: PaddingValues) {
     Box(modifier = Modifier
@@ -903,14 +903,14 @@ fun ListOfMessages(messages: List<Message>, paddingValues: PaddingValues) {
 
 当我们构建`WebsocketMessagesDataSource`时，我们必须提供一个`HttpClient`实例。通常，这些客户端在同一个应用程序中是共享的，但我们应该创建一个新的实例来用于我们的 API 请求。为此，我们需要添加一个新的依赖项：
 
-```kt
+```java
 implementation "io.ktor:ktor-client-content-negotiation:
 $ktor_version"
 ```
 
 然后，我们可以这样创建客户端（我们可以在定义 WebSocket 客户端的同一文件中这样做）：
 
-```kt
+```java
 object RestClient {
     val client = HttpClient{
         install(ContentNegotiation) {
@@ -922,7 +922,7 @@ object RestClient {
 
 接下来，我们将创建一个`ChatRoomDataSource`类，该类将负责处理这些数据检索：
 
-```kt
+```java
 class ChatRoomDataSource @Inject constructor(
     private val client: HttpClient,
     private val url: String
@@ -940,14 +940,14 @@ class ChatRoomDataSource @Inject constructor(
 
 +   **GET**：从指定的端点检索数据。要在 Ktor 中使用此方法，你可以调用 **get** 函数：
 
-    ```kt
+    ```java
     val response: HttpResponse =
     client.get("https://api.example.com/data")
     ```
 
 +   **POST**：向指定的端点发送数据，通常用于创建新资源。要在 Ktor 中使用此方法，你可以调用 **post** 函数：
 
-    ```kt
+    ```java
     val response: HttpResponse =
     client.post("https://api.example.com/data") {
     body = yourData }
@@ -955,7 +955,7 @@ class ChatRoomDataSource @Inject constructor(
 
 +   **PUT**：向指定的端点发送数据，通常用于更新现有资源。要在 Ktor 中使用此方法，你可以调用 **put** 函数：
 
-    ```kt
+    ```java
     val response: HttpResponse =
     client.put("https://api.example.com/data") {
     body = yourUpdatedData }
@@ -963,14 +963,14 @@ class ChatRoomDataSource @Inject constructor(
 
 +   **DELETE**：删除指定的资源。要在 Ktor 中使用此方法，你可以调用 **delete** 函数：
 
-    ```kt
+    ```java
     val response: HttpResponse =
     client.delete("https://api.example.com/data/ID")
     ```
 
 +   **PATCH**：对资源应用部分修改。要在 Ktor 中使用此方法，你可以调用 **patch** 函数：
 
-    ```kt
+    ```java
     val response: HttpResponse =
     client.patch("https://api.example.com/data") {
     body = yourPartialData }
@@ -978,7 +978,7 @@ class ChatRoomDataSource @Inject constructor(
 
 在我们的 `getInitialChatRoom` 函数中，我们使用 `client.get(URL)` 函数（注意我们必须以可以替换 `ChatRoom` ID 的格式提供 URL）。我们还需要返回一个新的模型，`ChatRoomModel`：
 
-```kt
+```java
 @kotlinx.serialization.Serializable
 data class ChatRoomModel(
     val id: String,
@@ -990,7 +990,7 @@ data class ChatRoomModel(
 
 现在，为了提供 `ChatRoomDataSource` 所需的依赖项，我们必须以以下方式设置我们的 `ChatModule` 类：
 
-```kt
+```java
 @InstallIn(SingletonComponent::class)
 @Module
 abstract class ChatModule {
@@ -1034,7 +1034,7 @@ abstract class ChatModule {
 
 在下一个代码块中，我们使用 `WEBSOCKET_CLIENT` 常量作为 WebSocket `HttpClient` 实例的限定符，以及 `API_CLIENT` 作为 REST API `HttpClient` 实例的限定符：
 
-```kt
+```java
 @Provides
 @Named(WEBSOCKET_CLIENT)
 fun providesWebsocketHttpClient(): HttpClient {
@@ -1051,7 +1051,7 @@ fun providesAPIHttpClient(): HttpClient {
 
 关于限定符，我们还需要在依赖项的消费者中指明应该注入哪一个。这将通过受影响依赖项中的 `@Named` 注解来完成，如下所示：
 
-```kt
+```java
 class ChatRoomDataSource @Inject constructor(
     @Named(API_CLIENT) private val client: HttpClient,
     @Named(API_CHAT_ROOM_URL_NAME) private val url: String
@@ -1065,7 +1065,7 @@ class ChatRoomDataSource @Inject constructor(
 
 此外，我们还需要修改 `MessagesSocketDataSource` 中的构造函数，以便 Hilt 知道它需要注入哪一个：
 
-```kt
+```java
 class MessagesSocketDataSource @Inject constructor(
     @Named(WEBSOCKET_CLIENT) private val httpClient:
         HttpClient,
@@ -1078,7 +1078,7 @@ class MessagesSocketDataSource @Inject constructor(
 
 首先，我们想在我们的领域包中创建一个接口：
 
-```kt
+```java
 package com.packt.feature.chat.domain
 import com.packt.feature.chat.domain.models.ChatRoom
 interface IChatRoomRepository {
@@ -1088,7 +1088,7 @@ interface IChatRoomRepository {
 
 然后，我们将在`data.repository`包中创建实际实现：
 
-```kt
+```java
 package com.packt.feature.chat.data.network.repository
 import com.packt.feature.chat.data.network.datasource
 .ChatRoomDataSource
@@ -1111,7 +1111,7 @@ class ChatRoomRepository @Inject constructor(
 
 当然，除非我们创建领域模型`ChatRoom`，否则这不会工作：
 
-```kt
+```java
 package com.packt.feature.chat.domain.models
 data class ChatRoom(
     val id: String,
@@ -1123,7 +1123,7 @@ data class ChatRoom(
 
 然后，我们应该从`ChatRoomModel`创建映射：
 
-```kt
+```java
 @Serializable
 data class ChatRoomModel(
     val id: String,
@@ -1146,7 +1146,7 @@ data class ChatRoomModel(
 
 现在，我们需要将仓库接口绑定到其实际实现。为此，我们应该在我们的 Hilt 模块中添加一个绑定声明：
 
-```kt
+```java
 @Binds
 abstract fun providesChatRoomRepository(
     chatRoomRepository: ChatRoomRepository
@@ -1157,7 +1157,7 @@ abstract fun providesChatRoomRepository(
 
 现在，我们已经准备好了数据源和仓库。我们需要实现一个新的用例，其责任是提供此初始信息：
 
-```kt
+```java
 package com.packt.feature.chat.domain.usecases
 import com.packt.feature.chat.domain.IChatRoomRepository
 import com.packt.feature.chat.domain.models.ChatRoom
@@ -1175,7 +1175,7 @@ class GetInitialChatRoomInformation @Inject constructor(
 
 我们现在到达了目的地：`ViewModel`。我们需要将`GetInitial` **ChatRoomInformation**作为`ViewModel`的依赖项，在初始化时获取此信息，并使其对 UI 可用以观察它：
 
-```kt
+```java
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val retrieveMessages: RetrieveMessages,
@@ -1188,14 +1188,14 @@ class ChatViewModel @Inject constructor(
 
 接下来，我们需要创建一个新的`StateFlow`实例，以便由 UI 消费。由于它将几乎包含所有 UI 的状态（除了消息；我们稍后会讨论这一点），我们将称之为`uiState`：
 
-```kt
+```java
 private val _uiState = MutableStateFlow(Chat())
 val uiState: StateFlow<Chat> = _uiState
 ```
 
 现在，我们将添加一个在视图初始化时调用的新函数：
 
-```kt
+```java
 fun loadChatInformation(id: String) {
     messageCollectionJob =
     viewModelScope.launch(Dispatchers.IO) {
@@ -1218,7 +1218,7 @@ fun loadChatInformation(id: String) {
 
 注意，我们还需要一个`Chat`模型，它将成为我们的`uiState`实例；这个模型很重要，因为它将是 UI 消费以配置的对象。添加方式如下：
 
-```kt
+```java
 data class Chat(
     val id: String? = null,
     val name: String? = null,
@@ -1235,7 +1235,7 @@ fun ChatRoom.toUI() = run {
 
 现在，我们需要从我们的屏幕组合组件监听这个`uiState`实例，并相应地更新 UI：
 
-```kt
+```java
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
@@ -1290,7 +1290,7 @@ fun ChatScreen(
 
 在本节中，我们将重点关注 `MessagesSocketDataSource`。如果我们看一下我们的 `connect` 函数，我们可以看到它可能有一些故障点（例如，在初始化会话或处理收到的消息时）。解决这个问题的最简单方法是将这些点用 `try`-`catch` 块包装起来：
 
-```kt
+```java
 suspend fun connect(): Flow<Message> {
     return flow {
         // Wrap the connection attempt with a try-catch
@@ -1341,7 +1341,7 @@ suspend fun connect(): Flow<Message> {
 
 我们还需要定义常量 `TAG`（用于在 Logcat 中记录消息），`MAX_RETRIES`（我们将要使用的重试次数，因为我们不能永远重试），以及 `RETRY_DELAY`（我们在重试之间等待的毫秒数）：
 
-```kt
+```java
 companion object {
     const val TAG = "MessagesSocketDataSource"
     const val RETRY_DELAY = 30000
@@ -1375,14 +1375,14 @@ companion object {
 
 1.  将 Firebase SDK 依赖项添加到项目中的 **build.gradle** 文件中，如下所示：
 
-    ```kt
+    ```java
     classpath 'com.google.gms:google-services:
     $latest_version'
     ```
 
 1.  然后在我们将使用它的 **app** 模块的 **build.gradle** 文件中（在我们的案例中，**:common:data**），我们应该添加以下特定 Firebase 服务的依赖项：
 
-    ```kt
+    ```java
     implementation platform('com.google.firebase:
         firebase-bom:$latest_version')
     implementation 'com.google.firebase:firebase-auth'
@@ -1400,7 +1400,7 @@ BoM 是在依赖管理系统中使用的一种机制，用于指定和管理多�
 
 1.  此外，为了便于使用协程来处理 Firebase 任务，我们将添加这个额外的依赖项：
 
-    ```kt
+    ```java
     implementation 'org.jetbrains.kotlinx:
     kotlinx-coroutines-play-services:$latest_version'
     ```
@@ -1413,7 +1413,7 @@ BoM 是在依赖管理系统中使用的一种机制，用于指定和管理多�
 
 我们可以通过从`FirebaseMessaging`类中调用`getToken()`方法来获取 FCM 令牌。为此，我们首先将创建一个数据源，该数据源将包装令牌处理功能：
 
-```kt
+```java
 package com.packt.data
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
@@ -1438,7 +1438,7 @@ class FCMTokenDataSource @Inject constructor(
 
 如往常一样，在领域层（在这种情况下，在`:common:domain`模块）为我们的存储库创建接口：
 
-```kt
+```java
 interface IFCMTokenRepository {
     suspend fun getFCMToken(): String
 }
@@ -1446,7 +1446,7 @@ interface IFCMTokenRepository {
 
 然后，我们将在数据层创建存储库实现（`:common:data`）：
 
-```kt
+```java
 class FCMTokenRepository @Inject constructor(
     private val tokenDataSource: FCMTokenDataSource
 ) {
@@ -1458,7 +1458,7 @@ class FCMTokenRepository @Inject constructor(
 
 我们将使用这个存储库从 Firebase 获取令牌。如前所述，我们还需要将令牌存储在某个地方，因此我们将为该目的创建另一个存储库：
 
-```kt
+```java
 interface IInternalTokenRepository {
     suspend fun storeToken(userId: String, token: String)
 }
@@ -1468,7 +1468,7 @@ interface IInternalTokenRepository {
 
 在下一个代码块中，我们可以看到我们如何实现上述接口，其中您将提供存储您首选数据源的方法：
 
-```kt
+```java
 class InternalTokenRepository(): IInternalTokenRepository {
     override suspend fun storeToken(userId: String, token:
     String) {
@@ -1491,7 +1491,7 @@ class InternalTokenRepository(): IInternalTokenRepository {
 
 为了创建我们的深度链接，我们将在`:common:framework`模块中创建一个名为`DeepLinks`的对象，以组织我们在应用中将要使用的所有深度链接：
 
-```kt
+```java
 package com.packt.framework.navigation
 object DeepLinks {
     const val chatRoute =
@@ -1501,7 +1501,7 @@ object DeepLinks {
 
 然后，我们需要修改我们的`NavHost`组件——一旦应用接收到带有此深度 comlink 的 intent，应用应导航到`ChatScreen`组件。为了实现这一点，我们需要在`WhatsPacktNavigation`中将`Deeplink`实例作为`ChatScreen`导航图的一个选项添加：
 
-```kt
+```java
 private fun NavGraphBuilder.addChat(navController:
 NavHostController) {
     composable(
@@ -1527,7 +1527,7 @@ NavHostController) {
 
 然后，我们需要实现一个`FirebaseMessagingService`函数，该函数将捕获我们收到的所有推送通知，并允许我们定义一个通知将被发布并由 Android 系统处理，最终显示给用户（如果用户已授予我们的应用执行此操作的权限）：
 
-```kt
+```java
 class WhatsPacktMessagingService:
 FirebaseMessagingService() {
     companion object {
@@ -1571,7 +1571,7 @@ FirebaseMessagingService() {
 
 一旦我们提取了这些信息，我们需要显示通知：
 
-```kt
+```java
 private fun showNotification(senderName: String?,
 messageId: String, messageContent: String?, chatId: String)
 {
@@ -1629,7 +1629,7 @@ messageId: String, messageContent: String?, chatId: String)
 
 最后一步是将我们的服务添加到 `AndroidManifest.xml` 文件中的 `application` 标签内：
 
-```kt
+```java
 <application
     android:allowBackup = "true"
     android:dataExtractionRules =
@@ -1692,7 +1692,7 @@ messageId: String, messageContent: String?, chatId: String)
 
 随后，我们的结构将如下所示：
 
-```kt
+```java
 chats (collection)
   |
   └── chatId1 (document)
@@ -1731,7 +1731,7 @@ chats (collection)
 
 假设我们的聊天将由认证用户使用，我们可以限制和限制对聊天集合的修改访问权限，仅限于已经认证的用户。为了实现这一点，我们可以在 Firestore 中定义一组规则，使用 Firebase 控制台。以下是一个示例：
 
-```kt
+```java
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -1776,7 +1776,7 @@ service cloud.firestore {
 
 创建 `FirestoreMessagesDataSource` 类的第一步是创建我们将用于序列化文档的模型。这个模型必须包括我们在设计 `Message` 文档结构时包含的相同字段：
 
-```kt
+```java
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.PropertyName
 import com.packt.feature.chat.domain.models.Message
@@ -1807,7 +1807,7 @@ data class FirestoreMessageModel(
 
 现在，就像我们处理 `MessagesSocketDataSource` 类一样，我们需要将这个数据模型转换为域模型。我们已经有 `messages` 域模型了，所以在这种情况下，我们只需要实现将 `FirestoreMessageModel` 数据类转换为我们的 `Message` 域模型的函数：
 
-```kt
+```java
 fun toDomain(userId: String): Message {
     return Message(
         id = id,
@@ -1837,7 +1837,7 @@ private fun Timestamp.toDateString(): String {
 
 此外，因为我们还想要发送消息，所以我们需要将域 `Message` 对象转换为数据对象：
 
-```kt
+```java
 companion object {
     fun fromDomain(message: Message): FirestoreMessageModel
     {
@@ -1855,7 +1855,7 @@ companion object {
 
 现在，我们可以继续进行 `FirestoreMessagesDataSource` 的实现。首先，我们定义类及其依赖项：
 
-```kt
+```java
 class FirestoreMessagesDataSource @Inject constructor(
     private val firestore: FirebaseFirestore =
         FirebaseFirestore.getInstance()
@@ -1864,14 +1864,14 @@ class FirestoreMessagesDataSource @Inject constructor(
 
 然后，我们将添加一个 `getMessages` 函数，以获取聊天消息：
 
-```kt
+```java
     fun getMessages(chatId: String, userId: String):
     Flow<Message> = callbackFlow {
 ```
 
 在这个函数内部，我们将获取指定聊天中的 `messages` 子集合的引用：
 
-```kt
+```java
         val chatRef =
             firestore.collection("chats").document(chatId)
                 .collection("messages")
@@ -1879,14 +1879,14 @@ class FirestoreMessagesDataSource @Inject constructor(
 
 现在，我们将创建一个查询以按时间戳（升序）获取消息：
 
-```kt
+```java
         val query = chatRef.orderBy("timestamp",
             Query.Direction.ASCENDING)
 ```
 
 在下一步中，我们向查询添加一个快照监听器以监听实时更新。每当消息中的文档被添加时，我们都会在那里获取已更改文档的快照，以便我们可以通过流将其发射给连接的消费者（在我们的案例中，是 `MessagesRepository`）：
 
-```kt
+```java
         val listenerRegistration =
         query.addSnapshotListener { snapshot, exception ->
             // If there's an exception, close the Flow with
@@ -1899,7 +1899,7 @@ class FirestoreMessagesDataSource @Inject constructor(
 
 在通过流发送新消息之前，我们需要将它们映射到它们的领域对应物并提供它们的 ID。此外，`userId` 将被需要以确定是新用户编写了新消息，还是其他用户在对话中编写了消息：
 
-```kt
+```java
             val messages = snapshot?.documents?.mapNotNull
             { doc ->
                 val message =
@@ -1916,7 +1916,7 @@ class FirestoreMessagesDataSource @Inject constructor(
 
 最后，我们可以将消息列表发送到 `Flow`：
 
-```kt
+```java
             domainMessages.forEach {
                 try {
                     trySend(it).isSuccess
@@ -1929,14 +1929,14 @@ class FirestoreMessagesDataSource @Inject constructor(
 
 如果不再需要 `Flow`，我们应该移除快照监听器：
 
-```kt
+```java
         awaitClose { listenerRegistration.remove() }
     }
 ```
 
 我们还需要添加一个发送消息的功能。要发送消息，我们只需将其添加到具有相关对话 `chatId` 值的文档中的 `messages` 集合：
 
-```kt
+```java
     fun sendMessage(chatId: String, message: Message) {
         val chatRef =
             firestore.collection("chats").document(chatId)
@@ -1949,7 +1949,7 @@ class FirestoreMessagesDataSource @Inject constructor(
 
 接下来，我们需要用 `FirestoreMessagesDataSource` 替换 `MessagesRepository` 中的先前 `MessagesSocketDataSource` 实例：
 
-```kt
+```java
 class MessagesRepository @Inject constructor(
     //private val dataSource: MessagesSocketDataSource
     private val dataSource: FirestoreMessagesDataSource

@@ -220,7 +220,7 @@ Empurror 是我之前开发的一个 iOS 小 SpriteKit 游戏。这是一款关�
 
 您将在 iTunes Connect（或 Google Developer Console）为您的应用程序定义一系列产品，当用户导航到您的内购视图时需要下载这些产品。注意这里对 StoreKit 和 SKProductsRequestDelegate 的导入：
 
-```kt
+```java
 @interface PurchaseViewController : UIViewController <SKProductsRequestDelegate, SKPaymentTransactionObserver> 
 ... 
 #import "PurchaseViewController.h" 
@@ -239,7 +239,7 @@ Empurror 是我之前开发的一个 iOS 小 SpriteKit 游戏。这是一款关�
 
 当视图出现时，我们添加一个事件来衡量转换（我们在这里使用 Flurry），并从商店加载产品，即如果我们被允许这样做的话：
 
-```kt
+```java
 @synthesize scene; 
 
 - (void)viewDidLoad { 
@@ -271,7 +271,7 @@ kProductColorfulWorld,
 
 一旦我们收到响应，我们就可以向用户展示它们，或者，正如这里的情况，启用相应的按钮，允许用户进行购买。对于每个产品，将返回一个产品标识符、一个名称和一个价格：
 
-```kt
+```java
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response{     
     if (self.view == nil){ 
         return; 
@@ -319,7 +319,7 @@ if ([product.productIdentifier isEqualToString:kProductTipAmazing]){
 
 如果支付成功（`SKPaymentTransactionStatePurchased`），我们需要通过调用`EnablePurchaseProduct`方法让应用程序知道要对其做出反应。如果支付失败（`SKPaymentTransactionStateFailed`），或者发生了其他事件，如果需要，我们也可以对其做出反应：
 
-```kt
+```java
 -(void)purchase:(SKProduct *)product{ 
 
     if (products==nil || products.count==0){ 
@@ -379,7 +379,7 @@ if ([product.productIdentifier isEqualToString:kProductTipAmazing]){
 
 应用程序调用`restore`方法（因为用户点击了恢复按钮，或者类似的操作），这会触发`restoreCompletedTransactions`方法：
 
-```kt
+```java
 - (void)restore{ 
     [[SKPaymentQueue defaultQueue] restoreCompletedTransactions]; 
 } 
@@ -389,7 +389,7 @@ if ([product.productIdentifier isEqualToString:kProductTipAmazing]){
 
 最后，交易完成，`paymentQueueRestoreCompleted`和`TransactionsFinished`方法被触发。这个方法可能更适合响应恢复或成功状态：
 
-```kt
+```java
 - (void) paymentQueueRestoreCompletedTransactionsFinished: (SKPaymentQueue *)queue 
 { 
     NSLog(@"received restored transactions: %lu", (unsigned  

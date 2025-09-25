@@ -34,7 +34,7 @@ Arrow 是将两个最成功和最受欢迎的函数式库 `funKTionale` 和 `Kat
 
 让我们组合一些函数：
 
-```kt
+```java
 import arrow.syntax.function.andThen
 import arrow.syntax.function.compose
 import arrow.syntax.function.forwardCompose
@@ -69,13 +69,13 @@ fun main(args: Array<String>) {
 
 要构建 `divStrong: (String) -> String` 函数，我们组合 `div:(String) -> String` 和 `strong:(String) -> String`。换句话说，`divStrong` 等同于以下代码片段：
 
-```kt
+```java
 val divStrong: (String) -> String = { body -> "<div><strong>$body</div></strong>"}
 ```
 
 对于 `spanP:(String) -> String`，我们按照以下方式组合 `span:(String) -> (String)` 和 `p:(String) -> String`：
 
-```kt
+```java
 val spanP: (String) -> String = { body -> "<span><p>$body</p></span>"}
 ```
 
@@ -83,7 +83,7 @@ val spanP: (String) -> String = { body -> "<span><p>$body</p></span>"}
 
 让我们用函数组合重写我们的 `Channel` 管道示例：
 
-```kt
+```java
 data class Quote(val value: Double, val client: String, val item: String, val quantity: Int)
 
 data class Bill(val value: Double, val client: String)
@@ -135,7 +135,7 @@ Arrow 提供了两种部分应用风格——显式和隐式。
 
 显式风格使用一系列称为 `partially1`、`partially2`，一直到 `partially22` 的扩展函数。隐式风格通过一系列扩展，重载了 `invoke` 操作符：
 
-```kt
+```java
 package com.packtpub.functionalkotlin.chapter11
 
 import arrow.syntax.function.invoke
@@ -155,7 +155,7 @@ fun main(args: Array<String>) {
 
 两种风格都可以按以下方式链式使用：
 
-```kt
+```java
 fun partialSplitter(billAndOrder: Pair<Bill, PickingOrder>?, warehouse: (PickingOrder) -> Unit, accounting: (Bill) -> Unit) {
    if (billAndOrder != null) {
       warehouse(billAndOrder.second)
@@ -179,7 +179,7 @@ fun main(args: Array<String>) {
 
 部分应用的一个特殊情况是 **绑定**。使用绑定时，你向 `(T) -> R` 函数传递一个 `T` 参数，但不执行它，实际上返回一个 `() -> R` 函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    val footer:(String) -> String = {content -> "<footer&gt;$content</footer>"}
@@ -194,7 +194,7 @@ fun main(args: Array<String>) {
 
 **反转**接受任何函数并返回其参数顺序相反的函数（在其他语言中，此函数被称为 **flip**）。让我们看看以下代码：
 
-```kt
+```java
 import arrow.syntax.function.partially3
 import arrow.syntax.function.reverse
 
@@ -216,7 +216,7 @@ fun main(args: Array<String>) {
 
 `pipe` 函数接受一个 `T` 值并使用它调用 `(T) -> R` 函数：
 
-```kt
+```java
 import arrow.syntax.function.pipe
 
 fun main(args: Array<String>) {
@@ -228,7 +228,7 @@ fun main(args: Array<String>) {
 
 **管道**类似于函数组合，但不同之处在于我们不是生成新函数，而是可以链式调用函数以产生新的值，从而减少嵌套调用。管道在其他语言中，如 **Elm** 和 **Ocaml** 中，被称为操作符 `|>`：
 
-```kt
+```java
 fun main(args: Array<String>) {
    splitter(filterBills(calculatePrice(Quote(20.0, "Foo", "Shoes", 1)))) //Nested
 
@@ -238,7 +238,7 @@ fun main(args: Array<String>) {
 
 两行是等价的，但第一行必须从后往前理解，第二行应该从左到右阅读：
 
-```kt
+```java
 import arrow.syntax.function.pipe
 import arrow.syntax.function.pipe3
 import arrow.syntax.function.reverse
@@ -258,7 +258,7 @@ fun main(args: Array<String>) {
 
 将柯里化应用于具有 *n* 个参数的函数，例如 `(A, B) -> R`，将其转换为 `n` 个函数调用的链，`(A) -> (B) -> R`：
 
-```kt
+```java
 import arrow.syntax.function.curried
 import arrow.syntax.function.pipe
 import arrow.syntax.function.reverse
@@ -288,7 +288,7 @@ fun main(args: Array<String>) {
 
 在柯里化和部分应用之间存在一些混淆。一些作者将它们视为同义词，但它们是不同的：
 
-```kt
+```java
 import arrow.syntax.function.curried
 import arrow.syntax.function.invoke
 
@@ -317,7 +317,7 @@ fun main(args: Array<String>) {
 
 **逻辑补码**接受任何谓词（一个返回 `Boolean` 类型的函数）并将其否定。让我们看看以下代码：
 
-```kt
+```java
 import arrow.core.Predicate
 import arrow.syntax.function.complement
 
@@ -342,7 +342,7 @@ fun main(args: Array<String>) {
 
 缓存化的经典例子是斐波那契数列：
 
-```kt
+```java
 import arrow.syntax.function.memoize
 import kotlin.system.measureNanoTime
 
@@ -398,7 +398,7 @@ inline fun milliseconds(description: String, body: () -> Unit): String {
 
 我们缓存版本的执行速度比递归函数版本快 700 多倍（后者几乎比 lambda 版本快四倍）。命令式版本是无敌的，因为它被编译器高度优化：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
 
    var lambdaFib: (Long) -> Long = { it } //Declared ahead to be used inside recursively
@@ -437,7 +437,7 @@ fun main(args: Array<String>) = runBlocking {
 
 让我们看看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val upper: (String?) -> String = { s:String? -> s!!.toUpperCase()} //Partial function, it can't transform null
 
@@ -449,7 +449,7 @@ fun main(args: Array<String>) {
 
 Arrow 为类型 `(T) -> R` 的部分函数提供了一个显式类型 `PartialFunction<T, R>`：
 
-```kt
+```java
 import arrow.core.PartialFunction
 
 fun main(args: Array<String>) {
@@ -467,7 +467,7 @@ fun main(args: Array<String>) {
 
 为了避免抛出异常，我们必须将我们的部分函数转换为总函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    val upper: (String?) -> String = { s: String? -> s!!.toUpperCase() } //Partial function, it can't transform null
@@ -480,7 +480,7 @@ fun main(args: Array<String>) {
 
 一种选择是使用 `invokeOrElse` 函数，在值 `s` 对此函数未定义时返回默认值：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    val upper: (String?) -> String = { s: String? -> s!!.toUpperCase() } //Partial function, it can't transform null
@@ -497,7 +497,7 @@ fun main(args: Array<String>) {
 
 第二种选择是使用 `orElse` 函数创建一个总函数，该函数由几个部分函数组成：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val fizz = PartialFunction({ n: Int -> n % 3 == 0 }) { "FIZZ" }
    val buzz = PartialFunction({ n: Int -> n % 5 == 0 }) { "BUZZ" }
@@ -516,7 +516,7 @@ fun main(args: Array<String>) {
 
 `constant<T, R>(t: T)`函数返回一个新函数，该函数将始终返回`t`值：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    val oneToFour = 1..4
@@ -530,7 +530,7 @@ fun main(args: Array<String>) {
 
 我们可以使用`constant`重新编写我们的`fizzBuzz`值：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val fizz = PartialFunction({ n: Int -> n % 3 == 0 }, constant("FIZZ"))
    val buzz = PartialFunction({ n: Int -> n % 5 == 0 }, constant("BUZZ"))
@@ -547,7 +547,7 @@ fun main(args: Array<String>) {
 
 **透镜**是优雅地更新不可变数据结构的抽象。透镜的一种形式是`Lens`（或透镜，具体取决于库实现）。`Lens`是一个功能引用，可以聚焦（因此得名）到结构中，并读取、写入或修改其目标：
 
-```kt
+```java
 typealias GB = Int
 
 data class Memory(val size: GB)
@@ -574,7 +574,7 @@ fun main(args: Array<String>) {
 
 让我们编写我们非常第一个`Lens`值：
 
-```kt
+```java
 val laptopPrice: Lens<Laptop, Double> = Lens(
       get = { laptop -> laptop.price },
       set = { price -> { laptop -> laptop.copy(price = price) } }
@@ -585,7 +585,7 @@ val laptopPrice: Lens<Laptop, Double> = Lens(
 
 如您所见，`set`是一个柯里化函数，因此您可以像这样编写您的设置：
 
-```kt
+```java
 import arrow.optics.Lens
 
 val laptopPrice: Lens<Laptop, Double> = Lens(
@@ -598,7 +598,7 @@ val laptopPrice: Lens<Laptop, Double> = Lens(
 
 现在您已经拥有了第一个透镜，它可以用来设置、读取和修改笔记本电脑的价格。这并不太令人印象深刻，但透镜的魔力在于它们的组合：
 
-```kt
+```java
 import arrow.optics.modify
 
 val laptopMotherBoard: Lens<Laptop, MotherBoard> = Lens(
@@ -637,7 +637,7 @@ fun main(args: Array<String>) {
 
 在一个 Gradle 项目中，添加一个名为`generated-kotlin-sources.gradle`的文件：
 
-```kt
+```java
 apply plugin: 'idea'
 
 idea {
@@ -656,14 +656,14 @@ idea {
 
 然后，在`build.gradle`文件中，添加以下内容：
 
-```kt
+```java
 apply plugin: 'kotlin-kapt'
 apply from: rootProject.file('gradle/generated-kotlin-sources.gradle')
 ```
 
 在`build.gradle`文件中添加一个新的依赖项：
 
-```kt
+```java
 dependencies {
     ...
     kapt    'io.arrow-kt:arrow-annotations-processor:0.5.2'
@@ -677,7 +677,7 @@ dependencies {
 
 一旦配置了 Arrow 的代码生成，您可以将`@lenses`注解添加到您希望生成透镜的数据类中：
 
-```kt
+```java
 import arrow.lenses
 import arrow.optics.Lens
 import arrow.optics.modify

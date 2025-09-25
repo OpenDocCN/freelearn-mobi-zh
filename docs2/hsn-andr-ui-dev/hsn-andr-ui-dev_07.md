@@ -158,7 +158,7 @@
 
 1.  `ViewHolder` 的主要任务是加快数据模型与用户界面小部件之间的绑定，为此，`ViewHolder` 需要引用它将要填充的每个 `View` 对象：
 
-```kt
+```java
 private final ImageView categoryIcon;
 private final TextView description;
 private final TextView amount;
@@ -167,13 +167,13 @@ private final TextView timestamp;
 
 1.  这个 `ViewHolder` 还需要一种格式化时间戳的方法，而最好的方法就是使用 `java.text.DateFormat`，这也是需要保留引用的东西，因为它们构建起来相当昂贵：
 
-```kt
+```java
 private final DateFormat dateFormat;
 ```
 
 1.  `ViewHolder` 通常使用它预期绑定到的 `View` 对象来构建。你可以在 `ViewHolder` 构造函数中填充 `View` 对象，但为了保持灵活性并避免在构造函数中产生参数混乱，这个 `ViewHolder` 实现将只接受它将要包装的 `View` 对象：
 
-```kt
+```java
 public ClaimItemViewHolder(final View claimItemCard) {
     super(claimItemCard);
     this.categoryIcon = claimItemCard.findViewById(R.id.item_category);
@@ -184,13 +184,13 @@ public ClaimItemViewHolder(final View claimItemCard) {
 
 1.  你还需要创建一个 `DateFormat` 对象，并且你希望使用用户当前区域的长时间日期格式：
 
-```kt
+```java
 this.dateFormat = DateFormat.getDateInstance(DateFormat.LONG);
 ```
 
 1.  这个类需要一个工具方法来确定应该渲染哪个图标用于 `Category`，这将涉及手动引用应用程序的 `Resources` 来检索类别图标的黑色版本：
 
-```kt
+```java
 public Drawable getCategoryIcon(final Category category) {
     final Resources resources = itemView.getResources();
     switch (category) {
@@ -213,7 +213,7 @@ public Drawable getCategoryIcon(final Category category) {
 
 1.  你还需要一个工具方法来格式化金额，使得整数金额没有小数部分，而非整数只显示两位小数：
 
-```kt
+```java
 public String formatAmount(final double amount) {
     return amount == 0
             ? ""
@@ -225,7 +225,7 @@ public String formatAmount(final double amount) {
 
 1.  最后，你需要一种方式让适配器用数据填充所有 `View` 元素，并且因为这个类是针对 `ClaimItem` 数据对象的，你可以通过提供一个类似设置器的方法来简化这个过程：
 
-```kt
+```java
 public void setClaimItem(final ClaimItem item) {
     categoryIcon.setImageDrawable(getCategoryIcon(item.getCategory()));
     description.setText(item.getDescription());
@@ -248,7 +248,7 @@ public void setClaimItem(final ClaimItem item) {
 
 1.  `ItemPresenter` 需要一个 `Context` 来引用应用程序的 `Resources` 和文件：
 
-```kt
+```java
 private final Context context;
 
 public ItemPresenter(final Context context) {
@@ -258,7 +258,7 @@ public ItemPresenter(final Context context) {
 
 1.  创建一个与简单 `ViewHolder` 类中相同方式的 `formatAmount` 工具方法：
 
-```kt
+```java
 public String formatAmount(final double amount) {
     return amount == 0
             ? ""
@@ -270,7 +270,7 @@ public String formatAmount(final double amount) {
 
 1.  在新的 `ItemPresenter` 中编写一个 `getCategoryIcon` 工具方法（这几乎与 `ClaimItemViewHolder` 中的方法完全相同，只是在访问 `Resources` 对象的方式上有所不同）：
 
-```kt
+```java
 public Drawable getCategoryIcon(final Category category) {
     final Resources resources = context.getResources();
     switch (category) {
@@ -293,7 +293,7 @@ public Drawable getCategoryIcon(final Category category) {
 
 1.  编写一个 `formatDate` 工具方法，将 `Date` 对象转换为适合在屏幕上显示的文本。转换是通过一个 `DateFormat` 对象完成的，它仅在第一次调用 `formatDate` 时创建（它是延迟初始化的）。延迟初始化很重要，因为这个类预期将在应用程序中所有可能的项表示器中通用，因此，将会有一些情况下它不会被使用：
 
-```kt
+```java
 private DateFormat dateFormat;
 public String formatDate(final Date date) {
     if (dateFormat == null) {
@@ -310,7 +310,7 @@ public String formatDate(final Date date) {
 
 1.  在 `CardView` 上方创建一个新的布局根元素，并确保从 `CardView` 中移除命名空间声明，并在文件末尾关闭布局元素：
 
-```kt
+```java
 <layout 
 
     >
@@ -318,7 +318,7 @@ public String formatDate(final Date date) {
 
 1.  在`CardView`上方声明一个包含两个变量的数据块。保持这些名称的泛型是很重要的。一个将是`ItemPresenter`的实例，另一个将是布局要绑定的`ClaimItem`：
 
-```kt
+```java
 <data>
     <variable name="presenter" type="com.packtpub.claim.ui.presenters.ItemPresenter" />
     <variable name="item" type="com.packtpub.claim.model.ClaimItem" />
@@ -327,7 +327,7 @@ public String formatDate(final Date date) {
 
 1.  找到`item_category`的`ImageView`声明，并添加一个新的数据绑定属性，使用`ItemPresenter`找到正确的图标：
 
-```kt
+```java
 <ImageView
     android:id="@+id/category_icon"
     android:layout_width="wrap_content"
@@ -343,7 +343,7 @@ public String formatDate(final Date date) {
 
 1.  找到`TextView`的声明并绑定其文本属性，使用`Presenter`将`ClaimItem`中的金额格式化：
 
-```kt
+```java
 <TextView
     android:id="@+id/item_amount"
     android:layout_width="wrap_content"
@@ -361,7 +361,7 @@ public String formatDate(final Date date) {
 
 1.  将`ClaimItem`中的描述数据绑定到`item_description` `TextView`：
 
-```kt
+```java
 <TextView
     android:id="@+id/item_description"
     android:layout_width="0dp"
@@ -379,7 +379,7 @@ public String formatDate(final Date date) {
 
 1.  使用`Presenter`将`ClaimItem`中的时间戳数据绑定到时间戳`TextView`：
 
-```kt
+```java
 <TextView
     android:id="@+id/item_timestamp"
     android:layout_width="0dp"
@@ -405,19 +405,19 @@ public String formatDate(final Date date) {
 
 1.  在类中添加一个泛型声明，以便为`Presenter`和 Item（P，I）变量提供泛型类型：
 
-```kt
+```java
 public class DataBoundViewHolder<P, I> extends RecyclerView.ViewHolder {
 ```
 
 1.  数据绑定系统生成的每个绑定类都扩展了`ViewDataBinding`；`DataBoundViewHolder`实际上将包装这些之一，以便任何数据绑定布局都可以被包装：
 
-```kt
+```java
 private final ViewDataBinding binding;
 ```
 
 1.  现在，编写一个构造函数，它接受一个`ViewDataBinding`对象和一个用于数据绑定布局的`Presenter`对象。由于`ViewDataBinding`是一个泛型抽象类，我们无法直接调用在`CardClaimItemBinding`类中由数据绑定系统生成的`setPresenter`方法。相反，我们可以使用一个特殊的泛型数据绑定方法，它允许你根据生成的 ID 号分配未知变量；这有点像使用 Java 反射，但实际的实现是在编译时生成的，并且非常快：
 
-```kt
+```java
 public DataBoundViewHolder(final ViewDataBinding binding, final P presenter) {
     super(binding.getRoot());
     this.binding = binding;
@@ -429,7 +429,7 @@ public DataBoundViewHolder(final ViewDataBinding binding, final P presenter) {
 
 1.  然后，编写两个 setter 方法，以便可以从外部统一更改`Presenter`和`item`变量：
 
-```kt
+```java
 public void setItem(final I item) {
     binding.setVariable(BR.item, item);
 }
@@ -443,7 +443,7 @@ public void setPresenter(final P presenter) {
 
 本节中定义的`card_claim_item`布局生成的`setVariable`实现将类似于以下内容：
 
-```kt
+```java
 public boolean setVariable(int variableId, @Nullable Object variable) {
     boolean variableSet = true;
     if (BR.item == variableId) {
@@ -481,32 +481,32 @@ public boolean setVariable(int variableId, @Nullable Object variable) {
 
 1.  将类声明修改为继承自`RecyclerView.Adapter`，并描述你将使用的`DataBoundViewHolder`泛型：
 
-```kt
+```java
 public class ClaimItemAdapter
        extends RecyclerView.Adapter<DataBoundViewHolder<ItemPresenter, ClaimItem>> {
 ```
 
 1.  此适配器类将作为资源填充数据绑定的布局文件，因此它需要一个`LayoutInflator`来完成这项工作：
 
-```kt
+```java
 private final LayoutInflater layoutInflater;
 ```
 
 1.  `ItemPresenter`实例也可以在屏幕上所有显示的索赔项布局之间共享，因此`ClaimItemAdapter`应该持有它的引用：
 
-```kt
+```java
 private final ItemPresenter itemPresenter;
 ```
 
 1.  最重要的是，`ClaimItemAdapter`需要数据来展示。确保你实例化这个引用，这样你就不需要在其他方法中进行空检查：
 
-```kt
+```java
 private List<ClaimItem> items = Collections.emptyList();
 ```
 
 1.  现在，声明一个`ClaimItemAdapter`的构造函数；由于`ClaimItemAdapter`将观察一个`LiveData`对象，它需要一个`LifecycleOwner`。`LifecycleOwner`告诉`LiveData`何时通知你变化，何时不通知，以及何时注销任何监听器。典型的`LifecycleOwners`是`Activity`或`Fragment`实例，但你几乎可以将任何类变成`LifecycleOwner`：
 
-```kt
+```java
 public ClaimItemAdapter(
         final Context context,
         final LifecycleOwner owner,
@@ -520,7 +520,7 @@ public ClaimItemAdapter(
 
 1.  注意，`ClaimItemAdapter`还没有保留对`LiveData`实例的引用，实际上，它根本不会直接持有任何引用。相反，你将使用匿名内部类（如果可用的话，可以使用 lambda 表达式）来观察`LiveData`。重要的是要知道，当你开始观察一个`LiveData`实例时，如果你的`LifecycleOwner`处于正确的状态，你将自动接收到一个*初始*事件，其中包含数据的当前状态。这意味着你永远不需要尝试直接获取数据：
 
-```kt
+```java
 liveItems.observe(owner, new Observer<List<ClaimItem>>() {
     public void onChanged(final List<ClaimItem> claimItems) {
         ClaimItemAdapter.this.items = (claimItems != null)
@@ -533,7 +533,7 @@ liveItems.observe(owner, new Observer<List<ClaimItem>>() {
 
 1.  现在构造函数已经完成，是时候实现与绑定相关的功能了。第一步是实现`onCreateViewHolder`，这将使用`DataBindingUtil`来创建布局和`ViewDataBinding`，后者将被`DataBoundViewHolder`包装：
 
-```kt
+```java
 public DataBoundViewHolder<ItemPresenter, ClaimItem> onCreateViewHolder(
         final ViewGroup parent,
         final int viewType) {
@@ -552,7 +552,7 @@ public DataBoundViewHolder<ItemPresenter, ClaimItem> onCreateViewHolder(
 
 1.  由于`DataBoundViewHolder`的实现，`onBindViewHolder`方法非常容易实现：
 
-```kt
+```java
 public void onBindViewHolder(
         final DataBoundViewHolder<ItemPresenter, ClaimItem> holder,
         final int position) {
@@ -563,7 +563,7 @@ public void onBindViewHolder(
 
 1.  `RecyclerView`还需要知道数据模型中有多少项：
 
-```kt
+```java
 public int getItemCount() {
     return items.size();
 }
@@ -575,7 +575,7 @@ public int getItemCount() {
 
 如果你想在包含`RecyclerView`的布局上使用数据绑定，你甚至可以将适配器对象数据绑定到`RecyclerView`。你所需做的只是在一个表示类中公开一个方法来访问所需的适配器对象：
 
-```kt
+```java
 private RecyclerView.Adapter<?> claimItemsAdapter;
 
 public RecyclerView.Adapter<?> getClaimItemsAdapter() {
@@ -592,7 +592,7 @@ public RecyclerView.Adapter<?> getClaimItemsAdapter() {
 
 重要的是你预先构建或缓存你创建的实例，以避免不必要地重新创建适配器对象。同时，也要记住不要将适配器设置为`ObservableField`或类似类型，因为适配器的内容应该是变化的，而不是适配器本身。要绑定`RecyclerView`到其适配器，请使用数据绑定系统的*自动属性*系统：
 
-```kt
+```java
 <android.support.v7.widget.RecyclerView
     app:adapter="@{presenter.claimItemsAdapter}"
     app:layoutManager="android.support.v7.widget.LinearLayoutManager"
@@ -621,7 +621,7 @@ public RecyclerView.Adapter<?> getClaimItemsAdapter() {
 
 1.  Android Studio 已经将`ConstraintLayout`作为根元素放置好了；将其更改为`FrameLayout`，因为这个布局非常简单，而且由于逻辑将是自绑定，使用数据绑定布局就没有意义了：
 
-```kt
+```java
 <FrameLayout 
 
     android:layout_width="match_parent"
@@ -635,7 +635,7 @@ public RecyclerView.Adapter<?> getClaimItemsAdapter() {
 
 1.  `FrameLayout`的第一个子元素将是一个简单的`LinearLayout`，以便你可以在报销项滚动列表上方放置津贴概览。在这里使用`LinearLayout`是理想的，因为它是一个非常简单且非常快的布局，我们不需要`ConstraintLayout`的复杂性：
 
-```kt
+```java
 <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -648,7 +648,7 @@ public RecyclerView.Adapter<?> getClaimItemsAdapter() {
 
 1.  `LinearLayout`的第一个子元素是`AllowanceOverviewFragment`，它将允许用户编辑他们的每日津贴并查看他们花费了多少：
 
-```kt
+```java
 <fragment
     class="com.packtpub.claim.ui.AllowanceOverviewFragment"
     android:id="@+id/allowance_overview"
@@ -658,7 +658,7 @@ public RecyclerView.Adapter<?> getClaimItemsAdapter() {
 
 1.  接下来是`RecyclerView`，它将显示用户输入的报销项的滚动列表。注意这里的裁剪和填充属性；它们确保报销项卡片有内边距，但它们的完整边框和阴影将可见：
 
-```kt
+```java
 <android.support.v7.widget.RecyclerView
     android:id="@+id/claim_items"
     android:layout_width="match_parent"
@@ -674,14 +674,14 @@ public RecyclerView.Adapter<?> getClaimItemsAdapter() {
 
 1.  我们将使用 `ClaimItemAdapter` 渲染 `ClaimItem` 对象的列表，并且它需要使用数据库产生的 `LiveData` 对象来监视变化。这要求 `Activity` 报告其生命周期，这通过扩展支持包提供的 `Activity` 实现之一（在这种情况下，`AppCompatActivity`）来完成：
 
-```kt
+```java
 public class OverviewActivity
         extends AppCompatActivity {
 ```
 
 1.  由于此 `Activity` 的所有行为实际上都是由其片段和由 `ClaimDatabase` 触发的 `LiveData` 变化处理的，因此 `onCreate` 实现只需要设置 `RecyclerView` 的适配器。`OverviewActivity` 的所有其他逻辑和行为将由片段和适配器处理：
 
-```kt
+```java
 protected void onCreate(final Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_overview);
@@ -699,7 +699,7 @@ protected void onCreate(final Bundle savedInstanceState) {
 
 1.  修改活动元素声明，使 MAIN / LAUNCHER intent-filter 在 `OverviewActivity` 元素中而不是 `CaptureClaimActivity` 元素中。还值得更改 `windowSoftInputMode` 属性，以便在启动 `OverviewActivity` 时软件键盘不会自动打开。键盘默认打开，因为屏幕上的第一个小部件是 `EditText` 字段，用户可以在其中输入他们的每日津贴：
 
-```kt
+```java
 <activity
     android:name=".CaptureClaimActivity"
     android:label="@string/title_activity_capture_claim"
@@ -728,7 +728,7 @@ protected void onCreate(final Bundle savedInstanceState) {
 
 1.  在返回抽象方法的后面，`ClaimItemDao` 和 `AttachmentDao` 声明了一个新的方法，该方法返回一个插入新 `ClaimItem` 的 `Runnable` 任务：
 
-```kt
+```java
 public Runnable createClaimItemTask(final ClaimItem claimItem) {
     return new Runnable() {
         @Override
@@ -740,7 +740,7 @@ public Runnable createClaimItemTask(final ClaimItem claimItem) {
 
 1.  在新的 `Runnable` 任务中，你希望使用事务将 `ClaimItem` 对象的内容保存到数据库中；如果此方法的任何部分失败，事务将被回滚，并且该方法将没有任何效果：
 
-```kt
+```java
 beginTransaction();
 try {
     final long claimId = claimItemDao().insert(claimItem);
@@ -760,7 +760,7 @@ try {
 
 1.  在 `ClaimItem` 类的末尾创建一个新的 `isValid` 方法；这将用于在 `CaptureClaimActivity` 返回 `ClaimItem` 时检查我们是否应该将新的 `ClaimItem` 存储到数据库中：
 
-```kt
+```java
 public boolean isValid() {
     return !TextUtils.isEmpty(description)
             && amount > 0
@@ -781,7 +781,7 @@ public boolean isValid() {
 
 1.  将路径元素的 `fillColor` 属性更改为白色：
 
-```kt
+```java
 <path
     android:fillColor="#FFFFFFFF"
     android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
@@ -799,7 +799,7 @@ public boolean isValid() {
 
 1.  用一个 `FloatingActionButton` 替换此文件的内容：
 
-```kt
+```java
 <android.support.design.widget.FloatingActionButton
 
     tools:context="com.packtpub.claim.ui.NewClaimItemFloatingActionButtonFragment"
@@ -813,7 +813,7 @@ public boolean isValid() {
 
 1.  将类声明更改为实现 `View.OnClickListener` 接口：
 
-```kt
+```java
 public class NewClaimItemFloatingActionButtonFragment
         extends Fragment
         implements View.OnClickListener {
@@ -821,13 +821,13 @@ public class NewClaimItemFloatingActionButtonFragment
 
 1.  声明一个请求码，用于将用户发送到 `CaptureClaimActivity`：
 
-```kt
+```java
 private static final int REQUEST_CODE_CREATE_CLAIM_ITEM = 100;
 ```
 
 1.  将 `onCreateView` 方法更改为同时设置 `FloatingActionButton` 的 `OnClickListener`：
 
-```kt
+```java
 @Override
 public View onCreateView(
         final LayoutInflater inflater,
@@ -847,7 +847,7 @@ public View onCreateView(
 
 1.  重写`onClick`方法从`View.OnClickListener`并启动`CaptureClaimActivity`以获取结果：
 
-```kt
+```java
 @Override public void onClick(final View view) {
     startActivityForResult(
             new Intent(getContext(), CaptureClaimActivity.class),
@@ -857,7 +857,7 @@ public View onCreateView(
 
 1.  重写`onActivityResult`方法以处理传入的`ClaimItem`，如果它是有效的，则使用`AsyncTask`的`SERIAL_EXECUTOR`将其保存到数据库中：
 
-```kt
+```java
 public void onActivityResult(
         final int requestCode,
         final int resultCode,
@@ -886,7 +886,7 @@ public void onActivityResult(
 
 1.  在`FrameLayout`根元素的底部，包含一个引用`NewClaimItemFloatingActionButtonFragment`的片段标签，并将其定位在屏幕的右下角：
 
-```kt
+```java
 <fragment
         class="com.packtpub.claim.ui.NewClaimItemFloatingActionButtonFragment"
     android:id="@+id/new_claim_item"
@@ -910,7 +910,7 @@ public void onActivityResult(
 
 1.  将其从使用`Allowance`类更改为公开每日津贴作为`ObservableInt`，并移除`OnPropertyChangeCallback`，以便现在字段看起来像这样：
 
-```kt
+```java
 public final ObservableField<SpendingStats> spendingStats = new ObservableField<>();
 public final ObservableInt allowance = new ObservableInt();
 private final UpdateSpendingStatsCommand updateSpendStatsCommand =
@@ -919,13 +919,13 @@ private final UpdateSpendingStatsCommand updateSpendStatsCommand =
 
 1.  现在，将`UpdateSpendingStatsCommand`内部类更改为接受`ClaimItem`对象`List`而不是`Allowance`作为其参数：
 
-```kt
+```java
 private class UpdateSpendingStatsCommand extends ActionCommand<List<ClaimItem>, SpendingStats> {
 ```
 
 1.  现在将`onBackground`实现更改为通过给定的`ClaimItem`对象`List`进行单次扫描，并一次性计算所有支出统计：
 
-```kt
+```java
 public SpendingStats onBackground(final List<ClaimItem> items) throws Exception {
     final Pair<Date, Date> today = getToday();
     final Pair<Date, Date> thisWeek = getThisWeek();
@@ -962,7 +962,7 @@ public SpendingStats onBackground(final List<ClaimItem> items) throws Exception 
 
 1.  现在，更改构造函数，使其接受`LifecycleOwner`和要显示给用户的起始津贴。然后，使用`ClaimDatabase`在添加新的`ClaimItem`对象时更新支出统计：
 
-```kt
+```java
 public AllowanceOverviewPresenter(
         final LifecycleOwner lifecycleOwner,
         final int allowance) {
@@ -983,7 +983,7 @@ public AllowanceOverviewPresenter(
 
 1.  你还需要将`updateAllowance`方法更改为使用`ObservableInt`而不是`Allowance`对象：
 
-```kt
+```java
 public void updateAllowance(final CharSequence newAllowance) {
     try {
         allowance.set(Integer.parseInt(newAllowance.toString()));
@@ -998,14 +998,14 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  在`AllowanceOverviewFragment`中添加一个`SharedPreferences`字段；我们将在本类中多次使用它们：
 
-```kt
+```java
 private FragmentAllowanceOverviewBinding binding;
 private SharedPreferences preferences;
 ```
 
 1.  重写`Fragment`的`onCreate`方法，并检索你将存储每日津贴的私有`SharedPreferences`实例。第一个参数指定要检索的`SharedPreferences`的名称，而第二个参数指定范围为`private`，意味着只有你的应用程序能够看到或使用此`SharedPreferences`实例：
 
-```kt
+```java
 @Override
 public void onCreate(final Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -1018,7 +1018,7 @@ public void onCreate(final Bundle savedInstanceState) {
 
 1.  创建一个`onCreateView`方法来创建`AllowanceOverviewPresenter`，并将`Fragment`实例作为`LifecycleOwner`传递，以及从`SharedPreferences`检索当前的`allowancePerDay`。传递给`SharedPreferences.getInt`方法的第二个参数是默认值，如果没有存储现有值，则返回该值：
 
-```kt
+```java
 @Override
 public View onCreateView(
         final LayoutInflater inflater,
@@ -1043,7 +1043,7 @@ public View onCreateView(
 
 1.  最后，创建一个`onDestroy`方法，将每日津贴存储回`SharedPreferences`对象。你这样做是通过首先从`SharedPreferences`请求一个`Editor`，然后应用更改。`Editor`中的所有更改都是原子性地同时应用的（原子性地）：
 
-```kt
+```java
 @Override
 public void onDestroy() {
     super.onDestroy();

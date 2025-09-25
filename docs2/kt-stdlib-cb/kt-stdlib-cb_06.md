@@ -32,26 +32,26 @@
 
 1.  导入`File.separator`常量并将其分配一个别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  声明一个存储将要读取的文件路径的`String`：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt" 
 ```
 
 1.  使用指定的路径实例化一个`File`：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt"
 val file = File(filePahtName)
 ```
 
 1.  从文件中读取文本并将其打印到控制台：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt"
 val file = File(filePahtName)
 val fileText: String = file.readText()
@@ -84,26 +84,26 @@ println(fileText)
 
 1.  导入`File.separator`常量并将其分配别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  声明一个存储将要读取的文件路径的`String`：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt" 
 ```
 
 1.  为`file1.txt`文件实例化`FileInputStream`：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt"
 val stream = File(filePahtName).inputStream()
 ```
 
 1.  在`use()`函数内部从流中读取字节：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt"
 val stream = File(fileName).inputStream()
 stream.use {
@@ -131,26 +131,26 @@ stream.use {
 
 1.  导入`File.separator`常量并为其指定别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  声明一个`String`，用于存储我们将要读取的文件的路径：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt" 
 ```
 
 1.  使用指定的路径实例化一个`File`：
 
-```kt
+```java
 val filePahtName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt"
 val file = File(filePahtName)
 ```
 
 1.  从文件中读取文本并将其打印到控制台：
 
-```kt
+```java
 val filePathName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file1.txt"
 val file = File(fileName)
 val fileLines = file.readLines()
@@ -179,26 +179,26 @@ fileLines.forEach { println(it) }
 
 1.  导入`File.separator`常量并为其指定别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  指定我们将要创建的新文件的路径：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 ```
 
 1.  使用指定的文件路径实例化文件：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 ```
 
 1.  在`apply`块中使用`writeText()`函数将文本写入文件：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 file.apply {
@@ -208,14 +208,14 @@ file.apply {
  "It's unlikely that you'll be the first.\" - Andy Hunt" 
 ```
 
-```kt
+```java
  writeText(text) 
 }
 ```
 
 1.  将`temp_file`的内容打印到控制台：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 file.apply {
@@ -232,7 +232,7 @@ file.readText().apply { println(this) }
 
 执行前面的代码后，将在`src/main/resources`目录下创建一个新的`temp_file`文件。请注意，如果`temp_file`已存在，它将被覆盖。接下来，使用`writeText()`函数，其内容将被打印到控制台：
 
-```kt
+```java
 "No one in the brief history of computing has ever written a piece of perfect software. It's unlikely that you'll be the first." - Andy Hunt
 ```
 
@@ -254,26 +254,26 @@ file.readText().apply { println(this) }
 
 1.  导入`File.separator`常量并将其分配一个别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  指定将要创建的新文件的路径：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 ```
 
 1.  使用指定的文件路径实例化文件：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 ```
 
 1.  如果文件已存在，则删除该文件：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 if (file.exists()) file.delete()
@@ -281,7 +281,7 @@ if (file.exists()) file.delete()
 
 1.  使用下一个字符串值追加文件：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 if (file.exists()) file.delete()
@@ -297,7 +297,7 @@ file.apply {
 
 1.  将文件内容打印到控制台：
 
-```kt
+```java
 val fileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}temp_file"
 val file = File(fileName)
 if (file.exists()) file.delete()
@@ -317,7 +317,7 @@ file.readText().let { println(it) }
 
 执行前面的代码后，将在`src/main/resources`目录下创建一个新的`temp_file`文件，并且其内容将被打印到控制台：
 
-```kt
+```java
 "A language that doesn’t affect the way you think about programming is worth knowing."
 Alan Perlis
 ```
@@ -340,20 +340,20 @@ Alan Perlis
 
 1.  导入`File.separator`常量并为其指定别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  为指定的`file2.txt`路径实例化一个`File`对象：
 
-```kt
+```java
 val sourceFileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file2.txt"
 val sourceFile = File(sourceFileName)
 ```
 
 1.  创建一个名为`file2_copy.txt`的新`File`：
 
-```kt
+```java
 val sourceFileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file2.txt"
 val sourceFile = File(sourceFileName)
 
@@ -363,7 +363,7 @@ val targetFile = File(targetFileName)
 
 1.  如果`file2_copy.txt`存在，则删除它：
 
-```kt
+```java
 val sourceFileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file2.txt"
 val sourceFile = File(sourceFileName)
 
@@ -375,7 +375,7 @@ if (targetFile.exists()) targetFile.delete()
 
 1.  将`file2.txt`的内容复制到`file2_copy.txt`文件中：
 
-```kt
+```java
 val sourceFileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file2.txt"
 val sourceFile = File(sourceFileName)
 
@@ -389,7 +389,7 @@ sourceFile.copyTo(targetFile)
 
 1.  将两个文件打印到控制台以进行验证：
 
-```kt
+```java
 val sourceFileName = "src${SEPARATOR}main${SEPARATOR}resources${SEPARATOR}file2.txt"
 val sourceFile = File(sourceFileName)
 
@@ -408,7 +408,7 @@ File(targetFileName).readText().apply { println(this) }
 
 你可以运行样本代码以验证，在调用`copyTo()`扩展函数后，两个文件包含相同的内容。在我们的例子中，我们得到以下输出：
 
-```kt
+```java
 "Testing can show the presence of errors, but not their absence." - E. W. Dijkstra
 "Testing can show the presence of errors, but not their absence." - E. W. Dijkstra
 ```
@@ -435,20 +435,20 @@ File(targetFileName).readText().apply { println(this) }
 
 1.  导入 `File.separator` 常量并将其分配一个别名：
 
-```kt
+```java
 import java.io.File.separator as SEPARATOR
 ```
 
 1.  从指向 `src/main/resources` 目录的 `File` 获取 `FileTreeWalk` 实例：
 
-```kt
+```java
 val directoryPath = "src${SEPARATOR}main${SEPARATOR}resources"
 val fileTreeWalk: FileTreeWalk = File(directoryPath).walk()
 ```
 
 1.  遍历所有非空 `.txt` 文件并打印：
 
-```kt
+```java
 val directoryPath = "src${SEPARATOR}main${SEPARATOR}resources"
 
 val fileTreeWalk: FileTreeWalk = File(directoryPath).walk()

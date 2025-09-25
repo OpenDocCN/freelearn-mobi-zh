@@ -66,7 +66,7 @@
 
 1.  打开`libs.version.toml`文件，并在版本部分添加以下版本：
 
-    ```kt
+    ```java
     mockWebServer = "5.0.0-alpha.2"
     coroutinesTest = "1.7.3"
     truth = "1.1.5"
@@ -76,7 +76,7 @@
 
 1.  接下来，在库部分，添加以下内容：
 
-    ```kt
+    ```java
     test-mock-webserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "mockWebServer" }
     test-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
     test-truth = { module = "com.google.truth:truth", version.ref = "truth" }
@@ -86,7 +86,7 @@
 
 1.  接下来，我们将创建一个包，以便一次性添加所有测试依赖项。在包部分，添加以下内容：
 
-    ```kt
+    ```java
     test = ["test-mock-webserver", "test-coroutines", "test-truth"]
     ```
 
@@ -94,7 +94,7 @@
 
 1.  最后，让我们转到应用程序级别的`build.gradle.kts`文件，并添加以下内容：
 
-    ```kt
+    ```java
     testImplementation(libs.bundles.test)
     ```
 
@@ -114,7 +114,7 @@
 
 1.  在这个文件夹内，让我们创建一个名为`catsresponse.json`的新 JSON 文件，并添加以下 JSON：
 
-    ```kt
+    ```java
     [
       {
         "_id": "eLjLV4oegWGFv9MH",
@@ -161,7 +161,7 @@
 
 1.  在`com.packt.chaptertwelve (test)`目录内，让我们创建一个名为`MockRequestDispatcher.kt`的新 Kotlin 文件，并添加以下代码：
 
-    ```kt
+    ```java
     import com.google.common.io.Resources
     import okhttp3.mockwebserver.Dispatcher
     import okhttp3.mockwebserver.MockResponse
@@ -203,7 +203,7 @@
 
 1.  接下来，让我们创建我们的测试类。让我们创建一个名为 `CatsAPITest.kt` 的新 Kotlin 文件，并添加以下代码：
 
-    ```kt
+    ```java
     class CatsAPITest {
         private lateinit var mockWebServer: MockWebServer
         private lateinit var catsAPI: CatsAPI
@@ -279,7 +279,7 @@
 
 让我们创建一个名为 `CatsDaoTest.kt` 的新文件，并添加以下代码：
 
-```kt
+```java
 @RunWith(AndroidJUnit4::class)
 class CatDaoTest {
     private lateinit var database: CatDatabase
@@ -311,7 +311,7 @@ class CatDaoTest {
 
 1.  在 `CatsDaoTest` 类中，添加以下测试函数：
 
-    ```kt
+    ```java
     @Test
     fun testInsertAndReadCat() = runTest {
         // Given a cat
@@ -343,7 +343,7 @@ class CatDaoTest {
 
 1.  仍然在 `CatsDaoTest` 类内部，让我们添加以下测试函数：
 
-    ```kt
+    ```java
     @Test
     fun testAddCatToFavorites() = runTest {
         // Given a cat
@@ -383,19 +383,19 @@ class CatDaoTest {
 
 1.  打开 `libs.version.toml` 文件，并在版本部分添加以下版本：
 
-    ```kt
+    ```java
     mockk = "1.13.3"
     ```
 
 1.  接下来，在库部分，添加以下内容：
 
-    ```kt
+    ```java
     test-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
     ```
 
 1.  将 `test-mockk` 依赖项添加到 `test` 包中。我们的更新后的 `test` 包现在应该看起来像这样：
 
-    ```kt
+    ```java
     test = ["test-mock-webserver", "test-coroutines", "test-truth", "test-mockk"]
     ```
 
@@ -403,7 +403,7 @@ class CatDaoTest {
 
 1.  我们现在准备好创建测试类。在测试目录中创建一个新的 Kotlin 文件，命名为 `CatsViewModelTest.kt`，并添加以下代码：
 
-    ```kt
+    ```java
     class PetsViewModelTest {
         private val petsRepository = mockk<PetsRepository>(relaxed = true)
         private lateinit var petsViewModel: PetsViewModel
@@ -429,7 +429,7 @@ class CatDaoTest {
 
 这样，我们就准备好编写测试了。在 `tearDown()` 函数下方，添加以下测试函数：
 
-```kt
+```java
 @Test
 fun testGetPets() = runTest {
     val cats = listOf(
@@ -467,7 +467,7 @@ fun testGetPets() = runTest {
 
 让我们转到 `PetListItem.kt` 文件。我们需要在我们的可组合项中添加一个 `testTags` 修饰符。这是因为我们正在使用标签来识别我们的可组合项。在 `PetListItem` 可组合项中，修改可组合项内容如下：
 
-```kt
+```java
 ElevatedCard(
     modifier = Modifier
         .fillMaxWidth()
@@ -538,7 +538,7 @@ ElevatedCard(
 
 注意我们已经为我们的组件添加了 `testTag()` 修饰符。有了这个修饰符，我们能够使用 Jetpack Compose 的 Finders API 来找到我们的可组合项。一旦我们使用了查找器，我们就可以对可组合项执行操作并断言。现在让我们在我们的 `androidTest` 目录中创建一个名为 `PetListItemTest.kt` 的新文件，并添加以下代码：
 
-```kt
+```java
 class PetListItemTest {
     @get:Rule
     val composeTestRule = createComposeRule()

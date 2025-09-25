@@ -124,7 +124,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 现在我们必须创建一个小脚本，以便当按钮被点击时，调用 startScene。为此，创建一个新的脚本，命名为 buttonClick，并将其保存在`Scripts`文件夹中。在脚本内部添加以下行：
 
-```kt
+```java
     using System.Collections; 
     using System.Collections.Generic; 
     using UnityEngine; 
@@ -166,7 +166,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 我们仍然需要在游戏结束前隐藏重置按钮。因此，在`gameScript`中创建一个公共的`Button`类型，命名为`resetButton`，如下所示：
 
-```kt
+```java
     public Text enemyTextInstance; 
     public Text playerTextInstance; 
     public Text gameOverText; 
@@ -176,7 +176,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 接下来，在`Start`函数中，我们将活动属性设置为`false`：
 
-```kt
+```java
     void Start () {  
         GameObject player = GameObject.Find("theDude"); 
         pScript = player.GetComponent<playerScript>(); 
@@ -192,7 +192,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 这将确保重置按钮最初不可见。最后，一旦游戏结束，将`SetActive`函数再次设置为`true`：
 
-```kt
+```java
     if (playerHealth <= 0 || enemyHealth <= 0) { 
         bGameover = true; 
         gameOverText.enabled = true; 
@@ -233,7 +233,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 因此，在`gameScript`中添加以下代码：
 
-```kt
+```java
     public Text gameOverText; 
     public Button resetButton; 
  public Toggle pauseButton; public bool bIsGamePaused = false;
@@ -244,7 +244,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 `Update`函数将如下所示：
 
-```kt
+```java
     void Update () {     
         if (!bGameover) { 
  bIsGamePaused = pauseButton.isOn; 
@@ -262,7 +262,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 接下来，在`enemyScript`中，将`Update`函数括起来，并检查`bIsGamePaused`是否为`false`，方式与我们检查游戏是否结束类似：
 
-```kt
+```java
     void Update () {    
         gameScript gScript = mainCamera.GetComponent<gameScript>(); 
 
@@ -287,7 +287,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 在`playerScript`中也进行相同的操作：
 
-```kt
+```java
     void Update () { 
         gameScript gScript = mainCamera.GetComponent<gameScript>(); 
 
@@ -325,7 +325,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 与重置按钮一样，我们只能在游戏结束后显示主菜单按钮。因此，在`gameScript`中创建一个新的公共变量，名为`mainMenuButton`，如下所示：
 
-```kt
+```java
     public Button resetButton; 
  public Button mainMenuButton; 
     public Toggle pauseButton; 
@@ -334,7 +334,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 在`Start`函数中将`mainMenuButton`的激活状态设置为`false`：
 
-```kt
+```java
     // Use this for initialization
     void Start () { 
 
@@ -353,7 +353,7 @@ MainMenu 场景还需要一个播放按钮，该按钮应链接到 startScene，
 
 当游戏结束时，将激活状态设置为`true`。
 
-```kt
+```java
     if (playerHealth <= 0 || enemyHealth <= 0) { 
         bGameover = true; 
 

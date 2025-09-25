@@ -28,7 +28,7 @@
 
 在 Android 中进行网络请求非常繁琐，除非你使用任何第三方库。例如，让我们看看 Android 中的网络请求过去是如何的：
 
-```kt
+```java
 try {
     URL url = new URL("<api call>");
 
@@ -82,7 +82,7 @@ try {
 
 1.  记得我们在本食谱开始时看到的那些用于执行网络请求的大量代码？所有这些都可以用一行 Kotlin 代码来替换。让我们看看以下代码：
 
-```kt
+```java
 var response= URL("<url>").readText()
 ```
 
@@ -92,7 +92,7 @@ var response= URL("<url>").readText()
 
 1.  我们想要异步执行的代码被包装在 `doAsync` 块下。将代码包装在异步任务中也非常简单。让我们看看以下代码：
 
-```kt
+```java
 doAsync {
     val result= URL("https://api.instagram.com/319bad89407ffd7082").readText()
     uiThread {
@@ -105,7 +105,7 @@ doAsync {
 
 1.  `uiThread` 方法由 Anko 库提供，你可以通过在你的 `build.gradle` 文件中添加以下行将它们包含到你的项目中：
 
-```kt
+```java
 implementation "org.jetbrains.anko:anko:1.0"
 ```
 
@@ -117,7 +117,7 @@ implementation "org.jetbrains.anko:anko:1.0"
 
 你是否厌倦了仅仅为了存储数据而编写冗长的样板代码？你是否觉得以下代码只是为了定义一个`Student`模型而显得过于繁琐？:
 
-```kt
+```java
 public class Student {
 
     private String name;
@@ -172,7 +172,7 @@ public class Student {
 
 1.  在菜谱开头提到的代码可以简化为仅仅一行：
 
-```kt
+```java
 data class Student(var name:String,var roll_number:String,var age:Int)
 ```
 
@@ -180,7 +180,7 @@ data class Student(var name:String,var roll_number:String,var age:Int)
 
 1.  现在，让我们尝试使用我们刚刚创建的数据类：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val student=Student("Aanand","2013001",21)
     println("Student: name- ${student.name}, roll_number:${student.roll_number}, age:${student.age}")
@@ -193,7 +193,7 @@ fun main(args: Array<String>) {
 
 1.  让我们检查`toString()`方法（我们甚至还没有定义）：
 
-```kt
+```java
 println("${student.toString()}")
 
 //Output: Student(name=Aanand, roll_number=2013001, age=21)
@@ -203,13 +203,13 @@ println("${student.toString()}")
 
 1.  数据类还提供了很多灵活性。例如，如果你不想要属性的 setter，你可以将属性设置为`val`。这将使属性为只读：
 
-```kt
+```java
 data class Student(val name:String,val roll_number:String,var age:Int)
 ```
 
 1.  你可以用数据类做的酷事情之一是你可以解构对象以获取属性。查看以下代码以了解更多信息：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val student= Student("Aanand", "2013001", 21)
     val (name, roll_number,age)=student
@@ -221,7 +221,7 @@ fun main(args: Array<String>) {
 
 1.  你也可以在类中为属性设置默认值。让我们看看下一个例子：
 
-```kt
+```java
 data class Student(val name:String="Aanand",val roll_number:String,var age:Int)
 var studentA= Student(roll_number =  "2013001", age = 21)
 println(studentA.toString())
@@ -255,7 +255,7 @@ println(studentA.toString())
 
 我们将使用`copy`方法，该方法接受命名参数并创建一个具有更改的命名参数值的对象副本。让我们看看一个例子：
 
-```kt
+```java
 data class Student(val name:String,val roll_number:String,var age:Int)
 fun main(args: Array<String>) {
     var studentA= Student("Aanand Roy", "2013001", 21)
@@ -282,7 +282,7 @@ JSON 是最广泛使用的响应格式之一。通常，APIs 以 JSON 响应的�
 
 我们将使用 Android Studio 3.0；请确保你有其最新版本。我们将使用 GSON 库，这是谷歌开源的一个用于解析 JSON 响应的库。GSON 非常易于使用，并且是市面上最受欢迎的 JSON 解析库之一。要将 GSON 包含到你的项目中，只需将以下行添加到你的 `build.gradle` 文件中：
 
-```kt
+```java
 compile 'com.google.code.gson:gson:2.8.2'
 
 ```
@@ -293,7 +293,7 @@ compile 'com.google.code.gson:gson:2.8.2'
 
 1.  通常，我们在发起网络请求后都会得到一个 JSON 响应，所以为了简化，我们将假设在发起一些网络请求后得到了给定的 JSON 响应：
 
-```kt
+```java
 {
  "data": [{
              "id": "17867282641151111",
@@ -342,7 +342,7 @@ IntelliJ IDEA 提供了一个插件，可以帮助将 JSON 响应转换为 Kotli
 
 1.  让我们看看这些类。第一个类是 JSON 响应的外部容器：
 
-```kt
+```java
 @Generated("com.robohorse.robopojogenerator")
 data class Response(
 
@@ -354,7 +354,7 @@ data class Response(
 )
 ```
 
-```kt
+```java
 // DataItem -  Class that will hold comments
 @Generated("com.robohorse.robopojogenerator")
 data class DataItem(
@@ -375,7 +375,7 @@ data class DataItem(
 
 1.  现在，让我们尝试解析从网络调用中接收到的 JSON。我们将尝试获取收到的第一个评论并像在 Kotlin 中那样访问它：
 
-```kt
+```java
 fun main(args:Array<String>){
     var response= URL("https://api.instagram.com/v1/media/1571595528561539504_5812999640/comments?access_token=5812999640.42ee6f0.9441d5bd909f40319bad89407ffd7082").readText()
     var gson= Gson()
@@ -401,7 +401,7 @@ fun main(args:Array<String>){
 
 创建一个新的 Android 项目并添加一个活动。现在，通过在您的`build.gradle`中添加以下行并将项目同步，将 fuel 依赖项添加到您的项目依赖项中：
 
-```kt
+```java
 //Fuel - Networking in Kotlin
 compile 'com.github.kittinunf.fuel:fuel:$fuel_version' //for JVM
 ```
@@ -414,7 +414,7 @@ compile 'com.github.kittinunf.fuel:fuel:$fuel_version' //for JVM
 
 1.  让我们从视图中添加一个带有`onClickListener`的按钮开始。我还添加了一个`progressBar`到视图中，以便能够看到下载的进度。这是我的视图：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout 
 
@@ -450,7 +450,7 @@ compile 'com.github.kittinunf.fuel:fuel:$fuel_version' //for JVM
 
 1.  让我们从下载一个临时文件开始。我们将使用[`httpbin.org/`](https://httpbin.org/)来模拟下载文件 API。以下是为下载临时文件编写的代码：
 
-```kt
+```java
 class DownloadFileActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -485,7 +485,7 @@ class DownloadFileActivity : AppCompatActivity() {
 
 现在，正如我们之前提到的，我们将使用`Fuel`库来下载文件；以下是代码的示例：
 
-```kt
+```java
 btn_download_file.onClick {
             progressBar.progress = 0
             Fuel.download("http://httpbin.org/bytes/32768").destination { response, url ->
@@ -514,7 +514,7 @@ btn_download_file.onClick {
 
 我们将使用 Android Studio 3.0。请确保您拥有其最新版本。我们还需要添加以下依赖项：
 
-```kt
+```java
 compile "com.squareup.retrofit2:retrofit:$retrofit_version"
 compile "com.squareup.retrofit2:adapter-rxjava2:$retrofit_version"
 compile "com.squareup.retrofit2:converter-gson:$retrofit_version"
@@ -531,7 +531,7 @@ compile "io.reactivex.rxjava2:rxkotlin:$rxKotlinVersion"
 
 1.  Retrofit（用于与网络通信）的实例将按照以下方式创建：
 
-```kt
+```java
 Retrofit.Builder()
         .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
         .addConverterFactory(GsonConverterFactory.create())
@@ -542,7 +542,7 @@ Retrofit.Builder()
 
 1.  下面的示例是一个接口，我们在这里定义了所有的 Retrofit 调用。你可能注意到，我们返回的是`Observable`，这是唯一的变化：
 
-```kt
+```java
 interface InstagramApiService {
 
     @FormUrlEncoded
@@ -573,13 +573,13 @@ interface InstagramApiService {
 
 1.  然后，您需要创建您之前提到的服务实例，如下所示：
 
-```kt
+```java
 retrofit.create<InstagramApiService>(InstagramApiService::class.java)
 ```
 
 1.  现在你只需要调用该方法，并且你需要一个订阅者对象来订阅它：
 
-```kt
+```java
 instagramApiService.getCommentsForInstagramPost(instagramId)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -608,7 +608,7 @@ Facebook、Instagram 和 Twitter 的动态有什么共同点？它们都几乎�
 
 你还需要在`build.gradle`文件中包含`RecyclerView`，你可以按照以下方式添加：
 
-```kt
+```java
 compile 'com.android.support:recyclerview-v7:26.1.0'
 
 ```
@@ -625,7 +625,7 @@ compile 'com.android.support:recyclerview-v7:26.1.0'
 
 1.  首先，我们将创建一个将放置在列表中的项。以下是该行项 `recycler_row.xml` 的代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -649,7 +649,7 @@ compile 'com.android.support:recyclerview-v7:26.1.0'
 
 1.  接下来，我们将在主活动布局文件中创建一个 `RecyclerView`：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -669,7 +669,7 @@ compile 'com.android.support:recyclerview-v7:26.1.0'
 
 1.  现在，我们将创建一个简单的 `RecyclerView` 适配器：
 
-```kt
+```java
 class RecyclerAdapter(val recyclerList: List<Int>) : RecyclerView.Adapter<RecyclerAdapter.ViewHolder>() {
     override fun onBindViewHolder(viewHolder: RecyclerAdapter.ViewHolder, position: Int) {
         viewHolder.bind(recyclerList[position])
@@ -697,7 +697,7 @@ class RecyclerAdapter(val recyclerList: List<Int>) : RecyclerView.Adapter<Recycl
 
 1.  现在，让我们创建一个简单的函数，当调用它时，将 30 个数据项追加到列表中。这正是应用程序中所做的。一旦用户到达列表底部，就会发起一个网络调用，将数据追加到之前的列表中：
 
-```kt
+```java
 fun updateDataList(dataList: MutableList<Int>) : List<Int> {
     kotlin.repeat(30) {
         dataList.add(dataList.size + 1)
@@ -708,7 +708,7 @@ fun updateDataList(dataList: MutableList<Int>) : List<Int> {
 
 1.  现在，让我们在活动中设置回收视图：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     val dataList = mutableListOf<Int>()
 
@@ -750,7 +750,7 @@ class MainActivity : AppCompatActivity() {
 
 我们将使用 Android Studio 3.0 进行编码；确保你有其最新版本。你需要将 Anko 添加到你的 `build.gradle` 文件中，如下所示：
 
-```kt
+```java
 implementation "org.jetbrains.anko:anko:$anko_version"
 ```
 
@@ -758,7 +758,7 @@ implementation "org.jetbrains.anko:anko:$anko_version"
 
 在 Kotlin 中在后台执行任务非常简单。让我们看看下一个例子。在这个例子中，我们将发起一个网络请求（这需要在后台执行，否则你会得到一个 `NetworkOnMainThread` 异常）；一旦网络请求完成，我们将使用 toast 显示成功消息。由于我们不能从后台线程触摸 UI 元素，我们需要回到 UI 线程来完成它。我们将使用 Anko 提供的 `uiThread` 方法，该方法将在后台任务完成后被调用：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -798,7 +798,7 @@ class MainActivity : AppCompatActivity() {
 
 我们将使用 Android Studio 3.0 进行编码。协程作为一个库提供，它抽象了所有复杂性，并让库来处理。你需要在 `build.gradle` 文件中添加这个库，如下所示：
 
-```kt
+```java
 dependencies {  
     ...  
     compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.19.2" 
@@ -807,7 +807,7 @@ dependencies {
 
 这个库发布到了 Bintray JCenter 仓库，所以你需要在你的仓库中添加 `jcenter()`，如下所示：
 
-```kt
+```java
 repositories {
  jcenter()
 }
@@ -815,7 +815,7 @@ repositories {
 
 有一个需要注意的事项是，在 Kotlin 1.1 中协程是实验性的，所以你需要明确告诉编译器你知道这一点，并且你愿意使用它。为此，你需要在你的 `build.gradle` 文件中添加以下行：
 
-```kt
+```java
 apply plugin: 'kotlin'
  kotlin {
     experimental {
@@ -838,7 +838,7 @@ apply plugin: 'kotlin'
 
 1.  让我们尝试编写我们的第一个简单的协程函数：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -855,7 +855,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  协程的关键在于挂起函数。我们只需在函数上添加`suspend`修饰符就可以创建一个挂起函数。考虑以下示例：
 
-```kt
+```java
 suspend fun timeConsumingMethod(arg: String): Boolean {
      //...
 }
@@ -873,7 +873,7 @@ suspend fun timeConsumingMethod(arg: String): Boolean {
 
 1.  首先，我们将创建两个挂起函数并并发执行它们，然后将从两个函数中添加结果：
 
-```kt
+```java
 suspend fun longOperationOne(): Int {
     delay(1000L) 
     return 10
@@ -885,7 +885,7 @@ suspend fun longOperationTwo(): Int {
 }
 ```
 
-```kt
+```java
 val one = async { longOperationOne() }
 val two = async { longOperationTwo() }
 async {
@@ -899,7 +899,7 @@ async {
 
 1.  如果你想要以阻塞的方式运行它，你需要使用`runBlocking`方法。以下是相同的示例，但它将在获取结果时阻塞主线程：
 
-```kt
+```java
 val one = async { longOperationOne() }
 val two = async { longOperationTwo() }
 runBlocking {
@@ -915,7 +915,7 @@ runBlocking {
 
 在 Android 的上下文中，你总是想更新 UI，但你不能从后台线程中这样做。协程为此提供了一个解决方案。让我们看看下一个示例：
 
-```kt
+```java
 launch(UI) {
      val sum = lengthyJobOne.await() +lengthyJobTwo.await()
      myTextView.text = "Sum of results is $sum."

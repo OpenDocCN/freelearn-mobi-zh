@@ -40,7 +40,7 @@
 
 下面是 `ViewModelFactory` 的样子：
 
-```kt
+```java
 class ViewModelFactory(private val repository: Repository)
  :ViewModelProvider.NewInstanceFactory() {
   override fun <T : ViewModel?> create(modelClass:
@@ -55,7 +55,7 @@ class ViewModelFactory(private val repository: Repository)
 
 `ViewModelFactory` 扩展了 `ViewModelProvider.NewInstanceFactory` 静态类，并重写了 `create()` 方法（该方法属于父 `Factory` 接口）。`modelClass` 代表要创建的 `ViewModel`。因此，如果以下代码为 `true`，则我们实例化 `TemperatureViewModel` 并传递 `repository`：
 
-```kt
+```java
 modelClass.isAssignableFrom
  (TemperatureViewModel::class.java)
 ```
@@ -64,7 +64,7 @@ modelClass.isAssignableFrom
 
 接下来，让我们看看我的 `Repository` 类，以了解 `ComposeUnitConverter` 如何加载和保存数据。你可以在下面的代码片段中看到这一点：
 
-```kt
+```java
 class Repository(context: Context) {
     private val prefs =
         PreferenceManager.getDefaultSharedPreferences(context)
@@ -103,7 +103,7 @@ class Repository(context: Context) {
 
 下面是创建仓库和工厂的方式：
 
-```kt
+```java
 class ComposeUnitConverterActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -124,7 +124,7 @@ class ComposeUnitConverterActivity : ComponentActivity() {
 
 `ComposeUnitConverter()`是组合函数层次结构的根。它将工厂传递给`ComposeUnitConverterNavHost()`，然后它反过来在`composable {}`内部作为屏幕的参数使用，如以下代码片段所示：
 
-```kt
+```java
 composable(ComposeUnitConverterScreen.route_temperature) {
   TemperatureConverter(
     viewModel = viewModel(factory = factory)
@@ -144,7 +144,7 @@ composable(ComposeUnitConverterScreen.route_temperature) {
 
 让我们看看它的实现。在以下代码片段中，为了简洁起见，我省略了与`scale`属性相关的代码。你可以在 GitHub 仓库中找到完整的实现：
 
-```kt
+```java
 class TemperatureViewModel(private val repository:
  Repository): ViewModel() {
   ...
@@ -188,7 +188,7 @@ class TemperatureViewModel(private val repository:
 
 如此是`ViewModel`在组合函数中使用的样子：
 
-```kt
+```java
 @Composable
 fun TemperatureConverter(viewModel: TemperatureViewModel) {
   …
@@ -241,7 +241,7 @@ fun TemperatureConverter(viewModel: TemperatureViewModel) {
 
 到目前为止，我向您展示了如何观察`ViewModel`中的变化以及如何调用其内部的逻辑。还有一个部分：更改属性。在前面的代码片段中，`TemperatureTextField()`接收`ViewModel`。让我们看看它如何处理它：
 
-```kt
+```java
 @Composable
 fun TemperatureTextField(
   temperature: State<String>,
@@ -259,7 +259,7 @@ fun TemperatureTextField(
 
 每当文本发生变化时，都会使用新值调用`setTemperature()`。请记住，设置器执行以下操作：
 
-```kt
+```java
 _temperature.value = value
 ```
 
@@ -287,7 +287,7 @@ _temperature.value = value
 
 这里是一个从 `DistancesViewModel` 中摘取的示例实现：
 
-```kt
+```java
 private val _convertedDistance: MutableLiveData<Float>
                 = MutableLiveData(Float.NaN)
 val convertedDistance: LiveData<Float>
@@ -309,7 +309,7 @@ fun convert() {
 
 `viewModelScope` 通过模块级别的 `build.gradle` 文件中的 `androidx.lifecycle:lifecycle-viewmodel-ktx` 实现依赖项可用。`convert()` 启动一个协程，一旦计算完成，就会更新 `_convertedDistance` 的值。可组合函数可以通过在 `convertedDistance` 公共属性上调用 `observeAsState()` 来观察变化。但如何访问 `convertedDistance` 和 `convert()`？下面是 `DistancesConverter.kt` 中的一个代码片段：
 
-```kt
+```java
 val convertedValue by
         viewModel.convertedDistance.observeAsState()
 val result by remember(convertedValue) {
@@ -353,7 +353,7 @@ Jetpack DataStore 允许你使用协议缓冲区存储键值对或类型对象�
 
 `LaunchedEffectDemo()` 实现了一个计数器。一旦点击了**开始**按钮，计数器每秒增加一次。点击**重启**将计数器重置。**停止**将终止它。实现此功能的代码在下面的代码片段中展示：
 
-```kt
+```java
 @Composable
 fun LaunchedEffectDemo() {
    var clickCount by rememberSaveable { mutableStateOf(0) }
@@ -411,7 +411,7 @@ fun LaunchedEffectDemo() {
 
 `DisposableEffect()` 组合器函数在其键更改时运行代码。此外，你可以传递一个 lambda 表达式用于清理目的。它将在 `DisposableEffect()` 函数离开组合时执行。代码在下面的代码片段中展示：
 
-```kt
+```java
 DisposableEffect(clickCount) {
   println("init: clickCount is $clickCount")
   onDispose {

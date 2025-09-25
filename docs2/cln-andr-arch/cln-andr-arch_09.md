@@ -34,7 +34,7 @@
 
 让我们看看前几章中定义的实体：
 
-```kt
+```java
 data class User(
     val id: String,
     val firstName: String,
@@ -47,7 +47,7 @@ data class User(
 
 这里，我们有与领域定义相同的 `User` 数据类。现在让我们假设我们从互联网以 JSON 格式获取以下数据：
 
-```kt
+```java
 data class UserApiModel(
     @Json(name = "id") val id: String,
     @Json(name = "first_name") val firstName: String,
@@ -60,7 +60,7 @@ data class UserApiModel(
 
 远程数据源抽象看起来如下：
 
-```kt
+```java
 interface UserRemoteDataSource {
     fun getUser(id: String): Flow<User>
 }
@@ -68,7 +68,7 @@ interface UserRemoteDataSource {
 
 这是我们在上一章中定义的抽象。在我们编写此类的实现之前，我们首先需要指定我们的 Retrofit 服务：
 
-```kt
+```java
 interface UserService {
     @GET("/users/{userId}")
     suspend fun getUser(@Path("userId") userId: String): 
@@ -78,7 +78,7 @@ interface UserService {
 
 这是一个典型的 Retrofit 服务类，它将从 `/users/{userId}` 端点获取 `UserApiModel` 类。我们现在可以创建数据源实现来从 `UserService` 获取用户：
 
-```kt
+```java
 data class UserRemoteDataSourceImpl(private val userService: UserService) : UserRemoteDataSource {
     override fun getUser(id: String): Flow<User> {
         return flow {
@@ -101,7 +101,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 用户将具有以下 JSON 表示形式：
 
-```kt
+```java
 {
     "id": 1,
     "name": "Leanne Graham",
@@ -112,7 +112,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 帖子将具有以下 JSON 表示形式：
 
-```kt
+```java
 {
     "userId": 1,
     "id": 1,
@@ -150,7 +150,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  确保在顶级 `build.gradle` 文件中设置了以下依赖项：
 
-    ```kt
+    ```java
     buildscript {
          …
         dependencies {
@@ -163,7 +163,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在同一文件中，将网络库添加到库映射中：
 
-    ```kt
+    ```java
         ext {
             …
             versions = [
@@ -193,7 +193,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `data-remote` 模块的 `build.gradle` 文件中，确保存在以下插件：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -204,7 +204,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在同一文件中，将配置更改为顶级 `build.gradle` 文件中定义的配置：
 
-    ```kt
+    ```java
     android {
         compileSdk defaultCompileSdkVersion
         defaultConfig {
@@ -226,7 +226,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在同一文件中，添加对网络库和 `data-repository` 以及 `domain` 模块的依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation(project(path: ":domain"))
         implementation(project(path: ":data-repository"))
@@ -246,13 +246,13 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在顶级 `gradle.properties` 文件中，为 `moshi` 添加以下配置：
 
-    ```kt
+    ```java
     android.jetifier.ignorelist=moshi-1.13.0
     ```
 
 1.  在 `data-remote` 模块的 `AndroidManifest.xml` 文件中，添加互联网权限：
 
-    ```kt
+    ```java
     <?xml version="1.0" encoding="utf-8"?>
     <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         package="com.clean.data_remote">
@@ -266,7 +266,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `user` 包中，创建一个名为 `UserApiModel` 的新类：
 
-    ```kt
+    ```java
     data class UserApiModel(
         @Json(name = "id") val id: Long,
         @Json(name = "name") val name: String,
@@ -277,7 +277,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在同一包中，创建一个名为 `UserService` 的新接口：
 
-    ```kt
+    ```java
     interface UserService {
         @GET("/users")
         suspend fun getUsers(): List<UserApiModel>
@@ -291,7 +291,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `post` 包中，创建一个名为 `PostApiModel` 的新类：
 
-    ```kt
+    ```java
     data class PostApiModel(
         @Json(name = "id") val id: Long,
         @Json(name = "userId") val userId: Long,
@@ -302,7 +302,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在同一包中，创建一个名为 `PostService` 的新接口：
 
-    ```kt
+    ```java
     interface PostService {
         @GET("/posts")
         suspend fun getPosts(): List<PostApiModel>
@@ -316,7 +316,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `source` 包中，创建一个名为 `RemoteUserDataSourceImpl` 的新类：
 
-    ```kt
+    ```java
     class RemoteUserDataSourceImpl @Inject constructor(private val userService: UserService) :
         RemoteUserDataSource {
         override fun getUsers(): Flow<List<User>> = flow {
@@ -346,7 +346,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `source` 包中，创建一个名为 `RemotePostDataSourceImpl` 的新类：
 
-    ```kt
+    ```java
     class RemotePostDataSourceImpl @Inject constructor(private val postService: PostService) :
         RemotePostDataSource {
 
@@ -378,7 +378,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `injection` 包中，创建一个名为 `NetworkModule` 的新类：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class NetworkModule {
@@ -416,7 +416,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `injection` 包中，创建一个名为 `RemoteDataSourceModule` 的类：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class RemoteDataSourceModule {
@@ -438,7 +438,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  创建一个名为 `RemoteUserDataSourceImplTest` 的测试类，该类将测试 `RemoteUserDataSourceImpl` 内部方法的成功场景：
 
-    ```kt
+    ```java
     class RemoteUserDataSourceImplTest {
         private val userService = mock<UserService>()
         private val userDataSource = 
@@ -476,7 +476,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在相同的测试类中，添加错误场景：
 
-    ```kt
+    ```java
     class RemoteUserDataSourceImplTest {
         …
         @ExperimentalCoroutinesApi
@@ -507,7 +507,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  创建一个名为 `RemotePostDataSourceImplTest` 的测试类，它将具有与 `RemoteUserDataSourceImplTest` 相似的测试方法，用于帖子：
 
-    ```kt
+    ```java
     class RemotePostDataSourceImplTest {
         private val postService = mock<PostService>()
         private val postDataSource = 
@@ -545,7 +545,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 1.  在 `RemotePostDataSourceImplTest` 中添加错误场景：
 
-    ```kt
+    ```java
     class RemotePostDataSourceImplTest {
         …
         @ExperimentalCoroutinesApi
@@ -592,7 +592,7 @@ data class UserRemoteDataSourceImpl(private val userService: UserService) : User
 
 假设我们在前面的章节中定义了相同的 `UserEntity`：
 
-```kt
+```java
 data class User(
     val id: String,
     val firstName: String,
@@ -605,7 +605,7 @@ data class User(
 
 让我们对 `UserLocalDataSource` 做相同的假设：
 
-```kt
+```java
 interface UserLocalDataSource {
     suspend fun insertUser(user: User)
     fun getUser(id: String): Flow<User>
@@ -614,7 +614,7 @@ interface UserLocalDataSource {
 
 我们现在需要提供一个实现，该实现将操作来自 Room 的数据。首先，我们需要为 Room 定义一个用户实体：
 
-```kt
+```java
 @Entity(tableName = "user")
 data class UserEntity(
     @PrimaryKey @ColumnInfo(name = "id") val id: String,
@@ -626,7 +626,7 @@ data class UserEntity(
 
 现在，我们可以定义 `UserDao`，它通过 ID 查询用户并插入用户：
 
-```kt
+```java
 @Dao
 interface UserDao {
     @Query("SELECT * FROM user where id = :id")
@@ -638,7 +638,7 @@ interface UserDao {
 
 最后，数据源的实施看起来像这样：
 
-```kt
+```java
 class UserLocalDataSourceImpl(private val userDao: UserDao) : UserLocalDataSource {
     override suspend fun insertUser(user: User) {
         userDao.insertUser(UserEntity(user.id, 
@@ -657,7 +657,7 @@ class UserLocalDataSourceImpl(private val userDao: UserDao) : UserLocalDataSourc
 
 如果我们想使用 Data Store 而不是 Room 与本地数据存储实现，我们可以有如下示例：
 
-```kt
+```java
 private val KEY_ID = stringPreferencesKey("key_id")
 private val KEY_FIRST_NAME = 
     stringPreferencesKey("key_first_name")
@@ -721,7 +721,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  确保在顶级`build.gradle`文件中，以下依赖项已设置：
 
-    ```kt
+    ```java
     buildscript {
          …
         dependencies {
@@ -734,7 +734,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一文件中，将持久化库添加到库映射中：
 
-    ```kt
+    ```java
         ext {
             …
             versions = [
@@ -761,7 +761,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在`data-local`模块的`build.gradle`文件中，确保存在以下插件：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -772,7 +772,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一文件中，将配置更改为顶级`build.gradle`文件中定义的配置：
 
-    ```kt
+    ```java
     android {
         compileSdk defaultCompileSdkVersion
         defaultConfig {
@@ -792,7 +792,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一文件中，添加网络库和`data-repository`以及`domain`模块的依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation(project(path: ":domain"))
         implementation(project(path: ":data-repository"))
@@ -815,7 +815,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在`user`包中，创建`UserEntity`类：
 
-    ```kt
+    ```java
     @Entity(tableName = "user")
     data class UserEntity(
         @PrimaryKey @ColumnInfo(name = "id") val id: Long,
@@ -828,7 +828,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一包中，创建`UserDao`接口：
 
-    ```kt
+    ```java
     @Dao
     interface UserDao {
         @Query("SELECT * FROM user")
@@ -842,7 +842,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在`post`包中，创建一个名为`PostEntity`的新类：
 
-    ```kt
+    ```java
     @Entity(tableName = "post")
     data class PostEntity(
         @PrimaryKey @ColumnInfo(name = "id") val id: Long,
@@ -854,7 +854,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一包中，创建一个名为`PostDao`的新接口：
 
-    ```kt
+    ```java
     @Dao
     interface PostDao {
         @Query("SELECT * FROM post")
@@ -866,7 +866,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在`db`包中，创建`AppDatabase`类：
 
-    ```kt
+    ```java
     @Database(entities = [UserEntity::class, PostEntity::class], version = 1)
     abstract class AppDatabase : RoomDatabase() {
         abstract fun userDao(): UserDao
@@ -878,7 +878,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在`source`包中，创建一个名为`LocalUserDataSourceImpl`的新类：
 
-    ```kt
+    ```java
     class LocalUserDataSourceImpl @Inject constructor(private val userDao: UserDao) :
         LocalUserDataSource {
         override fun getUsers(): Flow<List<User>> = 
@@ -900,7 +900,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一包中，创建`LocalPostDataSourceImpl`类：
 
-    ```kt
+    ```java
     class LocalPostDataSourceImpl @Inject constructor(private val postDao: PostDao) :
         LocalPostDataSource {
         override fun getPosts(): Flow<List<Post>> = 
@@ -921,7 +921,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一包中，创建`LocalInteractionDataSourceImpl`类：
 
-    ```kt
+    ```java
     internal val KEY_TOTAL_TAPS = intPreferencesKey("key_total_taps")
     class LocalInteractionDataSourceImpl @Inject constructor(private val dataStore: DataStore<Preferences>) :
         LocalInteractionDataSource {
@@ -946,7 +946,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在`injection`包中，创建一个名为`PersistenceModule`的新类：
 
-    ```kt
+    ```java
     val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "my_preferences")
     @Module
     @InstallIn(SingletonComponent::class)
@@ -975,7 +975,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  在同一个包中，创建一个名为`LocalDataSourceModule`的新类，在其中我们将抽象与绑定连接起来：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class LocalDataSourceModule {
@@ -1000,7 +1000,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  创建`LocalUserDataSourceImplTest`测试类：
 
-    ```kt
+    ```java
     class LocalUserDataSourceImplTest {
         private val userDao = mock<UserDao>()
         private val userDataSource = 
@@ -1034,7 +1034,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  创建`LocalPostDataSourceImplTest`测试类：
 
-    ```kt
+    ```java
     class LocalPostDataSourceImplTest {
         private val postDao = mock<PostDao>()
         private val postDataSource = 
@@ -1068,7 +1068,7 @@ class UserLocalDataSourceImpl(private val dataStore:
 
 1.  创建`LocalInteractionDataSourceImplTest`测试类：
 
-    ```kt
+    ```java
     class LocalInteractionDataSourceImplTest {
         private val dataStore = mock<DataStore
             <Preferences>>()

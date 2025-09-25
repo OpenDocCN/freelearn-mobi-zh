@@ -16,7 +16,7 @@
 
 在这个项目中，我们将使用 JPA。您可以启动一个新的项目，并将 JPA 作为其中一个依赖项添加。或者，您可以将此添加到您的 Gradle 依赖项列表中：
 
-```kt
+```java
     compile('org.springframework.boot:spring-boot-starter-data-jpa') 
 ```
 
@@ -24,7 +24,7 @@
 
 现在，由于您添加了依赖项，您必须添加 `application.properties` 文件。转到资源文件夹，添加一个名为 `application.properties` 的文件，并包含以下内容：
 
-```kt
+```java
     ## Spring DATASOURCE (DataSourceAutoConfiguration &    
     DataSourceProperties) 
     spring.datasource.url = jdbc:mysql://localhost:3306/tododb 
@@ -46,7 +46,7 @@
 
 我们对 `Todo` 类进行了一点点修改。请看以下代码片段：
 
-```kt
+```java
     @Entity 
     data class Todo ( 
       @Id @GeneratedValue(strategy = GenerationType.AUTO) 
@@ -85,7 +85,7 @@
 
 因此，我们完成了对`Todo`类的更改。我们还需要创建一个`Repository`接口。请看以下接口：
 
-```kt
+```java
     @Repository 
     interface TodoRepository: JpaRepository<Todo,Int> 
 ```
@@ -94,7 +94,7 @@
 
 我们还创建了一个新的类，`ResponseModel`，以结构化我们的响应 JSON。在此处找到类定义：
 
-```kt
+```java
     data class ResponseModel ( 
       val error_code:String, 
       val error_message:String, 
@@ -112,7 +112,7 @@
 
 此 API 的最后一部分是`controller`类。以下是定义：
 
-```kt
+```java
     @RestController 
     @RequestMapping("/api") 
     class TodoController(private val todoRepository: TodoRepository) { 
@@ -164,7 +164,7 @@
 
 现在，更仔细地看看`get_todo` API。它使用`TodoRepository`的`findAll`方法从数据库中获取所有待办事项。以下是该 API 的 JSON 响应（注意，此响应将根据数据库和`Todo`表的状态而变化）：
 
-```kt
+```java
     { 
       "error_code": "0", 
       "error_message": "", 
@@ -211,7 +211,7 @@
 
 下一个 API 是`add_todo` API：
 
-```kt
+```java
     @RequestMapping("/add_todo", method = arrayOf(RequestMethod.POST)) 
     fun addTodo(@Valid @RequestBody todo:Todo) = 
 
@@ -227,7 +227,7 @@
 
 API 的响应如下：
 
-```kt
+```java
     { 
       "error_code": "0", 
       "error_message": "", 
@@ -246,7 +246,7 @@ API 的响应如下：
 
 `delete_todo` API 与这个项目中所有其他 API 都不同。在这里仔细看看这个 API：
 
-```kt
+```java
     @RequestMapping("/delete_todo/{id}", method =    
     arrayOf(RequestMethod.DELETE)) 
     fun deleteTodo(@PathVariable("id") id:Int):ResponseModel { 
@@ -268,7 +268,7 @@ API 的响应如下：
 
 这里是这个 API 的两个理想响应示例：
 
-```kt
+```java
     { 
       "error_code": "0", 
       "error_message": "Successfully Deleted", 
@@ -278,7 +278,7 @@ API 的响应如下：
 
 如果找到并删除了`Todo`，您将得到以下响应：
 
-```kt
+```java
     { 
       "error_code": "1", 
       "error_message": "Invalid Todo", 
@@ -308,13 +308,13 @@ API 的响应如下：
 
 如果您使用 Gradle，请将以下依赖项添加到您的项目中：
 
-```kt
+```java
     compile 'io.projectreactor:reactor-core:3.1.1.RELEASE' 
 ```
 
 如果您使用 Maven，请将以下依赖项添加到`POM.xml`文件中：
 
-```kt
+```java
     <dependency> 
       <groupId>io.projectreactor</groupId> 
       <artifactId>reactor-core</artifactId> 
@@ -340,7 +340,7 @@ Flux 是一个可以发出*N*个发射并可以成功终止或带有错误的 Re
 
 考虑以下代码示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flux = Flux.just("Item 1","Item 2","Item 3") 
       flux.subscribe(object:Consumer<String>{ 
@@ -359,7 +359,7 @@ Flux 是一个可以发出*N*个发射并可以成功终止或带有错误的 Re
 
 那么，让我们来看一个 Mono 的例子。看一下以下示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       val consumer = object : Consumer<String> {//(1) 

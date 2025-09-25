@@ -38,7 +38,7 @@
 
 在 Kotlin 中，函数通常看起来像以下这样：
 
-```kt
+```java
 fun appropriateFunctionName(parameter1:DataType1, parameter2:DataType2,...): ReturnType { 
     //do your stuff here 
     return returnTypeObject 
@@ -53,7 +53,7 @@ fun appropriateFunctionName(parameter1:DataType1, parameter2:DataType2,...): Ret
 
 以下是一个比之前展示的抽象函数更现实的函数示例：
 
-```kt
+```java
 fun add(a:int, b:Int):Int { 
    val result = a+b 
    return result 
@@ -88,7 +88,7 @@ Kotlin 将各种功能捆绑到函数中，使开发者的生活更加轻松。�
 
 虽然，通常函数只能返回单个值，但在 Kotlin 中，通过利用 `Pair` 类型的优势和结构化声明的优势，我们可以从函数中返回两个变量。考虑以下示例：
 
-```kt
+```java
 fun getUser():Pair<Int,String> {//(1) 
     return Pair(1,"Rivu") 
 } 
@@ -108,7 +108,7 @@ Kotlin 为我们提供了扩展函数。它们是什么？它们是在现有数�
 
 例如，如果我们想计算字符串中的单词数，以下是一个传统的函数来完成这个任务：
 
-```kt
+```java
 fun countWords(text:String):Int { 
     return text.trim() 
             .split(Pattern.compile("\s+")) 
@@ -122,7 +122,7 @@ fun countWords(text:String):Int {
 
 看看以下程序：
 
-```kt
+```java
 fun String.countWords():Int { 
     return trim() 
             .split(Pattern.compile("\s+")) 
@@ -132,7 +132,7 @@ fun String.countWords():Int {
 
 仔细看看函数声明。我们声明了函数为`String.countWords()`，而不是像之前那样只是`countWords`；这意味着现在应该在一个`String`实例上调用它，就像`String`类的成员函数一样。就像以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val counts = "This is an example StringnWith multiple words".countWords() 
     println("Count Words: $counts") 
@@ -147,7 +147,7 @@ fun main(args: Array<String>) {
 
 我们可能有一个要求，即希望函数有一个可选参数。考虑以下示例：
 
-```kt
+```java
 fun Int.isGreaterThan(anotherNumber:Int):Boolean { 
     return this>anotherNumber 
 } 
@@ -155,7 +155,7 @@ fun Int.isGreaterThan(anotherNumber:Int):Boolean {
 
 我们希望`anotherNumber`参数是可选的；如果我们没有将其作为参数传递，我们希望它是`0`。传统的方法是有一个没有参数的重载函数，它会用`0`调用这个函数，如下所示：
 
-```kt
+```java
 fun Int.isGreaterThan(anotherNumber:Int):Boolean { 
     return this>anotherNumber 
 } 
@@ -168,7 +168,7 @@ fun Int.isGreaterThan():Boolean {
 
 以下是被修改后的函数：
 
-```kt
+```java
 fun Int.isGreaterThan(anotherNumber:Int=0):Boolean { 
     return this>anotherNumber 
 } 
@@ -176,7 +176,7 @@ fun Int.isGreaterThan(anotherNumber:Int=0):Boolean {
 
 我们会使用`main`函数如下：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     println("5>0: ${5.isGreaterThan()}") 
     println("5>6: ${5.isGreaterThan(6)}") 
@@ -197,7 +197,7 @@ Kotlin 允许你在函数内部嵌套函数，我们可以在另一个函数内�
 
 因此，让我们举一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     fun nested():String { 
         return "String from nested function" 
@@ -260,7 +260,7 @@ Lambda，Λ，**λ**（大写Λ，小写λ）是希腊字母的第 11 个字母�
 
 考虑以下 Java 示例。这是一个简单的例子，其中我们将接口的一个实例传递给一个方法，并在该方法中调用该实例的方法：
 
-```kt
+```java
 public class LambdaIntroClass { 
     interface SomeInterface { 
         void doSomeStuff(); 
@@ -283,7 +283,7 @@ public class LambdaIntroClass {
 
 这只是一个简单的例子；现在，让我们让它更简单：让我们给它添加 lambda 表达式。看看以下更新的代码：
 
-```kt
+```java
 public class LambdaIntroClass { 
     interface SomeInterface { 
         void doSomeStuff(); 
@@ -313,7 +313,7 @@ Java 没有 lambda 的类型；你只能使用 lambda 在运行时创建类和�
 
 所以，不再有讲座了，让我们继续看代码。现在让我们看看同样的程序在 Kotlin 中的样子：
 
-```kt
+```java
 fun invokeSomeStuff(doSomeStuff:()->Unit) { 
     doSomeStuff() 
 } 
@@ -336,7 +336,7 @@ Kotlin 还允许我们将函数作为属性。函数作为属性意味着函数�
 
 例如，看看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val sum = { x: Int, y: Int -> x + y }  
     println("Sum ${sum(10,13)}") 
@@ -360,7 +360,7 @@ fun main(args: Array<String>) {
 
 因此，让我们修改之前的 lambda 来添加它。看看下面的代码：
 
-```kt
+```java
 reverse = { 
         var n = it 
         var revNumber = 0 
@@ -379,7 +379,7 @@ reverse = {
 
 现在，你有了 lambda 作为属性，但它们的数据类型是什么呢？每个属性/变量都有一个数据类型（即使类型是推断的），那么 lambda 呢？让我们看看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val reverse:(Int)->Int//(1) 
     reverse = {number -> 
@@ -414,7 +414,7 @@ fun main(args: Array<String>) {
 
 以下是一个高阶函数的另一个示例：
 
-```kt
+```java
 fun performOperationOnEven(number:Int,operation:(Int)->Int):Int { 
     if(number%2==0) { 
         return operation(number) 
@@ -440,7 +440,7 @@ fun main(args: Array<String>) {
 
 那么，让我们来探索一下。看看以下示例：
 
-```kt
+```java
 fun getAnotherFunction(n:Int):(String)->Unit { 
     return { 
         println("n:$n it:$it") 
@@ -473,7 +473,7 @@ fun main(args: Array<String>) {
 
 例如，看看以下程序：
 
-```kt
+```java
 class Calc { 
     var a:Int=0 
     var b:Int=0 
@@ -505,7 +505,7 @@ fun main(args: Array<String>) {
 
 那么，让我们修改我们之前的程序，使其成为一个纯函数：
 
-```kt
+```java
 fun addNumbers(a:Int = 0,b:Int = 0):Int { 
     return a+b 
 } 

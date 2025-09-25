@@ -50,7 +50,7 @@
 
 1.  打开您模块中的 `build.gradle` 文件（或者我们也可以说是应用级别的 `build.gradle` 文件）并添加以下 `dependencies`：
 
-```kt
+```java
       compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version" 
 ```
 
@@ -84,7 +84,7 @@
 
 在开始活动布局之前，我希望你先看看`BaseActivity`和`ToDoApp`的内部结构，所以这里是`ToDoApp.kt`文件中的代码：
 
-```kt
+```java
     class ToDoApp:Application() { 
       override fun onCreate() { 
         super.onCreate() 
@@ -99,7 +99,7 @@
 
 确实是一个小类；它只包含一个`companion object`来为我们提供实例。随着我们继续本章的学习，这个类将会逐渐增长。我们在清单文件中声明了`ToDoApp`为这个项目的`application`类，如下所示：
 
-```kt
+```java
     <application 
       android:allowBackup="true" 
       android:icon="@mipmap/ic_launcher" 
@@ -114,7 +114,7 @@
 
 `BaseActivity`现在也很小。与`ToDoApp`一样，它也会在本章的进程中逐渐增长：
 
-```kt
+```java
     abstract class BaseActivity : AppCompatActivity() { 
        final override fun onCreate(savedInstanceState: Bundle?) { 
         super.onCreate(savedInstanceState) 
@@ -134,7 +134,7 @@
 
 如截图所示，我们需要一个`FloatingActionButton`和一个`RecyclerView`来构建这个`Activity`，所以这里是这个示例的 XML 布局文件——`activity_todo_list.xml`：
 
-```kt
+```java
     <?xml version="1.0" encoding="utf-8"?>
     <android.support.design.widget.CoordinatorLayout 
 
@@ -180,7 +180,7 @@
 
 是时候继续前进，看看`TodoListActivity`的`onCreateBaseActivity`方法了，如下所示：
 
-```kt
+```java
     lateinit var adapter: ToDoAdapter 
 
     private val INTENT_EDIT_TODO: Int = 100 
@@ -211,7 +211,7 @@
 
 我们还在 `onCreateBaseActivity` 方法的末尾调用了一个 `fetchTodoList()` 函数。正如其名称所示，它负责从 REST API 获取待办事项列表。我们将在稍后查看该方法的定义和细节，但现在，让我们看看 `Adapter`：
 
-```kt
+```java
     class ToDoAdapter( 
  private val context:Context, //(1) val onItemClick:(ToDoModel?)->Unit = {}//(2) 
       ):RecyclerView.Adapter<ToDoAdapter.ToDoViewHolder>() { 
@@ -299,7 +299,7 @@ Retrofit by Square 是 Android 中最著名和最广泛使用的 REST 客户端�
 
 在创建类之前，我们首先需要了解 JSON 响应的结构。我们在上一章中看到了 JSON 响应，但为了快速回顾，以下是`GET_TODO_LIST` API 的 JSON 响应：
 
-```kt
+```java
     { 
       "error_code": 0, 
       "error_message": "", 
@@ -327,7 +327,7 @@ Retrofit by Square 是 Android 中最著名和最广泛使用的 REST 客户端�
 
 这是我们`BaseAPIResponse`类：
 
-```kt
+```java
     open class BaseAPIResponse ( 
       @SerializedName("error_code") 
       val errorCode:Int, 
@@ -339,7 +339,7 @@ Retrofit by Square 是 Android 中最著名和最广泛使用的 REST 客户端�
 
 现在，让我们继续进行`GetToDoListAPIResponse`；以下是这个类的定义：
 
-```kt
+```java
     open class GetToDoListAPIResponse( 
       errorCode:Int, 
       errorMessage:String, 
@@ -353,7 +353,7 @@ Retrofit by Square 是 Android 中最著名和最广泛使用的 REST 客户端�
 
 现在，让我们看一下`ToDoModel`类：
 
-```kt
+```java
     data class ToDoModel ( 
       val id:Int, 
       var todoDescription:String, 
@@ -364,7 +364,7 @@ Retrofit by Square 是 Android 中最著名和最广泛使用的 REST 客户端�
 
 Retrofit 的`builder`类很简单，如下所示：
 
-```kt
+```java
     class APIClient { 
       private var retrofit: Retrofit? = null 
       fun getClient(): Retrofit { 
@@ -398,7 +398,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 现在，让我们创建 HTTP 操作的接口——`APIService`——如下所示：
 
-```kt
+```java
     interface APIService { 
       @POST(Constants.GET_TODO_LIST) 
       fun getToDoList(): Call<GetToDoListAPIResponse> 
@@ -430,7 +430,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 那么，让我们首先修改我们的`build.gradle`以支持 ReactiveX。将以下依赖项添加到应用的`build.gradle`级别：
 
-```kt
+```java
     implementation 'com.squareup.retrofit2:adapter-rxjava2:2.3.0 ' 
     implementation 'io.reactivex.rxjava2:rxandroid:2.0.1' 
     implementation 'io.reactivex.rxjava2:rxkotlin:2.1.0' 
@@ -444,7 +444,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 这是修改后的`APIClient.kt`文件：
 
-```kt
+```java
     class APIClient { 
       private var retrofit: Retrofit? = null 
       enum class LogLevel { 
@@ -502,7 +502,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 我们还需要修改`APIService.kt`文件，以便让函数返回`Observable`而不是`Call`，如下所示：
 
-```kt
+```java
     interface APIService { 
       @POST(Constants.GET_TODO_LIST) 
       fun getToDoList(): Observable<GetToDoListAPIResponse> 
@@ -519,7 +519,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 现在所有的 API 都返回`Observable`而不是`Call`。最后，我们一切都准备好了，可以查看`TodoListActivity`中的`fetchTodoList()`函数。
 
-```kt
+```java
     private fun fetchTodoList() { 
       APIClient() 
       .getAPIService() 
@@ -546,7 +546,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 因此，让我们按照以下方式修改 `ToDoAdapter`：
 
-```kt
+```java
     class ToDoAdapter( 
       private val context:Context, //(1) 
       val onClickTodoSubject:Subject<Pair<View,ToDoModel?>>//(2) 
@@ -603,13 +603,13 @@ Retrofit 的`builder`类很简单，如下所示：
 
 将以下依赖项添加到应用级别的 `build.gradle` 文件中：
 
-```kt
+```java
     implementation 'com.jakewharton.rxbinding2:rxbinding-kotlin:2.0.0' 
 ```
 
 然后，我们可以用以下代码行替换 `ToDoViewHolder` 内部的 `onClick`：
 
-```kt
+```java
     itemView.clicks() 
     .subscribeBy { 
        onClickTodoSubject.onNext(Pair(itemView,todoItem)) 
@@ -618,7 +618,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 这很简单。然而，你可能正在想，使它们响应式有什么好处呢？这里的实现足够简单，但想想你有很多逻辑的情况。你可以轻松地将逻辑划分为操作符，特别是 `map` 和 `filter` 可以为你提供极大的帮助。不仅如此，RxBindings 还为您提供了一致性。例如，当我们需要观察 `EditText` 上的文本变化时，我们通常会在 `TextWatcher` 实例中编写大量的代码，但如果你使用 RxBindings，它将让你这样做：
 
-```kt
+```java
     textview.textChanges().subscribeBy {  
       changedText->Log.d("Text Changed",changedText) 
     } 
@@ -634,7 +634,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 例如，如果您想要一个扩展函数，可以从`View`/`ViewGroup`实例创建位图（在添加 MapFragment 中的标记时特别有用），您可以从那里复制并粘贴以下扩展函数：
 
-```kt
+```java
     fun View.getBitmap(): Bitmap { 
       val bmp = Bitmap.createBitmap(width, height,
       Bitmap.Config.ARGB_8888) 
@@ -647,7 +647,7 @@ Retrofit 的`builder`类很简单，如下所示：
 
 或者，更常见的情况，当您需要隐藏键盘时，以下扩展函数将帮助您：
 
-```kt
+```java
     fun Activity.hideSoftKeyboard() { 
       if (currentFocus != null) { 
         val inputMethodManager = getSystemService(Context 

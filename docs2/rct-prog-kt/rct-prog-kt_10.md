@@ -48,7 +48,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 依赖注入是一种在实例化时一个组件为另一个组件提供依赖的技术。这个定义听起来很复杂，对吧？让我们用一个例子来解释它。考虑以下接口：
 
-```kt
+```java
     interface Employee { 
       fun executeTask() 
     } 
@@ -61,7 +61,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 `Employee` 类如下：
 
-```kt
+```java
     class RandomEmployee: Employee { 
       val task = RandomTask() 
       override fun executeTask() { 
@@ -72,7 +72,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 `Task` 接口实现如下：
 
-```kt
+```java
     class RandomTask : Task { 
       override fun execute() { 
         println("Executing Random Task") 
@@ -82,7 +82,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 然后，我们将在 `main` 方法中创建并使用 `RandomEmployee` 类的实例，如下所示：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       RandomEmployee().executeTask() 
     } 
@@ -108,7 +108,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 感到困惑？让我们动手编写代码并实现前面的概念。让我们从`Employee`接口的新实现开始，如下所示：
 
-```kt
+```java
     class SoftwareDeveloper(val task: ProgrammingTask) : Employee { 
       override fun executeTask() { 
         task.execute() 
@@ -118,7 +118,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 `SoftwareDeveloper`类只能执行`ProgrammingTask`。现在，看看下面的 XML`config`文件：
 
-```kt
+```java
     <?xml version="1.0" encoding="UTF-8"?> 
     <beans  
 
@@ -138,7 +138,7 @@ Kotlin 的一个关键优势是它提供了与用 Java 编写的库非常好的�
 
 `ProgrammingTask`类是`Task`接口的新实现，如下所示：
 
-```kt
+```java
 class ProgrammingTask: Task {
     override fun execute() {
         println("Writing Programms")
@@ -152,7 +152,7 @@ class ProgrammingTask: Task {
 
 更新的`main`函数将如下所示：
 
-```kt
+```java
     fun main(args: Array<String>) { 
  val context = ClassPathXmlApplicationContext( "META-INF/spring/employee.xml")//(1) val employee =  
         context.getBean(Employee::class.java)//(2) 
@@ -183,7 +183,7 @@ DI 与 XML 配置程序的裁剪输出
 
 因此，这是接受 lambda 作为构造函数参数的`Assignment`类：
 
-```kt
+```java
     class Assignment(val task:(String)->Unit) { 
       fun performAssignment(assignmentDtl:String) { 
         task(assignmentDtl) 
@@ -193,7 +193,7 @@ DI 与 XML 配置程序的裁剪输出
 
 这个类接受一个 lambda 作为`task`，在`performAssignment()`方法中稍后执行。以下是接受`Assignment`作为属性的`Student`类：
 
-```kt
+```java
     class Student(val assignment: Assignment) { 
       fun completeAssignment(assignmentDtl:String) { 
         assignment.performAssignment(assignmentDtl) 
@@ -207,7 +207,7 @@ DI 与 XML 配置程序的裁剪输出
 
 如何在代码中描述这个依赖流？使用注解配置就很容易。以下是我们所使用的`Configuration`类：
 
-```kt
+```java
     @Configuration 
     class Configuration { 
 
@@ -225,7 +225,7 @@ DI 与 XML 配置程序的裁剪输出
 
 现在，如何使用这个类？很简单，就像之前的那个一样，看看这里的`main`函数：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val context = AnnotationConfigApplicationContext   
       (Configuration::class.java) 
@@ -260,7 +260,7 @@ DI with Annotation Configuration 程序的裁剪输出
 
 `Faculty`类应该足够简单，只需要一个评估学生的方法。如下所示：
 
-```kt
+```java
     class Faculty { 
       fun evaluateAssignment() { 
         val marks = Random().nextInt(10) 
@@ -271,7 +271,7 @@ DI with Annotation Configuration 程序的裁剪输出
 
 现在，教师应该如何评分学生？他/她必须以某种方式知道学生已经完成了作业。这种业务逻辑的常见实现方法是通过修改`Student`类，如下所示：
 
-```kt
+```java
     class Student(val assignment: Assignment, 
       val faculty: Faculty) { 
         fun completeAssignment(assignmentDtl:String) { 
@@ -287,7 +287,7 @@ DI with Annotation Configuration 程序的裁剪输出
 
 AOP 让我们实现相同的功能。因此，在这里，`Student`类将恢复到几乎原始的状态：
 
-```kt
+```java
     open class Student(public val assignment: Assignment) { 
       open public fun completeAssignment(assignmentDtl:String) { 
         assignment.performAssignment(assignmentDtl) 
@@ -299,7 +299,7 @@ AOP 让我们实现相同的功能。因此，在这里，`Student`类将恢复�
 
 `main`方法将类似，只是我们又回到了基于 XML 的配置。看看下面的代码片段：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val context = ClassPathXmlApplicationContext( 
             "META-INF/spring/student_faculty.xml" 
@@ -315,7 +315,7 @@ AOP 让我们实现相同的功能。因此，在这里，`Student`类将恢复�
 
 唯一包含新内容的文件是配置文件。在我们解释它之前，看看配置文件：
 
-```kt
+```java
     <?xml version="1.0" encoding="UTF-8"?> 
     <beans  
 
@@ -410,7 +410,7 @@ AOP 让我们实现相同的功能。因此，在这里，`Student`类将恢复�
 
 在你创建了新项目之后，你会看到有一个 `Application` 类；不要过多关注它，它在几乎所有的 Spring Boot 应用程序中都有。我们需要创建一个新的类用于 `Todo`，如下所示：
 
-```kt
+```java
     data class Todo ( 
         var id:Int = 0, 
         var todoDescription:String, 
@@ -421,7 +421,7 @@ AOP 让我们实现相同的功能。因此，在这里，`Student`类将恢复�
 
 REST API 要求我们创建 `RestController`，这将作为 API 请求的端点，所以这里是我们的 `RestController`：
 
-```kt
+```java
  @RestController@RequestMapping("/api") 
     class TodoController { 
  @RequestMapping("/get_todo") 
@@ -435,7 +435,7 @@ REST API 要求我们创建 `RestController`，这将作为 API 请求的端点�
 
 什么？你期待更多吗？很抱歉让你失望，但我们已经完成了 API。你只需运行项目，然后访问 `http://127.0.0.1:8080/api/get_todo` 来获取以下 JSON 响应：
 
-```kt
+```java
     {"id":1,"todoDescription":"TODO   
     Project","todoTargetDate":"31/11/2017","status":"Running"} 
 ```

@@ -38,7 +38,7 @@
 
 1.  让我们从创建一个包含一些视图的活动开始，例如一个可以附加`onClickListener`的按钮。查看以下 XML 布局，这是一个可能的活动布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout
 
@@ -99,7 +99,7 @@
 
 1.  现在，让我们看看当我们在 Java 中为三个按钮附加`onClickListener`时的代码：
 
-```kt
+```java
 public class HelloWorldActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -131,7 +131,7 @@ public class HelloWorldActivity extends AppCompatActivity {
 
 1.  你注意到我们为了仅仅附加显示 toast 的点击监听器而必须编写的代码量吗？所有这些代码只是为了三个 onclick 监听器；现在，让我们看看在 Kotlin 中编写相同代码的差异：
 
-```kt
+```java
 class HelloWorldActivity2 : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -159,7 +159,7 @@ class HelloWorldActivity2 : AppCompatActivity() {
 
 1.  代码确实更少、更整洁，这要归功于 Kotlin 的**合成属性**和**Anko**的 toast 辅助函数。现在，让我们尝试使用**lambda**并看看它带来的差异：
 
-```kt
+```java
 class HelloWorldActivity2 : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -180,20 +180,20 @@ class HelloWorldActivity2 : AppCompatActivity() {
 
 Lambda 函数是未声明但作为表达式传递的函数。在 Kotlin 中，如果一个函数接收一个接口，我们可以用 lambda 来替换它。例如，`setOnClickListener`函数接收`View.OnClickListener`，因此我们可以使用 lambda：
 
-```kt
+```java
 fun setOnClickListener(listener: (View) -> Unit)
 someView.setOnClickListener({ view -> doSomething() })
 ```
 
 此外，如果没有参数要传递给 lambda 函数，我们可以省略箭头，如果最后一个传递的参数是函数，我们可以将其移出括号：
 
-```kt
+```java
 someView.setOnClickListener() { doSomething() }
 ```
 
 然后，如果传递给 lambda 函数的实际上是唯一参数，您可以完全省略括号：
 
-```kt
+```java
 button.setOnClickListener { doSomething() }
 ```
 
@@ -201,7 +201,7 @@ button.setOnClickListener { doSomething() }
 
 我们可以使用 Kotlin 的库 **Anko** 进一步减少代码。Anko 提供了一个接受 lambda 表达式的方法，该表达式在 `onClick` 事件发生时执行：
 
-```kt
+```java
 class HelloWorldActivity2 : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -229,13 +229,13 @@ class HelloWorldActivity2 : AppCompatActivity() {
 
 1.  首先，让我们看看如何通过懒初始化创建属性。语法如下：
 
-```kt
+```java
 val / var <property name>: <Type> by <delegate>
 ```
 
 1.  在创建懒代理时，我们使用 `by lazy`，如下所示：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     private val textView : TextView by lazy {
         findViewById<TextView>(R.id.textView) as TextView
@@ -254,7 +254,7 @@ class MainActivity : AppCompatActivity() {
 
 属性的委托看起来像这样：
 
-```kt
+```java
 class Delegate {
     operator fun getValue(
             thisRef: Any?,
@@ -293,7 +293,7 @@ class Delegate {
 
 可观察的代理接受一个默认值和一个包含旧值和新值的结构。让我们看看下一个示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a:String by Delegates.observable("",{_,oldValue,newValue ->
         println("old value: $oldValue, new value: $newValue ")
@@ -327,7 +327,7 @@ fun main(args: Array<String>) {
 
 1.  让我们快速看一下`vetoable`委托属性的实现：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var student:Student by Delegates.vetoable(Student(10),{property, oldValue, newValue ->
         if(newValue.age>25){
@@ -341,7 +341,7 @@ fun main(args: Array<String>) {
 class Student(var age:Int)
 ```
 
-```kt
+```java
 //Output: Age can't be greater than 25
 ```
 
@@ -351,7 +351,7 @@ class Student(var age:Int)
 
 让我们看看可撤销委托属性的声明：
 
-```kt
+```java
 inline fun <T> vetoable(
 initialValue: T, 
 crossinline onChange: (property: KProperty<*>, oldValue: T, newValue: T) -> Boolean
@@ -378,7 +378,7 @@ crossinline onChange: (property: KProperty<*>, oldValue: T, newValue: T) -> Bool
 
 1.  让我们创建一个名为 `SingleInitializationProperty` 的自定义委托。这个自定义委托属性如果变量没有被初始化，将抛出异常，并且它只能初始化一次。如果再次初始化，它将抛出异常。让我们看看我们的自定义委托类：
 
-```kt
+```java
 class SingleInitializableProperty<T>() : ReadWriteProperty<Any?, T>{
     private var value: T? = null
     override fun getValue(thisRef: Any?, property: KProperty<*>): T {
@@ -400,7 +400,7 @@ class SingleInitializableProperty<T>() : ReadWriteProperty<Any?, T>{
 
 1.  现在，我们已经创建了一个自定义委托，让我们尝试以下方式使用它而不进行初始化：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a:String by SingleInitializableProperty()
     println(a)
@@ -409,13 +409,13 @@ fun main(args: Array<String>) {
 
 这就是输出结果：
 
-```kt
+```java
 Output: Exception in thread "main" java.lang.IllegalStateException: Variable not initialized
 ```
 
 1.  让我们看看另一个例子；这次，我们将首先初始化它，然后访问它，然后再次尝试初始化它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a:String by SingleInitializableProperty()
     a="first"
@@ -426,7 +426,7 @@ fun main(args: Array<String>) {
 
 这里是输出结果：
 
-```kt
+```java
 Output:first
 Exception in thread "main" java.lang.IllegalStateException: Cannot be initialized twice
 ```
@@ -451,13 +451,13 @@ Exception in thread "main" java.lang.IllegalStateException: Cannot be initialize
 
 1.  在 Java 中，我们可以在声明变量后稍后初始化它，但 Kotlin 要求你在声明时立即初始化它（除非你使用特殊修饰符）。所以你可以这样做：
 
-```kt
+```java
 var student:Student?=null
 ```
 
 或者，你可以这样做：
 
-```kt
+```java
 val student=Student()
 ```
 
@@ -465,7 +465,7 @@ val student=Student()
 
 1.  为了克服限制，我们可以使用 `lateinit` 修饰符，通过它可以先声明后在我们想要的地方（但在第一次访问之前）初始化。这在使用依赖注入时尤其需要。让我们看看 Kotlin 文档中使用的 `lateinit` 修饰符来声明变量的例子：
 
-```kt
+```java
 public class MyTest {  
     lateinit var subject: TestSubject
     @SetUp fun setup() {  
@@ -479,7 +479,7 @@ public class MyTest {
 
 1.  如果你尝试在初始化之前访问变量，你会得到 `UninitializedPropertyAccessException`。如果你使用依赖注入，以下是使用 `lateinit` 的方法：
 
-```kt
+```java
 @Inject
  lateinit var mPresenter:EducationMvpPresenter
 ```
@@ -488,7 +488,7 @@ public class MyTest {
 
 初始化属性的另一种方式是使用 `lazy` 修饰符；`lazy()` 基本上是一个接受 lambda 表达式并返回一个 lazy 实例的函数，该实例作为实现懒加载属性的代理。让我们看看下一个示例：
 
-```kt
+```java
 public class Student{ 
     val name: String by lazy { 
         “Aanand Shekhar Roy” 
@@ -512,7 +512,7 @@ public class Student{
 
 1.  首先，我们将创建一个 `Prefs` 类，它将作为读取/写入我们应用程序 SharedPreferences 的单一入口。这将使处理所有 SharedPreferences 变得更容易，因为它们都将在一个地方。正如我们所知，共享偏好设置需要上下文存在，所以我们将上下文传递给主构造函数。我们还将创建一个单一的 SharedPreferences 对象，我们将在整个类中使用它：
 
-```kt
+```java
 class Prefs (mContext:Context){
     val sharedPrefences=mContext.getSharedPreferences("com.ankoexamples.app",Context.MODE_PRIVATE)
     val PREF_USERNAME="pref_username"
@@ -521,7 +521,7 @@ class Prefs (mContext:Context){
 
 1.  例如，我们定义了一个 `PREF_USERNAME` SharedPreferences；在这里，我们将存储用户的用户名。现在有趣的部分开始了；记住 Kotlin 有一个属性，我们可以显式地定义如何获取和设置该属性。我们在这里也会使用同样的方法。让我们看看给出的代码：
 
-```kt
+```java
 var username:String
     get() = sharedPrefences.getString(PREF_USERNAME,null)
    set(value)=sharedPrefences.edit().putString(PREF_USERNAME,value).apply()
@@ -531,7 +531,7 @@ var username:String
 
 1.  现在我们已经准备好了 `Prefs` 类，我们可以在我们的活动、片段等中使用它。最好的方法是在 `Application` 类中定义它，并从许多活动或片段中访问它，因为这样我们就不需要创建多个 `Prefs` 类的对象。所以让我们创建一个 `Application` 类和一个 `Prefs` 类的单例实例：
 
-```kt
+```java
 class App:Application() {
     companion object {
         var prefs: Prefs? = null
@@ -548,7 +548,7 @@ class App:Application() {
 
 1.  我们还可以使用 `lazy` 构造来确保我们只在第一次访问时创建对象。这样做也有助于我们避免空检查。下面是我们的 `App` 类将如何看起来：
 
-```kt
+```java
 val prefs: Prefs by lazy {
     App.prefs!!
 }
@@ -565,7 +565,7 @@ class App:Application() {
 
 1.  现在我们来看一个例子，向我们的 SharedPreferences 添加一个值：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -578,7 +578,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  现在使用共享偏好设置看起来非常简单，就像我们正在给变量赋值一样。访问它们也非常容易：
 
-```kt
+```java
 Log.d(prefs.username) // Aanand
 ```
 
@@ -590,14 +590,14 @@ Log.d(prefs.username) // Aanand
 
 `let` 是 Kotlin 的 `Standard.kt` 库提供的一个非常有用的函数。它基本上是一个作用域函数，允许你在其作用域内声明变量。让我们看看下面的代码：
 
-```kt
+```java
 someVariable.let{
     // someVariable is present as "*it"* }
 ```
 
 然而，最好的是它可以用来避免空检查。之前，你可能使用以下方法：
 
-```kt
+```java
 if(someVariable!=null){
     // do something 
 }
@@ -615,7 +615,7 @@ if(someVariable!=null){
 
 1.  当你需要进行多次空检查时，你可以显然使用嵌套的 `if-else`，检查空条件，如下面的代码所示：
 
-```kt
+```java
 if(variableA!=null){
     if(variableB!=null){
         if(variableC!=null){
@@ -627,7 +627,7 @@ if(variableA!=null){
 
 1.  由于我们知道 `let` 函数保证只有在对象不为 null 时才会运行代码块，我们需要创建一个函数来执行 `let` 的功能，但适用于三个变量场景。让我们看看我们的函数：
 
-```kt
+```java
 fun <T1: Any, T2: Any,T3:Any, R: Any> multiLet(p1: T1?, p2: T2?,p3:T3?, block: (T1, T2,T3)->R?): R? {
     return if (p1 != null && p2 != null &&p3!=null) block(p1, p2,p3) else null
 }
@@ -635,7 +635,7 @@ fun <T1: Any, T2: Any,T3:Any, R: Any> multiLet(p1: T1?, p2: T2?,p3:T3?, block: (
 
 1.  现在，我们可以像下面这样使用它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var variableA="a"
     var variableB="c"
@@ -651,7 +651,7 @@ fun main(args: Array<String>) {
 
 1.  以类似的方式，它也可以用于两个变量场景。你可能想知道如何在多对象场景中实现，比如在列表的情况下。让我们创建一个 `whenAllNotNull` 函数，它只会在列表的所有元素都不为 null 时运行代码块：
 
-```kt
+```java
 var nonNullList=listOf("a","b","c")
 nonNullList.whenAllNotNull {
     println("all not null")
@@ -681,7 +681,7 @@ Output: all not null
 
 1.  一种实现方式是在类声明下声明它。我们可以使用 `var` 声明，如下所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var student:Student?=null
 }
@@ -689,7 +689,7 @@ fun main(args: Array<String>) {
 
 然而，这种方法会在每次使用时都进行空值检查：
 
-```kt
+```java
 println(student?.age)
 ```
 
@@ -697,7 +697,7 @@ println(student?.age)
 
 1.  另一种声明全局变量的方式是使用 `lateinit` 修饰符。以下是前面代码的修改方式：
 
-```kt
+```java
 fun main(args: Array<String>) {
     lateinit var student:Student
     student=Student()

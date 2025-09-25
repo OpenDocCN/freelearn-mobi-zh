@@ -70,31 +70,31 @@ Android Studio 包括对 Kotlin、Java、C++和其他编程语言的支持，这
 
 1.  在你的 IDE 的游乐场或 Kotlin 游乐场中输入以下代码：
 
-    ```kt
+    ```java
     fun main() {
     ```
 
-    ```kt
+    ```java
         val stringToBeReversed = "Community"
     ```
 
-    ```kt
+    ```java
         println(reverseString(stringToBeReversed))
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     fun reverseString(stringToReverse: String): String {
     ```
 
-    ```kt
+    ```java
         return stringToReverse.reversed()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -164,101 +164,101 @@ Android Studio 包括对 Kotlin、Java、C++和其他编程语言的支持，这
 
 1.  继续探索包，您将注意到一个扩展 `ComponentActivity()` 的 `MainActivity` 类，而 `ComponentActivity()` 又扩展了 `Activity()`；在内部，我们有一个 `fun onCreate`，这是从 `ComponentActivity` 继承而来的。您还会看到一个 `setContent{}`，这是一个用于设置可组合函数内容的函数。`setContent{}` 函数接受一个包含应显示的 UI 元素的 lambda 表达式，在我们的情况下，它持有我们应用程序的主题。在 `Greeting()` 函数中，我们将更改提供的内容，并添加我们自己的问候语 `"Hello, Android Community"` 并运行，这样我们就创建了第一个 `Greeting`：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
     ```
 
-    ```kt
+    ```java
         override fun onCreate(savedInstanceState: Bundle?)
     ```
 
-    ```kt
+    ```java
         {
     ```
 
-    ```kt
+    ```java
             super.onCreate(savedInstanceState)
     ```
 
-    ```kt
+    ```java
             setContent {
     ```
 
-    ```kt
+    ```java
                 AndroidCommunityTheme {
     ```
 
-    ```kt
+    ```java
                     Surface(
     ```
 
-    ```kt
+    ```java
                         modifier = Modifier.fillMaxSize(),
     ```
 
-    ```kt
+    ```java
                         color =
     ```
 
-    ```kt
+    ```java
                         MaterialTheme.colors.background
     ```
 
-    ```kt
+    ```java
                     ) {
     ```
 
-    ```kt
+    ```java
                         Greeting("Hello, Android
     ```
 
-    ```kt
+    ```java
                                   Community")
     ```
 
-    ```kt
+    ```java
                     }
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  让我们继续修改 `Greeting()` 函数，并将 `name` 参数分配给文本：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun Greeting(name: String) {
     ```
 
-    ```kt
+    ```java
         Text(
     ```
 
-    ```kt
+    ```java
             text = name
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -266,19 +266,19 @@ Android Studio 包括对 Kotlin、Java、C++和其他编程语言的支持，这
 
 1.  就像在 XML 视图中一样，您可以使用 `@Preview(showBackground = true)` 在不运行模拟器中的应用程序的情况下轻松查看您正在构建的 UI，所以如果它不可用，我们就将其添加到我们的代码中。默认情况下，项目附带一个包含 `Preview()` 模板的模板：
 
-    ```kt
+    ```java
     @Preview(showBackground = true)
     ```
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun DefaultPreview() {
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -358,39 +358,39 @@ Android Studio 是一个可靠且成熟的集成开发环境。因此，自 2014
 
 1.  让我们继续组织我们的代码，并通过添加`Column()`来使文本居中。这应该添加到`setContent{}`函数中：
 
-    ```kt
+    ```java
     Column(
     ```
 
-    ```kt
+    ```java
         modifier = Modifier
     ```
 
-    ```kt
+    ```java
             .fillMaxSize()
     ```
 
-    ```kt
+    ```java
             .wrapContentSize(Alignment.Center),
     ```
 
-    ```kt
+    ```java
         horizontalAlignment = Alignment.CenterHorizontally
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         Greeting("Hello, Android Community")
     ```
 
-    ```kt
+    ```java
       }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -398,95 +398,95 @@ Android Studio 是一个可靠且成熟的集成开发环境。因此，自 2014
 
 1.  在 Compose 中，当你创建一个按钮时，你可以设置其形状、图标和高度，检查它是否启用，检查其内容等等。你可以通过在`Button()`组件上命令点击来检查如何自定义你的按钮：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun SampleButton() {
     ```
 
-    ```kt
+    ```java
         Button(
     ```
 
-    ```kt
+    ```java
             onClick = { /*TODO*/ },
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .padding(24.dp),
     ```
 
-    ```kt
+    ```java
             shape = RoundedCornerShape(20.dp),
     ```
 
-    ```kt
+    ```java
             border = BorderStroke(2.dp, Color.Blue),
     ```
 
-    ```kt
+    ```java
             colors = ButtonDefaults.buttonColors(
     ```
 
-    ```kt
+    ```java
                 contentColor = Color.Gray,
     ```
 
-    ```kt
+    ```java
                 backgroundColor = Color.White
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
             Text(
     ```
 
-    ```kt
+    ```java
                 text = stringResource(id =
     ```
 
-    ```kt
+    ```java
                            R.string.click_me),
     ```
 
-    ```kt
+    ```java
                 fontSize = 14.sp,
     ```
 
-    ```kt
+    ```java
                 modifier = Modifier.padding(horizontal =
     ```
 
-    ```kt
+    ```java
                                30.dp, vertical = 6.dp)
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -502,39 +502,39 @@ Android Studio 是一个可靠且成熟的集成开发环境。因此，自 2014
 
 1.  最后，让我们调用我们的`SampleButton`函数，其中包含`Greeting`函数，并运行应用程序：
 
-    ```kt
+    ```java
     Column(
     ```
 
-    ```kt
+    ```java
         modifier = Modifier
     ```
 
-    ```kt
+    ```java
             .fillMaxSize()
     ```
 
-    ```kt
+    ```java
             .wrapContentSize(Alignment.Center),
     ```
 
-    ```kt
+    ```java
         horizontalAlignment = Alignment.CenterHorizontally
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         Greeting("Hello, Android Community")
     ```
 
-    ```kt
+    ```java
         SampleButton()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -688,7 +688,7 @@ Gradle 是一种通用构建工具，在 Android 开发中证明非常强大。�
 
 1.  我们将创建一个调试日志，然后运行应用程序：
 
-    ```kt
+    ```java
     Log.d(TAG, "asdf Testing call")
     ```
 

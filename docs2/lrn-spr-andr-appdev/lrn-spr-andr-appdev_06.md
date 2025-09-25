@@ -36,7 +36,7 @@
 
 我们将在即将到来的项目中使用 MySQL。因此，您需要从 [`dev.mysql.com/downloads/workbench/`](https://dev.mysql.com/downloads/workbench/) 下载 MySQL 工具并安装它。请尝试使用给定信息配置 MySQL 数据库，以便使您的项目更容易：
 
-```kt
+```java
 Host -- localhost
 Port -- 3306
 Username -- root
@@ -145,7 +145,7 @@ NoSQL 数据库通常用于大量分布式数据。这种数据库在处理大�
 
 如果您转到 `pom.xml` 文件，您将看到 JDBC 的依赖项，我们使用 MySQL 作为数据源。以下是 `pom.xml` 文件的代码片段：
 
-```kt
+```java
 -----
 -----
 <!-- This is for JDBC use -->
@@ -170,7 +170,7 @@ NoSQL 数据库通常用于大量分布式数据。这种数据库在处理大�
 
 我们在 `application.properties` 中配置了 DataSource 和连接池。Spring Boot 使用 `spring.datasource` 接口作为前缀来配置 DataSource。我们的数据库模式名称是 `packtpub_dbtest_schema`。您可以自己创建它并重命名。以下是 `application.properties` 的详情：
 
-```kt
+```java
 # Database Configuration
 
 spring.datasource.url=jdbc:mysql://localhost:3306/packtpub_dbtest_schema
@@ -182,7 +182,7 @@ spring.datasource.password=12345678
 
 在我们的系统中，MySQL 的详情如下：
 
-```kt
+```java
 Host -- localhost                                    // the host URL
 Port -- 3306                                         // the host POST number
 Username -- root                                     // the username of the database
@@ -197,7 +197,7 @@ Database Schema Name - packtpub_dbtest_schema        // the Database Schema name
 
 我们为 `USERS` 表包含了一些用户详情。您可以将以下代码复制并粘贴以创建一个 `USERS` 表并插入一些示例数据：
 
-```kt
+```java
 create table users (id int not null auto_increment, name varchar(255), email varchar(255), contact_number varchar(255)
 , primary key (id)) engine=MyISAM;
 INSERT INTO user (id, name, email, contact_number) values (1, 'Sunnat', 'sunnat629@gmail.com', '1234567890');
@@ -218,7 +218,7 @@ INSERT INTO user (id, name, email, contact_number) values (4, 'Jisan', 'jisan123
 
 下面是模型类的代码：
 
-```kt
+```java
 data class UserModel(val id: Int,
                      val name: String,
                      val email: String,
@@ -233,7 +233,7 @@ data class UserModel(val id: Int,
 
 下面是这个接口的代码：
 
-```kt
+```java
 class UserRowMapper : RowMapper<UserModel> {
 
     @Throws(SQLException::class)
@@ -254,7 +254,7 @@ class UserRowMapper : RowMapper<UserModel> {
 
 下面是这个接口的代码：
 
-```kt
+```java
 interface UserInterface {
     fun getAllUserList(): List<UserModel>
     fun getUserByID(id: Int): UserModel?
@@ -282,7 +282,7 @@ interface UserInterface {
 
 下面是这个仓库类的代码：
 
-```kt
+```java
 @Repository
 class UserRepository: UsersInterface {
 
@@ -311,7 +311,7 @@ class UserRepository: UsersInterface {
 
 `JdbcTemplate` 是 JDBC 的核心。这是 JDBC 的中心类。SQL 查询由 `JdbcTemplate` 执行，它也获取结果。要使用这个 `JdbcTemplate`，我们需要在这个仓库类中自动装配 `JdbcTemplate`。下面是这个仓库类的代码片段：
 
-```kt
+```java
 @Repository
 class UserRepository: UserInterface {
 
@@ -330,7 +330,7 @@ class UserRepository: UserInterface {
 
 查找与创建操作相关的代码片段，其中我们将插入用户详情：
 
-```kt
+```java
 override fun addNewUser(userModel: UserModel) {
     val addQuery = "INSERT INTO users (name, email, contact_number) values (?,?,?)"
     jdbcTemplate.update(addQuery,userModel.name,userModel.email,userModel.contact_number)
@@ -345,7 +345,7 @@ override fun addNewUser(userModel: UserModel) {
 
 查找与读取操作相关的代码片段。以下函数将返回所有用户详情的列表：
 
-```kt
+```java
 override fun getAllUserList(): List<UserModel> {
     val selectAllSql = "SELECT * FROM users"
     return jdbcTemplate.query(selectAllSql, UserRowMapper())
@@ -356,7 +356,7 @@ override fun getAllUserList(): List<UserModel> {
 
 以下函数将根据`id`获取用户的详细信息：
 
-```kt
+```java
 override fun getUserByID(id: Int): UserModel? {
     val selectAllSql = "SELECT * FROM users WHERE id = ?"
     return jdbcTemplate.queryForObject(selectAllSql, UserRowMapper(), id)
@@ -369,7 +369,7 @@ override fun getUserByID(id: Int): UserModel? {
 
 查找更新操作的代码片段：
 
-```kt
+```java
 override fun updateUser(userModel: UserModel) {
     val updateQuery = "UPDATE users SET name=?,email=?, contact_number=? WHERE id=?"
     jdbcTemplate.update(updateQuery, userModel.name, userModel.email, userModel.contact_number, userModel.id)
@@ -382,7 +382,7 @@ override fun updateUser(userModel: UserModel) {
 
 查找删除操作的代码片段：
 
-```kt
+```java
 override fun deleteUser(id: Int) {
     val deleteQuery = "DELETE FROM users WHERE id=?"
     jdbcTemplate.update(deleteQuery, id)
@@ -399,7 +399,7 @@ override fun deleteUser(id: Int) {
 
 这是`UserService.kt`的代码片段**：
 
-```kt
+```java
 @Service
 class UserService: UsersInterface {
 
@@ -413,7 +413,7 @@ class UserService: UsersInterface {
 
 让我们借助`UserRepository`来覆盖和修改函数。以下是`UserService`类的完整代码：
 
-```kt
+```java
 @Service
 class UserService: UsersInterface {
     @Autowired
@@ -455,7 +455,7 @@ class UserService: UsersInterface {
 
 如果你的模型、仓库和服务类都已完成，那么你就可以创建控制器类了，在这个类中我们将创建`GetMapping`、`PostMapping`、`PutMapping`和`DeleteMapping`来创建 RESTful API URL 路径。让我们使用`@RestController`注解创建一个名为`UserController.kt`的控制器类：
 
-```kt
+```java
 @RestController
 class UserController {
     ----
@@ -467,7 +467,7 @@ class UserController {
 
 让我们使用`@Autowired`注解来自动装配`UserService`。以下是`UserController`类的代码片段：
 
-```kt
+```java
  @Autowired
  private lateinit var userService: UserService
 ```
@@ -476,7 +476,7 @@ class UserController {
 
 查找`getAllUsers()`操作的代码片段：
 
-```kt
+```java
 //    Getting the User List
 @GetMapping(path = ["/users"])
 fun getAllUsers(): ResponseEntity<List<UserModel>> {
@@ -491,7 +491,7 @@ fun getAllUsers(): ResponseEntity<List<UserModel>> {
 
 查找`getAllUserByID()`操作的代码片段：
 
-```kt
+```java
 //    Getting one User by ID
 @GetMapping(path = ["/user/{id}"])
 fun getAllUserByID(@PathVariable("id") id: Int): ResponseEntity<UserModel> {
@@ -506,7 +506,7 @@ fun getAllUserByID(@PathVariable("id") id: Int): ResponseEntity<UserModel> {
 
 查找`addNewUser()`操作的代码片段：
 
-```kt
+```java
 //    Inserting new User
 @PostMapping(path = ["/user/new"])
 fun addNewUser(@RequestBody userModel: UserModel): String {
@@ -523,7 +523,7 @@ fun addNewUser(@RequestBody userModel: UserModel): String {
 
 查找`updateUser()`操作的代码片段：
 
-```kt
+```java
 //    Updating a User
 @PutMapping(path = ["/user/{id}"])
 fun updateUser(@RequestBody userModel: UserModel, @PathVariable("id") id: Int): ResponseEntity<UserModel> {
@@ -538,7 +538,7 @@ fun updateUser(@RequestBody userModel: UserModel, @PathVariable("id") id: Int): 
 
 查找`deleteUser()`操作的代码片段：
 
-```kt
+```java
 //    Deleting a User
 @DeleteMapping(path = ["/user/{id}"])
 fun deleteUser(@PathVariable("id") id: Int): String {
@@ -649,7 +649,7 @@ JPA 元数据主要由类中的注解定义。然而，它也支持 XML，这意
 
 如果你访问`pom.xml`文件，你可以在那里看到 JDBC 的依赖项。我们正在使用 MySQL 作为数据库：
 
-```kt
+```java
 -----
 -----
 <dependency>
@@ -693,7 +693,7 @@ JPA 元数据主要由类中的注解定义。然而，它也支持 XML，这意
 
 我们在`application.properties`中配置了`DataSource`和`connection pool`。Spring Boot 使用`spring.datasource`接口作为前缀来配置 DataSource。我们的数据库模式名称是`cha6_dbtest_schema`。你可以自己创建它并重命名。以下是`application.properties`的详细信息：
 
-```kt
+```java
 ## Spring DATASOURCE (DataSourceAutoConfiguration & DataSourceProperties)
 spring.datasource.url = jdbc:mysql://localhost:3306/cha6_dbtest_schema?useSSL=false
 spring.datasource.username = root
@@ -723,7 +723,7 @@ spring.datasource.password = 12345678
 
 这里是模型类的代码：
 
-```kt
+```java
 @Entity
 @Table(name="user_jpa")
 @EntityListeners(AuditingEntityListener::class)
@@ -777,7 +777,7 @@ data class UserModel(
 
 这里是`Repository`类的代码：
 
-```kt
+```java
 @Repository
 interface UserRepository: JpaRepository<UserModel, Long>
 ```
@@ -796,7 +796,7 @@ interface UserRepository: JpaRepository<UserModel, Long>
 
 如果您的模型和仓库类已经完整，那么您就可以创建控制器类了，我们将创建 `GetMapping`、`PostMapping`、`PutMapping` 和 `DeleteMapping` 来创建 *RESTful API URL* 路径。让我们使用 `@RestController` 注解创建一个名为 `UserController.kt` 的控制器类：
 
-```kt
+```java
 @RestController
 class UserController {
     ----
@@ -808,7 +808,7 @@ class UserController {
 
 让我们使用 `@Autowired` 注解自动装配 `UserRepository`。以下是这个类的代码片段：
 
-```kt
+```java
 @RestController
 class UserController {
 
@@ -824,7 +824,7 @@ class UserController {
 
 查找 `getAllUsers()` 操作的代码片段：
 
-```kt
+```java
 // to get all the users details
  @GetMapping("/users")
     fun getAllUsers(): List<UserModel>{
@@ -838,7 +838,7 @@ class UserController {
 
 查找 `getAllUserByID()` 操作的代码片段如下：
 
-```kt
+```java
  // to get one specific user details
  @GetMapping("/user/{id}")
     fun getUser(@PathVariable(name = "id") id: Long): UserModel {
@@ -852,7 +852,7 @@ class UserController {
 
 查找 `addNewUser()` 操作的代码片段如下：
 
-```kt
+```java
 // to add a user
 @PostMapping("/users")
 fun addUser(@Valid @RequestBody userModel: UserModel): UserModel {
@@ -872,7 +872,7 @@ fun addUser(@Valid @RequestBody userModel: UserModel): UserModel {
 
 查找 `updateUser()` 操作的代码片段：
 
-```kt
+```java
  // to update a user
     @PutMapping("/user/{id}")
     fun updateUser(@PathVariable(name = "id")id: Long, @Valid @RequestBody userDetails: UserModel): UserModel {
@@ -892,7 +892,7 @@ fun addUser(@Valid @RequestBody userModel: UserModel): UserModel {
 
 查找 `deleteUser()` 操作的代码片段如下：
 
-```kt
+```java
 // to delete a user
  @DeleteMapping("/user/{id}")
     fun deleteUser(@PathVariable(name = "id")id: Long): ResponseEntity<*>{
@@ -1007,7 +1007,7 @@ fun addUser(@Valid @RequestBody userModel: UserModel): UserModel {
 
 这里是我的 Android Studio 的 Gradle 文件详情：
 
-```kt
+```java
 buildscript {
    -----
 -----
@@ -1029,7 +1029,7 @@ buildscript {
 
 在以下代码块中的依赖项中是以下代码：
 
-```kt
+```java
       // Room components
     implementation "android.arch.persistence.room:runtime:$rootProject.roomVersion"
     kapt "android.arch.persistence.room:compiler:$rootProject.roomVersion"
@@ -1046,7 +1046,7 @@ buildscript {
 
 要启用协程功能，请在应用的 `build.gradle` 文件末尾添加以下代码：
 
-```kt
+```java
 kotlin {
     experimental {
  coroutines "enable"    }
@@ -1057,7 +1057,7 @@ kotlin {
 
 让我们创建一个名为`UserModel.kt`的用户类，并使用`@Entity`注解，以便每个用户都是一个实体。所有变量列不应是私有的，这样`Room`就能实例化你的对象：
 
-```kt
+```java
 @Entity(tableName = "users")
 class Users(): Parcelable {
     @PrimaryKey(autoGenerate = true)
@@ -1106,7 +1106,7 @@ class Users(): Parcelable {
 
 为了将此对象从一个活动传递到另一个活动，我们需要将此类转换为`Parcelable`类。所以让我们扩展这个类。按照传统方式，它将需要像以下这样的大量代码：
 
-```kt
+```java
 @Entity(tableName = "users")
 class Users(): Parcelable {
     ----
@@ -1148,7 +1148,7 @@ class Users(): Parcelable {
 
 我们只需要在模型类顶部添加一个名为`@Parcelize`的注解。以下是完整的代码：
 
-```kt
+```java
 @Parcelize
 @Entity(tableName = "users")
 class Users(): Parcelable {
@@ -1188,7 +1188,7 @@ class Users(): Parcelable {
 
 因此，没有更多的额外代码。为了启用此功能，你需要在`build.gradle (Module: app)`文件的`android`块中添加以下代码：
 
-```kt
+```java
 android {
     ----
     ----
@@ -1206,28 +1206,28 @@ dependencies {
 
 让我们创建一个名为`UserDAO.kt`的接口，并使用`@DAO`注解。这将帮助`Room`识别`DAO`类。以下是`DAO`接口的代码：
 
-```kt
+```java
 @Dao
 interface UserDAO
 ```
 
 在此接口中，我们将创建负责插入、删除和获取用户详情的函数：
 
-```kt
+```java
 @Insert
 fun addNewUser(users: Users)
 ```
 
 在前面的代码中，`@Insert`用于插入一个用户：
 
-```kt
+```java
 @Query("DELETE FROM USERS")
 fun deleteAllUsers()
 ```
 
 在前面的代码中，`@Query("DELETE FROM USERS")`用于从`USERS`表中删除所有用户：
 
-```kt
+```java
 @Query("SELECT * FROM USERS")
 fun getAllUsers():  List<Users>
 ```
@@ -1240,7 +1240,7 @@ fun getAllUsers():  List<Users>
 
 让我们将`UserDao.kt`中的`getAllUsers()`函数用`LiveData`包装：
 
-```kt
+```java
 @Query("SELECT * FROM USERS")
 fun getAllUsers():  LiveData<List<Users>>
 ```
@@ -1249,7 +1249,7 @@ fun getAllUsers():  LiveData<List<Users>>
 
 因此，这里是 DAO 接口的完整代码：
 
-```kt
+```java
 @Dao
 interface UserDAO {
 
@@ -1272,7 +1272,7 @@ interface UserDAO {
 
 让我们创建一个名为`UsersRoomDatabase`的抽象类并扩展`RoomDatabase`。使用`@Database`注解并指定`Users`类作为实体，并添加版本号。最后，初始化`UserDao`类的抽象函数：
 
-```kt
+```java
 @Database(entities = [Users::class], version = 1)
 abstract class UsersRoomDatabase : RoomDatabase() {
     abstract fun userDAO(): UserDAO
@@ -1289,7 +1289,7 @@ abstract class UsersRoomDatabase : RoomDatabase() {
 
 这是这个对象的代码片段：
 
-```kt
+```java
 // static members
 companion object {
     @Volatile
@@ -1322,7 +1322,7 @@ companion object {
 
 要做到这一点，让我们创建一个带有`CoroutineScope`参数的内部回调`UserDatabaseCallback()`并扩展`RoomDatabase.Callback()`。最后，我们将重写`onOpen(db: SupportSQLiteDatabase)`，在那里我们可以添加两个随机的用户对象：
 
-```kt
+```java
 fun populateDatabase(userDao: UserDAO) {
             userDao.addNewUser(
                 Users(
@@ -1343,7 +1343,7 @@ fun populateDatabase(userDao: UserDAO) {
 
 最后，我们需要将回调函数添加到数据库中，并调用`build()`来完成这个回调，就像以下代码所示：
 
-```kt
+```java
 fun getDatabase(context: Context, scope: CoroutineScope): UsersRoomDatabase {
     val tempInstance = INSTANCE
     if (tempInstance != null) {
@@ -1392,7 +1392,7 @@ private class UserDatabaseCallback(
 
 这里是`UsersRepository.kt`的代码：
 
-```kt
+```java
 class UsersRepository(private val mUserDAO: UserDAO) {
 
     val mAllUsers: LiveData<List<Users>> = mUserDAO.getAllUsers()
@@ -1414,7 +1414,7 @@ class UsersRepository(private val mUserDAO: UserDAO) {
 
 这里是`MainViewModel.kt`类：
 
-```kt
+```java
 open class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val mRepository: UsersRepository
     private val mAllUsers: LiveData<List<Users>>
@@ -1460,7 +1460,7 @@ open class MainViewModel(application: Application) : AndroidViewModel(applicatio
 
 下面是这个名为`activity_new_user.xml`的布局类的代码。（完整代码可以在 GitHub 链接中找到）：
 
-```kt
+```java
 ----
 ----
     <EditText
@@ -1506,7 +1506,7 @@ open class MainViewModel(application: Application) : AndroidViewModel(applicatio
 
 下面是`NewUserActivity.kt`类的代码：
 
-```kt
+```java
 class NewUserActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1567,7 +1567,7 @@ class NewUserActivity : AppCompatActivity(), View.OnClickListener {
 
 为了显示所有用户列表，我们将使用`RecyclerView`。对于我们的项目，我们需要以我们自己的方式自定义`RecyclerView`适配器。在这个适配器中，我们主要传递用户模型。这将显示用户名、电子邮件和联系电话。让我们创建一个名为`UserListAdapter.kt`的适配器并扩展`RecyclerView.Adapter<UserListAdapter.UserViewHolder>()`。以下是`UserListAdapter.kt`的代码：
 
-```kt
+```java
 class UserListAdapter internal constructor(context: Context) :
     RecyclerView.Adapter<UserListAdapter.UserViewHolder>() {
 
@@ -1606,7 +1606,7 @@ class UserListAdapter internal constructor(context: Context) :
 
 根据代码：
 
-```kt
+```java
 onCreateViewHolder()
 onBindViewHolder()
 UserViewHolder()
@@ -1614,7 +1614,7 @@ UserViewHolder()
 
 在这里，我们在`UserViewHolder`内部类中初始化了`activity_new_user.xml`的四个属性：
 
-```kt
+```java
 val rowName: TextView = itemView.name
 val rowEmail: TextView = itemView.email
 val rowContactNumber: TextView = itemView.contactNumber
@@ -1623,7 +1623,7 @@ val rowAddress: TextView = itemView.contactNumber
 
 我们在`onBindViewHolder()`函数中设置了`userModel`的这四个属性值，如下所示：
 
-```kt
+```java
 holder.rowName.text = mUsers[position].username
 holder.rowEmail.text = mUsers[position].email
 holder.rowContactNumber.text = mUsers[position].contactNumber
@@ -1637,7 +1637,7 @@ holder.rowAddress.text = mUsers[position].address
 
 在`MainActivity`中，我们在`onCreate()`函数中设置`RecycleView`，如下所示：
 
-```kt
+```java
 val userListAdapter = UserListAdapter(this)
 recyclerview.adapter = userListAdapter
 recyclerview.layoutManager =  LinearLayoutManager(this)
@@ -1649,19 +1649,19 @@ recyclerview.layoutManager =  LinearLayoutManager(this)
 
 让我们创建一个`ViewModel`变量，如下所示：
 
-```kt
+```java
 private lateinit var mMainViewModel: MainViewModel
 ```
 
 使用`ViewModelProviders`将`MainViewModel`与`MainActivity`连接。在`onCreate()`中，我们将从`ViewModelProvider`获取`ViewModel`，如下所示：
 
-```kt
+```java
 mMainViewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
 ```
 
 要添加`LiveData`观察者，让我们添加以下`observe()`来观察`getAllUsers()`，如下所示：
 
-```kt
+```java
 mMainViewModel.getAllUsers().observe(this,
     Observer {
             userList -> userListAdapter.setNewUser(userList!!)
@@ -1672,7 +1672,7 @@ mMainViewModel.getAllUsers().observe(this,
 
 在*创建新活动*部分中，我们提到已经将可序列化的用户对象传递给了`MainActivity`。为了获取这个对象，我们需要创建一个请求码。让我们创建一个如下所示的请求码：
 
-```kt
+```java
 private val requestCode: Int = 1
 
 ```
@@ -1681,7 +1681,7 @@ private val requestCode: Int = 1
 
 下面是`onActivityResult()`函数的代码：
 
-```kt
+```java
 override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
     if (requestCode == this.requestCode && resultCode == Activity.RESULT_OK){
@@ -1699,7 +1699,7 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
 
 在`content_main.xml`中，我们添加了`RecyclerView`。这是这个布局的代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1726,7 +1726,7 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
 
 在`activity_main.xml`中，我们添加了一个`FloatingActionButton`，我们将使用它来进入**`NewUserActivity`**。为了完成这个任务，在`onCreate()`中使用以下代码，并指定提到的请求代码：
 
-```kt
+```java
 fab.setOnClickListener {
     val intent = Intent(this@MainActivity, NewUserActivity::class.java)
     startActivityForResult(intent, requestCode)
@@ -1738,7 +1738,7 @@ fab.setOnClickListener {
 
 因此，这是`MainAcivity.kt`的完整代码：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     private val requestCode: Int = 1

@@ -74,7 +74,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 1.  打开你选择的 IDE 中的文件，并使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     using UnityEngine.Advertisements; /* Advertisement class */
     public class UnityAdController : MonoBehaviour
@@ -126,7 +126,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 1.  要开始，我们需要向`UnityAdController`类中添加一个新函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will get the appropriate Ad ID for the platform we
     /// are on
@@ -162,7 +162,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 1.  保存你的脚本，然后打开`MainMenuBehaviour`文件，并添加以下高亮代码：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will load a new scene upon being called
     /// </summary>
@@ -215,7 +215,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 1.  让我们先打开`UnityAdController`类，并添加以下变量，然后将`Start`函数更新为以下内容：
 
-    ```kt
+    ```java
     /// <summary>
     /// A static reference to this object
     /// </summary>
@@ -241,7 +241,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 1.  更新`ShowAd`函数以添加第二个参数到我们的函数中：
 
-    ```kt
+    ```java
         /// <summary>
         /// Will load and display an ad on the screen
         /// </summary>
@@ -258,7 +258,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 1.  现在更新类定义如下：
 
-    ```kt
+    ```java
     public class UnityAdController : MonoBehaviour, IUnityAdsShowListener
     ```
 
@@ -268,7 +268,7 @@ Unity 会自动使用您的账户用户名创建一个组织；然而，如果�
 
 要查看这些方法，从您的 IDE 中，您可能可以右键单击`IUnityAdsShowListener`选项并选择**转到定义**。从那里，您可能看到以下内容：
 
-```kt
+```java
 namespace UnityEngine.Advertisements
 {
     public interface IUnityAdsShowListener
@@ -293,7 +293,7 @@ namespace UnityEngine.Advertisements
 
 1.  完成此操作后，我们需要实现接口中使用的函数：
 
-    ```kt
+    ```java
     #region IUnityAdsShowListener Methods
     /// <summary>
     /// This callback method handles logic for the ad
@@ -338,7 +338,7 @@ namespace UnityEngine.Advertisements
 
 1.  接下来，我们将确保`PauseScreenBehaviour`不会覆盖这个新的更改。因此，我们将用以下内容替换`Start()`函数：
 
-    ```kt
+    ```java
     void Start()
     {
         if (!UnityAdController.showAds)
@@ -385,7 +385,7 @@ namespace UnityEngine.Advertisements
 
 1.  我们首先需要更新`ObstacleBehaviour`脚本以处理它；添加以下高亮代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     using UnityEngine.UI; // Button
     public class ObstacleBehaviour : MonoBehaviour
@@ -488,7 +488,7 @@ namespace UnityEngine.Advertisements
 
 1.  首先，添加以下变量并更新`OnCollisionEnter`函数如下：
 
-    ```kt
+    ```java
         /// <summary>
         /// A reference to the player object
         /// </summary>
@@ -515,13 +515,13 @@ namespace UnityEngine.Advertisements
 
 1.  接下来，我们将使用`Button`类，所以我们需要在`ObstacleBehaviour`脚本的顶部添加以下内容：
 
-    ```kt
+    ```java
     using UnityEngine.UI;
     ```
 
 1.  完成这些后，我们将更新`ResetGame`函数如下：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will restart the currently loaded level
     /// </summary>
@@ -568,7 +568,7 @@ namespace UnityEngine.Advertisements
 
 1.  接下来，添加以下两个辅助函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Retrieves the Game Over menu game object
     /// </summary>
@@ -596,7 +596,7 @@ namespace UnityEngine.Advertisements
 
 1.  打开`UnityAdController`脚本，并在文件顶部添加以下变量声明：
 
-    ```kt
+    ```java
     /// <summary>
     /// For holding the obstacle for continuing the game
     /// </summary>
@@ -605,7 +605,7 @@ namespace UnityEngine.Advertisements
 
 1.  之后，继续在`UnityAdController`脚本中，更新`OnUnityAdsShowComplete`函数如下：
 
-    ```kt
+    ```java
     /// <summary>
     /// This callback method handles logic for the ad
     /// finishing.
@@ -631,7 +631,7 @@ namespace UnityEngine.Advertisements
 
 1.  我们想要确保 Unity 的广告系统在两个场景中都能正常工作，因此我们可以复制粘贴`GameManager`脚本，并将以下高亮代码添加到`Start`函数中：
 
-    ```kt
+    ```java
     /// <summary>
     /// Start is called before the first frame update
     /// </summary>
@@ -690,7 +690,7 @@ namespace UnityEngine.Advertisements
 
 1.  要开始，回到`UnityAdController`脚本，并向其中添加以下新的变量，如高亮代码所示：
 
-    ```kt
+    ```java
     using System; // DateTime
     using UnityEngine;
     using UnityEngine.Advertisements; /* Advertisement class */
@@ -728,7 +728,7 @@ namespace UnityEngine.Advertisements
 
 1.  为了在广告之间添加时间延迟，我们将为此创建一个新的函数：
 
-    ```kt
+    ```java
     public static void ShowRewardAd()
     {
         nextRewardTime = DateTime.Now.AddSeconds(15);
@@ -740,14 +740,14 @@ namespace UnityEngine.Advertisements
 
 1.  保存您的脚本，然后打开`ObstacleBehaviour`脚本。在脚本顶部，添加以下新的`using`语句：
 
-    ```kt
+    ```java
     using System; // DateTime
     using System.Collections; // IEnumerator
     ```
 
 1.  之后，我们需要修改`ResetGame()`函数的底部部分，以包含以下代码：
 
-    ```kt
+    ```java
     // Rest of ResetGame above...
             /*If we found the button we can use it */
             if (continueButton)
@@ -776,7 +776,7 @@ namespace UnityEngine.Advertisements
 
 1.  接下来，使用以下脚本为`ShowContinue`函数：
 
-    ```kt
+    ```java
         public IEnumerator ShowContinue(Button contButton)
         {
             while (true)

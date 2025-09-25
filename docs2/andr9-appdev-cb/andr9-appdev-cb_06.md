@@ -38,13 +38,13 @@
 
 1.  打开`AndroidManifest`文件并添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
 ```
 
 1.  接下来，打开`activity_main.xml`并将现有的 TextView 替换为以下按钮：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -59,7 +59,7 @@
 
 1.  将以下方法添加到`ActivityMain.java`:
 
-```kt
+```java
 public void createShortcut(View view) {
     Intent shortcutIntent = new Intent(this, MainActivity.class);
     shortcutIntent.setAction(Intent.ACTION_MAIN);
@@ -83,13 +83,13 @@ public void createShortcut(View view) {
 
 如果你还想删除快捷方式，你需要以下权限：
 
-```kt
+```java
 <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
 ```
 
 而不是使用`INSTALL_SHORTCUT`动作，你可以设置以下动作：
 
-```kt
+```java
 com.android.launcher.action.UNINSTALL_SHORTCUT 
 ```
 
@@ -107,7 +107,7 @@ com.android.launcher.action.UNINSTALL_SHORTCUT
 
 `AppWidgetProvider`必须在`AndroidManifest`文件中声明。由于`AppWidgetProvider`是基于广播接收器的辅助类，它使用`<receiver>`元素在 Manifest 中声明。以下是一个 Manifest 条目示例：
 
-```kt
+```java
 <receiver android:name=".HomescreenWidgetProvider" >
     <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -119,7 +119,7 @@ com.android.launcher.action.UNINSTALL_SHORTCUT
 
 元数据指向放置在`res/xml`目录中的`AppWidgetProviderInfo`文件。以下是一个示例`AppWidgetProviderInfo.xml`文件：
 
-```kt
+```java
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="40dp"
     android:minHeight="40dp"
@@ -230,7 +230,7 @@ com.android.launcher.action.UNINSTALL_SHORTCUT
 
 1.  在`res/layout`中创建一个名为`widget.xml`的新文件，使用以下 XML：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -248,7 +248,7 @@ com.android.launcher.action.UNINSTALL_SHORTCUT
 
 1.  在`res/xml`中创建一个名为`appwidget_info.xml`的新文件，使用以下 XML：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="40dp"
@@ -266,7 +266,7 @@ com.android.launcher.action.UNINSTALL_SHORTCUT
 
 1.  将以下`onUpdate()`方法添加到`HomescreenWidgetProvider`类中：
 
-```kt
+```java
 @Override
 public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
     super.onUpdate(context, appWidgetManager, appWidgetIds);
@@ -285,7 +285,7 @@ public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] a
 
 1.  使用以下 XML 声明在`<application>`元素中向 AndroidManifest 添加`HomescreenWidgetProvider`：
 
-```kt
+```java
 <receiver android:name=".HomescreenWidgetProvider" >
     <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -311,7 +311,7 @@ XML 资源目录用于存储`AppWidgetProviderInfo`，它定义了默认的小�
 
 使所有这些工作完成的最后一步是在 Android Manifest 中声明 widget。我们使用`<intent-filter>`标识我们想要处理的操作。大多数 App Widgets 可能希望处理更新事件，正如我们的那样。声明中需要注意的另一个项目是以下行：
 
-```kt
+```java
 <meta-data android:name="android.appwidget.provider" 
 
     android:resource="@xml/appwidget_info" />
@@ -325,7 +325,7 @@ XML 资源目录用于存储`AppWidgetProviderInfo`，它定义了默认的小�
 
 添加配置 Activity 需要几个额外的步骤。Activity 需要像往常一样在 Manifest 中声明，但需要包含`APPWIDGET_CONFIGURE`操作，如下例所示：
 
-```kt
+```java
 <activity android:name=".AppWidgetConfigureActivity">
     <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
@@ -335,7 +335,7 @@ XML 资源目录用于存储`AppWidgetProviderInfo`，它定义了默认的小�
 
 该 Activity 还需要在`AppWidgetProviderInfo`文件中使用 configure 属性进行指定，如下例所示：
 
-```kt
+```java
 android:configure="com.packtpub.appwidget.AppWidgetConfigureActivity"
 ```
 
@@ -373,7 +373,7 @@ android:configure="com.packtpub.appwidget.AppWidgetConfigureActivity"
 
 1.  添加以下字符串资源：
 
-```kt
+```java
 <string name="search_title">Search</string>
 <string name="search_hint">Enter text to search</string>
 ```
@@ -382,7 +382,7 @@ android:configure="com.packtpub.appwidget.AppWidgetConfigureActivity"
 
 1.  在`res/menu`中创建一个名为`menu_search.xml`的新菜单资源，使用以下 XML：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -396,7 +396,7 @@ android:configure="com.packtpub.appwidget.AppWidgetConfigureActivity"
 
 1.  打开`ActivityMain`并添加以下`onCreateOptionsMenu()`以填充菜单并设置搜索管理器：
 
-```kt
+```java
 @Override
 public boolean onCreateOptionsMenu(Menu menu) {
     MenuInflater inflater = getMenuInflater();
@@ -413,7 +413,7 @@ public boolean onCreateOptionsMenu(Menu menu) {
 
 1.  在`res/xml`中创建一个名为`searchable.xml`的新文件，使用以下 XML：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <searchable xmlns:android="http://schemas.android.com/apk/res/android"
     android:label="@string/app_name"
@@ -422,7 +422,7 @@ public boolean onCreateOptionsMenu(Menu menu) {
 
 1.  使用以下 XML 创建一个名为`activity_search_result.xml`的新布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -439,13 +439,13 @@ public boolean onCreateOptionsMenu(Menu menu) {
 
 1.  在类中添加以下变量：
 
-```kt
+```java
 TextView mTextViewSearchResult; 
 ```
 
 1.  将`onCreate()`改为加载我们的布局，设置 TextView，并检查 QUERY 动作：
 
-```kt
+```java
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -459,7 +459,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 1.  添加以下方法来处理搜索：
 
-```kt
+```java
 private void handleSearch(String searchQuery) {
     mTextViewSearchResult.setText(searchQuery);
 }
@@ -467,7 +467,7 @@ private void handleSearch(String searchQuery) {
 
 1.  用户界面和代码现在已经完成，我们只需要在`AndroidManifest`中正确连接一切。以下是完整的清单，包括两个活动：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.packtpub.searchview">
@@ -517,7 +517,7 @@ private void handleSearch(String searchQuery) {
 
 如果在这个时候运行应用程序，你会看到搜索图标，但什么都不会工作。第 12 步是我们将所有内容整合到`AndroidManifest`文件中的地方。首先要注意的是以下内容：
 
-```kt
+```java
 <meta-data android:name="android.app.default_searchable"
     android:value=".SearchResultActivity" />
 ```
@@ -528,14 +528,14 @@ private void handleSearch(String searchQuery) {
 
 我们在`SearchResultActivity`的`<meta-data>`元素中指定可搜索的资源：
 
-```kt
+```java
 <meta-data android:name="android.app.searchable"
     android:resource="@xml/searchable" />
 ```
 
 我们还需要设置`SearchResultActivity`的意图过滤器，就像我们在这里做的那样：
 
-```kt
+```java
 <intent-filter>
     <action android:name="android.intent.action.SEARCH" />
 </intent-filter>
@@ -543,7 +543,7 @@ private void handleSearch(String searchQuery) {
 
 当用户启动搜索时，`SearchManager`会广播`SEARCH`意图。这个声明将意图指向`SearchResultActivity`活动。一旦搜索被触发，查询文本就会通过`SEARCH`意图发送到`SearchResultActivity`。我们在`onCreate()`中检查`SEARCH`意图，并使用以下代码提取查询字符串：
 
-```kt
+```java
 if (Intent.ACTION_SEARCH.equals(getIntent().getAction())) {
     handleSearch(getIntent().getStringExtra(SearchManager.QUERY));
 }
@@ -583,7 +583,7 @@ Android 4.4（API 19）引入了一个名为沉浸模式的 UI 功能。与之�
 
 1.  添加以下方法以隐藏系统 UI：
 
-```kt
+```java
 private void hideSystemUi() {
     getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE |
             View.SYSTEM_UI_FLAG_FULLSCREEN |
@@ -596,7 +596,7 @@ private void hideSystemUi() {
 
 1.  添加以下方法以显示系统 UI：
 
-```kt
+```java
 private void showSystemUI() {
     getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
@@ -607,13 +607,13 @@ private void showSystemUI() {
 
 1.  添加以下类变量：
 
-```kt
+```java
 private GestureDetectorCompat mGestureDetector;
 ```
 
 1.  在类级别添加以下`GestureListener`类，在之前的类变量下方：
 
-```kt
+```java
 private class GestureListener extends GestureDetector.SimpleOnGestureListener {
     @Override
     public boolean onDown(MotionEvent event) {
@@ -638,7 +638,7 @@ private class GestureListener extends GestureDetector.SimpleOnGestureListener {
 
 1.  用以下代码覆盖`onTouchEvent()`回调：
 
-```kt
+```java
 @Override
 public boolean onTouchEvent(MotionEvent event) {
     mGestureDetector.onTouchEvent(event);
@@ -648,7 +648,7 @@ public boolean onTouchEvent(MotionEvent event) {
 
 1.  将以下代码添加到`onCreate()`方法中，以设置`GestureListener`并隐藏系统 UI：
 
-```kt
+```java
 mGestureDetector = new GestureDetectorCompat(this, new GestureListener());
 hideSystemUi();
 ```
@@ -675,13 +675,13 @@ hideSystemUi();
 
 使用此标志与 Immersive 模式标志相同的 `setSystemUiVisibility()` 调用：
 
-```kt
+```java
 getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE); 
 ```
 
 使用 0 作为参数调用 `setSystemUiVisibility()` 以清除所有标志：
 
-```kt
+```java
 getWindow().getDecorView().setSystemUiVisibility(0); 
 ```
 
@@ -689,7 +689,7 @@ getWindow().getDecorView().setSystemUiVisibility(0);
 
 如果你只需要隐藏或显示操作栏，请使用以下方法：
 
-```kt
+```java
 getActionBar().hide(); 
 
 getActionBar().show(); 
@@ -697,7 +697,7 @@ getActionBar().show();
 
 这种方法的一个问题是，每次调用任一方法时系统都会调整布局的大小。相反，你可能希望考虑使用主题选项来使系统 UI 表现为一个叠加层。要启用叠加模式，请将以下内容添加到主题中：
 
-```kt
+```java
 <item name="android:windowActionBarOverlay">true</item> 
 ```
 
@@ -705,7 +705,7 @@ getActionBar().show();
 
 以下两个主题可以启用透明设置：
 
-```kt
+```java
 Theme.Holo.NoActionBar.TranslucentDecor 
 
 Theme.Holo.Light.NoActionBar.TranslucentDecor 
@@ -713,7 +713,7 @@ Theme.Holo.Light.NoActionBar.TranslucentDecor
 
 如果你正在创建自己的主题，请使用以下主题设置：
 
-```kt
+```java
 <item name="android:windowTranslucentNavigation">true</item> 
 
 <item name="android:windowTranslucentStatus">true</item> 

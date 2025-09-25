@@ -34,14 +34,14 @@ Android 操作系统是一个不断变化的环境。最早的 Android 设备（
 
 菜单通常使用 XML（像许多其他 Android 资源）在 `res/menu` 目录中创建，尽管它们也可以在代码中创建。要创建菜单资源，请使用如下所示的 `<menu>` 元素：
 
-```kt
+```java
 <menu > 
 </menu> 
 ```
 
 `<item>` 元素定义了每个单独的菜单项，并包含在 `<menu>` 元素中。一个基本的菜单项看起来如下：
 
-```kt
+```java
 <item  
     android:id="@+id/settings" 
     android:title="@string/settings" /> 
@@ -97,7 +97,7 @@ Android 操作系统是一个不断变化的环境。最早的 Android 设备（
 
 1.  首先打开`strings.xml`文件，并在`<resources>`元素中添加以下`<string>`元素：
 
-```kt
+```java
     <string name="menu_settings">Settings</string> 
 ```
 
@@ -105,7 +105,7 @@ Android 操作系统是一个不断变化的环境。最早的 Android 设备（
 
 1.  打开`menu_main.xml`文件，并添加以下 XML 以定义菜单：
 
-```kt
+```java
     <?xml version="1.0" encoding="utf-8"?>
     <menu xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -118,7 +118,7 @@ Android 操作系统是一个不断变化的环境。最早的 Android 设备（
 
 1.  现在菜单已在 XML 中定义，我们只需在`ActivityMain.java`中重写`onCreateOptionsMenu()`方法来填充菜单：
 
-```kt
+```java
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -148,7 +148,7 @@ Android 操作系统是一个不断变化的环境。最早的 Android 设备（
 
 将以下方法添加到应用程序中，当选择设置菜单时显示 Toast：
 
-```kt
+```java
 @Override
 public boolean onOptionsItemSelected(MenuItem item) {
     if (item.getItemId() == R.id.menu_settings) {
@@ -172,7 +172,7 @@ public boolean onOptionsItemSelected(MenuItem item) {
 
 **子菜单**的创建和访问几乎与其他菜单元素完全相同。它们可以放置在任何提供的菜单中，但不能放置在其他子菜单中。要定义子菜单，请在 `<item>` 元素内包含一个 `<menu>` 元素。以下是此菜谱的 XML，其中添加了两个子菜单项：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?> 
 <menu 
 
@@ -204,7 +204,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 要创建一个分组，将 `<item>` 菜单元素添加到 `<group>` 元素中。以下是一个示例，使用此菜谱中的菜单 XML，并在一个分组中添加了两个额外的项：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -244,14 +244,14 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 1.  将以下两个字符串添加到现有的 `<resources>` 元素中：
 
-```kt
+```java
     <string name="menu_download">Download</string> 
     <string name="menu_settings">Settings</string> 
 ```
 
 1.  删除现有的 `TextView` 并在 `activity_main.xml` 中添加一个按钮，将其 `onClick()` 设置为 `toggleMenu`，如下所示：
 
-```kt
+```java
     <Button
         android:id="@+id/buttonToggleMenu"
         android:layout_width="wrap_content"
@@ -265,7 +265,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 1.  打开 `ActivityMain.java` 并在类声明下方添加以下三行代码：
 
-```kt
+```java
     private final int MENU_DOWNLOAD = 1; 
     private final int MENU_SETTINGS = 2; 
     private boolean showDownloadMenu = false; 
@@ -273,7 +273,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 1.  为按钮点击回调添加以下方法：
 
-```kt
+```java
     public void toggleMenu(View view) { 
         showDownloadMenu=!showDownloadMenu; 
     } 
@@ -281,7 +281,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 1.  当活动首次创建时，Android 会调用 `onCreateOptionsMenu()` 来创建菜单。以下是动态构建菜单的代码：
 
-```kt
+```java
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, MENU_DOWNLOAD, 0, R.string.menu_download);
@@ -292,7 +292,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 1.  为了最佳编程实践，不要使用 `onCreateOptionsMenu()` 来更新或更改您的菜单；相反，使用 `onPrepareOptionsMenu()`。以下是根据我们的标志更改下载菜单项可见性的代码：
 
-```kt
+```java
     @Override 
     public boolean onPrepareOptionsMenu(Menu menu) { 
         MenuItem menuItem = menu.findItem(MENU_DOWNLOAD); 
@@ -303,7 +303,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 1.  虽然此配方中技术上不需要此 `onOptionsItemSelected()` 代码，但它显示了如何响应每个菜单项：
 
-```kt
+```java
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -334,7 +334,7 @@ Android 会将所有带有 `showAsAction="ifRoom"` 的分组项一起保留。�
 
 如果我们希望当下载选项可用时使其突出显示，我们可以通过在 `onPrepareOptionsMenu()` 方法（在返回语句之前）添加以下代码来告诉 Android 我们希望在操作栏中显示菜单：
 
-```kt
+```java
 menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS); 
 ```
 
@@ -342,7 +342,7 @@ menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 早期，当我们动作栏中没有菜单项时，每次打开溢出菜单，Android 都会调用`onPrepareOptionsMenu()`来确保可见性总是更新。为了纠正这种行为，请将以下代码行添加到`toggleMenu()`方法中：
 
-```kt
+```java
 invalidateOptionsMenu(); 
 ```
 
@@ -374,14 +374,14 @@ CAB 与动作栏不同，您的活动不需要包含动作栏。
 
 1.  我们将首先添加两个新的字符串资源。打开`strings.xml`文件并添加以下内容：
 
-```kt
+```java
     <string name="menu_cast">Cast</string> 
     <string name="menu_print">Print</string> 
 ```
 
 1.  创建了字符串后，我们现在可以通过在 `res/menu` 中创建一个名为 `context_menu.xml` 的新文件来创建菜单，如下所示：
 
-```kt
+```java
     <?xml version="1.0" encoding="utf-8"?>
     <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -394,7 +394,7 @@ CAB 与动作栏不同，您的活动不需要包含动作栏。
 
 1.  现在将 `ImageView` 添加到 `activity_main.xml` 中，作为启动上下文模式的来源。以下是 `ImageView` 的 XML：
 
-```kt
+```java
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="wrap_content"
@@ -408,13 +408,13 @@ CAB 与动作栏不同，您的活动不需要包含动作栏。
 
 1.  现在 UI 已经设置好了，我们可以添加上下文模式的代码。首先，我们需要一个全局变量来存储在调用 `startActionMode()` 时返回的 `ActionMode` 实例。将以下行代码添加到 `MainActivity.java` 中的类构造函数下方：
 
-```kt
+```java
     ActionMode mActionMode;
 ```
 
 1.  接下来，创建一个 `ActionMode` 回调并将其传递给 `startActionMode()`。在以下 `MainActivity` 类的上一行代码下方添加以下代码：
 
-```kt
+```java
     private ActionMode.Callback mActionModeCallback = new 
     ActionMode.Callback() {
         @Override
@@ -457,7 +457,7 @@ CAB 与动作栏不同，您的活动不需要包含动作栏。
 
 1.  创建了 `ActionMode` 回调后，我们只需调用 `startActionMode()` 以开始上下文模式。将以下代码添加到 `onCreate()` 方法中以设置长按监听器：
 
-```kt
+```java
     ImageView imageView = findViewById(R.id.imageView);
     imageView.setOnLongClickListener(new View.OnLongClickListener() {
         public boolean onLongClick(View view) {
@@ -482,7 +482,7 @@ CAB 与动作栏不同，您的活动不需要包含动作栏。
 
 在这个例子中，我们存储了从 `startActionMode()` 调用返回的 `ActionMode`。我们使用它来防止在 Action Mode 已经激活时创建新的实例。我们也可以使用这个实例来对 CAB 本身进行更改，例如使用以下方式更改标题：
 
-```kt
+```java
 mActionMode.setTitle("New Title"); 
 ```
 
@@ -512,13 +512,13 @@ mActionMode.setTitle("New Title");
 
 1.  打开`strings.xml`文件，并添加两个新的字符串资源用于菜单项，如下所示：
 
-```kt
+```java
     <string name="delete_all">Delete All</string>
 ```
 
 1.  在`res/menu`文件夹中创建一个名为`contextual_menu.xml`的新文件，内容如下所示：
 
-```kt
+```java
     <?xml version="1.0" encoding="utf-8"?>
     <menu xmlns:android="http://schemas.android.com/apk/res/android" >
         <item android:id="@+id/delete_all"
@@ -528,7 +528,7 @@ mActionMode.setTitle("New Title");
 
 1.  接下来，在`res/drawable`文件夹中添加一个名为`item_selector.xml`的新文件，内容如下所示：
 
-```kt
+```java
     <?xml version="1.0" encoding="utf-8"?>
     <menu xmlns:android="http://schemas.android.com/apk/res/android" >
         <item android:id="@+id/delete_all"
@@ -538,13 +538,13 @@ mActionMode.setTitle("New Title");
 
 1.  打开`res/layout`中的`item.xml`文件，并在`LinearLayout`中添加以下行：
 
-```kt
+```java
     android:background="@drawable/item_selector"
 ```
 
 1.  接下来，创建一个名为`SelectMode`的新 Java 文件，作为点击事件接口。代码如下：
 
-```kt
+```java
     public interface SelectMode {
         void onSelect();
     }
@@ -552,7 +552,7 @@ mActionMode.setTitle("New Title");
 
 1.  现在打开`MyAdapter`文件，并将`implements SelectMode`添加到类中。最终结果如下：
 
-```kt
+```java
     public class MyAdapter extends 
     RecyclerView.Adapter<MyAdapter.MyViewHolder>
         implements SelectMode { 
@@ -560,7 +560,7 @@ mActionMode.setTitle("New Title");
 
 1.  使用以下代码向类中添加`onSelect`方法：
 
-```kt
+```java
     @Override
     public void onSelect() {
         if (mListener!=null) {
@@ -571,13 +571,13 @@ mActionMode.setTitle("New Title");
 
 1.  向类中添加以下声明以保存所选项目的列表：
 
-```kt
+```java
     private SparseArray<Boolean> selectedList = new SparseArray<>();
 ```
 
 1.  我们将在适配器中添加另一个方法来处理从 Action Mode 调用的实际`delete`方法：
 
-```kt
+```java
 public void deleteAllSelected() {
     if (selectedList.size()==0) { return; }
     for (int index = nameList.size()-1; index >=0; index--) {
@@ -591,7 +591,7 @@ public void deleteAllSelected() {
 
 1.  对`MyAdapter`类的最后修改是替换现有的`onClick()`。最终代码如下：
 
-```kt
+```java
     @Override
     public void onClick(View v) {
         holder.itemView.setSelected(!holder.itemView.isSelected());
@@ -606,21 +606,21 @@ public void deleteAllSelected() {
 
 1.  现在我们已经创建了菜单并更新了适配器，我们需要在`MainActivity`类中将它们全部连接起来。首先，修改`MainActivity`声明以实现`SelectMode`接口。最终代码如下：
 
-```kt
+```java
     public class MainActivity extends AppCompatActivity
     implements SelectMode {
 ```
 
 1.  在类声明下方，添加以下两个变量声明：
 
-```kt
+```java
     MyAdapter myAdapter;
     ActionMode mActionMode;
 ```
 
 1.  然后添加`ActionMode`回调声明：
 
-```kt
+```java
     private ActionMode.Callback mActionModeCallback = new 
     ActionMode.Callback() {
         @Override
@@ -657,13 +657,13 @@ public void deleteAllSelected() {
 
 1.  我们需要存储`MyAdapter`引用，以便可以从`ActionMode`中调用它。为此，修改`onCreate()`方法中`myAdapter`实例化调用如下：
 
-```kt
+```java
     myAdapter = new MyAdapter(list, this);
 ```
 
 1.  最终代码是实现`onSelect`方法以将适配器回调连接到 Action Mode。向`MainActivity`类中添加以下方法：
 
-```kt
+```java
     @Override
     public void onSelect() {
         if (mActionMode != null) return;
@@ -697,7 +697,7 @@ public void deleteAllSelected() {
 
 发生的事情是一个常见问题，并让许多新接触`RecyclerView`的开发者感到困惑。因为视图正在被重用，所以它显示了上一个项目的状态。解决方案很简单：只需在绑定新项目时适当地设置状态。我们只需在`MyAdapter`类的`onBindViewHolder()`调用中设置初始状态即可修复前面的问题。向`MyAdapter`类的`onBindViewHolder()`方法中添加以下代码行：
 
-```kt
+```java
 holder.itemView.setSelected(selectedList.get(position,false));
 ```
 
@@ -733,7 +733,7 @@ holder.itemView.setSelected(selectedList.get(position,false));
 
 1.  添加以下字符串：
 
-```kt
+```java
     <string name="menu_reply">Reply</string> 
     <string name="menu_reply_all">Reply All</string> 
     <string name="menu_forward">Forward</string> 
@@ -741,7 +741,7 @@ holder.itemView.setSelected(selectedList.get(position,false));
 
 1.  在`res/menu`目录下创建一个名为`menu_popup.xml`的新文件，使用以下 XML：
 
-```kt
+```java
     <?xml version="1.0" encoding="utf-8"?>
     <menu xmlns:android="http://schemas.android.com/apk/res/android">
         <item android:id="@+id/menu_reply"
@@ -755,7 +755,7 @@ holder.itemView.setSelected(selectedList.get(position,false));
 
 1.  在`activity_main.xml`中创建`ImageButton`以提供弹出菜单的锚视图。按照以下 XML 代码创建它：
 
-```kt
+```java
     <ImageButton
         android:id="@+id/imageButtonReply"
         android:layout_width="wrap_content"
@@ -770,7 +770,7 @@ holder.itemView.setSelected(selectedList.get(position,false));
 
 1.  打开`MainActivity.java`并在类构造函数下方添加以下`OnMenuItemClickListener`：
 
-```kt
+```java
     private PopupMenu.OnMenuItemClickListener mOnMenuItemClickListener  
     = new
             PopupMenu.OnMenuItemClickListener() {
@@ -798,7 +798,7 @@ holder.itemView.setSelected(selectedList.get(position,false));
 
 1.  最后的代码是处理按钮`onClick()`事件，如下所示：
 
-```kt
+```java
     public void showPopupMenu(View view) {
         PopupMenu popupMenu = new PopupMenu(MainActivity.this,view);
         popupMenu.inflate(R.menu.menu_popup);

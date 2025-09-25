@@ -146,7 +146,7 @@
 
 1.  使用以下命令在根文件夹（Windows 上的`C:\`）下创建一个名为`ARCore`的新文件夹：
 
-```kt
+```java
 mkdir ARCore
 cd ARCore
 ```
@@ -155,7 +155,7 @@ cd ARCore
 
 1.  执行以下命令：
 
-```kt
+```java
 git clone https://github.com/google-ar/arcore-unity-sdk.git ARCoreML
 ```
 
@@ -181,7 +181,7 @@ git clone https://github.com/google-ar/arcore-unity-sdk.git ARCoreML
 
 1.  删除所有代码，留下`using`语句，然后添加以下内容：
 
-```kt
+```java
 using System.Linq; //add after other using's
 
 public class Neuron
@@ -200,7 +200,7 @@ public class Neuron
 
 1.  在最后一个属性声明之后但在类的结束花括号之前输入以下内容：
 
-```kt
+```java
 public static double GetRandom()
 {
  return 2 * Random.NextDouble() - 1;
@@ -211,7 +211,7 @@ public static double GetRandom()
 
 1.  接下来，在`static`方法之后输入以下代码：
 
-```kt
+```java
 public Neuron()
 {
   InputSynapses = new List<Synapse>();
@@ -234,7 +234,7 @@ public Neuron(IEnumerable<Neuron> inputNeurons) : this()
 
 1.  接下来，我们将添加`Neuron`类的其余方法：
 
-```kt
+```java
 public virtual double CalculateValue()
 {
   return Value = Sigmoid.Output(InputSynapses.Sum(a => a.Weight *  
@@ -272,7 +272,7 @@ public void UpdateWeights(double learnRate, double momentum)
 
 1.  保持在同一文件中，并在 `Neuron` 类外部添加以下三个新的辅助类：
 
-```kt
+```java
 } // end of Neuron class definition
 public class Synapse
 {
@@ -318,7 +318,7 @@ public class DataSet
 
 1.  再次删除起始代码，但保留 `using` 语句，并输入以下内容：
 
-```kt
+```java
 public class NeuralNet
 {
   public double LearnRate;
@@ -336,7 +336,7 @@ public class NeuralNet
 
 1.  接下来，让我们为我们的 `NeuralNet` 添加一个构造函数：
 
-```kt
+```java
 public NeuralNet(int inputSize, int hiddenSize, int outputSize, 
               double? learnRate = null, double? momentum = null)
 {
@@ -363,7 +363,7 @@ public NeuralNet(int inputSize, int hiddenSize, int outputSize,
 
 1.  接下来，我们将添加一些用于训练的方法：
 
-```kt
+```java
 public void Train(List<DataSet> dataSets, int numEpochs)
 {
   for (var i = 0; i < numEpochs; i++)
@@ -397,7 +397,7 @@ public void Train(List<DataSet> dataSets, double minimumError)
 
 1.  然后，我们将添加方法来正向和反向传播网络：
 
-```kt
+```java
 private void ForwardPropagate(params double[] inputs)
 {
   var i = 0;
@@ -418,7 +418,7 @@ private void BackPropagate(params double[] targets)
 
 1.  最后，添加以下方法来计算整个网络和计算错误：
 
-```kt
+```java
 public double[] Compute(params double[] inputs)
 {
   ForwardPropagate(inputs);
@@ -468,7 +468,7 @@ Sigmoid 函数
 
 1.  将如下所示的代码添加到类定义中：
 
-```kt
+```java
 [RequireComponent(typeof(AudioSource))]
 public class EnvironmentalScanner : MonoBehaviour  //before me
 ```
@@ -477,7 +477,7 @@ public class EnvironmentalScanner : MonoBehaviour  //before me
 
 1.  将以下新的属性/字段和方法添加到类中；不要删除任何内容：
 
-```kt
+```java
 public NeuralNet net;
 public List<DataSet> dataSets;
 
@@ -505,7 +505,7 @@ public void Awake()
 
 1.  接下来，让我们修改 `Start` 方法，使其类似于以下内容：
 
-```kt
+```java
 void Start()
 { 
   dataSets.Add(new DataSet(new double[]{ 1,.1,0.0}, new double[] { 0.0,1.0,1.0 } ));
@@ -524,7 +524,7 @@ void Start()
 
 1.  最后，修改`Update`方法以包含以下内容：
 
-```kt
+```java
 void Update()
 {
   if (warning)
@@ -609,7 +609,7 @@ void Update()
 
 反向传播使用一个简单的迭代优化算法，称为**梯度下降**，它使用最小误差来最小化每个神经元的输入权重，以便达到全局最小误差。为了完全理解这一点，我们需要进入一些微分学和导数的知识。相反，我们将走捷径，只看看`NeuralNet`类的`Train`方法中的代码在做什么：
 
-```kt
+```java
 public void Train(List<DataSet> dataSets, double minimumError)
 {
   var error = 1.0;
@@ -631,7 +631,7 @@ public void Train(List<DataSet> dataSets, double minimumError)
 
 这里的代码相对简单。我们设置了一个`error`和`numEpochs`。然后，我们启动一个`while`循环，该循环在`error`大于`minimumError`（全局）并且`numEpochs`小于最大`int`值时结束。在循环内部，我们遍历`dataSets`中的每个`dataSet`。首先，使用`ForwardPropagate`对数据集值的输入进行操作以确定输出。然后，使用`BackPropagate`对数据集的目标值进行调整，使用梯度下降法调整每个神经元的权重。让我们看看`BackPropagate`方法内部的情况：
 
-```kt
+```java
 private void BackPropagate(params double[] targets)
 {
     var i = 0;
@@ -644,7 +644,7 @@ private void BackPropagate(params double[] targets)
 
 这个方法优雅地使用`System.Linq`中的`ForEach`遍历每个神经元层。首先，它计算输出和隐藏层的梯度，然后以相反的顺序调整权重：首先是隐藏层，然后是输出层。接下来，我们将剖析`CalculateGradient`方法：
 
-```kt
+```java
 public double CalculateGradient(double? target = null)
 {
   if (target == null)
@@ -668,7 +668,7 @@ public double CalculateGradient(double? target = null)
 
 让我们看看`CalculateError`函数，它简单地从神经元的输出值中减去其应有的值：
 
-```kt
+```java
 public double CalculateError(double target)
 {
     return target - Value;
@@ -677,7 +677,7 @@ public double CalculateError(double target)
 
 然后，滚动到以下代码中的`UpdateWeights`方法：
 
-```kt
+```java
 public void UpdateWeights(double learnRate, double momentum)
 {
     var prevDelta = BiasDelta;
@@ -744,7 +744,7 @@ public void UpdateWeights(double learnRate, double momentum)
 
 1.  滚动到`唤醒`方法，看看网络是如何创建的：
 
-```kt
+```java
 public void Awake()
 { 
   int numInputs, numHiddenLayers, numOutputs;
@@ -759,7 +759,7 @@ public void Awake()
 
 1.  我们从`Start`方法中移除了初始的 NN 设置和训练，并将其移动到新的`Train`方法底部：
 
-```kt
+```java
 private void Train()
 { 
   net.Train(dataSets, 100);
@@ -771,7 +771,7 @@ private void Train()
 
 1.  在`Train`方法之前是`TrainNetwork`，如下所示：
 
-```kt
+```java
 public void TrainNetwork(float expected)
 {
   this.expected = expected;
@@ -783,7 +783,7 @@ public void TrainNetwork(float expected)
 
 1.  滚动到`更新`方法，看看以下代码段：
 
-```kt
+```java
 if (training)
 { 
   dataSets.Add(new DataSet(normInputs, new double[] { expected }));
@@ -796,7 +796,7 @@ if (training)
 
 1.  滚动到上面的代码块，你可以看到我们是如何对训练`输入`进行归一化的：
 
-```kt
+```java
 for (int i = 0; i < normInputs.Length; i++)
 {
   if (i < pointCloud.PointCount)
@@ -851,14 +851,14 @@ TensorFlow 是一个高级的机器学习资源库和工具包，值得你花时
 
 1.  从你的用户文件夹或根目录运行以下命令：
 
-```kt
+```java
 mkdir TensorFlow
 cd TensorFlow
 ```
 
 1.  创建 `TensorFlow` 目录并导航到它。然后，输入以下命令：
 
-```kt
+```java
 git clone https://github.com/tensorflow/tensorflow
 ```
 
@@ -870,7 +870,7 @@ git clone https://github.com/tensorflow/tensorflow
 
 1.  从项目侧面板下的 Gradle 脚本中打开 `build.gradle` 文件，并将 `nativeBuildSystem` 变量设置为 `none`，如图所示：
 
-```kt
+```java
 def nativeBuildSystem = 'none'
 ```
 

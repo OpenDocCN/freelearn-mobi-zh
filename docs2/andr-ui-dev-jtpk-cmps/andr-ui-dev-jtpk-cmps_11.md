@@ -28,7 +28,7 @@
 
 状态是可能随时间变化的应用数据。在 Compose 应用中，状态（例如，颜色）通过`State`或`MutableState`实例表示。状态变化会触发重新组合。以下示例显示了一个按钮和一个盒子。点击按钮会通过改变状态在盒子的红色和白色之间切换颜色：
 
-```kt
+```java
 @Composable
 fun StateChangeDemo() {
   var toggled by remember {
@@ -69,7 +69,7 @@ fun StateChangeDemo() {
 
 要动画化颜色，您可以使用内置的 `animateColorAsState()` 可组合函数。将 `StateDemo()` 内部的 `val color = if (toggled) …` 赋值替换为以下代码块。如果您想尝试它，您可以在 `AnimationDemoActivity.kt` 中找到一个名为 `SingleValueAnimationDemo()` 的可组合函数，它属于 `AnimationDemo` 示例：
 
-```kt
+```java
 val color by animateColorAsState(
   targetValue = if (toggled)
     Color.White
@@ -86,19 +86,19 @@ val color by animateColorAsState(
 
 您可以提供一个可选的监听器，以便在动画完成后收到通知。以下代码行打印出与新状态匹配的颜色：
 
-```kt
+```java
 finishedListener = { color -> println(color)}
 ```
 
 要自定义您的动画，您可以将 `AnimationSpec<Color>` 的实例传递给 `animateColorAsState()`。默认值是 `colorDefaultSpring`，它是 `SingleValueAnimation.kt` 中的一个私有值：
 
-```kt
+```java
 private val colorDefaultSpring = spring<Color>()
 ```
 
 `spring()` 是 `AnimationSpec.kt` 中的一个顶级函数。它接收阻尼比、刚度和可见性阈值。以下代码行使颜色动画非常柔和：
 
-```kt
+```java
 animationSpec = spring(stiffness = Spring.StiffnessVeryLow)
 ```
 
@@ -110,7 +110,7 @@ animationSpec = spring(stiffness = Spring.StiffnessVeryLow)
 
 以下版本的 `MultipleValuesAnimationDemo()` 还不包含动画。它将被插入到读取为 **FIXME: animation setup missing** 的注释下方：
 
-```kt
+```java
 @Composable
 fun MultipleValuesAnimationDemo() {
   var toggled by remember {
@@ -151,7 +151,7 @@ fun MultipleValuesAnimationDemo() {
 
 `Box()` 显示一个黑色边框，其宽度由 `borderWidth` 控制。要为你的可组合函数应用边框，只需添加 `border()` 修饰符。`Text()` 被旋转。你可以使用 `rotate()` 修饰符实现这一点。`degrees` 变量持有角度。`degrees` 和 `borderWidth` 将在动画过程中发生变化。以下是实现方式：
 
-```kt
+```java
 val transition = updateTransition(targetState = toggled)
 val borderWidth by transition.animateDp() { state ->
   if (state)
@@ -182,7 +182,7 @@ val degrees by transition.animateFloat() { state ->
 
 在本节中，我们将查看我的示例可组合函数 `AnimatedVisibilityDemo()`。它属于 `AnimationDemo` 项目。与 `StateDemo()`、`SingleValueAnimationDemo()` 和 `MultipleValuesAnimationDemo()` 类似，它使用一个 `Column()` 实例，该实例包含一个 `Button()` 实例和一个 `Box()` 实例。这部分代码简单直接，因此无需在打印中重复。按钮切换状态，从而启动动画。让我们看看它是如何工作的：
 
-```kt
+```java
 AnimatedVisibility(
   visible = visible,
   enter = slideInHorizontally(),
@@ -209,7 +209,7 @@ AnimatedVisibility(
 
 它们可以通过 `+` 组合使用：
 
-```kt
+```java
 enter = slideInHorizontally() + fadeIn(),
 ```
 
@@ -235,7 +235,7 @@ enter = slideInHorizontally() + fadeIn(),
 
 通用设置遵循上一节中的示例：一个 `Column()` 实例作为一些可组合函数的容器，在本例中是一个 `Slider()` 实例和一个 `Text()` 实例。然后状态变化触发动画。以下是代码：
 
-```kt
+```java
 @Composable
 fun SizeChangeAnimationDemo() {
   var size by remember { mutableStateOf(1F) }
@@ -270,7 +270,7 @@ fun SizeChangeAnimationDemo() {
 
 动画由 `animateContentSize()` 修饰符处理。它属于 `androidx.compose.animation` 包。该修饰符期望两个参数，`animationSpec` 和 `finishedListener`。我在 *动画单个值变化* 部分简要介绍了这两个。`animationSpec` 默认为 `spring()`。如果你想在延迟后一次性显示所有线条，可以添加以下内容：
 
-```kt
+```java
 animationSpec = snap(1000)
 ```
 
@@ -296,7 +296,7 @@ animationSpec = snap(1000)
 
 与本章中的大多数示例一样，`CrossfadeAnimationDemo()`使用`Column()`作为根元素。该列包含一个开关和要显示的屏幕。显示哪个取决于一个可变的`Boolean`状态：
 
-```kt
+```java
 @Composable
 fun CrossfadeAnimationDemo() {
   var isFirstScreen by remember { mutableStateOf(true) }
@@ -342,7 +342,7 @@ fun CrossfadeAnimationDemo() {
 
 由于`Crossfade()`接收一个类型为`FiniteAnimationSpec<Float>`的`animationSpec`，例如，你可以传递以下代码来使用具有非常低刚度的弹簧动画：
 
-```kt
+```java
 animationSpec = spring(stiffness = Spring.StiffnessVeryLow)
 ```
 
@@ -358,7 +358,7 @@ animationSpec = spring(stiffness = Spring.StiffnessVeryLow)
 
 要创建一个`KeyframesSpec`实例，你可以调用`keyframes()`函数并传递一个用于动画的初始化函数。在动画的持续时间之后，你传递在给定毫秒数的时间点上的动画值的映射：
 
-```kt
+```java
 animationSpec = keyframes {
       durationMillis = 8000
       0f at 0
@@ -384,7 +384,7 @@ animationSpec = keyframes {
 
 可组合的组件将文本顺时针旋转 0 到 359 度。然后，动画重新开始。`Text()`组件在`Box()`组件内居中：
 
-```kt
+```java
 @Composable
 fun InfiniteRepeatableDemo() {
   val infiniteTransition = rememberInfiniteTransition()
@@ -412,13 +412,13 @@ fun InfiniteRepeatableDemo() {
 
 如果你想让文本返回到其初始角度而不是持续旋转，你可以将`repeatMode`参数更改为以下内容：
 
-```kt
+```java
 repeatMode = RepeatMode.Reverse
 ```
 
 然后你应该在开始和结束处添加短暂的延迟。`keyframes {}`应该看起来像这样：
 
-```kt
+```java
 keyframes {
       durationMillis = 2000
       0F at 500

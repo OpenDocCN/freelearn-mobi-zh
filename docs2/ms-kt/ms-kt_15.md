@@ -78,7 +78,7 @@ Android Studio 内置了 Firebase 工具，可以帮助我们快速将 Firebase 
 
 所有步骤完成后，我们现在可以在`MainActivity.kt`文件中的`onCreate()`函数内添加以下代码：
 
-```kt
+```java
 throw RuntimeException("Test Crash")
 ```
 
@@ -180,7 +180,7 @@ throw RuntimeException("Test Crash")
 
 让我们添加以下代码：
 
-```kt
+```java
 class FirebaseNotificationService: FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
@@ -232,7 +232,7 @@ class FirebaseNotificationService: FirebaseMessagingService() {
 
 服务创建后，我们需要在`AndroidManifest.xml`文件中注册它。让我们向其中添加以下代码：
 
-```kt
+```java
 <service
     android:name=".firebase.FirebaseNotificationService"
     android:exported="false">

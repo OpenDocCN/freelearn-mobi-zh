@@ -78,21 +78,21 @@
 
 代码块设置如下：
 
-```kt
+```java
 var s = "I'm a string"
 s = 1 // s is a String
 ```
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 var s = "I'm a string"
 s = 1 // s is a String
 ```
 
 任何命令行输入或输出都应如下所示：
 
-```kt
+```java
 I would suggest: a guitar
 ```
 

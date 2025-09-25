@@ -212,7 +212,7 @@ Retrofit 还允许你轻松添加自定义头和请求类型、文件上传、�
 
 1.  在应用程序模块的 `build.gradle` 文件中，在 `dependencies` 块内添加 Retrofit 的依赖项：
 
-    ```kt
+    ```java
     implementation "com.squareup.retrofit2:retrofit:2.9.0"
     ```
 
@@ -220,7 +220,7 @@ Retrofit 还允许你轻松添加自定义头和请求类型、文件上传、�
 
 1.  创建一个接口，定义我们的应用程序和数据库之间执行的 HTTP 操作。通过点击应用程序包，将名称选为 `RestaurantsApiService`，并选择 **接口** 作为类型。在新建的文件中，添加以下代码：
 
-    ```kt
+    ```java
     import retrofit2.Call
     import retrofit2.http.GET
     interface RestaurantsApiService {
@@ -275,7 +275,7 @@ Retrofit 允许您自动序列化请求体和反序列化响应体。在我们�
 
 在这里，我们可以看到 JSON 餐厅有四个键值对，分别对应餐厅的 `id`、`title`、`description` 和 `shutdown` 状态。这种结构与项目中的 `Restaurant.kt` 数据类类似：
 
-```kt
+```java
 data class Restaurant(val id: Int,
                       val title: String,
                       val description: String,
@@ -296,7 +296,7 @@ data class Restaurant(val id: Int,
 
 1.  首先，我们需要添加 GSON 库依赖项来标记我们的字段，使用自定义序列化键。在 app 模块的 `build.gradle` 文件中，在 `dependencies` 块内添加 GSON 依赖项：
 
-    ```kt
+    ```java
     implementation "com.google.code.gson:gson:2.8.6"
     ```
 
@@ -304,7 +304,7 @@ data class Restaurant(val id: Int,
 
 1.  在 `Restaurant.kt` 中，为每个字段添加 `@SerializedName` 注解，并指定来自 JSON 结构的相应序列化键：
 
-    ```kt
+    ```java
     import com.google.gson.annotations.SerializedName
     data class Restaurant(
         @SerializedName("r_id")
@@ -330,7 +330,7 @@ data class Restaurant(val id: Int,
 
 1.  更新 `RestaurantsApiService` 中的 `getRestaurants()` 方法，使其从服务器返回一个类型参数与预期响应匹配的 `Call` 对象。在我们的例子中，这将是一个 `List<Restaurant>`：
 
-    ```kt
+    ```java
     interface RestaurantsApiService {
         @GET("restaurants.json")
         fun getRestaurants(): Call<List<Restaurant>>
@@ -345,7 +345,7 @@ data class Restaurant(val id: Int,
 
 1.  首先，我们需要为 Retrofit 添加 GSON 转换器库依赖，以便 Retrofit 在反序列化 JSON 响应时遵循我们之前添加的 GSON 序列化注解。在应用模块的 `build.gradle` 文件中，在 `dependencies` 块内添加 Retrofit GSON 转换器的依赖项：
 
-    ```kt
+    ```java
     implementation "com.squareup.retrofit2:converter-
         gson:2.9.0"
     ```
@@ -354,7 +354,7 @@ data class Restaurant(val id: Int,
 
 1.  在 `RestaurantsViewModel` 中，添加一个类型为 `RestaurantsApiService` 的 `restInterface` 变量，并创建一个 `init` 块，我们将在这里实例化 `Retrofit.builder` 对象：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(…) : ViewModel() {
         private var restInterface: RestaurantsApiService
         val state = mutableStateOf(
@@ -396,7 +396,7 @@ data class Restaurant(val id: Int,
 
 1.  在 `RestaurantsViewModel` 内部，添加 `getRestaurants` 方法：
 
-    ```kt
+    ```java
     fun getRestaurants() {
         restInterface.getRestaurants().execute().body()
             ?.let { restaurants ->
@@ -421,7 +421,7 @@ data class Restaurant(val id: Int,
 
 5. 在`RestaurantsViewModel`内部，我们需要更新状态对象的初始值，使其包含一个空列表。这是因为，当屏幕首次显示时，我们不再有餐厅来渲染 – 我们将在网络请求中稍后获取它们。通过移除`dummyList`并放置一个`emptyList()`来更新`state`对象的初始值：
 
-```kt
+```java
 val state = mutableStateOf(emptyList<Restaurant>())
 ```
 
@@ -429,7 +429,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  我们希望触发网络请求以从服务器获取餐厅。在`RestaurantsScreen.kt`内部，更新`RestaurantsScreen`可组合函数，使其调用`viewModel`的`getRestaurants()`方法，这将触发网络请求以从服务器获取餐厅：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen() {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -442,7 +442,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在`AndroidManifest.xml`文件中添加互联网权限：
 
-    ```kt
+    ```java
     <manifest xmlns:android="…"
         package="com.codingtroops.restaurantsapp">
         <uses-permission                                   android:name="android.permission.INTERNET" />
@@ -466,7 +466,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在`ViewModel`的`getRestaurants()`方法中，将`.execute()`调用替换为`.enqueue()`：
 
-    ```kt
+    ```java
     fun getRestaurants() {
        restInterface.getRestaurants().enqueue(
         object : Callback<List<Restaurant>> {
@@ -526,7 +526,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在 `RestaurantsViewModel` 中，定义一个类型为 `Call` 且具有 `List<Restaurant>` 类型参数的类变量。将其命名为 `restaurantsCall`，因为我们将会使用它来保存对排队的 `Call` 对象的引用：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(…): ViewModel() {
         private var restInterface: RestaurantsApiService
         val state = […]
@@ -541,7 +541,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在 `RestaurantsViewModel` 的 `getRestaurants()` 方法内部，将您从 `restInterface.getRestaurants()` 方法调用中获得的 `Call` 对象分配给 `restaurantsCall` 成员变量，并对其调用 `enqueue()`：
 
-    ```kt
+    ```java
     fun getRestaurants() {
         restaurantsCall = restInterface.getRestaurants()
         restaurantsCall.enqueue(object : 
@@ -551,7 +551,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在 `RestaurantsViewModel` 中，重写 `onCleared()` 方法并调用 `restaurantCall` 对象的 `cancel()` 方法：
 
-    ```kt
+    ```java
     override fun onCleared() {
         super.onCleared()
         restaurantsCall.cancel()
@@ -594,7 +594,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在`RestaurantsScreen`组合函数内部，将`viewModel.getRestaurants()`调用包裹在`LaunchedEffect`组合函数中：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen() {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -623,7 +623,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  在 `RestaurantsViewModel` 中，找到 `init` 块，并在其中调用 `getRestaurants()`：
 
-    ```kt
+    ```java
     init {
         val retrofit: Retrofit = Retrofit.Builder().[…].build()
         restInterface = retrofit.create(
@@ -637,7 +637,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 1.  仍然在 `RestaurantsViewModel` 中，导航到 `getRestaurants()` 方法，将其标记为 `private`：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         …
     }
@@ -667,7 +667,7 @@ val state = mutableStateOf(emptyList<Restaurant>())
 
 在 Retrofit 接口内部使用自定义注解的帮助下，这个库隐藏了与处理网络请求相关的绝大多数复杂性。我们看到了在我们的`RestaurantsApiService`接口中，当我们使用`@GET`注解注释我们的请求时，简单的`GET`请求：
 
-```kt
+```java
 interface RestaurantsApiService {
     @GET("restaurants.json")
     fun getRestaurants(): Call<List<Restaurant>>
@@ -678,7 +678,7 @@ interface RestaurantsApiService {
 
 例如，如果您需要定义一个将一些数据传递给服务器的请求，这些数据可能需要存储，您可以通过添加`@POST`注解到您希望的方法来使用`POST`请求：
 
-```kt
+```java
 @POST("user/edit")
 fun updateUser(@Field("first_name") firstName: String): 
     Call<User>

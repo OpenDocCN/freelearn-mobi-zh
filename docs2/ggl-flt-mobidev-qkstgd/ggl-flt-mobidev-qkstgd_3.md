@@ -48,7 +48,7 @@ Flutter 团队构建了这个名为 **Widgets Catalog** 的非常好用的网站
 
 现在，让我们看看显示组件的代码。代码将如下所示：
 
-```kt
+```java
 Center(
  child: Container(
    decoration: BoxDecoration(border: Border.all()),
@@ -64,7 +64,7 @@ Center(
 
 有时候，你需要根据条件表达式显示组件——例如，在这个例子中：
 
-```kt
+```java
 function getIcon(bool condition) {
     if (condition == true) return Icon(Icons.edit);
     else return Container();  
@@ -77,7 +77,7 @@ function getIcon(bool condition) {
 
 在您的应用程序中显示图片是您必须拥有的一个功能。如今几乎没有应用程序缺少显示图片的功能。为此，图片小部件就派上用场了。我们可以使用以下代码来使用图片小部件：
 
-```kt
+```java
 Center(
   child: Container(
     height: 200.0,
@@ -117,7 +117,7 @@ Center(
 
 以下代码可以用来使用文本小部件：
 
-```kt
+```java
 Center(
   child: Container(
     height: 200.0,
@@ -141,7 +141,7 @@ Center(
 
 以下代码可以用来使用`Icon`小部件：
 
-```kt
+```java
 Center(
   child: Container(
     height: 200.0,
@@ -163,7 +163,7 @@ Center(
 
 以下代码可以用来使用`RaisedButton`小部件：
 
-```kt
+```java
 Center(
   child: Container(
     height: 200.0,
@@ -189,7 +189,7 @@ Center(
 
 以下代码可以用于使用`Scaffold`显示`snackbar`：
 
-```kt
+```java
 Center(
       child: Container(
         height: 200.0,
@@ -229,7 +229,7 @@ Center(
 
 以下代码可以用于`PlaceHolder`小部件：
 
-```kt
+```java
  Center(
       child: Container(
         height: 200.0,
@@ -247,7 +247,7 @@ Center(
 
 `Column`对于在 Flutter 应用中组合布局至关重要。它以垂直数组显示其子项。以下代码可以用于`Column`小部件：
 
-```kt
+```java
 Center(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -287,7 +287,7 @@ Center(
 
 以下代码可以用于`Row`小部件：
 
-```kt
+```java
 enter(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -367,7 +367,7 @@ Container(
 
 要构建无状态小部件，我们将扩展`StatelessWidget`抽象类，如下所示：
 
-```kt
+```java
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -386,7 +386,7 @@ class MyApp extends StatelessWidget {
 
 **有状态的组件**是具有内部状态以进行管理的动态组件。有状态的组件可以响应状态变化并相应地改变。状态存储在`State`对象中。要创建`StatefulWidget`，你必须扩展`StatefulWidget`抽象类，如下面的代码所示：
 
-```kt
+```java
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
   final String title;
@@ -398,7 +398,7 @@ class MyHomePage extends StatefulWidget {
 
 状态将是一个扩展了`State<T extends StatefulWidget>`抽象类的类。让我们看看一个示例，其中小部件根据其状态改变背景颜色。相应的代码如下：
 
-```kt
+```java
 class _MyHomePageState extends State<MyHomePage> {
   bool value = false;
 
@@ -433,7 +433,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 在 Flutter 的世界里，新屏幕是组件！要导航到新路由，我们可以使用`Navigator.push()`函数，将当前上下文和一个新的`MaterialPageRoute`作为参数传递：
 
-```kt
+```java
 Within the `FirstScreen` Widget
  onPressed: () {
    Navigator.push(
@@ -445,7 +445,7 @@ Within the `FirstScreen` Widget
 
 `SecondScreen`将是一个普通的小部件，用于构建屏幕。例如：
 
-```kt
+```java
 class SecondScreen extends StatelessWidget {
    @override
    Widget build(BuildContext context) {
@@ -468,7 +468,7 @@ class SecondScreen extends StatelessWidget {
 
 查看一下`Navigator.push()`的返回值，你可以看到它返回一个`Future<dynamic>`。因此，在推送新屏幕时，你可以等待弹出的返回值。例如：
 
-```kt
+```java
 function getConfirmation(BuildContext context) async {
   return await Navigator.push(context, MaterialPageRoute(
     builder: (context) => ConfirmationScreen(),
@@ -478,7 +478,7 @@ function getConfirmation(BuildContext context) async {
 
 `ConfirmationScreen`将如下所示：
 
-```kt
+```java
 class ConfirmationScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     body: ButtonBar(

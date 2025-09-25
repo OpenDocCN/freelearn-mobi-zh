@@ -210,7 +210,7 @@ WhatsApp 和其他一些应用正在使用设备的电话号码来识别用户�
 
 您会看到该文件包含对 Fabric 和 Firebase 的一些依赖项。我们稍后会使用它们，这样我们就可以使用 Twitter 或 Firebase 电话认证进行登录。此外，我们可以使用`TweetComposer`类在 Twitter 上分享故事。请注意，您可能需要将版本号更新到最新版本。它们出现在各种包名称定义的末尾：
 
-```kt
+```java
 ... 
 apply plugin: 'io.fabric' 
 
@@ -242,7 +242,7 @@ apply plugin: 'com.google.gms.google-services'
 
 现在，打开`app/src/main/`文件夹中的`AndroidManifest.xml`文件。元数据部分包含`ApiKey`的值。修改它，使其具有与您在`Fabric.io`上的配置相对应的值：
 
-```kt
+```java
 <meta-data 
     android:name="io.fabric.ApiKey" 
     android:value="fill in your api key" /> 
@@ -256,7 +256,7 @@ apply plugin: 'com.google.gms.google-services'
 
 打开`strings.xml`值并更新`twitter_key`和`twitter_secret`。用您自己的值替换它们。您可以在 Fabric 网站上找到它们：
 
-```kt
+```java
 <resources> 
    <string name="twitter_key">fill with your own Twitter key</string> 
    <string name="twitter_secret">fill your own Twitter secret</string> 
@@ -264,7 +264,7 @@ apply plugin: 'com.google.gms.google-services'
 
 打开`OnboardingActivity`类。在`onCreate`方法中，调用了`initFabric`方法。这就是 Fabric 初始化 Twitter 认证和分享的地方：
 
-```kt
+```java
 private fun initFabric(){ 
    val authConfig = TwitterAuthConfig(getString(R.string.twitter_key), getString(R.string.twitter_secret)) 
    Fabric.with(this, Twitter(authConfig)) 
@@ -278,7 +278,7 @@ private fun initFabric(){
 
 您可以在`setupTwitterLoginButton`和`signinWithTwitterAuthCredential`方法中找到我们刚才看到的实现，如下所示：
 
-```kt
+```java
 private fun setupTwitterLoginButton(){ 
   twitter_login_button.setCallback(object : Callback<TwitterSession>() { 
        override fun success(result: Result<TwitterSession>) { 
@@ -299,7 +299,7 @@ private fun setupTwitterLoginButton(){
 
 `signInWithPhoneAuthCredential`方法使用用户的 Twitter 名字作为 Firebase 用户注册用户。我们稍后会使用这个手机号码来识别用户的贡献。
 
-```kt
+```java
 private fun signinWithTwitterAuthCredential (credential: AuthCredential){ 
    mAuth.signInWithCredential(credential) 
        .addOnCompleteListener(this, OnCompleteListener<AuthResult> { 
@@ -319,7 +319,7 @@ private fun signinWithTwitterAuthCredential (credential: AuthCredential){
 
 要使用手机号码注册，我们需要告诉 Firebase 通过短信向用户发送验证码。我们将在`sendPhone`方法中完成此操作：
 
-```kt
+```java
 private fun sendPhone(){ 
    val number = onboarding_phone.text.toString() 
     PhoneAuthProvider.getInstance().verifyPhoneNumber( 
@@ -329,7 +329,7 @@ private fun sendPhone(){
 
 回调实现位于`getCallback`方法中。`onCodeSent`是最有趣的事件。如果验证码已发送，我们将存储返回的验证 ID。我们稍后会需要它来使用代码验证用户：
 
-```kt
+```java
 private fun getCallback(): PhoneAuthProvider.OnVerificationStateChangedCallbacks { 
    val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() { 
      ... 
@@ -345,7 +345,7 @@ private fun getCallback(): PhoneAuthProvider.OnVerificationStateChangedCallbacks
 
 在向用户发送验证码后，他必须输入验证码以确保提供的手机号码确实是他的手机号码。这是在`sendCode`方法中完成的：
 
-```kt
+```java
 private fun sendCode(){ 
    val verification = mVerificationId 
    if (verification != null) { 
@@ -358,7 +358,7 @@ private fun sendCode(){
 
 `signInWithPhoneAuthCredential`方法使用用户的手机号码作为 Firebase 用户注册用户。我们稍后会使用这个手机号码来识别用户的贡献：
 
-```kt
+```java
 private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) { 
    mAuth.signInWithCredential(credential) 
        .addOnCompleteListener(this, OnCompleteListener<AuthResult> { 
@@ -375,7 +375,7 @@ private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
 
 现在，打开 MainActivity。在`onCreate`方法中，您会看到我们首先做的事情之一是调用`onList`方法。`onList`方法创建一个新的`StoriesFragment`，通过调用`showFragment`方法，默认会显示故事列表：
 
-```kt
+```java
 fun onList() { 
    val fragment = StoriesFragment.newInstance() 
    showFragment(fragment) 
@@ -414,7 +414,7 @@ private fun showFragment(fragment: Fragment) {
 
 MainActivity 还负责显示其他片段，例如显示完整故事的`StoryDetailFragment`和`StoryContributeFragment`。它还包含对`OnboardingActivity`的调用，用于后续的注册。这将允许用户在之前跳过注册但后来想要为应用程序做出贡献的情况下注册。通过向故事添加内容或创建新的故事，他们将被要求再次注册：
 
-```kt
+```java
 val repository: Repository get() = Repository(this) 
 ```
 
@@ -426,7 +426,7 @@ val repository: Repository get() = Repository(this)
 
 类看起来是这样的：
 
-```kt
+```java
 class Repository(private val context: Context) { 
 
    fun getStories(handler: OnRepositoryResult) { 
@@ -481,7 +481,7 @@ class Repository(private val context: Context) {
 
 在`models`包中，你可以找到`Story`和`Contribution`类。一个`Story`有一个标题和多个贡献，每个贡献都有一个作者和一些内容。`Parcelable`实现使得从一个片段（或活动）向另一个片段传递数据变得更加方便，正如我们稍后将会看到的：
 
-```kt
+```java
 class Story : Parcelable { 
    var id: String? = null 
    var title: String? = null 
@@ -518,7 +518,7 @@ val summary: String
 
 每个人都喜欢故事，所以用户可能的第一步就是点击一个看起来吸引人的故事摘要。（这同样是一个需要证明的假设。）如果用户点击带有加号符号的浮动操作按钮，他将创建一个新的故事：
 
-```kt
+```java
 class StoriesFragment : Fragment(), OnCardViewClicked, OnRepositoryResult { 
    private var recyclerView: RecyclerView? = null 
    private var adapter: StoryAdapter? = null 
@@ -528,7 +528,7 @@ class StoriesFragment : Fragment(), OnCardViewClicked, OnRepositoryResult {
 
 如果你查看`StoriesFragment`内部，你会看到将使用`RecyclerView`小部件和`StoryAdapter`来显示这里显示的数据。在`onCreateView`方法中，将调用`loadData`方法，该方法反过来调用`Repository`类的`getStories`方法，并将片段本身作为结果的处理者：
 
-```kt
+```java
 override fun onResult(result: List<Story>) { 
    viewModel = result.toMutableList() 
    adapter = StoryAdapter(viewModel) 
@@ -539,7 +539,7 @@ override fun onResult(result: List<Story>) {
 
 当结果返回时，将创建一个`StoryAdapter`类的实例并将其附加到`RecyclerView`实例上。`StoryAdapter`将每个故事的数据绑定到列表中的行：
 
-```kt
+```java
 override fun onCardClicked(view: View, position: Int) { 
    (activity as MainActivity).onReadStory(viewModel[position]) 
 } 
@@ -549,7 +549,7 @@ override fun onCardClicked(view: View, position: Int) {
 
 此片段向用户显示完整的故事，包括贡献者的名字。在这里，用户可以通过点击 CONTRIBUTE（如示例图像所示）来为故事做出贡献：
 
-```kt
+```java
 class StoryDetailFragment : Fragment() { 
    private var mStory: Story? = null 
    override fun onCreate(savedInstanceState: Bundle?) { 
@@ -566,7 +566,7 @@ class StoryDetailFragment : Fragment() {
 
 在`StoryDetailFragment`的`onShare`方法中，你可以找到用于编写和分享推文的代码行：
 
-```kt
+```java
 private fun onShare() { 
    val builder = TweetComposer.Builder(getActivity()) 
            .text(String.format(getString(R.string.sharing_text), mStory?.title)) 
@@ -582,7 +582,7 @@ private fun onShare() {
 
 如果用户尚未认证，我们将调用 MainActivity 的`onLateOnboarding`方法。在这里，我们也将故事（以及与之相关的贡献）作为参数传递：
 
-```kt
+```java
 fun onLateOnboarding(story: Story) { 
    val intent = Intent(this, OnboardingActivity::class.java) 
    intent.putExtra(OnboardingActivity.ARG_LATE, true) 
@@ -593,7 +593,7 @@ fun onLateOnboarding(story: Story) {
 
 `OnboardingActivity`还将动态处理认证过程。虽然来得晚，但总比不来好。如果你想为故事做出贡献，或者想自己创建故事，你必须先注册。现在，活动将显示一条消息，指出这一点，并再次为用户提供使用 Twitter 账户或使用电话号码注册的选择：
 
-```kt
+```java
 private fun continueFlow(){ 
    if (mIsLateOnboarding){ 
        val returnIntent = Intent() 
@@ -605,7 +605,7 @@ private fun continueFlow(){
 
 如果延迟认证成功，结果将返回 MainActivity，MainActivity 将负责将贡献添加到故事中：
 
-```kt
+```java
 override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) { 
    if (requestCode == REQUEST_LATE_ONBOARDING) { 
        if (resultCode == Activity.RESULT_OK) { 

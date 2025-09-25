@@ -24,7 +24,7 @@
 
 你可以创建一个特殊的布局变体，包括分隔符，通过将其嵌入`LinearLayout`中实现。例如，如果你想向旅行报销应用的概览中显示的报销项添加分隔符标签，你可以添加一个名为`card_claim_item_with_divider`的特殊布局，其外观可能如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <layout >
   <data>
@@ -72,20 +72,20 @@
 
 1.  声明一个整数字段来表示每个`DisplayItem`对象的布局资源。这些将由`Adapter`类用来确定加载和渲染哪个布局：
 
-```kt
+```java
 public class DisplayItem {
   public final int layout;
 ```
 
 1.  这个类预期将作为混合列表的一部分使用，因此在这一级别使用泛型是不合适的。声明一个普通的`Object`字段来保存`DisplayItem`要绑定到其布局的数据（如果有）：
 
-```kt
+```java
 public final Object value;
 ```
 
 1.  现在，你需要一个构造函数来分配这两个字段：
 
-```kt
+```java
 public DisplayItem(
     final int layout,
     final Object value) {
@@ -97,7 +97,7 @@ public DisplayItem(
 
 1.  为了方便`Adapter`类，`DisplayItem`将提供一个`bindItem`方法来帮助`DataBoundViewHolder`类：
 
-```kt
+```java
 public <I> void bindItem(final DataBoundViewHolder<?, I> holder) {
   @SuppressWarnings("unchecked") final I item = (I) value;
   holder.setItem(item);
@@ -120,7 +120,7 @@ public <I> void bindItem(final DataBoundViewHolder<?, I> holder) {
 
 1.  默认情况下，Android Studio 将创建一个`selector`可绘制资源，但你想要声明一个`shape`可绘制资源。用以下 XML 可绘制资源替换生成的模板代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <shape 
     android:shape="line">
@@ -141,7 +141,7 @@ public <I> void bindItem(final DataBoundViewHolder<?, I> holder) {
 
 1.  新布局实际上不需要绑定任何变量，因此你可以将`data`部分留空。使用`ImageView`来渲染全宽度的新的`horizontal_divider`：
 
-```kt
+```java
 <layout >
     <data></data>
 
@@ -157,13 +157,13 @@ public <I> void bindItem(final DataBoundViewHolder<?, I> holder) {
 
 1.  将`ClaimItem`对象的`List`改为`DisplayItem`对象的`List`：
 
-```kt
+```java
 private List<DisplayItem> items = Collections.emptyList();
 ```
 
 1.  声明一个新的重写方法--`getItemViewType`--并使用`DisplayItem.layout`值来识别在`RecyclerView`中将使用的布局之间的差异。此方法将委托给`DisplayItem`对象，并使用布局资源 ID 作为标识符：
 
-```kt
+```java
 @Override
 public int getItemViewType(final int position) {
     return items.get(position).layout;
@@ -174,7 +174,7 @@ public int getItemViewType(final int position) {
 
 1.  现在，将`onCreateViewHolder`方法更改为使用`viewType`来决定加载哪个布局资源。`viewType`将由`RecyclerView`传入，并将与`getItemViewType`返回的值相同：
 
-```kt
+```java
 @Override
 public DataBoundViewHolder<ItemPresenter, ClaimItem>
     onCreateViewHolder(
@@ -195,7 +195,7 @@ public DataBoundViewHolder<ItemPresenter, ClaimItem>
 
 1.  将`onBindViewHolder`方法更改为使用`DisplayItem.bindItem`方法，而不是直接调用`DataBoundViewHolder.setItem`：
 
-```kt
+```java
 @Override
 public void onBindViewHolder(
     final DataBoundViewHolder<ItemPresenter, ClaimItem> holder,
@@ -207,14 +207,14 @@ public void onBindViewHolder(
 
 1.  在`ClaimItemAdapter`类底部，你需要一个新的`ActionCommand`内部类来完成计算分隔符位置的工作，并将所有`ClaimItem`对象包装在`DisplayItem`对象中：
 
-```kt
+```java
 private class CreateDisplayListCommand
         extends ActionCommand<List<ClaimItem>, List<DisplayItem>> {
 ```
 
 1.  `CreateDisplayListCommand`需要一个实用方法来决定是否在两个项目之间插入分隔符。这个实用方法将简单地检查两个项目是否在同一天有时间戳：
 
-```kt
+```java
 boolean isDividerRequired(
     final ClaimItem item1, final ClaimItem item2) {
   final Calendar c1 = Calendar.getInstance();
@@ -232,7 +232,7 @@ boolean isDividerRequired(
 
 1.  然后，你需要实现`ActionCommand`的`onBackground`方法，并将`ClaimItem`对象列表处理成`DisplayItem`对象列表：
 
-```kt
+```java
 @Override
 public List<DisplayItem> onBackground(
     final List<ClaimItem> claimItems)
@@ -257,7 +257,7 @@ public List<DisplayItem> onBackground(
 
 1.  要完成`CreateDisplayListCommand`的实现，你需要实现`onForeground`方法。这将把新的`DisplayItem`对象列表分配给`ClaimItemAdapter`，并通知`RecyclerView`发生变化：
 
-```kt
+```java
 @Override
 public void onForeground(final List<DisplayItem> value) {
   ClaimItemAdapter.this.items = value;
@@ -267,7 +267,7 @@ public void onForeground(final List<DisplayItem> value) {
 
 1.  你需要为每次`LiveData`更新提供一个`CreateDisplayListCommand`实例供`ClaimItemAdapter`使用。在`ClaimItemAdapter`类顶部创建一个新字段，并实例化它：
 
-```kt
+```java
 private final CreateDisplayListCommand createDisplayListCommand
  = new CreateDisplayListCommand();
 private final LayoutInflater layoutInflater;
@@ -277,7 +277,7 @@ private List<DisplayItem> items = Collections.emptyList();
 
 1.  现在，你可以将构造函数更改为使用`CreateDisplayListCommand`而不是直接引用 Room 数据库返回的`ClaimItem`对象列表：
 
-```kt
+```java
 public ClaimItemAdapter(
         final Context context,
         final LifecycleOwner owner,
@@ -319,7 +319,7 @@ public ClaimItemAdapter(
 
 1.  在`ClaimItemAdapter`类中`CreateDisplayListCommand`内部类下面，声明一个新的`ActionCommand`内部类来处理更新现有的`DisplayItem`对象列表，并触发所需的变化通知：
 
-```kt
+```java
 private class UpdateDisplayListCommand
         extends ActionCommand<
             Pair<List<DisplayItem>, List<ClaimItem>>,
@@ -331,7 +331,7 @@ private class UpdateDisplayListCommand
 
 1.  在`UpdateDisplayListCommand`中，你首先需要的是`onBackground`方法。这个方法将使用通过`Pair`传入的`DisplayItem`对象`List`作为“旧”的项`List`，并通过直接调用`CreateDisplayListCommand`来生成一个“新”的`DisplayItem`对象`List`：
 
-```kt
+```java
 @Override
 public Pair<List<DisplayItem>, DiffUtil.DiffResult> onBackground(
         final Pair<List<DisplayItem>, List<ClaimItem>> args)
@@ -344,7 +344,7 @@ public Pair<List<DisplayItem>, DiffUtil.DiffResult> onBackground(
 
 1.  现在你有了当前显示给用户的`List`和需要显示的`List`，是时候计算它们之间的差异了。为了保持完全通用，`DiffUtil`定义了一个回调接口，用于查询两个列表的详细信息。在`UpdateDisplayListCommand`类中，我们将简单地使用匿名内部类：
 
-```kt
+```java
 final DiffUtil.DiffResult result =
       DiffUtil.calculateDiff(new DiffUtil.Callback() {
   @Override
@@ -360,7 +360,7 @@ final DiffUtil.DiffResult result =
 
 1.  `Callback`实现还需要一个方法来比较两个不同位置的项目，以查看它们是否看起来是相同的项。首先，我们需要检查它们的布局是否看起来相同。如果布局不相同，我们可以确信它们不是同一个对象。如果布局相同，那么我们可以查看布局整数作为`DisplayItem`对象中数据类型的指示器。如果是`ClaimItem`，我们使用对象的数据库 ID 来查看它们是否代表数据库中的相同记录：
 
-```kt
+```java
 @Override
 public boolean areItemsTheSame(
     final int oldItemPosition,
@@ -389,7 +389,7 @@ public boolean areItemsTheSame(
 
 1.  `Callback`还需要另一个方法来测试两个对象的实际内容是否已更改。此方法仅在`areItemsTheSame`方法返回 true 时由`DiffUtil`调用，这允许你通过假设两边代表相同的记录来在实现中采取一些捷径：
 
-```kt
+```java
 @Override
 public boolean areContentsTheSame(
     final int oldItemPosition,
@@ -414,7 +414,7 @@ public boolean areContentsTheSame(
 
 1.  这就完成了`Callback`的实现。现在，你需要通过返回一个包含新的`DisplayItem`对象列表和`DiffResult`的`Pair`来关闭`onBackground`方法：
 
-```kt
+```java
   }); // end of the DiffUtil.Callback implementation
 
   return Pair.create(newDisplay, result);
@@ -423,7 +423,7 @@ public boolean areContentsTheSame(
 
 1.  在`UpdateDisplayListCommand`类的`onForeground`方法中，你需要将新的`DisplayItem`对象列表分配给`ClaimItemAdapter`，就像之前一样。然而，你不需要通知`RecyclerView`整个模型已更改，而是可以使用`DiffResult`来传递你发现的一系列差异事件：
 
-```kt
+```java
 @Override
 public void onForeground(
     final Pair<List<DisplayItem>,
@@ -435,7 +435,7 @@ public void onForeground(
 
 1.  在`ClaimItemAdapter`的顶部，你现在需要一个包含新`UpdateDisplayListCommand`类实例的字段：
 
-```kt
+```java
 public class ClaimItemAdapter extends
         RecyclerView.Adapter<DataBoundViewHolder<ItemPresenter, ClaimItem>> { private final UpdateDisplayListCommand updateCommand
  = new UpdateDisplayListCommand();
@@ -447,7 +447,7 @@ public class ClaimItemAdapter extends
 
 1.  现在，在`ClaimItemAdapter`类构造函数中，`LiveData`观察者再次发生变化。如果数据来自第一次通知，计算两个列表之间的差异没有意义，但如果是在之后的任何调用中，你现在可以通过`UpdateDisplayListCommand`来运行它：
 
-```kt
+```java
 public ClaimItemAdapter(
         final Context context,
         final LifecycleOwner owner,

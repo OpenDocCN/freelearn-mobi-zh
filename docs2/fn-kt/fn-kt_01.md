@@ -36,7 +36,7 @@ Kotlin 有许多我们可以用来编写程序的构造，在本章中，我们�
 
 定义一个类只需要一个名称：
 
-```kt
+```java
 class VeryBasic
 ```
 
@@ -44,7 +44,7 @@ class VeryBasic
 
 `VeryBasic`类没有任何状态或行为；尽管如此，你仍然可以声明`VeryBasic`类型的值，如下面的代码所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val basic: VeryBasic = VeryBasic()
 }
@@ -54,7 +54,7 @@ fun main(args: Array<String>) {
 
 在 Kotlin 中，类型可以被推断；因此，前面的例子等同于以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val basic = VeryBasic()
 }
@@ -66,7 +66,7 @@ fun main(args: Array<String>) {
 
 如前所述，类可以有状态。在 Kotlin 中，类状态由**属性**表示。让我们看看蓝莓纸杯蛋糕的例子：
 
-```kt
+```java
 class BlueberryCupcake {
   var flavour = "Blueberry"
 }
@@ -76,7 +76,7 @@ class BlueberryCupcake {
 
 当然，我们可以有`BlueberryCupcake`类的实例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myCupcake = BlueberryCupcake()
     println("My cupcake has ${myCupcake.flavour}")
@@ -85,7 +85,7 @@ fun main(args: Array<String>) {
 
 现在，因为我们声明了`flavour`属性为变量，它的内部值可以在运行时被改变：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myCupcake = BlueberryCupcake()
     myCupcake.flavour = "Almond"
@@ -95,7 +95,7 @@ fun main(args: Array<String>) {
 
 在现实生活中这是不可能的。纸杯蛋糕不会改变它们的味道（除非它们变陈了）。如果我们将`flavour`属性更改为一个值，它就不能被修改：
 
-```kt
+```java
 class BlueberryCupcake {
     val flavour = "Blueberry"
 }
@@ -109,7 +109,7 @@ fun main(args: Array<String>) {
 
 让我们声明一个新的类来表示杏仁纸杯蛋糕：
 
-```kt
+```java
 class AlmondCupcake {
     val flavour = "Almond"
 }
@@ -124,7 +124,7 @@ fun main(args: Array<String>) {
 
 在现实生活中，你不需要为不同的纸杯蛋糕风味准备不同的烤盘。同一个高质量的烤盘可以用于各种风味。同样，一个设计良好的`Cupcake`类可以用于不同的实例：
 
-```kt
+```java
 class Cupcake(flavour: String) { 
   val flavour = flavour
 }
@@ -134,13 +134,13 @@ class Cupcake(flavour: String) {
 
 因为这是一个非常常见的习语，Kotlin 有一些语法糖来更简洁地定义它：
 
-```kt
+```java
 class Cupcake(val flavour: String)
 ```
 
 现在，我们可以定义具有不同风味的几个实例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myBlueberryCupcake = Cupcake("Blueberry")
     val myAlmondCupcake = Cupcake("Almond")
@@ -153,7 +153,7 @@ fun main(args: Array<String>) {
 
 在 Kotlin 中，一个类的行为由方法定义。技术上，**方法**是一个成员函数，因此，我们在以下章节中学到的关于函数的知识也适用于方法：
 
-```kt
+```java
 class Cupcake(val flavour: String) {
   fun eat(): String {
     return "nom, nom, nom... delicious $flavour cupcake"
@@ -163,7 +163,7 @@ class Cupcake(val flavour: String) {
 
 `eat()`方法返回一个`String`值。现在，让我们调用`eat()`方法，如下面的代码所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myBlueberryCupcake = Cupcake("Blueberry")
     println(myBlueberryCupcake.eat())
@@ -184,7 +184,7 @@ fun main(args: Array<String>) {
 
 让我们引入一个新的`Biscuit`类：
 
-```kt
+```java
 class Biscuit(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour biscuit" 
@@ -194,7 +194,7 @@ class Biscuit(val flavour: String) {
 
 再次，这个类看起来几乎与`Cupcake`完全相同。我们可以重构这些类以减少代码重复：
 
-```kt
+```java
 open class BakeryGood(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour bakery good" 
@@ -211,7 +211,7 @@ class Biscuit(flavour: String): BakeryGood(flavour)
 
 将常见的行为和状态移动到父类的过程称为**泛化**。让我们看一下下面的代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myBlueberryCupcake: BakeryGood = Cupcake("Blueberry")
     println(myBlueberryCupcake.eat())
@@ -224,7 +224,7 @@ fun main(args: Array<String>) {
 
 唉，这不是我们预期的。我们需要进一步折射它：
 
-```kt
+```java
 open class BakeryGood(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour ${name()}" 
@@ -264,7 +264,7 @@ class Biscuit(flavour: String): BakeryGood(flavour) {
 
 现在，我们可以有更多的面包店商品了！让我们看看下面的代码：
 
-```kt
+```java
 open class Roll(flavour: String): BakeryGood(flavour) { 
   override fun name(): String { 
     return "roll" 
@@ -276,7 +276,7 @@ class CinnamonRoll: Roll("Cinnamon")
 
 子类也可以被扩展。它们只需要被标记为 `open`：
 
-```kt
+```java
 open class Donut(flavour: String, val topping: String) : BakeryGood(flavour)
 {
     override fun name(): String {
@@ -296,7 +296,7 @@ fun main(args: Array<String>) {
 
 到目前为止，一切顺利。我们的面包店看起来不错。然而，我们当前模型有一个问题。让我们看看下面的代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val anyGood = BakeryGood("Generic flavour")
 }
@@ -304,7 +304,7 @@ fun main(args: Array<String>) {
 
 我们可以直接实例化 `BakeryGood` 类，这太通用。为了纠正这种情况，我们可以将 `BakeryGood` 标记为 `abstract`：
 
-```kt
+```java
 abstract class BakeryGood(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour ${name()}" 
@@ -324,7 +324,7 @@ abstract class BakeryGood(val flavour: String) {
 
 现在我们不能实例化，`BakeryGood` 类中的 `name()` 方法就不再那么有用，而且除了 `CinnamonRoll` 之外的所有子类都重写了它（`CinnamonRoll` 依赖于 `Roll` 的实现）：
 
-```kt
+```java
 abstract class BakeryGood(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour ${name()}" 
@@ -340,7 +340,7 @@ abstract class BakeryGood(val flavour: String) {
 
 让我们引入一个新的类，`Customer`；面包店总是需要顾客的：
 
-```kt
+```java
 class Customer(val name: String) {
   fun eats(food: BakeryGood) {
     println("$name is eating... ${food.eat()}")
@@ -360,7 +360,7 @@ fun main(args: Array<String>) {
 
 有一个替代方案，一个匿名子类：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val mario = Customer("Mario")
 
@@ -378,7 +378,7 @@ fun main(args: Array<String>) {
 
 记住，一个 `object` 表达式是一个实例，因此它可以用来声明值：
 
-```kt
+```java
 val food: BakeryGood = object : BakeryGood("TEST_1") { 
   override fun name(): String { 
     return "TEST_2" 
@@ -394,7 +394,7 @@ mario.eats(food)
 
 我们的面包店产品很棒，但我们需要先烹饪它们：
 
-```kt
+```java
 abstract class BakeryGood(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour ${name()}" 
@@ -412,7 +412,7 @@ abstract class BakeryGood(val flavour: String) {
 
 如果我们能把 `bake()` 方法移动到第二个抽象类 `Bakeable` 中会怎样？让我们在下面的代码中尝试一下：
 
-```kt
+```java
 abstract class Bakeable { 
   fun bake(): String { 
     return "is hot here, isn't??" 
@@ -428,7 +428,7 @@ class Cupcake(flavour: String) : BakeryGood(flavour), Bakeable() { //Compilation
 
 错误！在 Kotlin 中，一个类不能同时扩展两个类。让我们看看下面的代码：
 
-```kt
+```java
 interface Bakeable { 
   fun bake(): String { 
     return "is hot here, isn't??" 
@@ -466,7 +466,7 @@ class Cupcake(flavour: String) : BakeryGood(flavour), Bakeable {
 
 在接口中，所有方法都是公开的，没有实现的方法不需要抽象修饰符：
 
-```kt
+```java
 interface Fried { 
   fun fry(): String 
 } 
@@ -498,7 +498,7 @@ open class Donut(flavour: String, val topping: String) : BakeryGood(flavour), Fr
 
 让我们看看以下代码：
 
-```kt
+```java
 abstract class BakeryGood(val flavour: String) {
   init { 
     println("Preparing a new bakery good") 
@@ -522,7 +522,7 @@ abstract class BakeryGood(val flavour: String) {
 
 与抽象类一样，对象表达式可以与接口一起使用：
 
-```kt
+```java
 val somethingFried = object : Fried { 
   override fun fry(): String { 
     return "TEST_3" 
@@ -536,7 +536,7 @@ val somethingFried = object : Fried {
 
 对象表达式不需要扩展任何类型：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val expression = object {
         val property = ""
@@ -556,7 +556,7 @@ fun main(args: Array<String>) {
 
 有一个限制——没有类型的对象表达式只能在本地使用，即在方法内部，或者私有地，在类内部：
 
-```kt
+```java
 class Outer {
     val internal = object {
         val property = ""
@@ -576,7 +576,7 @@ fun main(args: Array<String>) {
 
 对象也可以有一个名称。这种对象被称为 **对象声明**：
 
-```kt
+```java
 object Oven {
   fun process(product: Bakeable) {
     println(product.bake())
@@ -591,7 +591,7 @@ fun main(args: Array<String>) {
 
 对象是单例；你不需要实例化 `Oven` 来使用它。对象还可以扩展其他类型：
 
-```kt
+```java
 interface Oven {
   fun process(product: Bakeable)
 }
@@ -612,7 +612,7 @@ fun main(args: Array<String>) {
 
 在类/接口内部声明的对象可以被标记为伴随对象。观察以下代码中伴随对象的使用：
 
-```kt
+```java
 class Cupcake(flavour: String) : BakeryGood(flavour), Bakeable {
   override fun name(): String { 
     return "cupcake" 
@@ -632,7 +632,7 @@ class Cupcake(flavour: String) : BakeryGood(flavour), Bakeable {
 
 现在，可以直接使用类名来使用伴随对象中的方法，而不需要实例化它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myBlueberryCupcake: BakeryGood = Cupcake("Blueberry")
     val myAlmondCupcake = Cupcake.almond()
@@ -643,7 +643,7 @@ fun main(args: Array<String>) {
 
 伴随对象的方法不能从实例中使用：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myAlmondCupcake = Cupcake.almond()
     val myCheeseCupcake = myAlmondCupcake.cheese() //Compilation error: Unresolved reference: cheese
@@ -652,7 +652,7 @@ fun main(args: Array<String>) {
 
 伴随对象可以作为具有名称 `Companion` 的值在类外部使用：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val factory: Cupcake.Companion = Cupcake.Companion
 }
@@ -660,7 +660,7 @@ fun main(args: Array<String>) {
 
 或者，`Companion` 对象也可以有一个名称：
 
-```kt
+```java
 class Cupcake(flavour: String) : BakeryGood(flavour), Bakeable {
     override fun name(): String {
         return "cupcake"
@@ -684,7 +684,7 @@ fun main(args: Array<String>) {
 
 它们也可以不命名使用，如下面的代码所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val factory: Cupcake.Factory = Cupcake
 }
@@ -702,7 +702,7 @@ Kotlin 支持泛型编程的方式是使用类型参数。简而言之，我们�
 
 以我们的 `Oven` 接口为例：
 
-```kt
+```java
 interface Oven {
   fun process(product: Bakeable)
 }
@@ -710,7 +710,7 @@ interface Oven {
 
 烤箱是一种机器，因此我们可以更广泛地推广它：
 
-```kt
+```java
 interface Machine<T> {
   fun process(product: T)
 }
@@ -720,7 +720,7 @@ interface Machine<T> {
 
 现在，我们可以用 `Oven` 来扩展它：
 
-```kt
+```java
 interface Oven: Machine<Bakeable>
 ```
 
@@ -732,7 +732,7 @@ interface Oven: Machine<Bakeable>
 
 在某种意义上，`Oven` 接口只是一个名称，代表一个 `Machine<Bakeable>`：
 
-```kt
+```java
 typealias Oven = Machine<Bakeable>
 ```
 
@@ -740,7 +740,7 @@ typealias Oven = Machine<Bakeable>
 
 类型别名也可以用来增强类型信息，提供与你的领域相关的有意义的名称：
 
-```kt
+```java
 typealias Flavour = String
 
 abstract class BakeryGood(val flavour: Flavour) {
@@ -748,13 +748,13 @@ abstract class BakeryGood(val flavour: Flavour) {
 
 它也可以用于集合：
 
-```kt
+```java
 typealias OvenTray = List<Bakeable>
 ```
 
 它也可以与对象一起使用：
 
-```kt
+```java
 typealias CupcakeFactory = Cupcake.Companion
 ```
 
@@ -762,7 +762,7 @@ typealias CupcakeFactory = Cupcake.Companion
 
 Kotlin 的一个主要特性是可空类型。**可空类型**允许我们显式地定义一个值是否可以包含或为空：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myBlueberryCupcake: Cupcake = null //Compilation error: Null can not be a value of a non-null type Cupcake
 }
@@ -770,7 +770,7 @@ fun main(args: Array<String>) {
 
 在 Kotlin 中这并不有效；`Cupcake` 类型不允许空值。要允许空值，`myBlueberryCupcake` 必须有不同的类型：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val myBlueberryCupcake: Cupcake? = null
 }
@@ -780,7 +780,7 @@ fun main(args: Array<String>) {
 
 在层次结构中，`Cupcake` 是 `Cupcake?` 的子类型。因此，在任何 `Cupcake?` 被定义的情况下，`Cupcake` 可以被使用，但反之则不行：
 
-```kt
+```java
 fun eat(cupcake: Cupcake?){
 //  something happens here    
 }
@@ -798,7 +798,7 @@ Kotlin 编译器在可空类型和非空类型实例之间做出区分。
 
 让我们以这些值为例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val cupcake: Cupcake = Cupcake.almond()
     val nullabeCupcake: Cupcake? = Cupcake.almond()
@@ -807,7 +807,7 @@ fun main(args: Array<String>) {
 
 接下来，我们将对可空类型和非空类型都调用 `eat()` 方法：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val cupcake: Cupcake = Cupcake.almond()
     val nullableCupcake: Cupcake? = Cupcake.almond()
@@ -831,7 +831,7 @@ fun main(args: Array<String>) {
 
 在 `if` 块中将空值检查作为一个条件：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val nullableCupcake: Cupcake? = Cupcake.almond()
 
@@ -847,7 +847,7 @@ Kotlin 将执行智能转换。在 `if` 块内部，`nullableCupcake` 是 `Cupca
 
 这与上一个类似，但它直接检查类型：
 
-```kt
+```java
 if (nullableCupcake is Cupcake) {
   nullableCupcake.eat()
 }
@@ -855,7 +855,7 @@ if (nullableCupcake is Cupcake) {
 
 它也可以与 `when` 一起使用：
 
-```kt
+```java
 when (nullableCupcake) {
   is Cupcake -> nullableCupcake.eat()
 }
@@ -867,13 +867,13 @@ when (nullableCupcake) {
 
 **安全调用**允许在值非空时访问可空值的属性和方法（在底层，在字节码级别，安全调用被转换为 `if(x != null)`）：
 
-```kt
+```java
 nullableCupcake?.eat()
 ```
 
 但是，如果你在表达式中使用它呢？
 
-```kt
+```java
 val result: String? = nullableCupcake?.eat()
 ```
 
@@ -881,7 +881,7 @@ val result: String? = nullableCupcake?.eat()
 
 这样就打开了在链上使用安全调用的机会，如下所示：
 
-```kt
+```java
 val length: Int? = nullableCupcake?.eat()?.length
 ```
 
@@ -889,7 +889,7 @@ val length: Int? = nullableCupcake?.eat()?.length
 
 Elvis 操作符（`?:`）在表达式中使用空值时返回一个替代值：
 
-```kt
+```java
 val result2: String = nullableCupcake?.eat() ?: ""
 ```
 
@@ -897,7 +897,7 @@ val result2: String = nullableCupcake?.eat() ?: ""
 
 显然，Elvis 运算符可以与一系列安全调用一起使用：
 
-```kt
+```java
 val length2: Int = nullableCupcake?.eat()?.length ?: 0
 ```
 
@@ -905,13 +905,13 @@ val length2: Int = nullableCupcake?.eat()?.length ?: 0
 
 而不是`null`值，`!!`运算符将抛出一个 NPE：
 
-```kt
+```java
 val result: String = nullableCupcake!!.eat()
 ```
 
 如果你能够处理 NPE，则`!!`运算符提供了一个相当方便的功能，即免费智能转换：
 
-```kt
+```java
 val result: String = nullableCupcake!!.eat()
 
 val length: Int = nullableCupcake.eat().length
@@ -941,7 +941,7 @@ Kotlin 中的所有类型都扩展自`Any`类型（等等，实际上这不是�
 
 我们创建的每个类和接口都隐式扩展了`Any`。因此，如果我们编写一个接受`Any`作为参数的方法，它将接收任何值：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
     val myAlmondCupcake = Cupcake.almond()
@@ -962,7 +962,7 @@ fun main(args: Array<String>) {
 
 可空值呢？让我们看看它：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
     val anyMachine = object : Machine<Any> {
@@ -985,7 +985,7 @@ fun main(args: Array<String>) {
 
 让我们看看一个模糊表达式的例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val nullableCupcake: Cupcake? = Cupcake.almond()
 
@@ -995,7 +995,7 @@ fun main(args: Array<String>) {
 
 `length`的类型是什么？`Int`还是`String`？不，`length`值的类型是`Any`。这很合理。`Int`和`String`之间的最小公共类型是`Any`。到目前为止，一切顺利。现在让我们看看以下代码：
 
-```kt
+```java
 val length = nullableCupcake?.eat()?.length ?: 0.0
 ```
 
@@ -1003,7 +1003,7 @@ val length = nullableCupcake?.eat()?.length ?: 0.0
 
 错误的，`length`仍然是`Any`。Kotlin 在这些情况下不会搜索最小公共类型。如果你想得到一个特定的类型，它必须被显式声明：
 
-```kt
+```java
 val length: Number = nullableCupcake?.eat()?.length ?: 0.0
 ```
 
@@ -1015,7 +1015,7 @@ Kotlin 没有`void`返回值的方法（就像 Java 或 C 那样）。相反，�
 
 `Unit`，就像任何其他 Kotlin 类型一样，从`Any`扩展而来，并且可以是可空的。`Unit?`看起来很奇怪且不必要，但这是为了与类型系统保持一致性。拥有一致的类型系统有多个优点，包括更好的编译时间和工具支持：
 
-```kt
+```java
 anyMachine.process(Unit)
 ```
 
@@ -1027,7 +1027,7 @@ anyMachine.process(Unit)
 
 `Nothing` 代表一个无法执行的表达式（基本上是抛出异常）：
 
-```kt
+```java
 val result: String = nullableCupcake?.eat() ?: throw RuntimeException() // equivalent to nullableCupcake!!.eat()
 ```
 
@@ -1037,7 +1037,7 @@ val result: String = nullableCupcake?.eat() ?: throw RuntimeException() // equiv
 
 `Nothing?` 是空值的类型：
 
-```kt
+```java
 val x: Nothing? = null
 
 val nullsList: List<Nothing?> = listOf(null)
@@ -1053,7 +1053,7 @@ val nullsList: List<Nothing?> = listOf(null)
 
 Kotlin 有一种特定的类用于此目的：
 
-```kt
+```java
 data class Item(val product: BakeryGood,
   val unitPrice: Double,
   val quantity: Int)
@@ -1087,7 +1087,7 @@ data class Item(val product: BakeryGood,
 
 有时，我们希望重用现有实例的值。`copy()` 方法允许我们创建数据类的新实例，并覆盖我们想要的参数：
 
-```kt
+```java
 val myItem = Item(myAlmondCupcake, 0.40, 5)
 
 val mySecondItem = myItem.copy(product = myCaramelCupcake) //named parameter
@@ -1101,19 +1101,19 @@ val mySecondItem = myItem.copy(product = myCaramelCupcake) //named parameter
 
 Kotlin 将为任何数据类生成这些方法：
 
-```kt
+```java
 val (prod: BakeryGood, price: Double, qty: Int) = mySecondItem
 ```
 
 `prod` 值使用 `component1()` 的返回值初始化，`price` 使用 `component2()` 的返回值，依此类推。尽管前面的示例使用了显式类型，但这些类型不是必需的：
 
-```kt
+```java
 val (prod, price, qty) = mySecondItem
 ```
 
 在某些情况下，并不需要所有值。所有未使用的值都可以用（`_`）替换：
 
-```kt
+```java
 val (prod, _, qty) = mySecondItem
 ```
 
@@ -1123,13 +1123,13 @@ val (prod, _, qty) = mySecondItem
 
 让我们看看以下示例代码：
 
-```kt
+```java
 annotation class Tasty
 ```
 
 一个`注解`本身可以被注解来修改其行为：
 
-```kt
+```java
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class Tasty
@@ -1141,7 +1141,7 @@ annotation class Tasty
 
 注解可以有参数，但有一个限制，它们不能为空：
 
-```kt
+```java
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class Tasty(val tasty:Boolean = true)
@@ -1164,7 +1164,7 @@ interface Fried {
 
 要在运行时查询注解值，我们必须使用反射 API（`kotlin-reflect.jar`必须位于您的类路径中）：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val annotations: List<Annotation> = ElectricOven::class.annotations
 
@@ -1181,7 +1181,7 @@ fun main(args: Array<String>) {
 
 Kotlin 中的枚举是一种定义一组常量值的方式。枚举非常有用，但不仅限于配置值：
 
-```kt
+```java
 enum class Flour {
   WHEAT, CORN, CASSAVA
 }
@@ -1191,7 +1191,7 @@ enum class Flour {
 
 就像任何对象一样，它们可以扩展接口：
 
-```kt
+```java
 interface Exotic {
   fun isExotic(): Boolean
 }
@@ -1219,7 +1219,7 @@ enum class Flour : Exotic {
 
 枚举也可以有抽象方法：
 
-```kt
+```java
 enum class Flour: Exotic {
   WHEAT {
     override fun isGlutenFree(): Boolean {
@@ -1259,7 +1259,7 @@ enum class Flour: Exotic {
 
 当枚举与`when`表达式一起使用时，Kotlin 编译器会检查所有情况是否都已覆盖（单独或使用`else`）：
 
-```kt
+```java
 fun flourDescription(flour: Flour): String {
   return when(flour) { // error
     Flour.CASSAVA -> "A very exotic flavour"
@@ -1269,7 +1269,7 @@ fun flourDescription(flour: Flour): String {
 
 在这个例子中，我们只检查了`CASSAVA`，而没有检查其他元素；因此，它失败了：
 
-```kt
+```java
 fun flourDescription(flour: Flour): String {
   return when(flour) {
     Flour.CASSAVA -> "A very exotic flavour"

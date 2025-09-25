@@ -356,7 +356,7 @@ Flyng 的动态使其成为一个很好的盈利产品。类别卡片可以通�
 
 如你所见，我们使用 CocoaPods 添加了一些第三方依赖项，例如 Parse 和 QuickBlox SDK。如你所见，我还使用了 Facebook 和 Crashlytics 作为参考：
 
-```kt
+```java
 target 'flyng' do 
   use_frameworks! 
   pod 'Fabric' 
@@ -380,7 +380,7 @@ target 'flyng' do
 
 只为了给你一个概念，这里展示了其中一些可用的方法：
 
-```kt
+```java
 import UIKit 
 protocol RepositoryProtocol { 
     func authenticate (handler: RepositoryResultDelegate, request: AuthenticateRequest) 
@@ -404,7 +404,7 @@ protocol RepositoryProtocol {
 
 从应用的角度来看，这只是一个提供正确数据和消费服务器上云函数产生的结果的问题。例如，以下是调用云函数的方式：
 
-```kt
+```java
  func getCandidates (handler: RepositoryResultDelegate, request: GetCandidatesRequest){  
   let params =   
   [ 
@@ -432,7 +432,7 @@ protocol RepositoryProtocol {
 
 我们在发布每个候选版本之前都会进行测试，但即便如此，在野外使用时仍然可能发生崩溃。如果发生这种情况，Crashlytics 就会提供帮助。它易于实现，并且能为你提供大量关于崩溃的洞察（包括堆栈跟踪）：
 
-```kt
+```java
 func application(application: UIApplication,           
      didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {         
         ...         
@@ -447,7 +447,7 @@ func application(application: UIApplication,
 
 我们还使用 Fabric 来衡量应用程序的使用情况，例如测量在一定时间内注册了多少人：
 
-```kt
+```java
 AnalyticsUtil.logEvent(AnalyticsUtil.eventSignupFacebook) 
 
 static func logEvent(event: String){ 

@@ -46,45 +46,45 @@
 
 1.  添加以下依赖项，并检查项目的正确版本号，`1.1.0`：
 
-    ```kt
+    ```java
     implementation "androidx.compose.material3:material3-window-size-class:1.1.0"
     ```
 
 1.  当确保我们的代码具有适应性时，我们必须记住，响应式 UI 在手机旋转、折叠或展开时保留数据。最重要的是确保我们处理了姿势。我们将创建一个函数，`cityPosture`，它接受 `FoldingFeature` 作为输入并返回一个布尔值：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalContracts::class)
     ```
 
-    ```kt
+    ```java
     fun cityPosture(foldFeature: FoldingFeature?): Boolean {
     ```
 
-    ```kt
+    ```java
         contract { returns(true) implies (foldFeature !=
     ```
 
-    ```kt
+    ```java
             null) }
     ```
 
-    ```kt
+    ```java
         return foldFeature?.state ==
     ```
 
-    ```kt
+    ```java
             FoldingFeature.State.HALF_OPENED &&
     ```
 
-    ```kt
+    ```java
                 foldFeature.orientation ==
     ```
 
-    ```kt
+    ```java
                     FoldingFeature.Orientation.VERTICAL
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -92,137 +92,137 @@
 
 1.  接下来，我们需要涵盖 `isSeparating`，它监听 `FLAT` *完全打开* 和 `isSeparating` 布尔值，这计算了是否应该考虑 `FoldingFeature`，将窗口分割成多个用户可以视为逻辑上独立的物理区域：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalContracts::class)
     ```
 
-    ```kt
+    ```java
     fun separating(foldFeature: FoldingFeature?): Boolean {
     ```
 
-    ```kt
+    ```java
         contract { returns(true) implies (foldFeature !=
     ```
 
-    ```kt
+    ```java
             null) }
     ```
 
-    ```kt
+    ```java
         return foldFeature?.state ==
     ```
 
-    ```kt
+    ```java
             FoldingFeature.State.FLAT &&
     ```
 
-    ```kt
+    ```java
                 foldFeature.isSeparating
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们还将创建一个密封的接口，`DevicePosture`。这是一个 Jetpack Compose UI 组件，允许你检测设备的姿势或方向，例如设备是处于纵向还是横向模式：
 
-    ```kt
+    ```java
     sealed interface DevicePosture {
     ```
 
-    ```kt
+    ```java
         object NormalPosture : DevicePosture
     ```
 
-    ```kt
+    ```java
         data class CityPosture(
     ```
 
-    ```kt
+    ```java
             val hingePosition: Rect
     ```
 
-    ```kt
+    ```java
         ) : DevicePosture
     ```
 
-    ```kt
+    ```java
         data class Separating(
     ```
 
-    ```kt
+    ```java
             val hingePosition: Rect,
     ```
 
-    ```kt
+    ```java
             var orientation: FoldingFeature.Orientation
     ```
 
-    ```kt
+    ```java
         ) : DevicePosture
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在我们的 `MainActivity` 中，我们现在需要确保我们计算窗口大小：
 
-    ```kt
+    ```java
     val windowSize = calculateWindowSizeClass(activity = this)
     ```
 
 1.  然后，我们将通过创建 `postureStateFlow` 来确保我们处理所有尺寸，它将监听我们的 `DevicePosture`，并在 `cityPosture` 是折叠、展开或正常时采取行动：
 
-    ```kt
+    ```java
     val postureStateFlow = WindowInfoTracker.getOrCreate(this).windowLayoutInfo(this)
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
-    ```kt
+    ```java
     when {
     ```
 
-    ```kt
+    ```java
         cityPosture(foldingFeature) ->
     ```
 
-    ```kt
+    ```java
           DevicePosture.CityPosture(foldingFeature.bounds)
     ```
 
-    ```kt
+    ```java
         separating(foldingFeature) ->
     ```
 
-    ```kt
+    ```java
           DevicePosture.Separating(foldingFeature.bounds,
     ```
 
-    ```kt
+    ```java
             foldingFeature.orientation)
     ```
 
-    ```kt
+    ```java
         else -> DevicePosture.NormalPosture
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
-    ```kt
+    ```java
         )
     ```
 
@@ -296,37 +296,37 @@ Jetpack Compose，一个用于构建优秀 UI 的声明式 UI 工具包，非常
 
 1.  让我们继续打开`Traveller`。添加一个新的包，命名为`constraintllayoutexample`。在包内部，创建一个名为`ConstraintLayoutExample`的 Kotlin 文件，然后向项目中添加以下依赖项：
 
-    ```kt
+    ```java
     implementation "Androidx.constraintlayout:constraintlayout-compose:1.x.x"
     ```
 
 1.  在我们的示例中，我们将创建一个有趣的`AndroidCommunity()`，并使用`ConstraintLayout`创建`title`、`aboutCommunity`和`AndroidImage`引用：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun AndroidCommunity() {
     ```
 
-    ```kt
+    ```java
         ConstraintLayout {
     ```
 
-    ```kt
+    ```java
             val (title, aboutCommunity, AndroidImage) =
     ```
 
-    ```kt
+    ```java
                 createRefs()
     ```
 
-    ```kt
+    ```java
      . . .
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -334,59 +334,59 @@ Jetpack Compose，一个用于构建优秀 UI 的声明式 UI 工具包，非常
 
 1.  现在，让我们继续创建我们的标题文本`aboutCommunity`和`AndroidImage`：
 
-    ```kt
+    ```java
     Text(
     ```
 
-    ```kt
+    ```java
         text = stringResource(id =
     ```
 
-    ```kt
+    ```java
             R.string.Android_community),
     ```
 
-    ```kt
+    ```java
         modifier = Modifier.constrainAs(title) {
     ```
 
-    ```kt
+    ```java
             top.linkTo(parent.top)
     ```
 
-    ```kt
+    ```java
             start.linkTo(parent.start)
     ```
 
-    ```kt
+    ```java
             end.linkTo(parent.end)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
             .padding(top = 12.dp),
     ```
 
-    ```kt
+    ```java
         style = TextStyle(
     ```
 
-    ```kt
+    ```java
             color = Color.Blue,
     ```
 
-    ```kt
+    ```java
             fontSize = 24.sp
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     )
     ```
 
@@ -394,7 +394,7 @@ Jetpack Compose，一个用于构建优秀 UI 的声明式 UI 工具包，非常
 
 我们现在可以使用类似的方式将各个部分连接起来，此外，请确保您检查整个代码的*技术要求*部分：
 
-```kt
+```java
 Text(
     text = stringResource(id =
        R.string.about_community),
@@ -414,81 +414,81 @@ Text(
 
 1.  然后，我们构建图像：
 
-    ```kt
+    ```java
     Image(
     ```
 
-    ```kt
+    ```java
         painter = painterResource(id =
     ```
 
-    ```kt
+    ```java
             R.drawable.Android),
     ```
 
-    ```kt
+    ```java
         contentDescription = stringResource(id =
     ```
 
-    ```kt
+    ```java
             R.string.Android_image),
     ```
 
-    ```kt
+    ```java
         modifier = Modifier.constrainAs(AndroidImage) {
     ```
 
-    ```kt
+    ```java
             top.linkTo(aboutCommunity.bottom,
     ```
 
-    ```kt
+    ```java
                 margin = 16.dp)
     ```
 
-    ```kt
+    ```java
             centerHorizontallyTo(parent)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
 1.  最后，要运行这段代码，您可以运行`@Preview`部分：
 
-    ```kt
+    ```java
     @Preview(showBackground = true)
     ```
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun ShowAndroidCommunity() {
     ```
 
-    ```kt
+    ```java
         TravellerTheme() {
     ```
 
-    ```kt
+    ```java
             AndroidCommunity()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -548,89 +548,89 @@ Text(
 
 1.  要使用`rememberFoldableState`，我们需要将其导入到我们的项目中：
 
-    ```kt
+    ```java
     import Androidx.window.layout.FoldableState
     ```
 
 1.  然后，我们将创建一个新的`val/属性 foldableState`并将其初始化为我们的`rememberFoldableState`：
 
-    ```kt
+    ```java
     val foldState = rememberFoldableState()
     ```
 
 1.  使用`foldState`对象，我们可以获取有关可折叠设备的信息，使我们的应用程序能够响应正确的状态，并根据需要显示数据。可用的三种状态是`STATE_FLAT`、`STATE_HALF_OPENED`和`STATE_CLOSED`：
 
-    ```kt
+    ```java
     when (foldState.state) {
     ```
 
-    ```kt
+    ```java
         FoldableState.STATE_FLAT -> {
     ```
 
-    ```kt
+    ```java
             // Our Device is flat (unfolded)do something
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         FoldableState.STATE_HALF_OPENED -> {
     ```
 
-    ```kt
+    ```java
             //Our Device is partially folded. Do something
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         FoldableState.STATE_CLOSED -> {
     ```
 
-    ```kt
+    ```java
             //Our Device is fully folded do something
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们可以使用这些信息相应地调整我们的 UI，例如根据可折叠状态或指定位置显示或隐藏某些元素。此外，我们可以为设备折叠和展开时创建两个不同的布局：
 
-    ```kt
+    ```java
     val isFolded = foldState.state == FoldableState.STATE_CLOSED
     ```
 
-    ```kt
+    ```java
     if (isFolded) {
     ```
 
-    ```kt
+    ```java
         // Create our layout for when the device is folded
     ```
 
-    ```kt
+    ```java
     } else {
     ```
 
-    ```kt
+    ```java
         // Create our layout for when the device is
     ```
 
-    ```kt
+    ```java
            unfolded
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -660,7 +660,7 @@ Compose 的布局系统使得创建能够适应不同屏幕尺寸和宽高比的
 
 让我们看看在活动中嵌入一个可组合函数的示例：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -709,63 +709,63 @@ Compose 中的**材料主题**是由 Google 引入的设计系统，它提供了
 
 1.  你需要在你的应用程序的 `build.gradle` 文件中添加所需的 `Material 3` 依赖项：
 
-    ```kt
+    ```java
     implementation 'Androidx.compose.material3:material3:1.0.0-alpha14'
     ```
 
 1.  然后，你需要声明你的应用程序主题：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun MyAppMaterialTheme(content: @Composable () -> Unit) {
     ```
 
-    ```kt
+    ```java
         MaterialTheme(
     ```
 
-    ```kt
+    ```java
             colorScheme = /**/,
     ```
 
-    ```kt
+    ```java
             typography = /**/,
     ```
 
-    ```kt
+    ```java
             shapes = /**/,
     ```
 
-    ```kt
+    ```java
             content = content
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，你可以在整个应用程序中使用你的主题：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun MyApp() {
     ```
 
-    ```kt
+    ```java
         MyAppMaterialTheme {}
     ```
 
-    ```kt
+    ```java
     }
     ```
 

@@ -80,7 +80,7 @@ Android 仍在以非常快的速度变化。当我完成《Android 嵌入式编�
 
 代码块设置如下：
 
-```kt
+```java
 static struct hw_module_methods_t lights_module_methods = {
   .open = open_lights,
 };
@@ -89,7 +89,7 @@ static struct hw_module_methods_t lights_module_methods = {
 
 任何命令行输入或输出都如下所示：
 
-```kt
+```java
 $ ls
 Light.java LightsManager.java LightsService.java
 

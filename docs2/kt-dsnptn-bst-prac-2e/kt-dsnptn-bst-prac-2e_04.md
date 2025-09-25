@@ -42,43 +42,43 @@
 
 假设我们有一个相当简单的类，它注册了星际迷航宇宙中的所有船长及其船只：
 
-```kt
+```java
 open class StarTrekRepository {
 ```
 
-```kt
+```java
     private val starshipCaptains = mutableMapOf("USS 
 ```
 
-```kt
+```java
         Enterprise" to "Jean-Luc Picard")
 ```
 
-```kt
+```java
     open fun getCaptain(starshipName: String): String {
 ```
 
-```kt
+```java
         return starshipCaptains[starshipName] ?: "Unknown"
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     open fun addCaptain(starshipName: String, captainName:         String) {
 ```
 
-```kt
+```java
         starshipCaptains[starshipName] = captainName
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -104,11 +104,11 @@ open class StarTrekRepository {
 
 Elvis 操作符的目标是在我们收到空值时提供一个默认值。再次看看 `getCaptain` 函数，看看这是如何实现的。该函数的 *去糖化* 形式如下：
 
-```kt
+```java
 return if (starshipCaptains[starshipName] == null) 
 ```
 
-```kt
+```java
     "Unknown" else starshipCaptains[starshipName]
 ```
 
@@ -118,31 +118,31 @@ return if (starshipCaptains[starshipName] == null)
 
 让我们回到手头的任务。由于我们的类及其方法被声明为公开的，我们可以扩展这个类并覆盖我们需要的函数：
 
-```kt
+```java
 class LoggingGetCaptainStarTrekRepository : 
 ```
 
-```kt
+```java
   StarTrekRepository() {
 ```
 
-```kt
+```java
     override fun getCaptain(starshipName: String): String {
 ```
 
-```kt
+```java
         println("Getting captain for $starshipName")
 ```
 
-```kt
+```java
         return super.getCaptain(starshipName)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -150,43 +150,43 @@ class LoggingGetCaptainStarTrekRepository :
 
 注意我们是如何通过使用 `super` 关键字将实现委托给父类的。然而，第二天，你的老板（抱歉，*敏捷大师*）又来要求另一个功能。在添加船长时，我们需要检查他们的名字长度不超过 15 个字符。这可能对一些克林贡人来说是个问题，但你决定无论如何都要实现它。顺便说一下，这个功能不应与之前开发的日志记录功能相关。有时我们只想记录日志，有时我们只想进行验证。所以，我们的新类将如下所示：
 
-```kt
+```java
 class ValidatingAddCaptainStarTrekRepository : 
 ```
 
-```kt
+```java
   StarTrekRepository() {
 ```
 
-```kt
+```java
     override fun addCaptain(starshipName: String, 
 ```
 
-```kt
+```java
         captainName: String) {
 ```
 
-```kt
+```java
         if (captainName.length > 15) {
 ```
 
-```kt
+```java
             throw RuntimeException("$captainName is longer                 than 20 characters!")
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         super.addCaptain(starshipName, captainName)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -200,87 +200,87 @@ class ValidatingAddCaptainStarTrekRepository :
 
 我们首先将 `StarTrekRepository` 转换为一个接口：
 
-```kt
+```java
 interface StarTrekRepository {
 ```
 
-```kt
+```java
     fun getCaptain(starshipName: String): String
 ```
 
-```kt
+```java
     fun addCaptain(starshipName: String, captainName:         String)
 ```
 
-```kt
+```java
     }
 ```
 
 然后，我们将使用之前的逻辑实现该接口：
 
-```kt
+```java
 class DefaultStarTrekRepository : StarTrekRepository {
 ```
 
-```kt
+```java
     private val starshipCaptains = mutableMapOf("USS Enter         prise" to "Jean-Luc Picard")
 ```
 
-```kt
+```java
     override fun getCaptain(starshipName: String): String {
 ```
 
-```kt
+```java
         return starshipCaptains[starshipName] ?: "Unknown"
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun addCaptain(starshipName: String, captain         Name: String) {
 ```
 
-```kt
+```java
         starshipCaptains[starshipName] = captainName
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 接下来，我们不会扩展我们的具体实现，而是实现接口并使用一个新的关键字 `by`：
 
-```kt
+```java
 class LoggingGetCaptain(private val repository:
 ```
 
-```kt
+```java
   StarTrekRepository): StarTrekRepository by repository {
 ```
 
-```kt
+```java
     override fun getCaptain(starshipName: String): String {
 ```
 
-```kt
+```java
         println("Getting captain for $starshipName")
 ```
 
-```kt
+```java
         return repository.getCaptain(starshipName)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -300,47 +300,47 @@ class LoggingGetCaptain(private val repository:
 
 为了确保我们理解这个模式，让我们实现我们的第二个装饰器：
 
-```kt
+```java
 class ValidatingAdd(private val repository: 
 ```
 
-```kt
+```java
   StarTrekRepository): StarTrekRepository by repository {
 ```
 
-```kt
+```java
     private val maxNameLength = 15
 ```
 
-```kt
+```java
     override fun addCaptain(starshipName: String,
 ```
 
-```kt
+```java
         captainName: String) {
 ```
 
-```kt
+```java
         require (captainName.length < maxNameLength) {
 ```
 
-```kt
+```java
             "$captainName name is longer than                 $maxNameLength characters!"
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         repository.addCaptain(starshipName, captainName)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -348,29 +348,29 @@ class ValidatingAdd(private val repository:
 
 让我们看看它是如何工作的：
 
-```kt
+```java
 val starTrekRepository = DefaultStarTrekRepository()
 ```
 
-```kt
+```java
 val withValidating = ValidatingAdd(starTrekRepository)
 ```
 
-```kt
+```java
 val withLoggingAndValidating =     LoggingGetCaptain(withValidating)
 ```
 
-```kt
+```java
 withLoggingAndValidating.getCaptain("USS Enterprise")
 ```
 
-```kt
+```java
 withLoggingAndValidating.addCaptain("USS Voyager",    "Kathryn Janeway")
 ```
 
 最后一行将抛出异常：
 
-```kt
+```java
 > Kathryn Janeway name is longer than 15 characters!
 ```
 
@@ -380,39 +380,39 @@ withLoggingAndValidating.addCaptain("USS Voyager",    "Kathryn Janeway")
 
 让我们再次看看提取的接口。在这里，我们描述了通常与数组/映射访问和赋值相关的基本映射操作。在 Kotlin 中，我们有一些称为`DefaultStarTrekRepository`的语法糖，我们可以看到在 Kotlin 中处理映射是非常直观的：
 
-```kt
+```java
 starshipCaptains[starshipName]
 ```
 
-```kt
+```java
 starshipCaptains[starshipName] = captainName
 ```
 
 如果我们能够像使用地图一样使用我们的仓库，那将很有用：
 
-```kt
+```java
 withLoggingAndValidating["USS Enterprise"]
 ```
 
-```kt
+```java
 withLoggingAndValidating["USS Voyager"] = "Kathryn Janeway"
 ```
 
 使用 Kotlin，我们实际上可以非常容易地实现这种行为。首先，让我们改变我们的接口：
 
-```kt
+```java
 interface StarTrekRepository {
 ```
 
-```kt
+```java
     operator fun get(starshipName: String): String
 ```
 
-```kt
+```java
     operator fun set(starshipName: String, captainName:         String)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -420,17 +420,17 @@ interface StarTrekRepository {
 
 大多数编程语言都支持某种形式的操作符重载。让我们以**Java**为例，看看以下两行代码：
 
-```kt
+```java
 System.out.println(1 + 1); // Prints 2 
 ```
 
-```kt
+```java
 System.out.println("1" + "1") // Prints 11
 ```
 
 我们可以看到，`+`操作符根据参数是字符串还是整数而表现出不同的行为。也就是说，它可以添加两个数字，也可以连接两个字符串。你可以想象，*加*操作可以在其他类型上定义。例如，使用相同的操作符连接两个列表是非常有意义的：
 
-```kt
+```java
 List.of("a") + List.of("b")
 ```
 
@@ -438,7 +438,7 @@ List.of("a") + List.of("b")
 
 让我们看看另一个极端，**Scala**编程语言。在 Scala 中，任何一组字符都可以被定义为操作符。因此，你可能会遇到以下这样的代码：
 
-```kt
+```java
 Seq("a") ==== Seq("b") // You'll have to guess what   this code does
 ```
 
@@ -452,35 +452,35 @@ Kotlin 在这两种方法之间采取中间立场。它允许你重载某些 **�
 
 首先，你无法看到装饰器的 **内部**。这意味着没有办法知道它包装了哪个特定的对象：
 
-```kt
+```java
 println(withLoggingAndValidating is LoggingGetCaptain)
 ```
 
-```kt
+```java
 // This is our top level decorator, no problem here
 ```
 
-```kt
+```java
 println(withLoggingAndValidating is StarTrekRepository)
 ```
 
-```kt
+```java
 // This is the interface we implement, still no problem
 ```
 
-```kt
+```java
 println(withLoggingAndValidating is ValidatingAdd)
 ```
 
-```kt
+```java
 // We wrap this class, but compiler cannot validate it
 ```
 
-```kt
+```java
 println(withLoggingAndValidating is DefaultStarTrekRepository)
 ```
 
-```kt
+```java
 // We wrap this class, but compiler cannot validate it
 ```
 
@@ -490,7 +490,7 @@ println(withLoggingAndValidating is DefaultStarTrekRepository)
 
 例如，如果你想高效地读取文件，你可以使用 `BufferedReader`，它将另一个读取器作为其构造函数参数：
 
-```kt
+```java
 val reader = BufferedReader(FileReader("/some/file"))
 ```
 
@@ -510,125 +510,125 @@ val reader = BufferedReader(FileReader("/some/file"))
 
 `USPlug` 假设电源是 `Int`。如果它有电源，其值为 `1`；如果没有，则值为任何其他值：
 
-```kt
+```java
 interface USPlug {
 ```
 
-```kt
+```java
     val hasPower: Int
 ```
 
-```kt
+```java
 }
 ```
 
 `EUPlug` 将电源视为 `String`，其值为 `TRUE` 或 `FALSE`：
 
-```kt
+```java
 interface EUPlug {
 ```
 
-```kt
+```java
     val hasPower: String // "TRUE" or "FALSE"
 ```
 
-```kt
+```java
 }
 ```
 
 对于 `UsbMini`，电源是一个 `enum`：
 
-```kt
+```java
 interface UsbMini {
 ```
 
-```kt
+```java
     val hasPower: Power
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 enum class Power {
 ```
 
-```kt
+```java
     TRUE, FALSE
 ```
 
-```kt
+```java
 }
 ```
 
 最后，对于 `UsbTypeC`，电源是一个 `Boolean` 值：
 
-```kt
+```java
 interface UsbTypeC {
 ```
 
-```kt
+```java
     val hasPower: Boolean
 ```
 
-```kt
+```java
 }
 ```
 
 我们的目标是将美国电源插座中的功率值传输到我们的手机上，这将被这个函数表示：
 
-```kt
+```java
 fun cellPhone(chargeCable: UsbTypeC) {
 ```
 
-```kt
+```java
     if (chargeCable.hasPower) {
 ```
 
-```kt
+```java
         println("I've Got The Power!")
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
         println("No power")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 让我们先声明一下在我们的代码中美国电源插座将是什么样子。它将是一个返回`USPlug`的函数：
 
-```kt
+```java
 // Power outlet exposes USPlug interface
 ```
 
-```kt
+```java
 fun usPowerOutlet(): USPlug {
 ```
 
-```kt
+```java
     return object : USPlug {
 ```
 
-```kt
+```java
         override val hasPower = 1
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -636,61 +636,61 @@ fun usPowerOutlet(): USPlug {
 
 我们的可充电器将是一个函数，它以`EUPlug`作为输入并输出`UsbMini`：
 
-```kt
+```java
 // Charger accepts EUPlug interface and exposes UsbMini 
 ```
 
-```kt
+```java
 // interface
 ```
 
-```kt
+```java
 fun charger(plug: EUPlug): UsbMini {
 ```
 
-```kt
+```java
     return object : UsbMini {
 ```
 
-```kt
+```java
         override val hasPower=Power.valueOf(plug.hasPower)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 接下来，让我们尝试组合我们的`cellPhone`、`charger`和`usPowerOutlet`函数：
 
-```kt
+```java
 cellPhone(
 ```
 
-```kt
+```java
     // Type mismatch: inferred type is UsbMini but     // UsbTypeC was expected
 ```
 
-```kt
+```java
     charger(
 ```
 
-```kt
+```java
         // Type mismatch: inferred type is USPlug but         // EUPlug was expected
 ```
 
-```kt
+```java
         usPowerOutlet()
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
 )
 ```
 
@@ -704,31 +704,31 @@ cellPhone(
 
 我们可以通过定义以下扩展函数来使 US 插头与 EU 插头兼容：
 
-```kt
+```java
 fun USPlug.toEUPlug(): EUPlug {
 ```
 
-```kt
+```java
     val hasPower = if (this.hasPower == 1) "TRUE" else       "FALSE"
 ```
 
-```kt
+```java
     return object : EUPlug {
 ```
 
-```kt
+```java
         // Transfer power
 ```
 
-```kt
+```java
         override val hasPower = hasPower
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -736,49 +736,49 @@ fun USPlug.toEUPlug(): EUPlug {
 
 我们可以用类似的方式在 Mini USB 和 USB-C 实例之间创建一个 USB 适配器：
 
-```kt
+```java
 fun UsbMini.toUsbTypeC(): UsbTypeC {
 ```
 
-```kt
+```java
     val hasPower = this.hasPower == Power.TRUE
 ```
 
-```kt
+```java
     return object : UsbTypeC {
 ```
 
-```kt
+```java
         override val hasPower = hasPower
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 最后，我们可以通过组合所有这些适配器来重新上线：
 
-```kt
+```java
 cellPhone(
 ```
 
-```kt
+```java
     charger(
 ```
 
-```kt
+```java
         usPowerOutlet().toEUPlug()
 ```
 
-```kt
+```java
     ).toUsbTypeC()
 ```
 
-```kt
+```java
 )
 ```
 
@@ -792,31 +792,31 @@ cellPhone(
 
 我们已经讨论了`listOf()`函数：
 
-```kt
+```java
 val list = listOf("a", "b", "c")
 ```
 
 **流**是一个*延迟*的元素集合。你不能简单地将一个集合传递给接收流的函数，即使这可能是有意义的：
 
-```kt
+```java
 fun printStream(stream: Stream<String>) {
 ```
 
-```kt
+```java
     stream.forEach(e -> println(e))
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 printStream(list) // Doesn't compile
 ```
 
 幸运的是，集合为我们提供了`.stream()`适配器方法：
 
-```kt
+```java
 printStream(list.stream()) // Adapted successfully
 ```
 
@@ -828,11 +828,11 @@ printStream(list.stream()) // Adapted successfully
 
 如果你不够小心，你的代码也可能发生这种情况。以下示例使用另一个适配器，它也能编译：
 
-```kt
+```java
 val stream = Stream.generate { 42 } 
 ```
 
-```kt
+```java
 stream.toList()
 ```
 
@@ -846,149 +846,149 @@ stream.toList()
 
 我们从一个接口开始：
 
-```kt
+```java
 interface Trooper {
 ```
 
-```kt
+```java
     fun move(x: Long, y: Long)
 ```
 
-```kt
+```java
     fun attackRebel(x: Long, y: Long)
 ```
 
-```kt
+```java
 }
 ```
 
 我们将为不同类型的冲锋队员创建多个实现：
 
-```kt
+```java
 class StormTrooper : Trooper {
 ```
 
-```kt
+```java
     override fun move(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Move at normal speed
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun attackRebel(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Missed most of the time 
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class ShockTrooper : Trooper {
 ```
 
-```kt
+```java
     override fun move(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Moves slower than regular StormTrooper
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun attackRebel(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Sometimes hits
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 它们也有更强的版本：
 
-```kt
+```java
 class RiotControlTrooper : StormTrooper() {
 ```
 
-```kt
+```java
     override fun attackRebel(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Has an electric baton, stay away!
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class FlameTrooper : ShockTrooper() {
 ```
 
-```kt
+```java
     override fun attackRebel(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Uses flametrower, dangerous!
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 此外，还有能够比其他人跑得快的侦察兵：
 
-```kt
+```java
 class ScoutTrooper : ShockTrooper() {
 ```
 
-```kt
+```java
     override fun move(x: Long, y: Long) {
 ```
 
-```kt
+```java
         // Runs faster
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -996,23 +996,23 @@ class ScoutTrooper : ShockTrooper() {
 
 有一天，我们亲爱的设计师来了，要求所有的冲锋队员都应该能够喊话，每个人都会有一个不同的短语。没有多想，我们在我们的接口中添加了一个新的功能：
 
-```kt
+```java
 interface Infantry {
 ```
 
-```kt
+```java
     fun move(x: Long, y: Long) 
 ```
 
-```kt
+```java
     fun attackRebel(x: Long, y: Long)
 ```
 
-```kt
+```java
     fun shout(): String
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1030,81 +1030,81 @@ interface Infantry {
 
 假设我们想要将这些属性传递给一个实现我们一直在使用的相同接口的类的构造函数：
 
-```kt
+```java
 data class StormTrooper(
 ```
 
-```kt
+```java
     private val weapon: Weapon,
 ```
 
-```kt
+```java
     private val legs: Legs
 ```
 
-```kt
+```java
 ) : Trooper {
 ```
 
-```kt
+```java
     override fun move(x: Long, y: Long) {
 ```
 
-```kt
+```java
         legs.move(x, y)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun attackRebel(x: Long, y: Long) {
 ```
 
-```kt
+```java
         weapon.attack(x, y)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 `StormTrooper`接收的属性应该是接口，这样我们就可以稍后选择它们的实现：
 
-```kt
+```java
 typealias PointsOfDamage = Long 
 ```
 
-```kt
+```java
 typealias Meters = Int
 ```
 
-```kt
+```java
 interface Weapon {
 ```
 
-```kt
+```java
     fun attack(): PointsOfDamage
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 interface Legs {
 ```
 
-```kt
+```java
     fun move(): Meters
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1126,11 +1126,11 @@ Kotlin 允许我们为现有类型提供替代名称。这些被称为**别名**
 
 首先，让我们定义`StormTrooper`的常规伤害和速度，使用帝国单位：
 
-```kt
+```java
 const val RIFLE_DAMAGE = 3L
 ```
 
-```kt
+```java
 const val REGULAR_SPEED: Meters = 1
 ```
 
@@ -1144,79 +1144,79 @@ const val REGULAR_SPEED: Meters = 1
 
 现在，我们可以为我们的接口提供一些实现：
 
-```kt
+```java
 class Rifle : Weapon {
 ```
 
-```kt
+```java
     override fun attack(x: Long, y: Long) = RIFLE_DAMAGE
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class Flamethrower : Weapon {
 ```
 
-```kt
+```java
     override fun attack(x: Long, y: Long)= RIFLE_DAMAGE * 2
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class Batton : Weapon {
 ```
 
-```kt
+```java
     override fun attack(x: Long, y: Long)= RIFLE_DAMAGE * 3
 ```
 
-```kt
+```java
 }
 ```
 
 接下来，让我们看看我们如何移动以下内容：
 
-```kt
+```java
 class RegularLegs : Legs {
 ```
 
-```kt
+```java
     override fun move() = REGULAR_SPEED
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class AthleticLegs : Legs {
 ```
 
-```kt
+```java
     override fun move() = REGULAR_SPEED * 2
 ```
 
-```kt
+```java
 }
 ```
 
 最后，我们需要确保我们可以实现相同的功能，而不需要之前复杂类层次结构：
 
-```kt
+```java
 val stormTrooper = StormTrooper(Rifle(), RegularLegs())
 ```
 
-```kt
+```java
 val flameTrooper = StormTrooper(Flamethrower(),     RegularLegs())
 ```
 
-```kt
+```java
 val scoutTrooper = StormTrooper(Rifle(), AthleticLegs())
 ```
 
@@ -1238,89 +1238,89 @@ val scoutTrooper = StormTrooper(Rifle(), AthleticLegs())
 
 `Squad`显然是由一组风暴兵组成的：
 
-```kt
+```java
 class Squad(val units: List<Trooper>)
 ```
 
 让我们先添加几个：
 
-```kt
+```java
 val bobaFett = StormTrooper(Rifle(), RegularLegs()) 
 ```
 
-```kt
+```java
 val squad = Squad(listOf(bobaFett.copy(), bobaFett.copy(), bobaFett.copy()))
 ```
 
 为了让我们的`squad`表现得像一个单一的单元，我们将向其中添加两个名为`move`和`attack`的方法：
 
-```kt
+```java
 class Squad(private val units: List<Trooper>) {
 ```
 
-```kt
+```java
     fun move(x: Long, y: Long) {
 ```
 
-```kt
+```java
         for (u in units) {
 ```
 
-```kt
+```java
             u.move(x, y)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     fun attack(x: Long, y: Long) {
 ```
 
-```kt
+```java
         for (u in units) {
 ```
 
-```kt
+```java
             u.attackRebel(x, y)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 这两个函数都会将接收到的命令重复给它们包含的所有单位。起初，这个方法看起来似乎有效。然而，如果我们通过添加一个新函数来更改`Trooper`接口，会发生什么呢？考虑以下代码：
 
-```kt
+```java
 interface Trooper {
 ```
 
-```kt
+```java
     fun move(x: Long, y: Long)
 ```
 
-```kt
+```java
     fun attackRebel(x: Long, y: Long)
 ```
 
-```kt
+```java
     fun retreat()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1328,53 +1328,53 @@ interface Trooper {
 
 为了防止未来发生这种情况，让我们看看如果我们的`Squad`类实现了与包含的单位相同的接口会发生什么：
 
-```kt
+```java
 class Squad(private val units: List<StormTrooper>):  Trooper { ... }
 ```
 
 这个更改将迫使我们实现`retreat`函数，并用`override`关键字标记其他两个函数：
 
-```kt
+```java
 class Squad(private val units: List<StormTrooper>): Trooper {
 ```
 
-```kt
+```java
     override fun move(x: Long, y: Long) {
 ```
 
-```kt
+```java
         ...    
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun attackRebel(x: Long, y: Long) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun retreat() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1384,11 +1384,11 @@ class Squad(private val units: List<StormTrooper>): Trooper {
 
 我们的代码确实实现了其目标。然而，如果我们可以直接传递我们的风暴兵，而不是像现在这样传递风暴兵的列表给构造函数，那会更好：
 
-```kt
+```java
 val squad = Squad(bobaFett.copy(), bobaFett.copy(), 
 ```
 
-```kt
+```java
   bobaFett.copy())
 ```
 
@@ -1396,27 +1396,27 @@ val squad = Squad(bobaFett.copy(), bobaFett.copy(),
 
 到目前为止，我们一直在使用类的*主构造函数*。这是在类名之后声明的构造函数。但我们可以为类定义多个构造函数。我们可以在类体内部使用`constructor`关键字为类定义次级构造函数：
 
-```kt
+```java
 class Squad(private val units: List<Trooper>): Trooper {
 ```
 
-```kt
+```java
     constructor(): this(listOf())
 ```
 
-```kt
+```java
     constructor(t1: Trooper): this(listOf(t1))
 ```
 
-```kt
+```java
     constructor(t1: Trooper, t2: Trooper): this(listOf(t1, 
 ```
 
-```kt
+```java
       t2))
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1430,35 +1430,35 @@ class Squad(private val units: List<Trooper>): Trooper {
 
 Kotlin 为我们提供了`vararg`关键字来实现相同的目的。通过将次级构造函数与`varargs`结合，我们得到以下代码，这非常不错：
 
-```kt
+```java
 class Squad(private val units: List<Trooper>): Trooper {
 ```
 
-```kt
+```java
     constructor(vararg units: Trooper): 
 ```
 
-```kt
+```java
         this(units.toList())
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
 现在，我们能够创建包含任意数量风暴兵的班，而无需首先将它们包装在列表中：
 
-```kt
+```java
 val squad = Squad(bobaFett.copy(), bobaFett.copy(), bobaFett.copy())
 ```
 
 让我们尝试理解这是如何工作的。Kotlin 编译器将`vararg`参数转换为相同类型的`Array`：
 
-```kt
+```java
 constructor(units: Array<Trooper>) : this(units.toList())
 ```
 
@@ -1468,7 +1468,7 @@ Kotlin 中的数组有一个适配器方法，允许它们被转换为相同类�
 
 组合设计模式还有一个有趣的特性。之前，我们证明了我们可以创建包含多个风暴兵的班。我们还可以创建班的班：
 
-```kt
+```java
 val platoon = Squad(Squad(), Squad())
 ```
 
@@ -1512,51 +1512,51 @@ val platoon = Squad(Squad(), Squad())
 
 然而，在 Kotlin 中，我们有一个更好的选择，这个选择使用了一种我们在本章讨论适配器设计模式时已经讨论过的技术。我们可以将 `startFromConfiguration()` 作为 `Server` 类的一个 *扩展函数*：
 
-```kt
+```java
 @ExperimentalPathApi
 ```
 
-```kt
+```java
 fun Server.startFromConfiguration(fileLocation: String) {
 ```
 
-```kt
+```java
     val path = Path(fileLocation)
 ```
 
-```kt
+```java
     val lines = path.toFile().readLines()
 ```
 
-```kt
+```java
     val configuration = try {
 ```
 
-```kt
+```java
         JsonParser().server(lines)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     catch (e: RuntimeException) {
 ```
 
-```kt
+```java
         YamlParser().server(lines)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     Server.withPort(configuration.port)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1590,59 +1590,59 @@ fun Server.startFromConfiguration(fileLocation: String) {
 
 我们的角色有很多敌人，主要由肉食性的坦桑尼亚蜗牛组成：
 
-```kt
+```java
 class TanzanianSnail
 ```
 
 由于它是一个 2D 游戏，每只蜗牛只有两个移动方向：`LEFT`和`RIGHT`。我们可以使用`enum`类来表示这些方向：
 
-```kt
+```java
 enum class Direction {
 ```
 
-```kt
+```java
    LEFT,
 ```
 
-```kt
+```java
    RIGHT
 ```
 
-```kt
+```java
 }
 ```
 
 为了能够在屏幕上绘制自己，每只蜗牛将保存一对图像和一个方向：
 
-```kt
+```java
 class TansanianSnail {
 ```
 
-```kt
+```java
     val directionFacing = Direction.LEFT
 ```
 
-```kt
+```java
     val sprites = listOf(File("snail-left.jpg"), 
 ```
 
-```kt
+```java
                          File("snail-right.jpg"))
 ```
 
-```kt
+```java
     // More information about the state of a snail comes 
 ```
 
-```kt
+```java
         here
 ```
 
-```kt
+```java
     // This may include its health, for example
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1652,27 +1652,27 @@ class TansanianSnail {
 
 根据方向，我们可以获取当前精灵，它显示了蜗牛面向的方向，并使用它来绘制蜗牛：
 
-```kt
+```java
 fun getCurrentSprite(): File {
 ```
 
-```kt
+```java
     return when (directionFacing) {
 ```
 
-```kt
+```java
         Direction.LEFT -> sprites[0]
 ```
 
-```kt
+```java
         Direction.RIGHT -> sprites[1]
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1680,47 +1680,47 @@ fun getCurrentSprite(): File {
 
 我们希望拥有多个动画精灵来再现蜗牛在每个方向上的移动。我们可以使用`List`生成器为每只蜗牛敌人生成这样的精灵列表：
 
-```kt
+```java
 class TansanianSnail {
 ```
 
-```kt
+```java
     val directionFacing = Direction.LEFT
 ```
 
-```kt
+```java
     val sprites = List(8) { i ->
 ```
 
-```kt
+```java
         File(when(i) {
 ```
 
-```kt
+```java
             0 -> "snail-left.jpg"
 ```
 
-```kt
+```java
             1 -> "snail-right.jpg"
 ```
 
-```kt
+```java
             in 2..4 -> "snail-move-left-${i-1}.jpg"
 ```
 
-```kt
+```java
             else -> "snail-move-right${(4-i)}.jpg"
 ```
 
-```kt
+```java
         })
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1748,59 +1748,59 @@ class TansanianSnail {
 
 例如，考虑以下代码：
 
-```kt
+```java
 object SnailSprites {
 ```
 
-```kt
+```java
     val sprites = List(8) { i ->
 ```
 
-```kt
+```java
         java.io.File(when (i) {
 ```
 
-```kt
+```java
             0 -> "snail-left.jpg"
 ```
 
-```kt
+```java
             1 -> "snail-right.jpg"
 ```
 
-```kt
+```java
             in 2..4 -> "snail-move-left-${i-1}.jpg"
 ```
 
-```kt
+```java
             else -> "snail-move-right${(4-i)}.jpg"
 ```
 
-```kt
+```java
         })
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class TansanianSnail() {
 ```
 
-```kt
+```java
     val directionFacing = Direction.LEFT
 ```
 
-```kt
+```java
     val sprites = SnailSprites.sprites
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1832,31 +1832,31 @@ class TansanianSnail() {
 
 这听起来可能需要很多逻辑。但正如你可能猜到的（尤其是在遇到装饰者设计模式之后），Kotlin 可以通过减少你需要编写的样板代码来达到你的目标，从而创造奇迹：
 
-```kt
+```java
 data class CatImage(val thumbnailUrl: String,
 ```
 
-```kt
+```java
         val url: String) {
 ```
 
-```kt
+```java
     val image: ByteArray by lazy {
 ```
 
-```kt
+```java
         // Read image as bytes
 ```
 
-```kt
+```java
         URL(url).readBytes()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 

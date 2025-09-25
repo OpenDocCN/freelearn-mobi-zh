@@ -56,75 +56,75 @@ Kotlin 协程和流允许开发者使用简单、现代且可测试的代码在 
 
 代码块设置如下：
 
-```kt
+```java
 lifecycleScope.launch(Dispatchers.IO) {
 ```
 
-```kt
+```java
      val fetchedText = fetchText()
 ```
 
-```kt
+```java
      withContext(Dispatchers.Main) {
 ```
 
-```kt
+```java
            displayText(fetchedText)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 当我们希望引起你对代码块中特定部分的注意时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 private fun fetchTextWithThread() {
 ```
 
-```kt
+```java
      Thread {
 ```
 
-```kt
+```java
           // get text from network
 ```
 
-```kt
+```java
           val text = getTextFromNetwork()
 ```
 
-```kt
+```java
            runOnUiThread {
 ```
 
-```kt
+```java
  // Display on UI
 ```
 
-```kt
+```java
                 displayText(text)
 ```
 
-```kt
+```java
  }
 ```
 
-```kt
+```java
       }.start()
 ```
 
-```kt
+```java
 }
 ```
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 java.lang.IllegalStateException: Module with the Main dispatcher had failed to initialize. For tests Dispatchers.setMain from kotlinx-coroutines-test module can be used
 ```
 

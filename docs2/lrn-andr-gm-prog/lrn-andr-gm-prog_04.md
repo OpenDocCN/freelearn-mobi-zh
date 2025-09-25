@@ -116,7 +116,7 @@
 
 在这个文件中，你可以调整这些值，或者简单地添加你自己的值。比如说，如果你想添加红色，你只需将以下行添加到这段代码中，以获取红色值：
 
-```kt
+```java
 <color name="red">#ff0000</color>
 
 ```
@@ -171,7 +171,7 @@
 
 现在我们已经放置了图像资源，是时候将它们显示在我们的屏幕上了。你可以立即通过获取一个 ImageView 组件并将其属性设置为你的期望图片来实现这一点，但由于我们正在制作游戏，我们将采用*Canvas 方式*。为此，首先我们需要替换我们`FullscreenActivity.java`中的全部 Java 代码，使其看起来像这样：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.os.Bundle;
@@ -203,7 +203,7 @@ public class FullscreenActivity extends Activity{
 
 打开位于`app/manifests/`文件夹中的`AndroidManifest.xml`文件。在你的`<activity>`代码中，添加方向为横屏，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="nikhil.nikmlnkr.game">
@@ -262,7 +262,7 @@ public class FullscreenActivity extends Activity{
 
 我们的目的是在屏幕上有一个背景图片，它会连续滚动通过我们的视图。让我们首先打开我们的`BackgroundImage.java`文件，并在其中写入以下代码：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Bitmap;
@@ -328,7 +328,7 @@ public class BackgroundImage {
 
 因此，打开你的`MainGameThread.java`文件，并输入以下内容：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 import android.graphics.Canvas;
 import android.view.SurfaceHolder;
@@ -423,7 +423,7 @@ public class MainGameThread extends Thread
 
 通过这样做，我们现在已经准备好了我们的线程类，最后只剩下我们的`GameView`类。在我们的`GameView`中，我们将实际上把我们在屏幕上构建的所有图像数据放上去并显示出来。所以，让我们打开`GameView.java`文件并开始输入以下内容：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.content.Context;
@@ -530,7 +530,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
 在你完成这个文件后，别忘了检查你的`FullscreenActivity.java`文件，并确保其代码看起来像这样：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.os.Bundle;

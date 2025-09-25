@@ -22,13 +22,13 @@
 
 通常，如果你有一个对象，你可以创建尽可能多的其实例。比如说，你有一个`Cat`类：
 
-```kt
+```java
 class Cat
 ```
 
 你可以生产尽可能多的其实例（具体来说，是猫），你想要多少就有多少：
 
-```kt
+```java
 val firstCat = Cat()
 val secondCat = Cat()
 val yetAnotherCat = Cat()
@@ -50,7 +50,7 @@ val yetAnotherCat = Cat()
 
 Kotlin 只是为这个引入了一个保留关键字。看，一个如下所示的对象：
 
-```kt
+```java
 object MySingelton{}
 ```
 
@@ -60,12 +60,12 @@ object MySingelton{}
 
 当然，这个对象并没有做任何有趣的事情。让我们让它计算调用次数：
 
-```kt
+```java
 object CounterSingleton {
     private val counter = AtomicInteger(0)
 ```
 
-```kt
+```java
 
     fun increment() = counter.incrementAndGet()
 }
@@ -73,7 +73,7 @@ object CounterSingleton {
 
 我们现在不会测试它的线程安全性，这是一个将在第八章中讨论的主题，即*线程和协程*，它涉及到线程。现在，我们只测试它是如何调用我们的单例的：
 
-```kt
+```java
 for (i in 1..10) {
     println(CounterSingleton.increment())
 }
@@ -85,7 +85,7 @@ for (i in 1..10) {
 
 对象不能有构造函数。如果你想为你的 Singleton 添加一些初始化逻辑，比如第一次从数据库或网络上加载数据，你可以使用`init`块代替：
 
-```kt
+```java
 object CounterSingleton {
 
     init {
@@ -111,7 +111,7 @@ object CounterSingleton {
 
 假设你有一些类声明，例如：
 
-```kt
+```java
 class Cat {
     val name = "Cat"
 }
@@ -119,7 +119,7 @@ class Cat {
 
 你能写一个函数返回该类的新实例吗？大多数人都能成功：
 
-```kt
+```java
 fun catFactory() : Cat {
     return Cat()
 }
@@ -127,7 +127,7 @@ fun catFactory() : Cat {
 
 检查一切是否正常工作：
 
-```kt
+```java
 val c = catFactory() 
 println(c.name) // Indeed prints "Cat"
 ```
@@ -138,7 +138,7 @@ println(c.name) // Indeed prints "Cat"
 
 假设我们现在有一个`Dog`：
 
-```kt
+```java
 class Dog {
     val name = "Dog"
 }
@@ -146,7 +146,7 @@ class Dog {
 
 在两个类型的对象之间进行实例化选择只需要传递一个参数：
 
-```kt
+```java
 fun animalFactory(animalType: String) : Cat {
     return Cat()
 }
@@ -154,7 +154,7 @@ fun animalFactory(animalType: String) : Cat {
 
 当然，我们现在不能总是返回一个`Cat`。因此，我们创建一个公共接口来返回：
 
-```kt
+```java
 interface Animal {
    val name : String
 }
@@ -162,7 +162,7 @@ interface Animal {
 
 剩下的就是使用`when`表达式返回正确类的实例：
 
-```kt
+```java
 return when(animalType.toLowerCase()) {
     "cat" -> Cat()
     "dog" -> Dog()
@@ -178,13 +178,13 @@ return when(animalType.toLowerCase()) {
 
 当从配置创建对象时，这个模式非常有用。想象一下，我们有一个文本文件，其内容如下，来自兽医诊所：
 
-```kt
+```java
 dog, dog, cat, dog, cat, cat
 ```
 
 现在，我们希望为每种动物创建一个空配置文件。假设我们已经读取了文件内容并将它们分割成一个列表，我们可以做以下操作：
 
-```kt
+```java
 val animalTypes = listOf("dog", "dog", "cat", "dog", "cat", "cat")
 
 for (t in animalTypes) {
@@ -199,7 +199,7 @@ for (t in animalTypes) {
 
 但如果我们想为每个动物分配一个唯一的顺序标识符呢？看看下面的代码块：
 
-```kt
+```java
 interface Animal {
    val id : Int
    // Same as before
@@ -218,7 +218,7 @@ class Dog(override val id: Int) : Animal {
 
 我们的工厂现在成为一个合适的类：
 
-```kt
+```java
 class AnimalFactory { 
     var counter = 0
 
@@ -234,7 +234,7 @@ class AnimalFactory {
 
 因此，我们还需要初始化它：
 
-```kt
+```java
 val factory = AnimalFactory()
 for (t in animalTypes) {
     val c = factory.createAnimal(t) 
@@ -244,7 +244,7 @@ for (t in animalTypes) {
 
 上述代码的输出如下：
 
-```kt
+```java
 1 - Dog 
 2 - Dog 
 3 - Cat 
@@ -257,7 +257,7 @@ for (t in animalTypes) {
 
 如果我们决定支持不同的品种呢？看看下面的代码：
 
-```kt
+```java
 val animalTypes = listOf("dog" to "bulldog", 
                          "dog" to "beagle", 
                          "cat" to "persian", 
@@ -270,7 +270,7 @@ val animalTypes = listOf("dog" to "bulldog",
 
 我们可以将实际的对象实例化委托给其他工厂：
 
-```kt
+```java
 class AnimalFactory {
     var counter = 0
     private val dogFactory = DogFactory()
@@ -288,7 +288,7 @@ class AnimalFactory {
 
 工厂重复相同的模式：
 
-```kt
+```java
 class DogFactory {
     fun createDog(breed: String, id: Int) = when(breed.trim().toLowerCase()) {
         "beagle" -> Beagle(id)
@@ -302,7 +302,7 @@ class DogFactory {
 
 最后一点要注意的是我们现在如何使用一对参数调用我们的`AnimalFactory`：
 
-```kt
+```java
 for ((type, breed) in animalTypes) {
     val c = factory.createAnimal(type, breed)
     println(c.name)
@@ -315,7 +315,7 @@ for ((type, breed) in animalTypes) {
 
 静态工厂方法是由 Joshua Bloch 在他的书《Effective Java》中推广的。为了更好地理解它，让我们看看 Java 标准库本身的例子，即`valueOf()`方法：
 
-```kt
+```java
 Long l1 = new Long("1");
 Long l2 = Long.valueOf("1");
 ```
@@ -350,7 +350,7 @@ Long l2 = Long.valueOf("1");
 
 在 Java 中，静态工厂方法是声明为`static`的。但在 Kotlin 中，没有这样的关键字。相反，不属于类实例的方法可以声明在`companion`对象内部：
 
-```kt
+```java
 class NumberMaster {
     companion object {
         fun valueOf(hopefullyNumber: String) : Long {
@@ -364,13 +364,13 @@ class NumberMaster {
 
 调用`companion`对象不需要实例化一个类：
 
-```kt
+```java
 println(NumberMaster.valueOf("123")) // Prints 123
 ```
 
 此外，直接在类的实例上调用它将不起作用，这与 Java 不同：
 
-```kt
+```java
 println(NumberMaster().valueOf("123")) // Won't compile
 ```
 
@@ -380,7 +380,7 @@ println(NumberMaster().valueOf("123")) // Won't compile
 
 在 Java 中，静态工厂方法声明如下：
 
-```kt
+```java
 private static class MyClass { 
 
  // Don't want anybody to use it but me 
@@ -396,7 +396,7 @@ private static class MyClass {
 
 它们被这样称呼：
 
-```kt
+```java
 MyClass myClass = MyClass.create(); 
 ```
 
@@ -404,7 +404,7 @@ MyClass myClass = MyClass.create();
 
 我们之前在*单例*部分讨论了`object`关键字，现在我们将通过以下示例来探讨这个重要关键字的其他用法：
 
-```kt
+```java
    class NumberMaster { 
        companion object { 
            fun valueOf(hopefullyNumber: String) : Long { 
@@ -420,13 +420,13 @@ MyClass myClass = MyClass.create();
 
 就像 Java 中的静态方法一样，调用`companion`对象不需要实例化一个类：
 
-```kt
+```java
 println(NumberMaster.valueOf("123")) // Prints 123 
 ```
 
 此外，直接在类的实例上调用它将不起作用，这与 Java 不同：
 
-```kt
+```java
 println(NumberMaster().valueOf("123")) // Won't compile 
 ```
 
@@ -436,7 +436,7 @@ println(NumberMaster().valueOf("123")) // Won't compile
 
 通过使用`companion`对象，我们可以实现与 Java 中完全相同的行为：
 
-```kt
+```java
 private class MyClass private constructor() { 
 
     companion object { 
@@ -449,7 +449,7 @@ private class MyClass private constructor() {
 
 我们现在可以像以下代码所示那样实例化我们的对象：
 
-```kt
+```java
 // This won't compile 
 //val instance = MyClass() 
 
@@ -471,7 +471,7 @@ Kotlin 证明了自己是一种非常实用的语言。它里面的每一个关�
 
 我们的战略游戏将包括建筑和单位。让我们从声明所有建筑共有的内容开始：
 
-```kt
+```java
 interface Building<in UnitType, out ProducedUnit> 
         where UnitType : Enum<*>, ProducedUnit : Unit {
     fun build(type: UnitType) : ProducedUnit
@@ -486,7 +486,7 @@ interface Building<in UnitType, out ProducedUnit>
 
 我们将尝试一个示例，然后：
 
-```kt
+```java
     val listOfStrings = mutableListOf("a", "b", "c") 
 ```
 
@@ -494,13 +494,13 @@ interface Building<in UnitType, out ProducedUnit>
 
 让我们尝试以下代码行：
 
-```kt
+```java
 listOfStrings.add(1) 
 ```
 
 这行代码无法编译。那是因为 `mutableListOf()` 函数使用了泛型：
 
-```kt
+```java
 public fun <T> mutableListOf(vararg elements: T): MutableList<T> 
 ```
 
@@ -514,7 +514,7 @@ public fun <T> mutableListOf(vararg elements: T): MutableList<T>
 
 我们将创建一个名为 `Box` 的类。我知道这很无聊：
 
-```kt
+```java
 class Box<T> { 
     private var inside: T? = null 
 
@@ -527,19 +527,19 @@ class Box<T> {
 
 然而，这个盒子的好处是，通过使用泛型，我可以把它几乎任何东西放进去，例如，一只猫：
 
-```kt
+```java
 class Cat 
 ```
 
 当我创建一个盒子的实例时，我指定它可以容纳什么：
 
-```kt
+```java
 val box = Box<Cat>() 
 ```
 
 在编译时，泛型将确保它只会持有正确类型的对象：
 
-```kt
+```java
 box.put(Cat()) // This will work 
 val cat = box.get() // This will always return a Cat, because that's what our box holds 
 box.put("Cat") // This won't work, String is not a Cat 
@@ -561,7 +561,7 @@ Kotlin 使用 `in`、`out` 和 `where` 的概念。
 
 HQ 是一个可以生产其他建筑的特殊建筑。它记录了它至今为止所建造的所有建筑。同类型的建筑可以建造多次：
 
-```kt
+```java
 class HQ {
     val buildings = mutableListOf<Building<*, Unit>>()
 
@@ -583,7 +583,7 @@ class HQ {
 
 所有其他建筑都会生产单位。单位可以是陆军或装甲车辆：
 
-```kt
+```java
 interface Unit 
 
 interface Vehicle : Unit
@@ -593,7 +593,7 @@ interface Infantry : Unit
 
 陆军可以是有步枪兵或火箭兵：
 
-```kt
+```java
 class Rifleman : Infantry
 
 class RocketSoldier : Infantry
@@ -606,7 +606,7 @@ enum class InfantryUnits {
 
 在这里，我们第一次看到 `enum` 关键字。车辆可以是坦克或**装甲人员运输车**（**APCs**）：
 
-```kt
+```java
 class APC : Vehicle
 
 class Tank : Vehicle
@@ -619,7 +619,7 @@ enum class VehicleUnits {
 
 一个兵营是一个生产步兵的建筑：
 
-```kt
+```java
 class Barracks : Building<InfantryUnits, Infantry> {
     override fun build(type: InfantryUnits): Infantry {
         return when (type) {
@@ -634,7 +634,7 @@ class Barracks : Building<InfantryUnits, Infantry> {
 
 一个车辆工厂是一个生产不同类型装甲车辆的建筑：
 
-```kt
+```java
 class VehicleFactory : Building<VehicleUnits, Vehicle> {
     override fun build(type: VehicleUnits) = when (type) {
         APC -> APC()
@@ -645,7 +645,7 @@ class VehicleFactory : Building<VehicleUnits, Vehicle> {
 
 我们现在可以确保能够构建不同的单元：
 
-```kt
+```java
 val hq = HQ()
 val barracks1 = hq.buildBarracks()
 val barracks2 = hq.buildBarracks()
@@ -654,7 +654,7 @@ val vehicleFactory1 = hq.buildVehicleFactory()
 
 接下来是单元的生成：
 
-```kt
+```java
 val units = listOf(
         barracks1.build(InfantryUnits.RIFLEMEN),
         barracks2.build(InfantryUnits.ROCKET_SOLDIER),
@@ -673,7 +673,7 @@ val units = listOf(
 
 我们可以不用之前的 `buildBarracks()` 实现方式，而是有以下方式：
 
-```kt
+```java
 fun buildBarracks(): Building<InfantryUnits, Infantry> {
     val b = object : Building<InfantryUnits, Infantry> {
         override fun build(type: InfantryUnits): Infantry {
@@ -692,7 +692,7 @@ fun buildBarracks(): Building<InfantryUnits, Infantry> {
 
 如果我们的逻辑简单，我们甚至可以进一步缩短声明：
 
-```kt
+```java
 fun buildVehicleFactory(): Building<VehicleUnits, Vehicle> {
     val vf = object : Building<VehicleUnits, Vehicle> {
         override fun build(type: VehicleUnits) = when (type) {
@@ -714,7 +714,7 @@ fun buildVehicleFactory(): Building<VehicleUnits, Vehicle> {
 
 首先，`HQ` 变成了一个接口：
 
-```kt
+```java
 interface HQ {
     fun buildBarracks(): Building<InfantryUnits, Infantry>
     fun buildVehicleFactory(): Building<VehicleUnits, Vehicle>
@@ -723,7 +723,7 @@ interface HQ {
 
 之前 `HQ` 的功能现在变成了 `CatHQ`：
 
-```kt
+```java
 class CatHQ : HQ { 
 // Remember to add override to your methods
 }
@@ -757,7 +757,7 @@ class CatHQ : HQ {
 
 实际的调度逻辑将被推迟到第八章线程和协程和第九章设计用于并发，这两章讨论了调度和并发。现在，让我们看看我们的 `Mail` 类可能看起来像什么：
 
-```kt
+```java
 data class Mail(val to: String, 
            val cc: List<String>, 
            val bcc: List<String>,
@@ -781,7 +781,7 @@ Kotlin 的主要目标之一是 Java 互操作性。所以 Kotlin 集合与 Java
 
 因此，在上午 10 点，我计划在我当地的咖啡馆喝咖啡。但我也想联系我的经理，因为我的工资条昨天没有到达。我尝试创建我的第一个电子邮件如下：
 
-```kt
+```java
 val mail = Mail("manager@company.com", // TO
     null,   // CC
     null,   // BCC
@@ -791,7 +791,7 @@ val mail = Mail("manager@company.com", // TO
 
 这可能在 Java 中有效，但在 Kotlin 中不会编译，因为我们不能将 `null` 传递给 `List<String>`。空安全在 Kotlin 中非常重要：
 
-```kt
+```java
 val mail = Mail("manager@company.com", // TO
     listOf(),  // CC
     listOf(),  // BCC
@@ -805,7 +805,7 @@ Kotlin 编译器足够智能，可以推断我们传递的列表类型。由于�
 
 哦，但我忘了附件。让我们改变我们的构造函数：
 
-```kt
+```java
 data class Mail(val to: String, 
            val cc: List<String>, 
            val bcc: List<String>,
@@ -816,7 +816,7 @@ data class Mail(val to: String,
 
 但然后我们的实例化又停止编译了：
 
-```kt
+```java
 val mail = Mail("manager@company.com", // TO
     listOf(), listOf(),
     "Ping",
@@ -829,7 +829,7 @@ val mail = Mail("manager@company.com", // TO
 
 让我们尝试一种流畅的设置方法。在我们的构造函数中，我们只有必填字段，其他所有字段都将成为设置器，因此创建一个新电子邮件看起来可能像这样：
 
-```kt
+```java
 Mail("manager@company.com").title("Ping").cc(listOf<String>())
 ```
 
@@ -843,7 +843,7 @@ Mail("manager@company.com").title("Ping").cc(listOf<String>())
 
 让我们看看实现这种方法的一种方式。还有其他方便的方法来做这件事，我们将在第十章惯用和反模式中讨论：
 
-```kt
+```java
 data class Mail(// Stays the same
                 private var _message: String = "",
                 // ...) {
@@ -853,7 +853,7 @@ data class Mail(// Stays the same
     }
 ```
 
-```kt
+```java
     // Pattern repeats for every other variable
 }
 ```
@@ -866,7 +866,7 @@ data class Mail(// Stays the same
 
 和其他一些现代语言一样，Kotlin 提供了为函数参数设置 *默认值* 的能力：
 
-```kt
+```java
 data class Mail(val to: String, 
     val title: String = "",
     val message: String = "",
@@ -877,13 +877,13 @@ data class Mail(val to: String,
 
 因此，如果你想要发送一个没有 CC 的电子邮件，现在可以这样操作：
 
-```kt
+```java
 val mail = Mail("one@recepient.org", "Hi", "How are you")
 ```
 
 但是，如果你想要发送带有 BCC 的电子邮件怎么办？而且，使用流畅设置器不需要指定顺序，这非常方便。Kotlin 提供了 *命名参数* 来实现这一点：
 
-```kt
+```java
 val mail = Mail(title= "Hello", message="There", to="my@dear.cat")
 ```
 
@@ -891,7 +891,7 @@ val mail = Mail(title= "Hello", message="There", to="my@dear.cat")
 
 然后，我们可以这样创建我们的电子邮件：
 
-```kt
+```java
 val mail = Mail("hello@mail.com").apply {
     message = "Something"
     title = "Apply"
@@ -904,7 +904,7 @@ val mail = Mail("hello@mail.com").apply {
 
 让我们尝试一种流畅的设置方法，而不是这样。在我们的构造函数中，我们只有必填字段，其余的都将变成设置器。因此，要创建一个新的电子邮件，我们不再需要做以下操作：
 
-```kt
+```java
    val mail = Mail("manager@company.com") 
    mail.title("Ping") 
    mail.cc(listOf<String>()) 
@@ -912,7 +912,7 @@ val mail = Mail("hello@mail.com").apply {
 
 相反，我们将这样做：
 
-```kt
+```java
 Mail("manager@company.com").title("Ping").cc(listOf<String>())
 ```
 
@@ -928,7 +928,7 @@ Mail("manager@company.com").title("Ping").cc(listOf<String>())
 
 让我们看看实现这种方法的一种方式。还有其他方便的方法来做这件事，我们将在第十章第二百三十六部分“惯用句和反模式”中讨论：
 
-```kt
+```java
    data class Mail(// Stays the same 
                    private var _message: String = "", 
                    // ...) { 
@@ -945,7 +945,7 @@ return this }
 
 当然，我们也可以实现一个完整的构建器设计模式：
 
-```kt
+```java
 class MailBuilder(val to: String) { 
     private var mail: Mail = Mail(to) 
     fun title(title: String): MailBuilder { 
@@ -961,7 +961,7 @@ class MailBuilder(val to: String) {
 
 你可以用以下方式创建你的电子邮件：
 
-```kt
+```java
 val email = MailBuilder("hello@hello.com").title("What's up?").build()
 ```
 
@@ -989,7 +989,7 @@ val email = MailBuilder("hello@hello.com").title("What's up?").build()
 
 因此，你决定这样构建它：
 
-```kt
+```java
 data class PC(val motherboard: String = "Terasus XZ27",
              val cpu: String = "Until Atom K500",
              val ram: String = "8GB Microcend BBR5",
@@ -998,7 +998,7 @@ data class PC(val motherboard: String = "Terasus XZ27",
 
 所以当一位新顾客进来，想要尝试在邻里中大家都在谈论的这个游戏时，你只需这样做：
 
-```kt
+```java
 val pc = PC()
 ```
 
@@ -1020,7 +1020,7 @@ val pc = PC()
 
 幸运的是，Kotlin 修复了*损坏的*Java `clone()` 方法。对于数据类，有`copy()`方法，它接受一个现有的数据类，并创建它的一个新副本，在此过程中可以选择更改一些属性：
 
-```kt
+```java
 val pcFromWarehouse = PC() // Our boring PC
 
 val pwnerPC = pcFromWarehouse.copy(graphicCard = "nKCF 8999ZTXX",

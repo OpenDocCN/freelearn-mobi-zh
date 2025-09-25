@@ -44,7 +44,7 @@
 
 以下是为`BackgroundImage.java`编写的代码：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Bitmap;
@@ -79,7 +79,7 @@ public class BackgroundImage {
 
 接下来，让我们看看`GameView.java`的代码：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.content.Context;
@@ -165,7 +165,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
 我们现在将为我们的未来游戏对象创建一个抽象类，例如我们的玩家角色、导弹以及其他所有东西。我们这样做是因为有一些数据集，几乎是我们将在未来为我们的游戏创建的每个对象中都需要。因此，为了重用和持久性，我们将创建这个类。我们将称之为`GameObj.java`。按照我们之前章节中学到的步骤创建你的新类，并在其中编写以下代码：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Rect;
@@ -215,7 +215,7 @@ public abstract class GameObj {
 
 创建一个新的类，并将其命名为`PlayerCharacter.java`，然后在其中编写以下代码：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Bitmap;
@@ -310,7 +310,7 @@ private long startTime;
 
 我们的角色玩家已经准备好了；然而，我们仍然需要编写我们的 `AnimationClass`。正如你可以清楚地观察到的，你必须在 `AnimationClass` 行上得到一个错误。所以，让我们继续创建我们的 `AnimationClass.java` 文件，并在其中写入以下代码：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Bitmap;
@@ -396,7 +396,7 @@ public class AnimationClass {
 
 现在，在继续下一部分之前，确保你已经在你的 drawable 文件夹中有你想要用于玩家角色的图像。一旦你有了它，现在就是继续下一步并实例化屏幕上的玩家的时候了。这个过程与我们的背景图像相同。将你的 `GameView.java` 文件代码修改如下；与前一段代码相比，更改已被加粗显示：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.content.Context;

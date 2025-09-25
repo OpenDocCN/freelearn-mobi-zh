@@ -34,7 +34,7 @@
 
 1.  向下滚动一点，直到`try`块内部，并添加以下行：
 
-```kt
+```java
 Frame frame = mSession.update();
 ```
 
@@ -42,7 +42,7 @@ Frame frame = mSession.update();
 
 1.  `Frame`还公开了一些辅助方法；向下滚动直到你看到以下行：
 
-```kt
+```java
 mPointCloud.update(frame.getPointCloud());
 mPointCloud.draw(frame.getPointCloudPose(), viewmtx, projmtx);
 ```
@@ -71,7 +71,7 @@ mPointCloud.draw(frame.getPointCloudPose(), viewmtx, projmtx);
 
 1.  向下滚动一点，直到你看到这段代码块：
 
-```kt
+```java
 if (messageSnackbar != null) {
   for (Plane plane : session.getAllTrackables(Plane.class)) {
     if (plane.getType() == com.google.ar.core.Plane.Type.HORIZONTAL_UPWARD_FACING
@@ -87,7 +87,7 @@ if (messageSnackbar != null) {
 
 1.  然后，它将识别出的任何平面渲染成这条线：
 
-```kt
+```java
 planeRenderer.drawPlanes(
     session.getAllTrackables(Plane.class), camera.getDisplayOrientedPose(), projmtx);
 ```
@@ -116,7 +116,7 @@ planeRenderer.drawPlanes(
 
 1.  滚动到以下代码块：
 
-```kt
+```java
 MotionEvent tap = queuedSingleTaps.poll();
 if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
   for (HitResult hit : frame.hitTest(tap)) {
@@ -156,7 +156,7 @@ if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
 
 1.  向下滚动一些，直到`onDrawFrame`中的以下代码块：
 
-```kt
+```java
 // Visualize anchors created by touch.
 float scaleFactor = 1.0f;
 for (Anchor anchor : anchors) {
@@ -178,7 +178,7 @@ for (Anchor anchor : anchors) {
 
 1.  将第一行代码更改为以下内容：
 
-```kt
+```java
 float scaleFactor = 2.0f;
 ```
 
@@ -190,7 +190,7 @@ float scaleFactor = 2.0f;
 
 1.  滚动到以下代码部分：
 
-```kt
+```java
 // Set up tap listener.
 gestureDetector =
     new GestureDetector(
@@ -221,7 +221,7 @@ surfaceView.setOnTouchListener(
 
 1.  在高亮部分之后立即添加以下代码：
 
-```kt
+```java
 @Override
 public boolean onDown(MotionEvent e) { return true;} //after this section@Overridepublic void onLongPress(MotionEvent e) {
  onLongPressDown(e);
@@ -231,7 +231,7 @@ public boolean onDown(MotionEvent e) { return true;} //after this section@Overri
 
 1.  这将我们的事件发送到新的方法`onLongPressDown`。让我们在其他的处理手势的方法下面添加这个新方法，代码如下：
 
-```kt
+```java
 private void onSingleTap(MotionEvent e) {
     // Queue tap if there is space. Tap is lost if queue is full. mQueuedSingleTaps.offer(e);
 } //after this block of codeprivate void onLongPressDown(MotionEvent e) {
@@ -261,7 +261,7 @@ OpenGL ES 或简称 GLES 是 OpenGL 的精简版移动版本。OpenGL 是一个�
 
 1.  查看以下摘录中标识的行，如图所示：
 
-```kt
+```java
 GLES20.glUniform4f(colorUniform, 31.0f / 255.0f, 188.0f / 255.0f, 210.0f / 255.0f, 1.0f);
 ```
 
@@ -269,13 +269,13 @@ GLES20.glUniform4f(colorUniform, 31.0f / 255.0f, 188.0f / 255.0f, 210.0f / 255.0
 
 1.  让我们通过将那行代码更改为以下内容进行一点实验：
 
-```kt
+```java
 GLES20.glUniform4f(colorUniform, 255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f, 1.0f); 
 ```
 
 1.  接下来，我们将改变我们绘制的点的尺寸，以便它们清晰可见，通过更改以下行代码：
 
-```kt
+```java
 GLES20.glUniform1f(pointSizeUniform, 25.0f);
 ```
 
@@ -293,7 +293,7 @@ GLES20.glUniform1f(pointSizeUniform, 25.0f);
 
 那么，着色器程序看起来是什么样子？以下是一个用**OpenGL 着色语言**（**GLSL**）编写的着色器示例：
 
-```kt
+```java
 uniform mat4 u_ModelViewProjection;
 uniform vec4 u_Color;
 uniform float u_PointSize;
@@ -319,7 +319,7 @@ void main() {
 
 1.  滚动到`createOnGUIThread`方法的底部，查找以下行：
 
-```kt
+```java
 positionAttribute = GLES20.glGetAttribLocation(programName, "a_Position");
 colorUniform = GLES20.glGetUniformLocation(programName, "u_Color");
 modelViewProjectionUniform = GLES20.glGetUniformLocation(programName, "u_ModelViewProjection");
@@ -328,13 +328,13 @@ pointSizeUniform = GLES20.glGetUniformLocation(programName, "u_PointSize");
 
 1.  这些代码行设置了我们的着色器输入位置。我们在这里所做的就是确定我们需要用于将数据注入传递给着色器的数组缓冲区的索引。我们需要添加另一个输入，所以请在前面代码片段的末尾添加以下行：
 
-```kt
+```java
 furthestPoint = GLES20.glGetUniformLocation(programName, "u_FurthestPoint");
 ```
 
 1.  这行代码添加了一个名为`u_FurthestPoint`的另一个输入变量。我们需要计算用户（相机）到最远点的距离，以便在渐变上着色点。在此之前，回到文件顶部，并在识别的行下面声明以下新变量：
 
-```kt
+```java
 private int numPoints = 0; //after this line
 private int furthestPoint;
 private float furthestPointLength;
@@ -344,7 +344,7 @@ private float furthestPointLength;
 
 1.  滚动到`update`方法，在识别的行之后输入以下代码：
 
-```kt
+```java
 numPoints = lastPointCloud.getPoints().remaining() / FLOATS_PER_POINT;  //after me
 
 furthestPointLength = 1;
@@ -376,7 +376,7 @@ if(numPoints > 0) {
 
 1.  滚动到`draw`方法，并在指定的行下面添加以下代码：
 
-```kt
+```java
 GLES20.glUniform1f(mPointSizeUniform, 25.0f); //after me
 
 GLES20.glUniform1f(furthestPoint, furthestPointLength);
@@ -396,7 +396,7 @@ GLES20.glUniform1f(furthestPoint, furthestPointLength);
 
 1.  按照以下方式对高亮显示的代码进行更改：
 
-```kt
+```java
 uniform mat4 u_ModelViewProjection;
 uniform vec4 u_Color;
 uniform float u_PointSize;

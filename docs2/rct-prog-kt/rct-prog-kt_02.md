@@ -48,7 +48,7 @@ Lisp 和 Haskell 是一些最古老的语言，并且至今仍在学术界和工
 
 Lambda 或 Lambda 表达式通常意味着 *匿名函数*，即没有名称的函数。你也可以说 Lambda 表达式是一个函数，但并非每个函数都是 Lambda 表达式。并非每种编程语言都支持 Lambda 表达式，例如，Java 直到 Java 8 才有这个功能。Lambda 表达式的实现也因语言而异。Kotlin 对 Lambda 表达式有很好的支持，在 Kotlin 中实现它们既简单又自然。现在让我们看看 Kotlin 中 Lambda 表达式是如何工作的：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val sum = { x: Int, y: Int -> x + y } // (1) 
       println("Sum ${sum(12,14)}")// (2) 
@@ -68,7 +68,7 @@ Lambda 或 Lambda 表达式通常意味着 *匿名函数*，即没有名称的�
 
 纯函数的定义是，如果函数的返回值完全依赖于其参数/输入，那么这个函数可以被称为纯函数。所以，如果我们声明一个函数为 `fun func1(x:Int):Int`，那么它的返回值将严格依赖于其参数 `x`；比如说，如果你两次调用 `func1` 并传入值 `3`，那么两次的返回值将是相同的。纯函数可以是 Lambda 或命名函数。在前面的例子中，第一个 Lambda 表达式是一个纯函数，但第二个不是，因为对于第二个来说，即使传入相同的值，其返回值也可能在不同时间不同。让我们看看以下例子来更好地理解它：
 
-```kt
+```java
     fun square(n:Int):Int {//(1) 
       return n*n 
     } 
@@ -90,7 +90,7 @@ Lambda 或 Lambda 表达式通常意味着 *匿名函数*，即没有名称的�
 
 以下是输出：
 
-```kt
+```java
 named pure func square = 9
 lambda pure func qube = 27 
 ```
@@ -99,7 +99,7 @@ lambda pure func qube = 27
 
 那些接受另一个函数作为参数或返回函数作为结果的函数被称为**高阶函数**。考虑以下示例以更好地理解它：
 
-```kt
+```java
     fun highOrderFunc(a:Int, validityCheckFunc:(a:Int)->Boolean) {//(1) 
       if(validityCheckFunc(a)) {//(2) 
         println("a $a is Valid") 
@@ -120,7 +120,7 @@ lambda pure func qube = 27
 
 这里是输出：
 
-```kt
+```java
 a 12 is Valid 
 a 19 is Invalid 
 ```
@@ -129,7 +129,7 @@ a 19 is Invalid
 
 虽然函数是编写模块化代码的绝佳方式，但它有时可能会因为函数栈维护和开销而增加程序执行时间并减少内存优化。内联函数是避免函数式编程中这些障碍的绝佳方法。例如，请参见以下代码片段：
 
-```kt
+```java
     fun doSomeStuff(a:Int = 0) = a+(a*a) 
 
     fun main(args: Array<String>) { 
@@ -143,7 +143,7 @@ a 19 is Invalid
 
 上述程序声明了一个函数，用于添加两个数字并返回结果，我们将在循环中调用这个函数。而不是为这个目的声明一个函数，我们可以在将要调用函数的地方直接编写加法代码，但声明一个函数让我们可以在不影响剩余代码的情况下随时修改加法逻辑，例如，如果我们想修改加法为乘法或其他操作。如果我们将函数声明为内联的，那么该函数内部的代码将替换所有的函数调用，从而在保持自由度的同时提高性能。以下代码片段作为例子：
 
-```kt
+```java
     inline fun doSomeStuff(a:Int = 0) = a+(a*a) 
 
     fun main(args: Array<String>) { 
@@ -159,7 +159,7 @@ a 19 is Invalid
 
 Kotlin 通过内联函数提供的一个额外功能是，如果你将一个高阶函数声明为`inline`，那么`inline`关键字将影响该函数本身以及传递给它的 lambda。让我们用`inline`修改高阶函数的代码：
 
-```kt
+```java
     inline fun highOrderFuncInline(a:Int, validityCheckFunc:(a:Int)- 
     >Boolean) { 
       if(validityCheckFunc(a)) { 
@@ -181,7 +181,7 @@ Kotlin 通过内联函数提供的一个额外功能是，如果你将一个高�
 
 因此，现在，在尝试理解上一章中的`ReactiveCalculator`类之后，我们将尝试优化代码。让我们首先看看`ReactiveCalculator`类的`init`块：
 
-```kt
+```java
     init{ 
       nums = Pair(a,b) 
 
@@ -209,7 +209,7 @@ Kotlin 通过内联函数提供的一个额外功能是，如果你将一个高�
 
 因此，现在，有了函数式编程的知识，我们可以轻松地说，`map`和`subscribe`方法是接受函数作为参数的高阶函数。然而，你真的认为需要很多`subject`和`subscriber`吗？类上的`subscriber`不就足够完成这项工作了吗？让我们尝试修改和优化以下代码片段：
 
-```kt
+```java
     class ReactiveCalculator(a:Int, b:Int) { 
       val subjectCalc: io.reactivex.subjects.Subject
       <ReactiveCalculator>   = 
@@ -298,7 +298,7 @@ Kotlin 通过内联函数提供的一个额外功能是，如果你将一个高�
 
 因此，我们移除了所有其他的`subscriber`，只用一个来完成工作。以下是输出结果：
 
-```kt
+```java
 Initial Output with a = 15, b = 10
 Add = 25
 Substract = 5
@@ -334,7 +334,7 @@ exit
 
 因此，让我们先将其添加到我们的项目中。如果你正在使用 Gradle，请按照以下步骤操作（`apply plugin` 可以是 `'kotlin'` 或 `'kotlin-android'`，具体取决于你是否用于 JVM 或 Android）：
 
-```kt
+```java
     apply plugin: 'kotlin' 
 
     kotlin { 
@@ -346,7 +346,7 @@ exit
 
 然后，我们必须添加以下依赖项：
 
-```kt
+```java
     repositories { 
       ... 
       jcenter() 
@@ -359,7 +359,7 @@ exit
 
 如果你正在使用 Maven，那么请在 `pom.xml` 文件中添加以下代码块：
 
-```kt
+```java
     <plugin> 
       <groupId>org.jetbrains.kotlin</groupId> 
       <artifactId>kotlin-maven-plugin</artifactId> 
@@ -395,7 +395,7 @@ Apache Maven 是一个软件项目管理与理解工具。基于**项目对象�
 
 因此，让我们考虑以下示例：
 
-```kt
+```java
     suspend fun longRunningTsk():Long {//(1) 
       val time = measureTimeMillis {//(2) 
         println("Please wait") 
@@ -415,7 +415,7 @@ Apache Maven 是一个软件项目管理与理解工具。基于**项目对象�
 
 我们将检查代码，但首先让我们看看输出结果：
 
-```kt
+```java
 Please wait 
 Delay Over 
 Execution Time is 2018 
@@ -423,7 +423,7 @@ Execution Time is 2018
 
 因此，现在让我们来理解代码。在注释（1）中，当我们声明函数时，我们使用`suspend`关键字标记函数，这个关键字用来标记一个函数为挂起状态，即当执行函数时，程序应该等待其结果；因此，不允许在主线程中挂起函数（这为你提供了主线程和挂起函数之间清晰的障碍）。在注释（2）中，我们使用`measureTimeMillis`启动了一个代码块，并将其值赋给了`val`类型的`time`变量。`measureInMillis`的功能相当简单——它执行传递给它的代码块，同时测量其执行时间，并返回相同的值。我们将在注释（3）中使用`delay`函数故意延迟程序执行 2 秒钟。在注释（4）中的`main`函数中的`runBlocking`代码块使程序等待直到注释（5）中调用的`longRunningTsk`函数完成。所以，这是一个相当简单的例子；然而，我们在这里使主线程等待。有时，你可能不希望这样；相反，你可能想要进行异步操作。所以，让我们也尝试实现这一点：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val time = async(CommonPool) { longRunningTsk() }//(1) 
       println("Print after async ") 
@@ -443,7 +443,7 @@ Execution Time is 2018
 
 在学习我所说的内容之前，让我们做一些老式的代码，比如说斐波那契数列？以下代码块作为例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       var a = 0 
       var b = 1 
@@ -461,7 +461,7 @@ Execution Time is 2018
 
 所以，这是用 Kotlin 编写的老式斐波那契数列程序。当你计划让用户输入要打印的数字数量时，这段代码会变得更有问题。如果我告诉你 Kotlin 有一个`buildSequence`函数可以为你完成这个任务，而且做得非常自然，方式也更简单？所以，现在让我们修改代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val fibonacciSeries = buildSequence {//(1) 
         var a = 0 
@@ -484,7 +484,7 @@ Execution Time is 2018
 
 以下是对两个程序输出的描述：
 
-```kt
+```java
 0, 1, 1, 2, 3, 5, 8, 13, 21, 34 
 ```
 
@@ -496,7 +496,7 @@ Execution Time is 2018
 
 到目前为止，在`ReactiveCalculator`程序中，我们都在同一个线程上执行所有操作；你不认为我们应该异步地做这些事情吗？所以，让我们这样做：
 
-```kt
+```java
     class ReactiveCalculator(a:Int, b:Int) { 
       val subjectCalc:
       io.reactivex.subjects.Subject<ReactiveCalculator> =
@@ -605,7 +605,7 @@ Execution Time is 2018
 
 函数式编程没有单子是不完整的。如果你对函数式编程感兴趣，那么你非常了解它；否则，你可能是第一次听说。那么，什么是单子呢？让我们来了解一下。单子的概念相当抽象；定义说“单子是一个结构，通过封装一个值并添加一些额外的功能来创建一个新的类型”。所以，让我们先使用单子；看看下面的程序：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val maybeValue: Maybe<Int> = Maybe.just(14)//1 
       maybeValue.subscribeBy(//2 
@@ -626,7 +626,7 @@ Execution Time is 2018
 
 让我们逐步分析程序，以便更好地理解单子。在注释（1）中，我们将声明一个`Maybe`单子并将其赋值为`14`。在注释（2）中，我们将订阅这个单子。在注释（3）中，我们再次声明一个`Maybe`单子，这次赋予一个空值。订阅需要三个 lambda 表达式作为参数——当单子包含一个值时，`onSuccess`会被调用；当它不包含任何值时，`onComplete`会被调用；如果发生任何错误，则`onError`会被调用。现在让我们看看输出结果：
 
-```kt
+```java
 Completed with value 14 
 Completed Empty 
 ```

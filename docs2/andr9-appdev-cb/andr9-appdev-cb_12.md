@@ -72,7 +72,7 @@
 
 1.  打开`activity_main.xml`并用以下按钮替换现有的`TextView`：
 
-```kt
+```java
 <Button
     android:id="@+id/button1"
     android:layout_width="wrap_content"
@@ -90,14 +90,14 @@
 
 1.  现在，打开`ActivityMain.java`并添加以下全局变量：
 
-```kt
+```java
 HashMap<Integer, Integer> mHashMap= null;
 SoundPool mSoundPool;
 ```
 
 1.  修改现有的`onCreate()`方法如下：
 
-```kt
+```java
 final Button button1 = findViewById(R.id.button1);
 button1.setEnabled(false);
 final Button button2 = findViewById(R.id.button2);
@@ -122,7 +122,7 @@ mHashMap.put(2, mSoundPool.load(this, R.raw.sound_2, 1));
 
 1.  添加`createSoundPoolNew()`方法：
 
-```kt
+```java
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 private void createSoundPoolNew() {
     AudioAttributes audioAttributes = new AudioAttributes.Builder()
@@ -138,7 +138,7 @@ private void createSoundPoolNew() {
 
 1.  添加`createSoundPoolOld()`方法：
 
-```kt
+```java
 @SuppressWarnings("deprecation")
 private void createSoundPoolOld(){
     mSoundPool = new SoundPool(2, AudioManager.STREAM_MUSIC, 0);
@@ -147,7 +147,7 @@ private void createSoundPoolOld(){
 
 1.  添加按钮的`onClick()`方法：
 
-```kt
+```java
 public void playSound1(View view){
     mSoundPool.play(mHashMap.get(1), 0.1f, 0.1f, 1, 0, 1.0f);
 }
@@ -158,7 +158,7 @@ public void playSound2(View view){
 
 1.  如此覆盖`onStop()`回调：
 
-```kt
+```java
 @Override
 protected void onStop() {
     mSoundPool.release();
@@ -186,7 +186,7 @@ protected void onStop() {
 
 如果你只需要一个基本的音效，例如点击声，你可以使用`AudioManager`的`playSoundEffect()`方法。以下是一个示例：
 
-```kt
+```java
 AudioManager audioManager =(AudioManager)
 this.getSystemService(Context.AUDIO_SERVICE);
 audioManager.playSoundEffect(SoundEffectConstants.CLICK);
@@ -258,7 +258,7 @@ audioManager.playSoundEffect(SoundEffectConstants.CLICK);
 
 1.  打开 `activity_main.xml` 并将现有的 `TextView` 替换为以下按钮：
 
-```kt
+```java
 <Button
     android:id="@+id/buttonPlay"
     android:layout_width="100dp"
@@ -283,13 +283,13 @@ audioManager.playSoundEffect(SoundEffectConstants.CLICK);
 
 1.  现在，打开 `ActivityMain.java` 并添加以下全局变量：
 
-```kt
+```java
 MediaPlayer mMediaPlayer;
 ```
 
 1.  添加 `buttonPlay()` 方法：
 
-```kt
+```java
 public void buttonPlay(View view){
     if (mMediaPlayer==null) {
         mMediaPlayer = MediaPlayer.create(this, R.raw.sound_1);
@@ -303,7 +303,7 @@ public void buttonPlay(View view){
 
 1.  添加 `buttonPause()` 方法：
 
-```kt
+```java
 public void buttonPause(View view){
     if (mMediaPlayer!=null && mMediaPlayer.isPlaying()) {
         mMediaPlayer.pause();
@@ -313,7 +313,7 @@ public void buttonPause(View view){
 
 1.  添加 `buttonStop()` 方法：
 
-```kt
+```java
 public void buttonStop(View view){
     if (mMediaPlayer!=null) {
         mMediaPlayer.stop();
@@ -325,7 +325,7 @@ public void buttonStop(View view){
 
 1.  最后，使用以下代码覆盖 `onStop()` 回调：
 
-```kt
+```java
 @Override
 protected void onStop() {
     super.onStop();
@@ -348,7 +348,7 @@ protected void onStop() {
 
 为了使我们的演示更容易理解，我们使用 UI 线程进行所有操作。对于此示例，使用项目中的短音频文件，我们不太可能遇到任何 UI 延迟。通常，在准备 `MediaPlayer` 时使用后台线程是一个好主意。为了使这个常见任务更容易，`MediaPlayer` 已经包含了一个名为 `prepareAsync()` 的异步准备方法。以下代码将创建一个 `OnPreparedListener()` 监听器并使用 `prepareAsync()` 方法：
 
-```kt
+```java
 mMediaPlayer = new MediaPlayer();
 mMediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
     @Override
@@ -374,7 +374,7 @@ mMediaPlayer.prepareAsync();
 
 如果你希望音量控制可以控制你应用中的音量，请使用 `setVolumeControlStream()` 方法指定你的应用程序的音频流，如下所示：
 
-```kt
+```java
 setVolumeControlStream(AudioManager.STREAM_MUSIC);
 ```
 
@@ -404,13 +404,13 @@ setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
 1.  在依赖关系部分添加以下库：
 
-```kt
+```java
 implementation 'com.android.support:support-v13:28.0.0-rc02'
 ```
 
 1.  接下来，打开 `ActivityMain.java` 并将以下 `mMediaSessionCallback` 添加到类声明中：
 
-```kt
+```java
 MediaSessionCompat.Callback mMediaSessionCallback = new MediaSessionCompat.Callback() {
     @Override
     public void onPlay() {
@@ -437,7 +437,7 @@ MediaSessionCompat.Callback mMediaSessionCallback = new MediaSessionCompat.Callb
 
 1.  将以下代码添加到现有的 `onCreate()` 回调中：
 
-```kt
+```java
 MediaSessionCompat mediaSession = 
         new MediaSessionCompat(this, getApplication().getPackageName());
 mediaSession.setCallback(mMediaSessionCallback);
@@ -480,7 +480,7 @@ mediaSession.setPlaybackState(state);
 
 如果你想让你的应用根据当前输出硬件的不同而以不同的方式响应，你可以使用 `AudioManager` 来检查。以下是一个示例：
 
-```kt
+```java
 AudioManager audioManager =(AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
 if (audioManager.isBluetoothA2dpOn()) {
     // Adjust output for Bluetooth.
@@ -520,13 +520,13 @@ if (audioManager.isBluetoothA2dpOn()) {
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 ```
 
 1.  打开 `activity_main.xml` 并用以下视图替换现有的 TextView：
 
-```kt
+```java
 <android.support.v7.widget.AppCompatImageView
  android:id="@+id/imageView"
  android:layout_width="wrap_content"
@@ -548,14 +548,14 @@ if (audioManager.isBluetoothA2dpOn()) {
 
 1.  打开 `MainActivity.java` 并将以下全局变量添加到 `MainActivity` 类中：
 
-```kt
+```java
 final int PHOTO_RESULT=1;
 private Uri mLastPhotoURI=null;
 ```
 
 1.  添加以下方法以创建照片的 URI：
 
-```kt
+```java
 private Uri createFileURI() {
     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
             .format(System.currentTimeMillis());
@@ -567,7 +567,7 @@ private Uri createFileURI() {
 
 1.  添加以下方法以处理按钮点击：
 
-```kt
+```java
 public void takePicture(View view) {
     Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
     if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -580,7 +580,7 @@ public void takePicture(View view) {
 
 1.  添加一个新方法以覆盖 `onActivityResult()`，如下所示：
 
-```kt
+```java
 @Override
 protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     if (requestCode == PHOTO_RESULT && resultCode == RESULT_OK ) {
@@ -592,7 +592,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 7. 将以下代码添加到现有的 `onCreate()` 方法末尾：
 
-```kt
+```java
 StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
 StrictMode.setVmPolicy(builder.build());
 
@@ -617,7 +617,7 @@ if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_ST
 
 如果你不在乎图片存储在哪里，你可以不使用 `MediaStore.EXTRA_OUTPUT` 额外信息调用 Intent。如果你不指定输出文件，`onActivityResult()` 将在数据 Intent 中包含图像的缩略图。以下是如何显示缩略图的方法：
 
-```kt
+```java
 if (data != null) {
     imageView.setImageBitmap((Bitmap) data.getExtras().get(“data”));
 }
@@ -625,7 +625,7 @@ if (data != null) {
 
 这里是加载全分辨率图像的代码，使用在 data Intent 中返回的 URI：
 
-```kt
+```java
 if (data != null) {
     try {
         imageView.setImageBitmap(
@@ -641,13 +641,13 @@ if (data != null) {
 
 如果你想调用默认的视频捕获应用程序，过程是相同的。只需在步骤 5 中更改 Intent，如下所示：
 
-```kt
+```java
 Intent takeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
 ```
 
 你可以在 `onActivityResult()` 中获取视频的 URI，如下所示：
 
-```kt
+```java
 Uri videoUri = intent.getData();
 ```
 
@@ -673,14 +673,14 @@ Uri videoUri = intent.getData();
 
 1.  添加以下两个权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 ```
 
 1.  现在，打开 `activity_main.xml` 并将现有的 TextView 替换为以下视图：
 
-```kt
+```java
 <TextureView
     android:id="@+id/textureView"
     android:layout_width="match_parent"
@@ -702,7 +702,7 @@ Uri videoUri = intent.getData();
 
 1.  现在，打开 `MainActivity.java` 并将以下全局变量添加到 `MainActivity` 类中：
 
-```kt
+```java
 private CameraDevice mCameraDevice = null;
 private CaptureRequest.Builder mCaptureRequestBuilder = null;
 private CameraCaptureSession mCameraCaptureSession  = null;
@@ -712,7 +712,7 @@ private Size mPreviewSize = null;
 
 1.  将以下 `Comparator` 类添加到 `MainActivity` 类中：
 
-```kt
+```java
 static class CompareSizesByArea implements Comparator<Size> {
     @Override
     public int compare(Size lhs, Size rhs) {
@@ -724,7 +724,7 @@ static class CompareSizesByArea implements Comparator<Size> {
 
 1.  添加以下 `CameraCaptureSession.StateCallback`：
 
-```kt
+```java
 private CameraCaptureSession.StateCallback mPreviewStateCallback = new CameraCaptureSession.StateCallback() {
     @Override
     public void onConfigured(CameraCaptureSession session) {
@@ -737,7 +737,7 @@ private CameraCaptureSession.StateCallback mPreviewStateCallback = new CameraCap
 
 1.  添加以下 `SurfaceTextureListener`：
 
-```kt
+```java
 private TextureView.SurfaceTextureListener mSurfaceTextureListener =
         new TextureView.SurfaceTextureListener() {
             @Override
@@ -764,7 +764,7 @@ private TextureView.SurfaceTextureListener mSurfaceTextureListener =
 
 1.  添加 `CameraDevice.StateCallback` 如下：
 
-```kt
+```java
 private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
     @Override
     public void onOpened(CameraDevice camera) {
@@ -800,7 +800,7 @@ private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallba
 
 1.  添加以下 `CaptureCallback` 类以接收捕获完成事件：
 
-```kt
+```java
 final CameraCaptureSession.CaptureCallback mCaptureCallback = 
         new CameraCaptureSession.CaptureCallback() {
     @Override
@@ -817,7 +817,7 @@ final CameraCaptureSession.CaptureCallback mCaptureCallback =
 
 1.  将以下代码添加到现有的 `onCreate()` 回调中：
 
-```kt
+```java
 mTextureView = findViewById(R.id.textureView);
 mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
 
@@ -829,7 +829,7 @@ if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
 
 1.  将以下方法添加以重写 `onPause()` 和 `onResume()`：
 
-```kt
+```java
 @Override
 protected void onPause() {
     super.onPause();
@@ -852,7 +852,7 @@ public void onResume() {
 
 1.  添加 `openCamera()` 方法：
 
-```kt
+```java
 private void openCamera() {
     CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
     try{
@@ -872,7 +872,7 @@ private void openCamera() {
 
 1.  添加 `startPreview()` 方法：
 
-```kt
+```java
 private void startPreview(CameraCaptureSession session) {
     mCameraCaptureSession = session;
     mCaptureRequestBuilder.set(CaptureRequest.CONTROL_MODE, 
@@ -894,7 +894,7 @@ private void startPreview(CameraCaptureSession session) {
 
 1.  添加 `getPictureFile()` 方法：
 
-```kt
+```java
 private File getPictureFile() {
     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
             .format(System.currentTimeMillis());
@@ -906,7 +906,7 @@ private File getPictureFile() {
 
 1.  添加以下方法以保存图像文件：
 
-```kt
+```java
 private void saveImage(ImageReader reader) {
     Image image = null;
     try {
@@ -931,7 +931,7 @@ private void saveImage(ImageReader reader) {
 
 1.  添加以下方法以处理按钮点击：
 
-```kt
+```java
 public void takePictureClick(View view) {
     if (null == mCameraDevice) {
         return;
@@ -942,7 +942,7 @@ public void takePictureClick(View view) {
 
 1.  添加最终代码以实际设置相机并拍照：
 
-```kt
+```java
 private void takePicture() {
     CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
     try {

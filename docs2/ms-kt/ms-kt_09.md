@@ -50,7 +50,7 @@
 
 1.  让我们从将权限添加到清单文件开始。我们将请求访问用户位置的权限。为此，我们在清单文件中添加以下权限：
 
-    ```kt
+    ```java
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     ```
 
@@ -60,7 +60,7 @@
 
 1.  让我们在`view`包中创建一个名为`PermissionDialog.kt`的新文件，并将实用函数添加到该文件中：
 
-    ```kt
+    ```java
     fun checkIfPermissionGranted(context: Context, permission: String): Boolean {
         return (ContextCompat.checkSelfPermission(context, permission)
                 == PackageManager.PERMISSION_GRANTED)
@@ -82,7 +82,7 @@
 
 1.  在`data`包中创建一个名为`PermissionAction.kt`的新文件，并将以下代码添加到该文件中：
 
-    ```kt
+    ```java
     sealed class PermissionAction {
         data object PermissionGranted : PermissionAction()
         data object PermissionDenied : PermissionAction()
@@ -93,7 +93,7 @@
 
 1.  接下来，让我们创建一个用于请求用户权限的对话框。返回到 `PermissionDialog.kt` 文件，并向文件中添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun PermissionDialog(
         context: Context,
@@ -173,7 +173,7 @@
 
 1.  让我们转到 `PetsScreen.kt` 文件，并将其修改为以下内容：
 
-    ```kt
+    ```java
     @Composable
     fun PetsScreen(
         onPetClicked: (Cat) -> Unit,

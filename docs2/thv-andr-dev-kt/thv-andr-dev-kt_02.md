@@ -142,7 +142,7 @@ Android Studio 是官方标准的 **集成开发环境**（**IDE**）用于开�
 
 下一步是设置模块之间的依赖关系。我们将在每个模块的 `build.gradle` 文件中执行此操作。例如，在 `:app` 模块的 `build.gradle` 文件中，在 `dependencies` 部分包含以下代码：
 
-```kt
+```java
 dependencies {
     implementation project(':feature:chat')
     implementation project(':feature:conversations')
@@ -173,7 +173,7 @@ dependencies {
 
 1.  将 Hilt Gradle 插件添加到你的项目级别的 **build.gradle** 文件中（将 **[版本]** 替换为你可用的最新版本）：
 
-    ```kt
+    ```java
     buildscript {
         repositories {
             google()
@@ -187,7 +187,7 @@ dependencies {
 
 1.  在你的应用级别的 **build.gradle** 文件中应用 Hilt Gradle 插件并启用视图绑定：
 
-    ```kt
+    ```java
     apply plugin: 'kotlin-kapt'
     apply plugin: 'dagger.hilt.android.plugin'
     android {
@@ -207,7 +207,7 @@ dependencies {
 
 1.  最后，在我们的 **:app** 模块中创建一个 **Application** 类。**Application** 类作为维护全局应用状态的基础类（这指的是在整个应用生命周期中需要维护的数据或设置）。虽然它不是默认创建的，但创建一个自定义的 **Application** 类对于初始化任务至关重要，例如设置依赖注入框架或初始化库。在这个特定实例中，为了让 Hilt 正常工作，你应该使用 **@HiltAndroidApp** 注解来标注你的 **Application** 类：
 
-    ```kt
+    ```java
     @HiltAndroidApp
     class WhatsPacktApplication : Application() {
         // ...
@@ -240,7 +240,7 @@ dependencies {
 
 1.  首先，我们需要在我们的 Gradle 文件中包含所需的依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation "androidx.navigation:navigation-
         compose:2.5.3"
@@ -255,7 +255,7 @@ dependencies {
 
 1.  现在，创建一个**NavHost**可组合项，并提供一个**NavController**实例。**NavHost**可组合项充当管理应用中不同可组合项之间导航的容器。它作为中央枢纽，在这里定义导航路由，并根据导航状态切换可组合项。您的应用程序中的每个屏幕或视图都对应于**NavHost**可以显示的可组合项。在这里，我们将首先创建**WhatsPacktNavigation**可组合项函数。这将负责持有**NavHost**：
 
-    ```kt
+    ```java
     import androidx.compose.runtime.Composable
     import androidx.navigation.compose.NavHost
     import
@@ -272,7 +272,7 @@ dependencies {
 
 1.  一旦我们创建了第一个屏幕（我们将称之为**MainScreen**），我们将完成**NavHost**，如下所示：
 
-    ```kt
+    ```java
         NavHost(navController = navController,
         startDestination = "start_screen") {
             composable("start_screen") {
@@ -282,7 +282,7 @@ dependencies {
 
 1.  我们还可以在路由中包含动态参数，如下所示：
 
-    ```kt
+    ```java
     NavHost(
         navController = navController,
         startDestination = "start_screen"
@@ -304,7 +304,7 @@ dependencies {
 
 `NavHost`，你需要添加一个带有你想要用于该目的地的 URI 模式的`deepLink`参数。这个模式应该包括一个方案、一个主机和一个可选的路径。在我们的例子中，如果我们有一个`ChatScreen`，它接受一个`chatId`参数，我们可以添加一个类似这样的深度链接`URI`：
 
-```kt
+```java
 NavHost(
     navController = navController,
     startDestination = "start_screen")
@@ -325,7 +325,7 @@ NavHost(
 
 为了使我们的`NavHost`更简洁，并将路由和 URI 的定义委托给每个屏幕，一个常见的做法是使用常量来定义路由。以下是一个示例：
 
-```kt
+```java
 @Composable
 fun ChatScreen(
     ...
@@ -341,7 +341,7 @@ fun ChatScreen(
 
 然后，在`NavHost`中，我们将使用这些常量来定义`uriPattern`：
 
-```kt
+```java
 composable(
     route = NavRoutes.Chat,
     arguments = listOf(
@@ -359,7 +359,7 @@ composable(
 
 而不是将此信息添加到每个屏幕，更好的选择是创建一个类，我们将把所有的路由常量放在这个类中：
 
-```kt
+```java
 object NavRoutes {
     const val ConversationsList = "conversations_list"
     const val NewConversation = "create_conversation"
@@ -374,7 +374,7 @@ object NavRoutes {
 
 我们将把这个包含此类的文件放在我们的 `:common:framework` 模块中，因为我们需要从每个功能模块访问这些常量。另一个常见的做法是创建一个专门的 `:common:navigation` 模块，并在其中添加路由定义甚至 `NavHost` 定义。在我们的情况下，我们将使用最新的方法定义路由——即路由常量：
 
-```kt
+```java
 package com.packt.whatspackt.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavGraphBuilder
@@ -402,7 +402,7 @@ fun MainNavigation(navController: NavHostController) {
 
 在我们的应用中，我们希望导航到应用的三个不同部分（会话列表、创建新聊天和单个聊天屏幕）。可以通过在 `NavGraphBuilder` 上使用扩展函数将导航目标添加到 `NavHost`。这些扩展函数定义如下：
 
-```kt
+```java
 private fun NavGraphBuilder.addConversationsList(
     navController: NavHostController
 ) {
@@ -460,7 +460,7 @@ NavHostController) {
 
 例如，我们可以创建 `ChatScreen` 并将其保留如下：
 
-```kt
+```java
 package com.packt.feature.chat.ui
 import androidx.compose.runtime.Composable
 @Composable
@@ -473,7 +473,7 @@ fun ChatScreen(
 
 我们还缺少最后一个更改（目前是这样）。我们需要在 `MainActivity` 中包含 `MainNavigation` 可组合组件作为内容：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -519,7 +519,7 @@ class MainActivity : ComponentActivity() {
 
 之前，我们创建了一个第一个屏幕的空版本（`ConversationsListScreen`），如下所示：
 
-```kt
+```java
 package com.packt.feature.conversations.ui
 import androidx.compose.runtime.Composable
 @Composable
@@ -549,7 +549,7 @@ fun ConversationsListScreen(
 
 让我们在 `ConversationsListScreen` 中创建 `Scaffold` 组合组件。我们将添加所有想要包含的组件的修饰符，但暂时将它们留空：
 
-```kt
+```java
 @Composable
 fun ConversationsListScreen(
     onNewConversationClick: () -> Unit,
@@ -592,7 +592,7 @@ fun ConversationsListScreen(
 
 然后，我们将创建一个`TopAppBar`可组合组件，同时将标题设置为`WhatsPackt`并添加带有菜单图标的`IconButton`。在这里，`IconButton`有一个`onClick`函数，您可以在按钮被点击时定义要执行的操作：
 
-```kt
+```java
 topBar = {
     TopAppBar(
         title = {
@@ -621,7 +621,7 @@ topBar = {
 
 在创建`TabRow`可组合组件之前，我们必须提供一个列表以及它将要包含的标签：
 
-```kt
+```java
 @Composable
 fun ConversationsListScreen(
     onNewConversationClick: () -> Unit,
@@ -635,7 +635,7 @@ fun ConversationsListScreen(
 
 然后，我们可以添加`TabRow`：
 
-```kt
+```java
 bottomBar = {
     TabRow(selectedTabIndex = 1) {
         tabs.forEachIndexed { index, tab ->
@@ -653,7 +653,7 @@ bottomBar = {
 
 之后，我们可以通过创建一个数据类来存储`Tab`可组合组件的标题来使我们的代码更易于阅读：
 
-```kt
+```java
 data class ConversationsListTab(
     @StringRes val title: Int
 )
@@ -674,7 +674,7 @@ fun generateTabs(): List<ConversationsListTab> {
 
 然后，我们可以更改我们的`TabRow`代码：
 
-```kt
+```java
 bottomBar = {
     TabRow(selectedTabIndex = 1) {
         tabs.forEachIndexed { index, _ ->
@@ -703,7 +703,7 @@ bottomBar = {
 
 为了做到这一点，我们可能需要调整我们在 `ConversationsListScreen` 可组合组件中的一些先前代码：
 
-```kt
+```java
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConversationsListScreen(
@@ -723,7 +723,7 @@ fun ConversationsListScreen(
 
 接下来，我们将按照以下方式将 `HorizontalPager` 添加到内容函数中：
 
-```kt
+```java
 content = { innerPadding ->
     HorizontalPager(
     modifier = Modifier.padding(innerPadding),
@@ -765,7 +765,7 @@ content = { innerPadding ->
 
 `FloatingActionButton`可组合组件是一个表示在 UI 上方浮动的圆形按钮的 Material Design 可组合组件。它通常用于促进应用中的主要操作（例如，添加新项目、编写消息或启动新流程）。遵循 Material Design 指南（您可以在[`m3.material.io/`](https://m3.material.io/)中查看），我们将使用它从`ConversationsListScreen`创建新的聊天：
 
-```kt
+```java
 floatingActionButton = {
     FloatingActionButton(
         onClick = { onNewConversationClick() }
@@ -800,7 +800,7 @@ floatingActionButton = {
 
 考虑到这些信息，我们将开始创建一个数据类来保存我们需要的数据：
 
-```kt
+```java
 data class Conversation(
     val id: String,
     val name: String,
@@ -817,7 +817,7 @@ Jetpack Compose 默认不包含从 URL 异步加载图像的支持，但有许�
 
 和往常一样，我们需要在我们的模块的`build.gradle`文件中包含依赖项：
 
-```kt
+```java
 dependencies {
 ...
 implementation "io.coil-kt:coil-compose:${latest_version}"
@@ -827,7 +827,7 @@ implementation "io.coil-kt:coil-compose:${latest_version}"
 
 到目前为止，我们已经准备好创建我们的 `Avatar` 可组合：
 
-```kt
+```java
 @Composable
 fun Avatar(
     modifier: Modifier = Modifier,
@@ -850,7 +850,7 @@ fun Avatar(
 
 现在，我们可以创建 `ConversationItem`：
 
-```kt
+```java
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -926,7 +926,7 @@ fun ConversationItem(conversation: Conversation) {
 
 作为此屏幕的最后一步，我们将创建对话列表：
 
-```kt
+```java
 @Composable
 fun ConversationList(conversations: List<Conversation>) {
     LazyColumn {
@@ -943,7 +943,7 @@ fun ConversationList(conversations: List<Conversation>) {
 
 最后，我们将此列表包含在 `HorizontalPager` 逻辑中，在我们的 `ConversationsListScreen` 可组合中：
 
-```kt
+```java
 HorizontalPager(
     modifier = Modifier.padding(innerPadding),
     pageCount = tabs.size,
@@ -970,7 +970,7 @@ HorizontalPager(
 
 如果我们想测试它，我们可以伪造对话的数据：
 
-```kt
+```java
 fun generateFakeConversations(): List<Conversation> {
     return listOf(
         Conversation(
@@ -1009,7 +1009,7 @@ fun generateFakeConversations(): List<Conversation> {
 
 考虑到我们在聊天屏幕上需要显示的信息，我们将需要两个数据模型：一个用于与对话相关的静态数据（例如，我们正在与之交谈的用户的姓名、他们的头像等），以及每个消息一个数据模型。这将作为`Chat`模型的模型：
 
-```kt
+```java
 data class Chat(
     val id: String,
     val name: String,
@@ -1021,7 +1021,7 @@ data class Chat(
 
 关于`Message`模型，我们将创建以下类：
 
-```kt
+```java
 data class Message(
     val id: String,
     val senderName: String,
@@ -1050,7 +1050,7 @@ sealed class MessageContent {
 
 首先，我们将创建一个`Row`布局。我们将根据消息的作者设置行内容的排列：
 
-```kt
+```java
 @Composable
 fun MessageItem(message: Message) {
     Row(
@@ -1065,7 +1065,7 @@ fun MessageItem(message: Message) {
 
 然后，在这个行内，我们将放置消息的其余组件。我们将从头像开始；如果消息不是来自用户，我们将只显示头像：
 
-```kt
+```java
 if (!message.isMine) {
     Avatar(
         imageUrl = message.senderAvatar,
@@ -1079,7 +1079,7 @@ if (!message.isMine) {
 
 然后，我们将添加一个`Column`布局，以便我们可以安排剩余的消息信息：
 
-```kt
+```java
 Column {
     if (message.isMine) {
         Spacer(modifier = Modifier.height(8.dp))
@@ -1137,7 +1137,7 @@ Column {
 
 正如我们对对话列表所做的那样，我们将添加`Scaffold`结构和其`TopAppBar`和`BottomRow`可组合组件到这个屏幕：
 
-```kt
+```java
 @Composable
 fun ChatScreen(
     chatId: String?,
@@ -1165,7 +1165,7 @@ fun ChatScreen(
 
 在底部栏的情况下，我们正在添加一个新的可组合组件，该组件将包含`Textfield`和发送消息所需的发送按钮。这就是这个可组合组件的外观：
 
-```kt
+```java
 @Composable
 fun SendMessageBox() {
     Box(
@@ -1218,7 +1218,7 @@ fun SendMessageBox() {
 
 之前，我们曾将消息列表作为可组合组件添加到`Scaffold`可组合组件的`content`参数中。这个可组合组件将如下所示：
 
-```kt
+```java
 @Composable
 fun ListOfMessages(paddingValues: PaddingValues) {
     Box(modifier = Modifier
@@ -1247,7 +1247,7 @@ fun ListOfMessages(paddingValues: PaddingValues) {
 
 由于我们还没有将其连接到任何类型的数据源，我们正在使用一个函数来生成一个仅用于预览目的的假消息列表：
 
-```kt
+```java
 fun getFakeMessages(): List<Message> {
     return listOf(
         Message(

@@ -36,7 +36,7 @@
 
 首先，我们需要设置视频录制的预览。在上一章中，我们创建了一个`CameraPreview`可组合组件。我们将在这里重用相同的组件：
 
-```kt
+```java
 @Composable
 fun CameraPreview(cameraController:
 LifecycleCameraController, modifier: Modifier = Modifier) {
@@ -57,7 +57,7 @@ LifecycleCameraController, modifier: Modifier = Modifier) {
 
 现在，我们需要创建一个新的按钮组件，用于从预览中记录图像和声音（而不是仅仅捕获图像）：
 
-```kt
+```java
 @Composable
 fun CaptureVideoButton(
     cameraController: LifecycleCameraController,
@@ -104,7 +104,7 @@ fun CaptureVideoButton(
 
 要完成此录制功能，我们需要实现`startRecording`函数：
 
-```kt
+```java
 @SuppressLint("MissingPermission")
 private fun startRecording(
     cameraController: LifecycleCameraController,
@@ -152,7 +152,7 @@ private fun startRecording(
 
 现在，让我们实现`stopRecording`函数：
 
-```kt
+```java
 fun stopRecording(recording: Recording?) {
     recording?.stop()
 }
@@ -164,7 +164,7 @@ fun stopRecording(recording: Recording?) {
 
 现在，我们将新按钮包含到我们之前为捕获功能构建的`CaptureModeContent`中：
 
-```kt
+```java
 @Composable
 private fun CaptureModeContent(
     cameraController: LifecycleCameraController,
@@ -256,7 +256,7 @@ FFmpeg 因其广泛的功能而脱颖而出。其关键特性包括以下内容�
 
 要将 `mobile-ffmpeg` 库集成到我们的项目中，我们首先需要打开我们的 `libs.versions.toml` 文件。在那里，我们将添加版本和库组以及名称：
 
-```kt
+```java
 [versions]
 ...
 mobileffmpeg = "4.4"
@@ -269,7 +269,7 @@ mobileffmpeg = { group = "com.arthenica", name = "mobile-ffmpeg-full", version.r
 
 和往常一样，为了在任何模块中使用它，我们将在 `build.gradle.kts` 文件中添加依赖项：
 
-```kt
+```java
 dependencies {
     ....
     implementation(libs.mobileffmpeg)
@@ -286,7 +286,7 @@ dependencies {
 
 在其核心，一个 FFmpeg 命令遵循一个基本结构：
 
-```kt
+```java
 FFmpeg.execute("[global_options] {[input_file_options] [flags] input_url} ... {[output_file_options] output_url} ...")
 ```
 
@@ -322,7 +322,7 @@ FFmpeg.execute("[global_options] {[input_file_options] [flags] input_url} ... {[
 
 将视频文件从一种格式转换为另一种格式是视频编辑中的基本任务。例如，将 MP4 文件转换为 AVI 文件可以这样做：
 
-```kt
+```java
 FFmpeg.execute("-i input.mp4 output.avi")
 ```
 
@@ -338,13 +338,13 @@ FFmpeg.execute("-i input.mp4 output.avi")
 
 在 FFmpeg 中指定编解码器，使用`-c`标志后跟一个冒号，然后是`v`表示视频或`a`表示音频，接着指定编解码器的名称：
 
-```kt
+```java
 ffmpeg -i input.file -c:v [video_codec] -c:a [audio_codec] output.file
 ```
 
 例如，要指定 H.264 和 AAC 编解码器，可以运行以下命令：
 
-```kt
+```java
 ffmpeg -i input.mp4 -c:v libx264 -c:a aac output.mp4
 ```
 
@@ -376,13 +376,13 @@ ffmpeg -i input.mp4 -c:v libx264 -c:a aac output.mp4
 
 要在 FFmpeg 中调整比特率，我们可以使用`-b:v`标志来指定视频比特率，使用`-b:a`来指定音频比特率：
 
-```kt
+```java
 ffmpeg -i input.file -b:v [video_bitrate] -b:a [audio_bitrate] output.file
 ```
 
 例如，要设置标准定义视频并具有适中的质量，我们可以运行以下命令：
 
-```kt
+```java
 ffmpeg -i input.mp4 -b:v 1500k -b:a 128k output.mp4
 ```
 
@@ -412,13 +412,13 @@ ffmpeg -i input.mp4 -b:v 1500k -b:a 128k output.mp4
 
 在 FFmpeg 中调整视频大小，使用`-s`（大小）标志。它设置分辨率：
 
-```kt
+```java
 ffmpeg -i input.file -s [width]x[height] output.file
 ```
 
 例如，要将分辨率调整为 1080p，命令如下：
 
-```kt
+```java
 ffmpeg -i input.mp4 -s 1920x1080 output.mp4
 ```
 
@@ -452,13 +452,13 @@ FFmpeg 配备了丰富的视频和音频过滤器。这些过滤器可以应用�
 
 要应用过滤器，可以使用`-vf`（视频过滤器）或`-af`（音频过滤器）选项。以下是过滤器语法的工作模式：
 
-```kt
+```java
 ffmpeg -i input.file -vf "[filter1],[filter2]" output.file
 ```
 
 例如，想象一个场景，你需要裁剪视频并调整其颜色属性。你可以通过运行以下命令来完成：
 
-```kt
+```java
 ffmpeg -i input.mp4 -vf "crop=640:480:0:0, hue=h=60:s=1" -c:a copy output.mp4
 ```
 
@@ -492,7 +492,7 @@ FFmpeg 中的覆盖滤镜是一个多功能特性，允许用户将一个视频�
 
 覆盖滤镜的基本语法如下：
 
-```kt
+```java
 ffmpeg -i main_video.mp4 -i overlay.mp4 -filter_complex "overlay=x:y" output.mp4
 ```
 
@@ -508,7 +508,7 @@ ffmpeg -i main_video.mp4 -i overlay.mp4 -filter_complex "overlay=x:y" output.mp4
 
 考虑到这一点，我们必须执行以下命令：
 
-```kt
+```java
 ffmpeg -i video.mp4 -i logo.png -filter_complex "overlay=1900:1060" -codec:a copy output.mp4
 ```
 
@@ -536,7 +536,7 @@ FFmpeg 中的覆盖层过滤器不仅允许在主视频上静态放置图像或�
 
 移动覆盖层的命令如下：
 
-```kt
+```java
 ffmpeg -i main_video.mp4 -i logo.png -filter_complex "overlay=x='t*100':y=50" output.mp4
 ```
 
@@ -556,7 +556,7 @@ ffmpeg -i main_video.mp4 -i logo.png -filter_complex "overlay=x='t*100':y=50" ou
 
 为了实现淡入/淡出效果，我们将覆盖层过滤器与淡入/淡出过滤器结合使用。让我们分解这个命令，了解其结构：
 
-```kt
+```java
 ffmpeg -i main_video.mp4 -i logo.png -filter_complex "[1:v]fade=t=in:st=0:d=1,fade=t=out:st=3:d=1[logo];[0:v][logo]overlay=10:10" output.mp4
 ```
 
@@ -578,7 +578,7 @@ ffmpeg -i main_video.mp4 -i logo.png -filter_complex "[1:v]fade=t=in:st=0:d=1,fa
 
 这就是它的工作方式：
 
-```kt
+```java
 val command = "-i input.mp4 -c:v libx264 output.mp4"
 val returnCode = FFmpeg.execute(command)
 ```
@@ -589,7 +589,7 @@ val returnCode = FFmpeg.execute(command)
 
 这就是我们可以使用`executeAsync`函数的方式：
 
-```kt
+```java
 FFmpeg.executeAsync(command) { executionId, returnCode ->
     when (returnCode) {
         Config.RETURN_CODE_SUCCESS -> {
@@ -619,7 +619,7 @@ FFmpeg.executeAsync(command) { executionId, returnCode ->
 
 为了进一步细化集成，`mobile-ffmpeg` 允许我们处理进度和日志输出。这对于调试和提升用户体验至关重要。以下是它的工作方式：
 
-```kt
+```java
 FFmpeg.executeAsync(command, ExecuteCallback { executionId,
 returnCode ->
     // Handle execution result
@@ -642,7 +642,7 @@ returnCode ->
 
 这就是我们构建 `AddCaptionToVideoUseCase` 的方法：
 
-```kt
+```java
 class AddCaptionToVideoUseCase() {
     suspend fun addCaption(videoFile: File, captionText:
     String): Result<File> = withContext(Dispatchers.IO) {
@@ -693,7 +693,7 @@ error adding the caption to the video") {
 
 函数的下一部分涉及构建 FFmpeg 的命令字符串。这个命令被精心设计，以利用 FFmpeg 的 `drawtext` 过滤器，使得提供的字幕文本可以叠加到视频上。让我们分析一下之前代码块中使用的命令：
 
-```kt
+```java
 val command = "-i ${videoFile.absolutePath} -vf drawtext=text='$captionText':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2 -codec:a copy ${outputFile.absolutePath}"
 ```
 
@@ -725,7 +725,7 @@ val command = "-i ${videoFile.absolutePath} -vf drawtext=text='$captionText':fon
 
 现在，我们可以在`StoryEditorViewModel`中使用`AddCaptionToVideoUseCase`：
 
-```kt
+```java
 class StoryEditorViewModel(
     private val saveCaptureUseCase: SaveCaptureUseCase,
     private val addCaptionToVideoUseCase:
@@ -778,7 +778,7 @@ class StoryEditorViewModel(
 
 正如我们对字幕所做的那样，我们将首先创建用例：`AddVignetteEffectUseCase`。`AddVignetteEffectUseCase`的主要作用是使用`mobile-ffmpeg`执行将渐晕效果应用到给定视频文件的业务逻辑。我们将使用特定的`FFmpeg`命令，如下所示：
 
-```kt
+```java
 class AddVignetteEffectUseCase() {
     suspend fun addVignetteEffect(videoFile: File):
     Result<File> = withContext(Dispatchers.IO) {
@@ -814,7 +814,7 @@ error adding the vignette effect to the video") {
 
 接下来，我们构建 FFmpeg 命令。这个命令告诉 FFmpeg 应用渐晕效果。让我们详细看看这个命令（已在之前的代码块中存在）是如何工作的：
 
-```kt
+```java
 val command = "-i ${videoFile.absolutePath} -vf vignette=angle=PI/4 ${outputFile.absolutePath}"
 ```
 
@@ -834,7 +834,7 @@ val command = "-i ${videoFile.absolutePath} -vf vignette=angle=PI/4 ${outputFile
 
 现在，我们可以将这个用例集成到`StoryEditorViewModel`中：
 
-```kt
+```java
 class StoryEditorViewModel(
     private val saveCaptureUseCase: SaveCaptureUseCase,
     private val addCaptionToVideoUseCase:
@@ -888,7 +888,7 @@ class StoryEditorViewModel(
 
 我们将首先创建一个数据源，负责将视频上传到 Firebase 存储。我们将称之为`VideoStorageDataSource`：
 
-```kt
+```java
 class VideoStorageDataSource {
     fun uploadVideo(videoFile: File, onSuccess: (String) ->
     Unit, onError: (Exception) -> Unit) {
@@ -921,7 +921,7 @@ class VideoStorageDataSource {
 
 接下来，我们将实现一个负责管理并将数据源连接到领域层的仓库。我们将将其接口命名为`VideoRepository`，实现为`VideoRepositoryImpl`：
 
-```kt
+```java
 interface VideoRepository {
     suspend fun uploadVideo(videoFile: File):
         Result<String>
@@ -961,7 +961,7 @@ VideoRepository {
 
 现在，是我们实现`UploadVideoUseCase`的时候了：
 
-```kt
+```java
 class UploadVideoUseCase(private val videoRepository:
 VideoRepository) {
     suspend fun uploadVideo(videoFile: File):
@@ -975,7 +975,7 @@ VideoRepository) {
 
 最后，我们将`UploadVideoUseCase`包含在`StoryEditorViewModel`中，并从那里使用它：
 
-```kt
+```java
 class StoryEditorViewModel(
 private val saveCaptureUseCase: SaveCaptureUseCase,
 private val addCaptionToVideoUseCase:

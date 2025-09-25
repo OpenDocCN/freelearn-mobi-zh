@@ -28,13 +28,13 @@
 
 要在我们的项目中使用 Room，我们需要将其依赖项添加到我们的 `libs.versions.toml` 文件中。让我们首先在 `versions` 部分定义 Room 版本，如下所示：
 
-```kt
+```java
 room = "2.5.2"
 ```
 
 接下来，让我们在我们的 `libraries` 部分添加依赖项：
 
-```kt
+```java
 room-runtime = { module = "androidx.room:room-runtime" , version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
@@ -42,19 +42,19 @@ room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 
 同步项目以添加更改。在我们将这些依赖项添加到应用级别的 `build.gradle.kts` 文件之前，我们需要设置 room 编译器的注解处理器。Room 使用 `build.gradle.kts` 文件：
 
-```kt
+```java
 id("com.google.devtools.ksp") version "1.9.0-1.0.13" apply false
 ```
 
 我们已经添加了 `build.gradle.kts` 文件：
 
-```kt
+```java
 id("com.google.devtools.ksp")
 ```
 
 这允许我们在我们的 app 模块中使用 KSP。为了最终设置 Room，现在让我们将我们之前声明的依赖项添加到 app 级别的`build.gradle.kts`文件中：
 
-```kt
+```java
 implementation(libs.room.runtime)
 implementation(libs.room.ktx)
 ksp(libs.room.compiler)
@@ -62,7 +62,7 @@ ksp(libs.room.compiler)
 
 我们已经添加了 Room 依赖项和 Room KTX 库，使用`implementation`配置，以及使用`ksp`配置的 Room 编译器。我们现在已准备好开始在项目中使用 Room。让我们首先为我们的`Cat`对象创建一个实体类。这将是我们用于在数据库中存储宠物的数据类。在`data`包内，创建一个名为`CatEntity.kt`的新文件，并添加以下代码：
 
-```kt
+```java
 @Entity(tableName = "Cat")
 data class CatEntity(
     @PrimaryKey
@@ -76,7 +76,7 @@ data class CatEntity(
 
 此数据类代表我们的猫的 Room 表。使用`@Entity`注解来定义我们的猫的表。我们传递了`tableName`值来指定我们表的名字。使用`@PrimaryKey`注解来定义`tags`，它是一个字符串列表。Room 提供了使用`@TypeConverter`注解保存非原始类型的功能。让我们创建一个名为`PetsTypeConverters.kt`的新文件，并添加以下代码：
 
-```kt
+```java
 class PetsTypeConverters {
     @TypeConverter
     fun convertTagsToString(tags: List<String>): String {
@@ -93,7 +93,7 @@ class PetsTypeConverters {
 
 我们现在已准备好创建我们的数据库。我们需要创建一个`data`包，创建一个名为`CatDao.kt`的新文件，并添加以下代码：
 
-```kt
+```java
 @Dao
 interface CatDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -107,7 +107,7 @@ interface CatDao {
 
 我们现在需要创建我们的数据库类。在`data`包内，创建一个名为`CatDatabase.kt`的新文件，并添加以下代码：
 
-```kt
+```java
 @Database(
     entities = [CatEntity::class],
     version = 1
@@ -120,7 +120,7 @@ abstract class CatDatabase: RoomDatabase() {
 
 我们定义了一个继承自`RoomDatabase`类的抽象类。我们传递了`entities`参数来指定数据库中存储的实体或表。我们还传递了`version`参数来指定数据库的版本。我们使用了`@TypeConverters`注解来指定我们将在数据库中使用的类型转换器。我们还定义了一个返回我们的`CatDao`的抽象方法。我们需要为需要数据库的类提供一个数据库实例。我们将通过使用我们在项目中一直使用的依赖注入模式来完成此操作。让我们转到`di`包，并在`Module.kt`文件中，在 Retrofit 依赖项下方添加 Room 依赖项：
 
-```kt
+```java
 single {
     Room.databaseBuilder(
         androidContext(),
@@ -143,7 +143,7 @@ single { get<CatDatabase>().carDao() }
 
 修改后的`PetRepository.kt`文件应如下所示：
 
-```kt
+```java
 interface PetsRepository {
     suspend fun getPets(): Flow<List<Cat>>
     suspend fun fetchRemotePets()
@@ -152,7 +152,7 @@ interface PetsRepository {
 
 我们修改了`getPets`函数，使其返回宠物`Flow`。Room 不允许在主线程上访问数据库，因此我们的查询必须是异步的。Room 提供了对可观察查询的支持，每次数据库中的数据发生变化时，它都会从我们的数据库中读取数据并发出新值以反映这些变化。这就是我们从`getPets`函数返回`Flow`实例类型的原因。我们还添加了`fetchRemotePets`函数来从远程数据源获取宠物。现在让我们对`PetRepositoryImpl.kt`进行一些修改：
 
-```kt
+```java
 class PetsRepositoryImpl(
     private  val catsAPI: CatsAPI,
     private val dispatcher: CoroutineDispatcher,
@@ -207,13 +207,13 @@ class PetsRepositoryImpl(
 
 我们需要在 `Module.kt` 文件中更新 `PetsRepository` 依赖项，以添加 `CatDao` 依赖项：
 
-```kt
+```java
 single<PetsRepository> { PetsRepositoryImpl(get(), get(), get()) }
 ```
 
 在我们的 `PetsRepositoryImpl` 类中，我们已经能够从 Room 数据库中读取和获取数据。接下来，我们将修改 `PetsViewModel` 中的 `getPets()` 函数以适应这些新更改。前往 `PetsViewModel.kt` 文件，并将 `getPets()` 函数修改如下：
 
-```kt
+```java
 private fun getPets() {
     petsUIState.value = PetsUIState(isLoading = true)
     viewModelScope.launch {
@@ -237,7 +237,7 @@ private fun getPets() {
 
 我们做了一些小的改动。我们使用了 `asResult()` 扩展函数将宠物的 `Flow` 转换为 `NetworkResult` 的 `Flow`。这是因为我们现在从我们的仓库返回宠物的 `Flow`。其余的代码与之前相同。由于我们没有创建 `asResult()` 扩展函数，所以会得到一个错误。让我们在我们的 `NetworkResult.kt` 文件中创建它：
 
-```kt
+```java
 fun <T> Flow<T>.asResult(): Flow<NetworkResult<T>> {
     return this
         .map<T, NetworkResult<T>> {
@@ -251,7 +251,7 @@ fun <T> Flow<T>.asResult(): Flow<NetworkResult<T>> {
 
 我们需要做的最后一个改动是在 `Application` 类中向我们的 Koin 实例提供应用程序上下文。前往 `ChapterEightApplication.kt` 文件，并将 `startKoin` 块修改如下：
 
-```kt
+```java
 startKoin {
     androidContext(applicationContext)
     modules(appModules)
@@ -284,7 +284,7 @@ startKoin {
 
 1.  让我们先设置模式目录。在我们的应用级别的 **build.gradle.kts** 文件中，添加以下代码：
 
-    ```kt
+    ```java
     ksp {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
@@ -300,7 +300,7 @@ startKoin {
 
 1.  我们将把这个字段添加到 **CatEntity** 和 **Cat** 数据类中。转到 **CatEntity.kt** 文件并添加一个名为 **isFavorite** 的新字段：
 
-    ```kt
+    ```java
     @ColumnInfo(defaultValue = "0")
     val isFavorite: Boolean = false
     ```
@@ -309,7 +309,7 @@ startKoin {
 
 1.  让我们转到 **CatDao.kt** 文件并添加以下函数：
 
-    ```kt
+    ```java
     @Update
     suspend fun update(catEntity: CatEntity)
     @Query("SELECT * FROM Cat WHERE isFavorite = 1")
@@ -320,7 +320,7 @@ startKoin {
 
 1.  让我们修改 **CatDatabase** 以添加 **autoMigration** 如下：
 
-    ```kt
+    ```java
     @Database(
         entities = [CatEntity::class],
         version = 2,
@@ -340,7 +340,7 @@ startKoin {
 
 1.  让我们转到**PetsRepository.kt**文件并添加以下函数：
 
-    ```kt
+    ```java
     suspend fun updatePet(cat: Cat)
     suspend fun getFavoritePets(): Flow<List<Cat>>
     ```
@@ -349,7 +349,7 @@ startKoin {
 
 1.  让我们在我们的**PetsRepositoryImpl.kt**类中添加这两个函数的实现：
 
-    ```kt
+    ```java
     override suspend fun updatePet(cat: Cat) {
         withContext(dispatcher) {
             catDao.update(CatEntity(
@@ -389,7 +389,7 @@ startKoin {
 
 1.  在**PetsRepositoryImpl.kt**文件中，我们需要更新**fetchRemotePets**和**getPets**函数，以便如下更新猫的收藏状态：
 
-    ```kt
+    ```java
     override suspend fun getPets(): Flow<List<Cat>> {
         return withContext(dispatcher) {
            catDao.getCats()
@@ -435,7 +435,7 @@ startKoin {
 
 1.  让我们转到**PetsViewModel**类，并在**petsUIState**变量下方添加以下变量：
 
-    ```kt
+    ```java
     private val _favoritePets = MutableStateFlow<List<Cat>>(emptyList())
     val favoritePets: StateFlow<List<Cat>> get() = _favoritePets
     ```
@@ -444,7 +444,7 @@ startKoin {
 
 1.  接下来，让我们在**PetsViewModel**中的**getPets()**函数下方添加这两个函数：
 
-    ```kt
+    ```java
     fun updatePet(cat: Cat) {
         viewModelScope.launch {
             petsRepository.updatePet(cat)
@@ -463,7 +463,7 @@ startKoin {
 
 1.  我们将首先在我们的**PetListItem**可组合组件中添加我们的收藏图标。让我们转到**PetList.kt**文件并更新**PetListItem**可组合组件如下：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
     fun PetListItem(
@@ -541,7 +541,7 @@ startKoin {
 
 1.  让我们更新**PetList**可组合组件，以添加一个名为**onFavoriteClicked**的新回调参数，并将参数传递给**PetListItem**可组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun PetList(
         onPetClicked: (Cat) -> Unit,
@@ -565,7 +565,7 @@ startKoin {
 
 1.  接下来，我们将**onFavoriteClicked**回调作为参数添加到**PetsScreenContent**：
 
-    ```kt
+    ```java
     @Composable
     fun PetsScreenContent(
         modifier: Modifier,
@@ -580,7 +580,7 @@ startKoin {
 
 1.  我们现在可以将参数传递给**PetList**可组合组件：
 
-    ```kt
+    ```java
     PetList(
         onPetClicked = onPetClicked,
         pets = petsUIState.pets,
@@ -592,7 +592,7 @@ startKoin {
 
 1.  让我们更新**PetAndDetails**可组合组件，以添加**onFavoriteClicked**参数：
 
-    ```kt
+    ```java
     @Composable
     fun PetListAndDetails(
         pets: List<Cat>,
@@ -604,7 +604,7 @@ startKoin {
 
 1.  我们现在可以将参数传递给**PetList**可组合组件：
 
-    ```kt
+    ```java
     PetList(
         onPetClicked = {
         currentPet = it
@@ -619,7 +619,7 @@ startKoin {
 
 1.  在**PetsScreenContent.kt**文件中，我们需要将**onFavoriteClicked**参数传递给**PetListAndDetails**可组合组件：
 
-    ```kt
+    ```java
     PetListAndDetails(
         pets = petsUIState.pets,
         onFavoriteClicked = onFavoriteClicked
@@ -634,7 +634,7 @@ startKoin {
 
 1.  接下来，在**PetsScreen**可组合组件中，该组件位于**PetsScreen.kt**文件中，我们需要将**onFavoriteClicked**参数添加到**PetsScreenContent**可组合组件中：
 
-    ```kt
+    ```java
     PetsScreenContent(
         modifier = Modifier
             .fillMaxSize(),
@@ -655,7 +655,7 @@ startKoin {
 
 1.  最后，我们将更新**FavoritePetsScreen**以显示收藏猫的列表。让我们转到**FavoritePetsScreen.kt**文件，并更新**FavoritePetsScreen**可组合组件如下：
 
-    ```kt
+    ```java
     @Composable
     fun FavoritePetsScreen(
         onPetClicked: (Cat) -> Unit
@@ -707,7 +707,7 @@ startKoin {
 
 1.  我们需要更新 **AppNavigation.kt** 文件，将 **onPetClicked** 回调传递给 **FavoritePetsScreen** 可组合组件：
 
-    ```kt
+    ```java
     FavoritePetsScreen(
         onPetClicked = { cat ->
             navHostController.navigate(
@@ -733,13 +733,13 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  让我们转到 **libs.versions.toml** 文件，并在我们的 **versions** 部分定义工作版本，如下所示：
 
-    ```kt
+    ```java
     work = "2.8.1"
     ```
 
 1.  在库部分，添加以下依赖项：
 
-    ```kt
+    ```java
     work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
     workmanager-koin = { module = "io.insert-koin:koin-androidx-workmanager", version.ref = "koin" }
     ```
@@ -748,7 +748,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  接下来，我们需要将依赖项添加到应用级别的 **build.gradle.kts** 文件中：
 
-    ```kt
+    ```java
     implementation(libs.work.runtime)
     implementation(libs.workmanager.koin)
     ```
@@ -759,7 +759,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  让我们创建一个名为 **workers** 的新包，并在其中创建一个名为 **PetsSyncWorker.kt** 的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     class PetsSyncWorker(
         appContext: Context,
         workerParams: WorkerParameters,
@@ -780,7 +780,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  接下来，让我们在我们的 **Module.kt** 文件中创建一个 **PetsSyncWorker** 的实例：
 
-    ```kt
+    ```java
     worker { PetsSyncWorker(get(), get(), get()) }
     ```
 
@@ -788,7 +788,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  接下来，让我们在我们的 **MainActivity.kt** 文件中添加这个函数：
 
-    ```kt
+    ```java
     private fun startPetsSync() {
         val syncPetsWorkRequest = OneTimeWorkRequestBuilder<PetsSyncWorker>()
             .setConstraints(
@@ -814,7 +814,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
         +   在 **MainActivity.kt** 文件中，在 **onCreate** 方法中添加以下代码：
 
-            ```kt
+            ```java
             startPetsSync()
             ```
 
@@ -822,7 +822,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
         +   让我们转到 **AndroidManifest.xml** 文件，并在应用程序标签内添加以下代码：
 
-            ```kt
+            ```java
             <provider
                 android:name="androidx.startup.InitializationProvider"
                 android:authorities="${applicationId}.androidx-startup"
@@ -840,7 +840,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
         +   要设置自定义的 WorkManager 实例，转到 **ChapterEightApplication.kt** 文件，并在 **startKoin** 块内添加以下代码：
 
-            ```kt
+            ```java
             workManagerFactory()
             ```
 
@@ -858,7 +858,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  让我们转到 **libs.versions.toml** 文件，并在 **libraries** 部分添加以下依赖项：
 
-    ```kt
+    ```java
     work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
     ```
 
@@ -866,7 +866,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 1.  接下来，我们需要将依赖项添加到我们的应用级别的 **build.gradle.kts** 文件中：
 
-    ```kt
+    ```java
     androidTestImplementation(libs.work.testing)
     ```
 
@@ -874,7 +874,7 @@ WorkManager 是一个适合在后台执行长时间运行任务的 Jetpack 库�
 
 由于我们的 `PetsSyncWorker` 类需要一些依赖项，我们将创建一个测试规则，提供我们需要的 Koin 依赖项。让我们转到 `androidTest` 文件夹，创建一个名为 `KoinTestRule.kt` 的新文件，并添加以下代码：
 
-```kt
+```java
 class KoinTestRule: TestRule {
     override fun apply(base: Statement?, description: Description?): Statement {
         return object : Statement() {
@@ -893,7 +893,7 @@ class KoinTestRule: TestRule {
 
 `KoinTestRule` 实现了 `TestRule` 接口。我们使用这个规则来提供测试中需要的 Koin 依赖项。我们使用了 `startKoin` 方法来提供需要的 Koin 依赖项。我们使用了 `androidContext(ApplicationProvider.getApplicationContext())` 方法来获取应用程序上下文。我们还使用了 `modules(appModules)` 方法来提供需要的 Koin 模块。现在，我们准备好开始编写测试了。让我们创建一个名为 `PetsSyncWorkerTest.kt` 的新文件，并添加以下代码：
 
-```kt
+```java
 @RunWith(AndroidJUnit4::class)
 class PetsSyncWorkerTest {
     @get:Rule
@@ -919,7 +919,7 @@ class PetsSyncWorkerTest {
 
 1.  我们将首先创建一个测试函数来测试我们的工作功能。将以下代码添加到下面的 **PetsSyncWorkerTest.kt** 文件中的 **setup** 函数下方：
 
-    ```kt
+    ```java
     @Test
     fun testPetsSyncWorker() {
     }
@@ -929,7 +929,7 @@ class PetsSyncWorkerTest {
 
 1.  创建一个工作请求如下：
 
-    ```kt
+    ```java
     val syncPetsWorkRequest = OneTimeWorkRequestBuilder<PetsSyncWorker>()
         .setConstraints(
             Constraints.Builder()
@@ -944,7 +944,7 @@ class PetsSyncWorkerTest {
 
 1.  接下来，设置测试驱动程序：
 
-    ```kt
+    ```java
     val workManager = WorkManager.getInstance(ApplicationProvider.getApplicationContext())
     val testDriver =
         WorkManagerTestInitHelper.getTestDriver(ApplicationProvider.getApplicationContext())!!
@@ -954,7 +954,7 @@ class PetsSyncWorkerTest {
 
 1.  入队工作请求：
 
-    ```kt
+    ```java
     workManager.enqueueUniqueWork(
         "PetsSyncWorker",
         ExistingWorkPolicy.KEEP,
@@ -965,7 +965,7 @@ class PetsSyncWorkerTest {
 
 1.  使用 **WorkInfo** 类获取我们的工作请求信息：
 
-    ```kt
+    ```java
     val workInfo = workManager.getWorkInfoById(syncPetsWorkRequest.id).get()
     ```
 
@@ -973,7 +973,7 @@ class PetsSyncWorkerTest {
 
 1.  接下来，让我们获取工作状态并断言我们的工作是入队的：
 
-    ```kt
+    ```java
     assertEquals(WorkInfo.State.ENQUEUED, workInfo.state)
     ```
 
@@ -981,7 +981,7 @@ class PetsSyncWorkerTest {
 
 1.  接下来，让我们通过使用我们之前创建的 **testDriver** 实例来模拟我们的约束条件得到满足：
 
-    ```kt
+    ```java
     testDriver.setAllConstraintsMet(syncPetsWorkRequest.id)
     ```
 
@@ -989,7 +989,7 @@ class PetsSyncWorkerTest {
 
 1.  最后，让我们获取我们工作者的输出和状态：
 
-    ```kt
+    ```java
     val postRequirementWorkInfo =
         workManager.getWorkInfoById(syncPetsWorkRequest.id).get()
     assertEquals(WorkInfo.State.RUNNING, postRequirementWorkInfo.state)

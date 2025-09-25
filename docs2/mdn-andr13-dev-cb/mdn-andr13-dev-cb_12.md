@@ -374,61 +374,61 @@ Android Studio 为我们开发者提供了一个强大的调试器。要使用 A
 
 +   要在当前目录中初始化一个新的 Git 仓库，你可以简单地做以下操作：
 
-    ```kt
+    ```java
     $ git init
     ```
 
 +   当你想将更改添加到暂存区时，你可以简单地使用`git add`：
 
-    ```kt
+    ```java
     $ git add file.txt
     ```
 
 +   在向仓库提交更改时，只需使用以下命令：
 
-    ```kt
+    ```java
     $ git commit -m "message"
     ```
 
 +   最重要的是，当你开始协作时，能够克隆项目；你可以简单地运行以下命令：
 
-    ```kt
+    ```java
     $ git clone git@github.com:PacktPublishing/Modern-Android-13-Development-Cookbook.git
     ```
 
 +   当你想从远程仓库拉取变化到本地仓库时，只需使用以下命令：
 
-    ```kt
+    ```java
     $ git pull origin main
     ```
 
 +   你也可以使用以下命令将本地仓库的变化推送到远程仓库：
 
-    ```kt
+    ```java
     $ git push origin main
     ```
 
 +   使用`git branch`列出所有本地分支：
 
-    ```kt
+    ```java
     $ git branch
     ```
 
 +   以下命令切换到不同的分支：
 
-    ```kt
+    ```java
     $ git checkout branch_name
     ```
 
 +   使用以下命令检出新的分支：
 
-    ```kt
+    ```java
     $ git checkout -b branch_name
     ```
 
 +   使用以下命令将一个分支的变化合并到另一个分支中。注意，你也可以使用`rebase`；这取决于组织的偏好：
 
-    ```kt
+    ```java
     $ git merge branch_name
     ```
 

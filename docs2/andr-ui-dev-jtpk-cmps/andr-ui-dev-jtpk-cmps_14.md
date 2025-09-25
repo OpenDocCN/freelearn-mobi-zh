@@ -48,7 +48,7 @@ Jetpack Compose 1.1 将提供错误修复、新功能和性能改进。新功能
 
 目前，`ExposedDropdownMenuBox()`被标记为实验性。因此，您必须添加`@ExperimentalMaterialApi`注解：
 
-```kt
+```java
 @ExperimentalMaterialApi
 @Composable
 fun ExposedDropdownMenuBoxDemo() {
@@ -70,7 +70,7 @@ fun ExposedDropdownMenuBoxDemo() {
 
 `ExposedDropdownMenuBoxDemo()`将`ExposedDropdownMenuBox()`放入`Box()`中，并将菜单水平居中于顶部。菜单项存储在列表（`titles`）中。`expanded`状态反映了菜单项的可见性。`selectedTxt`代表当前选中的文本。以下是它们的用法：
 
-```kt
+```java
 ExposedDropdownMenuBox(expanded = expanded,
   onExpandedChange = {
     expanded = !expanded
@@ -121,7 +121,7 @@ Compose 提供了多种方式在您的应用中导航到顶级目的地。例如
 
 要继续，一个详细的方法是使用 Jetpack `WindowManager` 库，但这超出了本书的范围。相反，我们将使用 `NavigationRailDemo()` 以简化起见，它通过比较当前屏幕宽度与最小尺寸（600 密度无关像素）来确定是否应使用导航栏：
 
-```kt
+```java
 @Composable
 fun NavigationRailDemo() {
   val showNavigationRail =
@@ -143,7 +143,7 @@ fun NavigationRailDemo() {
 
 `Scaffold()` 通过 `bottomBar` 独占表达式接收底部栏。如果不应显示导航栏（`showNavigationRail` 为 `false`），则调用我的 `BottomBar()` 可组合组件。否则，不添加底部栏。当前活动屏幕存储在一个可变的 `Int` 状态（`index`）中。它传递给 `BottomBar()` 和 `Content()`。接下来，让我们简要回顾一下 `BottomNavigation()` 的工作原理，通过查看我的 `BottomBar()` 可组合组件：
 
-```kt
+```java
 @Composable
 fun BottomBar(index: MutableState<Int>) {
   BottomNavigation {
@@ -167,7 +167,7 @@ fun BottomBar(index: MutableState<Int>) {
 
 `BottomNavigation()` 的内容由几个带有图标、标签和 `onClick` 块的 `BottomNavigationItem()` 元素组成。我的实现只是更新了 `index` 状态，该状态也在 `Content()` 中使用。这个可组合组件在需要时显示导航栏，以及主要内容（屏幕），它只是一个内部文本居中的盒子：
 
-```kt
+```java
 @Composable
 fun Content(showNavigationRail: Boolean, index:
    MutableState<Int>) {
@@ -288,7 +288,7 @@ JetBrains 在 GitHub 上维护了一个 *使用 Compose Multiplatform 入门* �
 
 源代码包含一个名为 `App()` 的可组合组件。它从 `main()` 函数中被调用。让我们用我的一个示例来替换 `App()` 的主体，例如，从 *第八章*，*与动画一起工作* 中的 `StateChangeDemo()`：
 
-```kt
+```java
 @Composable
 @Preview
 fun App() {

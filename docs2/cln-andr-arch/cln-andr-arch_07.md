@@ -64,7 +64,7 @@
 
 然后，您将被提示选择模块类型，根据功能，您可以选择`build.gradle`文件。文件中的插件部分将指示已创建 Android 库：
 
-```kt
+```java
 plugins {
     id 'com.android.library'
     …
@@ -73,7 +73,7 @@ plugins {
 
 如果我们想向新创建的模块添加依赖项，我们可以在`app`模块中使用以下内容：
 
-```kt
+```java
 dependencies {
     implementation(project(path: ":my-new-module"))
     …
@@ -92,7 +92,7 @@ dependencies {
 
 实体由包含数据的主要不可变对象表示。假设我们想将用户表示为一个实体。我们可能会得到以下内容：
 
-```kt
+```java
 data class User(
     val id: String,
     val firstName: String,
@@ -107,7 +107,7 @@ data class User(
 
 接下来，我们需要定义我们的用例。因为用例将需要从数据层获取数据，我们首先需要为我们的存储库创建一个抽象，最终我们会得到以下内容：
 
-```kt
+```java
 interface UserRepository {
     fun getUser(id: String): User
 }
@@ -115,7 +115,7 @@ interface UserRepository {
 
 这里，我们只有一个简单的方法，它将根据`id`返回一个用户。现在，我们可以创建一个用于检索用户的用例：
 
-```kt
+```java
 class GetUserUseCase(private val userRepository: UserRepository) {
     fun getUser(id: String) = userRepository.getUser(id)
 }
@@ -125,7 +125,7 @@ class GetUserUseCase(private val userRepository: UserRepository) {
 
 假设我们想要将用户与特定的位置关联起来，如下所示：
 
-```kt
+```java
 data class Location(
     val id: String,
     val userId: String,
@@ -136,7 +136,7 @@ data class Location(
 
 这里，我们只保留与特定用户关联的纬度和经度。现在，假设我们会有一个用于不同位置的存储库：
 
-```kt
+```java
 interface LocationRepository {
     fun getLocation(userId: String): Location
 }
@@ -144,7 +144,7 @@ interface LocationRepository {
 
 这里，我们再次有一个存储库的抽象，它有一个根据`userId`获取特定位置的方法。如果我们想获取一个用户及其关联的位置，我们需要为这个创建一个特定的用例：
 
-```kt
+```java
 class GetUserWithLocationUseCase(
     private val userRepository: UserRepository,
     private val locationRepository: LocationRepository
@@ -162,7 +162,7 @@ data class UserWithLocation(
 
 我们还可以通过处理线程来进一步改进用例。因为用例将主要处理检索和管理数据，这需要异步处理，所以我们应该在单独的线程上处理。我们可以使用**Kotlin flows**来管理这个，我们最终可能会得到如下所示的存储库：
 
-```kt
+```java
 interface UserRepository {
     fun getUser(id: String): Flow<User>
 }
@@ -173,7 +173,7 @@ interface LocationRepository {
 
 这里，我们将方法的返回类型更改为 Kotlin flow，它可能会发出数据流或单个项目。现在，我们可以在用例中组合流中的不同流：
 
-```kt
+```java
 class GetUserWithLocationUseCase(
     private val userRepository: UserRepository,
     private val locationRepository: LocationRepository
@@ -191,7 +191,7 @@ class GetUserWithLocationUseCase(
 
 经常在处理数据加载和管理时，尤其是从互联网上，我们可能会遇到不同的错误，这些错误我们必须考虑在我们的用例中。为了解决这个问题，我们可以定义错误实体。定义它们有很多可能性，包括扩展`Throwable`类、定义特定的数据类、两者的组合，或者将它们与密封类结合：
 
-```kt
+```java
 sealed class UseCaseException(override val cause: Throwable?) : Throwable(cause) {
     class UserException(cause: Throwable) : 
         UseCaseException(cause)
@@ -213,7 +213,7 @@ sealed class UseCaseException(override val cause: Throwable?) : Throwable(cause)
 
 在这里，我们创建了一个密封类，它将作为子类为每个实体提供一个专用错误，以及一个未知错误来处理我们没有考虑到的错误，还有一个伴随方法，该方法将检查一个 `Throwable` 对象，并返回 `UnknownException` 以处理任何不是 `UseCaseException` 的 `Throwable`。我们需要确保错误通过流程流传播，但首先，我们可以将成功实体与错误实体组合起来，以确保用例的消费者不需要再次检查 `Throwable` 的类型并进行类型转换。我们可以使用以下方法来实现：
 
-```kt
+```java
 sealed class Result<out T : Any> {
     data class Success<out T : Any>(val data: T) : 
         Result<T>()
@@ -224,7 +224,7 @@ sealed class Result<out T : Any> {
 
 在这里，我们定义了一个 `Result` 密封类，它将有两个子类用于成功和错误。`Success` 类将包含用例的相关数据，而 `Error` 类将包含之前定义的异常。如果需要，`Error` 类可以进一步扩展以包含数据以及错误，如果我们想显示缓存的或持久化的数据作为占位符。现在我们可以修改用例以包含 `Result` 类和错误状态：
 
-```kt
+```java
 class GetUserWithLocationUseCase(
     private val userRepository: UserRepository,
     private val locationRepository: LocationRepository
@@ -245,7 +245,7 @@ class GetUserWithLocationUseCase(
 
 在这里，我们返回 `Result.Success`，如果没有发生错误，它将包含 `UserWithLocation` 对象，并使用 `catch` 操作符来发出带有在获取数据时发生的 `UseCaseException` 的 `Result.Error`。因为这些操作将在多个用例中重复，我们可以使用抽象来创建一个模板，说明每个用例的行为，并让实现只处理必要的数据。一个例子可能如下所示：
 
-```kt
+```java
 abstract class UseCase<T : Any, R : Any>(private val dispatcher: CoroutineDispatcher) {
     fun execute(input: T): Flow<Result<R>> = 
         executeData(input)
@@ -263,7 +263,7 @@ abstract class UseCase<T : Any, R : Any>(private val dispatcher: CoroutineDispat
 
 在前面的例子中，我们定义了一个抽象类，它将包含 `execute` 方法，该方法将调用抽象的 `executeData` 方法，然后将该方法的输出映射到 `Result` 对象中，接着在 `CoroutineDispatcher` 上设置流程，最后在 `catch` 操作符中处理错误。这个实现的代码如下。请注意，`executeData` 方法的 `internal` 关键字将只使该方法在当前模块中可访问。这是因为我们只想让用例的用户调用 `execute` 方法：
 
-```kt
+```java
 class GetUserWithLocationUseCase(
     dispatcher: CoroutineDispatcher,
     private val userRepository: UserRepository,
@@ -283,7 +283,7 @@ class GetUserWithLocationUseCase(
 
 在这个例子中，`GetUserWithLocationUseCase` 只需要在 `executeData` 方法中处理与用例相关的必要数据。我们可以通过引入对所需输入和输出的进一步抽象来使用泛型来绑定用例要处理的数据类型：
 
-```kt
+```java
 abstract class UseCase<T : UseCase.Request, R : UseCase.Response>(private val dispatcher: CoroutineDispatcher) {
     …
     interface Request
@@ -293,7 +293,7 @@ abstract class UseCase<T : UseCase.Request, R : UseCase.Response>(private val di
 
 在这里，我们将 `UseCase` 类中的泛型绑定到了两个接口——`Request` 和 `Response`。前者由用例所需的输入数据表示，后者由用例的输出表示。实现现在看起来像这样：
 
-```kt
+```java
 class GetUserWithLocationUseCase(
     dispatcher: CoroutineDispatcher,
     private val userRepository: UserRepository,
@@ -320,7 +320,7 @@ class GetUserWithLocationUseCase(
 
 通常，我们将有机会从现有的较小用例中构建一个新的用例。假设在检索用户和位置时，我们有两个独立的用例：
 
-```kt
+```java
  class GetUserUseCase(
     dispatcher: CoroutineDispatcher,
     private val userRepository: UserRepository
@@ -360,7 +360,7 @@ class GetLocationUseCase(
 
 我们可以将`GetUserWithLocationUseCase`修改为使用现有的用例，如下所示：
 
-```kt
+```java
 class GetUserWithLocationUseCase(
     dispatcher: CoroutineDispatcher,
     private val getUserUseCase: GetUserUseCase,
@@ -433,7 +433,7 @@ class GetUserWithLocationUseCase(
 
 1.  在根`build.gradle`文件中，添加以下配置，这些配置将用于项目中的所有模块：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             javaCompileVersion = JavaVersion.VERSION_1_8
@@ -447,7 +447,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一文件中，添加 Gradle 模块将使用的库版本：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             …
@@ -473,7 +473,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一文件中，添加整个项目将使用的插件依赖项的映射。
 
-    ```kt
+    ```java
     buildscript {
         ext {
             …
@@ -493,7 +493,7 @@ class GetUserWithLocationUseCase(
 
 1.  接下来，您需要将`androidx`库的依赖项添加到`androidx`库中：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             …
@@ -512,7 +512,7 @@ class GetUserWithLocationUseCase(
 
 1.  接下来，添加剩余的用于材料设计、依赖注入和测试的库：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             …
@@ -557,7 +557,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一文件中，您需要将之前的映射替换为插件依赖项：
 
-    ```kt
+    ```java
     buildscript {
          …
         dependencies {
@@ -570,7 +570,7 @@ class GetUserWithLocationUseCase(
 
 1.  现在，您需要切换到应用模块中的`build.gradle`文件，并将现有的配置更改为顶级`build.gradle`文件中定义的配置：
 
-    ```kt
+    ```java
     android {
         compileSdk defaultCompileSdkVersion
         defaultConfig {
@@ -603,7 +603,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一文件中，您需要将依赖项替换为顶级`build.gradle`文件中定义的依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation androidx.core
         implementation androidx.appCompat
@@ -623,7 +623,7 @@ class GetUserWithLocationUseCase(
 
 1.  在`domain`模块的`build.gradle`文件中，确保您有以下插件：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -634,7 +634,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一文件中，确保您使用顶级`build.gradle`文件中定义的配置：
 
-    ```kt
+    ```java
     android {
         compileSdk defaultCompileSdkVersion
         defaultConfig {
@@ -655,7 +655,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一文件中，您需要添加以下依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation coroutines.coroutinesAndroid
         implementation di.hiltAndroid
@@ -672,7 +672,7 @@ class GetUserWithLocationUseCase(
 
 1.  在`entity`包中，创建一个名为`Post`的类，该类将包含`id`、`userId`、`title`和`body`：
 
-    ```kt
+    ```java
     data class Post(
         val id: Long,
         val userId: Long,
@@ -683,7 +683,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一包中，创建一个名为`User`的类，该类将包含`id`、`name`、`username`和`email`：
 
-    ```kt
+    ```java
     data class User(
         val id: Long,
         val name: String,
@@ -694,7 +694,7 @@ class GetUserWithLocationUseCase(
 
 1.  接下来，创建一个名为`PostWithUser`的类，该类将包含`post`和`user`信息：
 
-    ```kt
+    ```java
     data class PostWithUser(
         val post: Post,
         val user: User
@@ -703,13 +703,13 @@ class GetUserWithLocationUseCase(
 
 1.  在同一包中，创建一个名为`Interaction`的类，该类将包含总点击次数：
 
-    ```kt
+    ```java
     data class Interaction(val totalClicks: Int)
     ```
 
 1.  现在，我们需要创建错误实体：
 
-    ```kt
+    ```java
     sealed class UseCaseException(cause: Throwable) : Throwable(cause) {
         class PostException(cause: Throwable) : 
             UseCaseException(cause)
@@ -731,7 +731,7 @@ class GetUserWithLocationUseCase(
 
 1.  接下来，让我们创建`Result`类，该类将包含成功和错误信息：
 
-    ```kt
+    ```java
     sealed class Result<out T : Any> {
         data class Success<out T : Any>(val data: T) : 
             Result<T>()
@@ -744,7 +744,7 @@ class GetUserWithLocationUseCase(
 
 1.  在`repository`包中，创建一个用于管理帖子数据的接口：
 
-    ```kt
+    ```java
     interface PostRepository {
         fun getPosts(): Flow<List<Post>>
         fun getPost(id: Long): Flow<Post>
@@ -753,7 +753,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一包中，创建一个用于管理用户数据的接口：
 
-    ```kt
+    ```java
     interface UserRepository {
         fun getUsers(): Flow<List<User>>
         fun getUser(id: Long): Flow<User>
@@ -762,7 +762,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一包中，创建一个用于管理交互数据的接口：
 
-    ```kt
+    ```java
     interface InteractionRepository {
         fun getInteraction(): Flow<Interaction>
         fun saveInteraction(interaction: Interaction): 
@@ -774,7 +774,7 @@ class GetUserWithLocationUseCase(
 
 1.  在此包中，创建`UseCase`模板：
 
-    ```kt
+    ```java
     abstract class UseCase<I : UseCase.Request, O : UseCase.Response>(private val configuration: Configuration) {
         fun execute(request: I) = process(request)
             .map {
@@ -797,7 +797,7 @@ class GetUserWithLocationUseCase(
 
 1.  在`usecase`包中，创建一个用于检索包含用户信息和交互数据的帖子列表的用例：
 
-    ```kt
+    ```java
     class GetPostsWithUsersWithInteractionUseCase @Inject constructor(
         configuration: Configuration,
         private val postRepository: PostRepository,
@@ -833,7 +833,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一包中，创建一个用于通过 ID 检索帖子的用例：
 
-    ```kt
+    ```java
     class GetPostUseCase @Inject constructor(
         configuration: Configuration,
         private val postRepository: PostRepository
@@ -854,7 +854,7 @@ class GetUserWithLocationUseCase(
 
 1.  在同一包中，创建一个用于通过 ID 检索用户的用例：
 
-    ```kt
+    ```java
     class GetUserUseCase @Inject constructor(
         configuration: Configuration,
         private val userRepository: UserRepository
@@ -875,7 +875,7 @@ class GetUserWithLocationUseCase(
 
 1.  现在，我们继续到最后一个用例，用于更新交互数据：
 
-    ```kt
+    ```java
     class UpdateInteractionUseCase @Inject constructor(
         configuration: Configuration,
         private val interactionRepository: 
@@ -902,7 +902,7 @@ class GetUserWithLocationUseCase(
 
 1.  在`domain`模块的测试文件夹中创建一个名为`UseCaseTest`的新类：
 
-    ```kt
+    ```java
     class UseCaseTest {
         @ExperimentalCoroutinesApi
         private val configuration = UseCase.Configuration
@@ -932,7 +932,7 @@ class GetUserWithLocationUseCase(
 
 1.  接下来，创建一个测试方法来验证`execute`方法的成功场景：
 
-    ```kt
+    ```java
         @ExperimentalCoroutinesApi
         @Test
         fun testExecuteSuccess() = runBlockingTest {
@@ -945,7 +945,7 @@ class GetUserWithLocationUseCase(
 
 1.  接下来，创建一个名为`GetPostsWithUsersWithInteractionUseCaseTest`的新测试类：
 
-    ```kt
+    ```java
     class GetPostsWithUsersWithInteractionUseCaseTest {
         private val postRepository = mock<PostRepository>()
         private val userRepository = mock<UserRepository>()
@@ -963,7 +963,7 @@ class GetUserWithLocationUseCase(
 
 1.  最后，创建一个测试方法来验证我们正在测试的用例中的`process`方法：
 
-    ```kt
+    ```java
         @ExperimentalCoroutinesApi
         @Test
         fun testProcess() = runBlockingTest {

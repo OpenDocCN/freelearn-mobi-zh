@@ -166,7 +166,7 @@
 
 软件架构师可以参与理解每个团队的需求以及他们对使用 REST 端点的担忧。然后，可以创建 REST 端点的指南，以便工程师遵循一定的模式。一个典型的例子是为错误响应定义一个通用有效载荷结构，以包含除 HTTP 响应状态之外的信息：
 
-```kt
+```java
 {
      "resource": "/users/32039/address/0",
      "shortMessage": "first line of address must be present",

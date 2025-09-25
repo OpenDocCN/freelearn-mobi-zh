@@ -76,13 +76,13 @@ iOS 示例需要**xCode 9**或更高版本（xCode 仅在 OSX 上可用，您需
 
 控制台输入显示如下：
 
-```kt
+```java
 $ gem install cocoapods
 ```
 
 代码块设置如下：
 
-```kt
+```java
 func refresh (sender: AnyObject!) {
 ...
         let cngQuery = client.queryDataset("wwmu-gmzc")

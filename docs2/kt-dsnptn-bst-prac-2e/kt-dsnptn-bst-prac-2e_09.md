@@ -108,23 +108,23 @@
 
 首先，让我们以命令式的方式实现它：
 
-```kt
+```java
 val letters = 'a'..'z'
 ```
 
-```kt
+```java
 val ascii = mutableListOf<Int>()
 ```
 
-```kt
+```java
 for (l in letters) {
 ```
 
-```kt
+```java
     ascii.add(l.toInt())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -132,7 +132,7 @@ for (l in letters) {
 
 现在，使用 `map()` 函数的相同代码将看起来像这样：
 
-```kt
+```java
 val result: List<Int> = ('a'..'z').map { it.toInt() }
 ```
 
@@ -144,41 +144,41 @@ val result: List<Int> = ('a'..'z').map { it.toInt() }
 
 在命令式方式中，这个函数可能看起来像这样：
 
-```kt
+```java
 val numbers = 1..100
 ```
 
-```kt
+```java
 val notFizzbuzz = mutableListOf<Int>()
 ```
 
-```kt
+```java
 for (n in numbers) {
 ```
 
-```kt
+```java
     if (n % 3 == 0 || n % 5 == 0) {
 ```
 
-```kt
+```java
         notFizzbuzz.add(n)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 在其函数式变体中，我们会使用 `filter()` 函数：
 
-```kt
+```java
 val filtered: List<Int> = (1..100).filter { it % 3 == 0 || 
 ```
 
-```kt
+```java
   it % 5 == 0 }
 ```
 
@@ -188,41 +188,41 @@ val filtered: List<Int> = (1..100).filter { it % 3 == 0 ||
 
 在集合中查找第一个元素是另一个常见任务。如果我们编写一个查找既能被 `3` 又能被 `5` 整除的数字的函数，我们可以这样实现它：
 
-```kt
+```java
 fun findFizzbuzz(numbers: List<Int>): Int? {
 ```
 
-```kt
+```java
     for (n in numbers) {
 ```
 
-```kt
+```java
         if (n % 3 == 0 && n % 5 == 0) {
 ```
 
-```kt
+```java
             return n
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     return null
 ```
 
-```kt
+```java
 }
 ```
 
 同样的功能可以使用 `find` 函数实现：
 
-```kt
+```java
 val found: Int? = (1..100).find { it % 3 == 0 && it % 5 ==   0 }
 ```
 
@@ -238,19 +238,19 @@ val found: Int? = (1..100).find { it % 3 == 0 && it % 5 ==   0 }
 
 在 `forEach()` 的情况下，它返回 `Unit` 类型的结果。`Unit` 类型类似于 `forEach()` 函数中的 `void`。`forEach()` 函数就像普通的 `for` 循环：
 
-```kt
+```java
 val numbers = (0..5)
 ```
 
-```kt
+```java
 numbers.map { it * it}          // Can continue
 ```
 
-```kt
+```java
        .filter { it < 20 }      // Can continue
 ```
 
-```kt
+```java
        .forEach { println(it) } // Cannot continue
 ```
 
@@ -258,47 +258,47 @@ numbers.map { it * it}          // Can continue
 
 此外，还有 `forEachIndexed()`，它提供了一个索引，与集合中的实际值一起：
 
-```kt
+```java
 numbers.map { it * it }
 ```
 
-```kt
+```java
         .forEachIndexed { index, value ->
 ```
 
-```kt
+```java
     print("$index:$value, ")
 ```
 
-```kt
+```java
 }
 ```
 
 上述代码的输出将如下所示：
 
-```kt
+```java
 > 0:1, 1:4, 2:9, 3:16, 4:25, 
 ```
 
 自 Kotlin 1.1 以来，还有一个 `onEach()` 函数，它更有用一些，因为它会返回集合本身：
 
-```kt
+```java
 numbers.map { it * it}         
 ```
 
-```kt
+```java
        .filter { it < 20 }     
 ```
 
-```kt
+```java
        .sortedDescending()     
 ```
 
-```kt
+```java
        .onEach { println(it) } // Can continue now
 ```
 
-```kt
+```java
        .filter { it > 5 }
 ```
 
@@ -310,29 +310,29 @@ numbers.map { it * it}         
 
 为了看到 `reduce()` 在实际中的应用，让我们总结一下从 `1` 到 `100` 之间的所有数字：
 
-```kt
+```java
 val numbers = 1..100
 ```
 
-```kt
+```java
 var sum = 0
 ```
 
-```kt
+```java
 for (n in numbers) {
 ```
 
-```kt
+```java
     sum += n
 ```
 
-```kt
+```java
 }
 ```
 
 现在，让我们使用 `reduce` 来编写相同的代码：
 
-```kt
+```java
 val reduced: Int = (1..100).reduce { sum, n -> sum + n }
 ```
 
@@ -342,7 +342,7 @@ val reduced: Int = (1..100).reduce { sum, n -> sum + n }
 
 有时在处理集合时，我们可能会得到一个 *集合的集合*。例如，考虑以下代码：
 
-```kt
+```java
 val listOfLists: List<List<Int>> = listOf(listOf(1, 2), listOf(3, 4, 5), listOf(6, 7, 8))
 ```
 
@@ -350,37 +350,37 @@ val listOfLists: List<List<Int>> = listOf(listOf(1, 2), listOf(3, 4, 5), listOf(
 
 然后，输出将如下所示：
 
-```kt
+```java
 > [1, 2, 3, 4, 5, 6, 7, 8]
 ```
 
 一个选择是迭代我们的输入并使用可变集合的 `addAll` 方法：
 
-```kt
+```java
 val flattened = mutableListOf<Int>()
 ```
 
-```kt
+```java
 for (list in listOfLists) {
 ```
 
-```kt
+```java
     flattened.addAll(list)
 ```
 
-```kt
+```java
 }
 ```
 
 一个更好的选择是使用 `flatMap()` 函数，它将执行相同操作：
 
-```kt
+```java
 val flattened: List<Int> = listOfLists.flatMap { it }
 ```
 
 通过使用 `flatten()` 函数，这个具体的例子可以进一步简化：
 
-```kt
+```java
 val flattened: List<Int> = listOfLists.flatten()
 ```
 
@@ -406,7 +406,7 @@ val flattened: List<Int> = listOfLists.flatten()
 
 我们可以使用`generateSequence()`函数创建一个新的序列。例如，下一个函数将创建一个无限数字序列：
 
-```kt
+```java
 val seq: Sequence<Long> = generateSequence(1L) { it + 1 }
 ```
 
@@ -414,57 +414,57 @@ val seq: Sequence<Long> = generateSequence(1L) { it + 1 }
 
 可以使用`asSequence()`函数将常规集合或范围转换为序列：
 
-```kt
+```java
 (1..100).asSequence()
 ```
 
 如果我们需要使用更复杂的逻辑来构建序列，可以使用`sequence()`构建器：
 
-```kt
+```java
 val fibSeq = sequence {
 ```
 
-```kt
+```java
     var a = 0
 ```
 
-```kt
+```java
     var b = 1
 ```
 
-```kt
+```java
     yield(a)
 ```
 
-```kt
+```java
     yield(b)
 ```
 
-```kt
+```java
     while (true) {
 ```
 
-```kt
+```java
         yield(a + b)
 ```
 
-```kt
+```java
         val t = a
 ```
 
-```kt
+```java
         a = b
 ```
 
-```kt
+```java
         b += t
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 } 
 ```
 
@@ -476,47 +476,47 @@ val fibSeq = sequence {
 
 为了理解这种差异，让我们看看以下代码。首先，我们将创建一个包含一百万个数字的列表，并测量平方列表中每个数字所需的时间——一次在操作**集合**时，另一次在操作**序列**时：
 
-```kt
+```java
 val numbers = (1..1_000_000).toList()
 ```
 
-```kt
+```java
 println(measureTimeMillis {
 ```
 
-```kt
+```java
     numbers.map {
 ```
 
-```kt
+```java
         it * it
 ```
 
-```kt
+```java
     }.take(1).forEach { it }
 ```
 
-```kt
+```java
 }) // ~50ms
 ```
 
-```kt
+```java
 println(measureTimeMillis {
 ```
 
-```kt
+```java
     numbers.asSequence().map {
 ```
 
-```kt
+```java
         it * it
 ```
 
-```kt
+```java
     }.take(1).forEach { it }
 ```
 
-```kt
+```java
 }) // ~5ms
 ```
 
@@ -540,7 +540,7 @@ println(measureTimeMillis {
 
 1.  首先，让我们创建一个通道：
 
-    ```kt
+    ```java
     val chan = Channel<Int>()
     ```
 
@@ -548,7 +548,7 @@ println(measureTimeMillis {
 
 1.  然后，让我们创建一个从该通道读取的协程：
 
-    ```kt
+    ```java
     launch {
         for (c in chan) {
             println(c)
@@ -560,7 +560,7 @@ println(measureTimeMillis {
 
 1.  现在，让我们向这个通道发送一些值。这和使用`send()`函数一样简单：
 
-    ```kt
+    ```java
     (1..10).forEach {
         chan.send(it)
     }
@@ -579,43 +579,43 @@ println(measureTimeMillis {
 
 我们可以通过使用`produce()`函数重写上一节中的例子，如下所示：
 
-```kt
+```java
 val chan = produce {
 ```
 
-```kt
+```java
     (1..10).forEach {
 ```
 
-```kt
+```java
         send(it)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 launch {
 ```
 
-```kt
+```java
     for (c in chan) {
 ```
 
-```kt
+```java
         println(c)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -623,23 +623,23 @@ launch {
 
 在我们的消费者协程中，我们不需要使用`for-each`循环，我们可以使用`consumeEach()`函数：
 
-```kt
+```java
 launch {
 ```
 
-```kt
+```java
     chan.consumeEach {
 ```
 
-```kt
+```java
         println(it)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -651,35 +651,35 @@ launch {
 
 让我们看看以下例子：
 
-```kt
+```java
 val actor = actor<Int> {
 ```
 
-```kt
+```java
     channel.consumeEach {
 ```
 
-```kt
+```java
         println(it)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 (1..10).forEach {
 ```
 
-```kt
+```java
     actor.send(it)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -693,35 +693,35 @@ val actor = actor<Int> {
 
 为了演示这意味着什么，让我们看看上一节中略微修改过的例子：
 
-```kt
+```java
 val actor = actor<Long> {
 ```
 
-```kt
+```java
     var prev = 0L
 ```
 
-```kt
+```java
     channel.consumeEach {
 ```
 
-```kt
+```java
         println(it - prev)
 ```
 
-```kt
+```java
         prev = it
 ```
 
-```kt
+```java
         delay(100)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -729,41 +729,41 @@ val actor = actor<Long> {
 
 而不是发送一系列数字，我们将当前时间戳发送到这个`actor`对象：
 
-```kt
+```java
 repeat(10) {
 ```
 
-```kt
+```java
     actor.send(System.currentTimeMillis())
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 actor.close().also { println("Done sending") }
 ```
 
 现在，让我们看看我们代码的输出：
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > 101
 ```
 
-```kt
+```java
 > 103
 ```
 
-```kt
+```java
 > 101
 ```
 
-```kt
+```java
 > Done sending
 ```
 
@@ -771,15 +771,15 @@ actor.close().also { println("Done sending") }
 
 现在，让我们对我们的`actor`对象的定义方式做一些小的改动：
 
-```kt
+```java
 val actor = actor<Long>(capacity = 10) {
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -787,19 +787,19 @@ val actor = actor<Long>(capacity = 10) {
 
 现在，如果我们再次运行我们的代码，我们将看到完全不同的输出：
 
-```kt
+```java
 > Done sending
 ```
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > 0
 ```
 
-```kt
+```java
 > 0
 ```
 
@@ -807,29 +807,29 @@ val actor = actor<Long>(capacity = 10) {
 
 以类似的方式，`capacity`也可以定义在生产者通道上：
 
-```kt
+```java
 val chan = produce(capacity = 10) { 
 ```
 
-```kt
+```java
     (1..10).forEach { 
 ```
 
-```kt
+```java
         send(it) 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 它也可以定义在原始通道上：
 
-```kt
+```java
 val chan = Channel<Int>(10)
 ```
 
@@ -847,15 +847,15 @@ val chan = Channel<Int>(10)
 
 我们可以使用`flow()`函数创建一个新的流：
 
-```kt
+```java
 val numbersFlow: Flow<Int> = flow {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -863,27 +863,27 @@ val numbersFlow: Flow<Int> = flow {
 
 例如，这里我们创建了一个使用`flow`构造函数发布十个数字的流：
 
-```kt
+```java
 flow {
 ```
 
-```kt
+```java
     (0..10).forEach {
 ```
 
-```kt
+```java
         println("Sending $it")
 ```
 
-```kt
+```java
         emit(it)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -891,15 +891,15 @@ flow {
 
 为了做到这一点，我们可以使用`flow`对象上可用的`collect()`函数：
 
-```kt
+```java
 numbersFlow.collect { number ->
 ```
 
-```kt
+```java
     println("Listener received $number")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -907,111 +907,111 @@ numbersFlow.collect { number ->
 
 与一些其他响应式框架和库不同，没有特殊的语法来向监听器抛出异常。相反，我们可以简单地使用标准的`throw`表达式来完成这个操作：
 
-```kt
+```java
 flow {
 ```
 
-```kt
+```java
     (1..10).forEach {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
         if (it == 9) {
 ```
 
-```kt
+```java
             throw RuntimeException()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 从监听器方面来看，处理异常就像将`collect()`函数包裹在`try`/`catch`块中一样简单：
 
-```kt
+```java
 try {
 ```
 
-```kt
+```java
     numbersFlow.collect { number ->
 ```
 
-```kt
+```java
         println("Listenerreceived $number")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 catch (e: Exception) {
 ```
 
-```kt
+```java
     println("Got an error")
 ```
 
-```kt
+```java
 }
 ```
 
 与通道一样，Kotlin 的流是挂起的，但它们不是并发的。流支持背压，尽管这对用户来说是完全透明的。为了了解这意味着什么，让我们为同一个流创建多个订阅者：
 
-```kt
+```java
 (1..4).forEach { coroutineId ->
 ```
 
-```kt
+```java
     delay(5000)
 ```
 
-```kt
+```java
     launch(Dispatchers.Default) {
 ```
 
-```kt
+```java
         numbersFlow.collect { number -> 
 ```
 
-```kt
+```java
             delay(1000)
 ```
 
-```kt
+```java
             println("Coroutine $coroutineId received 
 ```
 
-```kt
+```java
               $number") 
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1019,35 +1019,35 @@ catch (e: Exception) {
 
 现在，让我们看看输出结果：
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > Sending 1
 ```
 
-```kt
+```java
 > Coroutine 1 received 5
 ```
 
-```kt
+```java
 > Sending 6
 ```
 
-```kt
+```java
 > Coroutine 2 received 1
 ```
 
-```kt
+```java
 > Sending 2
 ```
 
-```kt
+```java
 > Coroutine 1 received 6
 ```
 
-```kt
+```java
 > ...
 ```
 
@@ -1063,49 +1063,49 @@ catch (e: Exception) {
 
 在某些情况下，例如，当我们有足够的可用内存时，我们并不急于对生产者应用背压。为了做到这一点，每个消费者都可以指定使用`buffer()`函数来缓冲流程：
 
-```kt
+```java
 numbersFlow.buffer().collect { number ->
 ```
 
-```kt
+```java
     delay(1000)
 ```
 
-```kt
+```java
     println("Coroutine $coroutineId received $number")
 ```
 
-```kt
+```java
 }
 ```
 
 如果我们再次查看上述代码的输出，我们会看到显著的变化：
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > Sending 8
 ```
 
-```kt
+```java
 > Sending 9
 ```
 
-```kt
+```java
 > Sending 10
 ```
 
-```kt
+```java
 > Coroutine 1 received 1
 ```
 
-```kt
+```java
 > Coroutine 1 received 2
 ```
 
-```kt
+```java
 > ...
 ```
 
@@ -1121,75 +1121,75 @@ numbersFlow.buffer().collect { number ->
 
 想象一下，我们有一个以每秒十次的速度产生股价变化的流程，并且我们有一个需要显示最新股价的 UI。为此，我们只需使用一个每次滴答上升 1 的数字：
 
-```kt
+```java
 val stock: Flow<Int> = flow {
 ```
 
-```kt
+```java
     var i = 0
 ```
 
-```kt
+```java
     while (true) {
 ```
 
-```kt
+```java
         emit(++i)
 ```
 
-```kt
+```java
         delay(100)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 然而，UI 本身不需要每秒刷新十次。每秒一次就足够了。如果我们简单地尝试使用`collect()`，就像前面的例子一样，我们将会不断落后于生产者：
 
-```kt
+```java
 var seconds = 0
 ```
 
-```kt
+```java
 stock.collect { number ->
 ```
 
-```kt
+```java
     delay(1000)
 ```
 
-```kt
+```java
     seconds++
 ```
 
-```kt
+```java
     println("$seconds seconds -> received $number")
 ```
 
-```kt
+```java
 }
 ```
 
 上述代码输出以下内容：
 
-```kt
+```java
 > 1 seconds -> received 1
 ```
 
-```kt
+```java
 > 2 seconds -> received 2
 ```
 
-```kt
+```java
 > 3 seconds -> received 3
 ```
 
-```kt
+```java
 > ...
 ```
 
@@ -1197,45 +1197,45 @@ stock.collect { number ->
 
 一个更好的解决方案是*合并*流程。合并流程不会存储所有消息。相反，它只保留最新的值。我们在以下代码中实现了这一点：
 
-```kt
+```java
 stock.conflate().collect { number ->
 ```
 
-```kt
+```java
     delay(1000)
 ```
 
-```kt
+```java
     seconds++
 ```
 
-```kt
+```java
     println("$seconds seconds -> received $number")
 ```
 
-```kt
+```java
 }
 ```
 
 让我们先看看输出：
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > 4 seconds -> received 30
 ```
 
-```kt
+```java
 > 5 seconds -> received 40
 ```
 
-```kt
+```java
 > 6 seconds -> received 49
 ```
 
-```kt
+```java
 > ...
 ```
 

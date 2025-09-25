@@ -148,7 +148,7 @@ Dart 分析器检查 Dart 代码中的错误。它本质上是一个 Dart 的 li
 
 Dart 观测站是一个专门用于调试和分析 Flutter 应用的工具。要设置断点并逐步运行应用，您可以使用 IDE 的帮助。另一种选择是使用 `debugger()` 语句。这一行将在您放置它的位置中断执行。您还可以指定一个条件，并且只有当条件为真时，应用才会停止：
 
-```kt
+```java
 void function(int aNumber) {
  debugger(when: aNumber < 10);
  // ...
@@ -157,7 +157,7 @@ void function(int aNumber) {
 
 当你运行 Flutter 应用程序时，你将在控制台看到一个指定观察器 URL 的行。该行看起来如下：
 
-```kt
+```java
 Observatory listening on http://127.0.0.1:8100/
 ```
 
@@ -169,7 +169,7 @@ Observatory listening on http://127.0.0.1:8100/
 
 要这样做，将`debugPaintSizeEnabled`变量设置为`true`，如下所示：
 
-```kt
+```java
 void main() {
  debugPaintSizeEnabled=true;
  runApp(MyApp());
@@ -238,7 +238,7 @@ void main() {
 
 1.  将`pubspec.yaml`导入到你的测试框架中，如下所示：
 
-```kt
+```java
       dev_dependencies:
            flutter_test:
              sdk: flutter
@@ -246,7 +246,7 @@ void main() {
 
 1.  在`test/unit_test.dart`中编写测试代码：
 
-```kt
+```java
       import 'package:test/test.dart';
       void main() {
          test('the answer to the question', () {
@@ -268,7 +268,7 @@ void main() {
 
 让我们看看代码中的组件测试是如何看的：
 
-```kt
+```java
 import 'package:flutter/material.dart';
  import 'package:flutter_test/flutter_test.dart';
 void main() {
@@ -317,7 +317,7 @@ void main() {
 
 1.  将`flutter_driver`包添加到`pubspec`：
 
-```kt
+```java
       dev_dependencies:
            flutter_driver: 
              sdk: flutter
@@ -327,7 +327,7 @@ void main() {
 
 1.  使用`flutter drive`命令运行集成测试：
 
-```kt
+```java
  flutter drive --target=my_app/test_driver/my_test.dart 
 ```
 

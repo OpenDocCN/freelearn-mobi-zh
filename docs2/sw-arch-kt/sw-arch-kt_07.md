@@ -62,7 +62,7 @@
 
 此规则通过数据类中的 Kotlin 非空字段语法和在 `init` 函数中的验证强制执行：
 
-```kt
+```java
 data class Household(
     val name: String,
     val members: List<String>
@@ -77,7 +77,7 @@ data class Household(
 
 此规则通过 Kotlin 枚举功能强制执行：
 
-```kt
+```java
 enum class ContractState {
     DRAFTED,
     UNDER_REVIEW,
@@ -93,7 +93,7 @@ enum class ContractState {
 
 此规则通过 Kotlin 数据类强制执行：
 
-```kt
+```java
 data class Party(
     val household: Household,
     val serviceProvided: String,
@@ -117,7 +117,7 @@ data class Contract(
 
 在我们的实际例子中，我们有一个用例，即一个家庭使用协商服务与另一个家庭草拟合同：
 
-```kt
+```java
 fun draftContract(
     householdA: Household,
     householdB: Household,
@@ -167,7 +167,7 @@ fun draftContract(
 
 然后，家庭将表单作为 JSON 值提交，并在接口适配器层中进入控制器。控制器将表单转换为几个内部对象，例如`Household`对象和作为字符串提供的服务。然后，这些内部对象被传递到用例层的`draftContract`函数：
 
-```kt
+```java
 fun draftContract(
     householdA: Household,
     householdB: Household,
@@ -246,7 +246,7 @@ fun draftContract(
 
 我们需要一个主端口以允许草拟合同。`ContractService`接口对外公开，但其实现保持在核心中：
 
-```kt
+```java
  interface ContractService {
     fun draftContract(
         householdA: Household,
@@ -259,7 +259,7 @@ fun draftContract(
 
 我们还需要一个次要端口以允许草拟合同被持久化。`ContractRepository`接口由适配器实现，以提供如何保存`Contract`对象的详细技术信息：
 
-```kt
+```java
 interface ContractRepository {
     fun save(contract: Contract)
 }
@@ -267,7 +267,7 @@ interface ContractRepository {
 
 主端口接口`ContractService`的实现验证草拟合同，并创建一个具有`DRAFTED`状态的`Contract`对象。然后，将`Contract`对象传递给`ContractRepository`进行保存：
 
-```kt
+```java
  class ContractServiceImpl(
     private val contractRepository: ContractRepository,
 ) : ContractService {
@@ -296,7 +296,7 @@ interface ContractRepository {
 
 在实际示例中，适配器可以是创建草拟合同的`POST`端点。负载是一个由`DraftContractRequest`类表示的 JSON 值，它可以被转换成一个`Contract`对象：
 
-```kt
+```java
 data class DraftContractRequest(
     val householdA: String,
     val householdB: String,
@@ -307,7 +307,7 @@ data class DraftContractRequest(
 
 合同服务在本地缓存了`Household`对象，可以通过`HouseholdRepository`存储库从家庭名称进行查找：
 
-```kt
+```java
 interface HouseholdRepository {
     fun findByName(householdName: String): Household?
 }
@@ -315,7 +315,7 @@ interface HouseholdRepository {
 
 如果找到给定名称的家庭，则函数返回一个`Household`对象。否则，它返回一个`null`值。定义了 REST 控制器类`ContractController`以接受草拟合同的 HTTP 请求。此控制器使用 Spring Boot 作为框架来注册 URI 映射：
 
-```kt
+```java
 @RestController
 @RequestMapping("/contracts/")
 class ContractController(
@@ -326,7 +326,7 @@ class ContractController(
 
 控制器注入了`ContractService`主端口以进入核心并草拟合同。它还注入了`HouseholdRepository`次要端口以查找用于验证的`Household`对象。
 
-```kt
+```java
     @PostMapping(
         value = ["draft"],
         consumes = [MediaType.APPLICATION_JSON_VALUE],
@@ -336,7 +336,7 @@ class ContractController(
 
 控制器定义了一个映射`POST /contracts/draft`，它接受 JSON 值作为输入和输出。
 
-```kt
+```java
     fun draftContract(
         @RequestBody request: DraftContractRequest,
     ): ResponseEntity<ContractDto> {
@@ -346,7 +346,7 @@ class ContractController(
 
 控制器将`DraftContractRequest`请求负载转换为 JSON，并验证负载中的家庭名称是否存在。如果任何家庭不存在，则向请求者返回一个`404 (Not Found)` HTTP 状态码。
 
-```kt
+```java
          val contract =
             contractService.draftContract(
                 householdA,
@@ -358,14 +358,14 @@ class ContractController(
 
 控制器调用`ContractNegotiationService`主端口中的`draftContract`函数，该函数验证请求并在存储库中持久化草拟合同。
 
-```kt
+```java
          return ResponseEntity(contract.toDto(), HttpStatus.CREATED)
 }
 ```
 
 最后，操作已完成，控制器向请求者返回一个`201 (Created)` HTTP 状态码，并附带草拟合同的详细信息。响应负载由`ContractDto`类表示：
 
-```kt
+```java
  data class ContractDto(
     val householdA: String,
     val householdB: String,
@@ -377,7 +377,7 @@ class ContractController(
 
 对于合同从内部模型到外部模型的转换，存在一个`toDto`函数：
 
-```kt
+```java
  fun Contract.toDto(): ContractDto =
     ContractDto(
         partyA.household.name,
@@ -450,7 +450,7 @@ FCIS 架构可以在 *图 7.5* 中展示：
 
 要开始这种方法，我们需要定义我们可能遇到的错误。我们首先定义错误的类型：
 
-```kt
+```java
 enum class ErrorType {
     HOUSEHOLD_NOT_FOUND,
     SAME_HOUSEHOLD_IN_CONTRACT
@@ -459,7 +459,7 @@ enum class ErrorType {
 
 我们还需要为错误本身提供一个包装数据类：
 
-```kt
+```java
 data class Error(
     val reason: String,
     val type: ErrorType
@@ -472,7 +472,7 @@ Arrow
 
 使用 `Either` 进行错误处理的 `Option` 和结果类型。它还提供了各种函数式编程模式，如函子、单子和应用。Arrow 通过允许开发者以函数式风格表达计算，旨在提高代码的可读性、可维护性和健壮性，使 Kotlin 应用中的复杂数据流和副作用管理变得更加容易。
 
-```kt
+```java
  fun draftContract(
     householdA: Household,
     householdB: Household,
@@ -483,7 +483,7 @@ Arrow
 
 `draftContract` 函数返回一个 `Either` 对象，其中左侧类型参数始终是潜在的错误，右侧类型参数始终是预期结果：
 
-```kt
+```java
     if (householdA.name == householdB.name) {
         Either.Left(
             Error("Parties must be from different households", ErrorType.SAME_HOUSEHOLD_IN_CONTRACT),
@@ -493,7 +493,7 @@ Arrow
 
 同样的验证确保合同在两侧没有相同的 `Household`。然而，而不是抛出异常，该函数返回左侧值，这由之前定义的 `Error` 类表示。
 
-```kt
+```java
       else {
         Either.Right(
             Contract(
@@ -515,14 +515,14 @@ Arrow
 
 除了 REST 控制器之外，还有两个涉及命令式操作。第一个是通过名称查找 `Household` 对象，第二个是持久化 `Contract` 对象。我们在这个示例中使用 `typealias` 定义它们：
 
-```kt
+```java
 typealias HouseholdLookup = (String) -> Household?
 typealias ContractPersist = (Contract) -> Either<Error, Contract>
 ```
 
 除了这两个定义的函数之外，我们还需要一个函数来确保请求中提到的家庭存在：
 
-```kt
+```java
 fun DraftContractRequest.ensureHouseholdExist(
     householdLookup: HouseholdLookup
 ): Either<Error, Pair<Household, Household>> {
@@ -548,7 +548,7 @@ fun DraftContractRequest.ensureHouseholdExist(
 
 定义了这个函数后，我们现在可以将它们注入到命令式控制器实现中：
 
-```kt
+```java
  @RequestMapping("/contracts/")
 class ContractControllerShell(
     private val householdLookup: HouseholdLookup,
@@ -563,7 +563,7 @@ class ContractControllerShell(
 
 `draft` 函数现在充分利用了 `Either` 类，通过 `flatMap` 函数将右侧类型参数折叠：
 
-```kt
+```java
     fun draft(
         @RequestBody draftContractRequest: DraftContractRequest,
     ): ResponseEntity<ContractDto> =
@@ -594,7 +594,7 @@ class ContractControllerShell(
 
 所有可能的错误都被折叠到左侧，并且它们被映射到 HTTP 状态码，如下所示：
 
-```kt
+```java
 fun ErrorType.toHttpStatus(): HttpStatus = when (this) {
     ErrorType.HOUSEHOLD_NOT_FOUND -> HttpStatus.NOT_FOUND
     ErrorType.SAME_HOUSEHOLD_IN_CONTRACT -> HttpStatus.BAD_REQUEST
@@ -639,7 +639,7 @@ FCIS 将代码分为两部分。
 
 与家庭服务通信相关的操作定义如下：
 
-```kt
+```java
 interface HouseholdApiAction<R> {
     fun toRequest(): Request
     fun fromResponse(response: Response): R
@@ -650,7 +650,7 @@ interface HouseholdApiAction<R> {
 
 通过给定的家庭名称获得家庭名称的操作定义如下：
 
-```kt
+```java
 val householdLens = Body.auto<Household>().toLens()
 data class GetHousehold(
     val householdName: String,
@@ -662,7 +662,7 @@ data class GetHousehold(
 
 `GetHousehold`类封装了生成发送到家庭服务的 HTTP 请求所需的详细信息。家庭服务响应通过使用`Household`数据类转换为内部数据类，`Household`数据类在此定义：
 
-```kt
+```java
 data class Household(
     val name: String,
     val emailAddress: String,
@@ -675,7 +675,7 @@ data class Household(
 
 适配器类提供了一种将连接细节和机制抽象到外部系统的方式。`Household` API 在此定义：
 
-```kt
+```java
 interface HouseholdApi {
     operator fun <R : Any> invoke(action: HouseholdApiAction<R>): R
     companion object
@@ -684,7 +684,7 @@ interface HouseholdApi {
 
 `HouseholdApi`接口充当特定操作的包装和处理程序。伴随对象被定义为扩展函数的占位符，稍后将会介绍。与本地家庭服务通信的 HTTP 实现如下：
 
-```kt
+```java
 val token = "fakeToken"
 fun HouseholdApi.Companion.Http(client: HttpHandler) =
     object : HouseholdApi {
@@ -701,7 +701,7 @@ fun HouseholdApi.Companion.Http(client: HttpHandler) =
 
 此外，定义了一个扩展函数来使使用代码更整洁：
 
-```kt
+```java
 fun HouseholdApi.getHousehold(householdName: String) = invoke(GetHousehold(householdName))
 ```
 
@@ -711,7 +711,7 @@ fun HouseholdApi.getHousehold(householdName: String) = invoke(GetHousehold(house
 
 在设置好操作和适配器后，使用家庭服务通过给定的名称获取家庭只需要三行代码：
 
-```kt
+```java
 val app: HttpHandler =
     routes(
         "/households/{name}" bind GET to { request ->
@@ -734,7 +734,7 @@ fun main() {
 
 Connect 模式的一个优势是更好的可测试性。每个 Action 和与 Household Service 一起的 API 都可以单独测试。这是从 Household API 获取家庭的测试用例：
 
-```kt
+```java
     @Test
     fun `Get the household from Household API`() {
         assertEquals(
@@ -839,14 +839,14 @@ FCIS 使用命令式外壳层来处理与外部世界的所有交互。任何技
 
 在创建混合风格方面有很多空间。例如，一个使用六边形架构的应用程序可以借鉴 FCIS 的概念，因此所有端口和适配器基本上是使用 Kotlin 操作符重载功能实现的函数：
 
-```kt
+```java
 class DummyContractPersist: ContractPersist {
     override fun invoke(p1: Contract): Either<Error, Contract> {
 ```
 
 `ContractPersist`是我们用于 FCIS 的类型别名，我们可以定义一个实现类型别名接口并提供具有操作符重载的`invoke`函数的类。因此，在实践中，调用者可以跳过`invoke`关键字，将其视为一个函数，如下所示：
 
-```kt
+```java
     val persist = DummyContractPersist()
     val result = persist(contract)
 ```
@@ -875,7 +875,7 @@ ADM 的使用
 
 +   **Clean Architecture**：
 
-    ```kt
+    ```java
     org.example.service.negotiation.entity
     org.example.service.negotiation.usecase
     org.example.service.negotiation.interface
@@ -885,7 +885,7 @@ ADM 的使用
 
 +   **六边形架构**：
 
-    ```kt
+    ```java
     org.example.service.negotiation.core
     org.example.service.negotiation.core.port
     org.example.service.negotiation.adapter
@@ -894,7 +894,7 @@ ADM 的使用
 
 +   **FCIS**：
 
-    ```kt
+    ```java
     org.example.service.negotiation.core
     org.example.service.negotiation.shell
     org.example.service.negotiation.shell.rest
@@ -904,7 +904,7 @@ ADM 的使用
 
 这是一个强制执行 FCIS 层依赖的测试用例示例，使用 **ArchUnit** 作为测试驱动程序：
 
-```kt
+```java
     val classes = ClassFileImporter().importPackages("fcis")
     @Test
     fun `layer dependencies are_respected`() {
@@ -926,7 +926,7 @@ ADM 的使用
 
 例如，协商服务的命令行外壳可以在命令行模块的 Gradle Kotlin 脚本中声明显式依赖。
 
-```kt
+```java
 implementation("com.example:service-negotiation-core")
 ```
 

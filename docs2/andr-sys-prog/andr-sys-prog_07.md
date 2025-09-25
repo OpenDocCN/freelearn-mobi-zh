@@ -36,7 +36,7 @@ Android Wi-Fi 架构
 
 当`WifiManager`被创建时，它获得`IWifiManager`的接口，如下面的代码片段所示。该接口通过 binder 机制由`WifiService`实现：
 
-```kt
+```java
 public WifiManager(Context context, IWifiManager service, Looper looper) { 
     mContext = context; 
     mService = service; 
@@ -50,7 +50,7 @@ public WifiManager(Context context, IWifiManager service, Looper looper) {
 
 在 `WifiService` 的实现中，它使用 `WifiStateMachine` 来管理 Wi-Fi 状态：
 
-```kt
+```java
 public final class WifiServiceImpl extends IWifiManager.Stub { 
     private static final String TAG = "WifiService"; 
     private static final boolean DBG = true; 
@@ -90,7 +90,7 @@ Android Wi-Fi 初始化的序列图
 
 当创建 `WifiNative` 类的实例时，它首先加载 Wi-Fi 服务共享库，并调用 `registerNatives` 函数来注册所有原生函数，如下所示：
 
-```kt
+```java
 public class WifiNative { 
 ... 
     static { 
@@ -108,7 +108,7 @@ public class WifiNative {
 
 `registerNatives` 的原生实现如下所示。它通过一个 `gWifiMethods` 全局变量来注册原生函数：
 
-```kt
+```java
 /* User to register native functions */ 
 extern "C" 
 jint Java_com_android_server_wifi_WifiNative_registerNatives(JNIEnv* env, jclass clazz) { 
@@ -125,7 +125,7 @@ jint Java_com_android_server_wifi_WifiNative_registerNatives(JNIEnv* env, jclass
 
 `loadDriver` 方法在 `android_net_wifi_loadDriver` 函数中实现，如下所示：
 
-```kt
+```java
 static jboolean android_net_wifi_loadDriver(JNIEnv* env, jobject) 
 { 
     return (::wifi_load_driver() == 0); 
@@ -135,7 +135,7 @@ static jboolean android_net_wifi_loadDriver(JNIEnv* env, jobject)
 
 它调用一个 `wifi_load_driver` 函数，这是 Wi-Fi HAL 的一部分，位于 `$AOSP/hardware/libhardware_legacy/wifi/wifi.c`。
 
-```kt
+```java
 int wifi_load_driver() 
 { 
     char driver_status[PROPERTY_VALUE_MAX]; 
@@ -182,7 +182,7 @@ int wifi_load_driver()
 
 现在我们将探讨另一种方法，`startHalNative`。它在`android_net_wifi_startHal`函数中实现：
 
-```kt
+```java
 static jboolean android_net_wifi_startHal(JNIEnv* env, jclass cls) { 
     JNIHelper helper(env); 
     wifi_handle halHandle = getWifiHandle(helper, cls); 
@@ -247,7 +247,7 @@ QEMU SLIRP 网络
 
 在前面的图中，客户端的 IP 地址为**10.0.2.15**，网关的 IP 地址为**10.0.2.2**。默认 DNS IP 地址为**10.0.2.3**。它可能支持 SMB，这是可选的。如果您启动 Android 模拟器，默认网络接口为`eth0`，IP 地址为**10.0.2.15**。这通常用于模拟蜂窝数据连接。要模拟 Wi-Fi 连接，我们可以使用以下 QEMU 选项添加一个额外的网络接口`eth1`：
 
-```kt
+```java
 -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1 
 
 ```
@@ -258,7 +258,7 @@ QEMU SLIRP 网络
 
 注意，前面的选项只能与 ranchu 一起使用，而不能与 goldfish 一起使用。要使用前面的 QEMU 选项启动 Android 模拟器，我们可以运行以下命令：
 
-```kt
+```java
 $ emulator @a25x86 -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1  
 
 ```
@@ -271,7 +271,7 @@ $ emulator @a25x86 -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2
 
 在默认的模拟器构建中，`wpa_supplicant` 不会被构建。要为模拟器启用 `wpa_supplicant` 的构建，我们可以在我们的 `BoardConfig.mk` 中添加以下行：
 
-```kt
+```java
 BOARD_WPA_SUPPLICANT_DRIVER := WIRED 
 WPA_SUPPLICANT_VERSION      := VER_0_8_X VER_2_1_DEVEL 
 BOARD_WLAN_DEVICE           := eth1 
@@ -280,7 +280,7 @@ BOARD_WLAN_DEVICE           := eth1
 
 当 `BOARD_WPA_SUPPLICANT_DRIVER` 被定义时，`external/wpa_supplicant_8/wpa_supplicant/Android.mk` 中的以下配置将被更改为 true：
 
-```kt
+```java
 ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),) 
   CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y 
 endif 
@@ -297,7 +297,7 @@ endif
 
 `eth1` 有线连接的 `wpa_supplicant.conf` 配置文件可以在以下片段中找到：
 
-```kt
+```java
 ctrl_interface=eth1 
 ap_scan=2 
 update_config=1 
@@ -321,7 +321,7 @@ network={
 
 要将 `wpa_supplicant.conf` 以正确的权限复制到 `/data/misc/wifi/` 目录，我们需要按以下方式更改 `device.mk`：
 
-```kt
+```java
 # Wi-Fi support 
 PRODUCT_PROPERTY_OVERRIDES := \ 
     wifi.interface=eth1 
@@ -351,7 +351,7 @@ wpa_supplicant.conf \
 
 从 Android 6 版本开始，系统对供应商文件的权限定义在 `device` 文件夹下的 `android_filesystem_config.h` 文件中。`PRODUCT_PACKAGES` 必须包含 `fs_config_dirs` 和/或 `fs_config_files`，以便将它们分别安装到 `/system/etc/fs_config_dirs` 和 `/system/etc/fs_config_files`。生成的 `fs_config_dirs` 和 `fs_config_files` 文件用于设置运行时权限。我们可以在以下代码片段中看到定义在 `android_filesystem_config.h` 中的所有者和权限：
 
-```kt
+```java
 #include <private/android_filesystem_config.h> 
 
 #define NO_ANDROID_FILESYSTEM_CONFIG_DEVICE_DIRS 
@@ -382,7 +382,7 @@ static const struct fs_path_config android_device_files[] = {
 
 要初始化 `eth1`，我们可以参考模拟器中 `eth0` 的初始化过程。网络接口 `eth0` 在 `system/etc/init.goldfish.sh` 脚本中初始化，如下所示：
 
-```kt
+```java
 #!/system/bin/sh 
 
 # Setup networking when boot starts 
@@ -394,7 +394,7 @@ route add default gw 10.0.2.2 dev eth0
 
 如我们所见，固定 IP 地址 `10.0.2.15` 被分配给了 `eth0` 接口。我们可以添加以下命令来初始化接口 `eth1`：
 
-```kt
+```java
 ifconfig eth1 up 
 dhcpcd -d eth1 
 
@@ -406,7 +406,7 @@ dhcpcd -d eth1
 
 在 `init.ranchu.rc` 初始化脚本中，定义了一个服务，如下面的代码片段所示，用于运行 `init.goldfish.sh` 脚本：
 
-```kt
+```java
 ... 
 service goldfish-setup /system/etc/init.goldfish.sh 
     user root 
@@ -422,7 +422,7 @@ service goldfish-setup /system/etc/init.goldfish.sh
 
 我们可以在 `init.ranchu.rc` 脚本中添加一个服务来启动 `wpa_supplicant`。以下是我们添加到 `init.ranchu.rc` 脚本中的服务：
 
-```kt
+```java
 service wpa_supplicant /system/bin/wpa_supplicant -ieth1 -Dwired -c/data/misc/wifi/wpa_supplicant.conf -e/data/misc/wifi/entropy.bin -g@android:wpa_eth1 
     class main 
     socket wpa_eth1 dgram 660 wifi wifi 
@@ -453,7 +453,7 @@ service wpa_supplicant /system/bin/wpa_supplicant -ieth1 -Dwired -c/data/misc/wi
 
 `wifi_start_supplicant` 函数通过设置 `ctl.start` 系统属性来启动 `wpa_supplicant`。`ctl.start` 和 `ctl.stop` 是由属性服务实现的两个系统属性，可以用来启动或停止在 init 脚本中定义的服务：
 
-```kt
+```java
 int wifi_start_supplicant(int p2p_supported) 
 { 
     char supp_status[PROPERTY_VALUE_MAX] = {'\0'};  
@@ -475,7 +475,7 @@ int wifi_start_supplicant(int p2p_supported)
 
 正如我们在前面的章节中所做的那样，我们将查看这一章中我们更改的项目。我们可以从这一章的清单文件中检查：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -514,7 +514,7 @@ int wifi_start_supplicant(int p2p_supported)
 
 我们可以看到，我们为这一章有一个 `android-7.1.1_r4_x86emu_ch07_r2` 标签。在这一章中，我们有我们自己的项目，`kernel`、`x86emu`、`newinstaller` 和 `goldfish`。我们将使用此清单来下载或更新这一章的源代码：
 
-```kt
+```java
 $ repo init https://github.com/shugaoye/manifests -b android-7.1.1_r4_x86emu_ch07_r2
 $ repo sync  
 
@@ -522,7 +522,7 @@ $ repo sync
 
 在我们获得这一章的源代码后，我们可以设置环境和构建系统，如下所示：
 
-```kt
+```java
 $ . build/envsetup.sh
 $ lunch x86emu_x86-eng
 $ make -j4  
@@ -537,7 +537,7 @@ $ make -j4
 
 在启动的第一阶段，`initrd.img` 中的 init 脚本将挂载系统镜像并将 `ramdisk.img` 提取到内存中的文件系统。由于我们将直接使用 `system.img`，我们需要将 `ramdisk.img` 放入 `system.img` 中。我们使用 x86emu 设备中的 `Makefile` 来完成这项工作，而不是更改 AOSP 源代码。以下是我们添加到 `device/generic/x86emu/Makefile` 中的构建目标：
 
-```kt
+```java
 qcow2_img: 
    mkdir -p ${OUT}/system/x86emu_ch07 
    cp ${OUT}/ramdisk.img ${OUT}/system/x86emu_ch07 
@@ -557,7 +557,7 @@ qcow2_img:
 
 最后，我们需要将 `initrd.img` 中的 init 脚本更改为以下内容，以从 `system.img` 内提取 `ramdisk.img`：
 
-```kt
+```java
 ... 
 check_root() 
 { 
@@ -608,7 +608,7 @@ echo -n Detecting x86emu... export DEBUG=2 export SRC=x86emu_ch07
 
 一旦我们完成所有这些更改，我们可以按照以下方式构建 `initrd.img` 和系统镜像：
 
-```kt
+```java
 $ cd device/generic/x86emu
 $ make qcow2_img
 ...
@@ -640,7 +640,7 @@ make[1]: Leaving directory `/home/roger/src/android-6'
 
 我们可以执行以下命令，首先使用 `initrd.img` 启动系统：
 
-```kt
+```java
 $ cd $OUT 
 $ emulator @a25x86 -ranchu -verbose -show-kernel -system ./system-qcow2.img -ramdisk ./initrd.img -initdata ./userdata-qcow2.img -kernel ./kernel -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1 
 
@@ -658,7 +658,7 @@ $ emulator @a25x86 -ranchu -verbose -show-kernel -system ./system-qcow2.img -ram
 
 要使用 `ramdisk.img` 启动系统，我们可以执行以下命令：
 
-```kt
+```java
 $ cd $OUT
 $ emulator @a25x86 -ranchu -verbose -show-kernel -system ./system-qcow2.img **-ramdisk ./ramdisk.img** -initdata ./userdata-qcow2.img -kernel ./kernel -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1
 
@@ -668,7 +668,7 @@ $ emulator @a25x86 -ranchu -verbose -show-kernel -system ./system-qcow2.img **-r
 
 系统启动后，我们可以使用 logcat 检查 `wpa_supplicant` 的调试信息，如下所示：
 
-```kt
+```java
 $ adb logcat -s "wpa_supplicant"  
 
 ```
@@ -677,7 +677,7 @@ $ adb logcat -s "wpa_supplicant"
 
 我们可以看到 `wpa_supplicant` 成功启动，使用以太网 `eth1` 和全局控制套接字 `wpa_eth1`。此全局控制套接字在 `init.ranchu.rc` 中指定，作为 `wpa_supplicant` 服务的一部分，如下所示：
 
-```kt
+```java
 service wpa_supplicant /system/bin/wpa_supplicant -ieth1 -Dwired -c/data/misc/wifi/wpa_supplicant.conf -e/data/misc/wifi/entropy.bin -g@android:wpa_eth1 -dd 
     class main 
     socket wpa_eth1 dgram 660 wifi wifi 

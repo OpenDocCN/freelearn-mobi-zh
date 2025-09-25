@@ -222,7 +222,7 @@ Unity 界面的一项特性是，开发者无需玩游戏就可以测试他们�
 
 让我们先让我们的企鹅向前移动。为此，打开在第一章，“使用 Unity3D 开发 Android 游戏入门”中创建的文件`PenguinController.cs`。此文件位于 Assets 目录的 Scripts 文件夹中。在类中添加一个公共字段前进速度，如下面的代码所示：
 
-```kt
+```java
     public float forwardMovementSpeed = 3.0f;
 
 ```
@@ -379,7 +379,7 @@ Unity 为开发者提供了在运行时实例化游戏对象并在其中定义�
 
 将以下字段变量添加到 `BlockGenerator` 类中：
 
-```kt
+```java
     public GameObject[] availableBlocks;
     public List<GameObject> currentBlocks;
     private float screenWidthInPoints;
@@ -450,7 +450,7 @@ Unity 为开发者提供了在运行时实例化游戏对象并在其中定义�
 
 因此，在所有这些解释之后，让我们将我们的最终方法`FixedUpdate()`添加到`BlockGenerator.cs`文件中，如下所示：
 
-```kt
+```java
     void FixedUpdate() 
     {
         GenerateBlockIfRequired(); 

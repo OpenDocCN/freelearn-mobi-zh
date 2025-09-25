@@ -48,7 +48,7 @@ SQLite 是一个嵌入到核心 Android 系统中的优秀小型 SQL 兼容数�
 
 直接使用 SQLite 需要大量的代码来将 SQLite 结构化数据转换为 Java 对象，然后准备 SQL 语句将这些对象存储回数据库。将 SQL 记录映射到 Java 对象的通常形式如下：
 
-```kt
+```java
 public Attachment selectById(final long id) {
    final Cursor cursor = db.query(
            "attachments",
@@ -89,7 +89,7 @@ Room 是架构组件的一部分，默认情况下不会导入到项目中。相
 
 1.  在文件底部，您会找到一个依赖项块；在块的底部，添加以下两行代码：
 
-```kt
+```java
 implementation 'android.arch.persistence.room:runtime:+'
 annotationProcessor 'android.arch.persistence.room:compiler:+'
 ```
@@ -116,14 +116,14 @@ Room 中的`Entity`类被注解为`@Entity`，并预期遵循某些规则：
 
 1.  使用`@Entity`注解类声明：
 
-```kt
+```java
 @Entity
 public class ClaimItem implements Parcelable {
 ```
 
 1.  添加一个 ID 字段，使用`@PrimaryKey`注解它，并告诉 Room 你希望它由数据库生成，而不是手动创建 ID（如果你喜欢，也可以为这个字段添加 getter 和 setter）：
 
-```kt
+```java
 @PrimaryKey(autoGenerate = true)
 public long id;
 ```
@@ -132,13 +132,13 @@ public long id;
 
 1.  告诉 Room 忽略`Attachment`的`List`。Room 无法直接持久化这类关系，当它尝试为这个字段生成映射代码时，你的应用程序将无法编译：
 
-```kt
+```java
 @Ignore List<Attachment> attachments = new ArrayList<>();
 ```
 
 1.  修改`ClaimItem`的`Parcelable`实现以保存和恢复 ID 字段：
 
-```kt
+```java
 protected ClaimItem(final Parcel in) {
        id = in.readLong();
        description = in.readString();
@@ -160,14 +160,14 @@ public void writeToParcel(final Parcel dest, final int flags) {
 
 1.  将`Entity`注解添加到`Attachment`类中；这次你还需要包括一个`@Index`注解，以告诉 Room 在即将添加的新字段`claimItemId`上生成数据库索引。索引将确保查询特定`ClaimItem`记录的附件时非常快速：
 
-```kt
+```java
 @Entity(indices = @Index("claimItemId"))
 public class Attachment implements Parcelable {
 ```
 
 1.  为`Attachment`添加数据库主键字段，以及新的`claimItemId`字段，该字段将用于指示当`Attachment`存储在数据库中时它属于哪个`ClaimItem`：
 
-```kt
+```java
 @PrimaryKey(autoGenerate = true)
 public long id;
 public long claimItemId;
@@ -175,7 +175,7 @@ public long claimItemId;
 
 1.  确保存在一个`public`默认构造函数，并且任何其他`public`构造函数都标记为`@Ignore`：
 
-```kt
+```java
 public Attachment() {}
 @Ignore public Attachment(final File file, final Type type) {
     this.file = file;
@@ -185,7 +185,7 @@ public Attachment() {}
 
 1.  更新`Attachment`类的`Parcelable`实现，以包括新字段：
 
-```kt
+```java
 protected Attachment(final Parcel in) {
     id = in.readLong();
  claimItemId = in.readLong();
@@ -207,14 +207,14 @@ public void writeToParcel(final Parcel dest, final int flags) {
 
 现在你已经有了一些要写入数据库的内容，你需要一种实际写入的方法，以及一种再次检索它的方法。最常见的方式是为每个类创建一个专门处理此类操作的类——数据访问对象（Data Access Object，简称 DAO）。然而，在 Room 中，你只需要使用接口声明它们应该是什么样子；Room 会为你生成实现代码。你可以通过在方法上使用`@Query`注解来定义你的查询，如下所示：
 
-```kt
+```java
 @Query(“SELECT * FROM users WHERE _id = :id”)
 public User selectById(long id);
 ```
 
 这与传统 O/R 映射层相比具有巨大优势，因为你仍然可以编写任何形式的 SQL 查询，让 Room 来决定如何将其转换为所需的对象模型。如果它无法生成代码，你将在编译时得到错误，而不是应用程序可能因为用户而崩溃。这还有一个额外的优势：Room 可以将你的 SQL 查询绑定到非实体类，让你能够充分利用 SQLite 数据库的全部功能，而无需手动进行所有列/字段/对象映射。例如，你可以定义一个特殊的`DisplayContact`类来显示联系人列表中的摘要数据，然后直接使用`join`查询它们：
 
-```kt
+```java
 @Query(“SELECT contacts.firstname, contacts.lastname, emails.address FROM contacts, emails WHERE emails._id = contacts.primaryEmailId ORDER BY contacts.lastname”)
 public List<DisplayContact> selectDisplayContacts()
 ```
@@ -235,7 +235,7 @@ Room 内置了对 `LiveData` 的支持，这意味着您可以通过返回任何
 
 1.  在文件底部，您会找到一个依赖项块；在块的底部，添加以下两行代码：
 
-```kt
+```java
 implementation 'android.arch.lifecycle:runtime:+'
 implementation 'android.arch.lifecycle:extensions:+'
 annotationProcessor 'android.arch.lifecycle:compiler:+'
@@ -259,21 +259,21 @@ annotationProcessor 'android.arch.lifecycle:compiler:+'
 
 1.  使用 `@Dao` 注解接口以将其标记为数据访问对象：
 
-```kt
+```java
 @Dao
 public interface ClaimItemDao {
 ```
 
 1.  声明一个查询方法以按最近的时间顺序获取所有 `ClaimItem` 对象；确保它返回 `LiveData` 以反映更改：
 
-```kt
+```java
 @Query("SELECT * FROM claimitem ORDER BY timestamp DESC")
 LiveData<List<ClaimItem>> selectAll();
 ```
 
 1.  接下来，您需要方法来在数据库中插入、更新和删除 `ClaimItem` 对象；这些方法仅接受 `Entity` 对象，而不是查询，而是用它们的操作进行注释。在插入方法的情况下，返回新记录生成的 ID 是有用的：
 
-```kt
+```java
 @Insert long insert(ClaimItem item);
 @Update void update(ClaimItem item);
 @Delete void delete(ClaimItem item);
@@ -287,21 +287,21 @@ LiveData<List<ClaimItem>> selectAll();
 
 1.  声明新的接口为 `Dao`：
 
-```kt
+```java
 @Dao
 public interface AttachmentDao {
 ```
 
 1.  编写一个查询方法以获取单个 `ClaimItem` 的 `Attachment` 对象。这是您在 `Attachment` 上声明的索引变得重要的地方：
 
-```kt
+```java
 @Query("SELECT * FROM attachment WHERE claimItemId = :claimItemId")
 LiveData<List<Attachment>> selectForClaimItemId(final long claimItemId);
 ```
 
 1.  声明 `Attachment` 类的插入、更新和删除方法，就像您对 `ClaimItem` 方法所做的那样：
 
-```kt
+```java
 @Insert long insert(Attachment attachment);
 @Update void update(Attachment attachment);
 @Delete void delete(Attachment attachment);
@@ -323,7 +323,7 @@ Room 数据库类是抽象的。这是因为 Room 注解处理器会扩展它们
 
 1.  注释该类以表明它是一个数据库，并声明它将存储 `ClaimItem` 和 `Attachment` 实体。您还需要指定模式版本，对于第一个版本将是 `1`：
 
-```kt
+```java
 @Database(
         entities = {ClaimItem.class, Attachment.class},
         version = 1,
@@ -333,7 +333,7 @@ public abstract class ClaimDatabase extends RoomDatabase {
 
 1.  如前所述，您需要为`ClaimItem`和`Attachment`使用的所有非原始字段声明`TypeConverter`方法。您需要告诉数据库这些方法的位置，在这种情况下，它将是`ClaimDatabase`类本身：
 
-```kt
+```java
 @Database(
         entities = {ClaimItem.class, Attachment.class},
         version = 1,
@@ -344,14 +344,14 @@ public abstract class ClaimDatabase extends RoomDatabase {
 
 1.  现在，定义用于检索您之前创建的数据访问对象实现的`abstract`方法；这些方法将由 Room 生成的子类实现：
 
-```kt
+```java
 public abstract ClaimItemDao claimItemDao();
 public abstract AttachmentDao attachmentDao();
 ```
 
 1.  现在，您需要告诉 Room 如何将各种字段转换为数据库支持的原始类型，并将其转换回原始类型。首先，实现将`Date`对象转换为可以存储在数据库中的时间戳长整型的方法（SQLite 没有`DATE`或`DATETIME`类型）：
 
-```kt
+```java
 @TypeConverter
 public static Long fromDate(final Date date) {
     return date == null ? null : date.getTime();
@@ -365,7 +365,7 @@ public static Date toDate(final Long value) {
 
 1.  现在继续使用这种模式来处理`ClaimItem`和`Attachment`需要的其他类型：
 
-```kt
+```java
 @TypeConverter
 public static String fromFile(final File value) {
     return value == null ? null : value.getAbsolutePath();
@@ -415,13 +415,13 @@ public static Attachment.Type toAttachmentType(final String name) {
 
 1.  声明一个静态的`ClaimDatabase`以供应用程序使用：
 
-```kt
+```java
 private static ClaimDatabase DATABASE;
 ```
 
 1.  重写`onCreate`方法，并使用它通过 Room 实例化`ClaimDatabase`对象；这将在您的应用程序中的任何其他操作之前发生：
 
-```kt
+```java
 @Override
 public void onCreate() {
     super.onCreate();
@@ -435,7 +435,7 @@ public void onCreate() {
 
 1.  提供一个`public` `static`方法，供应用程序的其他部分使用，以访问单例数据库实例：
 
-```kt
+```java
 public static ClaimDatabase getClaimDatabase() {
     return DATABASE;
 }
@@ -445,7 +445,7 @@ public static ClaimDatabase getClaimDatabase() {
 
 1.  在 `<application>` 元素中，你需要添加一个 `android:name` 属性来告诉 Android 平台代表应用程序根的类的名称：
 
-```kt
+```java
 <application
     android:name=".ClaimApplication"
     android:icon="@mipmap/ic_launcher"

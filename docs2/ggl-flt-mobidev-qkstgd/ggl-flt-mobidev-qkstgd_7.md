@@ -22,7 +22,7 @@
 
 1.  添加以下依赖项：
 
-```kt
+```java
 dependencies:
   flutter:
     sdk: flutter
@@ -34,7 +34,7 @@ dependencies:
 
 1.  接下来，为了建立连接，在您的 IDE 或使用命令行运行以下命令：
 
-```kt
+```java
 flutter packages get
 ```
 
@@ -104,7 +104,7 @@ flutter packages get
 
 1.  项目级别的 `build.gradle` (`<project>/build.gradle`):
 
-```kt
+```java
 buildscript { 
 dependencies 
 { 
@@ -116,7 +116,7 @@ classpath 'com.google.gms:google-services:4.2.0'
 
 1.  应用级别的 `build.gradle` (`<project>/<app-module>/build.gradle`):
 
-```kt
+```java
 dependencies {
   // Add this line
   *implementation 'com.google.firebase:firebase-core:16.0.1'* }
@@ -183,7 +183,7 @@ apply plugin: 'com.google.gms.google-services'
 
 Firestore 是一个 NoSQL 数据库，这意味着我们不会与行和列一起工作。现在我们将构建应用的布局。使用 Firestore 的详细信息，我们将构建列表布局，这将根据 Firestore 中的值在运行时生成列表项，并在点击列表项时读取/更新 Firestore 数据库中的新值。以下是 `main.dart` 文件：
 
-```kt
+```java
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -282,7 +282,7 @@ class Record {
 
 我们在 Firestore 云上准备好了集合。在前面的例子中，我们使用了 `party` 对象。现在是时候使用 Firestore 云数据从我们的集合中显示了。我们可以通过调用 Cloud Firestore 使用一个 `Firestore.instance` 引用来做到这一点。例如，如果你希望从你的 Firestore 云数据库中调用一个特定的集合，你可以使用以下命令来返回一个快照流：
 
-```kt
+```java
 Firestore.instance.collection('collection_name').snapshots()
 ```
 
@@ -290,7 +290,7 @@ Firestore.instance.collection('collection_name').snapshots()
 
 在前面的代码中查找 `_buildBody` 方法，并将内容替换为以下代码：
 
-```kt
+```java
 Widget _buildBody(BuildContext context) {
  return StreamBuilder<QuerySnapshot>(
    stream: Firestore.instance.collection('party').snapshots(),
@@ -306,7 +306,7 @@ Widget _buildBody(BuildContext context) {
 
 首先，将方法修改为接受 `DocumentSnapshot` 而不是映射列表：
 
-```kt
+```java
 Widget _buildList(BuildContext context, List<DocumentSnapshot> snapshot)
 { .... 
 }
@@ -314,7 +314,7 @@ Widget _buildList(BuildContext context, List<DocumentSnapshot> snapshot)
 
 其次，使用构造函数 `Record.fromSnapshot()` 来构建记录。该方法更新的代码如下：
 
-```kt
+```java
 Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
  final result = Record.fromSnapshot(data);
 ```
@@ -323,7 +323,7 @@ Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
 
 `main.dart` 的完整代码如下：
 
-```kt
+```java
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -441,7 +441,7 @@ class Record {
 
 要在您的设备上测试消息，需要 FCM 令牌。使用以下 Android 代码生成这些令牌：
 
-```kt
+```java
 FirebaseInstanceId.getInstance().getInstanceId()
         .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>
          () {

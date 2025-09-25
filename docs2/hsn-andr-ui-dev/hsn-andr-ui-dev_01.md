@@ -56,7 +56,7 @@ Android Studio 是基于 **IntelliJ** 平台构建的具有全部功能的 IDE�
 
 每个`Activity`都是一个非抽象类，它扩展了`Activity`类（或任何`Activity`的子类），并在应用程序清单文件中注册自己及其意图过滤器。以下是一个可以查看和编辑联系人的`Activity`的清单条目示例：
 
-```kt
+```java
 <activity android:name=".ContactActivity">
  <intent-filter>
    <!-- Appear in the launcher screen as the main entry point of the application -->
@@ -94,14 +94,14 @@ Android Studio 是基于 **IntelliJ** 平台构建的具有全部功能的 IDE�
 
 Android 中的资源系统需要特别注意，因为它允许多个文件协作，从简单的组件中创建出复杂的行为。在核心上，资源系统在请求时（包括从其他资源内部）选择最合适的每个资源。这不仅允许你为纵向和横向模式创建屏幕布局，还允许你为尺寸、文本、颜色或其他任何资源做同样的事情。考虑以下示例：
 
-```kt
+```java
 <!-- res/values/dimens.xml -->
 <dimen name="grid_spacer1">8dp</dimen>
 ```
 
 上述尺寸资源现在可以通过名称在布局资源文件中使用：
 
-```kt
+```java
 <!-- res/layouts/my_layout.xml -->
 <LinearLayout
     android:layout_width="match_parent"
@@ -185,13 +185,13 @@ Android Studio 为你提供了一个相当标准的 Java 项目结构，即你�
 
 1.  如果你现在打开`MainActivity`类，你会看到布局是如何加载和绑定的。`MainActivity`在创建时首先会调用其父类的`onCreate`方法（这是一个强制步骤，如果不这样做将会引发异常）。然后，它使用`setContentView`方法加载其布局文件。这个方法调用同时做两件事：它加载布局 XML 文件，并将根小部件作为`Activity`的根（替换掉之前已经存在的任何小部件）。`R`类是由资源编译器定义的，并由 Android Studio 为你保持同步。每个文件和值资源都将有一个唯一的标识符，这允许你将事物紧密地绑定在一起。重命名资源文件，其对应的字段也会改变：
 
-```kt
+```java
 setContentView(R.layout.activity_main);
 ```
 
 1.  然后，你会注意到`MainActivity`通过它们自己的 ID（也在`R`类中定义）检索布局文件中包含的各种小部件。`findViewById`方法在`Activity`布局中搜索具有相应`id`的小部件，然后返回它：
 
-```kt
+```java
 // MainActivity.java
 Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
 setSupportActionBar(toolbar);
@@ -201,7 +201,7 @@ setSupportActionBar(toolbar);
 
 1.  上述代码片段将返回在`app_bar_main.xml`布局资源文件中声明的`Toolbar`对象：
 
-```kt
+```java
 <!-- app_bar_main.xml -->
 <android.support.v7.widget.Toolbar
     android:id="@+id/toolbar"

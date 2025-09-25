@@ -32,14 +32,14 @@
 
 如果你来自 Java 世界，你可能记得我们无法为方法指定默认值。这意味着我们无法在 Java 中这样做：
 
-```kt
+```java
 public void foo(int a, int b=10){
 }
 ```
 
 我们需要为它编写两个方法，这被称为 *方法过载*：
 
-```kt
+```java
 public void foo(int a){
 }
 
@@ -49,14 +49,14 @@ public void foo(int a, int b){
 
 此外，假设你有一个具有三种不同类型参数的函数，例如这些：
 
-```kt
+```java
 public void foo (int a,double b, String c){
 }
 ```
 
 然后，你将拥有七个方法过载的实例：
 
-```kt
+```java
 public void foo (int a,double b, String c),
 public void foo (int a,double b) ,
 public void foo (double b, String c),
@@ -78,7 +78,7 @@ Kotlin 通过提供默认值的方法为你提供，这样你可以防止方法�
 
 1.  让我们在编辑器中添加提到的代码，运行它，并检查输出：
 
-```kt
+```java
 fun main(args: Array<String>) {
     foo()    
     foo(1)
@@ -92,7 +92,7 @@ fun foo(a:Int=0, b: Double =0.0, c:String="some default value"){
 
 如果你运行前面的代码，你会看到以下输出：
 
-```kt
+```java
 Output:
 a=0 , b=0.0 ,c = some default value
 a=1 , b=0.0 ,c = some default value
@@ -104,7 +104,7 @@ a=1 , b=0.1 ,c = custom string
 
 1.  需要注意的一件事是，默认参数也会与构造函数一起工作。所以你可以有一个如下所示的类声明：
 
-```kt
+```java
 data class Event(var eventName: String? = "", var eventSchedule: Date? = Date(), var isPrivate: Boolean = false)
 ```
 
@@ -112,7 +112,7 @@ data class Event(var eventName: String? = "", var eventSchedule: Date? = Date(),
 
 1.  然后，我们可以声明对象，如下所示：
 
-```kt
+```java
 Event("Celebration")
 Event("Ceberation",Date())
 Event("Ceberation",Date(),true)
@@ -122,7 +122,7 @@ Event("Ceberation",Date(),true)
 
 记住，这里有一个陷阱。如果你在 Java 中创建对象，我们将无法这样做。这意味着以下代码所示的操作将不会被 Java 接受。现在我知道你会想“Java 的 100%互操作性去哪了？！”：
 
-```kt
+```java
 new Event("Celebration")
 new Event("Celebration",Date())
 new Event("Celebration",Date(),true)
@@ -130,13 +130,13 @@ new Event("Celebration",Date(),true)
 
 1.  如果我们想要向 Java 调用者公开多个重载，我们只需要进行一个小修改，即——即在具有默认值的构造函数和函数上添加`@JvmOverloads`，这样前面的类声明就变成了这样：
 
-```kt
+```java
 data class Event @JvmOverloads constructor (var eventName: String? = "", var date: Date? = Date(), var isPrivate: Boolean = false)
 ```
 
 1.  此外，我们的方法也变成了这样：
 
-```kt
+```java
 @JvmOverloads fun foo(a:Int=0, b: Double =0.0, c:String="some default value"){
  println("a=$a , b=$b ,c = $c")
  }
@@ -162,7 +162,7 @@ data class Event @JvmOverloads constructor (var eventName: String? = "", var dat
 
 1.  以`foo`函数的相同示例，以下是我们可以如何使用命名参数：
 
-```kt
+```java
 fun main(args: Array<String>) {
      foo(b=0.9)
      foo(a=1,c="Custom string")
@@ -174,7 +174,7 @@ fun main(args: Array<String>) {
 
 1.  运行上述代码将得到以下输出：
 
-```kt
+```java
 Output:
 a=0 , b=0.9 ,c = some default value
 a=1 , b=0.0 ,c = Custom string
@@ -182,7 +182,7 @@ a=1 , b=0.0 ,c = Custom string
 
 1.  命名参数防止我们出现重载，并且使我们的代码更加易于阅读。此外，我们不需要输入所有参数。我的意思是，如果你只有两个参数——`a`和`c`——那么你可能需要这样做：
 
-```kt
+```java
 foo(1, 0.0, "Custom string")
 ```
 
@@ -216,7 +216,7 @@ DiffUtil 是一个实用类，可以计算两个列表之间的差异，并输�
 
 1.  首先，我们需要创建一个 Android 风味的列表。因此，我们将首先创建一个数据类，它包含图像和风味的名称：
 
-```kt
+```java
 data class AndroidFlavours (var name:String, val image:Int)
 ```
 
@@ -224,7 +224,7 @@ data class AndroidFlavours (var name:String, val image:Int)
 
 1.  接下来，我们将创建一个 Android 风味的列表：
 
-```kt
+```java
 val flavorList= listOf<AndroidFlavours>(
         AndroidFlavours("Cupcake",R.drawable.cupcake),
         AndroidFlavours("Donut",R.drawable.donut),
@@ -240,7 +240,7 @@ val flavorList= listOf<AndroidFlavours>(
 
 1.  现在，我们将创建一个适配器。我们将命名为 `AndroidFlavourAdapter`：
 
-```kt
+```java
 class AndroidFlavourAdapter:RecyclerView.Adapter<AndroidFlavourAdapter.FlavourViewHolder>() {
     var flavourItems:List<AndroidFlavours> by Delegates.observable(emptyList()){
         property, oldValue, newValue ->
@@ -269,7 +269,7 @@ class AndroidFlavourAdapter:RecyclerView.Adapter<AndroidFlavourAdapter.FlavourVi
 
 其中之一是 `loadImage` 函数，它不是一个原生函数，而是一个扩展函数，其实现如下：
 
-```kt
+```java
 fun ImageView.loadImage(image: Int) {
     Glide.with(context).load(image).into(this)
 }
@@ -277,7 +277,7 @@ fun ImageView.loadImage(image: Int) {
 
 1.  另一件事是我们已经在适配器中定义了 `AndroidFlavours` 的列表。适配器中的 `flavoursList` 是一个 `observable` 属性。这意味着监听器会通知此属性的变化。因此，我们得到以下结构：
 
-```kt
+```java
 var flavourItems:List<AndroidFlavours> by Delegates.observable(emptyList()){
     property, oldValue, newValue ->
     notifyChanges(oldValue,newValue)
@@ -287,7 +287,7 @@ var flavourItems:List<AndroidFlavours> by Delegates.observable(emptyList()){
 
 1.  现在，每次我们尝试为 `flavourItems` 变量赋值时，`{ .. }` 块下的构造就会运行，如果我们想进行操作，我们将有旧值和新值。在这种情况下，我们将使用 `notifyChanges` 方法。让我们看看 `notifyChanges` 方法：
 
-```kt
+```java
 private fun notifyChanges(oldValue: List<AndroidFlavours>, newValue: List<AndroidFlavours>) {
     val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
         override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? {
@@ -326,7 +326,7 @@ private fun notifyChanges(oldValue: List<AndroidFlavours>, newValue: List<Androi
 
 1.  现在，让我们设置适配器：
 
-```kt
+```java
 mAdapter= AndroidFlavourAdapter()
 flavour_list.layoutManager=LinearLayoutManager(this)
 flavour_list.adapter=mAdapter
@@ -338,7 +338,7 @@ shuffle.setOnClickListener {
 
 1.  `shuffle` 函数将随机化 `AndroidFlavours` 列表的顺序。`.shuffle()` 函数不是 Kotlin 或 Java 提供的本地函数，而是一个扩展函数：
 
-```kt
+```java
 fun <E> List<E>.shuffle(): MutableList<E> {
     val list = this.toMutableList()
     Collections.shuffle(list)
@@ -364,7 +364,7 @@ fun <E> List<E>.shuffle(): MutableList<E> {
 
 在我们实现前面的方法中，我们在有效载荷中添加了名称和图像的更改：
 
-```kt
+```java
 override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? {
     val oldFlavor=oldValue.get(oldItemPosition)
     val newFlavor=newValue.get(newItemPosition)
@@ -382,13 +382,13 @@ override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? 
 
 最后，在差异计算之后，`DiffUtils` 对象将更改派发到适配器。为此，我们调用 `dispatchUpdatesTo` 方法：
 
-```kt
+```java
 diff.dispatchUpdatesTo(this)
 ```
 
 要更新来自有效载荷中的数据的更改，你需要重写 `onBindViewHolder` (*`holder: FlavourViewHolder`*, `position: Int`*, `payloads: MutableList<Any>?`):
 
-```kt
+```java
 override fun onBindViewHolder(holder: FlavourViewHolder, position: Int, payloads: MutableList<Any>?) {
     if (payloads != null) {
         if (payloads.isEmpty())
@@ -429,7 +429,7 @@ override fun onBindViewHolder(holder: FlavourViewHolder, position: Int, payloads
 
 1.  Kotlin `property`的语法如下：
 
-```kt
+```java
 var <propertyName>[: <PropertyType>] [= <property_initializer>]  [<getter>]  [<setter>]
 ```
 
@@ -437,7 +437,7 @@ var <propertyName>[: <PropertyType>] [= <property_initializer>]  [<getter>]  [<s
 
 1.  现在，让我们看看如何创建一个自定义的`getter`。假设我们有一个属性，其值依赖于另一个属性：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val sample=Sample()
     println(sample.isListBig)
@@ -455,7 +455,7 @@ class Sample{
 
 1.  如您所见，我们可以修改属性的`get`方法中的 getter。如果属性类型是从 getter 推断出来的，我们也可以这样做：
 
-```kt
+```java
 val isListBig get()=array.size>2
 ```
 
@@ -465,7 +465,7 @@ val isListBig get()=array.size>2
 
 1.  在 Java 中，我们通常做如下操作：
 
-```kt
+```java
 public setIsListBig(boolean isListBig){
     this.isListBig=isListBig
 }
@@ -479,7 +479,7 @@ public setIsListBig(boolean isListBig){
 
 1.  为了避免递归调用并仍然实现 setter，您需要使用`field`关键字。因此，前面的实现将类似于以下这样：
 
-```kt
+```java
 var isListBig :Boolean = false
     set(value) {
         field= array.size>2
@@ -490,7 +490,7 @@ var isListBig :Boolean = false
 
 1.  如果您想限制 setter 的访问权限，您可以使用以下方式：
 
-```kt
+```java
 var isListBig :Boolean = false
     private set(value) {
         field= array.size>2
@@ -499,14 +499,14 @@ var isListBig :Boolean = false
 
 1.  此外，假设您正在使用某种形式的依赖注入。您可以使用以下方式实现：
 
-```kt
+```java
 var mPresenter:MainActivityMvpPresenter?=null
     @Inject set
 ```
 
 1.  与`set`类似，您也可以为`get`实现自定义实现。让我们看一个例子：
 
-```kt
+```java
 class SameClass {
     var name="aanand"
     get() = field.toUpperCase()
@@ -515,7 +515,7 @@ class SameClass {
 
 1.  现在，让我们假设我们正在尝试访问`name`属性：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var s=SameClass()
     println(s.name)
@@ -532,7 +532,7 @@ fun main(args: Array<String>) {
 
 这里需要注意的是，您不能在构造函数中为您的属性实现自定义的 getter 或 setter。您需要在类的主体中声明属性：
 
-```kt
+```java
 class Student(val name: String, age: Int) {
   var age: Int = age
       set(value) {
@@ -544,7 +544,7 @@ class Student(val name: String, age: Int) {
 
 这里需要注意的一个关键点是，您需要保持 getter 的可见性与属性的可见性完全相同：
 
-```kt
+```java
 protected var name="aanand"
 protected get() = field.toUpperCase()
 ```
@@ -553,14 +553,14 @@ protected get() = field.toUpperCase()
 
 另一方面，setter 可以有一个比属性权限低的访问修饰符。考虑以下示例：
 
-```kt
+```java
 protected var name="aanand"
     private set
 ```
 
 前面的代码是有效的，因为 setter 的访问修饰符`private`比属性的访问修饰符权限低：
 
-```kt
+```java
 protected var name="aanand"
     public set
 ```
@@ -581,7 +581,7 @@ protected var name="aanand"
 
 1.  使用 `vararg`，我们可以将逗号分隔的参数传递给一个函数，其中我们已将方法中的单个参数定义为 `vararg`，如下例所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     someMethod("as","you","know","this","works")
 }
@@ -594,7 +594,7 @@ fun someMethod(vararg a: String) {
 
 1.  此外，如果您已经有一个值数组，您可以直接使用 `*` 展开操作符传递它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list = arrayOf("as","you","know","this","works")
     someMethod(*list)
@@ -614,7 +614,7 @@ fun someMethod(vararg a: String) {
 
     在下面的示例代码中，我们尝试传递除了 `vararg` 之外的另一个参数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val list = arrayOf("as","you","know","this","works")
     someMethod(3, *list)
@@ -628,7 +628,7 @@ fun someMethod(b: Int, vararg a: String) {
 
 1.  在下一个示例中，第一个参数类似于 `vararg` 类型，但它可以工作：
 
-```kt
+```java
 fun main(args: Array<String>) {
     someMethod("3", "as","you","know","this","works")
 }
@@ -642,7 +642,7 @@ fun someMethod(b: String, vararg a: String) {
 
 输出如下：
 
-```kt
+```java
 b: 3
 as
 you
@@ -653,7 +653,7 @@ works
 
 1.  因此，通常 `vararg` 是最后一个传递的参数，但如果我们想在 `vararg` 之后传递其他参数怎么办？我们可以这样做，但它们必须被命名。这就是为什么以下代码无法编译的原因：
 
-```kt
+```java
 // does not compile
 fun main(args: Array<String>) {
     someMethod("3", "as","you","know","this","works", "what")
@@ -671,7 +671,7 @@ fun someMethod(b: String, vararg a: String, c: String) {
 
     要正确实现，我们需要将 `c` 作为命名参数传递，就像这里所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     someMethod("3", "as","you","know","this","works", c = "what")
 }
@@ -686,7 +686,7 @@ fun someMethod(b: String, vararg a: String, c: String) {
 
 输出如下：
 
-```kt
+```java
 b: 3
 as
 you
@@ -704,7 +704,7 @@ c: what
 
 如果我们希望第一个参数有一个默认值，就像这个例子一样：
 
-```kt
+```java
 fun main(args: Array<String>) {
     someMethod("3", "as","you","know","this","works")
 }
@@ -718,7 +718,7 @@ fun someMethod(b: String = "x", vararg a: String) {
 
 我们希望所有参数都被视为 `vararg` 的一部分，但编译器将第一个参数读取为 `b`。在这种情况下，命名传递的参数可以解决这个问题：
 
-```kt
+```java
 fun main(args: Array<String>) {
     someMethod(a = *arrayOf("3", "as","you","know","this","works"))
 }
@@ -746,7 +746,7 @@ Kotlin 赋予我们声明*高阶函数*的能力。在高阶函数中，我们�
 
 1.  让我们先了解如何将函数声明为 lambda：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val funcMultiply = {a:Int, b:Int -> a*b}
     println(funcMultiply(4,3))
@@ -759,7 +759,7 @@ fun main(args: Array<String>) {
 
 1.  虽然在前面的例子中我们不需要声明参数类型和返回类型，但在某些情况下，我们需要显式地声明参数类型和返回类型。我们按照以下方式来做：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val funcMultiply : (Int, Int)->Int = {a:Int, b:Int -> a*b}
     println(funcMultiply(4,3))
@@ -770,7 +770,7 @@ fun main(args: Array<String>) {
 
 1.  现在我们已经对 lambda 的工作原理有了大致的了解，让我们尝试将一个 lambda 传递给另一个函数——也就是说，我们将尝试一个高阶函数。看看这个代码片段：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val funcMultiply : (Int, Int)->Int = {a:Int, b:Int -> a*b}
     val funcSum : (Int, Int)->Int = {a:Int, b:Int -> a+b}
@@ -786,7 +786,7 @@ fun performMath(a:Int, b:Int, mathFunc : (Int, Int) -> Int) : Unit {
 
 1.  高阶函数的另一个用途是返回一个函数。考虑以下示例，我们需要一个根据某些条件转换订单总价的函数。有点像电子商务网站，但简单得多：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val productPrice1 = 600; // free delivery of order above 499
     val productPrice2 = 300; // not eligible for free deliver
@@ -828,7 +828,7 @@ Kotlin 建议创建包级别的函数。如果你来自 Java 世界，这可能�
 
 1.  你需要创建一个以`.kt`扩展名的 Kotlin 文件，并仅声明你将在许多地方使用的方法。我已经创建了一个`SampleClass.kt`文件，并添加了一个我们将从其他类中调用的方法：
 
-```kt
+```java
 package packageA
 fun foo(){
     println("calling from boo method")
@@ -837,7 +837,7 @@ fun foo(){
 
 1.  现在，我将从`HelloWorld.kt`中调用这个方法：
 
-```kt
+```java
 import packageA.*
 fun main(args: Array<String>) {
     foo()
@@ -848,7 +848,7 @@ fun main(args: Array<String>) {
 
 1.  另一种方法是，通过在对象声明中放置方法或变量来实现。因此，我们可以将`SameClass.kt`修改如下：
 
-```kt
+```java
 package packageA
 object Foo{
     fun callFoo() = println("Foo")
@@ -858,7 +858,7 @@ object Foo{
 
 1.  在对象声明下定义的任何方法或变量都将作为`static`方法或变量工作。为了访问它，我们可以这样做：
 
-```kt
+```java
 Foo.callFoo()
 ```
 
@@ -866,7 +866,7 @@ Foo.callFoo()
 
 1.  然而，假设你想要使用类名作为限定符并访问类的元素。你仍然可以使用`companion`关键字来实现。以下是它的样子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     SampleClass.foo()
 }
@@ -879,13 +879,13 @@ class SampleClass{
 
 1.  如果你想要调用`companion`对象下的方法，你需要像这样访问它：
 
-```kt
+```java
 SampleClass.Companion.foo();
 ```
 
 1.  如果`Companion`看起来让你感到不舒服，你可以使用`@JvmStatic`注解：
 
-```kt
+```java
 companion object {
     @JvmStatic
     fun foo()= print("In foo method")
@@ -908,7 +908,7 @@ companion object {
 
 1.  要理解 `use` 关键字，我们需要回到 Java。在 Java 7 之前，管理需要关闭的资源有点繁琐。例如，看看以下代码：
 
-```kt
+```java
 private static void printFile() throws IOException {
     InputStream input = null;
 
@@ -928,7 +928,7 @@ private static void printFile() throws IOException {
 
 1.  Java 7 通过引入 try-with-resource 构造来更新了这个问题，其外观如下：
 
-```kt
+```java
 try(FileInputStream input = new FileInputStream("file.txt")) {
         int data = input.read();
         // operations on input object
@@ -939,7 +939,7 @@ try(FileInputStream input = new FileInputStream("file.txt")) {
 
 1.  在前面的例子中，如果我们实现 `use` 关键字，Java 中的代码将类似于以下内容：
 
-```kt
+```java
 FileInputStream("file.txt").use {
     input ->
     var data = input.read()
@@ -968,7 +968,7 @@ MDN ([`developer.mozilla.org/en-US/docs/Web/JavaScript/Closures`](https://develo
 
 在这个例子中，我们将简单地创建一个整数数组并计算其总和：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var sum=0
     var listOfInteger= arrayOf(0,1,2,3,4,5,6,7)
@@ -999,7 +999,7 @@ fun main(args: Array<String>) {
 
 1.  让我们从在 `String` 上的一个简单函数字面量开始，它返回一个添加到接收者字符串上的字符串：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var str1 = "The start of a "
     val addStr = fun String.(successor: String): String {
@@ -1016,7 +1016,7 @@ fun main(args: Array<String>) {
 
     因此 `String.(String) -> Int` 与 `(String, String) -> Int` 是兼容的。查看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var str1 = "The start of a "
     val addStr = fun String.(successor: String): Int {
@@ -1035,7 +1035,7 @@ fun main(args: Array<String>) {
 
 因此，基本上，我们可以在接收者对象上调用函数字面量，并在函数的主体内部访问和调用接收者对象的方法，这与 Kotlin 中的扩展函数类似。以下是这个语法的示例：
 
-```kt
+```java
 receiver.functionLliteral(arguments) -> ReturnType
 ```
 
@@ -1053,7 +1053,7 @@ receiver.functionLliteral(arguments) -> ReturnType
 
 1.  让我们从将函数声明为 lambda 函数开始：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val funcMultiply = {a:Int, b:Int -> a*b}
     println(funcMultiply(4,3))
@@ -1066,7 +1066,7 @@ fun main(args: Array<String>) {
 
 1.  虽然在前面的示例中我们不需要声明参数类型和返回类型，但在某些情况下，我们需要显式声明参数类型和返回类型。我们通过以下方式使用匿名函数来完成此操作：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var funcMultiply = fun (a: Int, b: Int): Int {return a*b}
     println(funcMultiply(4,3))
@@ -1076,7 +1076,7 @@ fun main(args: Array<String>) {
 
 1.  因此，现在我们已经对匿名函数的工作方式有了大致的了解。现在，让我们尝试将一个匿名函数传递给另一个函数——也就是说，我们将尝试一个高阶函数。查看以下代码片段：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var funcMultiply = fun(a: Int, b: Int): Int { return a*b }
     var funcSum = fun(a: Int, b: Int): Int { return a+b }
@@ -1090,7 +1090,7 @@ fun performMath(a:Int, b:Int, mathFunc : (Int, Int) -> Int) : Unit {
 
 1.  因此，基本上，匿名函数的声明方式与常规函数相同，但没有名称。主体可以是一个表达式，如以下示例所示，或者是一个代码块，如前面的示例所示。需要注意的是，在匿名函数的情况下，参数总是传递在括号内，这与 lambda 表达式不同：
 
-```kt
+```java
 fun main(args: Array<String>) {
     performMath(3,4,fun(a: Int, b: Int): Int = a*b )
     performMath(3,4,fun(a: Int, b: Int): Int = a+b )

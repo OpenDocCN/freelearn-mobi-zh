@@ -164,7 +164,7 @@ Unity 中的场景窗口用于组合场景对象。你将在 Unity 中大部分�
 
 1.  这将打开你的脚本编辑器中的脚本。默认情况下，Unity 安装了**MonoDevelop**，如果没有安装或设置了不同的编辑器，它将打开脚本。向下滚动到`Update`方法，如下所示：
 
-```kt
+```java
 public void Update()
 {
 #if UNITY_EDITOR
@@ -214,7 +214,7 @@ public void Update()
 
 1.  将`MiddleGray`常量更改为以下行：
 
-```kt
+```java
 const float MiddleGray = 1.0f;
 ```
 
@@ -238,7 +238,7 @@ Unity 中使用的着色语言是 HLSL 的多种变体，有时也称为 Cg。�
 
 1.  点击齿轮图标，从上下文菜单中选择编辑着色器。这将打开你的代码编辑器中的着色器，这里也为了参考而展示：
 
-```kt
+```java
 Shader "ARCore/DiffuseWithLightEstimation"
 {
     Properties
@@ -283,7 +283,7 @@ Shader "ARCore/DiffuseWithLightEstimation"
 
 1.  这是一个相当简单的漫反射光照着色器，它使用了我们之前计算的全球光照估计。它首先通过以下行定义自己：
 
-```kt
+```java
 Shader "ARCore/DiffuseWithLightEstimation"
 ```
 
@@ -291,7 +291,7 @@ Shader "ARCore/DiffuseWithLightEstimation"
 
 1.  以`SubShader`开始的代码块是动作发生的地方。我们首先定义`Tags`，这是一组键/值对，用于设置渲染顺序和类型参数。在我们的例子中，我们将此设置为`Opaque`。然后，我们有以下行：
 
-```kt
+```java
 LOD 150
 ```
 
@@ -317,7 +317,7 @@ LOD 150
 
 1.  我们从`CGPROGRAM`开始编写实际的着色器代码，然后使用`#pragma`指令定义表面着色器的形式，如下所示代码：
 
-```kt
+```java
 #pragma surface surf Lambert noforwardadd finalcolor:lightEstimation
 
 #pragma surface surfaceFunction lightModel [optionalparams]
@@ -332,7 +332,7 @@ LOD 150
 
 1.  接下来，我们将向下跳几行到`surf`函数，如下所示：
 
-```kt
+```java
 void surf (Input IN, inout SurfaceOutput o)
 {
  fixed4 c = tex2D(_MainTex, IN.uv_MainTex);
@@ -347,7 +347,7 @@ void surf (Input IN, inout SurfaceOutput o)
 
 1.  向上滚动一点到`lightEstimation`函数。在这个函数内部，以下所示的代码根据为`_GlobalLightEstimation`设置的值修改颜色：
 
-```kt
+```java
 color *= _GlobalLightEstimation;
 ```
 
@@ -375,7 +375,7 @@ Google 通过 ARCore 为我们提供了一个强大的解决方案，用于估�
 
 1.  在类声明下方，添加以下行以声明新变量：
 
-```kt
+```java
 public class EnvironmentalLight : MonoBehaviour
 { //after me
   public GameObject SceneCamera;
@@ -388,7 +388,7 @@ public class EnvironmentalLight : MonoBehaviour
 
 1.  在代码中向下滚动，直到看到`Update`方法中标识的行，并添加以下行：
 
-```kt
+```java
 const float Inclination = 0.4f; //after me
 var pi = Frame.LightEstimate.PixelIntensity;
 if(pi > maxGlobal)
@@ -431,7 +431,7 @@ if(pi > maxGlobal)
 
 1.  在指定的行之后和之前添加以下行：
 
-```kt
+```java
 var pi = Frame.LightEstimate.PixelIntensity; //after me
 maxGlobal *= .98f;
 if(pi > maxGlobal){ //before me

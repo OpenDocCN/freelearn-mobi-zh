@@ -393,7 +393,7 @@ Unity 内置了一些最常见的分辨率，这些分辨率可以从之前提�
 
 1.  一旦你的 IDE 已经打开，使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     using UnityEngine.SceneManagement; // LoadScene
     public class MainMenuBehaviour : MonoBehaviour
@@ -558,7 +558,7 @@ Unity 内置了一些最常见的分辨率，这些分辨率可以从之前提�
 
 1.  一旦打开，使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     using UnityEngine.SceneManagement; // SceneManager
     public class PauseScreenBehaviour : MainMenuBehaviour
@@ -648,7 +648,7 @@ Unity 内置了一些最常见的分辨率，这些分辨率可以从之前提�
 
 1.  打开`PlayerBehaviour`脚本，并将以下加粗代码添加到`FixedUpdate`函数中：
 
-    ```kt
+    ```java
     /// <summary>
     /// FixedUpdate is a prime place to put physics
     /// calculations happening over a period of time.
@@ -670,7 +670,7 @@ Unity 内置了一些最常见的分辨率，这些分辨率可以从之前提�
 
 1.  然后，我们还需要将相同的脚本添加到`Update`函数的顶部：
 
-    ```kt
+    ```java
     /// <summary>
     /// Update is called once per frame
     /// </summary>

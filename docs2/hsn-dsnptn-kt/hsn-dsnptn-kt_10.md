@@ -44,7 +44,7 @@
 
 通常，我们使用`let()`只在对象`not null`时执行某些操作：
 
-```kt
+```java
 val sometimesNull = if (Random().nextBoolean()) "not null" else null
 
 sometimesNull?.let {
@@ -54,7 +54,7 @@ sometimesNull?.let {
 
 这里一个常见的陷阱是`let()`本身也可以用于空值：
 
-```kt
+```java
 val alwaysNull = null
 
 alwaysNull.let { // No null pointer there
@@ -66,7 +66,7 @@ alwaysNull.let { // No null pointer there
 
 `let()`的返回值与其操作的类型无关：
 
-```kt
+```java
 val numberReturned = justAString.let {
     println(it)
     it.length
@@ -81,7 +81,7 @@ val numberReturned = justAString.let {
 
 想想你有多少次不得不创建一个空构造函数的类，然后依次调用很多 setter：
 
-```kt
+```java
 class JamesBond {
     lateinit var name: String
     lateinit var movie: String
@@ -95,7 +95,7 @@ agentJavaWay.movie = "Dr. No"
 
 我们只能设置`name`和`movie`，但`alsoStarring`留空，如下所示：
 
-```kt
+```java
 val `007` = JamesBond().apply {
     this.name = "Sean Connery"
     this.movie = "Dr. No"
@@ -106,7 +106,7 @@ println(`007`.name)
 
 由于上下文设置为`this`，我们可以将其简化为以下漂亮的语法：
 
-```kt
+```java
 val `007` = JamesBond().apply {
     name = "Sean Connery"
     movie = "Dr. No"
@@ -119,7 +119,7 @@ val `007` = JamesBond().apply {
 
 单表达式函数非常简洁和优雅：
 
-```kt
+```java
 fun multiply(a: Int, b: Int): Int = a * b
 ```
 
@@ -127,7 +127,7 @@ fun multiply(a: Int, b: Int): Int = a * b
 
 你可以写成以下方式：
 
-```kt
+```java
 fun multiply(a: Int, b: Int): Int {
     val c = a * b
     println(c)
@@ -139,7 +139,7 @@ fun multiply(a: Int, b: Int): Int {
 
 我们还引入了另一个变量。来拯救，`also()`：
 
-```kt
+```java
 fun multiply(a: Int, b: Int): Int = (a * b).also { println(it) }
 ```
 
@@ -147,7 +147,7 @@ fun multiply(a: Int, b: Int): Int = (a * b).also { println(it) }
 
 这也适用于你想要在一系列调用中产生副作用的情况：
 
-```kt
+```java
 val l = (1..100).toList()
 
 l.filter{ it % 2 == 0 }
@@ -160,7 +160,7 @@ l.filter{ it % 2 == 0 }
 
 与线程无关，`run()`与`let()`类似，但它将上下文设置为`this`而不是使用`it`：
 
-```kt
+```java
 val justAString = "string"
 
 val n = justAString.run { 
@@ -170,7 +170,7 @@ val n = justAString.run {
 
 通常，`this`可以省略：
 
-```kt
+```java
 val n = justAString.run { 
     length
 }
@@ -180,7 +180,7 @@ val n = justAString.run {
 
 与`apply()`不同，返回结果可能完全不同：
 
-```kt
+```java
 val year = JamesBond().run {
     name = "ROGER MOORE"
     movie = "THE MAN WITH THE GOLDEN GUN"
@@ -194,13 +194,13 @@ val year = JamesBond().run {
 
 这意味着你不能这样做：
 
-```kt
+```java
 "scope".with { ... }
 ```
 
 相反，`with()`接收一个作为参数的对象，你想要作用域的对象：
 
-```kt
+```java
 with("scope") {
     println(this.length) // "this" set to the argument of with()
 }
@@ -208,7 +208,7 @@ with("scope") {
 
 通常情况下，我们可以省略`this`：
 
-```kt
+```java
 with("scope") {
     length
 }
@@ -220,7 +220,7 @@ with("scope") {
 
 来自 Java，你可能倾向于检查你的对象类型，使用`is`，然后使用`as`进行转换：
 
-```kt
+```java
 interface Superhero
 class Batman : Superhero {
     fun callRobin() {
@@ -246,7 +246,7 @@ fun doCoolStuff(s : Superhero) {
 
 但正如你可能知道的，Kotlin 有智能转换，所以在这种情况下，隐式转换不是必需的：
 
-```kt
+```java
 fun doCoolStuff(s : Superhero) {
     if (s is Superman) {
         s.fly()
@@ -259,7 +259,7 @@ fun doCoolStuff(s : Superhero) {
 
 此外，在大多数情况下，使用`when()`进行智能转换会产生更干净的代码：
 
-```kt
+```java
 fun doCoolStuff(s : Superhero) {
     when(s) {
         is Superman -> s.fly()
@@ -271,14 +271,14 @@ fun doCoolStuff(s : Superhero) {
 
 作为一条经验法则，你应该避免使用类型转换，并尽可能多地依赖智能转换：
 
-```kt
+```java
 // Superhero is clearly not a string
 val superheroAsString = (s as String)
 ```
 
 但如果你绝对必须，还有一个安全的类型转换操作符：
 
-```kt
+```java
 val superheroAsString = (s as? String)
 ```
 
@@ -290,7 +290,7 @@ Java7 引入了 `AutoCloseable` 的概念和 try-with-resources 语句。
 
 在 Java7 之前，那是一个完全的混乱：
 
-```kt
+```java
 BufferedReader br = null; // Nulls are bad, we know that
 try {
     br = new BufferedReader(new FileReader("/some/peth"));
@@ -305,7 +305,7 @@ finally {
 
 在 Java7 之后：
 
-```kt
+```java
 try (BufferedReader br = new BufferedReader(new FileReader("/some/peth"))) {
     System.out.println(br.readLine());
 }
@@ -313,7 +313,7 @@ try (BufferedReader br = new BufferedReader(new FileReader("/some/peth"))) {
 
 在 Kotlin 中，`this` 语句被 `use()` 函数替换：
 
-```kt
+```java
 val br = BufferedReader(FileReader(""))
 
 br.use {
@@ -327,7 +327,7 @@ br.use {
 
 只有当它是一个高阶函数，并且其中一个参数是 lambda 表达式时，才使用内联函数：
 
-```kt
+```java
 inline fun doesntMakeSense(something: String) {
     println(something)
 }
@@ -335,7 +335,7 @@ inline fun doesntMakeSense(something: String) {
 
 这是最常见的使用场景，你希望使用 `inline`：
 
-```kt
+```java
 inline fun makesSense(block: () -> String) {
     println("Before")
     println(block())
@@ -345,7 +345,7 @@ inline fun makesSense(block: () -> String) {
 
 你可以像往常一样调用它，使用代码块体：
 
-```kt
+```java
 makesSense {
     "Inlining"
 }
@@ -353,7 +353,7 @@ makesSense {
 
 但如果你查看字节码，你会发现它实际上被转换成了生成的行，而不是函数调用：
 
-```kt
+```java
 println("Before")
 println("Inlining")
 println("After")
@@ -361,7 +361,7 @@ println("After")
 
 在实际代码中，你会看到以下内容：
 
-```kt
+```java
 String var1 = "Before"; <- Inline function call
 System.out.println(var1);
 var1 = "Inlining";
@@ -389,7 +389,7 @@ System.out.println(var1);
 
 你可以尝试编写如下内容：
 
-```kt
+```java
 fun <T> printIfSameType(a: Number) {
     if (a is T) { // <== Error
         println(a)   
@@ -399,13 +399,13 @@ fun <T> printIfSameType(a: Number) {
 
 但这段代码会因为以下错误而无法编译：
 
-```kt
+```java
 Cannot check for instance of erased type: T
 ```
 
 在这种情况下，我们通常在 Java 中这样做，即传递类作为参数：
 
-```kt
+```java
 fun <T: Number> printIfSameType(clazz: KClass<T>, a: Number) {
     if (clazz.isInstance(a) ) {
         println(a)
@@ -415,7 +415,7 @@ fun <T: Number> printIfSameType(clazz: KClass<T>, a: Number) {
 
 我们可以通过运行以下两行来检查这段代码：
 
-```kt
+```java
 printIfSameType(Int::class, 1) // Print 1, as 1 is Int
 printIfSameType(Int::class, 2L) // Prints nothing, as 2 is Long
 ```
@@ -424,7 +424,7 @@ printIfSameType(Int::class, 2L) // Prints nothing, as 2 is Long
 
 +   我们不得不使用反射，为此，我们必须包含 `kotlin-reflect` 库：
 
-```kt
+```java
 compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version: '1.2.31'
 ```
 
@@ -432,13 +432,13 @@ compile group: 'org.jetbrains.kotlin', name: 'kotlin-reflect', version: '1.2.31'
 
 +   我们必须传递正确的类：
 
-```kt
+```java
 clazz: KClass<T>
 ```
 
 相反，我们可以使用一个 `reified` 函数：
 
-```kt
+```java
 reified T> printIfSameTypeReified(a: Number) {
     if (a is T) {
         println(a)
@@ -448,7 +448,7 @@ reified T> printIfSameTypeReified(a: Number) {
 
 我们可以测试我们的代码是否仍然按预期工作：
 
-```kt
+```java
 printIfSameTypeReified<Int>(3) // Prints 3, as 3 is Int
 printIfSameTypeReified<Int>(4L) // Prints nothing, as 4 is Long
 printIfSameTypeReified<Long>(5) // Prints nothing, as 5 is Int
@@ -467,7 +467,7 @@ printIfSameTypeReified<Long>(6L) // Prints 6, as 6 is Long
 
 考虑另一个关于函数重载的例子：
 
-```kt
+```java
 fun printList(list: List<Int>) {
     println("This is a lit of Ints")
     println(list)
@@ -483,7 +483,7 @@ fun printList(list: List<Long>) {
 
 但使用 `reified`，我们可以实现这一点：
 
-```kt
+```java
 const val int = 1
 const val long = 1L
 inline fun <reified T : Any> printList(list: List<T>) {
@@ -503,7 +503,7 @@ inline fun <reified T : Any> printList(list: List<T>) {
 
 由于 Kotlin 有伴随对象，我们通常尝试将它们放在那里：
 
-```kt
+```java
 class MyClass {
     companion object {
         val MY_CONST = "My Const"
@@ -515,7 +515,7 @@ class MyClass {
 
 因此，这将被翻译成以下代码，或多或少：
 
-```kt
+```java
 public final class Spock {
    @NotNull
    private static final String MY_CONST = "My Const";
@@ -535,7 +535,7 @@ public final class Spock {
 
 我们常量的调用看起来像这样：
 
-```kt
+```java
 String var1 = Spock.Companion.getSENSE_OF_HUMOR();
 System.out.println(var1);
 ```
@@ -544,7 +544,7 @@ System.out.println(var1);
 
 现在我们将这个值标记为常量：
 
-```kt
+```java
 class Spock {
     companion object {
         const val SENSE_OF_HUMOR = "None"
@@ -554,7 +554,7 @@ class Spock {
 
 这里是字节码的变化：
 
-```kt
+```java
 public final class Spock {
    @NotNull
    public static final String SENSE_OF_HUMOR = "NONE";
@@ -570,7 +570,7 @@ public final class Spock {
 
 这里是调用：
 
-```kt
+```java
 String var1 = "NONE";
 System.out.println(var1);
 ```
@@ -579,13 +579,13 @@ System.out.println(var1);
 
 如果你只需要一个常量，你也可以在任何类外部设置它：
 
-```kt
+```java
 const val SPOCK_SENSE_OF_HUMOR = "NONE"
 ```
 
 如果你需要命名空间，你可以将其包裹在一个对象中：
 
-```kt
+```java
 object SensesOfHumor {
     const val SPOCK = "NONE"
 }
@@ -595,7 +595,7 @@ object SensesOfHumor {
 
 在 Java 中，我们习惯于有重载的构造函数：
 
-```kt
+```java
 class MyClass {
     private final String a;
     private final Integer b;
@@ -612,7 +612,7 @@ class MyClass {
 
 我们可以在 Kotlin 中模拟相同的行为：
 
-```kt
+```java
 class MyClass(val a: String, val b: Int, val c: Long) {
 
     constructor(a: String, b: Int) : this(a, b, 0) 
@@ -625,7 +625,7 @@ class MyClass(val a: String, val b: Int, val c: Long) {
 
 但通常更好的做法是使用默认参数值和命名参数：
 
-```kt
+```java
 
 class BetterClass(val a: String = "Default",
                   val b: Int = 1,
@@ -638,7 +638,7 @@ class BetterClass(val a: String = "Default",
 
 但你可以用 Java 的方式检查空值：
 
-```kt
+```java
 // Will return "String" half of the time, and null the other half
 val stringOrNull: String? = if (Random().nextBoolean()) "String" else null 
 
@@ -650,7 +650,7 @@ if (stringOrNull != null) {
 
 或者用更短的形式，使用 `Elvis` 操作符。如果长度不为空，这个操作符将返回其值。否则，它将返回我们提供的默认值，在这个例子中是零：
 
-```kt
+```java
 val alwaysLength = stringOrNull?.length ?: 0
 
 println(alwaysLength) // Will print 6 or 0, but never null
@@ -658,7 +658,7 @@ println(alwaysLength) // Will print 6 or 0, but never null
 
 如果你有一个嵌套对象，你可以链式调用这些检查：
 
-```kt
+```java
 data class Json(
         val User: Profile?
 )
@@ -673,7 +673,7 @@ println(json?.User?.firstName?.length)
 
 最后，你可以使用 `let()` 块来进行这些检查：
 
-```kt
+```java
 println(json?.let {
     it.User?.let {
         it.firstName?.length
@@ -683,7 +683,7 @@ println(json?.let {
 
 如果你想要消除所有地方的 `it()`，你可以使用 run：
 
-```kt
+```java
 println(json?.run {
     User?.run {
         firstName?.length
@@ -693,7 +693,7 @@ println(json?.run {
 
 尽可能避免不安全的 `!!` 空值操作符：
 
-```kt
+```java
 println(json!!.User!!.firstName!!.length)
 ```
 
@@ -703,7 +703,7 @@ println(json!!.User!!.firstName!!.length)
 
 正如你在上一章中看到的，在 Kotlin 中引入并发非常容易：
 
-```kt
+```java
 fun getName() = async {
    delay(100)
    "Ruslan"
@@ -712,25 +712,25 @@ fun getName() = async {
 
 但这种并发可能对函数的用户来说是不预期的行为，因为他们可能期望一个简单的值：
 
-```kt
+```java
 println("Name: ${getName()}")
 ```
 
 它会打印：
 
-```kt
+```java
 Name: DeferredCoroutine{Active}@...
 ```
 
 当然，这里缺少的是 `await()`：
 
-```kt
+```java
 println("Name: ${getName().await()}")
 ```
 
 但如果我们相应地命名我们的函数，这会显得更加明显：
 
-```kt
+```java
 fun getNameAsync() = async {
    delay(100)
    "Ruslan"
@@ -743,7 +743,7 @@ fun getNameAsync() = async {
 
 你有多少次不得不编写如下代码：
 
-```kt
+```java
 fun setCapacity(cap: Int) {
     if (cap < 0) {
         throw IllegalArgumentException()
@@ -754,7 +754,7 @@ fun setCapacity(cap: Int) {
 
 相反，你可以使用 `require()` 来检查参数：
 
-```kt
+```java
 fun setCapacity(cap: Int) {
     require(cap > 0)
 }
@@ -764,7 +764,7 @@ fun setCapacity(cap: Int) {
 
 你可以使用 `require()` 来检查嵌套的空值：
 
-```kt
+```java
 fun printNameLength(p: Profile) {
     require(p.firstName != null)
 }
@@ -772,7 +772,7 @@ fun printNameLength(p: Profile) {
 
 但也有 `requireNotNull()` 来处理这种情况：
 
-```kt
+```java
 fun printNameLength(p: Profile) {
     requireNotNull(p.firstName)
 }
@@ -780,7 +780,7 @@ fun printNameLength(p: Profile) {
 
 使用 `check()` 来验证你对象的状态。这在你提供用户可能没有正确设置的对象时很有用：
 
-```kt
+```java
 private class HttpClient {
     var body: String? = null
     var url: String = ""
@@ -803,7 +803,7 @@ private class HttpClient {
 
 来自 Java，你可能想给你的 `enum` 赋予功能：
 
-```kt
+```java
 // Java code
 enum PizzaOrderStatus {
     ORDER_RECEIVED, 
@@ -824,7 +824,7 @@ enum PizzaOrderStatus {
 
 相反，你可以使用 `sealed` 类：
 
-```kt
+```java
 sealed class PizzaOrderStatus(protected val orderId: Int) {
     abstract fun nextStatus() : PizzaOrderStatus
     class OrderReceived(orderId: Int) : PizzaOrderStatus(orderId) {
@@ -855,7 +855,7 @@ sealed class PizzaOrderStatus(protected val orderId: Int) {
 
 这种方法的优点是，我们现在可以传递数据以及状态：
 
-```kt
+```java
 var status: PizzaOrderStatus = OrderReceived(123)
 
 while (status !is Completed) {
@@ -874,7 +874,7 @@ while (status !is Completed) {
 
 你只能有一个伴随对象在你的类中：
 
-```kt
+```java
 class A {
    companion {
    }
@@ -885,7 +885,7 @@ class A {
 
 但你可以在你的类中拥有任意多的对象：
 
-```kt
+```java
 class A {
    object B {
    }
@@ -900,7 +900,7 @@ class A {
 
 从 Scala 转向 Kotlin 的开发者有时可能会这样定义他们的函数：
 
-```kt
+```java
 fun hello() = {
     "hello"
 }
@@ -908,31 +908,31 @@ fun hello() = {
 
 调用此函数不会打印你期望的内容：
 
-```kt
+```java
 println("Say ${hello()}")
 ```
 
 它会打印以下内容：
 
-```kt
+```java
  Say () -> kotlin.String
 ```
 
 我们缺少的是第二组括号：
 
-```kt
+```java
 println("Say ${hello()()}")
 ```
 
 它会打印以下内容：
 
-```kt
+```java
 Say hello
 ```
 
 这是因为单表达式定义可以翻译成：
 
-```kt
+```java
 fun hello(): () -> String {
     return {
         "hello"
@@ -942,7 +942,7 @@ fun hello(): () -> String {
 
 它可以进一步翻译成：
 
-```kt
+```java
 fun helloExpandedMore(): () -> String {
     return fun():String {
         return "hello"

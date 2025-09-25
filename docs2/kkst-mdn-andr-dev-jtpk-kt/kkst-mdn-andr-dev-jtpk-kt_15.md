@@ -46,7 +46,7 @@
 
 现在，当我们说`Activity`有一个系统定义的生命周期时，这实际上意味着我们的`Activity`类从`ComponentActivity()`继承，它反过来包含一个`Lifecycle`对象。如果我们查看来自 Repositories 应用的`MainActivity`类，我们可以看到它从`ComponentActivity()`继承：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
 
 让我们举一个例子，并稍微发挥一下想象力——`Presenter`类具有由多个网络请求产生的一个数据流。这个数据流被观察并传递到 UI。然而，任何正在进行的网络请求都必须在`cancelOngoingNetworkRequests()`方法中取消，因为我们的 UI 不再需要消费它们的响应：
 
-```kt
+```java
 class Presenter() {
     // observe data and pass it to the UI
     fun cancelOngoingNetworkRequests() {
@@ -114,7 +114,7 @@ class Presenter() {
 
 假设我们的`Presenter`类实例在`MainActivity`中使用。自然，它必须尊重`MainActivity`类的生命周期。这就是为什么我们应该通过在`MainActivity`类的`onDestroyed()`生命周期回调中调用`Presenter`类的`cancelOngoingNetworkRequests()`方法来停止`Presenter`类中的任何正在进行的网络请求：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     val presenter = Presenter()
     override fun onStart() {
@@ -166,7 +166,7 @@ Jetpack 的`Lifecycle`包为我们提供了以下内容：
 
 这基本上意味着，我们不需要手动让我们的`Activity`通知`ViewModel`其生命周期已结束，以便它可以停止其工作，`ViewModel`是一个生命周期感知组件，它为您提供了处理该事件的句柄 - 即`onCleared()`回调：
 
-```kt
+```java
 class MyViewModel(): ViewModel() {
     override fun onCleared() {
         super.onCleared()
@@ -179,7 +179,7 @@ class MyViewModel(): ViewModel() {
 
 但是，`ViewModel`是如何知道`Activity`组件的生命周期回调的呢？为了回答这个问题，我们可以通过使用`ViewModelProvider` API 并在`Activity`内部实例化`ViewModel`来查看传统的做法，并指定必须检索的`ViewModel`类型——即`MyViewModel`：
 
-```kt
+```java
 class MyActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -220,7 +220,7 @@ class MyActivity: ComponentActivity() {
 
 在 `ViewModel` 中，我们实例化了一个 `MutableLiveData` 对象，该对象将持有 `Int` 类型的值，传递了一个初始值为 `0`，然后在 `init{}` 块中启动了一个协程，在 `5000` 毫秒的延迟后，将值设置为 `100`：
 
-```kt
+```java
 class MyViewModel(): ViewModel() {
     val numberLiveData: MutableLiveData<Int> = 
         MutableLiveData(0)
@@ -237,7 +237,7 @@ class MyViewModel(): ViewModel() {
 
 现在，一个 `Activity` 可以通过首先获取 `MyViewModel` 的实例，访问其 `numberLiveData` 对象，然后通过 `observe()` 方法开始观察变化来进行观察：
 
-```kt
+```java
 class MyActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -298,7 +298,7 @@ class MyActivity: ComponentActivity() {
 
 1.  在根包内部，创建一个名为`CustomCountdown`的新类，并定义其构造函数，使其具有两个将被作为倒计时计时器函数调用的函数参数：
 
-    ```kt
+    ```java
     class CustomCountdown(
         private val onTick: ((currentValue: Int) -> Unit),
         private val onFinish: (() -> Unit),
@@ -310,7 +310,7 @@ class MyActivity: ComponentActivity() {
 
 1.  现在，在`CustomCountdown`类内部，让我们创建一个名为`InternalTimer`的内部类，它将继承自内置的 Android `android.os.CountDownTimer`类，并处理实际的倒计时序列：
 
-    ```kt
+    ```java
     class CustomCountdown(
         private val onTick: ((currentValue: Int) -> Unit),
         private val onFinish: (() -> Unit),
@@ -330,7 +330,7 @@ class MyActivity: ComponentActivity() {
 
 1.  接下来，让我们完成`InternalTimer`类的实现：
 
-    ```kt
+    ```java
     class CustomCountdown(
         private val onTick: ((currentValue: Int) -> Unit),
         private val onFinish: (() -> Unit),
@@ -365,7 +365,7 @@ class MyActivity: ComponentActivity() {
 
 为了做到这一点，让我们将其构造函数传递给`onFinish`和`onTick`函数参数，并将 60 秒（作为`60000`毫秒）传递给`millisInFuture`参数，将 1 秒（作为`1000`毫秒）传递给`countDownInterval`参数：
 
-```kt
+```java
 class CustomCountdown(
     private val onTick: ((currentValue: Int) -> Unit),
     private val onFinish: (() -> Unit),
@@ -387,7 +387,7 @@ class CustomCountdown(
 
 1.  仍然在`CustomCountdown`内部，为了提供一个取消倒计时的方法，添加一个`stop()`方法，这将允许我们调用从 Android `CountDownTimer`类继承的`InternalTimer`的`cancel()`方法：
 
-    ```kt
+    ```java
     class CustomCountdown(…) {
         var timer: InternalTimer = InternalTimer(…)
         fun stop() {
@@ -402,7 +402,7 @@ class CustomCountdown(
 
 1.  然后，在`RepositoriesViewModel`中，添加一个`timerState`变量，它将保存我们的倒计时可组合显示的文本状态，以及一个`timer`变量，它将保存一个`CustomCountdown`对象：
 
-    ```kt
+    ```java
     class RepositoriesViewModel(…) : ViewModel() {
         val repositories: Flow<PagingData<Repository>> = […]
         val timerState = mutableStateOf("")
@@ -422,7 +422,7 @@ class CustomCountdown(
 
 1.  作为一种良好的实践，在`RepositoriesViewModel`内部，确保在用户移动到不同的屏幕时在`onCleared()`回调中停止计时器。这意味着`RepositoriesScreen()`将不再被组合，因此这个`ViewModel`将被清除，倒计时应该停止，这样它就不会发送事件和浪费资源：
 
-    ```kt
+    ```java
     class RepositoriesViewModel(…) : ViewModel() {
         val repositories: Flow<PagingData<Repository>> = […]
         val timerState = mutableStateOf("")
@@ -436,7 +436,7 @@ class CustomCountdown(
 
 1.  现在，转到`MainActivity`并确保，正如仓库被消费并传递给`RepositoriesScreen()`可组合一样，由`ViewModel`产生的倒计时计时器文本也被消费并传递给`RepositoriesScreen()`：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -459,7 +459,7 @@ class CustomCountdown(
 
 1.  然后，在`RepositoriesScreen.kt`文件末尾，创建一个简单的`CountdownItem()`可组合函数，该函数接受一个`timerText: String`参数并将其值设置为`Text`可组合：
 
-    ```kt
+    ```java
     @Composable
     private fun CountdownItem(timerText: String) {
         Text(timerText)
@@ -468,7 +468,7 @@ class CustomCountdown(
 
 1.  接下来，在`RepositoriesScreen()`可组合中，添加一个名为`timerText`的新参数，并在`LazyColumn`作用域内，在`itemsIndexed()`调用之前，添加一个单独的`item()` `CountdownItem()`可组合，并将`timerText`变量传递给它：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>,
@@ -530,7 +530,7 @@ class CustomCountdown(
 
 1.  让`CustomCountdown`类实现`DefaultLifecycleObserver`接口，然后重写我们感兴趣的两种生命周期回调，`onResume()`和`onPause()`：
 
-    ```kt
+    ```java
     class CustomCountdown(
         […]
     ): DefaultLifecycleObserver {
@@ -556,7 +556,7 @@ class CustomCountdown(
 
 首先，让我们在 `onPause()` 回调中通过调用 `timer` 变量的 `cancel()` 方法来暂停倒计时。
 
-```kt
+```java
 class CustomCountdown(
     […]
 ): DefaultLifecycleObserver {
@@ -579,7 +579,7 @@ class CustomCountdown(
 
 在内部 `InternalTimer` 类中，创建一个 `lastKnownTime` 变量，用 `millisInFuture` 的值初始化它，然后确保在 `onFinish()` 和 `onTick()` 计时器回调中更新它：
 
-```kt
+```java
 class CustomCountdown(
     […]
 ): DefaultLifecycleObserver {
@@ -609,7 +609,7 @@ class CustomCountdown(
 
 1.  现在，回到父类 `CustomCountdown`，在 `CustomCountdown` 的 `onResume()` 回调中恢复倒计时，首先取消上一个计时器的倒计时，然后在 `timer` 变量中存储另一个 `InternalTimer` 实例，该实例现在从上一个 `InternalTimer` 实例的 `lastKnownTime` 值开始倒计时：
 
-    ```kt
+    ```java
     class CustomCountdown(
         […]
     ): DefaultLifecycleObserver {
@@ -643,7 +643,7 @@ class CustomCountdown(
 
 1.  返回到`RepositoriesScreen.kt`文件，在`CountdownItem()`组合组件内部，首先通过调用`LocalLifeCycleOwner` API 获取组合函数所属的`LifecycleOwner`实例，然后通过访问其`current`变量来获取所有者：
 
-    ```kt
+    ```java
     @Composable
     private fun CountdownItem (timerText: String) {
     val lifecycleOwner: LifecycleOwner  = 
@@ -662,7 +662,7 @@ class CustomCountdown(
 
 对于这种情况，我们可以使用`DisposableEffect()`组合组件，它为我们提供了一个代码块，在组合组件进入组合时我们可以执行操作，然后通过其内部的`onDispose()`块执行其他操作：
 
-```kt
+```java
 @Composable
 private fun CountdownItem (timerText: String) {
     val lifecycleOwner: LifecycleOwner = 
@@ -680,7 +680,7 @@ private fun CountdownItem (timerText: String) {
 
 1.  既然我们知道何时何地可以添加和移除观察者，让我们首先从`lifecycleOwner`变量中获取`Lifecycle`对象，以便我们可以将其存储在`lifecycle`变量中：
 
-    ```kt
+    ```java
     @Composable
     private fun CountdownItem(timerText: String) {
         val lifecycleOwner: LifecycleOwner = 
@@ -699,7 +699,7 @@ private fun CountdownItem (timerText: String) {
 
 1.  在`DisposableEffect()`组合组件暴露的代码块内部，通过调用其`addObserver()`方法在`lifecycle`变量上添加观察者，然后在其暴露的`onDispose()`回调中，使用`removeObserver()`方法将其移除：
 
-    ```kt
+    ```java
     @Composable
     private fun CountdownItem(timerText: String) {
         val lifecycleOwner: LifecycleOwner 
@@ -725,7 +725,7 @@ private fun CountdownItem (timerText: String) {
 
 1.  更新`CountdownItem()`函数定义，以接收一个返回`CustomCountdown`计时器的`getTimer()`函数参数。这个回调方法应该被调用，为`addObserver()`和`removeObserver()`方法提供一个`LifecycleObserver`实例：
 
-    ```kt
+    ```java
     @Composable
     private fun CountdownItem(timerText: String, 
         getTimer: () -> CustomCountdown) {
@@ -746,7 +746,7 @@ private fun CountdownItem (timerText: String) {
 
 1.  由于`CountdownItem()`现在期望一个`getTimer: ()-> CustomCountdown`回调函数，我们必须也强制我们的`RepositoriesScreen()`可组合接受这样的回调函数，并将其传递给我们的`CountdownItem()`可组合：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>,
@@ -765,7 +765,7 @@ private fun CountdownItem (timerText: String) {
 
 1.  最后，在`MainActivity`内部，更新`RepositoriesScreen()`可组合调用，以提供`getTimer()`函数的实现，我们将从`viewModel`变量的`timer`字段中获取`CustomCountdown`实例：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -815,7 +815,7 @@ private fun CountdownItem (timerText: String) {
 
 如果你查看`CountdownItem()`组合组件的主体，你会注意到我们已注册了一个`DisposableEffect()`组合组件，它会通知我们当`CountdownItem()`组合组件离开组合时，通过暴露`onDispose()`回调：
 
-```kt
+```java
 @Composable
 private fun CountdownItem(…) {
     val lifecycleOwner: […] = LocalLifecycleOwner.current
@@ -834,7 +834,7 @@ private fun CountdownItem(…) {
 
 1.  更新`CountdownItem()`函数定义，使其接受一个新的`onPauseTimer()`回调函数，然后确保在`DisposableEffect()`的`onDispose()`回调中调用它：
 
-    ```kt
+    ```java
     @Composable
     private fun CountdownItem(timerText: String,
         getTimer: () -> CustomCountdown,
@@ -854,7 +854,7 @@ private fun CountdownItem(…) {
 
 1.  由于`CountdownItem()`现在期望一个`onPauseTimer: () -> Unit`回调函数，我们必须也强制我们的`RepositoriesScreen()`组合组件接受这样的回调函数，并将其传递给我们的`CountdownItem()`组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>,
@@ -878,7 +878,7 @@ private fun CountdownItem(…) {
 
 1.  最后，在`MainActivity`内部，更新`RepositoriesScreen()`组合组件的调用，以提供`onPauseTimer()`函数实现，我们将通过`viewModel`变量通过其`timer`字段获取的`CustomCountdown`实例的`stop()`方法来暂停计时器：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -913,7 +913,7 @@ private fun CountdownItem(…) {
 
 让我们来看看`CountdownItem()`可组合组件内部，看看这是如何发生的：
 
-```kt
+```java
 @Composable
 private fun CountdownItem(timerText: String,
     getTimer: () -> CustomCountdown,
@@ -936,7 +936,7 @@ private fun CountdownItem(timerText: String,
 
 换句话说，一旦我们的计时器可组合组件可见，我们就将其作为观察者添加到`MainActivity`类的生命周期中。在那个时刻，`RESUMED`状态是`MainActivity`的当前状态，因此`onResume()`回调在`CustomCountdown`组件内部被触发，从而在我们的特定场景中有效地恢复了计时器的倒计时：
 
-```kt
+```java
 class CustomCountdown([…]): DefaultLifecycleObserver {
     var timer: InternalTimer = InternalTimer(…)
     override fun onResume(owner: LifecycleOwner) {

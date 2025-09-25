@@ -97,7 +97,7 @@ AOSP 构建中的所有组件都称为**模块**。在模块定义中，模块�
 
 如我之前所述，我会尽量避免对 AOSP 源代码进行不必要的修改。在本章中，为了设置构建环境，你可以检出 AOSP 源代码的`android-7.1.1_r4`版本，并将内核和 x86emu 源代码克隆到 AOSP 源代码树中，如下所示：
 
-```kt
+```java
 $ mkdir android-x86emu
 $ cd android-x86emu
 $ repo init -u https://android.googlesource.com/platform/manifest -b android-7.1.1_r4
@@ -126,7 +126,7 @@ $ git clone https://github.com/shugaoye/x86emu.git -b android-7.1.1_r4_x86emu_ch
 
 要使用我们自己的清单文件，我们可以使用本地镜像或远程仓库。如果我们使用本地镜像，我们必须稍微修改`android-7.1.1_r4`的`manifest.xml`以创建我们自己的。我们将`.repo/manifest.xml`复制到我们的`manifests/default.xml`并做出以下更改：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -152,7 +152,7 @@ $ git clone https://github.com/shugaoye/x86emu.git -b android-7.1.1_r4_x86emu_ch
 
 此清单文件假设我们的本地镜像具有以下目录结构：
 
-```kt
+```java
 $ ls -F
 android/  android-x86/  github/  
 
@@ -162,7 +162,7 @@ AOSP 镜像创建在`android`文件夹下。GitHub 镜像创建在`github`文件
 
 使用此清单，我们可以使用以下命令获取源代码：
 
-```kt
+```java
 $ mkdir android-x86emu
 $ cd android-x86emu
 $ repo init -u {your mirror URL}/github/manifests.git -b **android-7.1.1_r4_****ch04**
@@ -172,7 +172,7 @@ $ repo sync
 
 我们也可以直接使用我们自己的清单文件从远程仓库检索所有源代码。为此，我们需要稍微更改清单文件如下：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -202,7 +202,7 @@ $ repo sync
 
 如你所见，我们更改了远程 `aosp` 的 URL，在本版本清单文件中使用绝对路径。要使用此修订版检出源代码，我们可以运行以下命令：
 
-```kt
+```java
 $ mkdir android-x86emu
 $ cd android-x86emu
 $ repo init -u https://github.com/shugaoye/manifests -b **android-7.1.1_r4_ch04_****aosp**
@@ -232,7 +232,7 @@ $ repo sync
 
 在我们检出源代码后，我们可以查看如何在 `$AOSP/device` 文件夹中创建一个新的 x86emu 设备。`device` 文件夹中的层次结构是 `vendor-name/device-name` 格式。例如，三星的 Nexus S 可以在 `samsung/crespo` 文件夹中找到。Nexus S 的设备名称是 `crespo`。我们可以在一个公共文件夹 `generic` 下创建我们的设备，如下所示。我们设备的文件夹名称为 `generic*/*x86emu`：
 
-```kt
+```java
 $ cd device/generic 
 $ mkdir x86emu 
 
@@ -258,7 +258,7 @@ $ mkdir x86emu
 
 我们将所有产品定义 Makefile 包含在这个文件中。AOSP 构建系统将开始使用此文件搜索所有产品定义。以下为 `AndroidProducts.mk` 的内容：
 
-```kt
+```java
 PRODUCT_MAKEFILES := \ 
     $(LOCAL_DIR)/x86emu_x86.mk \  
     $(LOCAL_DIR)/x86emu_x86_64.mk \  
@@ -276,7 +276,7 @@ PRODUCT_MAKEFILES := \
 
 |
 
-```kt
+```java
 $(call inherit-product, device/generic/x86emu/device.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full.mk)
 # Overrides
@@ -292,7 +292,7 @@ $(call inherit-product, $(LOCAL_PATH)/x86emu_base.mk)
 
 |
 
-```kt
+```java
 $(call inherit-product, device/generic/x86emu/device.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_x86_64.mk)
 # Overrides
@@ -312,21 +312,21 @@ $(call inherit-product, $(LOCAL_PATH)/x86emu_base.mk)
 
 您可能会注意到，我们在开头首先继承了 32 位和 64 位的通用产品定义文件：
 
-```kt
+```java
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full.mk) 
 
 ```
 
 以及：
 
-```kt
+```java
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_x86_64.mk) 
 
 ```
 
 AOSP 构建系统定义了许多通用产品定义。您可以在 `$AOSP/build/target/product` 找到它们：
 
-```kt
+```java
 $ ls build/target/product
 AndroidProducts.mk      full_base.mk             sdk_base.mk
 aosp_arm64.mk           full_base_telephony.mk   sdk_mips.mk
@@ -350,7 +350,7 @@ emulator.mk             sdk_arm64.mk
 
 之后，定义了一系列具有不同值的 product 定义变量 `PRODUCT_BRAND`、`PRODUCT_NAME`、`PRODUCT_DEVICE` 和 `PRODUCT_MODEL`。`TARGET_ARCH` 和 `TARGET_KERNEL_CONFIG` 也分别针对 32 位和 64 位进行定义。请注意 `PRODUCT_MODEL`。由于我们将在每个章节中更改 Makefile，在这本书中我们使用 `PRODUCT_MODEL` 来表示每个章节的构建。在本章中，我们将 `PRODUCT_MODEL` 定义为 `x86emu_x86_ch4` 以表示本章的构建。在文件末尾，我们还包含了一个通用的 `Makefile x86emu_base.mk`，用于 32 位和 64 位产品。此文件包括内核构建的额外配置：
 
-```kt
+```java
 TARGET_KERNEL_SOURCE := kernel 
 
 PRODUCT_OUT ?= out/target/product/x86emu 
@@ -387,7 +387,7 @@ PRODUCT_COPY_FILES += \
 
 `BoardConfig.mk` 定义了板级特定配置。我们在该文件中定义 CPU/ABI、目标架构、OpenGLES 配置等。我们还在该文件中定义了镜像文件的大小、格式等：
 
-```kt
+```java
 TARGET_NO_BOOTLOADER := true 
 TARGET_NO_KERNEL := true 
 TARGET_CPU_ABI := x86 
@@ -436,7 +436,7 @@ BOARD_SEPOLICY_DIRS += \
 
 我们也可以直接使用系统定义的板级配置，并覆盖预定义变量，如下所示：
 
-```kt
+```java
 include $(SRC_TARGET_DIR)/board/generic_x86/BoardConfig.mk 
 
 # 
@@ -457,7 +457,7 @@ BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
 
 如果我们查看 `$AOSP/build/target/board/generic_x86` 文件夹，它包含了一些其他文件：
 
-```kt
+```java
 $ ls -F
 BoardConfig.mk  device.mk  README.txt  sepolicy/  system.prop  
 
@@ -465,7 +465,7 @@ BoardConfig.mk  device.mk  README.txt  sepolicy/  system.prop
 
 我们还需要将 `system.prop` 复制到我们的 `device` 文件夹中，因为这个文件定义了模拟器的 **Radio Interface Layer** （RIL）配置，如下所示：
 
-```kt
+```java
 rild.libpath=/system/lib/libreference-ril.so 
 rild.libargs=-d /dev/ttyS0 
 
@@ -477,7 +477,7 @@ rild.libargs=-d /dev/ttyS0
 
 您可能会注意到 `generic_x86` 文件夹中有一个 `device.mk` 文件。是的，我们可以直接重用该文件。以下是我们 `device.mk` 文件的内容：
 
-```kt
+```java
 $(call inherit-product, $(SRC_TARGET_DIR)/board/generic_x86/device.mk) 
 
 ```
@@ -486,7 +486,7 @@ $(call inherit-product, $(SRC_TARGET_DIR)/board/generic_x86/device.mk)
 
 我们可以查看 `generic_x86` 设备的 `device.mk` 文件如下：
 
-```kt
+```java
 PRODUCT_PROPERTY_OVERRIDES := \ 
     ro.ril.hsxpa=1 \ 
     ro.ril.gprsclass=10 \  
@@ -512,7 +512,7 @@ PRODUCT_PACKAGES := \
 
 现在，我们可以使用以下命令将我们的设备构建添加到构建系统中：
 
-```kt
+```java
 $ add_lunch_combo <product_name>-<build_variant> 
 $ lunch <product_name>-<build_variant> 
 
@@ -520,7 +520,7 @@ $ lunch <product_name>-<build_variant>
 
 例如：
 
-```kt
+```java
 $ add_lunch_combo x86emu_x86-eng 
 $ lunch x86emu_x86-eng 
 
@@ -528,7 +528,7 @@ $ lunch x86emu_x86-eng
 
 要自动将其添加到构建系统中，我们可以添加一个脚本 `vendorsetup.sh`。在这个脚本中，我们可以为 `x86emu_x86` 创建所有构建变体：
 
-```kt
+```java
 for i in eng userdebug user; do 
         add_lunch_combo x86emu_x86-${i} 
 done 
@@ -565,7 +565,7 @@ done
 
 在我们开始构建 x86emu 之前，让我们先快速了解一下 Android 构建系统。与其他基于 make 的构建系统相比，Android 构建系统不依赖于递归的 Makefiles。Android Makefiles 以 `.mk` 扩展名结尾；特定源目录的主要 Makefile 被命名为 `Android.mk`。构建系统从各个文件夹导入所有 `Android.mk` 以创建一个大的 Makefile 来启动构建，正如我们可以在以下代码片段中看到的那样：
 
-```kt
+```java
 $ make -j4 
 ============================================ 
 PLATFORM_VERSION_CODENAME=REL 
@@ -588,21 +588,21 @@ including ./bionic/Android.mk ...
 
 在我们开始构建之前，我们必须首先设置构建环境。Android 构建系统提供了一个 `build/envsetup.sh` 脚本来设置构建环境。我们可以通过运行以下命令来设置构建环境：
 
-```kt
+```java
 $ source build/envsetup.sh  
 
 ```
 
 之后，我们需要指定我们想要构建的目标。在 Android 构建系统的术语中，这被称为 lunch-combo。我们可以直接指定一个 lunch-combo：
 
-```kt
+```java
 $ lunch x86emu_x86-eng  
 
 ```
 
 或者从菜单中选择它：
 
-```kt
+```java
 $ lunch
 
 You're building on Linux
@@ -651,14 +651,14 @@ OUT_DIR=out
 
 我们在这里选择的 lunch-combo 是 `x86emu_x86-eng`。现在我们可以使用以下命令开始构建目标：
 
-```kt
+```java
 $ make -j4  
 
 ```
 
 或者：
 
-```kt
+```java
 $ m -j4  
 
 ```
@@ -667,7 +667,7 @@ $ m -j4
 
 如果你想在构建中看到实际的命令，你可以在命令行上使用 `showcommands` 选项：
 
-```kt
+```java
 $ make -j4 showcommands  
 
 ```
@@ -694,7 +694,7 @@ $ make -j4 showcommands
 
 除了构建目标之外，还有一些辅助宏和函数在您源码 `envsetup.sh` 时被安装。您可以通过使用 `hmm` 命令来找出它们：
 
-```kt
+```java
 $ hmm
 Invoke ". build/envsetup.sh" from your shell to add the following functions to your environment:
 - lunch:   lunch <product_name>-<build_variant>
@@ -727,7 +727,7 @@ addcompletions add_lunch_combo cgrep check_product check_variant choosecombo cho
 
 在我们成功构建目标之后，我们可以在我们的案例中找到图像在 `out/target/product/x86emu`。我们还可以使用环境变量 `$OUT` 如下列出构建输出：
 
-```kt
+```java
 $ ls -F $OUT
 Android-info.txt  dex_bootjars/             ramdisk.img           symbols/
 boot.img          gen/                      ramdisk-recovery.img  system/
@@ -742,7 +742,7 @@ data/             previous_build_config.mk  root/
 
 要测试 x86emu，我们可以使用在 第二章 “设置开发环境”中创建的 AVD `a25x86`。要使用我们自己的系统镜像，我们可以创建一个 shell 脚本 `~/bin/test-ch04.sh`，如下所示：
 
-```kt
+```java
 #!/bin/sh 
 
 emulator @a25x86 -verbose -show-kernel -shell -selinux disabled -system ${OUT}/system.img -ramdisk ${OUT}/ramdisk.img -initdata ${OUT}/userdata.img -kernel ${OUT}/kernel 
@@ -751,7 +751,7 @@ emulator @a25x86 -verbose -show-kernel -shell -selinux disabled -system ${OUT}/s
 
 您可以从前面的 shell 脚本中看到，用于启动 AVD `a25x86` 的 x86emu 图像。您需要设置您的 Android SDK 路径，以便您可以从 Android SDK 使用模拟器：
 
-```kt
+```java
 $ test-ch04.sh  
 
 ```
@@ -782,7 +782,7 @@ x86emu 构建信息
 
 要使用 Eclipse，我们需要为我们的 x86emu 设备构建创建一个 Makefile，如下所示：
 
-```kt
+```java
 all: 
    cd ../../..;make -j8 showcommands 2>&1 | tee x86emu-`date +%Y%m%d`.txt 
 
@@ -810,7 +810,7 @@ clean-initrd:
 
 我们需要定义一些可以在 Eclipse 中使用的构建目标。让我们看看如何将 x86emu 设备构建导入到 Eclipse 项目中。我们将使用 ADT 套件中的 Eclipse 来解释这个过程。为了将 AOSP 构建与 Eclipse 集成，我们必须在 AOSP 构建环境中启动 Eclipse。让我们按照以下步骤启动 Eclipse：
 
-```kt
+```java
 $ source build/envsetup.sh
 $ lunch x86emu_x86-eng
 ${SDK_ROOT}/eclipse/eclipse  
@@ -837,7 +837,7 @@ ${SDK_ROOT}/eclipse/eclipse
 
 一旦我们导入项目，我们应该能够在项目资源管理器中看到 `x86emu` 文件夹下的所有文件都显示在右侧，正如我们在以下屏幕截图中所见。然后我们可以点击鼠标右键以查看项目的菜单列表，并选择“Make Targets | Create... | Create Make Target”。我们可以在目标名称字段中添加我们在 Makefile 中定义的构建目标。如果我们定义默认的构建目标 `all`，Eclipse 中的默认构建将触发我们的 `Makefile` 中的构建目标 `all`。这是我们为构建目标 `all` 定义的：
 
-```kt
+```java
 all: 
    cd ../../..;make -j8 showcommands 2>&1 | tee x86emu-`date +%Y%m%d`.txt 
 

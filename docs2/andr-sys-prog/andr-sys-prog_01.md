@@ -134,7 +134,7 @@ Android 应用框架还与 Google 的**集成开发环境**（**IDE**）紧密�
 
 当系统启动到恢复模式时，它从闪存中的专用分区启动。这个分区包括包含 Linux 内核和特殊 ramdisk 图像的恢复镜像。如果我们查看 Nexus 5 分区，我们会看到以下列表：
 
-```kt
+```java
 # parted /dev/block/mmcblk0
 parted /dev/block/mmcblk0
 GNU Parted 1.8.8.1.179-aef3

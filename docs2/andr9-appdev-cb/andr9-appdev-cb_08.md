@@ -70,7 +70,7 @@ Android 提供了许多通知用户的方法，包括视觉和非视觉方法。
 
 1.  用以下布局替换现有的布局 XML：
 
-```kt
+```java
 &lt;?xml version="1.0" encoding="utf-8"?&gt;
 &lt;RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -107,13 +107,13 @@ Android 提供了许多通知用户的方法，包括视觉和非视觉方法。
 
 1.  在 AndroidManifest.xml 中添加以下权限：
 
-```kt
+```java
 &lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
 ```
 
 1.  打开 `ActivityMain.java` 并添加以下全局变量：
 
-```kt
+```java
 private CameraManager mCameraManager;
 private String mCameraId=null;
 private ToggleButton mButtonLights;
@@ -121,7 +121,7 @@ private ToggleButton mButtonLights;
 
 1.  添加以下方法以获取摄像头 ID：
 
-```kt
+```java
 private String getCameraId() {
     try {
         String[] ids = mCameraManager.getCameraIdList();
@@ -145,7 +145,7 @@ private String getCameraId() {
 
 1.  在 `onCreate()` 方法中添加以下代码：
 
-```kt
+```java
 mButtonLights = findViewById(R.id.buttonLights);
 if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M) {
     mCameraManager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
@@ -161,7 +161,7 @@ if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M) {
 
 1.  现在，添加代码来处理每个按钮点击：
 
-```kt
+```java
 public void clickLights(View view) {
     if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M) {
         try {
@@ -190,7 +190,7 @@ public void clickSound(View view) {
 
 如前几段所示，大部分代码都与查找和打开摄像头以使用闪光灯功能相关。`setTorchMode()` 是在 API 23 中引入的，这就是为什么我们需要进行 API 版本检查的原因：
 
-```kt
+```java
 if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M){} 
 ```
 
@@ -200,7 +200,7 @@ if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M){}
 
 要播放声音，我们使用 `RingtoneManager` 中的 `Ringtone` 对象。除了相对容易实现之外，这种方法的好处是我们可以使用默认的通知声音，我们通过以下代码获取它：
 
-```kt
+```java
 Uri notificationSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION); 
 ```
 
@@ -208,7 +208,7 @@ Uri notificationSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NO
 
 最后是振动手机的调用。这是最简单的代码，但它确实需要权限，我们已经将其添加到 Manifest 中：
 
-```kt
+```java
 &lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
 ```
 
@@ -238,7 +238,7 @@ Android Studio 提供了一个快捷键来创建简单的 Toast 语句。当你�
 
 当你再次按下 Enter 键时，它会自动完成以下内容：
 
-```kt
+```java
 Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
 ```
 
@@ -256,7 +256,7 @@ Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
 
 1.  将现有的`&lt;TextView&gt;`元素替换为以下内容的`&lt;Button&gt;`：
 
-```kt
+```java
 &lt;Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -270,7 +270,7 @@ Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
 
 1.  在`res/drawable`文件夹中创建一个新的可绘制资源文件，命名为`border_square.xml`，使用以下代码：
 
-```kt
+```java
 &lt;?xml version="1.0" encoding="utf-8"?&gt;
 &lt;layer-list xmlns:android="http://schemas.android.com/apk/res/android"&gt;
     &lt;item
@@ -288,7 +288,7 @@ Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
 
 1.  在`res/layout`文件夹中创建一个新的布局资源文件，命名为`toast_custom.xml`，使用以下代码：
 
-```kt
+```java
 &lt;?xml version="1.0" encoding="utf-8"?&gt;
 &lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/toast_layout_root"
@@ -314,7 +314,7 @@ Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
 
 1.  现在，打开`ActivityMain.java`并添加以下方法：
 
-```kt
+```java
 public void showToast(View view) {
     LayoutInflater inflater = (LayoutInflater)this
             .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -358,7 +358,7 @@ public void showToast(View view) {
 
 1.  添加以下`&lt;Button&gt;`：
 
-```kt
+```java
 &lt;Button
     android:id="@+id/buttonDelete"
     android:layout_width="wrap_content"
@@ -373,7 +373,7 @@ public void showToast(View view) {
 
 1.  将`confirmDelete()`方法添加到`ActivityMain.java`中；这个方法是由按钮调用的：
 
-```kt
+```java
 public void confirmDelete(View view) {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Delete")
@@ -404,7 +404,7 @@ public void confirmDelete(View view) {
 
 如食谱介绍截图所示，`AlertDialog`还有一个第三个按钮，称为中性按钮，可以使用以下方法设置：
 
-```kt
+```java
 builder.setNeutralButton() 
 ```
 
@@ -412,7 +412,7 @@ builder.setNeutralButton()
 
 要向对话框添加图标，请使用`setIcon()`方法。以下是一个示例：
 
-```kt
+```java
 .setIcon(R.mipmap.ic_launcher) 
 ```
 
@@ -422,7 +422,7 @@ Android 4.3 中引入的 mipmap 文件夹是一个用于存储不应在 APK 优�
 
 我们还可以使用各种列表设置方法创建一个可供选择的项列表，包括以下方法：
 
-```kt
+```java
 .setItems() 
 .setAdapter() 
 .setSingleChoiceItems() 
@@ -437,7 +437,7 @@ Android 4.3 中引入的 mipmap 文件夹是一个用于存储不应在 APK 优�
 
 最后，我们还可以创建一个自定义布局，并使用以下方法设置它：
 
-```kt
+```java
 .setView() 
 ```
 
@@ -467,7 +467,7 @@ Google Play 应用提供了一个很好的例子。当添加下载项目时，Go
 
 1.  将 `<TextView>` 替换为以下 `<Button>`：
 
-```kt
+```java
 &lt;Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -482,13 +482,13 @@ Google Play 应用提供了一个很好的例子。当添加下载项目时，Go
 
 1.  打开 `MainActivity.java` 并添加以下两个全局变量：
 
-```kt
+```java
 private ProgressDialog mDialog; final int THIRTY_SECONDS=30*1000; 
 ```
 
 1.  添加由按钮点击引用的 `showDialog()` 方法：
 
-```kt
+```java
 public void startProgress(View view) {
     mDialog = new ProgressDialog(this);
     mDialog.setMessage("Doing something...");
@@ -508,7 +508,7 @@ public void startProgress(View view) {
 
 我们使用 `ProgressDialog` 类来显示对话框。选项应该是自解释的，但这个设置值得注意：
 
-```kt
+```java
 mDialog.setCancelable(false); 
 ```
 
@@ -520,7 +520,7 @@ mDialog.setCancelable(false);
 
 添加并运行以下代码行：
 
-```kt
+```java
 mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL); 
 ```
 
@@ -544,13 +544,13 @@ mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 
 1.  添加以下权限：
 
-```kt
+```java
 &lt;uses-permission android:name="android.permission.VIBRATE"/&gt;
 ```
 
 1.  打开 `activity_main.xml` 并将现有的 `<TextView>` 替换为以下按钮：
 
-```kt
+```java
 &lt;Button
     android:id="@+id/buttonSound"
     android:layout_width="wrap_content"
@@ -565,13 +565,13 @@ mDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 
 1.  现在，打开 `MainActivity.java` 并将以下声明添加到类中：
 
-```kt
+```java
 final String CHANNEL_ID="notifications";
 ```
 
 1.  接下来，添加处理按钮点击的方法：
 
-```kt
+```java
 public void clickLightsActionSound(View view) {
     Uri notificationSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
@@ -611,7 +611,7 @@ public void clickLightsActionSound(View view) {
 
 我们将所有三种动作组合成一个单一的通知，仅仅是因为我们可以这样做。你不必使用所有三个额外的通知选项，甚至不需要任何。以下是需要的内容：
 
-```kt
+```java
 .setSmallIcon() 
 .setContentText() 
 ```
@@ -622,7 +622,7 @@ public void clickLightsActionSound(View view) {
 
 这三条代码行生成了我们的额外通知选项：
 
-```kt
+```java
 .setSound(notificationSoundUri) 
 .setLights(Color.BLUE, 500, 500) 
 .setVibrate(new long[]{250,500,250,500,250,500}); 
@@ -632,7 +632,7 @@ public void clickLightsActionSound(View view) {
 
 如以下代码行所示：
 
-```kt
+```java
 if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O)
 ```
 
@@ -654,7 +654,7 @@ if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O)
 
 这是创建此通知的代码：
 
-```kt
+```java
 NotificationCompat.Builder notificationBuilder = new
         NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.mipmap.ic_launcher)
@@ -671,7 +671,7 @@ notificationBuilder.addAction(android.R.drawable.ic_dialog_email, "Email",
 
 以下代码创建了一个非常简单的`PendingIntent`；它只是启动应用。这可能是通知中最常见的意图，通常在用户按下通知时使用。要设置通知意图，请使用以下代码：
 
-```kt
+```java
 .setContentIntent(pendingIntent) 
 ```
 
@@ -697,7 +697,7 @@ notificationBuilder.addAction(android.R.drawable.ic_dialog_email, "Email",
 
 下面是此样式的代码：
 
-```kt
+```java
 NotificationCompat.Builder notificationBuilder =
         new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher);
@@ -714,7 +714,7 @@ notificationBuilder.setStyle(inboxStyle);
 
 查看此样式的代码：
 
-```kt
+```java
 NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.mipmap.ic_launcher)
         .setContentTitle("LightsActionSoundRedux")
@@ -730,7 +730,7 @@ notificationBuilder.setStyle(bigPictureStyle);
 
 下面是这个样式的代码示例。
 
-```kt
+```java
 NotificationCompat.Builder notificationBuilder = 
         new NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.mipmap.ic_launcher)
@@ -780,7 +780,7 @@ Android 5.0（API 21）及以上版本可以根据用户的锁屏可见性显示
 
 1.  将现有的 `&lt;TextView&gt;` 替换为以下按钮代码：
 
-```kt
+```java
 &lt;Button
     android:id="@+id/button"
     android:layout_width="wrap_content" 
@@ -795,7 +795,7 @@ Android 5.0（API 21）及以上版本可以根据用户的锁屏可见性显示
 
 1.  打开 `MainActivity.java` 并添加 `showNotification()` 方法：
 
-```kt
+```java
 @SuppressWarnings("deprecated")
 public void showNotification(View view) {
     Intent activityIntent = new Intent(this,MainActivity.class);
@@ -846,7 +846,7 @@ public void showNotification(View view) {
 
 1.  添加以下方法以创建 Android O 及更高版本的通道：
 
-```kt
+```java
 private String createChannel() {
     final String channelId = "mediaplayer";
     if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O) {
@@ -868,13 +868,13 @@ private String createChannel() {
 
 首先要注意的是，我们用以下方式装饰我们的 `showNotification()` 方法：
 
-```kt
+```java
 @SuppressWarnings("deprecated")
 ```
 
 这告诉编译器我们知道我们正在使用已弃用的调用。（如果没有这个，编译器将标记代码。）我们随后进行 API 检查，使用以下调用：
 
-```kt
+```java
 if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M) 
 ```
 
@@ -886,13 +886,13 @@ if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M)
 
 要使通知在锁屏上可见，我们需要将可见性级别设置为`VISIBILITY_PUBLIC`，这可以通过以下调用完成：
 
-```kt
+```java
 .setVisibility(Notification.VISIBILITY_PUBLIC) 
 ```
 
 这个调用值得注意：
 
-```kt
+```java
 .setShowActionsInCompactView(1) 
 ```
 
@@ -902,7 +902,7 @@ if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.M)
 
 在这个菜谱中，我们只创建了视觉通知。如果我们正在创建实际的媒体播放器，我们可以实例化一个`MediaSession`类，并通过此调用传入会话令牌：
 
-```kt
+```java
 .setMediaSession(mMediaSession.getSessionToken()) 
 ```
 
@@ -934,20 +934,20 @@ Android 5.0-Lollipop（API 21）引入了一种新的通知类型，称为抬头
 
 1.  添加以下权限：
 
-```kt
+```java
 &lt;uses-permission android:name="android.permission.VIBRATE"/&gt;
 ```
 
 1.  在 `&lt;MainActivity&gt;` 元素中添加 `android:launchMode="singleInstance"` 以指定我们只想有一个 `MainActivity` 的实例。它将看起来如下：
 
-```kt
+```java
 &lt;activity android:name=".MainActivity" 
     android:launchMode="singleInstance"&gt; 
 ```
 
 1.  在完成对 `AndroidManifest` 的修改后，打开 `activity_main.xml` 布局，并用以下 `&lt;ToggleButton&gt;` 代码替换现有的 `&lt;TextView&gt;` 元素：
 
-```kt
+```java
 &lt;ToggleButton
     android:id="@+id/buttonLight"
     android:layout_width="wrap_content"
@@ -962,7 +962,7 @@ Android 5.0-Lollipop（API 21）引入了一种新的通知类型，称为抬头
 
 1.  现在，打开 `ActivityMain.java` 并添加以下全局变量：
 
-```kt
+```java
 private static final String ACTION_STOP="STOP"; 
 private CameraManager mCameraManager; 
 private String mCameraId=null; 
@@ -971,7 +971,7 @@ private ToggleButton mButtonLight;
 
 1.  在 `onCreate()` 中添加以下代码以设置相机：
 
-```kt
+```java
 mButtonLight = findViewById(R.id.buttonLight);
 mCameraManager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
 mCameraId = getCameraId();
@@ -984,7 +984,7 @@ if (mCameraId==null) {
 
 1.  添加以下方法来处理用户按下通知时的响应：
 
-```kt
+```java
 @Override 
 protected void onNewIntent(Intent intent) { 
     super.onNewIntent(intent); 
@@ -996,7 +996,7 @@ protected void onNewIntent(Intent intent) {
 
 1.  添加获取相机 ID 的方法：
 
-```kt
+```java
 private String getCameraId() {
     try {
         String[] ids = mCameraManager.getCameraIdList();
@@ -1020,7 +1020,7 @@ private String getCameraId() {
 
 1.  添加以下两个方法来处理手电筒模式：
 
-```kt
+```java
 public void clickLight(View view) {
     setFlashlight(mButtonLight.isChecked());
     if (mButtonLight.isChecked()) {
@@ -1040,7 +1040,7 @@ private void setFlashlight(boolean enabled) {
 
 1.  最后，添加以下方法来创建通知：
 
-```kt
+```java
 private void showNotification() {
     final String CHANNEL_ID = "flashlight";
     if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O) {
@@ -1078,7 +1078,7 @@ private void showNotification() {
 
 由于这个菜谱使用了与 *灯光、动作和声音 - 引起用户的注意!* 相同的手电筒代码，我们将跳转到 `showNotification()` 方法。大多数通知构建器调用与之前的示例相同，但有两大显著差异：
 
-```kt
+```java
 .setVibrate() 
 .setPriority(PRIORITY_MAX) 
 ```
@@ -1091,7 +1091,7 @@ private void showNotification() {
 
 我们像之前一样创建了一个 `PendingIntent`，但在这里我们使用以下方式设置动作：
 
-```kt
+```java
 activityIntent.setAction(ACTION_STOP); 
 ```
 
@@ -1101,13 +1101,13 @@ activityIntent.setAction(ACTION_STOP);
 
 你可能已经注意到了以下代码行：
 
-```kt
+```java
 .setAutoCancel(true);
 ```
 
 `.setAutoCancel()` 告诉操作系统在用户点击通知时自动移除通知。如果用户按下通知来关闭灯光，这很好，但如果他们使用切换按钮会发生什么呢？灯光会像预期的那样关闭，但他们将留下一个无用的通知。为了解决这个问题，我们可以添加一个新的方法来取消通知：
 
-```kt
+```java
 private void cancelNotification() {
     NotificationManager notificationManager = (NotificationManager)
             this.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -1117,7 +1117,7 @@ private void cancelNotification() {
 
 然后在他们按下按钮时调用它。以下是`clickLight()`将看起来如何：
 
-```kt
+```java
 public void clickLight(View view) {
     setFlashlight(mButtonLight.isChecked());
     if (mButtonLight.isChecked()) {
@@ -1150,7 +1150,7 @@ Android N 中引入的最令人兴奋的新功能之一是内联回复，称为�
 
 1.  将现有的`TextView`替换为按钮 XML：
 
-```kt
+```java
 &lt;Button
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -1165,14 +1165,14 @@ Android N 中引入的最令人兴奋的新功能之一是内联回复，称为�
 
 1.  现在，打开`MainActivity.java`并将以下代码添加到类中：
 
-```kt
+```java
 private final String KEY_REPLY_TEXT = "KEY_REPLY_TEXT";
 private final int NOTIFICATION_ID = 1;
 ```
 
 1.  将以下代码添加到现有的`onCreate()`方法中：
 
-```kt
+```java
 if (getIntent()!=null) {
     Toast.makeText(MainActivity.this, getReplyText(getIntent()), Toast.LENGTH_SHORT).show();
 }
@@ -1180,7 +1180,7 @@ if (getIntent()!=null) {
 
 1.  如下重写`onNewIntent()`方法：
 
-```kt
+```java
 @Override
 protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
@@ -1190,7 +1190,7 @@ protected void onNewIntent(Intent intent) {
 
 1.  添加以下方法以处理按钮点击：
 
-```kt
+```java
 public void onClickSend(View view){
     Intent activityIntent = new Intent(this,MainActivity.class);
     PendingIntent pendingIntent =
@@ -1233,7 +1233,7 @@ private String getChannelId() {
 
 1.  添加`getReplyText()`方法：
 
-```kt
+```java
 private CharSequence getReplyText(Intent intent) {
     Bundle notificationReply = RemoteInput.getResultsFromIntent(intent);
     if (notificationReply != null) {

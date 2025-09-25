@@ -70,7 +70,7 @@ Compose 在 Kotlin 的类型检查和代码生成阶段通过 Kotlin 编译器�
 
 例如，一个显示文本片段的可组合组件可能看起来像这样：
 
-```kt
+```java
 @Composable
 fun FriendlyMessage(name: String) {
    Text(text = "Greetings $name!")
@@ -185,7 +185,7 @@ Compose 通过将屏幕定义为可组合物的树状结构来实现这一点。
 
 让我们尝试构建一个具有图像和文本的按钮的可组合组件。使用继承时，这是一个巨大的挑战，但 Compose 通过允许你在`Button`可组合组件内部组合`Image`和`Text`可组合组件来简化了这一点：
 
-```kt
+```java
 @Composable
 fun SuggestiveButton() {
     Button(onClick = { }) {
@@ -219,7 +219,7 @@ fun SuggestiveButton() {
 
 在以下示例中，我们的`MailButton`可组合组件接收一个电子邮件标识符`mailId`和一个事件回调函数`mailPressedCallback`：
 
-```kt
+```java
 @Composable
 fun MailButton(
     mailId: Int,
@@ -261,7 +261,7 @@ fun MailButton(
 
 重组通常是由`State`对象内部的变化触发的，因此让我们通过一个例子来探讨这一过程是如何在我们几乎没有干预的情况下无缝发生的。假设你有一个`TimerText`可组合组件，它期望显示一个特定的已过`seconds`数，这个数在一个`Text`可组合组件中显示。计时器从 0 开始，每秒更新一次（或 1,000 毫秒），显示已过的秒数：
 
-```kt
+```java
 var seconds by mutableStateOf(0)
 val stopWatchTimer = timer(period = 1000) { seconds++ }
    ...
@@ -303,7 +303,7 @@ fun TimerText(seconds: Int) {
 
 通过简单地替换传统的`setContentView(R.layout.XML)`调用为`setContent()`并将一个 composable 函数传递给它，就可以轻松设置 composable 内容，并鼓励你在`Activity`类中这样做：
 
-```kt
+```java
 import androidx.activity.compose.setContent
 class MainActivity : ComponentActivity() {
    override fun onCreate(savedInstanceState: Bundle?) {
@@ -329,7 +329,7 @@ class MainActivity : ComponentActivity() {
 
 预览你的 composable 非常简单；只需将其添加到`@Preview`注解中：
 
-```kt
+```java
 @Preview(showBackground = true)
 @Composable
 fun FriendlyMessage() {
@@ -365,7 +365,7 @@ IDE 会自动检测你想要预览这个 composable，并将其显示在屏幕�
 
 此外，如果你在每个函数上使用 `@Preview` 注解，你可以同时拥有多个预览。你可以通过 `name` 参数为每个预览添加名称，甚至可以通过 `device` 参数告诉预览工具它应该在哪个设备上显示：
 
-```kt
+```java
 @Preview(
     name = "Greeting preview",
     showSystemUi = true,
@@ -396,7 +396,7 @@ fun FriendlyMessagePreview2() { Text(text = "Goodbye!") }
 
 `Text` 是我们旧的和喜爱的 `TextView` 的 Compose 版本。`Text` 由 Compose 提供，实现了任何应用程序中最基本但最重要的功能：显示文本的能力。我们已经在几个示例中使用了这个可组合组件：
 
-```kt
+```java
 Text(text = "Greetings $name!")
 ```
 
@@ -416,7 +416,7 @@ Text(text = "Greetings $name!")
 
 我们不是逐个检查 `Text` 的所有参数，而是看看一个我们可以自定义 `Text` 可组合函数外观的例子：
 
-```kt
+```java
 @Composable
 fun MyAppText() {
    Text(
@@ -453,7 +453,7 @@ fun MyAppText() {
 
 让我们尝试构建一个`Button`函数，使其利用这些核心参数：
 
-```kt
+```java
 @Composable
 fun ClickableButton() {
    Button(
@@ -468,7 +468,7 @@ fun ClickableButton() {
 
 我们还传递了一个预定义的`MaterialTheme`形状。让我们预览生成的可组合函数：
 
-![图 1.12 – 探索自定义按钮可组合函数![图 1.12 – 探索自定义按钮可组合函数图 1.12 – 探索自定义按钮可组合函数有了这个，我们已经看到了如何轻松地使用`Button`可组合函数创建自定义按钮。接下来，让我们尝试玩转另一个可组合函数——`TextField`。### TextField 添加按钮是拥有交互式 UI 的第一步，但这个领域最重要的元素是`TextField`可组合函数，在视图系统中之前被称为`EditText`。就像`EditText`所做的那样，`TextField`可组合函数允许用户输入和修改文本。虽然`TextField`有很多参数，但它最重要的参数如下：+   `value`是一个强制`String`参数，因为它是显示的文本。这个值应该在我们输入时改变，通过将其保持在`State`对象中；关于这一点，我们很快就会详细介绍。+   `onValueChange`是一个强制函数，每次用户输入新字符或删除现有字符时都会触发。+   `label`期望一个可组合的函数，允许我们添加一个描述性标签。让我们看看一个简单的`TextField`用法，它也处理自己的状态：```kt@Composablefun NameInput() {   val textState = remember { mutableStateOf("") }   TextField(        value = textState.value,        onValueChange = { newValue ->            textState.value = newValue        },        label = { Text("Your name") })}```它通过定义一个`MutableState`来持有`TextField`显示的文本来实现这一点。这意味着`textState`在重新组合过程中不会改变，所以每次 UI 因为其他可组合函数而更新时，`textState`都应该被保留。此外，我们还在`MutableState`对象上包裹了一个`remember`块，这告诉 Compose 在重新组合过程中，它不应该将值重置为其初始值；即`""`。要获取或设置`State`或`MutableState`对象的值，我们的`NameInput`可组合函数使用`value`访问器。因为`TextField`通过`value`访问器访问`MutableState`对象，所以 Compose 知道每次`textState`值改变时——在我们的案例中，在`onValueChange`回调中——重新触发*重新组合*。通过这样做，我们确保当我们输入`TextField`中的文本时，UI 也会更新，以显示已添加或从键盘删除的新字符。如果 Compose 中的状态概念现在不太容易理解，请不要担心——我们将在*第二章*中更详细地介绍如何在 Compose 中定义状态，即使用 Jetpack ViewModel 处理 UI 状态。注意：与 `EditText` 不同，`TextField` 没有内部状态。这就是为什么我们创建并处理了它；否则，当我们输入时，UI 不会相应地更新。结果的 `NameInput` 可组合项正确更新了 UI，看起来像这样：![图 1.13 – 探索 TextField 可组合项](img/B17788_01_13.jpg)
+![图 1.12 – 探索自定义按钮可组合函数![图 1.12 – 探索自定义按钮可组合函数图 1.12 – 探索自定义按钮可组合函数有了这个，我们已经看到了如何轻松地使用`Button`可组合函数创建自定义按钮。接下来，让我们尝试玩转另一个可组合函数——`TextField`。### TextField 添加按钮是拥有交互式 UI 的第一步，但这个领域最重要的元素是`TextField`可组合函数，在视图系统中之前被称为`EditText`。就像`EditText`所做的那样，`TextField`可组合函数允许用户输入和修改文本。虽然`TextField`有很多参数，但它最重要的参数如下：+   `value`是一个强制`String`参数，因为它是显示的文本。这个值应该在我们输入时改变，通过将其保持在`State`对象中；关于这一点，我们很快就会详细介绍。+   `onValueChange`是一个强制函数，每次用户输入新字符或删除现有字符时都会触发。+   `label`期望一个可组合的函数，允许我们添加一个描述性标签。让我们看看一个简单的`TextField`用法，它也处理自己的状态：```java@Composablefun NameInput() {   val textState = remember { mutableStateOf("") }   TextField(        value = textState.value,        onValueChange = { newValue ->            textState.value = newValue        },        label = { Text("Your name") })}```它通过定义一个`MutableState`来持有`TextField`显示的文本来实现这一点。这意味着`textState`在重新组合过程中不会改变，所以每次 UI 因为其他可组合函数而更新时，`textState`都应该被保留。此外，我们还在`MutableState`对象上包裹了一个`remember`块，这告诉 Compose 在重新组合过程中，它不应该将值重置为其初始值；即`""`。要获取或设置`State`或`MutableState`对象的值，我们的`NameInput`可组合函数使用`value`访问器。因为`TextField`通过`value`访问器访问`MutableState`对象，所以 Compose 知道每次`textState`值改变时——在我们的案例中，在`onValueChange`回调中——重新触发*重新组合*。通过这样做，我们确保当我们输入`TextField`中的文本时，UI 也会更新，以显示已添加或从键盘删除的新字符。如果 Compose 中的状态概念现在不太容易理解，请不要担心——我们将在*第二章*中更详细地介绍如何在 Compose 中定义状态，即使用 Jetpack ViewModel 处理 UI 状态。注意：与 `EditText` 不同，`TextField` 没有内部状态。这就是为什么我们创建并处理了它；否则，当我们输入时，UI 不会相应地更新。结果的 `NameInput` 可组合项正确更新了 UI，看起来像这样：![图 1.13 – 探索 TextField 可组合项](img/B17788_01_13.jpg)
 
 图 1.13 – 探索 TextField 可组合项
 
@@ -488,7 +488,7 @@ fun ClickableButton() {
 
 让我们添加一个显示应用程序图标的 `Image` 可组合项，使用 `painterResource`：
 
-```kt
+```java
 @Composable
 fun BeautifulImage() {
     Image(
@@ -514,7 +514,7 @@ fun BeautifulImage() {
 
 让我们从一个例子开始，使用 `Box` 可组合项并为其指定一个 `size` 修饰符：
 
-```kt
+```java
 @Composable
 fun ColoredBox() {
    Box(modifier = Modifier.size(120.dp))
@@ -525,7 +525,7 @@ fun ColoredBox() {
 
 通常只为可组合项指定一个修饰符是不够的。这就是为什么 *修饰符可以被链式调用。让我们通过向我们的 `Box` 添加几个其他配置来链式调用多个修饰符：*
 
-```kt
+```java
 @Composable
 fun ColoredBox() {
    Box(modifier = Modifier
@@ -577,7 +577,7 @@ fun ColoredBox() {
 
 在屏幕上显示多个小部件是通过使用一个`Row`可组合组件来水平排列其子可组合组件来实现的，就像旧的具有水平方向的`LinearLayout`一样：
 
-```kt
+```java
 @Composable
 fun HorizontalNumbersList() {
    Row(
@@ -611,7 +611,7 @@ fun HorizontalNumbersList() {
 
 在屏幕上显示垂直列表可以通过使用排列其子元素可组合元素的垂直 `Column` 可组合元素来实现，就像旧的具有垂直方向的 `LinearLayout` 一样：
 
-```kt
+```java
 @Composable
 fun NamesVerticalList() {
    Column(verticalArrangement = Arrangement.SpaceEvenly,
@@ -654,7 +654,7 @@ fun NamesVerticalList() {
 
 这就是代码的样子：
 
-```kt
+```java
 @Composable
 fun MyFloatingActionButton() {
    Box {
@@ -731,7 +731,7 @@ fun MyFloatingActionButton() {
 
 要这样做，首先转到项目级别的`build.gradle`文件，并在`dependencies`块内确保 Kotlin 版本设置为`1.6.10`：
 
-```kt
+```java
 buildscript {
     […]
     dependencies {
@@ -745,7 +745,7 @@ buildscript {
 
 或者，如果您使用的是较新版本的 Android Studio，您可能会在`plugins`块中找到本项目中使用的 Kotlin 版本，如下所示：
 
-```kt
+```java
 plugins {
     […]
     id 'org.jetbrains.kotlin.android' version '1.6.10' 
@@ -757,7 +757,7 @@ plugins {
 
 仍然在项目级别的`build.gradle`文件中，因为 Compose 与我们在项目中使用的 Kotlin 版本相关联，请确保在`ext { }`块内将 Compose 版本设置为`1.1.1`：
 
-```kt
+```java
 buildscript {
     ext {
         compose_version = '1.1.1'
@@ -769,7 +769,7 @@ buildscript {
 
 然后，进入应用级别的`build.gradle`文件。首先检查`composeOptions { }`块看起来是否如下：
 
-```kt
+```java
 plugins { ... }
 android {
     [...]
@@ -785,7 +785,7 @@ android {
 
 最后，确保应用级别的`build.gradle`文件的`dependencies`块包含以下版本的依赖项：
 
-```kt
+```java
 dependencies {
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.1'
@@ -827,7 +827,7 @@ dependencies {
 
 `MainActivity`类是将内容传递到`onCreate`回调中的`setContent`方法的地点。正如我们所知，我们需要调用`setContent`来设置 Compose UI 并传递可组合函数作为我们的 UI：
 
-```kt
+```java
 setContent {
    RestaurantsAppTheme {
        Surface(color = MaterialTheme.colors.background) {
@@ -841,7 +841,7 @@ IDE 模板已经实现了一个`Greeting`可组合函数，它被包裹在一个
 
 如果你按*Ctrl* + *B*或*Command* + *B*在函数名上，你将被带到生成主题的`Theme.kt`文件，这是我们的主题生成的地方。`RestaurantsAppTheme`是一个由 IDE 自动生成的可组合函数，因为它包含了应用的名字：
 
-```kt
+```java
 @Composable
 fun RestaurantsAppTheme(
    darkTheme: Boolean = isSystemInDarkTheme(),
@@ -872,7 +872,7 @@ fun RestaurantsAppTheme(
 
 1.  在这个文件中，让我们为我们的第一个 Compose 屏幕创建一个`RestaurantsScreen`可组合函数：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen() {
        RestaurantItem()
@@ -881,7 +881,7 @@ fun RestaurantsAppTheme(
 
 1.  接下来，在`RestaurantsScreen.kt`文件内部，让我们定义`RestaurantItem`可组合，它具有带有提升和填充的`Card`可组合：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem() {
         Card(elevation = 4.dp,
@@ -911,7 +911,7 @@ fun RestaurantsAppTheme(
 
 1.  仍然在 `RestaurantsScreen.kt` 文件中，创建另一个名为 `RestaurantIcon` 的组合器函数，其代码如下：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantIcon(icon: ImageVector, modifier: Modifier) {
        Image(imageVector = icon,
@@ -926,7 +926,7 @@ fun RestaurantsAppTheme(
 
 1.  现在，仍然在 `RestaurantsScreen.kt` 文件中，创建一个显示餐厅详细信息的 `RestaurantDetails` 函数：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantDetails(modifier: Modifier) {
        Column(modifier = modifier) {
@@ -954,7 +954,7 @@ fun RestaurantsAppTheme(
 
 1.  返回 `RestaurantsScreen.kt` 文件内部，定义一个 `@Preview` 组合器：
 
-    ```kt
+    ```java
     @Preview(showBackground = true)
     @Composable
     fun DefaultPreview() {
@@ -974,7 +974,7 @@ fun RestaurantsAppTheme(
 
 1.  最后，回到 `MainActivity.kt` 文件，移除 `Greeting` 可组合组件。同时，在 `setContent` 方法中移除 `Surface` 和 `Greeting` 函数调用，并用 `RestaurantScreen` 替换：
 
-    ```kt
+    ```java
     setContent {
        RestaurantsAppTheme {
            RestaurantsScreen()
@@ -994,7 +994,7 @@ fun RestaurantsAppTheme(
 
 1.  首先，在根包中创建一个新类，在 `MainActivity.kt` 旁边，命名为 `Restaurant.kt`。在这里，我们将添加一个名为 `Restaurant` 的 `data class` 并添加我们期望餐厅拥有的字段：
 
-    ```kt
+    ```java
     data class Restaurant(val id: Int,
                           val title: String,
                           val description: String)
@@ -1002,7 +1002,7 @@ fun RestaurantsAppTheme(
 
 1.  在相同的 `Restaurant.kt` 文件中，创建一个 `Restaurant` 项目的示例列表，最好至少有 10 个以填充整个屏幕：
 
-    ```kt
+    ```java
     data class Restaurant(val id: Int,
                           val title: String,
                           val description: String)
@@ -1019,7 +1019,7 @@ fun RestaurantsAppTheme(
 
 1.  回到 `RestaurantsScreen.kt` 文件，并更新你的 `RestaurantItem`，使其接收一个 `Restaurant` 对象作为参数，同时将餐厅的 `title` 和 `description` 作为参数传递给 `RestaurantDetails` 可组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem(item: Restaurant) {
         Card(...) {
@@ -1037,7 +1037,7 @@ fun RestaurantsAppTheme(
 
 1.  我们已经将餐厅的 `title` 和 `description` 作为参数传递给了 `RestaurantDetails` 可组合组件。在 `RestaurantDetails` 可组合组件中传播这些更改，并将 `title` 传递给第一个 `Text` 可组合组件，将 `description` 传递给第二个 `Text` 可组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantDetails(title: String, description: String, modifier: Modifier){
        Column(modifier = modifier) {
@@ -1051,7 +1051,7 @@ fun RestaurantsAppTheme(
 
 1.  回到 `RestaurantsScreen` 可组合组件，并更新它以显示 `Restaurant` 对象的垂直列表。我们已经知道我们可以使用 `Column` 来实现这一点。然后，遍历 `dummyRestaurants` 中的每个餐厅并将其绑定到 `RestaurantItem`：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen() {
        Column {
@@ -1098,7 +1098,7 @@ fun RestaurantsAppTheme(
 
 让我们通过传递一个接收 `ScrollState` 的 `Modifier.verticalScroll` 修饰符来使 `Column` 可滚动：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen() {
    Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -1123,7 +1123,7 @@ fun RestaurantsScreen() {
 
 然而，懒加载的可组合组件与我们迄今为止使用的常规可组合组件不同。这主要是因为它们不是接受`@Composable`内容，而是暴露一个`LazyListScope`块：
 
-```kt
+```java
 @Composable
 fun LazyColumn(
    ...
@@ -1133,7 +1133,7 @@ fun LazyColumn(
 
 `LazyListScope` DSL 允许我们描述我们想要作为列表一部分显示的*项*内容。最常用的有`item()`和`items()`。以下是一个使用 DSL 的`LazyColumn`示例用法：
 
-```kt
+```java
 LazyColumn {
    item() {
        Text(text = "Custom header item")
@@ -1167,7 +1167,7 @@ LazyColumn {
 
 返回到`RestaurantsScreen.kt`文件，并在`RestaurantScreen`可组合组件内部，将`Column`可组合组件替换为`LazyColumn`：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen() {
    LazyColumn(

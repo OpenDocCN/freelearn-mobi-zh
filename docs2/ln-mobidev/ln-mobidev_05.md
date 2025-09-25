@@ -126,7 +126,7 @@
 
 对于 Android，它可能看起来像这样：
 
-```kt
+```java
 public interface IRepository{ 
 
     public void getNews(OnRepositoryResult handler, GetNewsRequest request); 
@@ -134,7 +134,7 @@ public interface IRepository{
 
 对于 iOS，它看起来像这样（在 Swift 2.x）：
 
-```kt
+```java
 protocol RepositoryProtocol { 
 
 func getNews(handler: RepositoryResultDelegate, request: GetNewsRequest) 
@@ -144,7 +144,7 @@ func getNews(handler: RepositoryResultDelegate, request: GetNewsRequest)
 
 例如，Android 实现开始如下：
 
-```kt
+```java
 public class RemoteRepository implements IRepository { 
 
 ... 
@@ -156,7 +156,7 @@ public class RemoteRepository implements IRepository {
 
 而 iOS 实现开始如下：
 
-```kt
+```java
 public class RemoteRepository: RepositoryProtocol  { 
 
     ... 

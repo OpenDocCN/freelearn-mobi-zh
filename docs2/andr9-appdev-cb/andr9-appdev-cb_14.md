@@ -36,7 +36,7 @@ Google API 提供了许多丰富的功能，用于创建具有位置感知的应
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 ```
 
@@ -46,13 +46,13 @@ Google API 提供了许多丰富的功能，用于创建具有位置感知的应
 
 1.  在`dependencies`部分添加以下语句：
 
-```kt
+```java
 implementation 'com.google.android.gms:play-services:12.0.1'
 ```
 
 1.  打开`activity_main.xml`，并使用以下 XML 更新现有的`TextView`：
 
-```kt
+```java
 <TextView
     android:id="@+id/textView"
     android:layout_width="wrap_content"
@@ -65,7 +65,7 @@ implementation 'com.google.android.gms:play-services:12.0.1'
 
 1.  将以下代码添加到现有的`onCreate()`方法中：
 
-```kt
+```java
 if (ActivityCompat.checkSelfPermission(this, ACCESS_COARSE_LOCATION)
         == PackageManager.PERMISSION_GRANTED) {
     getLocation();
@@ -76,7 +76,7 @@ if (ActivityCompat.checkSelfPermission(this, ACCESS_COARSE_LOCATION)
 
 6. 创建`getLocation()`方法如下：
 
-```kt
+```java
 private void getLocation() throws SecurityException {
     LocationServices.getFusedLocationProviderClient(this).getLastLocation()
             .addOnSuccessListener(this, new OnSuccessListener<Location>() {
@@ -105,7 +105,7 @@ private void getLocation() throws SecurityException {
 
 我们收到的位置对象精度基于我们的权限设置。我们使用了`ACCESS_COARSE_LOCATION`，但如果我们想要更高的精度，我们可以请求`ACCESS_FINE_LOCATION`，以下是需要此权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 ```
 
@@ -163,13 +163,13 @@ private void getLocation() throws SecurityException {
 
 1.  将以下语句添加到 `dependencies` 部分：
 
-```kt
+```java
 implementation 'com.google.android.gms:play-services:12.0.1'
 ```
 
 1.  打开 `ActivityMain.java` 并将以下行添加到全局类变量中：
 
-```kt
+```java
 private final int REQUEST_RESOLVE_GOOGLE_CLIENT_ERROR=1;
 boolean mResolvingError;
 GoogleApiClient mGoogleApiClient;
@@ -177,7 +177,7 @@ GoogleApiClient mGoogleApiClient;
 
 1.  添加以下两个类来处理回调：
 
-```kt
+```java
 GoogleApiClient.ConnectionCallbacks mConnectionCallbacks =
         new GoogleApiClient.ConnectionCallbacks() {
     @Override
@@ -212,7 +212,7 @@ GoogleApiClient.OnConnectionFailedListener mOnConnectionFailedListener =
 
 1.  将以下方法添加到 MainActivity 类中，以显示 Google API 错误对话框：
 
-```kt
+```java
 private void showGoogleAPIErrorDialog(int errorCode) {
     GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
     Dialog errorDialog = googleApiAvailability.getErrorDialog(
@@ -223,7 +223,7 @@ private void showGoogleAPIErrorDialog(int errorCode) {
 
 1.  添加以下代码以覆盖 `onActivityResult()`：
 
-```kt
+```java
 @Override
 protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     if (requestCode == REQUEST_RESOLVE_GOOGLE_CLIENT_ERROR) {
@@ -239,7 +239,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 1.  将以下方法添加以设置 `GoogleApiClient`：
 
-```kt
+```java
 protected void setupGoogleApiClient() {
     mGoogleApiClient = new GoogleApiClient.Builder(this)
             .addConnectionCallbacks(mConnectionCallbacks)
@@ -252,7 +252,7 @@ protected void setupGoogleApiClient() {
 
 1.  最后，将以下行代码添加到现有的 `onCreate()` 方法末尾：
 
-```kt
+```java
 setupGoogleApiClient();
 ```
 
@@ -264,7 +264,7 @@ setupGoogleApiClient();
 
 `GoogleAPIClient` 使用 `connectionResult` 来指示可能的操作。我们可以调用 `hasResolution()` 方法，如下所示：
 
-```kt
+```java
 connectionResult.hasResolution() 
 ```
 
@@ -276,7 +276,7 @@ connectionResult.hasResolution()
 
 如果您的应用程序正在使用片段，您可以使用以下代码获取对话框片段：
 
-```kt
+```java
 ErrorDialogFragment errorFragment = new ErrorDialogFragment(); 
 Bundle args = new Bundle(); 
 args.putInt("dialog_error", errorCode); 
@@ -322,25 +322,25 @@ Geofence 属性包括：
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 ```
 
 1.  打开 `build.gradle (Module: app)` 文件，并在 `dependencies` 部分添加以下语句：
 
-```kt
+```java
 implementation 'com.google.android.gms:play-services:12.0.1'
 ```
 
 1.  创建一个名为 `GeofenceIntentService` 的新 Java 类，并扩展 `IntentService` 类。声明如下：
 
-```kt
+```java
 public class GeofenceIntentService extends IntentService { 
 ```
 
 1.  添加以下构造函数：
 
-```kt
+```java
 public GeofenceIntentService() { 
     super("GeofenceIntentService"); 
 } 
@@ -348,7 +348,7 @@ public GeofenceIntentService() {
 
 1.  添加 `onHandleIntent()` 以接收 Geofence 警报：
 
-```kt
+```java
 @Override
 protected void onHandleIntent(Intent intent) {
     GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
@@ -367,19 +367,19 @@ protected void onHandleIntent(Intent intent) {
 
 1.  打开 Android 清单文件，并在 `<application>` 元素内添加以下内容，与 `<activity>` 元素处于同一级别：
 
-```kt
+```java
 <service android:name=".GeofenceIntentService"/> 
 ```
 
 1.  打开 `MainActivity.java` 并添加以下全局变量：
 
-```kt
+```java
 private final int MINIMUM_RECOMENDED_RADIUS=100;
 ```
 
 1.  使用以下方法创建一个 `PendingIntent`：
 
-```kt
+```java
 private PendingIntent createGeofencePendingIntent() {
     Intent intent = new Intent(this, GeofenceIntentService.class);
     return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -388,7 +388,7 @@ private PendingIntent createGeofencePendingIntent() {
 
 1.  使用以下方法创建 Geofence 项目：
 
-```kt
+```java
 private List createGeofenceList() {
     List<Geofence> geofenceList = new ArrayList<>();
     geofenceList.add(new Geofence.Builder()
@@ -407,7 +407,7 @@ private List createGeofenceList() {
 
 1.  使用以下方法创建 Geofence 请求：
 
-```kt
+```java
 private GeofencingRequest createGeofencingRequest() {
     GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
     builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_DWELL);
@@ -418,7 +418,7 @@ private GeofencingRequest createGeofencingRequest() {
 
 1.  将以下代码添加到现有的 `onCreate()` 回调中：
 
-```kt
+```java
 if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
     GeofencingClient geofencingClient = LocationServices.getGeofencingClient(this);
     geofencingClient.addGeofences(createGeofencingRequest(), createGeofencePendingIntent())
@@ -455,7 +455,7 @@ if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_
 
 要创建地理围栏请求，我们使用`GeofencingRequest.Builder`。构建器需要地理围栏对象的列表，这些对象是在`createGeofenceList()`方法中创建的。（即使我们只创建了一个地理围栏对象，构建器也需要一个列表，所以我们只需将我们的单个地理围栏添加到`ArrayList`中。）这就是我们设置地理围栏属性的地方：
 
-```kt
+```java
 .setRequestId("GeofenceLocation")
 .setCircularRegion(
         47.6062,  //Latitude
@@ -468,7 +468,7 @@ if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_
 
 只有逗留延迟是可选的，但我们需要它，因为我们正在使用`DWELL`转换。当调用`setTransitionTypes()`时，我们可以使用`OR`运算符（使用管道字符）组合多个转换类型。以下是一个使用`ENTER`和`EXIT`的示例：
 
-```kt
+```java
 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
 ```
 
@@ -484,7 +484,7 @@ if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_
 
 要停止接收地理围栏通知，您可以使用`RequestID`参数或`PendingIntent`调用`removeGeofences()`方法。以下示例使用了我们用于通知的相同`PendingIntent`方法：
 
-```kt
+```java
 geofencingClient.removeGeofences(createGeofencePendingIntent())
         .addOnSuccessListener(this, new OnSuccessListener<Void>() {
             @Override

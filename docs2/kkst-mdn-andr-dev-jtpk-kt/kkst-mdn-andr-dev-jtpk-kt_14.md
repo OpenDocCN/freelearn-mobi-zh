@@ -122,7 +122,7 @@
 
 如果我们查看`RepositoriesApiService.kt`文件，我们会注意到我们的应用通过`@GET()`端点**统一资源定位符**（**URL**）指令 REST API 获取仓库的第一页，每次只获取每页 20 个项目，如下面的代码片段所示：
 
-```kt
+```java
 interface RepositoriesApiService {
    @GET("repositories?q=mobile&sort=stars&page=1&per_page=20")
    suspend fun getRepositories(): RepositoriesResponse
@@ -139,7 +139,7 @@ interface RepositoriesApiService {
 
 让我们简要地看一下我们从 GitHub API 收到的响应，通过导航到`Repository.kt`文件。基本上，我们得到一个`Repository`对象的列表，并解析仓库的`id`、`name`和`description`值，如下面的代码片段所示：
 
-```kt
+```java
 data class RepositoriesResponse(
     @SerializedName("items") val repos: List<Repository>
 )
@@ -154,7 +154,7 @@ data class Repository(
 
 如前所述，我们的应用使用了 GitHub 搜索 API，这可以在`DependencyContainer.kt`类中更好地观察到，其中手动构建了 Retrofit 的`RepositoriesApiService`依赖项，并传递了此 API 的基本 URL。你可以查看此过程的代码如下所示：
 
-```kt
+```java
 object DependencyContainer {
     val repositoriesRetrofitClient: RepositoriesApiService =         
         Retrofit.Builder()
@@ -168,7 +168,7 @@ object DependencyContainer {
 
 现在，回到我们的仓库应用，如果我们导航到`RepositoriesViewModel.kt`文件，我们会看到我们的`ViewModel`类使用`RepositoriesApiService`依赖项通过启动协程并将结果设置为一个包含`Repository`对象列表的 Compose `State`对象来获取仓库列表。代码如下所示：
 
-```kt
+```java
 class RepositoriesViewModel(
     private val restInterface: RepositoriesApiService
     = DependencyContainer.repositoriesRetrofitClient
@@ -187,7 +187,7 @@ class RepositoriesViewModel(
 
 UI 层也与 Restaurants App 类似。如果我们导航到 `MainActivity.kt` 文件，我们可以看到我们的 `Activity` 类创建了一个 `ViewModel` 实例，检索了一个 Compose `State` 对象，获取了其类型为 `List<Repository>` 的值，并将其传递给一个可组合函数以消费它，如下面的代码片段所示：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -205,7 +205,7 @@ class MainActivity : ComponentActivity() {
 
 消费 `Repository` 对象列表的可组合函数位于 `RepositoriesScreen.kt` 文件中，如下面的代码片段所示：
 
-```kt
+```java
 @Composable
 fun RepositoriesScreen(repos: List<Repository>) {
     LazyColumn(
@@ -228,7 +228,7 @@ fun RepositoriesScreen(repos: List<Repository>) {
 
 最后，让我们简要地看一下显示 `Repository` 对象内容的 `RepositoryItem` 可组合组件的结构，同时渲染仓库的索引，如下所示：
 
-```kt
+```java
 @Composable
 fun RepositoryItem(index: Int, item: Repository) {
     Card(
@@ -268,7 +268,7 @@ fun RepositoryItem(index: Int, item: Repository) {
 
 让我们先看一下以下代码片段，看看我们的 `RepositoriesViewModel` 类是如何请求数据的：
 
-```kt
+```java
 class RepositoriesViewModel(
     private val restInterface: RepositoriesApiService =  [...]
 ) : ViewModel() {
@@ -318,7 +318,7 @@ class RepositoriesViewModel(
 
 让我们以前面的例子为例，其中 `getRepositories()` 方法返回一个 `Flow<List<Repository>>` 实例，并假设我们正在尝试在一个 UI 组件中观察其值，如下所示：
 
-```kt
+```java
 class SomeViewModel(…) : ViewModel() {
     init {
         viewModelScope.launch {
@@ -399,7 +399,7 @@ Jetpack Paging 库抽象了与请求正确页面的复杂性，这取决于用�
 
 1.  首先，在应用级别的`build.gradle`文件中，在`dependencies`块中，添加 Jetpack Paging 的 Compose Gradle 依赖项，如下所示：
 
-    ```kt
+    ```java
     dependencies {
         […]
         implementation "androidx.paging:
@@ -411,7 +411,7 @@ Jetpack Paging 库抽象了与请求正确页面的复杂性，这取决于用�
 
 1.  接下来，让我们重构我们的 Retrofit `RepositoriesApiService`接口，通过从`@GET()`请求注解中移除硬编码的页面索引`1`，并添加一个表示我们想要获取的页面索引的`page`查询参数类型`Int`。代码如下所示：
 
-    ```kt
+    ```java
     interface RepositoriesApiService {
         @GET("repositories?q=mobile&sort=stars&per_page=20")
         suspend fun getRepositories(@Query("page") page:Int): 
@@ -427,7 +427,7 @@ Jetpack Paging 库抽象了与请求正确页面的复杂性，这取决于用�
 
 在应用的根包中，创建一个名为`RepositoriesPagingSource`的新类，并将其以下代码粘贴到该类下面：
 
-```kt
+```java
 class RepositoriesPagingSource(
     private val restInterface: RepositoriesApiService
     = DependencyContainer.repositoriesRetrofitClient,
@@ -465,7 +465,7 @@ class RepositoriesPagingSource(
 
 此方法应返回一个`LoadResult`对象，因此首先添加一个`try`-`catch`块，并在`catch`块内部，通过传递捕获到的`Exception`对象返回`LoadResult.Error`实例，如下面的代码片段所示：
 
-```kt
+```java
 class RepositoriesPagingSource(…) : […] {
     override suspend fun load(params: LoadParams<Int>)
     : LoadResult<Int, Repository> {
@@ -482,7 +482,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  接下来，在`try`块内部，我们首先必须获取并存储我们感兴趣的下一页。将下一页的索引存储在`nextPage`变量中，如下所示：
 
-    ```kt
+    ```java
     class RepositoriesPagingSource(…) : […] {
         override suspend fun load(params: LoadParams<Int>)
         : LoadResult<Int, Repository> {
@@ -500,7 +500,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  由于我们现在知道了我们需要加载的下一个仓库页面的索引，让我们通过调用`restInterface`的`getRepositories()`方法并传递新定义的`nextPage`参数来查询我们的 REST API 以获取该特定页面，如下所示：
 
-    ```kt
+    ```java
     class RepositoriesPagingSource(…) : […] {
         override suspend fun load(params: LoadParams<Int>)
                 : LoadResult<Int, Repository> {
@@ -520,7 +520,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  接下来，我们必须返回一个`LoadResult`对象，因为此时我们的 REST API 请求是成功的。让我们实例化并返回一个`LoadResult.Page`对象，如下所示：
 
-    ```kt
+    ```java
     class RepositoriesPagingSource(…) : […] {
         override suspend fun load(params: LoadParams<Int>)
                 : […] {
@@ -553,7 +553,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  在 `RepositoriesViewModel` 内部，将 `RepositoriesApiService` 依赖项替换为新创建的 `RepositoriesPagingSource` 类，如下所示：
 
-    ```kt
+    ```java
     class RepositoriesViewModel(
         private val reposPagingSource:
         RepositoriesPagingSource = RepositoriesPagingSource()
@@ -565,7 +565,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  仍然在 `RepositoriesViewModel` 中，定义一个 `repositories` 变量，它将保存我们的分页数据流，如下所示：
 
-    ```kt
+    ```java
     import kotlinx.coroutines.flow.Flow
     class RepositoriesViewModel(
         private val reposPagingSource:
@@ -581,7 +581,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  获取分页数据流的第一个步骤是创建一个基于之前创建的 `PagingSource` 对象的 `Pager` 类实例，如下所示：
 
-    ```kt
+    ```java
     class RepositoriesViewModel(
         private val reposPagingSource:
         RepositoriesPagingSource = RepositoriesPagingSource()
@@ -603,7 +603,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  最后，为了获取来自新创建的 `Pager` 实例的数据流，我们只需访问由结果 `Pager` 实例公开的 `flow` 字段，如下所示：
 
-    ```kt
+    ```java
     class RepositoriesViewModel(...) : ViewModel() {
         val repositories: Flow<PagingData<Repository>> =
             Pager(
@@ -618,7 +618,7 @@ class RepositoriesPagingSource(…) : […] {
 
 1.  现在，我们必须在我们的基于 Compose 的 UI 中获取流，因此，在 `MainActivity` 内部调用 `RepositoriesAppTheme()` 可组合函数时，将 `repos` 变量替换为包含对 `ViewModel` 的 `repositories` 流变量的引用的 `reposFlow` 变量，如下所示：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -638,7 +638,7 @@ class RepositoriesPagingSource(…) : […] {
 
 声明一个新的变量 `lazyRepoItems` 并使用对 `reposFlow` 的 `collectAsLazyPagingItems()` 调用的结果来实例化它，如下所示：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -660,7 +660,7 @@ class MainActivity : ComponentActivity() {
 
 1.  转到拼图的最后一部分，`RepositoriesScreen()` 可组合函数，确保它通过添加 `repos` 参数接受我们的流程返回的 `LazyPagingItems` 对象，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>
@@ -674,7 +674,7 @@ class MainActivity : ComponentActivity() {
 
 1.  最后，仍然在 `RepositoriesScreen()` 内部，将 `repos` 输入参数传递给另一个接受 `LazyPagingItems` 的 `itemsIndexed()` DSL 函数，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>
@@ -725,7 +725,7 @@ class MainActivity : ComponentActivity() {
 
 1.  在 `RepositoriesScreen()` 可组合内部，在 `itemsIndexed()` 调用下方，将 `refresh` 加载状态实例存储在 `refreshLoadstate` 变量中，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>
@@ -745,7 +745,7 @@ class MainActivity : ComponentActivity() {
 
 1.  接下来，创建一个 `when` 表达式并验证 `refreshLoadState` 是否为 `LoadState.Loading` 类型，如果是，则在新的 `item()` 调用中传递我们将稍后定义的 `LoadingItem()` 可组合。代码如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>
@@ -773,7 +773,7 @@ class MainActivity : ComponentActivity() {
 
 1.  接下来，在`RepositoriesScreen.kt`文件的底部，让我们快速定义一个`LoadingItem()`函数，该函数将包含一个`CirculatorProgressIndicator()`可组合项，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun LoadingItem(
         modifier: Modifier = Modifier
@@ -795,7 +795,7 @@ class MainActivity : ComponentActivity() {
 
 1.  现在，让我们讨论`refreshLoadState`为`Loadstate.Error`类型的情况。回到`RepositoriesScreen()`可组合组件的`LazyColumn`组件内部，在第一个`when`分支下面，添加对状态为`LoadState.Loading`的另一个检查——如果是这种情况，添加一个我们稍后将定义的`ErrorItem()`可组合项。你必须添加的代码如下面的代码片段所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>
@@ -829,7 +829,7 @@ class MainActivity : ComponentActivity() {
 
 1.  接下来，在`RepositoriesScreen.kt`文件的底部，让我们快速定义一个`ErrorItem()`函数，该函数将包含一个显示红色错误信息的`Text()`可组合项，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun ErrorItem(
         message: String,
@@ -864,7 +864,7 @@ class MainActivity : ComponentActivity() {
 
 1.  重构 `ErrorItem()` 可组合函数以接受一个 `onClick()` 函数参数，该参数将由按下新的重试 `Button()` 可组合函数引起的 `onClick` 事件触发，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun ErrorItem(
         message: String,
@@ -884,7 +884,7 @@ class MainActivity : ComponentActivity() {
 
 1.  然后，回到 `RepositoriesScreen()` 的 `LazyColumn` 组件内部，找到 `LoadState` 为 `LoadState.Error` 类型的案例，并实现 `ErrorItem()` 可组合函数的 `onClick` 参数，该参数将触发重试。代码如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>
@@ -930,7 +930,7 @@ class MainActivity : ComponentActivity() {
 
 1.  在 `RepositoriesScreen()` 可组合函数中 `itemsIndexed()` 调用暴露的代码块内部，就像我们对 `refresh` 状态所做的那样，将 `append` 状态存储在一个新的 `appendLoadState` 变量中，然后在 `when` 表达式中添加两个相应的分支来处理 `LoadState.Loading` 和 `LoadState.Error` 的情况。代码如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RepositoriesScreen(
         repos: LazyPagingItems<Repository>

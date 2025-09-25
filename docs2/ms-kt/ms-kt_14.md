@@ -76,7 +76,7 @@
 
 1.  目前，我们将创建自己的工作流程，所以请将以下代码添加到我们的工作流程中：
 
-    ```kt
+    ```java
     name: Push
     on:
       push:
@@ -124,7 +124,7 @@
 
 1.  让我们在上一节中 *步骤 3* 运行的命令下方添加以下代码：
 
-    ```kt
+    ```java
     - name: Checkout
       uses: actions/checkout@v3
     - name: Set up JDK 17
@@ -167,7 +167,7 @@
 
 1.  首先，我们将添加`ktlintCheck`步骤：
 
-    ```kt
+    ```java
     - name: Run ktlintCheck
       run: ./gradlew ktlintCheck
       working-directory: ./chapterfourteen
@@ -177,7 +177,7 @@
 
 1.  接下来，我们添加`detekt`步骤：
 
-    ```kt
+    ```java
     - name: Run detekt
       run: ./gradlew detekt
       working-directory: ./chapterfourteen
@@ -187,7 +187,7 @@
 
 1.  接下来，我们添加测试步骤：
 
-    ```kt
+    ```java
     - name: Run unit tests
       run: ./gradlew testDebugUnitTest
       working-directory: ./chapterfourteen
@@ -197,7 +197,7 @@
 
 1.  最后，我们添加运行仪器化测试的步骤：
 
-    ```kt
+    ```java
     - name: Run connected tests
       uses: ReactiveCircus/android-emulator-runner@v2
       with:
@@ -233,7 +233,7 @@
 
 我们需要修改`main.yml`文件运行的时间。目前，我们的工作流程在我们向主分支推送代码时运行。我们将将其更改为在向主分支创建拉取请求时也运行。这是因为我们希望在将代码移动到主分支之前运行我们的检查。为此，我们将在`workflow_dispatch`事件之上添加`pull_request`事件：
 
-```kt
+```java
 on:
   push:
     branches: ["main" ]
@@ -247,13 +247,13 @@ on:
 
 1.  在 Android Studio 中打开终端并运行以下命令：
 
-    ```kt
+    ```java
     test and switches to the newly created branch.
     ```
 
 1.  接下来，让我们修改应用级别的`build.gradle.kts`文件中的`versionName`和`versionCode`：
 
-    ```kt
+    ```java
     versionCode = 2
     versionName = "1.0.1"
     ```
@@ -262,7 +262,7 @@ on:
 
 1.  在对`versionName`和`versionCode`进行更改后，我们可以提交更改并将它们推送到我们的远程仓库。我们可以在终端中运行以下命令来完成此操作：
 
-    ```kt
+    ```java
     it add .
     ```
 
@@ -270,7 +270,7 @@ on:
 
 1.  接下来，我们运行以下命令：
 
-    ```kt
+    ```java
     git commit -m "Update app version name and code"
     ```
 
@@ -278,7 +278,7 @@ on:
 
 1.  接下来，我们运行以下命令：
 
-    ```kt
+    ```java
     git push origin test
     ```
 
@@ -334,7 +334,7 @@ on:
 
 就像我们在仓库秘密中创建`GOOGLE_SERVICES_JSON`变量一样，我们需要将我们的签名证书的详细信息添加到我们的变量中，这样我们就可以在 CI/CD 管道中使用它们。第一步是生成签名证书的`base64`编码版本。我们可以在终端中运行以下命令来完成此操作：
 
-```kt
+```java
 openssl base64 < packt.jks | tr -d '\n' | tee packt.jks.base64.txt
 ```
 
@@ -354,7 +354,7 @@ openssl base64 < packt.jks | tr -d '\n' | tee packt.jks.base64.txt
 
 所有这些细节都应该像我们创建密钥库文件时使用的那样。现在，让我们编写我们的工作流程。在编写工作流程之前，请确保您已经完成了*第十三章*中我们的应用程序发布步骤，因为这是此操作所需。让我们前往`.github/workflows`文件夹，创建一个名为`deploy-to-playstore.yml`的新文件，并添加以下代码：
 
-```kt
+```java
 name: Deploy to Playstore
 on:
   push:

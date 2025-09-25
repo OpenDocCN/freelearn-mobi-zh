@@ -496,7 +496,7 @@ FaaS（函数即服务）允许工程师编写代码并将其作为函数部署�
 
 这些工具都创建了一个可以使用各自服务器框架构建的骨架项目。在这个例子中，我们使用 Ktor 作为服务器框架和 REST 端点路由。在 Ktor 中，端点路由定义如下：
 
-```kt
+```java
 routing {
     get("/households/{name}") {
      ...
@@ -516,7 +516,7 @@ Kafka 主题可以使用 Terraform 定义，它为指定基础设施提供了一
 
 压缩主题有不同的设置。压缩主题中的消息应尽可能保留。通过压缩日志，相同键的新消息将替换旧消息。压缩主题的清理策略应设置为`"compact"`，保留期设置为`–1`。以下是在 Terraform 中指定压缩主题的示例：
 
-```kt
+```java
 config {
     cleanup_policy = "compact"
     retention_bytes = -1
@@ -527,7 +527,7 @@ config {
 
 更新的家庭记录将被发送到两个主题。以下代码使用**Apache Kafka API**说明了这一点：
 
-```kt
+```java
 topicProducer.send(ProducerRecord(topic, household))
 compactedTopicProducer.send(ProducerRecord(topic, key, household))
 ```

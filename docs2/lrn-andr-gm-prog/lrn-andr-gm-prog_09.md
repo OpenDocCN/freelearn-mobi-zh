@@ -92,7 +92,7 @@
 
 好吧，我们现在已经设置了我们的新项目文件夹。此外，我们将为这个项目使用横屏模式方向，所以我们将它在`AndroidManifest.xml`文件中定义。从`app/manifests/AndroidManifest.xml`文件打开您的清单文件，并做出以下标记为粗体的更改：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.nikmlnkr.my3Dgame">
@@ -134,7 +134,7 @@
 
 因此，让我们在`MainActivity.java`文件中创建它们，如下所示：
 
-```kt
+```java
 package com.nikmlnkr.my3Dgame;
 
 import android.app.Activity;
@@ -177,7 +177,7 @@ public class MainActivity extends Activity {
 
 接口`GLSurfaceView.Renderer`负责让 OpenGL 渲染一个帧，因此我们需要在我们的代码中实现它作为一个接口；所以我们将从我们的第一行开始，这将做同样的事情。我们将扩展我们的类到`GLSurfaceView.Renderer`接口，并编写一个默认构造函数，如下所示：
 
-```kt
+```java
 public class MyGLRenderer implements GLSurfaceView.Renderer {
     Context ct;    //Context variable
 
@@ -193,7 +193,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 首先，我们将从我们的`onSurfaceChanged()`方法开始。在这个方法中，我们将创建我们的表面。这个方法用于初始化我们的场景。在这里，我们将在屏幕上创建一个简单的黑色屏幕。为了设置我们的颜色，我们将使用 RGBA 值。对于黑色，我们需要(0,0,0,1)的 RGBA 值。我们还会在这里添加一些更多的初始化因素：
 
-```kt
+```java
     @Override
     public void onSurfaceCreated(GL10 gles, EGLConfig c) {
         gles.glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
@@ -225,7 +225,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 这个方法在`onSurfaceCreated()`方法之后被调用，并且每次屏幕分辨率改变时也会被调用。基本上，这个方法负责创建我们在本章中较早看到的显示矩阵，这反过来又会在任何屏幕上创建一个均匀的形状：
 
-```kt
+```java
     @Override
     public void onSurfaceChanged(GL10 gles, int w, int h) {
         if (h == 0) h = 1;
@@ -251,7 +251,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 最后，我们有`onDrawFrame()`函数，它用于绘制当前帧。在每一帧之后，我们需要清除之前绘制的屏幕，因此在这个函数中，在渲染任何其他代码之前，我们调用`glClear()`。现在，我们只需编写我们的清除代码，然后在清除代码之后，在这个函数中绘制我们的对象形状：
 
-```kt
+```java
     @Override
     public void onDrawFrame(GL10 gles) {
         gles.glClear(GL10.GL_COLOR_BUFFER_BIT | 
@@ -263,7 +263,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 最后，这是你的`Renderer`类的整个代码看起来像这样：
 
-```kt
+```java
 package com.nikmlnkr.my3Dgame;
 
 /**
@@ -338,7 +338,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 为了这个目的，我们将使用一个三维数组来存储我们的顶点，并在我们的类中定义它们作为变量：
 
-```kt
+```java
 package com.nikmlnkr.my3Dgame;
 
 /**
@@ -356,7 +356,7 @@ public class Triangle {
 
 这样我们就处理了顶点，并定义了其形状，好吧，某种程度上是这样，但当然，还有更多。我们还需要定义一个顶点缓冲区并将这些数据传输到其中。为此，我们将定义我们的顶点缓冲区变量为 nio 的缓冲区，因为它们位于本地堆上，不会被垃圾回收。我们也会为我们的索引缓冲区做同样的事情，这将使我们的三角形以逆时针（CCW）方向排列，并且正**z**方向朝向屏幕。因此，首先我们将定义我们的`vertexBuffer`和`indexBuffer`变量，然后在我们的默认构造函数中，我们将设置我们的`vertexBuffer`和`indexBuffer`：
 
-```kt
+```java
     private FloatBuffer vb;
     private ByteBuffer ib
 
@@ -388,7 +388,7 @@ public class Triangle {
 
 既然我们已经理解了其理论的工作原理，那么让我们继续通过在代码中实现它来实践：
 
-```kt
+```java
 public void draw(GL10 gles) {
     gles.glEnableClientState(GL10.GL_VERTEX_ARRAY);
     gles.glVertexPointer(3, GL10.GL_FLOAT, 0, vb);
@@ -402,7 +402,7 @@ public void draw(GL10 gles) {
 
 我们的定义形状是完美的，我们的整个`Triangle.java`文件的代码块将看起来像这样：
 
-```kt
+```java
 package com.nikmlnkr.my3Dgame;
 
 /**

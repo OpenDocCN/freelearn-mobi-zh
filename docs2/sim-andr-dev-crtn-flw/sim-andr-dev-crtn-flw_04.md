@@ -32,47 +32,47 @@
 
 在上一章中，你了解到使用如`launch`之类的协程构建器会返回一个`cancel()`函数来取消协程。以下是一个示例：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch {
 ```
 
-```kt
+```java
             val job = launch {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             job.cancel()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -80,55 +80,55 @@ class MovieViewModel: ViewModel() {
 
 在取消作业后，你可能想在继续下一个任务之前等待取消完成，以避免竞态条件。你可以通过在调用`call`函数后调用`join`函数来实现这一点：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch() {
 ```
 
-```kt
+```java
             val job = launch {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             job.cancel()
 ```
 
-```kt
+```java
             job.join()
 ```
 
-```kt
+```java
             hideProgressBar()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -136,51 +136,51 @@ class MovieViewModel: ViewModel() {
 
 你还可以使用`Job.cancelAndJoin()`扩展函数，它与调用`cancel`然后调用`join`函数相同：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch() {
 ```
 
-```kt
+```java
             val job = launch {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             job.cancelAndJoin()
 ```
 
-```kt
+```java
             hideProgressBar()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -190,71 +190,71 @@ class MovieViewModel: ViewModel() {
 
 如果你的协程作用域有多个协程，并且你需要取消所有这些协程，你可以使用协程作用域中的`cancel`函数而不是逐个取消作业。这将取消作用域中的所有协程。以下是一个使用协程作用域的`cancel`函数来取消协程的示例：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     private val scope = CoroutineScope(Dispatchers.Main +
 ```
 
-```kt
+```java
       Job())
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         scope.launch {
 ```
 
-```kt
+```java
             val job1 = launch {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             val job2 = launch {
 ```
 
-```kt
+```java
                 displayLoadingText()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     override fun onCleared() {
 ```
 
-```kt
+```java
         scope.cancel()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -262,75 +262,75 @@ class MovieViewModel: ViewModel() {
 
 使用协程作用域中的`cancel`函数可以更容易地取消使用指定作用域启动的多个作业。然而，在你对该作用域调用`cancel`函数之后，协程作用域将无法再启动新的协程。如果你想取消作用域的协程，但之后还想从作用域中创建协程，你可以使用`scope.coroutineContext.cancelChildren()`代替：
 
-```kt
+```java
 class MovieViewModel: ViewModel() { 
 ```
 
-```kt
+```java
     private val scope = CoroutineScope(Dispatchers.Main +
 ```
 
-```kt
+```java
       Job()) 
 ```
 
-```kt
+```java
     init { 
 ```
 
-```kt
+```java
         scope.launch() { 
 ```
 
-```kt
+```java
             val job1 = launch { 
 ```
 
-```kt
+```java
                 fetchMovies() 
 ```
 
-```kt
+```java
             } 
 ```
 
-```kt
+```java
             val job2 = launch { 
 ```
 
-```kt
+```java
                 displayLoadingText()
 ```
 
-```kt
+```java
             } 
 ```
 
-```kt
+```java
         } 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
     fun cancelAll() { 
 ```
 
-```kt
+```java
         scope.coroutineContext.cancelChildren()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -340,55 +340,55 @@ class MovieViewModel: ViewModel() {
 
 你还可以将`CancellationException`的子类传递给`cancel`函数以指定不同的原因：
 
-```kt
+```java
 class MovieViewModel: ViewModel() { 
 ```
 
-```kt
+```java
 private lateinit var movieJob: Job
 ```
 
-```kt
+```java
     init { 
 ```
 
-```kt
+```java
         movieJob = scope.launch() { 
 ```
 
-```kt
+```java
             fetchMovies() 
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     fun stopFetching() { 
 ```
 
-```kt
+```java
         movieJob.cancel(CancellationException("Cancelled by
 ```
 
-```kt
+```java
           user"))
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -416,71 +416,71 @@ private lateinit var movieJob: Job
 
 下面是一个示例，说明如何使用 `isActive` 使你的协程可取消：
 
-```kt
+```java
 class SensorActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     private val scope = CoroutineScope(Dispatchers.IO)
 ```
 
-```kt
+```java
     private lateinit var job: Job
 ```
 
-```kt
+```java
    …
 ```
 
-```kt
+```java
     private fun processSensorData() {
 ```
 
-```kt
+```java
         job = scope.launch {
 ```
 
-```kt
+```java
             if (isActive) {
 ```
 
-```kt
+```java
                 val data = fetchSensorData()
 ```
 
-```kt
+```java
                 saveData(data)
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     fun stopProcessingData() {
 ```
 
-```kt
+```java
         job.cancel()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -490,79 +490,79 @@ class SensorActivity : AppCompatActivity() {
 
 `yield` 和 `delay` 函数已经检查了取消操作，并停止了执行或抛出了 `CancellationException`。因此，当你在协程中使用它们时，不再需要手动检查取消操作。以下是一个使用前面代码片段的示例，该片段已更新为使用挂起函数 `delay` 以使协程可取消：
 
-```kt
+```java
 class SensorActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     private val scope = CoroutineScope(Dispatchers.IO)
 ```
 
-```kt
+```java
     private lateinit var job: Job
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         processSensorData()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     private fun processSensorData() {
 ```
 
-```kt
+```java
         job = scope.launch {
 ```
 
-```kt
+```java
             delay (1_000L)
 ```
 
-```kt
+```java
             val data = fetchSensorData()
 ```
 
-```kt
+```java
             saveData(data)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     fun stopProcessingData() {
 ```
 
-```kt
+```java
         job.cancel()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -578,7 +578,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  打开`app/build.gradle`文件并添加`kotlinx-coroutines-android`的依赖项：
 
-    ```kt
+    ```java
     implementation ‘org.jetbrains.kotlinx:kotlinx-
       coroutines-android:1.6.0’
     ```
@@ -587,7 +587,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  打开`activity_main.xml`布局文件并为`TextView`添加一个`id`属性：
 
-    ```kt
+    ```java
     <TextView
         android:id="@+id/textView"
         style="@style/TextAppearance.AppCompat.Large"
@@ -604,7 +604,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  打开`MainActivity`文件。向`MainActivity`类添加以下属性：
 
-    ```kt
+    ```java
     private val scope = CoroutineScope(Dispatchers.Main)
     private?var job: Job? = null
     private lateinit var textView: TextView
@@ -613,7 +613,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  第一行指定协程的作用域，`CoroutineScope`，使用`Dispatchers.Main`作为调度器。第二行创建一个协程作业的`job`属性。`textView`属性将用于显示倒计时文本，`count`初始化倒计时为 100。在`MainActivity`文件的`onCreate`函数中，初始化`TextView`的值：
 
-    ```kt
+    ```java
     textView = findViewById(R.id.textView)
     ```
 
@@ -621,7 +621,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  创建一个倒计时函数，用于计数：
 
-    ```kt
+    ```java
     private fun countdown() {
         count--
         textView.text = count.toString()
@@ -632,7 +632,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  在`onCreate`函数中，在`textView`初始化下方，添加以下代码以启动协程来计数并显示在文本视图中：
 
-    ```kt
+    ```java
     job = scope.launch {
         while (count > 0) {
             delay(100)
@@ -653,7 +653,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  打开`strings.xml`文件并为按钮添加一个字符串：
 
-    ```kt
+    ```java
     <string name="stop">Stop</string>
     ```
 
@@ -661,7 +661,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  再次打开`activity_main.xml`文件，在`TextView`下方添加一个按钮：
 
-    ```kt
+    ```java
     <Button
             android:id="@+id/button"
             android:layout_width="wrap_content"
@@ -677,7 +677,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  打开`MainActivity`并在作业初始化后，为按钮创建一个变量：
 
-    ```kt
+    ```java
     val button = findViewById<Button>(R.id.button)
     ```
 
@@ -685,7 +685,7 @@ class SensorActivity : AppCompatActivity() {
 
 1.  在下面，给按钮添加一个取消作业的点击监听器：
 
-    ```kt
+    ```java
     button.setOnClickListener {
         job?.cancel()
     }
@@ -715,51 +715,51 @@ class SensorActivity : AppCompatActivity() {
 
 当你的应用程序正在执行后台任务时，你可能想停止它，因为它花费了太长时间。你可以手动跟踪时间并取消任务。或者你可以使用`withTimeout`挂起函数。使用`withTimeout`函数，你可以设置以毫秒或`Duration`为单位的超时时间。一旦这个超时时间被超过，它将抛出`TimeOutCancellationException`，这是`CancellationException`的一个子类。以下是如何使用`withTimeout`的一个示例：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch {
 ```
 
-```kt
+```java
             val job = launch {
 ```
 
-```kt
+```java
                 withTimeout(5_000L) {
 ```
 
-```kt
+```java
                     fetchMovies()
 ```
 
-```kt
+```java
                 }
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -767,59 +767,59 @@ class MovieViewModel: ViewModel() {
 
 你还可以使用另一个函数`withTimeoutOrNull`。它与`withTimeout`函数类似，但如果超时被超过，它将返回 null。以下是如何使用`withTimeoutOrNull`的一个示例：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch() {
 ```
 
-```kt
+```java
             val job = async {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             val movies = withTimeoutOrNull(5_000L) {
 ```
 
-```kt
+```java
                 job.await()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -835,55 +835,55 @@ class MovieViewModel: ViewModel() {
 
 要处理协程中的异常，你可以简单地使用`try-catch`。例如，如果你使用`launch`协程构建器启动了一个协程，你可以执行以下操作来处理异常：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch() {
 ```
 
-```kt
+```java
             try {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             } catch (exception: Exception) {
 ```
 
-```kt
+```java
                 Log.e("MovieViewModel",
 ```
 
-```kt
+```java
                   exception.message.toString())
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -891,71 +891,71 @@ class MovieViewModel: ViewModel() {
 
 如果你使用`async`协程构建器构建了协程，当你在`Deferred`对象上调用`await`函数时，将抛出异常。处理异常的代码可能如下所示：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch() {
 ```
 
-```kt
+```java
             val job = async {
 ```
 
-```kt
+```java
                 fetchMovies()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             var movies = emptyList<Movie>()
 ```
 
-```kt
+```java
             try {
 ```
 
-```kt
+```java
                 movies = job.await()
 ```
 
-```kt
+```java
             } catch (exception: Exception) {
 ```
 
-```kt
+```java
                 Log.e("MovieViewModel",
 ```
 
-```kt
+```java
                   exception.message.toString())
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -971,39 +971,39 @@ class MovieViewModel: ViewModel() {
 
 在处理协程异常时，你也可以使用`CoroutineExceptionHandler`在单个位置处理这些异常。`CoroutineExceptionHandler`是你可以添加到你的协程中以处理未捕获异常的协程上下文元素。以下代码行展示了如何使用它：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     private val exceptionHandler =
 ```
 
-```kt
+```java
       CoroutineExceptionHandler { _, exception ->
 ```
 
-```kt
+```java
         Log.e("MovieViewModel",
 ```
 
-```kt
+```java
           exception.message.toString())
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     private val scope = CoroutineScope(exceptionHandler)
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1019,7 +1019,7 @@ class MovieViewModel: ViewModel() {
 
 1.  前往`MainActivity`文件，并在倒计时函数的末尾添加以下代码以模拟异常：
 
-    ```kt
+    ```java
     if ((0..9).random() == 0) throw Exception("An error
       occurred")
     ```
@@ -1030,7 +1030,7 @@ class MovieViewModel: ViewModel() {
 
 1.  在你的协程中的代码周围使用`try-catch`块来捕获应用中的异常：
 
-    ```kt
+    ```java
     job = scope.launch {
         try {
             while (count > 0) {
@@ -1047,7 +1047,7 @@ class MovieViewModel: ViewModel() {
 
 1.  在`catch`块中，将`//TODO`替换为`Snackbar`以显示异常消息：
 
-    ```kt
+    ```java
     Snackbar.make(textView, exception.message.toString(),
       Snackbar.LENGTH_LONG).show()
     ```

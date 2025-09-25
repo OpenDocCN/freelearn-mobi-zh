@@ -74,7 +74,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 fun main() {
     val stringToBeReversed = "Community"
     println(reverseString(stringToBeReversed))
@@ -86,7 +86,7 @@ fun reverseString(stringToReverse: String): String {
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 data class City(
     val id: Int,
     @StringRes val nameResourceId: Int,
@@ -96,7 +96,7 @@ data class City(
 
 任何命令行输入或输出都按照以下方式编写：
 
-```kt
+```java
 $ git clone git@github.com:PacktPublishing/Modern-Android-13-Development-Cookbook.git
 ```
 

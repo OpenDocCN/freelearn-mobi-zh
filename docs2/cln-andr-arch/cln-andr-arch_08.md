@@ -60,7 +60,7 @@
 
 在上一章中，我们定义了以下实体：
 
-```kt
+```java
 data class User(
     val id: String,
     val firstName: String,
@@ -73,7 +73,7 @@ data class User(
 
 在这里，我们有一个简单的`User`数据类，包含一些相关字段。`User`数据的仓库抽象如下：
 
-```kt
+```java
 interface UserRepository {
     fun getUser(id: String): Flow<User>
 }
@@ -83,7 +83,7 @@ interface UserRepository {
 
 如果我们想从互联网上获取数据，我们必须首先定义一个`UserRemoteDataSource`抽象：
 
-```kt
+```java
 interface UserRemoteDataSource {
     fun getUser(id: String): Flow<User>
 }
@@ -91,7 +91,7 @@ interface UserRemoteDataSource {
 
 在这种情况下，我们有一个类似于`UserRepository`定义的接口，它有一个简单的`User`对象检索方法。现在我们可以实现`UserRepository`以使用此数据源：
 
-```kt
+```java
 class UserRepositoryImpl(private val userRemoteDataSource: 
     UserRemoteDataSource) : UserRepository {
 
@@ -103,7 +103,7 @@ class UserRepositoryImpl(private val userRemoteDataSource:
 
 在这里，我们有一个对`UserRemoteDataSource`的依赖，并调用`getUser`方法。如果我们想将远程用户数据本地持久化，我们需要定义一个`UserLocalDataSource`抽象，它将负责插入用户：
 
-```kt
+```java
 interface UserLocalDataSource {
     suspend fun insertUser(user: User)
 }
@@ -111,7 +111,7 @@ interface UserLocalDataSource {
 
 在这里，我们有一个将用户插入本地存储的方法。现在我们可以更新`UserRepositoryImpl`以连接数据源，并在检索后插入用户：
 
-```kt
+```java
 class UserRepositoryImpl(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val userLocalDataSource: UserLocalDataSource
@@ -126,7 +126,7 @@ class UserRepositoryImpl(
 
 这代表了一个简单的数据源使用案例，但我们可以使用仓库来提升用户体验。例如，我们可以更改仓库实现以返回保存的数据，并为远程获取数据提供一个单独的方法。我们可以利用流，它可以在流中发射多个用户：
 
-```kt
+```java
 interface UserLocalDataSource {
     suspend fun insertUser(user: User)
     fun getUser(id: String): Flow<User>
@@ -135,7 +135,7 @@ interface UserLocalDataSource {
 
 在前面的例子中，我们添加了`getUser`方法来检索本地持久化的`User`对象。我们需要修改仓库抽象如下：
 
-```kt
+```java
 interface UserRepository {
     fun getUser(id: String): Flow<User>
     fun refreshUser(id: String): Flow<User>
@@ -144,7 +144,7 @@ interface UserRepository {
 
 在这里，我们添加了`refreshUser`方法，当实现时，将负责从互联网上获取新用户。实现如下：
 
-```kt
+```java
 class UserRepositoryImpl(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val userLocalDataSource: UserLocalDataSource
@@ -163,7 +163,7 @@ class UserRepositoryImpl(
 
 我们还可以使用仓库在内存中缓存数据。以下是一个例子：
 
-```kt
+```java
 class UserRepositoryImpl(
     private val userRemoteDataSource: UserRemoteDataSource,
     private val userLocalDataSource: UserLocalDataSource
@@ -228,7 +228,7 @@ class UserRepositoryImpl(
 
 1.  确保在顶级 `build.gradle` 文件中，以下依赖项已设置：
 
-    ```kt
+    ```java
     buildscript {
          …
         dependencies {
@@ -241,7 +241,7 @@ class UserRepositoryImpl(
 
 1.  在 `data-repository` 模块的 `build.gradle` 文件中，确保以下插件存在：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -252,7 +252,7 @@ class UserRepositoryImpl(
 
 1.  在同一文件中，将配置更改为顶级 `build.gradle` 文件中定义的配置：
 
-    ```kt
+    ```java
     android {
         compileSdk defaultCompileSdkVersion
         defaultConfig {
@@ -273,7 +273,7 @@ class UserRepositoryImpl(
 
 1.  在同一文件中，确保以下依赖项已指定：
 
-    ```kt
+    ```java
     dependencies {
         implementation(project(path: ":domain"))
         implementation coroutines.coroutinesAndroid
@@ -293,7 +293,7 @@ class UserRepositoryImpl(
 
 1.  在`remote`包内，创建`RemoteUserDataSource`接口：
 
-    ```kt
+    ```java
     interface RemoteUserDataSource {
         fun getUsers(): Flow<List<User>>
         fun getUser(id: Long): Flow<User>
@@ -302,7 +302,7 @@ class UserRepositoryImpl(
 
 1.  在`remote`包内，创建`RemotePostDataSource`接口：
 
-    ```kt
+    ```java
     interface RemotePostDataSource {
         fun getPosts(): Flow<List<Post>>
         fun getPost(id: Long): Flow<Post>
@@ -313,7 +313,7 @@ class UserRepositoryImpl(
 
 1.  在`local`包内，创建`LocalUserDataSource`接口：
 
-    ```kt
+    ```java
     interface LocalUserDataSource {
         fun getUsers(): Flow<List<User>>
         suspend fun addUsers(users: List<User>)
@@ -322,7 +322,7 @@ class UserRepositoryImpl(
 
 1.  在`local`包内，创建`LocalPostDataSource`接口：
 
-    ```kt
+    ```java
     interface LocalPostDataSource {
         fun getPosts(): Flow<List<Post>>
         suspend fun addPosts(posts: List<Post>)
@@ -331,7 +331,7 @@ class UserRepositoryImpl(
 
 1.  在`local`包内，创建`LocalInteractionDataSource`包：
 
-    ```kt
+    ```java
     interface LocalInteractionDataSource {
         fun getInteraction(): Flow<Interaction>
         suspend fun saveInteraction(interaction: Interaction)
@@ -342,7 +342,7 @@ class UserRepositoryImpl(
 
 1.  在`repository`包内，创建`UserRepositoryImpl`类：
 
-    ```kt
+    ```java
     class UserRepositoryImpl @Inject constructor(
         private val remoteUserDataSource: 
             RemoteUserDataSource,
@@ -365,7 +365,7 @@ class UserRepositoryImpl(
 
 1.  在同一个包内，创建`PostRepositoryImpl`类：
 
-    ```kt
+    ```java
     class PostRepositoryImpl @Inject constructor(
         private val remotePostDataSource: 
             RemotePostDataSource,
@@ -389,7 +389,7 @@ class UserRepositoryImpl(
 
 1.  在同一个包内，创建`InteractionRepositoryImpl`类：
 
-    ```kt
+    ```java
     class InteractionRepositoryImpl @Inject constructor(
         private val interactionDataSource: 
             LocalInteractionDataSource
@@ -412,7 +412,7 @@ class UserRepositoryImpl(
 
 1.  在`injection`包内，创建一个名为`RepositoryModule`的类：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class RepositoryModule {
@@ -439,7 +439,7 @@ class UserRepositoryImpl(
 
 1.  为`UserRepositoryImpl`方法创建一个`UserRepositoryImplTest`类进行单元测试：
 
-    ```kt
+    ```java
     class UserRepositoryImplTest {
         private val remoteUserDataSource = 
             mock<RemoteUserDataSource>()
@@ -453,7 +453,7 @@ class UserRepositoryImpl(
 
 1.  在`UserRepositoryImplTest`类中，为每个仓库方法添加一个测试方法：
 
-    ```kt
+    ```java
     class UserRepositoryImplTest {
          …
         @ExperimentalCoroutinesApi
@@ -488,7 +488,7 @@ class UserRepositoryImpl(
 
 1.  创建一个`PostRepositoryImplTest`类来测试`PostRepositoryImpl`类：
 
-    ```kt
+    ```java
     class PostRepositoryImplTest {
         private val remotePostDataSource = 
             mock<RemotePostDataSource>()
@@ -501,7 +501,7 @@ class UserRepositoryImpl(
 
 1.  为`PostRepositoryImpl`类中的每个方法创建单元测试：
 
-    ```kt
+    ```java
     class PostRepositoryImplTest {
         …
         @ExperimentalCoroutinesApi
@@ -533,7 +533,7 @@ class UserRepositoryImpl(
 
 1.  创建一个`InteractionRepositoryImplTest`类来测试`InteractionRepositoryImpl`类：
 
-    ```kt
+    ```java
     class InteractionRepositoryImplTest {
         private val localInteractionDataSource = 
             mock<LocalInteractionDataSource>()
@@ -545,7 +545,7 @@ class UserRepositoryImpl(
 
 1.  为`InteractionRepositoryImpl`类中的每个方法创建单元测试：
 
-    ```kt
+    ```java
     class InteractionRepositoryImplTest {
         …
         @ExperimentalCoroutinesApi

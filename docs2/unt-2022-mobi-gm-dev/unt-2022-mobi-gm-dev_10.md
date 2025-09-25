@@ -42,7 +42,7 @@
 
 1.  双击新添加的脚本，使用您选择的代码编辑器打开它，并使用以下代码：
 
-    ```kt
+    ```java
     using System.Collections.Generic; /* List */
     using Unity.Services.Analytics; /* AnalyticsService, ConsentCheckException */
     using Unity.Services.Core; /* UnityServices */
@@ -131,7 +131,7 @@ Unity Analytics 自动执行多项不同操作以简化使用。然而，作为�
 
 1.  打开 `PauseScreenBehaviour` 脚本，并在脚本顶部添加以下 `using` 语句：
 
-    ```kt
+    ```java
     using Unity.Services.Analytics; /* AnalyticsService */
     ```
 
@@ -139,7 +139,7 @@ Unity Analytics 自动执行多项不同操作以简化使用。然而，作为�
 
 1.  更新 `SetPauseMenu` 函数以包含以下突出显示的代码：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will turn our pause menu on or off
     /// </summary>
@@ -256,7 +256,7 @@ Unity Analytics 自动执行多项不同操作以简化使用。然而，作为�
 
 1.  要使用参数利用 Unity Analytics，在文件顶部添加以下`using`声明：
 
-    ```kt
+    ```java
     using Unity.Services.Analytics; /* AnalyticsService */
     using System.Collections.Generic; /* Dictionary */
     ```
@@ -265,7 +265,7 @@ Unity Analytics 自动执行多项不同操作以简化使用。然而，作为�
 
 1.  接下来，我们将更新`OnCollisionEnter`函数到以下内容：
 
-    ```kt
+    ```java
     private void OnCollisionEnter(Collision collision)
     {
         var go = collision.gameObject;
@@ -360,7 +360,7 @@ Unity Analytics 自动执行多项不同操作以简化使用。然而，作为�
 
 1.  在 **查询** 字段中，将代码替换为以下内容：
 
-    ```kt
+    ```java
     SELECT EVENT_JSON:score::FLOAT
     FROM EVENTS
     WHERE EVENT_NAME = 'gameOver'
@@ -380,7 +380,7 @@ Unity Analytics 自动执行多项不同操作以简化使用。然而，作为�
 
 使用以下类似的片段：
 
-```kt
+```java
 SELECT EVENT_JSON
 FROM EVENTS
 WHERE EVENT_NAME = 'gameOver'
@@ -388,7 +388,7 @@ WHERE EVENT_NAME = 'gameOver'
 
 之前的代码将确保，而不是第一个事件只显示 6.5199995，我们会有每个槽位都包含我们之前讨论过的全部 JSON 数据——在这种情况下，以下内容：
 
-```kt
+```java
 "{
   ""clientVersion"": ""0.1"",
   ""collectInsertedTimestamp"": ""2022-12-23

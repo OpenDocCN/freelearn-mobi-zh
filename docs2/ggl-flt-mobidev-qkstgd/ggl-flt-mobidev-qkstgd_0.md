@@ -62,7 +62,7 @@ Flutter 是由 Google 开发的跨平台应用开发框架。它使用 Dart 编�
 
 代码块设置如下：
 
-```kt
+```java
 void main() {
 debugPaintSizeEnabled=true;
 runApp(MyApp());
@@ -71,7 +71,7 @@ runApp(MyApp());
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
  Center(
 child: Container(
 decoration: BoxDecoration(border: Border.all()),
@@ -83,7 +83,7 @@ width: 200.0,
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 $ flutter packages get
 ```
 

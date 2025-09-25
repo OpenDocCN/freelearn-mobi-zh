@@ -84,7 +84,7 @@
 
 文件所属的包使用`package`关键字声明：
 
-```kt
+```java
 package me.soshin
 ```
 
@@ -106,43 +106,43 @@ package me.soshin
 
 要开始学习 Kotlin 的工作原理，让我们将以下代码放入我们的 `Main.kt` 文件中并运行它：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     println("Hello Kotlin")
 ```
 
-```kt
+```java
 }
 ```
 
 当你运行这个示例时，例如通过在 IntelliJ IDEA 中按下 **运行** 按钮，它简单地输出以下内容：
 
-```kt
+```java
 > Hello Kotlin
 ```
 
 与下面这段执行相同功能的 Java 代码相比，这段代码中有一些有趣的属性：
 
-```kt
+```java
 class Main {
 ```
 
-```kt
+```java
     public static void main(String[] args) {
 ```
 
-```kt
+```java
         System.out.println("Hello Java");
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -164,7 +164,7 @@ class Main {
 
 作为字符串数组提供的参数是配置命令行应用程序的一种方式。在 Java 中，你不能有一个不接受此参数数组的可运行的 `main()` 函数：
 
-```kt
+```java
 public static void main(String[] args) { ... }
 ```
 
@@ -184,13 +184,13 @@ public static void main(String[] args) { ... }
 
 在 Java 以及许多其他语言中，每个语句或表达式都必须以分号结束，如下面的示例所示：
 
-```kt
+```java
 System.out.println("Semicolon =>"); 
 ```
 
 Kotlin 是一种实用主义语言。因此，相反，它在编译期间推断出应该放置分号的位置：
 
-```kt
+```java
 println("No semicolons! =>")
 ```
 
@@ -230,11 +230,11 @@ Java 示例是为了熟悉，而不是为了证明 Kotlin 在任何方面优于 
 
 让我们通过从我们的 `Hello Kotlin` 示例中提取字符串来声明我们的第一个 Kotlin 变量：
 
-```kt
+```java
 var greeting = "Hello Kotlin"
 ```
 
-```kt
+```java
 println(greeting)
 ```
 
@@ -242,17 +242,17 @@ println(greeting)
 
 在 Kotlin 中，这将产生一个错误：
 
-```kt
+```java
 var greeting = "Hello Kotlin"
 ```
 
-```kt
+```java
 greeting = 1 // <- Greeting is a String
 ```
 
 如果你希望明确定义变量的类型，可以使用以下符号：
 
-```kt
+```java
 var greeting: String = "Hello Kotlin"
 ```
 
@@ -260,21 +260,21 @@ var greeting: String = "Hello Kotlin"
 
 在 Java 中，变量可以被声明为 `final`。final 变量只能赋值一次，并且它们的引用实际上是不可变的：
 
-```kt
+```java
 final String s = "Hi";
 ```
 
-```kt
+```java
 s = "Bye"; // Doesn't work
 ```
 
 Kotlin 强调我们应该尽可能使用不可变数据。Kotlin 中的不可变变量称为 `val` 关键字：
 
-```kt
+```java
 val greeting = "Hi"
 ```
 
-```kt
+```java
 greeting = "Bye"// Doesn't work, "Val cannot be reassigned"
 ```
 
@@ -288,43 +288,43 @@ greeting = "Bye"// Doesn't work, "Val cannot be reassigned"
 
 JVM 对整数进行缓存和字符串池化，以防止在某些基本情况下发生这种情况，因此为了示例，我们将使用一个大的整数：
 
-```kt
+```java
 Integer a = 1000;
 ```
 
-```kt
+```java
 Integer b = 1000;
 ```
 
-```kt
+```java
 System.out.println(a == b);      // false
 ```
 
-```kt
+```java
 System.out.println(a.equals(b)); // true
 ```
 
 这种行为远非直观。相反，Kotlin 将 `==` 转换为 `equals()`：
 
-```kt
+```java
 val a = 1000
 ```
 
-```kt
+```java
 val b = 1000
 ```
 
-```kt
+```java
 println(a == b)      // true
 ```
 
-```kt
+```java
 println(a.equals(b)) // true
 ```
 
 如果你确实想检查引用等价性，请使用`===`。但这对于一些基本类型是不适用的：
 
-```kt
+```java
 println(a === b) // Still true
 ```
 
@@ -336,43 +336,43 @@ println(a === b) // Still true
 
 我们之前已经提到，在 Kotlin 中，函数可以声明在类之外。我们已经通过`main()`函数看到了这一点。声明函数的关键字是`fun`。参数类型位于参数名称之后，而不是之前：
 
-```kt
+```java
 fun greet(greeting: String) {
 ```
 
-```kt
+```java
     println(greeting)
 ```
 
-```kt
+```java
 }
 ```
 
 如果你需要返回一个结果，其类型将位于函数声明之后：
 
-```kt
+```java
 fun getGreeting(): String { 
 ```
 
-```kt
+```java
     return "Hello, Kotlin!"
 ```
 
-```kt
+```java
 }
 ```
 
 你可以亲自尝试一下：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     greet(getGreeting())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -380,7 +380,7 @@ fun main() {
 
 当一个函数非常短，仅由一个表达式组成，例如我们的`getGreeting()`函数，我们可以省略返回类型和大括号，并使用更简短的表示法：
 
-```kt
+```java
 fun getGreeting() = "Hello, Kotlin!"
 ```
 
@@ -398,99 +398,99 @@ fun getGreeting() = "Hello, Kotlin!"
 
 在 Java 世界中，最臭名昭著的异常可能是`NullPointerException`。这个异常背后的原因是 Java 中的每个对象都可以是`null`。这里的代码展示了为什么这是一个问题：
 
-```kt
+```java
 final String s = null;
 ```
 
-```kt
+```java
 System.out.println(s.length()); 
 ```
 
-```kt
+```java
 // Causes NullPointerException
 ```
 
 尽管 Java 没有尝试解决这个问题，但`Optional`构造函数表示可能不存在值的值：
 
-```kt
+```java
 var optional = Optional.of("I'm not null");
 ```
 
-```kt
+```java
 if (optional.isPresent()) { 
 ```
 
-```kt
+```java
     System.out.println(optional.get().length());
 ```
 
-```kt
+```java
 }
 ```
 
 但这并没有解决我们的问题。如果我们的函数接收`Optional`作为参数，我们仍然可以传递一个`null`值，并在运行时崩溃程序：
 
-```kt
+```java
 void printLength(Optional<String> optional) {
 ```
 
-```kt
+```java
     if (optional.isPresent()) { // <- Missing null check 
 ```
 
-```kt
+```java
       here
 ```
 
-```kt
+```java
         System.out.println(optional.get().length());
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 printLength (null); // Crashes!
 ```
 
 Kotlin 在编译时检查`null`：
 
-```kt
+```java
 val s: String = null // Won't compile
 ```
 
 让我们看看用 Kotlin 编写的`printLength()`函数：
 
-```kt
+```java
 fun printLength(s: String) { 
 ```
 
-```kt
+```java
     println(s.length)
 ```
 
-```kt
+```java
 }
 ```
 
 使用`null`调用此函数根本无法编译：
 
-```kt
+```java
 printLength(null) 
 ```
 
-```kt
+```java
 // Null cannot be a value of a non-null type String
 ```
 
 如果你希望你的类型能够接收`null`值，你需要使用问号将其标记为可空：
 
-```kt
+```java
 fun printLength(stringOrNull: String?) { ... }
 ```
 
@@ -504,7 +504,7 @@ Kotlin 中有多种处理空值的技术，例如智能转换、Elvis 运算符�
 
 一个`listOf()`函数：
 
-```kt
+```java
 val hobbits = listOf("Frodo", "Sam", "Pippin", "Merry")
 ```
 
@@ -512,19 +512,19 @@ val hobbits = listOf("Frodo", "Sam", "Pippin", "Merry")
 
 如果你想提供列表的类型，你可以在定义函数参数时这样做：
 
-```kt
+```java
 val hobbits: List<String> = listOf("Frodo", "Sam", "Pippin",   "Merry")
 ```
 
 要访问列表中特定索引的元素，我们使用方括号：
 
-```kt
+```java
 println(hobbits[1]) 
 ```
 
 上一段代码将输出以下内容：
 
-```kt
+```java
 > Sam
 ```
 
@@ -534,31 +534,31 @@ println(hobbits[1])
 
 让我们创建一组直到 1994 年之后的足球世界杯冠军：
 
-```kt
+```java
 val footballChampions = setOf("France", "Germany", "Spain",   "Italy", "Brazil", "France", "Brazil", "Germany")
 ```
 
-```kt
+```java
 println(footballChampions) // [France, Germany, Spain,   Italy, Brazil]
 ```
 
 你可以看到每个国家在集合中恰好存在一次。要检查元素是否在`Set`集合中，你可以使用`in`函数：
 
-```kt
+```java
 println("Israel" in footballChampions)
 ```
 
-```kt
+```java
 println("Italy" in footballChampions) 
 ```
 
 这将给我们以下结果：
 
-```kt
+```java
 > false
 ```
 
-```kt
+```java
 > true
 ```
 
@@ -570,65 +570,65 @@ println("Italy" in footballChampions)
 
 同时，让我们创建一个包含一些蝙蝠侠电影及其扮演布鲁斯·韦恩的演员的映射：
 
-```kt
+```java
 val movieBatmans = mapOf(
 ```
 
-```kt
+```java
     "Batman Returns" to "Michael Keaton",
 ```
 
-```kt
+```java
     "Batman Forever" to "Val Kilmer",
 ```
 
-```kt
+```java
     "Batman & Robin" to "George Clooney"
 ```
 
-```kt
+```java
 )
 ```
 
-```kt
+```java
 println(movieBatmans) 
 ```
 
 这将打印以下内容：
 
-```kt
+```java
 > {Batman Returns=Michael Keaton, 
 ```
 
-```kt
+```java
 > Batman Forever=Val Kilmer, 
 ```
 
-```kt
+```java
 > Batman & Robin=George Clooney}
 ```
 
 要通过键访问值，我们使用方括号并提供键：
 
-```kt
+```java
 println(movieBatmans["Batman Returns"])
 ```
 
 上一段代码将输出以下内容：
 
-```kt
+```java
 > Michael Keaton
 ```
 
 这些数据结构也支持检查元素是否存在：
 
-```kt
+```java
 println(" Batman Begins " !in movieBatmans)
 ```
 
 我们得到以下输出：
 
-```kt
+```java
 > true
 ```
 
@@ -638,17 +638,17 @@ println(" Batman Begins " !in movieBatmans)
 
 使用`listOf()`函数创建的列表没有添加新元素的方法，我们也不能替换任何元素：
 
-```kt
+```java
 hobbits[0] = "Bilbo " // Unresolved reference!
 ```
 
 不可变数据结构非常适合编写并发代码。但有时，我们仍然需要一个可以修改的集合。为了做到这一点，我们可以使用集合函数的可变版本：
 
-```kt
+```java
 val editableHobbits = mutableListOf("Frodo", "Sam",   "Pippin", "Merry")
 ```
 
-```kt
+```java
 editableHobbits.add("Bilbo")
 ```
 
@@ -660,49 +660,49 @@ editableHobbits.add("Bilbo")
 
 这是你在 Kotlin 中实例化它们的方法：
 
-```kt
+```java
 import java.util.*
 ```
 
-```kt
+```java
 // Mutable map that is sorted by its keys 
 ```
 
-```kt
+```java
 val treeMap = java.util.TreeMap( 
 ```
 
-```kt
+```java
     mapOf(
 ```
 
-```kt
+```java
         "Practical Pig" to "bricks",
 ```
 
-```kt
+```java
         "Fifer" to "straw",
 ```
 
-```kt
+```java
         "Fiddler" to "sticks"
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
 )
 ```
 
-```kt
+```java
 println(treeMap.keys)
 ```
 
 我们将得到以下输出：
 
-```kt
+```java
 > [Fiddler, Fifer, Practical Pig]
 ```
 
@@ -716,7 +716,7 @@ println(treeMap.keys)
 
 在 Kotlin 中，数组语法与其他类型的集合保持一致。字符串数组声明为 `Array<String>`：
 
-```kt
+```java
 val musketeers: Array<String> = arrayOf("Athos", "Porthos",   "Aramis")
 ```
 
@@ -724,7 +724,7 @@ val musketeers: Array<String> = arrayOf("Athos", "Porthos",   "Aramis")
 
 如果你已经有一个集合并且想要将其转换为数组，请使用 `toTypedArray` 函数：
 
-```kt
+```java
 listOf(1, 2, 3, 5).toTypedArray()
 ```
 
@@ -734,15 +734,15 @@ listOf(1, 2, 3, 5).toTypedArray()
 
 这是一个接受命令行参数并打印所有参数的 `main` 函数的示例，参数之间用逗号分隔：
 
-```kt
+```java
 fun main(args: Array<String>) { 
 ```
 
-```kt
+```java
     println(args.joinToString(", "))
 ```
 
-```kt
+```java
 }
 ```
 
@@ -758,35 +758,35 @@ fun main(args: Array<String>) {
 
 在 Java 中，`if` 是一个语句。语句不会返回任何值。让我们看看以下函数，它返回两个可能值中的一个：
 
-```kt
+```java
 public String getUnixSocketPolling(boolean isBsd) { 
 ```
 
-```kt
+```java
     if (isBsd) {
 ```
 
-```kt
+```java
         return "kqueue"; 
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     else {
 ```
 
-```kt
+```java
         return "epoll";
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -794,31 +794,31 @@ public String getUnixSocketPolling(boolean isBsd) {
 
 我们可以使用 Java 的 `var` 关键字重写这个方法：
 
-```kt
+```java
 public String getUnixSocketPolling(boolean isBsd) { 
 ```
 
-```kt
+```java
     var pollingType = "epoll";
 ```
 
-```kt
+```java
     if (isBsd) {
 ```
 
-```kt
+```java
         pollingType = "kqueue";
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     return pollingType;
 ```
 
-```kt
+```java
 }
 ```
 
@@ -828,37 +828,37 @@ public String getUnixSocketPolling(boolean isBsd) {
 
 与 Java 不同，在 Kotlin 中，`if`是一个表达式，意味着它返回一个值。我们可以将之前的函数重写为以下 Kotlin 版本：
 
-```kt
+```java
 fun getUnixSocketPolling(isBsd: Boolean): String {
 ```
 
-```kt
+```java
     return if (isBsd) {
 ```
 
-```kt
+```java
         "kqueue"
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
         "epoll"
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 或者我们可以使用更简短的形式：
 
-```kt
+```java
 fun getUnixSocketPolling(isBsd: Boolean): String     = if (isBsd) "kqueue" else "epoll"
 ```
 
@@ -876,27 +876,27 @@ Kotlin 的单行函数非常酷且实用，但你应该确保其他人除了你�
 
 在 Java 中，我们使用`switch`语句。在 Kotlin 中，有一个`when`表达式，它要强大得多，因为它可以嵌入一些其他 Kotlin 特性。让我们创建一个方法，给定一个超级英雄并告诉我们他们的宿敌是谁：
 
-```kt
+```java
 fun archenemy(heroName: String) = when (heroName) {
 ```
 
-```kt
+```java
     "Batman" -> "Joker"
 ```
 
-```kt
+```java
     "Superman" -> "Lex Luthor"
 ```
 
-```kt
+```java
     "Spider-Man" -> "Green Goblin"
 ```
 
-```kt
+```java
     else -> "Sorry, no idea"
 ```
 
-```kt
+```java
 }
 ```
 
@@ -918,17 +918,17 @@ fun archenemy(heroName: String) = when (heroName) {
 
 但，更重要的是，就像许多其他现代语言一样，Kotlin 支持使用`${}`语法进行字符串插值。让我们以前面的例子为例：
 
-```kt
+```java
 val hero = "Batman"
 ```
 
-```kt
+```java
 println("Archenemy of $hero is ${archenemy(hero)}")
 ```
 
 之前的代码将按以下方式打印：
 
-```kt
+```java
 > Archenemy of Batman is Joker
 ```
 
@@ -940,27 +940,27 @@ Kotlin 支持多行字符串，也称为**原始字符串**。这个特性存在
 
 这个想法很简单。如果我们想要打印跨越多行的文本，比如说来自刘易斯·卡罗尔的《爱丽丝梦游仙境》的一段，一种方法是将它们连接起来：
 
-```kt
+```java
 println("Twinkle, Twinkle Little Bat\n" +
 ```
 
-```kt
+```java
     "How I wonder what you're at!\n" +
 ```
 
-```kt
+```java
     "Up above the world you fly,\n" +
 ```
 
-```kt
+```java
     "Like a tea tray in the sky.\n" +
 ```
 
-```kt
+```java
     "Twinkle, twinkle, little bat!\n" +
 ```
 
-```kt
+```java
     "How I wonder what you're at!")
 ```
 
@@ -968,27 +968,27 @@ println("Twinkle, Twinkle Little Bat\n" +
 
 相反，我们可以使用三引号定义相同的字符串字面量：
 
-```kt
+```java
 println("""Twinkle, Twinkle Little Bat 
 ```
 
-```kt
+```java
            How I wonder what you're at!
 ```
 
-```kt
+```java
            Up above the world you fly,
 ```
 
-```kt
+```java
            Like a tea tray in the sky.
 ```
 
-```kt
+```java
            Twinkle, twinkle, little bat!
 ```
 
-```kt
+```java
            How I wonder what you're at!""")
 ```
 
@@ -996,25 +996,25 @@ println("""Twinkle, Twinkle Little Bat
 
 为了正确打印结果，我们需要添加一个`trimIndent()`调用：
 
-```kt
+```java
 println("""
 ```
 
-```kt
+```java
     Twinkle, Twinkle Little Bat
 ```
 
-```kt
+```java
     How I wonder what you're at! 
 ```
 
-```kt
+```java
     """.trimIndent())
 ```
 
 多行字符串还有另一个好处——不需要在它们中转义引号。让我们看看以下示例：
 
-```kt
+```java
 println("From \" Alice's Adventures in Wonderland\" ")
 ```
 
@@ -1022,7 +1022,7 @@ println("From \" Alice's Adventures in Wonderland\" ")
 
 现在，让我们使用多行语法查看相同的文本：
 
-```kt
+```java
 println(""" From " Alice's Adventures in Wonderland" """)
 ```
 
@@ -1036,65 +1036,65 @@ println(""" From " Alice's Adventures in Wonderland" """)
 
 在 Kotlin 中，最有助于理解循环类型的是`for`-`each`循环。这个循环可以遍历字符串、数据结构和基本上所有具有迭代器的对象。我们将在*第四章*“熟悉行为模式”中了解更多关于迭代器的知识，所以现在让我们通过一个简单的字符串来演示它们的使用：
 
-```kt
+```java
 for (c in "Word") {
 ```
 
-```kt
+```java
     println(c)
 ```
 
-```kt
+```java
 }
 ```
 
 这将打印以下内容：
 
-```kt
+```java
 >W
 ```
 
-```kt
+```java
 >o
 ```
 
-```kt
+```java
 >r
 ```
 
-```kt
+```java
 >d
 ```
 
 `for`-`each`循环适用于我们之前讨论的所有数据结构类型，即列表、集合和映射。让我们以列表为例：
 
-```kt
+```java
 val jokers = listOf("Heath Ledger", "Joaquin Phoenix",   "Jack Nicholson")
 ```
 
-```kt
+```java
 for (j in jokers) {
 ```
 
-```kt
+```java
     println(j)
 ```
 
-```kt
+```java
 }
 ```
 
 我们将得到以下输出：
 
-```kt
+```java
 > Heath Ledger
 ```
 
-```kt
+```java
 > Joaquin Phoenix
 ```
 
-```kt
+```java
 > Jack Nicholson
 ```
 
@@ -1106,15 +1106,15 @@ for (j in jokers) {
 
 为了更好地理解它，让我们看看一个打印所有单个数字的`for`循环：
 
-```kt
+```java
 for (i in 0..9) {
 ```
 
-```kt
+```java
     println(i)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1122,43 +1122,43 @@ for (i in 0..9) {
 
 如果你运行这段代码，你会注意到这个循环是包含的。它打印了所有的数字，包括`9`。这类似于以下 Java 代码：
 
-```kt
+```java
 for (int i = 0; i <= 9; i++) 
 ```
 
 如果你想要你的范围是排他的，不包括最后一个元素，你可以使用`until`函数：
 
-```kt
+```java
 for (i in 0 until 10) {
 ```
 
-```kt
+```java
     println("for until $i") 
 ```
 
-```kt
+```java
 // Same output as the previous 
 ```
 
-```kt
+```java
         loop
 ```
 
-```kt
+```java
 }
 ```
 
 如果你想要以相反的顺序打印数字，可以使用`downTo`函数：
 
-```kt
+```java
 for (i in 9 downTo 0) {
 ```
 
-```kt
+```java
     println("for downTo $i") // 9, 8, 7...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1168,45 +1168,45 @@ for (i in 9 downTo 0) {
 
 与其他一些语言相比，`while`循环的功能没有变化，所以我们非常简短地介绍它们：
 
-```kt
+```java
 var x = 0
 ```
 
-```kt
+```java
 while (x < 10) {
 ```
 
-```kt
+```java
     x++
 ```
 
-```kt
+```java
     println("while $x")
 ```
 
-```kt
+```java
 }
 ```
 
 这将打印从`1`到`10`的数字。请注意，我们被迫将`x`定义为`var`。较少使用的`do while`循环也存在于该语言中：
 
-```kt
+```java
 var x = 5 
 ```
 
-```kt
+```java
 do {
 ```
 
-```kt
+```java
     println("do while $x")
 ```
 
-```kt
+```java
     x--
 ```
 
-```kt
+```java
 } while (x > 0)
 ```
 
@@ -1224,17 +1224,17 @@ do {
 
 让我们想象我们正在开发一个视频游戏。我们可以定义一个类来表示玩家，如下所示：
 
-```kt
+```java
 class Player {
 ```
 
-```kt
+```java
 }
 ```
 
 类的实例化看起来就像这样：
 
-```kt
+```java
 val player = Player()
 ```
 
@@ -1242,7 +1242,7 @@ val player = Player()
 
 如果类没有主体，就像这个简单的例子一样，我们可以省略大括号：
 
-```kt
+```java
 class Player // Totally fine
 ```
 
@@ -1252,19 +1252,19 @@ class Player // Totally fine
 
 如果玩家在创建时能够指定他们的姓名将是有用的。为了做到这一点，让我们给我们的类添加一个主要构造函数：
 
-```kt
+```java
 class Player(name: String) 
 ```
 
 现在，这个声明将不再有效：
 
-```kt
+```java
 val player = Player()
 ```
 
 此外，我们还需要为每个新实例化的玩家提供一个名称：
 
-```kt
+```java
 val player = Player("Roland")
 ```
 
@@ -1274,39 +1274,39 @@ val player = Player("Roland")
 
 在 Java 中，我们习惯于 getter 和 setter 的概念。如果我们用 Java 习惯用法在 Kotlin 中编写表示游戏玩家的类，它可能看起来像这样：
 
-```kt
+```java
 class Player(name: String) {
 ```
 
-```kt
+```java
     private var name: String = name
 ```
 
-```kt
+```java
     fun getName(): String {
 ```
 
-```kt
+```java
         return name
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     fun setName(name: String) {
 ```
 
-```kt
+```java
         this.name = name;
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1316,15 +1316,15 @@ class Player(name: String) {
 
 *那么，我们为什么不这样写我们的类呢？*
 
-```kt
+```java
 class Player {
 ```
 
-```kt
+```java
     var name: String = ""
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1336,7 +1336,7 @@ class Player {
 
 Kotlin 属性为所有这些问题提供了一个解决方案。让我们看看以下类定义：
 
-```kt
+```java
 class Player(val name: String)
 ```
 
@@ -1346,37 +1346,37 @@ class Player(val name: String)
 
 *这是怎么可能的？* 在幕后，Kotlin 将为我们的便利生成具有相同名称的成员和获取器。我们可以在构造函数中设置属性值，然后使用其名称访问它：
 
-```kt
+```java
 val player = Player("Alex")
 ```
 
-```kt
+```java
 println(player.name)
 ```
 
 尝试更改我们的`Player`的名称将导致错误：
 
-```kt
+```java
 player.name = "Alexey" // value cannot be reassigned
 ```
 
 由于我们将此属性定义为值，因此它是只读的。要能够更改属性，我们需要将其定义为可变的。在构造函数参数前加上`var`会自动生成一个获取器和设置器：
 
-```kt
+```java
 class Player(val name: String, var score: Int)
 ```
 
 如果我们不想在构造时提供值的能力，我们可以将属性移动到类体内部：
 
-```kt
+```java
 class Player(val name: String) { 
 ```
 
-```kt
+```java
     var score: Int = 0
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1386,49 +1386,49 @@ class Player(val name: String) {
 
 尽管我们现在可以轻松地设置分数，但其价值可能无效。以下是一个例子：
 
-```kt
+```java
 player.score = -10
 ```
 
 如果我们想要有一个具有一些验证的可变属性，我们需要为它定义一个显式的设置器，使用`set`语法：
 
-```kt
+```java
 class Player(val name: String) { 
 ```
 
-```kt
+```java
     var score: Int = 0
 ```
 
-```kt
+```java
        set(value) {
 ```
 
-```kt
+```java
              field = if (value >= 0) {
 ```
 
-```kt
+```java
                  value
 ```
 
-```kt
+```java
              } else {
 ```
 
-```kt
+```java
                  0
 ```
 
-```kt
+```java
              }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1436,41 +1436,41 @@ class Player(val name: String) {
 
 来自 Java，你可能会倾向于在你的设置器中编写以下代码：
 
-```kt
+```java
 set(value) {
 ```
 
-```kt
+```java
     this.score = if (value >= 0) value else 0
 ```
 
-```kt
+```java
 }
 ```
 
 但是，在 Kotlin 中，这将创建一个无限递归。你必须记住 Kotlin 为可变属性生成设置器。因此，前面的代码将被翻译成类似以下的内容：
 
-```kt
+```java
 // This is a pseudocode, not real Kotlin code!
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 fun setValue(value: Int) {
 ```
 
-```kt
+```java
     setValue(value) // Infinite recursion!
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 ...
 ```
 
@@ -1478,31 +1478,31 @@ fun setValue(value: Int) {
 
 以类似的方式，我们可以声明一个自定义获取器：
 
-```kt
+```java
  class Player(name: String) {
 ```
 
-```kt
+```java
     val name = name
 ```
 
-```kt
+```java
         get() = field.toUpperCase()
 ```
 
-```kt
+```java
 }
 ```
 
 首先，我们将作为构造函数参数接收的值保存到具有相同名称的字段中。然后，我们定义一个自定义获取器，该获取器将转换此属性中的所有字符为大写：
 
-```kt
+```java
 println(player.name)
 ```
 
 我们将得到以下输出：
 
-```kt
+```java
 > ALEX
 ```
 
@@ -1514,41 +1514,41 @@ println(player.name)
 
 现在让我们定义一个用于掷骰子的接口：
 
-```kt
+```java
 interface DiceRoller {
 ```
 
-```kt
+```java
     fun rollDice(): Int
 ```
 
-```kt
+```java
 }
 ```
 
 要实现接口，一个类在冒号后指定其名称。在 Kotlin 中没有`implement`关键字。
 
-```kt
+```java
 import kotlin.random.*
 ```
 
-```kt
+```java
 class Player(...) : DiceRoller 
 ```
 
-```kt
+```java
 {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun rollDice() = Random.nextInt(0, 6)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1556,15 +1556,15 @@ class Player(...) : DiceRoller
 
 Kotlin 中的接口也支持默认函数。如果一个函数不依赖于任何状态，例如这个简单地掷出`0`到`5`之间随机数的函数，我们可以将其移动到接口中：
 
-```kt
+```java
 interface DiceRoller {
 ```
 
-```kt
+```java
     fun rollDice() = Random.nextInt(0, 6)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1574,35 +1574,35 @@ interface DiceRoller {
 
 让我们创建一个抽象类，使其能够移动我们的玩家在棋盘上，或者为了简化，只需存储新的坐标：
 
-```kt
+```java
 abstract class Moveable() {
 ```
 
-```kt
+```java
     private var x: Int = 0
 ```
 
-```kt
+```java
     private var y: Int = 0
 ```
 
-```kt
+```java
     fun move(x: Int, y: Int) {
 ```
 
-```kt
+```java
         this.x = x
 ```
 
-```kt
+```java
         this.y = y
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1618,15 +1618,15 @@ abstract class Moveable() {
 
 为了扩展一个抽象类，我们只需在它的名字后面加上一个冒号。在 Kotlin 中也没有`extends`关键字。
 
-```kt
+```java
 class ActivePlayer(name: String) : Moveable(), DiceRoller {
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1642,7 +1642,7 @@ class ActivePlayer(name: String) : Moveable(), DiceRoller {
 
 首先，让我们创建一个继承自`Player`的类：
 
-```kt
+```java
 class ConfusedPlayer(name: String ): ActivePlayer(name)
 ```
 
@@ -1652,45 +1652,45 @@ class ConfusedPlayer(name: String ): ActivePlayer(name)
 
 为了允许其他类从它们继承，我们需要将它们声明为`open`：
 
-```kt
+```java
 open class ActivePlayer (...) : Moveable(), DiceRoller {
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 }
 ```
 
 现在让我们尝试重写`move`方法：
 
-```kt
+```java
 class ConfusedPlayer(name : String): Player(name) {
 ```
 
-```kt
+```java
     // move() must be declared open
 ```
 
-```kt
+```java
     override fun move(x: Int, y: Int) {
 ```
 
-```kt
+```java
         this.x = y // must be declared protected
 ```
 
-```kt
+```java
         this.y = x // must be declared protected
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1700,35 +1700,35 @@ class ConfusedPlayer(name : String): Player(name) {
 
 让我们使用`protected`可见性修饰符使属性对子类可访问，并将函数标记为`open`以能够重写它：
 
-```kt
+```java
 abstract class Moveable() {
 ```
 
-```kt
+```java
 protected var x: Int = 0
 ```
 
-```kt
+```java
 protected var y: Int = 0
 ```
 
-```kt
+```java
 open fun move(x: Int, y: Int) {
 ```
 
-```kt
+```java
         this.x = x
 ```
 
-```kt
+```java
         this.y = y
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1740,11 +1740,11 @@ open fun move(x: Int, y: Int) {
 
 让我们看看以下示例：
 
-```kt
+```java
 data class User(val username: String, private val 
 ```
 
-```kt
+```java
   password: String)
 ```
 
@@ -1752,27 +1752,27 @@ data class User(val username: String, private val
 
 `data` 类的引入是 Kotlin 语言在减少样板代码方面最显著的改进之一。就像常规类一样，`data` 类可以有自己的函数：
 
-```kt
+```java
 data class User(val username: String, private val 
 ```
 
-```kt
+```java
   password: String) {
 ```
 
-```kt
+```java
     fun hidePassword() = "*".repeat(password.length)
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 val user = User("Alexey", "abcd1234")
 ```
 
-```kt
+```java
 println(user.hidePassword()) // ********
 ```
 
@@ -1782,7 +1782,7 @@ println(user.hidePassword()) // ********
 
 从 Kotlin 中学习，Java 15 引入了 `record` 的概念：
 
-```kt
+```java
 public record User(String username, String password) {}
 ```
 
@@ -1796,11 +1796,11 @@ public record User(String username, String password) {}
 
 总结来说，`data` 类在许多方面优于记录。但两者都是各自语言的优秀特性。由于 Kotlin 是以互操作性为设计理念的，你还可以轻松地将 `data` 类标记为记录，以便从 Java 访问：
 
-```kt
+```java
 @JvmRecord
 ```
 
-```kt
+```java
 data class User(val username: String, val password: String)
 ```
 
@@ -1810,15 +1810,15 @@ data class User(val username: String, val password: String)
 
 实现这一点的其中一种方法是为我们声明一个包装字符串的类：
 
-```kt
+```java
 data class Password(val password: String) {
 ```
 
-```kt
+```java
     fun hidePassword() = "*".repeat(password.length)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1828,7 +1828,7 @@ data class Password(val password: String) {
 
 要扩展一个类而不从它继承，我们可以在函数名前加上我们想要扩展的类的名称：
 
-```kt
+```java
 fun String.hidePassword() = "*".repeat(this.length)
 ```
 
@@ -1838,17 +1838,17 @@ fun String.hidePassword() = "*".repeat(this.length)
 
 现在，让我们声明一个常规字符串并尝试在其上调用这个新函数：
 
-```kt
+```java
 val password: String = "secretpassword"
 ```
 
-```kt
+```java
 println("Password: ${password.hidePassword()}")
 ```
 
 这将打印以下内容：
 
-```kt
+```java
 > Password: **************
 ```
 
@@ -1856,19 +1856,19 @@ println("Password: ${password.hidePassword()}")
 
 这是 Kotlin 编译器的一个特性，是众多特性之一。这个扩展函数将被编译成以下代码：
 
-```kt
+```java
 // This is not real Kotlin
 ```
 
-```kt
+```java
 fun hidePassword(this: String) {
 ```
 
-```kt
+```java
     "*".repeat(this.length)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1876,11 +1876,11 @@ fun hidePassword(this: String) {
 
 打印加密密码的代码将被相应地调整：
 
-```kt
+```java
 val password: String = "secretpassword"
 ```
 
-```kt
+```java
 println("Password: ${hidePassword(password)}")
 ```
 

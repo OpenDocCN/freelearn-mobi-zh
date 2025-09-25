@@ -30,13 +30,13 @@ ARCore 使用称为**视觉惯性里程计**（**VIO**）的算法来实现运�
 
 1.  定位以下代码行：
 
-```kt
+```java
 camera.updateProjectionMatrix();
 ```
 
 1.  在高亮显示的行之后添加以下代码行：
 
-```kt
+```java
 var pos = camera.position;
 var rot = camera.rotation;
 console.log("Device position (X:" + pos.x + ",Y:" + pos.y + ",Z:" + pos.z + ")");
@@ -49,7 +49,7 @@ console.log("Device orientation (pitch:" + rot._x + ",yaw:" + rot._y + ",roll:" 
 
 1.  在你的`android`文件夹中通过输入以下命令启动`http-server`：
 
-```kt
+```java
 cd /android
 http-server -d -p 9999
 ```
@@ -74,7 +74,7 @@ http-server -d -p 9999
 
 摄像机的主要任务是投影或展平 3D 虚拟对象到 2D 图像中，然后该图像在设备上显示。如果你在`spawn-at-surface.html`文件的中间附近滚动，你会看到以下代码，它为场景创建摄像机：
 
-```kt
+```java
 camera = new THREE.ARPerspectiveCamera(
     vrDisplay,
     60,
@@ -106,7 +106,7 @@ camera = new THREE.ARPerspectiveCamera(
 
 1.  定位到 JavaScript 的开始部分，并在变量声明中添加以下行：
 
-```kt
+```java
 var cube***;** * //after this line
 var audioContext;
 var resonanceAudioScene;
@@ -117,7 +117,7 @@ var audio;
 
 1.  现在，向下滚动到`update`函数之前，开始一个新的函数，称为`initAudio`，如下所示：
 
-```kt
+```java
 function initAudio(){
 
 }
@@ -127,20 +127,20 @@ function update(){ //before this function
 
 1.  接下来，我们需要初始化一个`AudioContext`，它代表设备的立体声音。在`initAudio`函数中，输入以下内容：
 
-```kt
+```java
 audioContext = new AudioContext();
 ```
 
 1.  然后，我们在`Resonance`中设置音频场景，并通过添加以下内容将双耳音频输出到设备的立体声音频输出：
 
-```kt
+```java
 resonanceAudioScene = new ResonanceAudio(audioContext); 
 resonanceAudioScene.output.connect(audioContext.destination);
 ```
 
 1.  之后，我们通过添加以下代码为用户周围的虚拟空间定义一些属性：
 
-```kt
+```java
 let roomDimensions = {   width: 10, height: 100, depth: 10 };
 let roomMaterials = {
    // Room wall materials
@@ -158,14 +158,14 @@ let roomMaterials = {
 
 1.  现在，我们通过写入以下内容将`room`添加到音频场景中：
 
-```kt
+```java
 resonanceAudioScene.setRoomProperties(roomDimensions,       
                                       roomMaterials);
 ```
 
 1.  现在，`room`已经完成，让我们通过输入以下内容添加音频源：
 
-```kt
+```java
 audioElement = document.createElement('audio');
 audioElement.src = 'cube-sound.wav'; 
 
@@ -178,7 +178,7 @@ audioElementSource.connect(audio.input);
 
 1.  最后，当我们生成盒子并播放声音时，我们需要添加我们的`audio`对象。在`onClick`函数中`THREE.ARUtils.placeObjectAtHit`函数调用之后输入给定的代码：
 
-```kt
+```java
 audio.setPosition(cube.position.x,cube.position.y,cube.position.z);
 
 audioElement.play();
@@ -202,14 +202,14 @@ audioElement.play();
 
 如果你省略了前面的部分，你需要回去完成它。本节中使用的代码需要它*。
 
-```kt
+```java
 //console.log("Device position (X:" + pos.x + ",Y:" + pos.y + ",Z:" + pos.z + ")");
 //console.log("Device orientation (pitch:" + rot._x + ",yaw:" + rot._y + ",roll:" + rot._z + ")");
 ```
 
 1.  添加我们新的代码行：
 
-```kt
+```java
 audio.setPosition(pos.x-cube.position.x,pos.y-cube.position.y,pos.z-cube.position.z);
 ```
 
@@ -265,7 +265,7 @@ Firebase 是一个使用简单且跨平台的优秀应用工具和存储服务�
 
 1.  点击 RULES 标签页。默认的安全规则是用 JSON 定义的。我们想要更改它，以便我们的数据库具有公开访问权限。将 JSON 替换为以下内容：
 
-```kt
+```java
 {  "rules": {    ".read": true,    ".write": true  }}
 ```
 
@@ -285,13 +285,13 @@ Firebase 是一个使用简单且跨平台的优秀应用工具和存储服务�
 
 1.  滚动到我们之前添加的 Firebase 脚本。在最后一行之后添加以下代码：
 
-```kt
+```java
 var database = firebase.database();
 ```
 
 1.  上一行代码创建了对数据库的引用。现在，让我们使用以下代码设置一些数据：
 
-```kt
+```java
 firebase.database().ref('pose/' + 1).set({x: 12,y: 1,z: 0});
 ```
 
@@ -319,13 +319,13 @@ firebase.database().ref('pose/' + 1).set({x: 12,y: 1,z: 0});
 
 1.  找到我们上次练习中添加的最后一行代码并将其删除：
 
-```kt
+```java
 firebase.database().ref('pose/' + 1).set({x: 12,y: 1,z : 0}); //delete me
 ```
 
 1.  将该行替换为以下代码：
 
-```kt
+```java
 var idx = 1;
 setInterval(function(){
  idx = idx + 1;
@@ -351,7 +351,7 @@ setInterval(function(){
 
 1.  在识别的行之后输入以下代码：
 
-```kt
+```java
 firebase.database().ref('pose/' + ... //after this lineif(lastPos){   
   var material = new THREE.LineBasicMaterial({ color: 0x0000ff   });
   var geometry = new THREE.Geometry();

@@ -28,7 +28,7 @@
 
 还很重要的一点是，默认情况下，平台主题会将 App Bar（由`ActionBar`类呈现）放入一个`Activity`中为你处理；使用`Toolbar`类和`NoActionBar`主题在`Activity`中创建自己的 App Bar 也是常见的。实际上，在第二章，*设计表单屏幕*中，当你创建`CaptureClaimActivity`时，Android Studio 模板正是这样做的：
 
-```kt
+```java
 <activity
     android:name=".CaptureClaimActivity"
     android:label="@string/title_activity_capture_claim"
@@ -37,7 +37,7 @@
 
 在`CaptureClaimActivity`类中，在`onCreate`方法顶部附近，你可以找到以下代码片段：
 
-```kt
+```java
 Toolbar toolbar = findViewById(R.id.toolbar);
 setSupportActionBar(toolbar);
 ```
@@ -68,7 +68,7 @@ Android 有一系列布局，旨在协同工作以在用户滚动时实现动态
 
 1.  找到`OverviewActivity`条目并添加一个主题属性，告诉系统不要提供系统`ActionBar`，因为你会添加自己的：
 
-```kt
+```java
 <activity
     android:name=".OverviewActivity"
  android:theme="@style/AppTheme.NoActionBar"
@@ -84,7 +84,7 @@ Android 有一系列布局，旨在协同工作以在用户滚动时实现动态
 
 1.  使用所有标准命名空间和上下文创建`CoordinatorLayout`根元素。请注意，这次你需要告诉系统这个小部件将适应根窗口，而不是作为*内容*：
 
-```kt
+```java
 <android.support.design.widget.CoordinatorLayout 
 
     android:layout_width="match_parent"
@@ -97,7 +97,7 @@ android:id="@+id/scaffolding"
 
 1.  现在，在`CoordinatorLayout`中创建`AppBarLayout`元素；再次提醒系统，`AppBarLayout`应适应系统窗口，不应被视为普通*内容*小部件：
 
-```kt
+```java
 <android.support.design.widget.AppBarLayout
     android:id="@+id/app_bar"
     android:layout_width="match_parent"
@@ -109,13 +109,13 @@ android:fitsSystemWindows="true"
 
 1.  使用`layout_height`的代码辅助功能创建一个名为`app_bar_height`的新维度资源，并分配一个值为`180dp`：
 
-```kt
+```java
 <dimen name="app_bar_height">180dp</dimen>
 ```
 
 1.  在`AppBarLayout`内部，你需要声明`CollapsingToolbarLayout`。这将处理工具栏和其他小部件的折叠和展开，当用户滚动时。你使用`layout_scrollFlags`来告诉它如何折叠和展开，但重要的是要注意，实际上是`AppBarLayout`负责这些操作，所以`AppBarLayout`的任何子项都可以使用这些标志。在这种情况下，我们将告诉它，当用户滚动查看项目列表时进行折叠，但不要完全退出（消失），当用户开始向上滚动列表时立即重新进入：
 
-```kt
+```java
 <android.support.design.widget.CollapsingToolbarLayout
     android:id="@+id/toolbar_layout"
     android:layout_width="match_parent"
@@ -132,7 +132,7 @@ android:fitsSystemWindows="true"
 
 1.  在`CollapsingToolbarLayout`内部，你需要声明一个`Toolbar`小部件。这个小部件将取代系统`ActionBar`的位置。我们使用`layout_collapseMode`来告诉`CollapsingToolbarLayout`，一旦折叠，就将`Toolbar`固定在屏幕顶部（而不是让它完全消失）：
 
-```kt
+```java
 <android.support.v7.widget.Toolbar
     android:id="@+id/toolbar"
     android:layout_width="match_parent"
@@ -143,7 +143,7 @@ android:fitsSystemWindows="true"
 
 1.  在`Toolbar`小部件之后，你可以声明`AllowanceOverviewFragment`；它将使用`parallax`折叠模式，并在用户滚动查看索赔项目列表时消失：
 
-```kt
+```java
 <fragment
     android:id="@+id/overview"
     class="com.packtpub.claim.ui.AllowanceOverviewFragment"
@@ -157,7 +157,7 @@ android:fitsSystemWindows="true"
 
 1.  这就完成了你的新`AppBarLayout`结构；现在你需要在`AppBarLayout`之后添加`RecyclerView`，并告诉`CoordinatorLayout`使用`layout_behaviour`属性，它正在滚动内容。这将告诉`CoordinatorLayout`，当`RecyclerView`滚动时，`AppBarLayout`应该对滚动做出反应：
 
-```kt
+```java
 <android.support.v7.widget.RecyclerView
     android:id="@+id/claim_items"
     android:layout_width="match_parent"
@@ -175,7 +175,7 @@ android:fitsSystemWindows="true"
 
 1.  在你的`CoordinatorLayout`中的最后一个元素应该是`NewClaimItemFloatingActionButtonFragment`，由于`FloatingActionButton`类的编写方式，它将在`CoordinatorLayout`中自动获得特殊行为：
 
-```kt
+```java
 <fragment
     android:id="@+id/new_claim_item"
     class="com.packtpub.claim.ui.NewClaimItemFloatingActionButtonFragment"
@@ -187,14 +187,14 @@ android:fitsSystemWindows="true"
 
 `FloatingActionButton`类声明了一个默认的`Behaviour`类，当任何子项被添加到`CoordinatorLayout`中时，`CoordinatorLayout`会查找这个类。这定义了`FloatingActionButton`在屏幕上的位置，以及它应该在何时消失、重新出现，甚至相对于可能出现在屏幕底部的面板（如 snackbars）移动。声明是通过一个公开可访问的注解来完成的：
 
-```kt
+```java
 @CoordinatorLayout.DefaultBehavior(FloatingActionButton.Behavior.class)
 public class FloatingActionButton extends VisibilityAwareImageButton {
 ```
 
 由于您的应用程序的结构，`OverviewActivity` 类不需要修改即可使新布局工作。它仍然会自动用 `ClaimItem` 对象填充 `RecyclerView`，并且片段将通过数据库进行通信。然而，使新的 `Toolbar` 小部件充当 `OverviewActivity` 的 `ActionBar` 是有用的；您可以通过将 `onCreate` 方法更改为调用 `setSupportActionBar` 来实现这一点：
 
-```kt
+```java
 protected void onCreate(final Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_overview);
@@ -216,14 +216,14 @@ protected void onCreate(final Bundle savedInstanceState) {
 
 1.  您的新类将需要一个简单的方法来访问 `DataBoundViewHolder` 中的项目，但 `ViewDataBinding` 并没有提供 `getVariable` 方法，因此您需要将其保存在类字段中并提供一个获取方法：
 
-```kt
+```java
 private I item;
 public I getItem() { return item; }
 ```
 
 1.  您还需要修改 `setItem` 方法以捕获此字段：
 
-```kt
+```java
 public void setItem(final I item) {
     this.item = item;
     binding.setVariable(BR.item, item);
@@ -234,7 +234,7 @@ public void setItem(final I item) {
 
 1.  在 `OverviewActivity` 类的底部，您需要声明一个新的 `ActionCommand` 类，该类将封装删除操作和撤销操作。与大多数其他 `ActionCommand` 类不同，这个类是不可重用的，并且不接受任何参数：
 
-```kt
+```java
 class DeleteClaimItemCommand
         extends ActionCommand<Void, Void>
         implements View.OnClickListener {
@@ -243,7 +243,7 @@ class DeleteClaimItemCommand
 
 1.  新的 `DeleteClaimItemCommand` 类需要一个对 `ClaimDatabase` 的引用，并且还将有一个 `ClaimItem` 字段，它将删除并可选地恢复：
 
-```kt
+```java
 private final ClaimDatabase database = ClaimApplication.getClaimDatabase();
 private final ClaimItem item;
 public DeleteClaimItemCommand(final ClaimItem item) {
@@ -253,7 +253,7 @@ public DeleteClaimItemCommand(final ClaimItem item) {
 
 1.  `onBackground` 的实现将从数据库中删除 `ClaimItem` 对象，但 `DeleteClaimItemCommand` 会保留对内存中实现的引用，如果用户决定恢复它：
 
-```kt
+```java
 public Void onBackground(final Void noArgs) {
     database.claimItemDao().delete(item);
     return null;
@@ -264,7 +264,7 @@ public Void onBackground(final Void noArgs) {
 
 1.  `onForeground` 的实现需要显示一个 `Snackbar` 通知，告诉用户项目已被删除；为此，你需要一个可本地化的消息。`Context` 类提供了一个方便的 `getString` 方法，它将从应用程序资源生成格式化的字符串：
 
-```kt
+```java
 final String message = getString(
         R.string.msg_claim_item_deleted,
         item.getDescription());
@@ -272,7 +272,7 @@ final String message = getString(
 
 1.  使用代码辅助功能创建一个名为 `msg_claim_item_deleted` 的新字符串资源：
 
-```kt
+```java
 <string name="msg_claim_item_deleted">%s Deleted</string>
 ```
 
@@ -280,13 +280,13 @@ final String message = getString(
 
 1.  在 `onForeground` 方法中，你需要获取 `CoordinatorLayout` 的引用作为 `Snackbar` 的基础：
 
-```kt
+```java
 final View scaffolding = findViewById(R.id.scaffolding);
 ```
 
 1.  然后，创建 `Snackbar` 对象，指定其撤销动作文本，并使用 `DeleteClaimItemCommand` 作为动作处理程序（`OnClickListener`）：
 
-```kt
+```java
 Snackbar.make(scaffolding, message, Snackbar.LENGTH_LONG)
         .setAction(R.string.undo, this)
         .show();
@@ -294,13 +294,13 @@ Snackbar.make(scaffolding, message, Snackbar.LENGTH_LONG)
 
 1.  使用代码辅助功能在 `R.string.undo` 引用上创建一个新的字符串资源，用于 `undo` 动作的文本：
 
-```kt
+```java
 <string name="undo">Undo</string>
 ```
 
 1.  如果用户点击撤销动作，将调用 `DeleteClaimItemCommands` 和 `onClick` 方法。然后，它可以使用其缓存的已删除 `ClaimItem` 引用将其恢复到数据库中：
 
-```kt
+```java
 public void onClick(final View view) {
     AsyncTask.SERIAL_EXECUTOR.execute(database.createClaimItemTask(item));
 }
@@ -308,14 +308,14 @@ public void onClick(final View view) {
 
 1.  作为 `OverviewActivity` 的另一个内部类，你需要一个类来提供对 *滑动删除* 行为的动作定义和处理。这个新类将扩展 `ItemTouchHelper` 类中的 `SimpleCallback` 类，该类提供了对移动手势识别的处理：
 
-```kt
+```java
 private class SwipeToDeleteCallback extends ItemTouchHelper.SimpleCallback {
 }
 ```
 
 1.  `SimpleCallback` 构造函数接受两套以 `int` 值形式表示的“标志”。这些标志实际上是一系列可以二进制“或”操作（使用 `|` 操作符）的数字。这些定义了允许和管理不同手势。其中第一个是用于不同类型的“移动”手势的标志，这些手势可以用来重新排列 `RecyclerView` 中的项目（将此设置为零表示不应识别任何移动手势）。第二个标志的参数是用于“滑动”手势的，这是我们在这里感兴趣的内容：
 
-```kt
+```java
 SwipeToDeleteCallback() {
     super(0, ItemTouchHelper.RIGHT);
 }
@@ -323,7 +323,7 @@ SwipeToDeleteCallback() {
 
 1.  `SimpleCallback`类要求你声明用于移动和滑动的处理方法，即使该类不会处理移动手势。你需要声明`onMove`，但该类可以简单地返回`false`作为其实现：
 
-```kt
+```java
 public boolean onMove(
         final RecyclerView recyclerView,
         final RecyclerView.ViewHolder viewHolder,
@@ -335,7 +335,7 @@ public boolean onMove(
 
 1.  接下来，你可以定义`onSwipe`方法的实现，这将创建一个`DeleteClaimItemCommand`并执行它：
 
-```kt
+```java
 public void onSwiped(
         final RecyclerView.ViewHolder viewHolder,
         final int direction) {
@@ -348,7 +348,7 @@ public void onSwiped(
 
 1.  现在，要将`SwipeToDeleteCallback`附加到`RecyclerView`上，你需要使用`ItemTouchHelper`类将其包装，并在`onCreate`方法的底部将其附加到你的`RecyclerView`实例上：
 
-```kt
+```java
 final RecyclerView claimItems = findViewById(R.id.claim_items);
     claimItems.setAdapter(new ClaimItemAdapter(
             this, this,
@@ -374,14 +374,14 @@ Android 小部件库中的伟大功能之一是`View`类定义了海拔的概念
 
 1.  如果用户在拾起项目后“放下”项目以删除它，则该类需要能够重置海拔。为此，`SwipeToDeleteCallback`类需要一个具有默认卡片海拔的字段：
 
-```kt
+```java
 final float defaultElevation = 
         getResources().getDimensionPixelSize(R.dimen.cardview_default_elevation);
 ```
 
 1.  每次在`RecyclerView`的子项被拾起后绘制，`ItemTouchHelper`允许你覆盖绘制行为。在你的情况下，你想要根据用户拖动的距离调整卡片相对于右侧的海拔。为了在旧版本的 Android 上工作，此代码使用`ViewCompat`类来更改海拔：
 
-```kt
+```java
 public void onChildDraw(
         final Canvas c,
         final RecyclerView recyclerView,
@@ -406,7 +406,7 @@ public void onChildDraw(
 
 1.  一旦用户释放卡片，我们需要通过将其重置为默认值来清除海拔值；当用户放下一个项目时，`ItemTouchHelper`将调用`clearView`回调：
 
-```kt
+```java
 public void clearView(
         final RecyclerView recyclerView,
         final RecyclerView.ViewHolder viewHolder) {
@@ -435,7 +435,7 @@ public void clearView(
 
 1.  在依赖项列表中，添加对 grid-layout 模块的依赖项：
 
-```kt
+```java
 implementation 'com.android.support:appcompat-v7:26.0.0'
 implementation 'com.android.support:gridlayout-v7:26.0.0'
 ```
@@ -456,7 +456,7 @@ implementation 'com.android.support:gridlayout-v7:26.0.0'
 
 1.  由于您正在使用`GridLayout`的支持库实现，XML 属性中的许多将位于`app`命名空间而不是平台（`android`）命名空间中。您需要将`app`命名空间添加到`GridLayout`声明中：
 
-```kt
+```java
 <android.support.v7.widget.GridLayout
 
     android:layout_width="match_parent"
@@ -466,7 +466,7 @@ implementation 'com.android.support:gridlayout-v7:26.0.0'
 
 **9.  `GridLayout`默认设置了许多布局属性，并默认假设每个子元素都在单元格中，跟随其前面的单元格（从左上角的单元格开始）。它允许您指定`columnWeight`和`rowWeight`属性来定义每个单元格应占用多少可用空间。声明一个`TextInputLayout`来占用 70%的可用空间：**
 
-```kt
+```java
 <android.support.design.widget.TextInputLayout app:layout_columnWeight="0.7">
     <android.support.design.widget.TextInputEditText
         android:id="@+id/description"
@@ -480,7 +480,7 @@ implementation 'com.android.support:gridlayout-v7:26.0.0'
 
 1.  接下来，声明`TextInputLayout`的数量；这将仅占用单个单元格，但我们希望它占用剩余的 30%水平空间：
 
-```kt
+```java
 <android.support.design.widget.TextInputLayout app:layout_columnWeight="0.3">
     <android.support.design.widget.TextInputEditText
         android:id="@+id/amount"
@@ -492,7 +492,7 @@ implementation 'com.android.support:gridlayout-v7:26.0.0'
 
 1.  现在，我们想要声明一个`DatePickerLayout`供用户选择日期，但我们需要告诉`GridLayout`将其放在下一行。您可以使用`row`和`column`属性来完成此操作。此小部件还需要占用`GridLayout`的整个宽度，这意味着它需要占用两个列，这是通过使用`columnSpan`属性来完成的：
 
-```kt
+```java
 <com.packtput.claim.widget.DatePickerLayout
     android:id="@+id/date"
     app:layout_row="1"
@@ -525,13 +525,13 @@ implementation 'com.android.support:gridlayout-v7:26.0.0'
 
 1.  在新的`AttachmentListAdapter`类中，声明一个用于向用户呈现的`Attachment`对象`List`：
 
-```kt
+```java
 private List<Attachment> attachments = Collections.emptyList();
 ```
 
 1.  创建一个构造函数来观察`LiveData`并分配附件的`List`，并在事情发生变化时通知`StackView`：
 
-```kt
+```java
 public AttachmentListAdapter(
         final LifecycleOwner lifecycleOwner,
         final LiveData<List<Attachment>> attachments) {
@@ -551,20 +551,20 @@ public AttachmentListAdapter(
 
 1.  与`RecyclerView.Adapter`实现类似，`BaseAdapter`需要一个方法来访问它预期呈现的项目数量：
 
-```kt
+```java
 public int getCount() { return attachments.size(); }
 ```
 
 1.  然而，与`RecyclerView.Adapter`实现不同，`BaseAdapter`预期直接暴露底层数据。它还必须暴露每个数据元素的唯一 ID：
 
-```kt
+```java
 public Object getItem(final int i) { return attachments.get(i); }
 public long getItemId(final int i) { return attachments.get(i).id; }
 ```
 
 1.  此外，与`RecyclerView.Adapter`不同，创建和重用现有视图项以及将数据绑定到它们的方法只有一个。在此方法中，第二个参数可以是`null`，也可以是一个期望被回收的现有视图：
 
-```kt
+```java
 public View getView(
         final int i,
         final View view,
@@ -583,7 +583,7 @@ public View getView(
 
 1.  要从布局 XML 文件中使用`StackView`，你只需像声明`RecyclerView`或`ViewPager`一样声明`StackView`：
 
-```kt
+```java
 <StackView
     android:id="@+id/attachments"
     android:layout_width="match_parent"
@@ -592,7 +592,7 @@ public View getView(
 
 1.  然后，从封装的 `Activity` 或 `Fragment` 中，您需要设置其 `Adapter`。与 `RecyclerView` 类似，`Adapter` 也可以从数据绑定布局中指定。以下是在 `Activity` 中的代码示例：
 
-```kt
+```java
 final StackView attachments = findViewById(R.id.attachments);
 attachments.setAdapter(new AttachmentListAdapter(
         this,

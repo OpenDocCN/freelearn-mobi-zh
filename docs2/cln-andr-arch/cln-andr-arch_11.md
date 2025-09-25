@@ -46,7 +46,7 @@
 
 组件之间关系的有趣方面是`Presenter`和`View`之间的双向关系。`Presenter`将更新`View`的相关数据，但`View`也会在必要时调用`Presenter`以进行用户交互。由于这两个组件之间的关系，需要定义一个契约，如下所示：
 
-```kt
+```java
 interface Presenter {
     fun loadUsers()
     fun validateInput(text: String)
@@ -59,7 +59,7 @@ interface View {
 
 在这里，我们有一个`View`接口和一个`Presenter`接口。`Presenter`的实现可能看起来像这样：
 
-```kt
+```java
 class PresenterImpl(
     private val view: View,
     private val getUsersUseCase: GetUsersUseCase
@@ -83,7 +83,7 @@ class PresenterImpl(
 
 在这里，`PresenterImpl`类依赖于`View`类以及一个`GetUsersUseCase`对象，该对象将返回一个包含用户列表的`Flow`对象。当`Presenter`接收到用户列表时，它将调用`View`中的`showUsers`方法。当调用`validateInput`方法时，`Presenter`将检查文本是否为空，并使用错误信息调用`View`中的`showInputError`方法。`View`的实现可能如下所示：
 
-```kt
+```java
 class MainActivity : ComponentActivity(), View {
     @Inject
     private lateinit var presenter: Presenter
@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity(), View {
 
 因为演示者最终将执行后台操作，我们面临造成 `Context` 泄漏的风险。这意味着我们需要将 `Activity` 的生命周期考虑进 MVP 协议中。为了实现这一点，我们将在 `Presenter` 中定义一个 `close` 方法：
 
-```kt
+```java
 interface Presenter {
     …
     fun close()
@@ -124,7 +124,7 @@ interface Presenter {
 
 在前面的代码片段中，我们添加了 `close` 方法，该方法将在 `Activity` 的 `onDestroy` 方法中被调用，如下所示：
 
-```kt
+```java
 override fun onDestroy() {
         presenter.close()
         super.onDestroy()
@@ -133,7 +133,7 @@ override fun onDestroy() {
 
 `close` 方法的实现必须清理所有可能引起泄漏的资源：
 
-```kt
+```java
 class PresenterImpl(
     private val view: View,
     private val getUsersUseCase: GetUsersUseCase
@@ -166,7 +166,7 @@ MVVM 代表了一种对 Humble Object 模式的不同方法，它试图将逻辑
 
 从`LiveData`的角度来看（它充当视图可以订阅的可观察对象）。一个`ViewModel`类的示例可能如下所示：
 
-```kt
+```java
 class MyViewModel(
     private val getUsersUseCase: GetUsersUserUseCase
 ) : ViewModel() {
@@ -227,7 +227,7 @@ class MyViewModel(
 
 1.  确保在顶级`build.gradle`文件中设置了以下依赖项：
 
-    ```kt
+    ```java
     buildscript {
         …
         dependencies {
@@ -240,7 +240,7 @@ class MyViewModel(
 
 1.  在同一文件中，将持久化库添加到库映射中：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             …
@@ -277,7 +277,7 @@ class MyViewModel(
 
 1.  在`presentation-post`模块的`build.gradle`文件中，确保存在以下插件：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.library'
         id 'kotlin-android'
@@ -288,7 +288,7 @@ class MyViewModel(
 
 1.  在同一文件中，将配置更改为顶级`build.gradle`文件中定义的配置：
 
-    ```kt
+    ```java
     android {
         compileSdk defaultCompileSdkVersion
         defaultConfig {
@@ -319,7 +319,7 @@ class MyViewModel(
 
 1.  在同一文件中，添加网络库和领域模块的依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation(project(path: ":domain"))
         implementation coroutines.coroutinesAndroid
@@ -341,7 +341,7 @@ class MyViewModel(
 
 1.  在`list`包中创建`UiState`类：
 
-    ```kt
+    ```java
     sealed class UiState<T : Any> {
         object Loading : UiState<Nothing>()
         data class Error<T : Any>(val errorMessage: 
@@ -355,7 +355,7 @@ class MyViewModel(
 
 1.  在`PostListModels`文件中，创建`PostListItemModel`类：
 
-    ```kt
+    ```java
     data class PostListItemModel(
         val id: Long,
         val userId: Long,
@@ -366,7 +366,7 @@ class MyViewModel(
 
 1.  在同一文件中，创建`PostListModel`类：
 
-    ```kt
+    ```java
     data class PostListModel(
         val headerText: String = "",
         val items: List<PostListItemModel> = listOf()
@@ -381,7 +381,7 @@ class MyViewModel(
 
 1.  在`strings.xml`文件中，添加以下字符串：
 
-    ```kt
+    ```java
     <?xml version="1.0" encoding="utf-8"?>
     <resources>
         <string name="total_click_count">Total click 
@@ -393,7 +393,7 @@ class MyViewModel(
 
 1.  在`list`包中，创建`PostListConverter`类：
 
-    ```kt
+    ```java
     class PostListConverter @Inject constructor(@ApplicationContext private val context: Context) {
         fun convert(postListResult: Result
             <GetPostsWithUsersWithInteractionUseCase.
@@ -430,7 +430,7 @@ class MyViewModel(
 
 1.  在`list`包中，创建`PostListViewModel`类：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         private val useCase: 
@@ -465,7 +465,7 @@ class MyViewModel(
 
 1.  在`PostListScreen`文件中，添加一个用于显示加载小部件和`Snackbar`方法的方法：
 
-    ```kt
+    ```java
     @Composable
     fun Error(errorMessage: String) {
         Column(
@@ -492,7 +492,7 @@ class MyViewModel(
 
 1.  在同一文件中，添加一个用于显示帖子列表和标题的方法：
 
-    ```kt
+    ```java
     @Composable
     fun PostList(
         postListModel: PostListModel
@@ -518,7 +518,7 @@ class MyViewModel(
 
 1.  在同一文件中，添加一个方法来监控`postListFlow`的值，并根据状态值调用前面三个方法之一：
 
-    ```kt
+    ```java
     @Composable
     fun PostListScreen(
         viewModel: PostListViewModel
@@ -542,7 +542,7 @@ class MyViewModel(
 
 1.  在 `app` 模块的 `build.gradle` 文件中，确保添加以下插件：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.application'
         id 'kotlin-android'
@@ -553,7 +553,7 @@ class MyViewModel(
 
 1.  在同一文件中，确保添加以下依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation(project(path: ":presentation-
             post"))
@@ -581,7 +581,7 @@ class MyViewModel(
 
 1.  在 `injection` 包中，创建一个名为 `AppModule` 的类：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class AppModule {
@@ -595,14 +595,14 @@ class MyViewModel(
 
 1.  在 `app` 模块中，创建一个名为 `PostApplication` 的类：
 
-    ```kt
+    ```java
     @HiltAndroidApp
     class PostApplication : Application()
     ```
 
 1.  将 `PostApplication` 类添加到 `app` 模块的 `AndroidManifest.xml` 文件中：
 
-    ```kt
+    ```java
         <application
             …
             android:name=".PostApplication"
@@ -612,7 +612,7 @@ class MyViewModel(
 
 1.  修改 `MainActivity` 类，使其使用导航库从 `presentation-post` 模块导航到 `PostListScreen` 功能：
 
-    ```kt
+    ```java
     @AndroidEntryPoint
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
@@ -672,7 +672,7 @@ class MyViewModel(
 
 如果我们正在使用 Jetpack Compose 为我们的应用程序，那么我们可以依赖在 *第三章* 的 *练习 03.02 – 使用 Jetpack Compose 进行导航* 中完成的工作，其中我们为应用导航定义了以下结构：
 
-```kt
+```java
 private const val ROUTE_USERS = "users"
 private const val ROUTE_USER = "users/%s"
 private const val ARG_USER_NAME = "name"
@@ -691,7 +691,7 @@ sealed class AppNavigation(val route: String, val
 
 当涉及到处理不同模块之间的常见逻辑，例如显示相同的错误或加载视图时，我们可以在 `:common` 模块中声明可组合函数：
 
-```kt
+```java
 @Composable
 fun Error(errorMessage: String) {
     …
@@ -704,7 +704,7 @@ fun Loading() {
 
 如果不同模块中的不同屏幕共享相同的状态，我们可以有如下类似的情况：
 
-```kt
+```java
 @Composable
 fun <T> CommonScreen(state: State<T>, onSuccess: 
     @Composable (T) -> Unit) {
@@ -776,7 +776,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`presentation-post`和`presentation-user`模块的`build.gradle`文件中，确保添加了对`presentation-common`的依赖项。
 
-    ```kt
+    ```java
     dependencies {
         …
         implementation(project(path: ":presentation-common"))
@@ -790,7 +790,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在同一个包中，创建 `CommonResultConverter` 类：
 
-    ```kt
+    ```java
     abstract class CommonResultConverter<T : Any, R : Any> {
         fun convert(result: Result<T>): UiState<R> {
             return when (result) {
@@ -812,7 +812,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  修改 `presentation-post` 模块中的 `PostListConverter` 类，使其扩展 `CommonResultConverter` 并为 `convertSuccess` 方法提供实现：
 
-    ```kt
+    ```java
     class PostListConverter @Inject constructor (@ApplicationContext private val context: Context) :
         CommonResultConverter<GetPostsWithUsersWithInteraction
         UseCase.Response, PostListModel>() {
@@ -845,7 +845,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在 `CommonScreen` 文件中，添加一个 `CommonScreen` `@Composable` 方法，它将检查 `UiState` 并对 `UiState.Error` 调用 `Error`，对 `UiState.Loading` 调用 `Loading`：
 
-    ```kt
+    ```java
     @Composable
     fun <T : Any> CommonScreen(state: UiState<T>, onSuccess: @Composable (T) -> Unit) {
         when (state) {
@@ -866,7 +866,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  修改 `presentation-post` 模块中的 `PostListScreen` `@Composable` 方法，使其使用 `CommonScreen` 方法：
 
-    ```kt
+    ```java
     @Composable
     fun PostListScreen(
         viewModel: PostListViewModel
@@ -887,7 +887,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在 `navigation` 包中，创建一个名为 `PostInput` 的类：
 
-    ```kt
+    ```java
     data class PostInput(val postId: Long)
     ```
 
@@ -895,7 +895,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在同一个包中，创建一个名为 `UserInput` 的类：
 
-    ```kt
+    ```java
     data class UserInput(val userId: Long)
     ```
 
@@ -903,7 +903,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在同一个包中，创建一个新的类，命名为 `NavRoutes`：
 
-    ```kt
+    ```java
     private const val ROUTE_POSTS = "posts"
     private const val ROUTE_POST = "posts/%s"
     private const val ROUTE_USER = "users/%s"
@@ -922,7 +922,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在 `NavRoutes` 类中创建 `Posts` 类：
 
-    ```kt
+    ```java
     sealed class NavRoutes(
         val route: String,
         val arguments: List<NamedNavArgument> = 
@@ -934,7 +934,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在 `NavRoutes` 类中创建 `Post` 类：
 
-    ```kt
+    ```java
     sealed class NavRoutes(
         val route: String,
         val arguments: List<NamedNavArgument> = 
@@ -962,7 +962,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在 `NavRoutes` 类内部创建 `User` 类：
 
-    ```kt
+    ```java
     sealed class NavRoutes(
         val route: String,
         val arguments: List<NamedNavArgument> = emptyList()
@@ -991,7 +991,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建`PostModel`类：
 
-    ```kt
+    ```java
     data class PostModel(
         val title: String,
         val body: String
@@ -1000,7 +1000,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建`PostConverter`类：
 
-    ```kt
+    ```java
     class PostConverter @Inject constructor(@ApplicationContext private val context: Context) :
         CommonResultConverter<GetPostUseCase.Response, 
             PostModel>() {
@@ -1018,7 +1018,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  将`body`字符串添加到`presentation-post`模块的`strings.xml`中：
 
-    ```kt
+    ```java
     <resources>
         …
         <string name="body">Body: %s</string>
@@ -1027,7 +1027,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建`PostViewModel`类：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostViewModel @Inject constructor(
         private val postUseCase: GetPostUseCase,
@@ -1056,7 +1056,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建`PostScreen`文件，该文件将显示帖子信息：
 
-    ```kt
+    ```java
     @Composable
     fun PostScreen(
         viewModel: PostViewModel,
@@ -1085,7 +1085,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建一个名为`UserModel`的新类：
 
-    ```kt
+    ```java
     data class UserModel(
         val name: String,
         val username: String,
@@ -1095,7 +1095,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建一个名为`UserConverter`的新类：
 
-    ```kt
+    ```java
     class UserConverter @Inject constructor(@ApplicationContext private val context: Context) :
         CommonResultConverter<GetUserUseCase.Response, 
             UserModel>() {
@@ -1116,7 +1116,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`presentation-user`模块的`main`文件夹内创建`res/values/strings.xml`文件：
 
-    ```kt
+    ```java
     <?xml version="1.0" encoding="utf-8"?>
     <resources>
         <string name="name">Name: %s</string>
@@ -1127,7 +1127,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建`UserViewModel`：
 
-    ```kt
+    ```java
     @HiltViewModel
     class UserViewModel @Inject constructor(
         private val userUseCase: GetUserUseCase,
@@ -1157,7 +1157,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`single`包内创建`UserScreen`文件：
 
-    ```kt
+    ```java
     @Composable
     fun UserScreen(
         viewModel: UserViewModel,
@@ -1185,7 +1185,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`PostListScreen`中添加点击监听器：
 
-    ```kt
+    ```java
     @Composable
     fun PostList(
         postListModel: PostListModel,
@@ -1216,7 +1216,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  修改`PostListScreen`的`@Composable`方法，以便当用户点击时，我们导航到用户界面，当行被点击时，我们导航到帖子：
 
-    ```kt
+    ```java
     @Composable
     fun PostListScreen(
         viewModel: PostListViewModel,
@@ -1242,7 +1242,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`app`模块的`build.gradle`中，确保添加了对`presentation-common`和`presentation-user`的依赖：
 
-    ```kt
+    ```java
     dependencies {
         …
         implementation(project(path: ":presentation-
@@ -1255,7 +1255,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`MainActivity`文件中，修改`App`方法，以便实现不同屏幕之间的导航：
 
-    ```kt
+    ```java
     @Composable
     fun App(navController: NavHostController) {
         NavHost(navController, startDestination = 
@@ -1290,7 +1290,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在`PostListModel`内部添加一个`Interaction`字段：
 
-    ```kt
+    ```java
     data class PostListModel(
         …
         val interaction: Interaction
@@ -1299,7 +1299,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  修改`PostListConverter`以包含`interaction`字段：
 
-    ```kt
+    ```java
     class PostListConverter @Inject constructor (@ApplicationContext private val context: Context) :
         CommonResultConverter<GetPostsWithUsersWithInteraction
         UseCase.Response, PostListModel>() {
@@ -1316,7 +1316,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  在 `PostListViewModel` 中添加对 `UpdateInteractionUseCase` 的引用，并添加一个更新交互的方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         …
@@ -1341,7 +1341,7 @@ fun <T> CommonScreen(state: State<T>, onSuccess:
 
 1.  修改 `PostListScreen` 的 `@Composable` 方法，使其在每次点击时调用更新交互：
 
-    ```kt
+    ```java
     @Composable
     fun PostListScreen(
         viewModel: PostListViewModel,

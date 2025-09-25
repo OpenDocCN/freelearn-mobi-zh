@@ -82,7 +82,7 @@
 
 我们将从没有调度器的常规示例开始，然后在这个示例中实现一个调度器来观察差异，如下所示：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
         .subscribe { 
@@ -106,7 +106,7 @@
 
 这个程序的总执行时间大约为 3,100 毫秒（因为延迟是在打印之前执行的），而线程池在这期间处于空闲状态。使用调度器，这个时间可以显著减少。让我们来完成它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1, 10) 
        .subscribeOn(Schedulers.computation())//(1) 
@@ -175,7 +175,7 @@
 
 让我们看看 `Schedulers.single()` 和 `Schedulers.trampoline()` 的几个示例，以更好地理解它们：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       async(CommonPool) { 
@@ -211,7 +211,7 @@
 
 现在，让我们使用 `Schedulers.trampoline()` 实现相同的代码，并观察差异：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       async(CommonPool) { 
@@ -249,7 +249,7 @@
 
 让我们看看以下示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       val executor:Executor = Executors.newFixedThreadPool(2)//(1) 
@@ -310,7 +310,7 @@
 
 首先，让我们看看代码示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf("1","2","3","4","5","6","7","8","9","10") 
         .toObservable() 
@@ -337,7 +337,7 @@
 
 `subscribeOn` 操作符，正如其名所示，帮助我们改变订阅的线程。让我们修改一次程序并查看结果：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf("1","2","3","4","5","6","7","8","9","10") 
         .toObservable() 
@@ -370,7 +370,7 @@
 
 让我们通过`observeOn`修改我们的程序，以在`Schedulers.computation()`中执行`map`操作，并在`Schedulers.io()`中接收订阅的结果（`onNext`）：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf("1","2","3","4","5","6","7","8","9","10") 
         .toObservable() 

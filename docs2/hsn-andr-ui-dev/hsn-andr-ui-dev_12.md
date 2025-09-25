@@ -38,7 +38,7 @@
 
 1.  你将使用此文件声明一些新的 XML 属性，供资源编译器使用，这些属性可以在处理你的新图`View`类时用在布局 XML 文件中。这些 XML 属性提供了类型信息（以`format`属性的形式），这会影响资源编译器在布局 XML 中处理它们的方式：
 
-```kt
+```java
 <resources>
   <declare-styleable name="SpendingGraphView">
     <attr name="strokeColor" format="color" />
@@ -57,20 +57,20 @@
 
 1.  在`SpendingGraphView`中声明变量以保存可以在布局 XML 文件中指定的值。这些变量通常应反映 XML 文件中使用的名称，并且应使用合理的默认值初始化：
 
-```kt
+```java
 private int strokeColor = Color.GREEN;
 private int strokeWidth = 2;
 ```
 
 1.  接下来，声明一个数组以将数据点渲染到图中。在这个实现中，我们假设每个数据点是某个未指定日期的花费金额：
 
-```kt
+```java
 private double[] spendingPerDay;
 ```
 
 1.  如前所述，`onDraw`实现应尽可能少做工作。在这个图形实现中，这意味着整个图形实际上是提前计算好的，并缓存到局部变量中，以便在`onDraw`方法中绘制。Android 图形 API 提供了一个`Path`类，用于定义任何抽象的连接线组，以及一个`Paint`类，用于定义颜色、笔触大小（笔）、填充样式等。你需要声明一个`Path`和一个`Paint`，以便计算和渲染：
 
-```kt
+```java
 private Path path = null;
 private Paint paint = null;
 ```
@@ -79,7 +79,7 @@ private Paint paint = null;
 
 1.  现在，实现一个`View`类的标准构造函数。你希望所有这些构造函数都调用一个单独的`init()`方法来处理小部件的实际初始化，在这种情况下，还需要从布局 XML 中获取并读取属性：
 
-```kt
+```java
 public SpendingGraphView(final Context context) {
   super(context);
   init(null, 0);
@@ -103,7 +103,7 @@ public SpendingGraphView(
 
 1.  现在，实现 `init` 方法并使用 `Context` 将 `AttributeSet` 对象及其数据转换为 `TypedArray` 对象。这是从应用程序的当前 `Theme` 中合并所有样式信息的地方。当你完成一个 `TypedArray` 后，你需要回收它们，将它们交还给平台以供重用。这有助于 `obtainStyledAttributes` 方法的性能：
 
-```kt
+```java
 private void init(final AttributeSet attrs, final int defStyle) {
   final TypedArray a = getContext().obtainStyledAttributes(
           attrs, R.styleable.SpendingGraphView, defStyle, 0);
@@ -123,7 +123,7 @@ private void init(final AttributeSet attrs, final int defStyle) {
 
 1.  为了正确绘制图表，你需要一个实用方法来帮助找到垂直轴的刻度。这涉及到找到图表将具有的最大值，不幸的是，Android 平台没有直接提供方法来做这件事，所以你需要自己实现它：
 
-```kt
+```java
 protected static double getMaximum(final double[] numbers) {
   double max = 0;
 
@@ -137,7 +137,7 @@ protected static double getMaximum(final double[] numbers) {
 
 1.  下一步是实现图表数据的实际渲染方法。此方法将在主线程上调用，但不会作为渲染循环的一部分调用。相反，你将计算所有值并使用 `Path` 对象（矢量图形原语）绘制图表。然后，此方法将存储绘制的线条和要用于路径和绘制字段的 `Paint`，并发出信号，表示 `View` 是 *无效的*，需要尽快调用其 `onDraw` 方法：
 
-```kt
+```java
 protected void invalidateGraph() {
   if (spendingPerDay == null || spendingPerDay.length <= 1) {
     path = null;
@@ -191,7 +191,7 @@ protected void invalidateGraph() {
 
 1.  现在，你已经准备好覆盖 `onDraw` 方法，并在平台提供的 `Canvas` 上实际绘制图表。这个 `onDraw` 实现只是简单地验证图表是否已渲染，然后将字段绘制到屏幕上：
 
-```kt
+```java
 @Override
 protected void onDraw(final Canvas canvas) {
   if (path == null || paint == null) {
@@ -206,7 +206,7 @@ protected void onDraw(final Canvas canvas) {
 
 1.  现在，你只需要几个获取器和设置器方法，以便让应用程序指定要渲染的数据，以及一个程序化的方式来更改和获取 XML 属性值。设置器方法还需要调用 `invalidateGraph()` 方法，以使数据被重新计算并渲染：
 
-```kt
+```java
 public void setSpendingPerDay(final double[] spendingPerDay) {
   this.spendingPerDay = spendingPerDay;
   invalidateGraph();
@@ -237,7 +237,7 @@ public void setStrokeWidth(final int strokeWidth) {
 
 将 `SpendingGraphView` 集成到应用程序中就像在布局 XML 文件中声明它一样简单，并给它提供一些数据点以进行渲染：
 
-```kt
+```java
 <com.packtpub.claim.widget.SpendingGraphView
     android:id="@+id/spendingGraphView"
     android:layout_width="match_parent"
@@ -259,7 +259,7 @@ public void setStrokeWidth(final int strokeWidth) {
 
 1.  此布局资源将与 `DataBoundViewHolder` 一起使用，我们将间接通过 `item` 变量传递每日消费。还值得注意的是，您的 `SpendingGraphView` 上的自定义属性（`strokeColor` 和 `strokeWidth`）的 XML 命名空间是 `app` 命名空间。布局资源应该看起来像这样：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <layout>
     <data>
@@ -287,7 +287,7 @@ public void setStrokeWidth(final int strokeWidth) {
 
 1.  使用 `layout_height` 属性上的代码助手，在您的 `dimens.xml` 值资源文件中创建一个名为 `spending_graph_height` 的新维度值（正如刚刚所强调的）：
 
-```kt
+```java
     <dimen name="app_bar_height">180dp</dimen>
     <dimen name="spending_graph_height">80dp</dimen>
 </resources>
@@ -297,7 +297,7 @@ public void setStrokeWidth(final int strokeWidth) {
 
 1.  大多数更改将在 `CreateDisplayListCommand` 内部类中。您需要计算用户最近几天内的消费，为此，您需要知道每个索赔距离今天有多少天，以便可以将其金额添加到正确的日期。此方法简单地逐日倒退，直到达到给定的时间戳：
 
-```kt
+```java
 int countDays(final Date timestamp) {
   final Calendar calendar = Calendar.getInstance();
   calendar.setTime(timestamp);
@@ -322,7 +322,7 @@ int countDays(final Date timestamp) {
 
 1.  接下来，您需要在 `CreateDisplayListCommand` 中添加另一个方法来创建表示用户过去几天消费的金额数组。为了使实现简单快捷，我们默认将其限制为十天。`getSpendingPerDay` 方法为这些天中的每一天创建一个双精度浮点数，并将每天的 `ClaimItem` 对象的金额添加到每个双精度浮点数中：
 
-```kt
+```java
 double[] getSpendingPerDay(final List<ClaimItem> claimItems) {
   final double[] daysSpending = new double[10];
   final int lastItem = daysSpending.length - 1;
@@ -345,7 +345,7 @@ double[] getSpendingPerDay(final List<ClaimItem> claimItems) {
 
 1.  在 `CreateDisplayListCommand` 中要做的最后一件事是，在列表中创建一个 `DisplayItem` 作为第一个条目：
 
-```kt
+```java
 public List<DisplayItem> onBackground(
     final List<ClaimItem> claimItems)
     throws Exception {
@@ -360,7 +360,7 @@ public List<DisplayItem> onBackground(
 
 1.  你还需要向 `UpdateDisplayListCommand` 内部类添加一些新代码，因为它不知道如何比较 `DiffUtil` 的支出图。在 `DiffUtil.Callback` 中 `areItemsTheSame` 方法的实现中，你可以将 `card_spending_graph` 布局资源与分隔符完全相同对待，因为在列表中只有一个：
 
-```kt
+```java
 @Override
 public boolean areItemsTheSame(
     final int oldItemPosition,
@@ -385,7 +385,7 @@ public boolean areItemsTheSame(
 
 1.  然而，你还需要 `DiffUtil` 来检测图数据可能已更改。在这种情况下，我们简单地假设数据已更改，并强制 `RecyclerView` 将新的数据点绑定到现有的 `SpendingGraphView`：
 
-```kt
+```java
 @Override
 public boolean areContentsTheSame(
     final int oldItemPosition,
@@ -414,7 +414,7 @@ public boolean areContentsTheSame(
 
 1.  我们需要通知 `ItemTouchHelper` 列表中的第一个项目不能滑动或移动。我们通过重写默认的 `getMovementFlags` 方法来实现这一点。此方法通常只返回传递给构造函数的标志，但现在你希望这些标志仅对单个项目进行更改：
 
-```kt
+```java
 @Override
 public int getMovementFlags(
     final RecyclerView recyclerView,
@@ -452,7 +452,7 @@ public int getMovementFlags(
 
 1.  声明标准的 `ViewGroup` 构造函数：
 
-```kt
+```java
 public CircleLayout(final Context context) {
   super(context);
 }
@@ -474,7 +474,7 @@ public CircleLayout(
 
 1.  重写 `onMeasure` 方法以计算 `CircleLayout` 及其所有子 `View` 小部件的大小。测量规范以 `int` 值的形式传入，这些值使用 `MeaureSpec` 类中的 `static` 方法进行解释。测量规范有两种类型：*最多* 和 *正好*，每种类型都附加一个 *大小* 值。在这个特定的布局中，我们始终将 `CircleLayout` 测量为其规范中给出的大小。这意味着 `CircleLayout` 将始终消耗可用的最大空间。它还期望所有子项能够指定大小，而无需 `match_parent` 属性（因为这会导致每个子项占用所有可用空间）：
 
-```kt
+```java
 @Override
 protected void onMeasure(
     final int widthMeasureSpec,
@@ -490,7 +490,7 @@ protected void onMeasure(
 
 1.  下一个要实现的方法是 `onLayout` 方法。这个方法负责在 `CircleLayout` 中对子 `View` 小部件进行实际排列，通过调用它们的 `layout` 方法。`layout` 方法不应该被重写，因为它与平台紧密相关，并执行多个其他重要操作（例如通知布局监听器）。相反，你应该重写 `onLayout`，但调用 `layout.CircleLayout` 假设所有子 `View` 小部件具有相同的大小（并在 `onLayout` 实现中强制执行这一点）。这个 `onLayout` 方法只是计算可用空间，然后将子 `View` 小部件定位在边缘周围的一个圆圈中：
 
-```kt
+```java
 protected void onLayout(
     final boolean changed,
     final int left,
@@ -557,7 +557,7 @@ protected void onLayout(
 
 1.  场景中将有若干弹跳对象，你需要跟踪它们的位置和速度向量。为此，你希望将每个弹跳的`Drawable`封装在`Bouncer`对象中；我们将将其编写为内部类：
 
-```kt
+```java
 public static class Bouncer {
   final Drawable drawable;
   final Rect bounds;
@@ -578,7 +578,7 @@ public static class Bouncer {
 
 1.  在`Bouncer`内部类中接下来要做的事情是创建一个单独的`step`方法，该方法将为下一个要渲染的动画帧设置`Bouncer`。此方法将接受一个参数，表示它正在渲染的*字段*的边界。如果下一个位置与字段的任何边缘发生碰撞，`Bouncer`将避免越过边缘，并在可能碰撞的轴上反转方向：
 
-```kt
+```java
 void step(final Rect boundary) {
   final int width = bounds.width();
   final int height = bounds.height();
@@ -613,7 +613,7 @@ void step(final Rect boundary) {
 
 1.  `Bouncer`类还需要一个方便的绘制方法，该方法将在将`Drawable`渲染到给定的`Canvas`对象之前更新`Drawable`的边界。`Bouncer`跟踪自己的边界，因此所有`Bouncer`实例实际上可以共享同一个`Drawable`实例，只需在不同的位置在字段上绘制它即可：
 
-```kt
+```java
   void draw(final Canvas canvas) {
     drawable.setBounds(bounds);
     drawable.draw(canvas);
@@ -623,19 +623,19 @@ void step(final Rect boundary) {
 
 1.  现在，在`BouncingDrawablesView`中，声明一个`Bouncer`对象的数组，这些对象将被`View`实现包含和动画化：
 
-```kt
+```java
 private Bouncer[] bouncers = null;
 ```
 
 1.  `BouncingDrawableView`还需要一个状态字段来跟踪它是否应该进行动画：
 
-```kt
+```java
 private boolean running = false;
 ```
 
 1.  接下来，声明标准的`View`实现构造函数：
 
-```kt
+```java
 public BouncingDrawablesView(
     final Context context) {
   super(context);
@@ -657,7 +657,7 @@ public BouncingDrawablesView(
 
 1.  通过简单地告诉每个`Bouncer`对象绘制自己来实现`onDraw`方法：
 
-```kt
+```java
 @Override
 protected void onDraw(final Canvas canvas) {
   super.onDraw(canvas);
@@ -674,7 +674,7 @@ protected void onDraw(final Canvas canvas) {
 
 1.  接下来，你需要实现实际逻辑来动画每一帧。通过创建一个 `onNextFrame` 方法来实现，这个方法首先检查动画是否应该继续运行（如果它没有运行，我们停止动画），然后告诉每个 `Bouncer` 在动画中移动一步。在你设置了下一个动画帧之后，你需要通过调用 `invalidate()` 方法告诉平台重新绘制 `BouncingDrawablesView`。一旦 `onNextFrame()` 方法完成，我们将它安排在 16 毫秒后再次调用（安排每秒大约 60 帧）：
 
-```kt
+```java
 private final Runnable postNextFrame = new Runnable() {
   @Override
   public void run() {
@@ -705,7 +705,7 @@ void onNextFrame() {
 
 1.  为了在 `BouncingDrawablesView` 变得可见时自动开始动画，并在不可见时停止它，你需要知道 `BouncingDrawablesView` 是何时附加到 `Window`（当它附加到屏幕组件时）。为此，你需要覆盖 `onAttachedToWindow` 并调用 `onNextFrame()`。然而，`onAttachedToWindow` 在布局执行之前被调用，所以你将 `onNextFrame()` 安排在当前事件队列的末尾运行：
 
-```kt
+```java
 @Override
 protected void onAttachedToWindow() {
   super.onAttachedToWindow();
@@ -723,7 +723,7 @@ protected void onDetachedFromWindow() {
 
 1.  最后，为 `Bouncer` 对象编写设置器和获取器：
 
-```kt
+```java
 public void setBouncers(final Bouncer[] bouncers) {
   this.bouncers = bouncers;
 }
@@ -735,7 +735,7 @@ public Bouncer[] getBouncers() {
 
 设置 `BouncingDrawablesView` 是一个非常简单的过程。一个 `Activity` 需要创建一个包含一些随机位置和速度的 `Bouncer` 对象数组，然后将它们传递给 `BouncingDrawablesView` 实例来处理。一旦 `BouncingDrawablesView` 在屏幕上可见，它将开始动画屏幕周围的 `Drawable` 对象。`BouncingDrawableView` 的简单配置示例可能看起来像这样：
 
-```kt
+```java
 final BouncingDrawablesView bouncingDrawablesView = (BouncingDrawablesView) findViewById(R.id.bouncing_view);
 final BouncingDrawablesView.Bouncer[] bouncers = new BouncingDrawablesView.Bouncer[10];
 final Random random = new Random();

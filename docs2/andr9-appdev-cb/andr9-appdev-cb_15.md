@@ -50,13 +50,13 @@ Google 现在要求应用的目标为 Android 6.0（API 23）或更高版本才�
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.SEND_SMS"/>
 ```
 
 1.  打开`activity_main.xml`并用此按钮替换现有的`TextView`：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -71,13 +71,13 @@ Google 现在要求应用的目标为 Android 6.0（API 23）或更高版本才�
 
 1.  打开`MainActivity.java`并将以下常量添加到类中：
 
-```kt
+```java
 private final int REQUEST_PERMISSION_SEND_SMS=1; 
 ```
 
 1.  添加此方法进行权限检查：
 
-```kt
+```java
 private boolean checkPermission(String permission) { 
     int permissionCheck = 
          ContextCompat.checkSelfPermission( 
@@ -89,7 +89,7 @@ private boolean checkPermission(String permission) {
 
 1.  添加此方法来请求权限：
 
-```kt
+```java
 private void requestPermission(String permissionName, int permissionRequestCode) {    
     ActivityCompat.requestPermissions(this, new String[]{permissionName}, 
             permissionRequestCode);
@@ -98,7 +98,7 @@ private void requestPermission(String permissionName, int permissionRequestCode)
 
 1.  添加此方法来显示解释对话框：
 
-```kt
+```java
 private void showExplanation(String title, String message, 
                              final String permission, 
                              final int permissionRequestCode) {
@@ -120,7 +120,7 @@ private void showExplanation(String title, String message,
 
 1.  添加此方法来处理按钮点击：
 
-```kt
+```java
 public void doSomething(View view) {
     if (!checkPermission(Manifest.permission.SEND_SMS)) {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, 
@@ -141,7 +141,7 @@ public void doSomething(View view) {
 
 1.  如下重写`onRequestPermissionsResult()`方法：
 
-```kt
+```java
 @Override
 public void onRequestPermissionsResult(int requestCode, String permissions[], 
                                        int[] grantResults) {
@@ -191,13 +191,13 @@ public void onRequestPermissionsResult(int requestCode, String permissions[],
 
 你可以通过 ADB 使用以下命令授予/撤销权限：
 
-```kt
+```java
 adb shell pm [grant|revoke] <package> <permission-name> 
 ```
 
 下面是一个为我们的测试应用授予`SEND_SMS`权限的示例：
 
-```kt
+```java
 adb shell pm grant com.packtpub.androidcookbook.runtimepermissions android.permission.SEND_SMS 
 ```
 
@@ -285,7 +285,7 @@ Elapsed Real Time 对于时间间隔闹钟（如每 30 分钟）更好。
 
 1.  在与现有`<activity>`元素同一级别的`<application>`元素中添加以下`<receiver>`：
 
-```kt
+```java
 <receiver android:name=".AlarmBroadcastReceiver">
     <intent-filter>
         <action android:name="com.packtpub.alarms.ACTION_ALARM" />
@@ -297,7 +297,7 @@ Elapsed Real Time 对于时间间隔闹钟（如每 30 分钟）更好。
 
     以下按钮：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -312,7 +312,7 @@ Elapsed Real Time 对于时间间隔闹钟（如每 30 分钟）更好。
 
 1.  使用以下代码创建一个新的 Java 类`AlarmBroadcastReceiver`：
 
-```kt
+```java
 public class AlarmBroadcastReceiver extends BroadcastReceiver {    
     public static final String ACTION_ALARM= "com.packtpub.alarms.ACTION_ALARM";
 
@@ -327,7 +327,7 @@ public class AlarmBroadcastReceiver extends BroadcastReceiver {
 
 1.  打开`ActivityMain.java`并为按钮点击添加方法：
 
-```kt
+```java
 public void setAlarm(View view) {
     Intent intentToFire = new Intent(getApplicationContext(), AlarmBroadcastReceiver.class);
     intentToFire.setAction(AlarmBroadcastReceiver.ACTION_ALARM);
@@ -345,14 +345,14 @@ public void setAlarm(View view) {
 
 创建闹钟是通过以下代码行完成的：
 
-```kt
+```java
 alarmManager.set(AlarmManager.ELAPSED_REALTIME, thirtyMinutes, 
      alarmIntent);
 ```
 
 这里是方法签名：
 
-```kt
+```java
 set(AlarmType, Time, PendingIntent); 
 ```
 
@@ -360,7 +360,7 @@ set(AlarmType, Time, PendingIntent);
 
 要设置闹钟，我们创建一个带有先前定义的闹钟动作的挂起意图：
 
-```kt
+```java
 public static final String ACTION_ALARM= "com.packtpub.alarms.ACTION_ALARM";
 ```
 
@@ -374,7 +374,7 @@ public static final String ACTION_ALARM= "com.packtpub.alarms.ACTION_ALARM";
 
 如果您想取消闹钟，通过传递创建闹钟时使用的相同挂起意图调用`cancel()`方法。如果我们继续我们的菜谱，它将看起来像这样：
 
-```kt
+```java
 alarmManager.cancel(alarmIntent); 
 ```
 
@@ -382,7 +382,7 @@ alarmManager.cancel(alarmIntent);
 
 如果您想创建重复闹钟，请使用`setRepeating()`方法。签名与`set()`方法类似，但带有间隔。如下所示：
 
-```kt
+```java
 setRepeating(AlarmType, Time (in milliseconds), Interval, PendingIntent);
 ```
 
@@ -418,13 +418,13 @@ Android 在其生命周期中会发送许多意图。其中第一个发送的意
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 ```
 
 1.  将以下`<receiver>`添加到`<application>`元素中，与现有的`<activity>`元素处于同一级别：
 
-```kt
+```java
 <receiver android:name=".BootBroadcastReceiver">
     <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED"/>
@@ -435,7 +435,7 @@ Android 在其生命周期中会发送许多意图。其中第一个发送的意
 
 1.  使用以下代码创建一个新的 Java 类`BootBroadcastReceiver`：
 
-```kt
+```java
 public class BootBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -467,7 +467,7 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
 
 如果你遵循了前面的食谱，那么你已经有了一个 Broadcast Receiver。你不需要为每个动作创建单独的`BroadcastReceiver`，只需按需检查每个动作即可。以下是一个示例，如果我们需要处理另一个动作：
 
-```kt
+```java
 @Override
 public void onReceive(Context context, Intent intent) {
     if (intent.getAction().equals("android.intent.action.BOOT_COMPLETED")) {
@@ -520,7 +520,7 @@ Android 应用程序使用单线程模型，有两个简单的规则，如下所
 
 1.  用以下按钮替换现有的 TextView：
 
-```kt
+```java
 <Button
     android:id="@+id/buttonStart"
     android:layout_width="wrap_content"
@@ -535,13 +535,13 @@ Android 应用程序使用单线程模型，有两个简单的规则，如下所
 
 1.  打开 `MainActivity.java` 并添加以下全局变量：
 
-```kt
+```java
 Button mButtonStart; 
 ```
 
 1.  添加 `AsyncTask` 类：
 
-```kt
+```java
 private class CountingTask extends AsyncTask<Integer, Integer, Integer> {
     @Override
     protected Integer doInBackground(Integer... params) {
@@ -565,13 +565,13 @@ private class CountingTask extends AsyncTask<Integer, Integer, Integer> {
 
 1.  将以下代码添加到 `onCreate()` 以初始化按钮：
 
-```kt
+```java
 mButtonStart=findViewById(R.id.buttonStart);
 ```
 
 1.  添加按钮点击的方法：
 
-```kt
+```java
 public void start(View view){
     mButtonStart.setEnabled(false);
     new CountingTask().execute(10);
@@ -596,7 +596,7 @@ public void start(View view){
 
 对于许多人来说，`AsyncTask` 最令人困惑的方面是在创建自己的类时参数。如果你查看我们的类声明，`AsyncTask` 有三个参数；它们定义如下：
 
-```kt
+```java
 AsyncTask<Params, Progress, Result > 
 ```
 
@@ -628,7 +628,7 @@ AsyncTask<Params, Progress, Result >
 
 取消任务，请按照以下方式在对象上调用 cancel 方法：
 
-```kt
+```java
 < AsyncTask>.cancel(true); 
 ```
 
@@ -656,7 +656,7 @@ Android 2.2 (API 8) 在 Android 中引入了语音识别功能，并且几乎在
 
 1.  将现有的 `TextView` 替换为以下 XML：
 
-```kt
+```java
 <TextView
     android:id="@+id/textView"
     android:layout_width="wrap_content"
@@ -679,13 +679,13 @@ Android 2.2 (API 8) 在 Android 中引入了语音识别功能，并且几乎在
 
 1.  定义 `REQUEST_SPEECH` 常量：
 
-```kt
+```java
 private final int REQUEST_SPEECH=1; 
 ```
 
 1.  将以下代码添加到现有的 `onCreate()` 回调中：
 
-```kt
+```java
 PackageManager pm = getPackageManager();
 List<ResolveInfo> activities = pm
         .queryIntentActivities(new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH), 0);
@@ -697,7 +697,7 @@ if (activities.isEmpty()) {
 
 1.  添加按钮点击方法：
 
-```kt
+```java
 public void speakNow(View view) {
     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
     intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, 
@@ -708,7 +708,7 @@ public void speakNow(View view) {
 
 1.  将以下代码添加到重写的 `onActivityResult()` 回调中：
 
-```kt
+```java
 @Override
 protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -741,7 +741,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 如果你想获取置信度评分，请使用 `EXTRA_CONFIDENCE_SCORES` 获取浮点数组。以下是一个示例：
 
-```kt
+```java
 float[] confidence = data.getFloatArrayExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES);
 ```
 
@@ -751,7 +751,7 @@ float[] confidence = data.getFloatArrayExtra(RecognizerIntent.EXTRA_CONFIDENCE_S
 
 使用意图是一个快速简单的方法来获取语音识别；然而，如果你不想使用默认的 Google 活动，你可以直接调用 `SpeechRecognizer` 类。以下是如何实例化类的示例：
 
-```kt
+```java
 SpeechRecognizer speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
 ```
 
@@ -807,13 +807,13 @@ Google 登录使用 Google 服务插件，这需要一个 Google 服务配置文
 
 1.  打开应用模块的 Gradle 构建文件，`build.gradle (Module: app)`，并在依赖项部分添加以下语句：
 
-```kt
+```java
 implementation 'com.google.android.gms:play-services-auth:16.0.0'
 ```
 
 1.  打开 `activity_main.xml` 并将现有的 `TextView` 替换为以下 XML：
 
-```kt
+```java
 <com.google.android.gms.common.SignInButton
     android:id="@+id/signInButton"
     android:layout_width="wrap_content"
@@ -826,14 +826,14 @@ implementation 'com.google.android.gms:play-services-auth:16.0.0'
 
 1.  打开 `MainActivity.java` 并添加以下全局声明：
 
-```kt
+```java
 private final int REQUEST_SIGN_IN=1;
 GoogleSignInClient mGoogleSignInClient;
 ```
 
 1.  将以下代码添加到现有的 `onCreate()` 中：
 
-```kt
+```java
 findViewById(R.id.signInButton).setOnClickListener(new View.OnClickListener() {
     @Override
     public void onClick(View view) {
@@ -849,7 +849,7 @@ mGoogleSignInClient = GoogleSignIn.getClient(this, googleSignInOptions);
 
 1.  添加 `signIn()` 方法：
 
-```kt
+```java
 private void signIn() {
     Intent signInIntent = mGoogleSignInClient.getSignInIntent();
     startActivityForResult(signInIntent, REQUEST_SIGN_IN);
@@ -858,7 +858,7 @@ private void signIn() {
 
 1.  如下创建 `onActivityResult()` 回调的覆盖：
 
-```kt
+```java
 @Override
 public void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -903,7 +903,7 @@ Google 通过他们的 `GoogleSignInClient` 和 `GoogleSignInOptions` API 使添
 
 如果你想检查用户是否已经登录过？
 
-```kt
+```java
 GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
 ```
 

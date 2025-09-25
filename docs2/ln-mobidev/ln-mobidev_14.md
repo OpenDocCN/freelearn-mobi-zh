@@ -140,7 +140,7 @@ A/B 测试，也称为分割测试，在最基本的形式上，归结为向不�
 
 对于示例项目，它已经设置好了。在`app`文件夹内的`build.gradle`文件中，您将找到以下 Firebase 依赖项：
 
-```kt
+```java
 dependencies {
  ...
    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
@@ -181,7 +181,7 @@ apply plugin: 'com.google.gms.google-services'
 
 我们还告诉`firebaseRemoteConfig`实例，它应该使用`remote_config_defaults.xml`文件中的变量作为后备选项：
 
-```kt
+```java
 val firebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
 var firebaseAnalytics: FirebaseAnalytics? = null
 override fun onCreate(savedInstanceState: Bundle?) {
@@ -204,7 +204,7 @@ firebaseRemoteConfig.fetch(cacheExpiration).addOnCompleteListener(this)
 
 如果所有参数和值都已检索，我们告诉`firebaseRemoteConfig`对象应用这些值。对`applyRemoteConfiguration`方法的调用确保 UI 将更新：
 
-```kt
+```java
 override fun onComplete(task: Task<Void>) {
    if (task.*isSuccessful*){
        Log.i(*javaClass*.*simpleName*, "complete success")
@@ -219,7 +219,7 @@ override fun onComplete(task: Task<Void>) {
 
 在这里，我们设置了适用于当前变体的所有颜色和文本：
 
-```kt
+```java
 private fun applyRemoteConfiguration(){
    val variant = firebaseRemoteConfig.getString("experiment_variant")
    Log.i(javaClass.simpleName, "experiment = ${variant}")
@@ -248,7 +248,7 @@ findViewById(R.id.sign_up_button).setBackgroundColor(Color.parseColor("#0000ff")
 
 这将导致在用户引导流程中显示变体 A 或变体 B。由于我们想要测量这两个变体之间的转化率差异，我们为`fireBaseAnalytics`对象设置一个用户属性，并且如果用户点击注册按钮，我们将事件记录如下：
 
-```kt
+```java
 private fun onSignup(){
    logEvent("signUp")
    Log.i(javaClass.simpleName, "sign up button clicked")
@@ -262,7 +262,7 @@ private fun logEvent(eventName: String){
 
 首先，我们需要测试两个变体。如果你第一次运行应用且一切顺利，你将在日志输出中找到类似以下内容（过滤条件：token）：
 
-```kt
+```java
 11-10 11:22:09.856 27547-27547/com.packt.splittestdemo I/MainActivity: token = cG-QulinNq0:APA91bH2lOQThh57qNseb3PDoBRDy-mPXvE_vezn1nNFBiDrWd0a…
 ```
 

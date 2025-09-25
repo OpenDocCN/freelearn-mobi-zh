@@ -30,19 +30,19 @@
 
 一个简单的协程看起来如下所示：
 
-```kt
+```java
 CoroutineScope(Dispatchers.IO).launch {
 ```
 
-```kt
+```java
     performTask()
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -64,37 +64,37 @@ CoroutineScope(Dispatchers.IO).launch {
 
 如果你正在使用 Retrofit 2.6.0 或更高版本，你可以使用 `suspend` 将端点函数标记为暂停函数，如下所示：
 
-```kt
+```java
 @GET("movie/now_playing")
 ```
 
-```kt
+```java
 suspend fun getMovies() : List<Movies>
 ```
 
 然后，你可以创建一个协程，该协程将调用 `getMovies` 暂停函数并显示列表：
 
-```kt
+```java
 CoroutineScope(Dispatchers.IO).launch {
 ```
 
-```kt
+```java
     val movies = movieService.getMovies()
 ```
 
-```kt
+```java
     withContext(Dispatchers.Main) {
 ```
 
-```kt
+```java
         displayMovies(movies)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -102,27 +102,27 @@ CoroutineScope(Dispatchers.IO).launch {
 
 如果你正在使用 Room-KTX 2.1 或更高版本，你可以在你的 **数据访问对象** (**DAO**) 函数中添加 `suspend` 关键字，这样查询或操作就可以在后台线程上执行，结果将在主线程上发布。以下是一个示例：
 
-```kt
+```java
 @Dao
 ```
 
-```kt
+```java
 interface MovieDao {
 ```
 
-```kt
+```java
     @Query("SELECT * from movies")
 ```
 
-```kt
+```java
     suspend fun getMovies(): List<Movies>
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -130,31 +130,31 @@ interface MovieDao {
 
 当你在另一个协程内部创建协程时，新的协程成为原始协程的子协程。原始协程成为新协程的父协程。这可以在以下代码中看到：
 
-```kt
+```java
 CoroutineScope(Dispatchers.IO).launch {
 ```
 
-```kt
+```java
     performTask1()
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         performTask2()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -182,55 +182,55 @@ CoroutineScope(Dispatchers.IO).launch {
 
 当你想运行一个任务然后忘记它（这意味着你不需要等待操作的结果）时，`launch` 协程构建器是理想的选择。以下是一个使用 `launch` 协程构建器的示例：
 
-```kt
+```java
  class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     val scope = MainScope()
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         super.onCreate(savedInstanceState)
 ```
 
-```kt
+```java
         setContentView(R.layout.activity_main)
 ```
 
-```kt
+```java
         val progressBar =
 ```
 
-```kt
+```java
           findViewById<ProgressBar>(R.id.progressBar)
 ```
 
-```kt
+```java
         scope.launch {
 ```
 
-```kt
+```java
             delay(1_000)
 ```
 
-```kt
+```java
             progressBar.isVisible = true
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -238,67 +238,67 @@ CoroutineScope(Dispatchers.IO).launch {
 
 另一方面，`async` 构建器与 `launch` 类似，但它返回一个值：一个 `Deferred` 对象。稍后，你可以使用 `await` 函数获取这个值。当你想执行一个任务并获取该任务的输出时，应该使用 `async` 构建器。以下是一个使用 `async` 协程构建器的示例：
 
-```kt
+```java
  class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     val scope = MainScope()
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         super.onCreate(savedInstanceState)
 ```
 
-```kt
+```java
         setContentView(R.layout.activity_main)
 ```
 
-```kt
+```java
         val textView =
 ```
 
-```kt
+```java
           findViewById<TextView>(R.id.textView)
 ```
 
-```kt
+```java
         scope.launch {
 ```
 
-```kt
+```java
             val text = async {
 ```
 
-```kt
+```java
                 getText()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             delay(1_000)
 ```
 
-```kt
+```java
             textView.text = text.await()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -306,51 +306,51 @@ CoroutineScope(Dispatchers.IO).launch {
 
 `runBlocking` 启动一个新的协程并阻塞当前线程，直到任务执行完毕。这在需要阻塞线程的情况下很有用。创建单元测试就是这种情况之一：
 
-```kt
+```java
  class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         super.onCreate(savedInstanceState)
 ```
 
-```kt
+```java
         setContentView(R.layout.activity_main)
 ```
 
-```kt
+```java
         val progressBar =
 ```
 
-```kt
+```java
           findViewById<ProgressBar>(R.id.progressBar)
 ```
 
-```kt
+```java
         runBlocking {
 ```
 
-```kt
+```java
             delay(2_000)
 ```
 
-```kt
+```java
             progressBar.isVisible = true
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -368,51 +368,51 @@ CoroutineScope(Dispatchers.IO).launch {
 
 例如，假设我们使用 `MainScope` 创建了一个协程：
 
-```kt
+```java
  class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     val scope = MainScope()
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         super.onCreate(savedInstanceState)
 ```
 
-```kt
+```java
         setContentView(R.layout.activity_main)
 ```
 
-```kt
+```java
         val progressBar =
 ```
 
-```kt
+```java
           findViewById<ProgressBar>(R.id.progressBar)
 ```
 
-```kt
+```java
         scope.launch {
 ```
 
-```kt
+```java
             progressBar.isVisible = true
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -436,53 +436,53 @@ CoroutineScope(Dispatchers.IO).launch {
 
 要使用 `lifecycleScope`，您必须将以下行添加到您的 `app/build.gradle` 文件依赖项中：
 
-```kt
+```java
 implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.1"
 ```
 
 `lifeCycleScope` 的一个示例如下：
 
-```kt
+```java
  class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         super.onCreate(savedInstanceState)
 ```
 
-```kt
+```java
         setContentView(R.layout.activity_main)
 ```
 
-```kt
+```java
         val progressBar =
 ```
 
-```kt
+```java
           findViewById<ProgressBar>(R.id.progressBar)
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             progressBar.isVisible = true
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -490,7 +490,7 @@ implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.1"
 
 要更改协程将使用的调度器，您可以在使用 `launch` 和 `async` 协程构建器时传递一个调度器：
 
-```kt
+```java
 lifecycleScope.launch(Dispatchers.IO) { ... }
 ```
 
@@ -516,41 +516,41 @@ lifecycleScope.launch(Dispatchers.IO) { ... }
 
 要使用 `viewModelScope`，你必须将以下行添加到你的 `app/build.gradle` 文件依赖项中：
 
-```kt
+```java
 implementation "androidx.lifecycle:lifecycle-viewmodel-
 ```
 
-```kt
+```java
   ktx:2.4.1"
 ```
 
 你可以这样使用 `viewModelScope`：
 
-```kt
+```java
 class MovieViewModel: ViewModel() {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         viewModelScope.launch {
 ```
 
-```kt
+```java
             fetchMovies()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -558,7 +558,7 @@ class MovieViewModel: ViewModel() {
 
 要更改协程将使用的调度器，你可以在使用 `launch` 和 `async` 协程构造器时传递一个调度器：
 
-```kt
+```java
 viewModelScope.launch (Dispatchers.IO) { ... }
 ```
 
@@ -570,43 +570,43 @@ viewModelScope.launch (Dispatchers.IO) { ... }
 
 你可以使用一个 `coroutineScope{}` 构造器，如下所示：
 
-```kt
+```java
 private suspend fun fetchAndDisplay() = coroutineScope {
 ```
 
-```kt
+```java
         launch {
 ```
 
-```kt
+```java
             val movies = fetchMovies()
 ```
 
-```kt
+```java
             displayMovies(movies)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         launch {
 ```
 
-```kt
+```java
             val shows = fetchShows()
 ```
 
-```kt
+```java
             DisplayShows(shows)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -618,47 +618,47 @@ private suspend fun fetchAndDisplay() = coroutineScope {
 
 `supervisorScope` 的一个示例如下：
 
-```kt
+```java
  private suspend fun fetchAndDisplayMovies() =
 ```
 
-```kt
+```java
    supervisorScope {
 ```
 
-```kt
+```java
         launch {
 ```
 
-```kt
+```java
             val movies = fetchMovies()
 ```
 
-```kt
+```java
             displayMovies(movies)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         launch {
 ```
 
-```kt
+```java
             val shows = fetchShows()
 ```
 
-```kt
+```java
             displayShows(shows)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -694,7 +694,7 @@ Kotlin 有一个名为`kotlinx-coroutines-test`的库用于测试协程。这个
 
 当使用`MainScope`作为你的协程作用域时，默认使用`Dispatchers.Main`：
 
-```kt
+```java
 MainScope().launch { ... }
 ```
 
@@ -702,15 +702,15 @@ MainScope().launch { ... }
 
 如果你使用了不同的协程作用域，你可以传递协程将使用的调度器：
 
-```kt
+```java
 CoroutineScope(Dispatchers.IO).launch {
 ```
 
-```kt
+```java
     fetchMovies()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -718,7 +718,7 @@ CoroutineScope(Dispatchers.IO).launch {
 
 你也可以在使用`launch`和`async`协程构建器时传递调度器：
 
-```kt
+```java
 viewModelScope.launch(Dispatchers.Default) { ... }
 ```
 
@@ -726,15 +726,15 @@ viewModelScope.launch(Dispatchers.Default) { ... }
 
 要更改协程的上下文，你可以使用`withContext`函数来为想要使用不同线程的代码。例如，在你的挂起函数`getMovies`中，该函数从你的端点获取电影，你可以使用`Dispatchers.IO`：
 
-```kt
+```java
 suspend fun getMovies(): List<Movies>  {
 ```
 
-```kt
+```java
     withContext(Dispatchers.IO) { ... }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -754,19 +754,19 @@ suspend fun getMovies(): List<Movies>  {
 
 当你创建一个`CoroutineScope`或使用协程构建器时，你可以传递一个`CoroutineContext`。在之前的示例中，我们传递了一个调度器：
 
-```kt
+```java
 CoroutineScope(Dispatchers.IO) {
 ```
 
-```kt
+```java
     …
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 viewModelScope.launch(Dispatchers.Default) { ... }
 ```
 
@@ -788,19 +788,19 @@ viewModelScope.launch(Dispatchers.Default) { ... }
 
 `CoroutineName`是另一个你可以使用的`CoroutineContext`，用于设置一个字符串来命名协程。这个名称对于调试目的可能很有用。例如，你可以使用以下代码添加一个`CoroutineName`：
 
-```kt
+```java
 val scope = CoroutineScope(Dispatchers.IO)
 ```
 
-```kt
+```java
 scope.launch(CoroutineName("IOCoroutine")) {
 ```
 
-```kt
+```java
     performTask()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -808,13 +808,13 @@ scope.launch(CoroutineName("IOCoroutine")) {
 
 由于协程上下文是协程元素集合，你可以使用如`+`这样的运算符来组合上下文元素以创建一个新的`CoroutineContext`：
 
-```kt
+```java
 val context = Dispatchers.Main + Job()
 ```
 
 例如，`MainScope`、`viewModelScope`和`lifecycleScope`使用以下内容作为协程作用域上下文：
 
-```kt
+```java
 SupervisorJob() + Dispatchers.Main.immediate
 ```
 
@@ -822,7 +822,7 @@ SupervisorJob() + Dispatchers.Main.immediate
 
 在上一节中，你使用了`withContext`函数来更改调度器以指定不同的线程来运行你的协程。正如其名所示，这会通过调度器更改协程上下文，调度器本身也是一个`CoroutineContext`元素：
 
-```kt
+```java
 withContext(Dispatchers.IO) { ... }
 ```
 
@@ -838,37 +838,37 @@ withContext(Dispatchers.IO) { ... }
 
 要从协程访问作业，您可以将其设置为一个变量：
 
-```kt
+```java
 val job = viewModelScope.launch(Dispatchers.IO) { ... }
 ```
 
 `launch`协程构建器创建一个在`Dispatchers.IO`线程上运行的协程，并返回一个作业。作业可以有子作业，使其成为父作业。`Job`有一个`children`属性，您可以使用它来获取作业的子作业：
 
-```kt
+```java
 val job1 = viewModelScope.launch(Dispatchers.IO) { 
 ```
 
-```kt
+```java
     val movies = fetchMovies()
 ```
 
-```kt
+```java
     val job2 = launch {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -880,27 +880,27 @@ val job1 = viewModelScope.launch(Dispatchers.IO) {
 
 使用作业还可以让您创建一个可以在以后启动的协程，而不是默认立即运行。为此，您必须在协程构建器中将`start`参数的值设置为`CoroutineStart.LAZY`，并将结果分配给一个`Job`变量。稍后，您可以使用`start()`函数来运行协程，如下所示：
 
-```kt
+```java
 val lazyJob = viewModelScope.launch (start=CoroutineStart.LAZY) {
 ```
 
-```kt
+```java
     delay(1_000)
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 lazyJob.start()
 ```
 
@@ -908,47 +908,47 @@ lazyJob.start()
 
 使用`Job`对象，您还可以使用`join()`挂起函数等待作业完成，然后再继续另一个作业或任务：
 
-```kt
+```java
 viewModelScope.launch {
 ```
 
-```kt
+```java
     val job1 = launch {
 ```
 
-```kt
+```java
         showProgressBar()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     job1.join()
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     val job2 = launch {
 ```
 
-```kt
+```java
         fetchMovies()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1006,13 +1006,13 @@ viewModelScope.launch {
 
 1.  打开 `MovieRepository` 并使用 The Movie Database API 的值更新 `apiKey`：
 
-    ```kt
+    ```java
     private val apiKey = "your_api_key_here" 
     ```
 
 1.  打开 `app/build.gradle` 文件，并添加 `kotlinx-coroutines-android` 的依赖项：
 
-    ```kt
+    ```java
     implementation ‘org.jetbrains.kotlinx:kotlinx-
       coroutines-android:1.6.0’
     ```
@@ -1021,7 +1021,7 @@ viewModelScope.launch {
 
 1.  此外，添加 `ViewModel` 扩展库的依赖项：
 
-    ```kt
+    ```java
     implementation ‘androidx.lifecycle:lifecycle-
       viewmodel-ktx:2.4.1’
     ```
@@ -1030,7 +1030,7 @@ viewModelScope.launch {
 
 1.  打开 `MovieViewModel` 类，导航到 `fetchMovies` 函数，并添加以下代码：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         _loading.value = true
         viewModelScope.launch(Dispatchers.IO) {
@@ -1042,7 +1042,7 @@ viewModelScope.launch {
 
 1.  在 `fetchMovies` 协程中，调用 MovieRepository 的 `fetchMovies` 函数以从 The Movie Database API 获取电影列表：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         _loading.value = true
         viewModelScope.launch(Dispatchers.IO) {

@@ -28,7 +28,7 @@
 
 当一个类依赖于另一个类的功能时，两个类之间就创建了一个依赖。要调用你依赖的类的功能，你需要实例化它，如下例所示：
 
-```kt
+```java
  class ClassA() {
     private val b: ClassB = ClassB()
     fun executeA() {
@@ -44,7 +44,7 @@ class ClassB() {
 
 在这个例子中，`ClassA` 创建了一个新的 `ClassB` 实例，然后当调用 `executeA` 时，它将调用 `executeB`。这引发了一个问题，因为 `ClassA` 将承担创建 `ClassB` 的额外责任。让我们看看如果 `ClassB` 需要变为以下内容时会发生什么：
 
-```kt
+```java
 class ClassB(private val myFlag: Boolean) {
 
     fun executeB() {
@@ -59,7 +59,7 @@ class ClassB(private val myFlag: Boolean) {
 
 在这里，我们向 `ClassB` 添加了 `myFlag` 变量，该变量在 `executeB` 方法中使用。这个更改将导致编译错误，因为现在 `ClassA` 需要修改才能使代码编译。
 
-```kt
+```java
 class ClassA() {
     private val b: ClassB = ClassB(true)
     fun executeA() {
@@ -72,7 +72,7 @@ class ClassA() {
 
 当应用程序的代码库增加时，对这些类型的变化进行修改将使维护变得困难。解决这个问题的一个方案是将我们使用依赖项的方式与我们创建依赖项的方式分开，并将创建委托给不同的对象。继续前面的例子，我们可以将 `ClassA` 重写为以下内容：
 
-```kt
+```java
 class ClassA(private val b: ClassB) {
     fun executeA() {
         b.executeB()
@@ -82,7 +82,7 @@ class ClassA(private val b: ClassB) {
 
 在这里，我们移除了 `ClassB` 的实例化，并将变量移动到了 `ClassA` 的构造函数中。现在，我们可以创建一个负责创建两个类实例的类，如下所示：
 
-```kt
+```java
 class Injector() {
     fun createA(b: ClassB) = ClassA(b)
     fun createB() = ClassB(true)
@@ -91,7 +91,7 @@ class Injector() {
 
 在这里，我们有一个新的类，它将使用`ClassB`作为参数创建`ClassA`的实例，并且还有一个单独的方法用于创建`ClassB`的实例。理想情况下，当程序初始化时，我们需要初始化所有依赖项并适当地传递它们：
 
-```kt
+```java
 fun main(args : Array<String>) {
     val injector = Injector()
     val b = injector.createB()
@@ -103,7 +103,7 @@ fun main(args : Array<String>) {
 
 在`ClassB`中，我们在`executeB`方法中有一个`if-else`语句。我们可以在那里引入一个抽象，因此我们将`if-else`语句拆分为两个单独的实现：
 
-```kt
+```java
 class ClassA(private val b: ClassB) {
     fun executeA() {
         b.executeB()
@@ -126,7 +126,7 @@ class ClassB2() : ClassB {
 
 在这里，`ClassA`保持不变，而`ClassB`已成为一个接口，有两个实现，分别称为`ClassB1`和`ClassB2`，代表`if-else`分支的实现。在这里，我们也可以使用`Injector`类来注入这两个实现之一，而无需对`ClassA`进行任何更改：
 
-```kt
+```java
 class Injector() {
     fun createA(b: ClassB) = ClassA(b)
     fun createB() = ClassB1()
@@ -175,7 +175,7 @@ Dagger 2 库依赖于基于注解处理的代码生成，这将生成执行 DI �
 
 为了将 Dagger 2 添加到 Android 应用程序中，你首先需要将 Kotlin 注解处理器插件添加到使用 Dagger 2 的模块的 `build.gradle` 文件中：
 
-```kt
+```java
 plugins {
     … 
     id 'kotlin-kapt'
@@ -185,7 +185,7 @@ plugins {
 
 在这里，我们添加了 `kotlin-kapt` 插件以允许 Dagger 2 生成 DI 所需的代码。接下来，我们需要 Dagger 2 依赖项：
 
-```kt
+```java
 dependencies {
     …
     implementation 'com.google.dagger:dagger:2.40.5'
@@ -198,7 +198,7 @@ dependencies {
 
 让我们重新介绍上一节中的示例：
 
-```kt
+```java
 class ClassA(private val b: ClassB) {
     fun executeA() {
         b.executeB()
@@ -221,7 +221,7 @@ class ClassB2() : ClassB {
 
 这里，我们有相同的类和相同的依赖项。我们不需要定义 `Injector` 类，而是可以使用 Dagger 2 来定义 `@Module`：
 
-```kt
+```java
 @Module
 class ApplicationModule {
     @Provides
@@ -233,7 +233,7 @@ class ApplicationModule {
 
 在这里，我们使用 `@Module` 注解了类，并为每个实例使用了 `@Provides` 注解。我们可以进一步使用 `@Inject` 注解来简化这一点，并从 `ApplicationModule` 中删除 `@Provides` 方法：
 
-```kt
+```java
 class ClassA @Inject constructor(private val b: ClassB) {
    …
 }
@@ -247,7 +247,7 @@ class ClassB2 @Inject constructor() : ClassB {
 
 在前面的代码中，我们已经为每个构造函数添加了`@Inject`。对于`ClassA`来说，它将同时扮演向`ClassB`注入的角色，并将`ClassA`作为依赖提供给其他对象。然而，存在一个问题，因为`ClassA`依赖于抽象而不是具体实现，所以 Dagger 将不知道应该为`ClassA`提供哪个实例。现在，我们可以在`ApplicationModule`中添加一个被`@Binds`注解的方法，将抽象与实现连接起来：
 
-```kt
+```java
 @Module
 abstract class ApplicationModule {
     @Binds
@@ -259,7 +259,7 @@ abstract class ApplicationModule {
 
 现在，我们需要创建连接器：
 
-```kt
+```java
 @Singleton
 @Component(modules = [ApplicationModule::class])
 interface ApplicationComponent
@@ -267,7 +267,7 @@ interface ApplicationComponent
 
 在这里，我们定义了一个`@Component`，在其中我们指定应用程序将使用的模块。`@Singleton`注解告诉 Dagger，这个组件中的所有依赖将与应用程序的生命周期一样长。在这个时候，我们应该在应用程序上触发构建。这将触发编译，生成一个`DaggerApplicationComponent`类。这是一个`ApplicationComponent`的实现，Dagger 2 将处理它。这个类将用于创建整个依赖图。在 Android 中，我们需要一个入口点，这由`Application`类表示：
 
-```kt
+```java
 class MyApplication : Application() {
     lateinit var component: ApplicationComponent
     override fun onCreate() {
@@ -279,7 +279,7 @@ class MyApplication : Application() {
 
 在这里，在`MyApplication`类中，我们使用`DaggerApplicationComponent`创建依赖图。这将遍历图中的所有模块并调用所有的`@Provides`方法。`@Component`注解还有另一个作用，即在构造函数注入不可用时定义成员注入。在 Android 中，这种情况发生在处理生命周期组件，如活动和片段时，因为我们不允许修改这些类的默认构造函数。为此，我们可以这样做：
 
-```kt
+```java
 @Singleton
 @Component(modules = [ApplicationModule::class])
 interface ApplicationComponent {
@@ -289,7 +289,7 @@ interface ApplicationComponent {
 
 在`ApplicationComponent`中，我们添加了一个名为`inject`的方法和想要执行注入的`Activity`。在`MainActivity`类中，我们需要做以下操作：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var a: ClassA
@@ -305,7 +305,7 @@ class MainActivity : AppCompatActivity() {
 
 在这里，我们需要访问在 `MyApplication` 中创建的 `ApplicationComponent` 实例，然后从 `ApplicationComponent` 中调用 `inject` 方法。这将初始化变量 `a` 为 Dagger 2 创建的实例。然而，这种方法有一个问题，因为所有依赖项都将与应用程序的生命周期一样长。这意味着当不需要依赖项时，Dagger 2 需要保留它们在内存中。Dagger 2 以范围和子组件的形式提供了解决方案。我们可以创建一个新的范围，这将告诉 Dagger 2 只在 Activity 存活期间保留某些依赖项，然后将其应用于子组件，这将处理更小的依赖项图。
 
-```kt
+```java
 @Scope
 @MustBeDocumented
 @kotlin.annotation.Retention(AnnotationRetention.RUNTIME)
@@ -314,7 +314,7 @@ annotation class ActivityScope
 
 在这里，我们创建了一个新的 `@Scope` 注解，它将指示依赖项将与活动一样长。接下来，我们将使用 `@ActivityScope` 创建一个 `@Subcomponent` 注解的类：
 
-```kt
+```java
 @ActivityScope
 @Subcomponent(modules = [ApplicationModule::class])
 interface MainSubcomponent {
@@ -324,7 +324,7 @@ interface MainSubcomponent {
 
 在这里，我们定义了一个子组件，它将使用 `ApplicationModule` 并为 `MainActivity` 中的字段注入提供了一个 `inject` 方法。之后，我们需要告诉 Dagger 2 创建 `MainSubcomponent`，通过修改 `ApplicationComponent`：
 
-```kt
+```java
 @Singleton
 @Component
 interface ApplicationComponent {
@@ -334,7 +334,7 @@ interface ApplicationComponent {
 
 在这里，我们从 `@Component` 中移除了 `ApplicationModule`，并用一个 `createMainSubcomponent` 方法替换了 `inject` 方法，这将允许 Dagger 创建 `MainSubcomponent`。最后，我们需要在 `MainActivity` 中访问 `MainSubcomponent` 并注入 `ClassA` 依赖项：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var a: ClassA
@@ -380,7 +380,7 @@ Hilt 是一个建立在 Dagger 2 之上的库，专注于 Android 应用程序�
 
 为了在项目中使用 Hilt，它需要一个 Gradle 插件，该插件需要作为依赖添加到项目的根 `build.gradle` 文件中：
 
-```kt
+```java
 buildscript {
     repositories {
         …
@@ -395,7 +395,7 @@ buildscript {
 
 然后，我们需要将注解处理器插件和 Hilt 插件添加到我们想要在 Gradle 模块中使用 Hilt 库的 `build.gradle` 文件中：
 
-```kt
+```java
 plugins {
     …
     id 'kotlin-kapt'
@@ -405,7 +405,7 @@ plugins {
 
 这两个插件的组合使得 Hilt 能够生成注入依赖所需的源代码。最后，我们还需要将依赖添加到 Hilt 库中：
 
-```kt
+```java
 dependencies {
     …
     implementation 'com.google.dagger:hilt-android:2.40.5'
@@ -418,7 +418,7 @@ dependencies {
 
 现在，让我们重新引入上一节中的示例：
 
-```kt
+```java
 class ClassA @Inject constructor(private val b: ClassB) {
     fun executeA() {
         b.executeB()
@@ -441,7 +441,7 @@ class ClassB2 @Inject constructor() : ClassB {
 
 在这里，我们可以保持我们类的相同结构，并像之前那样使用 `@Inject` 注解。将提供这些依赖项的 `@Module` 注解的类将类似于 Dagger 2 模块：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ApplicationModule {
@@ -452,14 +452,14 @@ abstract class ApplicationModule {
 
 在 `ApplicationModule` 类中，我们保持之前的实现不变，但现在我们添加了 `@InstallIn` 注解，这将使此模块提供的依赖项的生命周期与应用程序的生命周期相同。接下来，我们需要触发组件的生成：
 
-```kt
+```java
 @HiltAndroidApp
 class MyApplication : Application()
 ```
 
 在这里，我们不再需要使用 `DaggerApplicationComponent` 来手动触发依赖图的创建，而是使用 `@HiltAndroidApp`，这将为我们完成这项工作，并提供将依赖项注入到 `MyApplication` 类的能力。最后，我们需要将依赖项注入到 `Activity` 中：
 
-```kt
+```java
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     @Inject
@@ -502,7 +502,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  将 Hilt Gradle 插件添加到根项目的 `build.gradle` 文件：
 
-    ```kt
+    ```java
     buildscript {
         repositories {
             …
@@ -517,7 +517,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  将 Gradle 插件应用到 app 模块中的 `build.gradle` 文件：
 
-    ```kt
+    ```java
     plugins {
         …
         id 'dagger.hilt.android.plugin'
@@ -526,7 +526,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  将 Hilt 库依赖项添加到 app 模块的 `build.gradle` 文件：
 
-    ```kt
+    ```java
     dependencies {
         …
         implementation 'com.google.dagger:hilt-android
@@ -542,7 +542,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在一个 `NetworkModule` 类中提供网络依赖项：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     class NetworkModule {
@@ -575,7 +575,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  接下来，创建一个 `PersistenceModule` 类，它将返回所有持久化相关的依赖项：
 
-    ```kt
+    ```java
     val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "my_preferences")
     @Module
     @InstallIn(SingletonComponent::class)
@@ -601,7 +601,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  将 `@Inject` 注解添加到 `MainTextFormatter` 类的构造函数中：
 
-    ```kt
+    ```java
     class MainTextFormatter @Inject constructor(@ApplicationContext private val applicationContext: Context) {
         fun getCounterText(count: Int) =
             applicationContext.getString(R.string.total_
@@ -613,7 +613,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在 `MyApplication` 类中删除所有依赖项，并添加 `@HiltAndroidApp` 注解：
 
-    ```kt
+    ```java
     @HiltAndroidApp
     class MyApplication : Application()
     ```
@@ -622,7 +622,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  将 `@HiltViewModel` 注解添加到 `MainViewModel` 类，并将 `@Inject` 添加到构造函数：
 
-    ```kt
+    ```java
     @HiltViewModel
     class MainViewModel @Inject constructor(
         private val userService: UserService,
@@ -636,7 +636,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在 `MainActivity` 的 `Users` `@Composable` 方法中删除对 `MainViewModelFactory` 的引用：
 
-    ```kt
+    ```java
     @Composable
     fun Users(
         navController: NavController,
@@ -648,7 +648,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  将 `MainActivity` 中的 `@Composable` `App` 方法修改为在调用 `Users` 方法时提供 `MainViewModel` 实例：
 
-    ```kt
+    ```java
     @Composable
     fun App(navController: NavHostController) {
         NavHost(navController, startDestination = AppNavigation.Users.route) {
@@ -673,7 +673,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在 `MainActivity` 上添加 `@AndroidEntryPoint` 注解：
 
-    ```kt
+    ```java
     @AndroidEntryPoint
     class MainActivity : ComponentActivity() {
         …
@@ -682,7 +682,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  如果在构建应用程序时遇到 `Records requires ASM8` 错误，请在根项目的 `gradle.properties` 文件中添加以下内容：
 
-    ```kt
+    ```java
     android.jetifier.ignorelist=moshi-1.13.0
     ```
 

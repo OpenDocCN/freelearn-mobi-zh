@@ -22,7 +22,7 @@
 
 1.  在您的根文件夹或工作文件夹中创建一个新的文件夹，并执行以下命令来下载 ARCore 模板：
 
-```kt
+```java
 mkdir ARCore
 cd ARCore
 git clone https://github.com/google-ar/arcore-unity-sdk.git ARCoreDesign
@@ -106,7 +106,7 @@ git clone https://github.com/google-ar/arcore-unity-sdk.git ARCoreDesign
 
 1.  将整个`HelloARController.cs`脚本复制并粘贴到`SceneController.cs`文件的内容上；是的，全部。我们实际上是在制作一个副本。重命名你的类并更改命名空间，如下所示：
 
-```kt
+```java
 namespace Packt.ARCoreDesign
 {
 ...  //code omitted
@@ -119,7 +119,7 @@ public class SceneController : MonoBehaviour  //rename me
 
 1.  确保以下所有新的`using`语句都已识别，如下所示：
 
-```kt
+```java
  using System.Collections.Generic;
  using GoogleARCore;
  using UnityEngine;
@@ -267,7 +267,7 @@ public class SceneController : MonoBehaviour  //rename me
 
 1.  在代码编辑器中打开我们之前创建的`SceneController`脚本。在`Update`方法之前，插入以下代码段：
 
-```kt
+```java
 private List<GameObject> m_sceneObjects = new List<GameObject>();
 private List<GameObject> m_scenePlanes = new List<GameObject>();
 private bool m_planeOnState;
@@ -296,7 +296,7 @@ public void Planes()
 
 1.  在`Update`方法中向下滚动，并在指定的行之后添加一行：
 
-```kt
+```java
 var andyObject = Instantiate... //after me
 m_sceneObjects.Add(andyObject);
 ```
@@ -305,7 +305,7 @@ m_sceneObjects.Add(andyObject);
 
 1.  向上滚动并添加到指定的行之后的一行：
 
-```kt
+```java
 GameObject planeObject = Instantiate... //after mem_scenePlanes.Add(planeObject);
 ```
 
@@ -345,13 +345,13 @@ GameObject planeObject = Instantiate... //after mem_scenePlanes.Add(planeObject)
 
 1.  将着色器的名称（顶部行）更改为以下内容：
 
-```kt
+```java
 Shader "ARCoreDesgin/ARMobileSpecularOutline"
 ```
 
 1.  接下来，我们需要在文件顶部进行几个编辑。将属性部分更改为以下内容，并添加未高亮的新的行：
 
-```kt
+```java
 Properties
 {
   _Albedo ("Albedo", Color) = (1, 1, 1, 1)
@@ -367,7 +367,7 @@ Properties
 
 1.  在标识的行之后，注入以下代码块：
 
-```kt
+```java
 Tags { "RenderType"="Opaque" }
 LOD 250 //after me
 Pass {
@@ -408,14 +408,14 @@ Pass {
 
 1.  我们需要做的最后一件事是将新的`_Albedo`属性添加到我们的表面着色器中，并添加代码来使用它。向下滚动，并在标识的行之后添加以下行：
 
-```kt
+```java
 fixed _GlobalLightEstimation;  //after me
 float4 _Albedo;
 ```
 
 1.  向下滚动到`surf`函数并修改以下行：
 
-```kt
+```java
 from o.Albedo = tex.rgb;
 
 to o.Albedo = tex.rgb * _Albedo;
@@ -455,7 +455,7 @@ to o.Albedo = tex.rgb * _Albedo;
 
 1.  用以下内容替换所有预生成的脚本：
 
-```kt
+```java
 namespace Packt.ARCoreDesign
 {
     using System.Collections;
@@ -491,7 +491,7 @@ namespace Packt.ARCoreDesign
 
 1.  接下来，在您的代码编辑器中打开`SceneController.cs`脚本。我们必须在`Update`方法中用我们自己的`Physics Raycast`包装`Session Raycast`调用。按照以下方式在突出显示的代码部分周围添加以下代码：
 
-```kt
+```java
 RaycastHit rayHit;
 if (Physics.Raycast(FirstPersonCamera.ScreenPointToRay(touch.position), out rayHit, 2))
   {
@@ -559,7 +559,7 @@ if (Physics.Raycast(FirstPersonCamera.ScreenPointToRay(touch.position), out rayH
 
 1.  在指定的行之后，在类顶部添加一个新的`public`变量：
 
-```kt
+```java
 public GameObject m_andyAndroidPrefab; //after me
 public float MoveSpeed = .1f;
 ```
@@ -568,7 +568,7 @@ public float MoveSpeed = .1f;
 
 1.  定位以下突出显示的代码部分，并将其替换为以下内容：
 
-```kt
+```java
 if (Input.touchCount < 1 || (touch = Input.GetTouch(0)).phase != TouchPhase.Began)
 {
  return;
@@ -584,7 +584,7 @@ if (touch.phase == TouchPhase.Began) //handle a single touch
 
 1.  滚动到指定的行，并在`Update`方法末尾之前添加以下代码：
 
-```kt
+```java
     // Make Andy model a child of the anchor.
     andyObject.transform.parent = anchor.transform;
  }
@@ -611,7 +611,7 @@ else if (touch.phase == TouchPhase.Moved)
 
 1.  向上滚动并更改 `**if**` 语句，添加以 `**&&**` 开头的新突出显示代码：
 
-```kt
+```java
 if (outliner != null && outliner.outlineOn == false)
 {
   outliner.Outline();
@@ -624,7 +624,7 @@ if (outliner != null && outliner.outlineOn == false)
 
 1.  向下滚动到指定的代码，并插入以下新代码以清除选中对象上的轮廓：
 
-```kt
+```java
 else
 {  //after me
   //touched outside, reset all outlined objects
@@ -662,7 +662,7 @@ TrackableHit hit;  //before me
 
 1.  选择所有自动生成的代码并将其删除。然后，添加以下代码：
 
-```kt
+```java
 Shader "ARCoreDesign/UnlitShadowReceiver" 
 {
  Properties

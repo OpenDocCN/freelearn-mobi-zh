@@ -54,33 +54,33 @@ GUI 警告的主要好处之一是它们为用户提供即时反馈。例如，�
 
 1.  让我们在 Kotlin 文件中创建一个可组合函数`OurMenu`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun OurMenu(){ }
     ```
 
 1.  现在，让我们继续创建我们的菜单。为了我们的目的，我们只展示一些项目，当有人点击时，不会发生任何事情，因为我们不会实现`onClick`函数。首先，我们需要确保它不是以`expanded`开始的，这意味着用户需要点击来展开菜单，并且它将响应地变为`true`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun OurMenu(){
     ```
 
-    ```kt
+    ```java
     var expanded by remember { mutableStateOf(false) }
     ```
 
-    ```kt
+    ```java
     val menuItems = listOf("Item 1", "Item 2", "Item 3",
     ```
 
-    ```kt
+    ```java
     "Item 4") }
     ```
 
@@ -88,55 +88,55 @@ GUI 警告的主要好处之一是它们为用户提供即时反馈。例如，�
 
 1.  接下来，我们必须创建一个`Box()`，将其对齐到中心，并响应修改器中的`expanded`状态。我们还需要添加一个图标`ArrowDropDown`，以通知用户他们可以点击，并且我们还有更多项目：
 
-    ```kt
+    ```java
     Box(
     ```
 
-    ```kt
+    ```java
         contentAlignment = Alignment.Center,
     ```
 
-    ```kt
+    ```java
         modifier = Modifier
     ```
 
-    ```kt
+    ```java
             .clickable { expanded = true }
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         Text(stringResource(id = R.string.menu))
     ```
 
-    ```kt
+    ```java
         Icon(
     ```
 
-    ```kt
+    ```java
             imageVector = Icons.Default.ArrowDropDown,
     ```
 
-    ```kt
+    ```java
             contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                 id = R.string.menu_drop_down),
     ```
 
-    ```kt
+    ```java
             modifier = Modifier.align(Alignment.CenterEnd)
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -144,39 +144,39 @@ GUI 警告的主要好处之一是它们为用户提供即时反馈。例如，�
 
 1.  然后，我们将显示我们的项目在`DropdownMenuItem`函数上，以便当它被点击时执行操作。在我们的示例中，我们不做任何事情：
 
-    ```kt
+    ```java
     DropdownMenu(
     ```
 
-    ```kt
+    ```java
         expanded = expanded,
     ```
 
-    ```kt
+    ```java
         onDismissRequest = { expanded = false }
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         menuItems.forEachIndexed { index, item ->
     ```
 
-    ```kt
+    ```java
             DropdownMenuItem(text = { Text(item)},
     ```
 
-    ```kt
+    ```java
                 onClick = { /*TODO*/ })
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -222,41 +222,41 @@ GUI 警告的主要好处之一是它们为用户提供即时反馈。例如，�
 
 1.  一旦创建了`Toast`对象，你可以调用`show()`方法来在屏幕上显示它：
 
-    ```kt
+    ```java
     Toast.makeText(context, "Hello, Android!", Toast.LENGTH_SHORT).show();
     ```
 
 1.  然而，在 Jetpack Compose 中，要显示 Toast，我们需要使用`coroutineScope`，但请注意，在所有情况下显示 Toast 并不一定需要协程，在我们的示例中，我们将使用`launch`函数来启动一个显示 Toast 消息的协程：
 
-    ```kt
+    ```java
     val coroutineScope = rememberCoroutine()
     ```
 
-    ```kt
+    ```java
     coroutineScope.launch {
     ```
 
-    ```kt
+    ```java
         Toast.makeText(
     ```
 
-    ```kt
+    ```java
             context,
     ```
 
-    ```kt
+    ```java
             "Selected item: $item",
     ```
 
-    ```kt
+    ```java
             Toast.LENGTH_SHORT
     ```
 
-    ```kt
+    ```java
         ).show()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -268,37 +268,37 @@ GUI 警告的主要好处之一是它们为用户提供即时反馈。例如，�
 
 1.  在以下示例中，我们将使用 Snackbar 而不是 Toast：
 
-    ```kt
+    ```java
     coroutineScope.launch {
     ```
 
-    ```kt
+    ```java
         Toast.makeText(
     ```
 
-    ```kt
+    ```java
             context,
     ```
 
-    ```kt
+    ```java
             "Selected item: $item",
     ```
 
-    ```kt
+    ```java
             Toast.LENGTH_SHORT
     ```
 
-    ```kt
+    ```java
         ).show()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 在 Jetpack Compose 中，使用 Snackbar 的方式有多种；你可以用它与`Scaffold`一起使用，也可以不使用它。然而，建议使用带有`Scaffold`的 Snackbar。在我们的示例中，我们将使用`Scaffold`：
 
-```kt
+```java
 menuItems.forEachIndexed { index, item ->
     DropdownMenuItem(
         text = { Text(item) },
@@ -371,11 +371,11 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  在 `AlertDialogDemo` 中创建一个可组合函数，并命名为 `AlertDialogExample()`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun AlertDialogExample() {...}
     ```
 
@@ -383,149 +383,149 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  然后，我们必须向 `AlertDialog` 添加标题和文本属性。我们使用 `Text` 组件来定义标题和消息文本，并根据需要设置 `fontWeight` 和 `color` 属性：
 
-    ```kt
+    ```java
     AlertDialog(
     ```
 
-    ```kt
+    ```java
         onDismissRequest = { dialog.value = false },
     ```
 
-    ```kt
+    ```java
         title = {
     ```
 
-    ```kt
+    ```java
             Text(
     ```
 
-    ```kt
+    ```java
                 text = stringResource(
     ```
 
-    ```kt
+    ```java
                     id = R.string.title_message),
     ```
 
-    ```kt
+    ```java
                 fontWeight = FontWeight.Bold,
     ```
 
-    ```kt
+    ```java
                 color = Color.Black
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         },
     ```
 
-    ```kt
+    ```java
         text = {
     ```
 
-    ```kt
+    ```java
             Text(
     ```
 
-    ```kt
+    ```java
                 text = stringResource(id = R.string.body),
     ```
 
-    ```kt
+    ```java
                 color = Color.Gray
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         },
     ```
 
-    ```kt
+    ```java
         . . .
     ```
 
 1.  然后，我们将向 `AlertDialog` 添加 `confirmButton` 和 `dismissButton` 属性。我们使用 `Button` 组件来定义按钮，并将 `onClick` 属性设置为 lambda 表达式，当按钮被点击时将执行适当的操作：
 
-    ```kt
+    ```java
         confirmButton = {
     ```
 
-    ```kt
+    ```java
             Button(
     ```
 
-    ```kt
+    ```java
                 onClick = {/*TODO*/ }
     ```
 
-    ```kt
+    ```java
             ) {
     ```
 
-    ```kt
+    ```java
                 Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                     id = R.string.ok))
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         },
     ```
 
-    ```kt
+    ```java
         dismissButton = {
     ```
 
-    ```kt
+    ```java
             Button(
     ```
 
-    ```kt
+    ```java
                 onClick = { dialog.value = false }
     ```
 
-    ```kt
+    ```java
             ) {
     ```
 
-    ```kt
+    ```java
                 Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                     id = R.string.cancel))
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         },
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
         . . .
     ```
 
@@ -567,17 +567,17 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  在`BottomSheetDemo`内部创建一个可组合函数，并命名为`BottomSheetExample()`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun BottomSheetExample() {...}
     ```
 
 1.  由于我们正在使用 Material 3，我们将承认大多数 API 仍然是实验性的，这意味着很多东西都可能改变。让我们为我们的底部面板对话框创建状态：
 
-    ```kt
+    ```java
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ```
 
@@ -585,99 +585,99 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  现在我们需要继续创建我们的`ModalBottomSheet()`，它接受几个参数；我们只需使用`onDismiss`和`sheetState`：
 
-    ```kt
+    ```java
     ModalBottomSheet(
     ```
 
-    ```kt
+    ```java
         onDismissRequest = { openBottomSheet = false },
     ```
 
-    ```kt
+    ```java
         sheetState = bottomSheetState,
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         Column(Modifier.fillMaxWidth(),
     ```
 
-    ```kt
+    ```java
             horizontalAlignment =
     ```
 
-    ```kt
+    ```java
                 Alignment.CenterHorizontally) {
     ```
 
-    ```kt
+    ```java
             Button(
     ```
 
-    ```kt
+    ```java
                 onClick = {
     ```
 
-    ```kt
+    ```java
                     coroutineScope.launch {
     ```
 
-    ```kt
+    ```java
                         bottomSheetState.hide() }
     ```
 
-    ```kt
+    ```java
                            .invokeOnCompletion {
     ```
 
-    ```kt
+    ```java
                            if (
     ```
 
-    ```kt
+    ```java
                                !bottomSheetState.isVisible
     ```
 
-    ```kt
+    ```java
                            ) {
     ```
 
-    ```kt
+    ```java
                                openBottomSheet = false
     ```
 
-    ```kt
+    ```java
                            }
     ```
 
-    ```kt
+    ```java
                     }
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             ) {
     ```
 
-    ```kt
+    ```java
                 Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                     id = R.string.content))
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
@@ -719,83 +719,83 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  在 `RadioButtonDemo` 中创建一个组合函数，并命名为 `RadioButtonExample()`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun RadioButtonExample() {...}
     ```
 
 1.  我们将开始创建一个选择列表，在我们的例子中，我们可以使用水果，然后跟踪选中的选择：
 
-    ```kt
+    ```java
     val choices = listOf("Mangoes", "Avocado", "Oranges")
     ```
 
-    ```kt
+    ```java
     var selectedOption by remember {
     ```
 
-    ```kt
+    ```java
         mutableStateOf(choices[0]) }
     ```
 
 1.  由于我们使用的是 Google 提供的 `RadioButton` 组合组件，根据你的需求，你可以按自己的喜好自定义 `RadioButton`：
 
-    ```kt
+    ```java
     Row(
     ```
 
-    ```kt
+    ```java
         Modifier.fillMaxWidth(),
     ```
 
-    ```kt
+    ```java
         verticalAlignment = Alignment.CenterVertically
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         RadioButton(
     ```
 
-    ```kt
+    ```java
             selected = selectedOption == option,
     ```
 
-    ```kt
+    ```java
             onClick = { selectedOption = option }
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         Text(
     ```
 
-    ```kt
+    ```java
             text = option,
     ```
 
-    ```kt
+    ```java
             style = MaterialTheme.typography.body1,
     ```
 
-    ```kt
+    ```java
             modifier = Modifier.padding(start = 6.dp)
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -831,11 +831,11 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  在 `ActionComponentsDemo` 中创建一个组合函数，并命名为 `ActionComponentsExample()`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun RadioButtonExample() {...}
     ```
 
@@ -843,19 +843,19 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  我们将首先创建一个 FAB。`FloatingActionButton` 是一个圆形按钮，它浮在 UI 之上，通常用于触发应用中的主要操作。你可以在 Jetpack Compose 中使用 `FloatingActionButton` 创建一个 `FloatingActionButton` 组合器：
 
-    ```kt
+    ```java
     FloatingActionButton(onClick = { /* do something */ }) {
     ```
 
-    ```kt
+    ```java
         Icon(Icons.Default.Add, contentDescription =
     ```
 
-    ```kt
+    ```java
             stringResource(id = R.string.add))
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -863,47 +863,47 @@ Scaffold 在 Android 应用程序开发框架（如 Flutter 或 Jetpack Compose�
 
 1.  在 Jetpack Compose 中创建 `ExtendedFloatingActionButton`，你可以使用 `ExtendedFloatingActionButton` 组合器。此代码使用文本标签 `"Add item"` 和一个加号图标创建它。`onClick` 参数指定当按钮被点击时执行的操作：
 
-    ```kt
+    ```java
     ExtendedFloatingActionButton(
     ```
 
-    ```kt
+    ```java
         text = { Text("Add item") },
     ```
 
-    ```kt
+    ```java
         onClick = { /* do something */ },
     ```
 
-    ```kt
+    ```java
         icon = {
     ```
 
-    ```kt
+    ```java
             Icon(
     ```
 
-    ```kt
+    ```java
                 Icons.Default.Add,
     ```
 
-    ```kt
+    ```java
                 contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                     id = R.string.add)
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     )
     ```
 

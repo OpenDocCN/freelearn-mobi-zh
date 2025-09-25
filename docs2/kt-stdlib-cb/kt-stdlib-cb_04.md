@@ -28,7 +28,7 @@
 
 Kotlin 标准库提供了一些方便的扩展，使得集合创建和合并变得简单且安全。我们将逐步学习它们。假设我们定义了以下`Message`类：
 
-```kt
+```java
 data class Message(val text: String, 
                    val sender: String, 
                    val timestamp: Instant = Instant.now())
@@ -46,7 +46,7 @@ Kotlin 标准库提供了两个基本接口，用于表示集合数据结构—�
 
 1.  让我们声明两个包含样本数据的列表：
 
-```kt
+```java
 val sentMessages = listOf (
     Message("Hi Agat, any plans for the evening?", "Samuel"),
     Message("Great, I'll take some wine too", "Samuel")
@@ -60,13 +60,13 @@ val inboxMessages = mutableListOf(
 
 1.  将`sentMessages`和`inboxMessages`合并到一个集合中：
 
-```kt
+```java
 val allMessages: List<Message> = sentMessages + inboxMessages
 ```
 
 1.  将存储在`allMessages`列表中的`Message`对象的文本打印到控制台：
 
-```kt
+```java
 val allMessages: List<Message> = sentMessages + inboxMessages
 allMessages.forEach { (text, _) ->
     println(text)
@@ -77,7 +77,7 @@ allMessages.forEach { (text, _) ->
 
 因此，我们的代码将打印以下文本到控制台：
 
-```kt
+```java
 Hi Agat, any plans for the evening?
 Great, I'll take some wine too
 Let's go out of town and watch the stars tonight!
@@ -90,7 +90,7 @@ Excelent!
 
 标准库还为 `Collection` 类型重载了 `-` 操作符。我们可以用它从集合中减去一些元素。例如，我们可以这样使用它：
 
-```kt
+```java
 val receivedMessages = allMessages - sentMessages
 receivedMessages.forEach { (text, _) ->
     println(text)
@@ -99,14 +99,14 @@ receivedMessages.forEach { (text, _) ->
 
 我们将得到以下输出：
 
-```kt
+```java
 Let's go out of town and watch the stars tonight!
 Excelent!
 ```
 
 我们也可以使用标准的 `for` 循环来实现迭代：
 
-```kt
+```java
 for (msg in allMessages) {
     println(msg.text)
 }
@@ -122,7 +122,7 @@ for (msg in allMessages) {
 
 过滤是数据处理领域中最常见的编程挑战之一。在本菜谱中，我们将探索标准库的内置扩展函数，这些函数提供了一种简单的方式来过滤 `Iterable` 数据类型。假设我们有一个以下 `Message` 类声明：
 
-```kt
+```java
 data class Message(val text: String,
                    val sender: String,
                    val receiver: String,
@@ -134,7 +134,7 @@ enum class Folder { INBOX, SENT }
 
 `getMessages()` 函数返回以下数据：
 
-```kt
+```java
 fun getMessages() = mutableListOf(
         Message("Je t'aime", "Agat", "Sam", Folder.INBOX),
         Message("Hey, Let's go climbing tomorrow", "Stefan", "Sam", Folder.INBOX),
@@ -153,13 +153,13 @@ fun getMessages() = mutableListOf(
 
 1.  对 `getMessages()` 函数应用过滤：
 
-```kt
+```java
 getMessages().filter { it.folder == Folder.INBOX && it.sender == "Agat" }
 ```
 
 1.  遍历过滤后的消息并将它们的消息打印到控制台：
 
-```kt
+```java
 getMessages().filter { it.folder == Folder.INBOX && it.sender == "Agat" }
  .forEach { (text) ->
      println(text)
@@ -172,7 +172,7 @@ getMessages().filter { it.folder == Folder.INBOX && it.sender == "Agat" }
 
 因此，上一节中的代码将在控制台打印以下输出：
 
-```kt
+```java
 Je t'aime
 ```
 
@@ -188,7 +188,7 @@ Kotlin 标准库为其他类型提供了相应的 `filter()` 扩展函数，例�
 
 当与服务器或外部库的糟糕设计 API 一起工作时，我们经常需要处理接收空返回值的情况。幸运的是，有一些标准库特性允许我们有效地处理空值。在本菜谱中，我们将实现一个数据预处理操作，该操作将自动从数据集中移除所有空值。假设我们正在与一个提供最新新闻源的外部 API 一起工作。不幸的是，它不是空安全的，可能会返回随机的空值。例如，让我们假设我们有一个 `getNews(): List<News>` 函数，它返回以下数据：
 
-```kt
+```java
 fun getNews() = listOf(
  News("Kotlin 1.2.40 is out!", "https://blog.jetbrains.com/kotlin/"),
  News("Google launches Android KTX Kotlin extensions for developers",
@@ -201,7 +201,7 @@ fun getNews() = listOf(
 
 `News` 类定义如下：
 
-```kt
+```java
 data class News(val title: String, val url: String)
 ```
 
@@ -209,7 +209,7 @@ data class News(val title: String, val url: String)
 
 将 `filterNotNull` 函数应用于 `getNews()` 函数：
 
-```kt
+```java
 getNews()
         .filterNotNull()
         .forEachIndexed { index, news ->
@@ -221,7 +221,7 @@ getNews()
 
 因此，我们将得到以下输出打印到控制台：
 
-```kt
+```java
 0\. News(title=Kotlin 1.2.40 is out!, url=https://blog.jetbrains.com/kotlin/)
 1\. News(title=Google launches Android KTX Kotlin extensions for developers, url=https://android-developers.googleblog.com/)
 2\. News(title=How to Pick a Career, url=waitbutwhy.com)
@@ -229,7 +229,7 @@ getNews()
 
 相比之下，没有 `filterNotNull()` 函数的代码如下：
 
-```kt
+```java
 getNews().forEachIndexed { index, news ->
     println("$index. ${news.toString()}")
 }
@@ -237,7 +237,7 @@ getNews().forEachIndexed { index, news ->
 
 这将在控制台打印以下输出：
 
-```kt
+```java
 0\. News(title=Kotlin 1.2.40 is out!, url=https://blog.jetbrains.com/kotlin/)
 1\. News(title=Google launches Android KTX Kotlin extensions for developers, url=https://android-developers.googleblog.com/)
 2\. null
@@ -261,7 +261,7 @@ getNews().forEachIndexed { index, news ->
 
 假设我们正在处理以下声明的两个`Message`类型集合：
 
-```kt
+```java
 data class Message(val text: String,
                    val sender: String,
                    val receiver: String,
@@ -270,7 +270,7 @@ data class Message(val text: String,
 
 这些由`allMessages`变量提供：
 
-```kt
+```java
 val sentMessages = listOf(
         Message("I'm programming in Kotlin, of course", 
                 "Samuel", 
@@ -296,7 +296,7 @@ val allMessages = sentMessages + inboxMessages
 
 如果我们打印出`allMessages`列表中连续消息的文本，我们将在控制台得到以下文本输出：
 
-```kt
+```java
 I'm learning Kotlin, of course
 Sure!
 Hey Sam, any plans for the evening?
@@ -309,13 +309,13 @@ That's cool, can I join you?
 
 1.  将`sortedBy`函数应用于`allMessages`集合：
 
-```kt
+```java
 allMessages.sortedBy { it.time }
 ```
 
 1.  将排序后的元素打印到控制台：
 
-```kt
+```java
 allMessages.sortedBy { it.time }
         .forEach {
             println(it.text)
@@ -326,12 +326,12 @@ allMessages.sortedBy { it.time }
 
 如果我们运行前面的代码，我们得到以下输出：
 
-```kt
+```java
 I'm programming in Kotlin, of course
 Sure!
 ```
 
-```kt
+```java
 Hey Sam, any plans for the evening?
 That's cool, can I join you?
 ```
@@ -342,7 +342,7 @@ That's cool, can I join you?
 
 如果我们的集合由实现 Comparable 接口的对象组成，我们就可以通过对其应用`sorted()`函数来简单地对其进行排序。Kotlin 标准库还提供了`sortedBy()`函数的更多专用版本，例如`sortedByDescending()`和`sortedWith()`。第一个是一个基础排序函数，但它返回按相反顺序排序的数据集。`sortedWith()`函数允许我们使用自定义比较器对列表进行排序。例如，为了按`sender`属性首先排序，然后按`time`属性排序`Message`类型元素的集合，我们可以编写以下代码：
 
-```kt
+```java
 allMessages.sortedWith(compareBy({it.sender}, {it.time}))
 ```
 
@@ -350,7 +350,7 @@ allMessages.sortedWith(compareBy({it.sender}, {it.time}))
 
 有时候，我们会遇到根据集合元素生成文本的问题。这就是`Iterable.joinToString()`扩展函数能帮到的地方。例如，我们可以考虑实现一个电子邮件转发功能。当用户点击转发按钮时，原始消息的正文文本被连接起来，前缀看起来像这样：
 
-```kt
+```java
 <br/>
 <p>---------- Forwarded message ----------</p>
 <p>
@@ -363,13 +363,13 @@ To: natasha@gmail.com, barbra@gmail.com<br/>
 
 在这个菜谱中，我们将实现一个函数，该函数将生成收件人的字符串，例如：
 
-```kt
+```java
 To: natasha@gmail.com, barbra@gmail.com</br>
 ```
 
 对于给定的`Address`类型对象列表，它定义如下：
 
-```kt
+```java
 data class Address(val emailAddress: String, val displayName: String)
 ```
 
@@ -377,20 +377,20 @@ data class Address(val emailAddress: String, val displayName: String)
 
 1.  声明`generateRecipientsString()`函数头：
 
-```kt
+```java
 fun generateRecipientsString(recipients: List<Address?>): String
 ```
 
 1.  首先从`recipient`参数中移除所有`null`项：
 
-```kt
+```java
 fun generateRecipientsString(recipients: List<Address?>): String =
  recipients.filterNotNull()
 ```
 
 1.  将`Address`类型的集合元素转换为与`Address.emailAddress`属性对应的`String`类型元素：
 
-```kt
+```java
 fun generateRecipientsString(recipients: List<Address?>): String =
         recipients.filterNotNull()
  .map { it.emailAddress }
@@ -398,7 +398,7 @@ fun generateRecipientsString(recipients: List<Address?>): String =
 
 1.  为了将集合元素合并成字符串，应用`joinToString()`函数：
 
-```kt
+```java
 fun generateRecipientsString(recipients: List<Address?>): String =
         recipients.filterNotNull()
                 .map { it.emailAddress }
@@ -413,7 +413,7 @@ fun generateRecipientsString(recipients: List<Address?>): String =
 
 我们还可以使用`joinToString()`函数的另一个版本来简化`generateRecipientsString()`函数实现中的逻辑：
 
-```kt
+```java
 fun generateRecipientsString(recipients: List<Address?>): String =
         recipients.filterNotNull()
             .joinToString(", ", "To: ", "<br/>") { it.emailAddress }
@@ -429,13 +429,13 @@ fun generateRecipientsString(recipients: List<Address?>): String =
 
 常见的数据处理任务是将数据集合划分为子集。在这个菜谱中，我们将探索标准库函数，这些函数允许我们将集合缓冲到更小的块中。假设我们有一个包含大量`Message`类型对象的列表，我们希望将其转换成固定大小的子列表集合。例如，转换将原始集合的*n*个元素：
 
-```kt
+```java
 [mssg_1, mssg_2, mssg_3, mssg_4, mssg_5, mssg_6, mssg_7, ..., mssg_n]
 ```
 
 然后将其分割成包含四个元素子集的集合：
 
-```kt
+```java
 [[mssg_1, mssg_2, mssg_3, mssg_4], ..., [mssg_n-3, mssg_n-2, mssg_n-1, mssg_n]]
 ```
 
@@ -443,14 +443,14 @@ fun generateRecipientsString(recipients: List<Address?>): String =
 
 让我们先声明一个`Message`类，我们将在下面的菜谱中使用它：
 
-```kt
+```java
 data class Message(val text: String,
                    val time: Instant = Instant.now())
 ```
 
 让我们声明一个存储样本数据的`messages`变量：
 
-```kt
+```java
 val messages = listOf(
         Message("Any plans for the evening?"),
         Message("Learning Kotlin, of course"),
@@ -468,13 +468,13 @@ val messages = listOf(
 
 1.  将`windowed()`函数应用于`messages`列表：
 
-```kt
+```java
 val pagedMessages = messages.windowed(4, partialWindows = true, step = 4)  
 ```
 
 1.  将一个`transform: (List<T>) -> R`转换函数作为额外的内联参数添加到`windowed`函数中：
 
-```kt
+```java
 val pagedMessages = messages.windowed(4, partialWindows = true, step = 4) { 
     it.map { it.text }
 }
@@ -484,13 +484,13 @@ val pagedMessages = messages.windowed(4, partialWindows = true, step = 4) {
 
 `windowed`函数将原始消息列表分割成指定大小的子列表。结果，我们得到`List<List<Message>>`类型分配给`pagedMessages`处理。我们可以使用以下代码打印下一个消息子集：
 
-```kt
+```java
 pagedMessages.forEach { println(it) }
 ```
 
 结果，我们得到以下输出打印到控制台：
 
-```kt
+```java
 [Any plans for the evening?, Learning Kotlin, of course, I'm going to watch the new Star Wars movie, Would u like to join?]
 [Meh, I don't know, See you later!, I like the ketchup, Did you send CFP for Kotlin Conf?]
 [Sure!]
@@ -512,7 +512,7 @@ pagedMessages.forEach { println(it) }
 
 在这个菜谱中，我们将使用这两个函数来实现映射数据转换。让我们想象我们正在处理负责管理大学系讲座的系统的一部分。我们得到了以下类型：
 
-```kt
+```java
 class Course(val name: String, val lecturer: Lecturer, val isPaid: Boolean = false)
 class Student(val name: String, val courses: List<Course>)
 class Lecturer(val name: String)
@@ -524,13 +524,13 @@ class Lecturer(val name: String)
 
 1.  声明一个函数头：
 
-```kt
+```java
 fun getLecturesOfCoursesWithSubscribedStudents()
 ```
 
 1.  对学生列表应用`flatMap`操作：
 
-```kt
+```java
 fun getLecturesOfCoursesWithSubscribedStudents() =
         getStudents()
                 .flatMap { student ->
@@ -540,7 +540,7 @@ fun getLecturesOfCoursesWithSubscribedStudents() =
 
 1.  限制集合元素的值为唯一值：
 
-```kt
+```java
 fun getLecturesOfCoursesWithSubscribedStudents() =
         getStudents()
                 .flatMap { student ->
@@ -551,7 +551,7 @@ fun getLecturesOfCoursesWithSubscribedStudents() =
 
 1.  将`Course`类型元素的集合映射到它们对应的`Lecturer`类型属性：
 
-```kt
+```java
 fun getLecturesOfCoursesWithSubscribedStudents() =
  getStudents()
  .flatMap { student ->
@@ -566,7 +566,7 @@ fun getLecturesOfCoursesWithSubscribedStudents() =
 
 以下`flatMap`操作将`getLecturesOfCoursesWithSubscribedStudents()`函数将`Student`类型对象的集合转换为`Course`类型对象的集合，通过合并`Student.courses: Collection<Course>`属性中的元素：
 
-```kt
+```java
 getStudents()
         .flatMap { student: Student ->
             student.courses
@@ -585,7 +585,7 @@ getStudents()
 
 虽然`map()`操作符接受给定大小的列表并返回另一个大小相同且类型修改后的列表，但应用于数据集的`fold()`和`reduce()`操作返回一个单一元素，由数据集的连续元素组成。这听起来可能像使用简单的命令式循环和局部累加变量（它持有当前状态并在每次迭代中更新）的简单场景。我们可以考虑一个简单的任务，即求整数值的总和。假设我们想要计算从`0`到`10`的连续整数的总和。我们可以使用一个简单的`for`循环来实现它：
 
-```kt
+```java
 var sum = 0
 (1..10).forEach {
     sum += it
@@ -594,7 +594,7 @@ var sum = 0
 
 然而，有一种替代的函数式方法可以执行这样的计算，使用`fold()`函数：
 
-```kt
+```java
 val sum = (1..3).toList().fold(0) { acc, i -> acc + i }
 
 ```
@@ -603,14 +603,14 @@ val sum = (1..3).toList().fold(0) { acc, i -> acc + i }
 
 在这个菜谱中，我们将使用`fold`函数来实现处理音频专辑曲目时负责的函数。假设我们给出了以下数据类型：
 
-```kt
+```java
 data class Track(val title: String, val durationInSeconds: Int)
 data class Album(val name: String, val tracks: List<Track>)
 ```
 
 以及示例`Album`类实例：
 
-```kt
+```java
 val album = Album("Sunny side up", listOf(
         Track("10/10", 176),
         Track("Coming Up Easy", 292),
@@ -626,13 +626,13 @@ val album = Album("Sunny side up", listOf(
 
 1.  声明一个针对`Album`类的扩展函数：
 
-```kt
+```java
 fun Album.getStartTime(track: Track): Int
 ```
 
 1.  计算给定`Track`参数的起始时间：
 
-```kt
+```java
 fun Album.getStartTime(track: Track): Int {
     val index = tracks.indexOf(track)
  return this.tracks
@@ -644,7 +644,7 @@ fun Album.getStartTime(track: Track): Int {
 
 1.  为`track`参数添加一个安全检查：
 
-```kt
+```java
 fun Album.getStartTime(track: Track): Int {
  if (track !in tracks) throw IllegalArgumentException("Bad 
      track")
@@ -665,14 +665,14 @@ fun Album.getStartTime(track: Track): Int {
 
 让我们测试一下`Album.getStartTime()`函数的实际效果：
 
-```kt
+```java
 println(album.getStartTime(Track("Growing Up Beside You", 191)))
 println(album.getStartTime(Track("Coming Up Easy", 292)))
 ```
 
 上述代码返回以下输出：
 
-```kt
+```java
 468
 176
 ```
@@ -687,7 +687,7 @@ Kotlin 标准库为数据集*按组分组*操作提供了内置支持。在本�
 
 假设我们正在处理以下类型：
 
-```kt
+```java
 class Course(val name: String, val lecturer: Lecturer, val isPaid: Boolean = false)
 class Student(val name: String, val courses: List<Course>)
 class Lecturer(val name: String)
@@ -701,13 +701,13 @@ class Lecturer(val name: String)
 
 1.  声明一个函数头：
 
-```kt
+```java
 fun getCoursesWithSubscribedStudents(): Map<Course, List<Student>> 
 ```
 
 1.  将每个学生映射到课程-学生配对的列表：
 
-```kt
+```java
 fun getCoursesWithSubscribedStudents(): Map<Course,
  List<Student>> =
     getStudents()
@@ -718,7 +718,7 @@ fun getCoursesWithSubscribedStudents(): Map<Course,
 
 1.  按照课程对课程-学生配对进行分组：
 
-```kt
+```java
 fun getCoursesWithSubscribedStudents(): Map<Course,
  List<Student>> =
     getStudents()
@@ -730,7 +730,7 @@ fun getCoursesWithSubscribedStudents(): Map<Course,
 
 1.  对`Pair<Course, List<Student>>`类型应用映射转换：
 
-```kt
+```java
 fun getCoursesWithSubscribedStudents(): Map<Course,
  List<Student>> =
     getStudents()
@@ -746,7 +746,7 @@ fun getCoursesWithSubscribedStudents(): Map<Course,
 
 1.  在最后应用一个`toMap()`函数：
 
-```kt
+```java
 fun getCoursesWithSubscribedStudents(): Map<Course,
  List<Student>> =
     getStudents()
@@ -765,7 +765,7 @@ fun getCoursesWithSubscribedStudents(): Map<Course,
 
 我们首先使用 `flatMap()` 函数将学生列表转换为 `Pair<Course, Student>` 类型的列表。接下来，我们应用 `groupBy()` 函数将这些配对按不同的 `Course` 实例进行分组。分组操作的结果是以下类型的数据——`Map.Entry<Course, List<Pair<Course, Student>>>`。我们需要将 `Map.Entry.value` 属性的类型转换为 `List<Student>` 类型。我们通过以下映射转换函数实现它：
 
-```kt
+```java
 map { (course, courseStudentPairs) ->
     course to courseStudentPairs.map { (_, student) -> student }
 }
@@ -777,7 +777,7 @@ map { (course, courseStudentPairs) ->
 
 我们还可以通过使用 `mapValues` 函数将我们的映射构建操作修改为更简洁的形式：
 
-```kt
+```java
 fun getCoursesWithSubscribedStudents(): Map<Course, List<Student>> =
         getStudents()
                 .flatMap { student ->

@@ -32,7 +32,7 @@
 
 1.  让我们创建一个名为`DemoInterface`的接口：
 
-```kt
+```java
 interface DemoInterface {
 
     fun implementatedMethod() {
@@ -45,13 +45,13 @@ interface DemoInterface {
 
 1.  现在，让我们看看一个实现了前面接口的类：
 
-```kt
+```java
 class IntefaceImplementation: DemoInterface
 ```
 
 1.  然后，你可以这样调用方法：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var interfaceImplementation= IntefaceImplementation()
     interfaceImplementation.implementatedMethod()
@@ -60,13 +60,13 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
  From demo interface
 ```
 
 1.  这种新型接口的一个关键好处是，你可以拥有多个接口的行为，因为它允许方法实现：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var interfaceImplementation= IntefaceImplementation()
     interfaceImplementation.foo()
@@ -92,7 +92,7 @@ interface B  {
 
 1.  假设你有两种类型的接口，并且它们都有相同名称的方法，如下所示：
 
-```kt
+```java
 interface A {
     fun foo() {
         println("foo from A")
@@ -107,13 +107,13 @@ interface B  {
 
 1.  现在，如果你尝试将两个接口都实现到一个类中，编译器将会抛出一个错误：
 
-```kt
+```java
 Error:(24, 1) Kotlin: Class 'IntefaceImplementation' must override public open fun foo(): Unit defined in packageB.A because it inherits multiple interface methods of it
 ```
 
 1.  原因是直观的，因为它带来了调用哪个方法的歧义。因此，Kotlin 将要求你实现该方法，并在其中调用所需的方法，类似于以下这样：
 
-```kt
+```java
 class IntefaceImplementation: A,B {
     override fun foo() {
         super<A>.foo()
@@ -124,7 +124,7 @@ class IntefaceImplementation: A,B {
 
 1.  现在，你将简单地调用`foo`方法，就像之前一样：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var interfaceImplementation= IntefaceImplementation()
     interfaceImplementation.foo()
@@ -133,7 +133,7 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 foo from A
 foo from B
 ```
@@ -142,14 +142,14 @@ Kotlin 中的接口可以有方法实现，但不能有状态。这意味着你�
 
 例如，你无法在接口中拥有`val a=23`这样的声明，尽管你可以有类似以下的内容：
 
-```kt
+```java
 val a: Int
     get() = 2
 ```
 
 或者，简单地定义它在接口中，并在实现类中覆盖它，如下所示：
 
-```kt
+```java
 class InterfaceImplementation: A,B {
     override val a: Int=25}
 ```
@@ -158,7 +158,7 @@ class InterfaceImplementation: A,B {
 
 1.  委托模式，一个对象（[`en.wikipedia.org/wiki/Object_(computer_science)`](https://en.wikipedia.org/wiki/Object_(computer_science)))通过将请求委托给第二个对象来处理。让我们看看以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var interfaceImplementation= InterfaceImplementation(object :A{
     })
@@ -178,7 +178,7 @@ interface A {
 
 1.  在前面的例子中，我们将`foo`方法的调用委托给了实现了接口 A 的对象。虽然前面的代码是完美的，但 Kotlin 允许我们直接使用该函数。看看这段代码：
 
-```kt
+```java
 class InterfaceImplementation(var a:A):A by a{
     fun someMethod(){
         foo()
@@ -222,7 +222,7 @@ class InterfaceImplementation(var a:A):A by a{
 
 1.  这是一个“胖”接口的简单例子：
 
-```kt
+```java
 button.setOnClickListener(object : View.OnClickListener {
     fun onClick(View v) {
        *// TODO: do some stuff...*
@@ -243,7 +243,7 @@ button.setOnClickListener(object : View.OnClickListener {
 
 1.  一个简单的解决方案是将该接口拆分成更小的接口，如下面的代码所示：
 
-```kt
+```java
 interface OnClickListener { 
     fun onClick( v:View )
 } public interface OnLongClickListener { 
@@ -256,7 +256,7 @@ interface OnClickListener {
 
 1.  Kotlin 还有一个强大的功能，允许你在接口本身编写方法的完整实现。让我们看一下以下代码来理解它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     Simple().callMethod()
 }
@@ -292,19 +292,19 @@ interface A{
 
 1.  需要记住的关键一点是，Kotlin 中的类默认是 *封闭* 的，不允许扩展，因此我们需要在类声明前添加 *open* 关键字来打开它们。所以我们的超类 A 看起来是这样的：
 
-```kt
+```java
 open class A
 ```
 
 1.  然后，我们可以按照以下方式扩展我们的类 B：
 
-```kt
+```java
 class B:A()
 ```
 
 1.  现在，假设我们的类 A 有一个接受 `String` 变量的主构造函数，如下所示：
 
-```kt
+```java
 open class A(var str:String)
 ```
 
@@ -312,13 +312,13 @@ open class A(var str:String)
 
 +   在 B 的主构造函数中初始化 A。在这种方法中，我们将通过从 B 的主构造函数传递参数来初始化 A。考虑以下示例：
 
-```kt
+```java
 class B(var randomString:String): A(randomString)
 ```
 
 +   如果 B 或任何类没有主构造函数，那么扩展类的每个次级类都需要使用 `super` 关键字来初始化超类。考虑以下示例：
 
-```kt
+```java
 class B: A{
     constructor(randomString:String) : super(randomString)
     constructor(randomString:String, randomInt:Int) : super(randomString)
@@ -326,7 +326,7 @@ class B: A{
 
 1.  我们通常通过扩展一个类来导入超类的功能，有时我们可能还想覆盖它们以实现自己的版本。与类类似，方法默认也是封闭的，我们需要使用 open 修饰符来“打开”它们：
 
-```kt
+```java
 open class A(var str:String){
     open fun foo(){
         println("foo from A")
@@ -341,7 +341,7 @@ class B(var string: String): A(string) {
 
 1.  你也可以将一个方法标记为“final”，以防止任何其他子类覆盖它。考虑以下示例：
 
-```kt
+```java
 open class A(var str:String){
     final fun foo(){
         println("foo from A")
@@ -351,7 +351,7 @@ open class A(var str:String){
 
 1.  如果你用一个抽象类扩展你的类，你需要实现抽象类中定义的所有抽象方法。请注意，你不需要将它们标记为公开，以便扩展类可以覆盖它们。将它们设置为抽象本身就完成了这项工作，如下例所示：
 
-```kt
+```java
 class B(var string: String): C() {
     override fun methodC() {
         // Do something here
@@ -367,7 +367,7 @@ abstract class C{
 
 **扩展函数**很有用，因为它们允许我们扩展类的功能，而不必实际修改它。例如，如果你使用 Glide 或 Picasso 库在 `Imageview` 中放置图像，你一定熟悉以下代码：
 
-```kt
+```java
 Glide.with(context).load(image_url).into(imageView)
 ```
 
@@ -387,7 +387,7 @@ Glide.with(context).load(image_url).into(imageView)
 
 当你点击它时，在同一文件中创建了一个扩展函数，看起来像这样：
 
-```kt
+```java
 private fun ImageView.loadImage(image_url: String) {
 
 }
@@ -395,7 +395,7 @@ private fun ImageView.loadImage(image_url: String) {
 
 在这里，我们可以放置我们的 Glide/Picasso 图像加载代码：
 
-```kt
+```java
 private fun ImageView.loadImage(image_url: String) {
     Glide.with(context).load(image_url).into(this)
 }
@@ -411,7 +411,7 @@ private fun ImageView.loadImage(image_url: String) {
 
 当你创建一个与成员函数名称相似的扩展函数时会发生什么？例如，在以下代码中，如果我们调用 `c.foo()`，会发生什么？
 
-```kt
+```java
 fun main(args: Array<String>) {
     var c= C()
     c.foo()
@@ -428,7 +428,7 @@ private fun C.foo() {
 
 这是我们的输出结果：
 
-```kt
+```java
  from member
 ```
 
@@ -448,7 +448,7 @@ private fun C.foo() {
 
 1.  让我们从可以接受任何类型参数的通用类开始：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val intgen: GenCl<Int> = GenCl<Int>(10)
     println(intgen.a)
@@ -465,14 +465,14 @@ class GenCl<T>(t: T) {
 
 该程序的输出如下：
 
-```kt
+```java
 10
 A string
 ```
 
 1.  我们也可以像这样限制在通用类中允许的类型：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val intgen: GenCl<Int> = GenCl<Int>(10)
     println(intgen.a)
@@ -489,14 +489,14 @@ class GenCl<T: Number>(t: T) {
 
 1.  如果我们尝试使用前面的类与不是 `Number` 类型的类型，例如 `String`，我们会得到以下错误：
 
-```kt
+```java
 Error:(8, 17) Type parameter bound for T in constructor GenCl<T : Number>(t: T)
  is not satisfied: inferred type String is not a subtype of Number
 ```
 
 1.  现在，让我们尝试一个泛型方法的示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     fun <T> addTwo(a: List<T>) {
         for(x in a) {
@@ -511,7 +511,7 @@ fun main(args: Array<String>) {
 
 上述代码的输出将如下所示：
 
-```kt
+```java
 10 
 20 
 30 
@@ -541,7 +541,7 @@ Java 中的泛型类型是不变的，这意味着 `List<String>` 不是 `List<O
 
 1.  让我们从编译时多态开始。在**编译时多态**中，函数名，即签名保持不变，但参数或返回类型不同。在编译时，编译器根据参数类型等确定我们试图调用的函数。查看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(doubleOf(4))
 
@@ -565,7 +565,7 @@ fun doubleOf(a: Double): Double {
 
 这是上述代码的输出：
 
-```kt
+```java
 8
 8.6
 8.646
@@ -573,7 +573,7 @@ fun doubleOf(a: Double): Double {
 
 1.  现在，让我们谈谈运行时多态。在**运行时多态**中，编译器在运行时解析对重写/重载方法的调用。我们可以通过方法重写来实现运行时多态。让我们尝试一个扩展超类并重写其成员方法的示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a = Sup()
     a.method1()
@@ -603,7 +603,7 @@ class Sum: Sup() {
 
 上述代码的输出如下：
 
-```kt
+```java
 Printing method 1 from inside Sup
 Printing method 2 from inside Sup
 Printing method 1 from inside Sum
@@ -626,13 +626,13 @@ Printing method 2 from inside Sup
 
 1.  我们将创建一个名为`ToastOperation`的**密封**类。在同一个源文件中，我们将定义一个`ShowMessageToast`子类：
 
-```kt
+```java
 class ShowMessageToast(val message:String):ToastOperation()
 ```
 
 1.  此外，我们将定义一个`ShowErrorToast`对象：
 
-```kt
+```java
 object ShowErrorToast:ToastOperation()
 ```
 
@@ -640,7 +640,7 @@ object ShowErrorToast:ToastOperation()
 
 现在，我们可以在`when`语句中使用它，如下所示：
 
-```kt
+```java
 fun doToastOperation(toastOperation: ToastOperation){
     when(toastOperation){
         is ShowMessageToast ->Toast.makeText(this,toastOperation.message,Toast.LENGTH_LONG).show()
@@ -655,7 +655,7 @@ fun doToastOperation(toastOperation: ToastOperation){
 
 这是我们的密封类结构：
 
-```kt
+```java
 sealed class ToastOperation {
 }
 object ShowErrorToast:ToastOperation()
@@ -672,7 +672,7 @@ class ShowMessageToast(val message:String):ToastOperation()
 
 如果您使用的是 Kotlin 1.1 之前的版本，您需要在密封类内部实现子类，就像这样：
 
-```kt
+```java
 sealed class ToastOperation {
     object ShowErrorToast:ToastOperation()
     class ShowMessageToast(val message:String):ToastOperation()

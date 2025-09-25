@@ -52,13 +52,13 @@ Unity 安装完成后，我们希望下载 Unity 的 ARCore SDK。由于我们�
 
 1.  导航到您的`Android`文件夹。在 Windows 上，使用以下路径：
 
-```kt
+```java
 cd C:\Android
 ```
 
 1.  输入并执行以下命令：
 
-```kt
+```java
 git clone https://github.com/google-ar/arcore-unity-sdk.git
 ```
 
@@ -126,7 +126,7 @@ git clone https://github.com/google-ar/arcore-unity-sdk.git
 
 1.  输入以下命令：
 
-```kt
+```java
 //WINDOWS ONLY
 path C:\Android\sdk\platform-tools
 
@@ -147,7 +147,7 @@ adb tcpip 5555
 
 1.  返回您的 shell 或命令提示符并输入以下内容：
 
-```kt
+```java
 adb connect [IP Address]
 ```
 
@@ -183,7 +183,7 @@ adb connect [IP Address]
 
 1.  输入以下命令：
 
-```kt
+```java
 adb logcat
 ```
 
@@ -193,7 +193,7 @@ adb logcat
 
 1.  输入以下命令：
 
-```kt
+```java
 //ON WINDOWS
 C:\Android\sdk\tools\monitor.bat
 
@@ -229,7 +229,7 @@ Unity 支持许多用于编写 C# 脚本的集成开发环境（IDE）。一些�
 
 1.  在脚本中向下滚动，直到你看到以下代码块：
 
-```kt
+```java
 public void Update ()
 {
     _QuitOnConnectionErrors();
@@ -237,7 +237,7 @@ public void Update ()
 
 1.  在 `_QuitOnConnectionErrors();` 代码行之后，添加以下代码：
 
-```kt
+```java
 Debug.Log("Unity Update Method");
 ```
 

@@ -34,13 +34,13 @@
 
 `main` 方法如下：
 
-```kt
+```java
 fun main(args: Array<String>) { }
 ```
 
 1.  让我们尝试一个基本的 `if` 语句，以了解它是如何工作的：
 
-```kt
+```java
 fun main(args: Array<String>) {
      var x:Int
      if(10>20){
@@ -57,7 +57,7 @@ fun main(args: Array<String>) {
 
 1.  现在，让我们以 Kotlin 的方式尝试同样的事情：
 
-```kt
+```java
 fun main(args: Array<String>) {
       var x:Int = if(10>20)  5  else  10
     println("$x")
@@ -68,7 +68,7 @@ fun main(args: Array<String>) {
 
 1.  让我们看看我们还能做什么。在以下示例中，我们将尝试使用 `if` 语句从表达式中返回一些内容：
 
-```kt
+```java
 fun main(args: Array<String>) {
      var x:Int
     x = if(10>20) {
@@ -93,7 +93,7 @@ fun doSomething() {
 
 1.  最后，让我们尝试一个更复杂的例子，使用嵌套的`if`–`else`。这将帮助我们理解在嵌套的`if`–`else`结构中值的返回方式：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var x:Int
     x = if(10<20) {
@@ -120,7 +120,7 @@ fun main(args: Array<String>) {
 
 1.  如果`if`–`else`块不是最后一个语句，会发生什么，就像这个例子一样：
 
-```kt
+```java
  fun main(args: Array<String>) {
  var x:Int
  x = if(10<20) {
@@ -155,13 +155,13 @@ fun main(args: Array<String>) {
 
 我们在打印语句中使用了字符串模板。注意我们是如何在变量名前使用`$`符号来访问变量的：
 
-```kt
+```java
 println("$a is a number something”)
 ```
 
 我们还可以在要评估并其结果连接到字符串的字符串中放入一段代码。在这种情况下，`$`后面跟着`{}`，我们在其中放入我们的代码：
 
-```kt
+```java
 println("some variable whose value: ${if(a < 100) 25 else 29}")
 ```
 
@@ -179,7 +179,7 @@ println("some variable whose value: ${if(a < 100) 25 else 29}")
 
 1.  让我们尝试一个基本的`when`语句来了解它是如何工作的：
 
-```kt
+```java
 fun main(args: Array<String>) {
      val x = 12
      when(x){
@@ -194,7 +194,7 @@ fun main(args: Array<String>) {
 
 1.  现在，让我们看看`x`是否位于`1`到`10`之间或之外：
 
-```kt
+```java
 fun main(args: Array<String>) {
      val x = 12
      when(x){
@@ -206,7 +206,7 @@ fun main(args: Array<String>) {
 
 1.  让我们看看我们还能做什么。在下面的例子中，我们将处理可以在`when`语句内部使用的不同类型的条件：
 
-```kt
+```java
 fun main(args: Array<String>) {
      val x = 10
      when(x){
@@ -225,7 +225,7 @@ fun magicNum(a: Int): Int {
 
 1.  最后，让我们尝试一个更复杂的使用数据类的例子。在这个例子中，我们将看到如何使用对象与`when`结合：
 
-```kt
+```java
 fun main(args: Array<String>) {
      val x = ob(2, true, 500)
      when(x.value){
@@ -255,7 +255,7 @@ fun main(args: Array<String>) {
 
 在第二个例子中，我们在 `when` 块的第一个语句中检查 `x` 是否位于 `1` 到 `10` 之间，在第二个语句中，我们检查 `x` 是否不位于 `1` 到 `10` 之间。这就是我们在 `when` 中处理范围的方式。基本上，在 `when` 中，我们可以使用 `in` 关键字检查 `x` 是否位于一个范围内或存在于一个集合中。语法如下：
 
-```kt
+```java
 when(x) {
     In collection_or_range -> // do something
 }
@@ -269,13 +269,13 @@ when(x) {
 
 我们已经看到了如何在打印语句中使用带有表达式的字符串模板。记得我们是如何能够使用变量名前的 `$` 符号来访问变量的，对吧：
 
-```kt
+```java
 println("$x is a magic number”)
 ```
 
 我们还可以将一段代码放入一个字符串中，然后该字符串将被评估，其结果将连接到字符串中。在这种情况下，`$` 后面跟着 `{}`，我们在其中放入我们的代码：
 
-```kt
+```java
 println("lies between 1 to 10, value: ${if(x.value < x.max) x.value else x.max}")
 ```
 
@@ -291,7 +291,7 @@ println("lies between 1 to 10, value: ${if(x.value < x.max) x.value else x.max}"
 
 创建一个文件，并将其命名为 `whenWithObject.kt`，然后，让我们尝试使用自定义对象来使用 `when`。在这个例子中，我们将创建一个具有一些属性的对象，并尝试在 `when` 语句中匹配它：
 
-```kt
+```java
 fun main(args: Array<String>) {
      val x = ob(2, true, 500)
      when(x){
@@ -321,7 +321,7 @@ data class ob(val value: Int, val valid: Boolean, val max: Int)
 
 `try`–`catch` 的结构也与 Java 中使用的结构相似。在 Kotlin 中，这是一个 `try`–`catch` 语句的外观：
 
-```kt
+```java
 try {
  // some code to execute
  }
@@ -345,7 +345,7 @@ try {
 
 让我们编写一个简单的程序，它接受一个数字作为输入并将其值赋给一个变量。如果输入的值不是一个数字，我们捕获`NumberFormatException`异常并将`-1`赋给该变量：
 
-```kt
+```java
 fun main(args: Array<String>) {
  val str="23"
  val a: Int? = try { str.toInt() } catch (e: NumberFormatException) { -1 }
@@ -355,13 +355,13 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 Output: 23
 ```
 
 现在，让我们尝试一些疯狂的事情，故意尝试抛出异常：
 
-```kt
+```java
 fun main(args: Array<String>) {
  val str="abc"
  val a: Int? = try { str.toInt() } catch (e: NumberFormatException) { -1 }
@@ -371,7 +371,7 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 Output: -1
 ```
 
@@ -385,7 +385,7 @@ Output: -1
 
 这里，需要注意的是，同样的情况并不适用于`finally`块——也就是说，编写`finally`块不会影响结果：
 
-```kt
+```java
 fun main(args: Array<String>) {
      val str="abc"
      val a:Int = try {
@@ -399,7 +399,7 @@ fun main(args: Array<String>) {
  }
 ```
 
-```kt
+```java
 Output: -1
 ```
 
@@ -411,7 +411,7 @@ Output: -1
 
 这里是一个 Kotlin 中的 IO 操作的示例：
 
-```kt
+```java
 fun fileToString(file: File) : String {
  //readAllBytes throws IOException, but we can omit catching it
  fileContent = Files.readAllBytes(file)
@@ -429,7 +429,7 @@ fun fileToString(file: File) : String {
 
 你当然可以使用这里提到的方法，这只是 Java 代码的 Kotlin 版本：
 
-```kt
+```java
 var a = 1
 var b = 2
 run { val temp = a; a = b; b = temp }
@@ -447,7 +447,7 @@ println(b) // print 1
 
 在 Kotlin 中，我们有一个特殊的功能，`also`，我们可以用它来交换两个数字。以下是相应的代码：
 
-```kt
+```java
 var a = 1
 var b = 2
 a = b.also { b = a }
@@ -465,7 +465,7 @@ println(b) // print 1
 
 因此，我们在 `b` 上调用了 `also` 函数，执行了一个操作（将 `a` 的值赋给 `b`），然后返回了作为参数得到的相同接收者：
 
-```kt
+```java
 var a = 1
  var b = 2
 a = b.also {
@@ -482,13 +482,13 @@ println(b) // print 1
 
 +   `also` 函数：
 
-```kt
+```java
 public inline fun <T> T.also(block: (T) -> Unit): T { block(this); return this }
 ```
 
 +   `apply` 函数：
 
-```kt
+```java
 public inline fun <T> T.apply(block: T.() -> Unit): T { block(); return this }
 ```
 
@@ -496,13 +496,13 @@ public inline fun <T> T.apply(block: T.() -> Unit): T { block(); return this }
 
 所以，使用 `also` 的代码将看起来像这样：
 
-```kt
+```java
 val result = Dog(12).also { it.age = 13 }
 ```
 
 使用 `apply` 的代码将看起来像这样：
 
-```kt
+```java
 val result2 =Dog(12).apply {age = 13 }
 ```
 
@@ -524,7 +524,7 @@ val result2 =Dog(12).apply {age = 13 }
 
 这就是我们的自定义异常的样子：
 
-```kt
+```java
 class CustomException(message:String): Exception(message)
 ```
 
@@ -532,7 +532,7 @@ class CustomException(message:String): Exception(message)
 
 现在，如果您必须 `throw` 一个 `Exception`，您只需做以下操作：
 
-```kt
+```java
 throw CustomException("Threw custom exception")
 ```
 
@@ -544,7 +544,7 @@ throw CustomException("Threw custom exception")
 
 让我们看看 `Exception` 类的实现：
 
-```kt
+```java
 public class Exception extends Throwable {
  static final long serialVersionUID = -3387516993124229948L;
 public Exception() {
@@ -560,7 +560,7 @@ public Exception(String var1) {
 
 条件循环是任何编程语言都有的常见特性。如果你在循环中应用多个条件，那么它被称为**多条件循环**。这里以 Java 为例，展示了多条件循环的一个简单示例：
 
-```kt
+```java
 int[] data = {5,6,7,1,3,4,5,7,12,13};
  for(int i=0;i<10&&i<data[i];i++){
      System.out.println(data[i]);
@@ -577,7 +577,7 @@ int[] data = {5,6,7,1,3,4,5,7,12,13};
 
 上述多条件循环可以用 Kotlin 这样写：
 
-```kt
+```java
 (0..9).asSequence().takeWhile {
      it<numbers[it]
  }.forEach 
@@ -597,7 +597,7 @@ int[] data = {5,6,7,1,3,4,5,7,12,13};
 
 这是贪婪版本，它会在移动到下一个函数之前先评估第一个函数：
 
-```kt
+```java
 (0..9).takeWhile {
      println("Inside takeWhile")
      it<numbers[it]
@@ -608,7 +608,7 @@ int[] data = {5,6,7,1,3,4,5,7,12,13};
 
 这是输出：
 
-```kt
+```java
 Inside takeWhile
  Inside takeWhile
  Inside takeWhile
@@ -622,7 +622,7 @@ Inside takeWhile
 
 现在，让我们看看惰性版本：
 
-```kt
+```java
 (0..9).asSequence().takeWhile {
      println("Inside takeWhile")
      it<numbers[it]
@@ -633,7 +633,7 @@ Inside takeWhile
 
 这是输出：
 
-```kt
+```java
 Inside takeWhile
  Inside forEach
  Inside takeWhile

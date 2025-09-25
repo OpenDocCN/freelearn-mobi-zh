@@ -54,7 +54,7 @@
 
 让我们看看这是如何完成的。首先，我将向你展示如何创建一个带有伴随标签的复选框：
 
-```kt
+```java
 @Composable
 fun CheckboxWithLabel(label: String, state: MutableState<Boolean>) {
   Row(
@@ -82,7 +82,7 @@ Jetpack Compose 内置了一个`Checkbox()`。它接收当前状态（`checked`�
 
 接下来，让我们看看状态是如何创建的：
 
-```kt
+```java
 @Composable
 fun PredefinedLayoutsDemo() {
   val red = remember { mutableStateOf(true) }
@@ -98,7 +98,7 @@ fun PredefinedLayoutsDemo() {
 
 `PredefinedLayoutsDemo()`通过将其内容放入`Column()`中来垂直排列其内容。该列填充所有可用空间（`fillMaxSize()`），并在所有四边都有 16 密度无关像素的填充（`padding(16.dp)`）。三个状态（`red`、`green`和`blue`）被传递给`CheckboxWithLabel()`。下面是这些调用看起来像什么：
 
-```kt
+```java
 CheckboxWithLabel(
   label = stringResource(id = R.string.red),
   state = red
@@ -117,7 +117,7 @@ CheckboxWithLabel(
 
 现在，让我们来看看如何创建堆叠的彩色盒子：
 
-```kt
+```java
 Box(
   modifier = Modifier
     .fillMaxSize()
@@ -163,13 +163,13 @@ Box(
 
 `ConstraintLayoutDemo`示例应用程序是基于`ConstraintLayout()`的`PredefinedLayoutsDemo`的重实现。通过比较这两个版本，您可以全面了解这个可组合函数是如何工作的。要在您的应用程序中使用`ConstraintLayout()`，您需要在模块级别的`build.gradle`文件中添加一个依赖项。请注意，这里显示的版本号只是一个示例。您可以在[`developer.android.com/jetpack/androidx/versions/all-channel`](https://developer.android.com/jetpack/androidx/versions/all-channel)找到最新版本：
 
-```kt
+```java
 implementation "androidx.constraintlayout:constraintlayout-compose:1.0.0-rc02"
 ```
 
 那么，我们如何定义基于约束的布局呢？让我们通过检查`CheckboxWithLabel()`的重实现来找出答案。它将文本放置在复选框旁边：
 
-```kt
+```java
 @Composable
 fun CheckboxWithLabel(
   label: String,
@@ -204,13 +204,13 @@ fun CheckboxWithLabel(
 
 让我们看看`Text()`。它的`constrainAs()`包含`bottom.linkTo(checkbox.bottom)`。这意味着文本的底部被约束到复选框的底部。由于文本的顶部与复选框的顶部相关联，因此文本的高度等于复选框的高度。下一行意味着文本的起始端被复选框的末端约束，并额外增加了 8 个密度无关像素的边距：
 
-```kt
+```java
 start.linkTo(checkbox.end, margin = 8.dp)
 ```
 
 因此，在阅读方向上，文本位于复选框之后。接下来，让我们看看`ConstraintLayoutDemo()`：
 
-```kt
+```java
 @Composable
 fun ConstraintLayoutDemo() {
   val red = remember { mutableStateOf(true) }
@@ -235,7 +235,7 @@ fun ConstraintLayoutDemo() {
 
 一旦我们使用`createRefs()`创建了定义约束所需的引用，我们就添加我们的第一个`CheckboxWithLabel()`。它的`top`与`parent`的`top`（即`ConstraintLayout()`）相关联。因此，带标签的第一个复选框是最上面的一个。下面是如何调用第二个复选框（它切换绿色框）的示例：
 
-```kt
+```java
 CheckboxWithLabel(
   label = stringResource(id = R.string.green),
   state = green,
@@ -247,7 +247,7 @@ CheckboxWithLabel(
 
 它的`top`被第一个带标签的复选框的`bottom`约束。最后，这是我们需要约束第三个`CheckboxWithLabel()`的方式：
 
-```kt
+```java
 modifier = Modifier.constrainAs(cbBlue) {
   top.linkTo(cbGreen.bottom)
 }
@@ -255,7 +255,7 @@ modifier = Modifier.constrainAs(cbBlue) {
 
 为了总结本节，让我向您展示如何定义彩色框。这是红色框的示例：
 
-```kt
+```java
 if (red.value) {
   Box(
     modifier = Modifier
@@ -276,7 +276,7 @@ if (red.value) {
 
 接下来，让我们看看绿色框的约束条件：
 
-```kt
+```java
 constrainAs(boxGreen) {
   start.linkTo(parent.start, margin = 32.dp)
   end.linkTo(parent.end, margin = 32.dp)
@@ -291,7 +291,7 @@ constrainAs(boxGreen) {
 
 这里是蓝色框的约束条件将呈现的样子：
 
-```kt
+```java
 constrainAs(boxBlue) {
   start.linkTo(parent.start, margin = 64.dp)
   end.linkTo(parent.end, margin = 64.dp)
@@ -318,7 +318,7 @@ constrainAs(boxBlue) {
 
 布局 UI 元素层次结构意味着确定所有元素的大小，并根据其父元素的布局策略在屏幕上定位它们。起初，获取例如一些文本的大小听起来并不太复杂。毕竟，它不是由字体和要输出的文本决定的吗？以下是一个例子，其中两行文本在一个`Column()`中布局：
 
-```kt
+```java
 @Composable
 @Preview
 fun ColumnWithTexts() {
@@ -406,7 +406,7 @@ fun ColumnWithTexts() {
 
 让我们从查看创建彩色框的组成函数开始：
 
-```kt
+```java
 @Composable
 fun ColoredBox() {
   Box(
@@ -424,13 +424,13 @@ fun ColoredBox() {
 
 一个彩色框由一个带有黑色、宽度为两个密度无关像素的 `Box()` 组成。`width()` 和 `height()` 修饰符设置框的首选大小。这意味着布局可以覆盖它。为了简单起见，我的示例没有这样做。`randomInt123()` 随机返回 `1`、`2` 或 `3`：
 
-```kt
+```java
 private fun randomInt123() = Random.nextInt(1, 4)
 ```
 
 `randomColor()` 随机返回红色、绿色或蓝色：
 
-```kt
+```java
 private fun randomColor() = when (randomInt123()) {
     1 -> Color.Red
     2 -> Color.Green
@@ -440,7 +440,7 @@ private fun randomColor() = when (randomInt123()) {
 
 接下来，我将向您展示如何创建并设置彩色框作为我自定义布局的内容：
 
-```kt
+```java
 @Composable
 @Preview
 fun CustomLayoutDemo() {
@@ -454,7 +454,7 @@ fun CustomLayoutDemo() {
 
 `SimpleFlexBox()` 是我们的自定义布局。它就像任何预定义布局一样使用。您甚至可以提供一个修饰符（这里为了简单起见没有这样做）。那么，自定义布局是如何工作的呢？让我们来看看：
 
-```kt
+```java
 @Composable
 fun SimpleFlexBox(
   modifier: Modifier = Modifier,
@@ -476,7 +476,7 @@ fun SimpleFlexBox(
 
 到目前为止，我已经向您展示了几乎所有的自定义布局代码。唯一缺少的是测量策略。让我们看看它是如何工作的：
 
-```kt
+```java
 private fun simpleFlexboxMeasurePolicy(): MeasurePolicy =
   MeasurePolicy { measurables, constraints ->
     val placeables = measurables.map { measurable ->

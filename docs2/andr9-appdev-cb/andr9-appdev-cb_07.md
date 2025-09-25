@@ -72,7 +72,7 @@
 
 1.  用以下新视图替换现有的`TextView`：
 
-```kt
+```java
 <TextView
     android:id="@+id/textView"
     android:layout_width="wrap_content"
@@ -105,14 +105,14 @@
 
 1.  打开`ActivityMain.java`并添加以下全局声明：
 
-```kt
+```java
 private final String NAME="NAME"; 
 private EditText mEditTextName; 
 ```
 
 1.  将以下代码添加到`onCreate()`中，以保存对`EditText`的引用并加载任何已保存的名称：
 
-```kt
+```java
 TextView textView = (TextView)findViewById(R.id.textView);
 SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
 String name = sharedPreferences.getString(NAME,null);
@@ -126,7 +126,7 @@ mEditTextName = findViewById(R.id.editTextName);
 
 1.  添加以下`saveName()`方法：
 
-```kt
+```java
 public void saveName(View view) {
     SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
     editor.putString(NAME, mEditTextName.getText().toString());
@@ -162,7 +162,7 @@ public void saveName(View view) {
 
 1.  将现有的`<TextView>`元素替换为以下视图：
 
-```kt
+```java
 <EditText
     android:id="@+id/editText"
     android:layout_width="wrap_content"
@@ -195,20 +195,20 @@ public void saveName(View view) {
 
 1.  现在，打开`ActivityMain.java`并添加以下全局变量：
 
-```kt
+```java
 private final String FILENAME="testfile.txt"; 
 EditText mEditText; 
 ```
 
 1.  在`onCreate()`方法中`setContentView()`之后添加以下内容：
 
-```kt
+```java
 mEditText = (EditText)findViewById(R.id.editText); 
 ```
 
 1.  添加以下`writeFile()`方法：
 
-```kt
+```java
 public void writeFile(View view) {
     try {
         FileOutputStream fileOutputStream = openFileOutput(FILENAME, Context.MODE_PRIVATE);        
@@ -222,7 +222,7 @@ public void writeFile(View view) {
 
 1.  现在，添加`readFile()`方法：
 
-```kt
+```java
 public void readFile(View view) {
     StringBuilder stringBuilder = new StringBuilder();
     try {
@@ -259,7 +259,7 @@ public void readFile(View view) {
 
 如果您只需要临时存储数据，您也可以使用缓存文件夹。以下方法返回缓存文件夹作为一个`File`对象（下一个配方将演示如何与`File`对象一起工作）：
 
-```kt
+```java
 getCacheDir() 
 ```
 
@@ -287,14 +287,14 @@ getCacheDir()
 
 1.  打开 AndroidManifest 文件并添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 ```
 
 1.  接下来，打开`ActivityMain.java`并添加以下全局变量：
 
-```kt
+```java
 private final String FILENAME="testfile.txt";
 private final String[] PERMISSIONS_STORAGE = {
         Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -305,13 +305,13 @@ EditText mEditText;
 
 1.  在`onCreate()`方法中，在`setContentView()`之后添加以下内容：
 
-```kt
+```java
 mEditText = (EditText)findViewById(R.id.editText); 
 ```
 
 1.  添加以下两种方法来检查存储状态：
 
-```kt
+```java
 public boolean isExternalStorageWritable() {
     if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
         return true;
@@ -330,7 +330,7 @@ public boolean isExternalStorageReadable() {
 
 1.  添加以下方法以验证应用是否有权限访问外部存储：
 
-```kt
+```java
 public void checkStoragePermission() {
     int permission = ActivityCompat.checkSelfPermission(this, 
             Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -343,7 +343,7 @@ public void checkStoragePermission() {
 
 1.  添加以下`writeFile()`方法：
 
-```kt
+```java
 public void writeFile(View view) {
     if (isExternalStorageWritable()) {
         checkStoragePermission();
@@ -364,7 +364,7 @@ public void writeFile(View view) {
 
 1.  添加以下`readFile()`方法：
 
-```kt
+```java
 public void readFile(View view) {
     if (isExternalStorageReadable()) {
         checkStoragePermission();
@@ -400,7 +400,7 @@ public void readFile(View view) {
 
 与内部存储示例不同，我们请求工作路径，这是我们在这一行代码中做的：
 
-```kt
+```java
 File textFile = new File(Environment.getExternalStorageDirectory(), FILENAME);
 ```
 
@@ -418,7 +418,7 @@ File textFile = new File(Environment.getExternalStorageDirectory(), FILENAME);
 
 `getExternalStorageDirectory()`方法返回外部存储的根文件夹。如果你想获取特定的公共文件夹，例如`Music`或`Ringtone`文件夹，请使用`getExternalStoragePublicDirectory()`并传入所需的文件夹类型，例如：
 
-```kt
+```java
 getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC) 
 ```
 
@@ -426,7 +426,7 @@ getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
 
 内部存储和外部存储之间一个一致的问题是空间有限。如果你提前知道你需要多少空间，你可以在`File`对象上调用`getFreeSpace()`方法。（`getTotalSpace()`将返回总空间。）以下是一个简单的示例，使用对`getFreeSpace()`的调用：
 
-```kt
+```java
 if (Environment.getExternalStorageDirectory().getFreeSpace() < RQUIRED_FILE_SPACE) { 
     //Not enough space 
 } else { 
@@ -438,7 +438,7 @@ if (Environment.getExternalStorageDirectory().getFreeSpace() < RQUIRED_FILE_SPAC
 
 通过`File`对象提供了许多辅助方法，包括删除文件。如果我们想删除示例中创建的文本文件，我们可以按照以下方式调用`delete()`：
 
-```kt
+```java
 textFile.delete() 
 ```
 
@@ -492,7 +492,7 @@ Android 为包含项目中的文件提供了两种选项：`raw` 文件夹和 `a
 
 1.  打开 `activity_main.xml` 并将内容替换为以下布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -530,7 +530,7 @@ Android 为包含项目中的文件提供了两种选项：`raw` 文件夹和 `a
 
 1.  现在，是时候编写代码了。打开 `MainActivity.java` 并添加以下方法来读取文本文件（该文件作为参数传递给方法）：
 
-```kt
+```java
 private String getText(InputStream inputStream) {
     StringBuilder stringBuilder = new StringBuilder();
     try {;
@@ -552,7 +552,7 @@ private String getText(InputStream inputStream) {
 
 1.  最后，将以下代码添加到 `onCreate()` 方法中：
 
-```kt
+```java
 TextView textViewRaw = findViewById(R.id.textViewRaw);
 textViewRaw.setText(getText(this.getResources().openRawResource(R.raw.raw_text)));
 TextView textViewAsset = findViewById(R.id.textViewAsset);
@@ -569,13 +569,13 @@ try {
 
 总结来说，唯一的区别在于我们获取每个文件的引用方式。此行代码读取 `raw` 资源：
 
-```kt
+```java
 this.getResources().openRawResource(R.raw.raw_text) 
 ```
 
 这段代码读取 `asset` 文件：
 
-```kt
+```java
 this.getAssets().open("asset_text.txt") 
 ```
 
@@ -617,7 +617,7 @@ this.getAssets().open("asset_text.txt")
 
 1.  用以下内容替换默认的 XML：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -660,13 +660,13 @@ this.getAssets().open("asset_text.txt")
 
 1.  向项目中添加一个名为 `DictionaryDatabase` 的新 Java 类。此类从 `SQLiteOpenHelper` 继承，并处理所有 SQLite 功能。以下是类声明：
 
-```kt
+```java
 public class DictionaryDatabase extends SQLiteOpenHelper { 
 ```
 
 1.  在声明下方添加以下常量：
 
-```kt
+```java
 private static final String DATABASE_NAME = "dictionary.db";
 private static final String TABLE_DICTIONARY = "dictionary";
 
@@ -677,7 +677,7 @@ private static final int DATABASE_VERSION = 1;
 
 1.  添加以下构造函数、`OnCreate()` 和 `onUpgrade()` 方法：
 
-```kt
+```java
 DictionaryDatabase(Context context) {
     super(context, DATABASE_NAME, null, DATABASE_VERSION);
 }
@@ -698,7 +698,7 @@ public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 
 1.  以下方法负责创建、更新和删除记录：
 
-```kt
+```java
 public void saveRecord(String word, String definition) {
     long id = findWordID(word);
     if (id>0) {
@@ -733,7 +733,7 @@ public int deleteRecord(long id) {
 
 1.  而这些方法处理从数据库读取信息：
 
-```kt
+```java
 public long findWordID(String word) {
     long returnVal = -1;
     SQLiteDatabase db = getReadableDatabase();
@@ -771,7 +771,7 @@ public Cursor getWordList() {
 
 1.  数据库和类完成后，打开 `MainActivity.java`。在类声明下方添加以下全局变量：
 
-```kt
+```java
 EditText mEditTextWord; 
 EditText mEditTextDefinition; 
 DictionaryDatabase mDB; 
@@ -780,7 +780,7 @@ ListView mListView;
 
 1.  添加以下方法以在按钮点击时保存字段：
 
-```kt
+```java
 private void saveRecord() {
     mDB.saveRecord(mEditTextWord.getText().toString(), mEditTextDefinition.getText().toString());
     mEditTextWord.setText("");
@@ -791,7 +791,7 @@ private void saveRecord() {
 
 1.  将此方法添加到填充 `ListView`：
 
-```kt
+```java
 private void updateWordList() {
     SimpleCursorAdapter simpleCursorAdapter = new SimpleCursorAdapter(
             this,
@@ -806,7 +806,7 @@ private void updateWordList() {
 
 1.  最后，将以下代码添加到 `onCreate()`：
 
-```kt
+```java
 mDB = new DictionaryDatabase(this);
 mEditTextWord = findViewById(R.id.editTextWord);
 mEditTextDefinition = findViewById(R.id.editTextDefinition);
@@ -843,7 +843,7 @@ updateWordList();
 
 我们将首先解释 `DictionaryDatabase` 类，因为它是 SQLite 数据库的核心。首先要注意的是构造函数：
 
-```kt
+```java
 DictionaryDatabase(Context context) { 
     super(context, DATABASE_NAME, null, DATABASE_VERSION); 
 } 
@@ -859,7 +859,7 @@ DictionaryDatabase(Context context) {
 
 最后要注意的方法是 `getWordList()`，它使用游标对象返回数据库中的所有单词。我们使用这个游标来填充 `ListView`，这把我们带到了 `ActivityMain.java`。`onCreate()` 方法执行我们之前看到的标准初始化，并使用以下代码行创建数据库实例：
 
-```kt
+```java
 mDB = new DictionaryDatabase(this); 
 ```
 
@@ -907,7 +907,7 @@ Loaders 的两个主要好处如下：
 
 1.  创建一个新的 Java 类，命名为 `DictionaryAdapter`，并扩展 `CursorAdapter` 类。这个类替换了上一个菜谱中使用的 `SimpleCursorAdapater`。以下是完整的代码：
 
-```kt
+```java
 public class DictionaryAdapter extends CursorAdapter {
     public DictionaryAdapter(Context context, Cursor c, int flags) {
         super(context, c, flags);
@@ -929,7 +929,7 @@ public class DictionaryAdapter extends CursorAdapter {
 
 1.  接下来，创建另一个新的 Java 类，并将其命名为 `DictionaryLoader`。尽管这个类处理后台线程中的数据加载，但实际上它非常简单：
 
-```kt
+```java
 public class DictionaryLoader extends CursorLoader { 
     Context mContext;
     public DictionaryLoader(Context context) {
@@ -947,14 +947,14 @@ public class DictionaryLoader extends CursorLoader {
 
 1.  接下来，打开 `ActivityMain.java`。我们需要将声明改为实现 `LoaderManager.LoaderCallbacks<Cursor>` 接口，如下所示：
 
-```kt
+```java
 public class MainActivity extends AppCompatActivity 
     implements LoaderManager.LoaderCallbacks<Cursor> {
 ```
 
 1.  将适配器添加到全局声明中。完整的列表如下：
 
-```kt
+```java
 EditText mEditTextWord; 
 EditText mEditTextDefinition; 
 DictionaryDatabase mDB; 
@@ -964,7 +964,7 @@ DictionaryAdapter mAdapter;
 
 1.  将 `onCreate()` 改为使用新的适配器，并在删除记录后添加一个调用更新 Loader 的调用。最终的 `onCreate()` 方法应如下所示：
 
-```kt
+```java
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -1010,7 +1010,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
     如下所示：
 
-```kt
+```java
 private void saveRecord() {
     mDB.saveRecord(mEditTextWord.getText().toString(), mEditTextDefinition.getText().toString());
     mEditTextWord.setText("");
@@ -1021,7 +1021,7 @@ private void saveRecord() {
 
 1.  最后，实现 Loader 接口这三个方法：
 
-```kt
+```java
 @Override
 public Loader<Cursor> onCreateLoader(int id, Bundle args) {
     return new DictionaryLoader(this);
@@ -1084,7 +1084,7 @@ public void onLoaderReset(Loader<Cursor> loader) {
 
 1.  用此按钮 XML 替换现有的`TextView`：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -1099,13 +1099,13 @@ public void onLoaderReset(Loader<Cursor> loader) {
 
 1.  现在，打开`MainActivity.java`，并将以下代码行添加到类中：
 
-```kt
+```java
 private final int REQUEST_FOLDER_MUSIC=101;
 ```
 
 1.  添加处理按钮点击的方法：
 
-```kt
+```java
 public void onAccessClick(View view) {
     StorageManager storageManager = (StorageManager)getSystemService(Context.STORAGE_SERVICE);
     StorageVolume storageVolume = storageManager.getPrimaryStorageVolume();
@@ -1116,7 +1116,7 @@ public void onAccessClick(View view) {
 
 1.  如下重写`onActivityResult()`方法：
 
-```kt
+```java
 @Override
 protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -1136,7 +1136,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 访问请求由操作系统处理，而不是由应用程序处理。要请求访问，我们需要调用`createAccessIntent()`，我们通过以下代码行来完成：
 
-```kt
+```java
 Intent intent = storageVolume.createAccessIntent(Environment.DIRECTORY_MUSIC);
 ```
 

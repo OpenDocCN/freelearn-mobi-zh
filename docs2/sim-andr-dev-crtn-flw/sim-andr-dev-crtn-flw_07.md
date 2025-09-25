@@ -44,27 +44,27 @@ Room 数据库库从 2.2 版本开始支持 Flows。这允许你通过使用 Flo
 
 如果你的 Android 应用程序使用 **数据访问对象**（**DAO**）来显示电影列表，你的项目可以有一个如下所示的 DAO：
 
-```kt
+```java
 @Dao
 ```
 
-```kt
+```java
 interface MovieDao {
 ```
 
-```kt
+```java
     @Query("SELECT * FROM movies")
 ```
 
-```kt
+```java
     fun getMovies(): List<Movie>
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -72,27 +72,27 @@ interface MovieDao {
 
 上述代码在调用`getMovies`后只会获取一次电影列表。你可能希望你的应用程序在数据库中的电影被添加、删除或更新时自动更新电影列表。你可以通过使用 Room-KTX 并将你的`MovieDao`更改为使用 Flow 来`getMovies`来实现这一点：
 
-```kt
+```java
 @Dao
 ```
 
-```kt
+```java
 interface MovieDao {
 ```
 
-```kt
+```java
     @Query("SELECT * FROM movies")
 ```
 
-```kt
+```java
     fun getMovies(): Flow<List<Movie>>
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -102,23 +102,23 @@ interface MovieDao {
 
 要将`LiveData`转换为`Flow`，你可以使用`LiveData.asFlow()`扩展函数。使用`Flow.asLiveData()`扩展函数将`Flow`转换为`LiveData`。你可以通过在你的`app/build.gradle`依赖项中包含以下内容将 LiveData KTX 添加到你的项目中：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     implementation ‘androidx.lifecycle:lifecycle-livedata-
 ```
 
-```kt
+```java
       ktx:2.2.0'
 ```
 
-```kt
+```java
 }
 ```
 
@@ -130,71 +130,71 @@ dependencies {
 
 在下面的例子中，`collect()`函数是从使用`lifecycleScope`中的`launch`协程构建器创建的协程中调用的：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             viewModel.fetchMovies().collect { movie ->
 ```
 
-```kt
+```java
                 Log.d("movies", "${movie.title}")
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchMovies(): Flow<Movie> {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -204,55 +204,55 @@ class MovieViewModel : ViewModel() {
 
 要更改 Flow 运行的`CoroutineContext`，你可以使用`flowOn()`函数。如果你想将前一个例子中的 Flow 的`Dispatcher`更改为`Dispatchers.IO`，你可以使用`flowOn(Dispatchers.IO)`，如下面的例子所示：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             viewModel.fetchMovies()
 ```
 
-```kt
+```java
                 .flowOn(Dispatchers.IO)
 ```
 
-```kt
+```java
                 .collect { movie ->
 ```
 
-```kt
+```java
                     Log.d("movies", "${movie.title}")
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -260,59 +260,59 @@ class MainActivity : AppCompatActivity() {
 
 当你调用`flowOn`时，它只会改变调用之前的函数或操作符，而不会改变调用之后的。在下面的例子中，在调用`flowOn`之后调用了`map`操作符来更改分发器，因此其上下文不会改变：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             viewModel.fetchMovies()
 ```
 
-```kt
+```java
                 .flowOn(Dispatchers.IO)
 ```
 
-```kt
+```java
                 .map { ... }
 ```
 
-```kt
+```java
                 .collect { movie ->
 ```
 
-```kt
+```java
                     Log.d("movies", "${movie.title}")
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -322,23 +322,23 @@ class MainActivity : AppCompatActivity() {
 
 为了在 Android UI 层面上安全地收集 Flows，你需要自己处理生命周期变化。你也可以使用 `Lifecycle.repeatOnLifecycle` 和 `Flow.flowWithLifecycle`，这些在 `app/build.gradle` 依赖中可用：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...    
 ```
 
-```kt
+```java
     implementation ‘androidx.lifecycle:lifecycle-runtime-
 ```
 
-```kt
+```java
       ktx:2.4.1
 ```
 
-```kt
+```java
 }
 ```
 
@@ -354,59 +354,59 @@ dependencies {
 
 以下展示了如何在你的 Android 项目中使用 `Lifecycle.repeatOnLifecycle`：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 viewModel.fetchMovies()
 ```
 
-```kt
+```java
                     .collect { movie ->
 ```
 
-```kt
+```java
                         Log.d("movies", "${movie.title}")
 ```
 
-```kt
+```java
                     }   
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -414,83 +414,83 @@ class MainActivity : AppCompatActivity() {
 
 你可以使用 `Lifecycle.repeatOnLifecycle` 收集多个 Flow。为此，你必须在不同协程中并行收集它们：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
   override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
       ...
 ```
 
-```kt
+```java
       lifecycleScope.launch {
 ```
 
-```kt
+```java
           repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
               launch {
 ```
 
-```kt
+```java
                  viewModel.fetchMovies().collect { movie ->
 ```
 
-```kt
+```java
                       Log.d("movies", "${movie.title}")
 ```
 
-```kt
+```java
                     }
 ```
 
-```kt
+```java
                 }
 ```
 
-```kt
+```java
               launch {
 ```
 
-```kt
+```java
                   viewModel.fetchTVShows.collect { show ->
 ```
 
-```kt
+```java
                       Log.d("tv shows", "${show.title}")
 ```
 
-```kt
+```java
                     }
 ```
 
-```kt
+```java
                 }
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -498,59 +498,59 @@ class MainActivity : AppCompatActivity() {
 
 如果你只有一个 Flow 要收集，你也可以使用 `Flow.flowWithLifecycle`。当生命周期至少处于 `Lifecycle.repeatOnLifecycle` 内部时，它会从上游 Flow（调用之前的 Flow 和操作符）发出值。你可以像以下代码所示使用 `Flow.flowWithLifecycle`：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             viewModel.fetchMovies()          
 ```
 
-```kt
+```java
                 .flowWithLifecycle(lifecycle,
 ```
 
-```kt
+```java
                   Lifecycle.State.STARTED)
 ```
 
-```kt
+```java
                 .collect { movie ->
 ```
 
-```kt
+```java
                     Log.d("movies", "${movie.title}")
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -574,51 +574,51 @@ Kotlin Flow API 有你可以用来创建 Flows 的流构建器。以下是你可
 
 `flow` 构建器函数从一个可挂起 lambda 块创建一个新的 Flow。在块内部，你可以使用 `emit` 函数发送值。例如，这个 `MovieViewModel` 的 `fetchMovieTitles` 函数返回 `Flow<String>`：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchMovieTitles(): Flow<String> = flow {
 ```
 
-```kt
+```java
         val movies = fetchMoviesFromNetwork()
 ```
 
-```kt
+```java
         movies.forEach { movie -> 
 ```
 
-```kt
+```java
             emit(movie.title)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     private fun fetchMoviesFromNetwork(): List<Movie> {
 ```
 
-```kt
+```java
          …
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -626,55 +626,55 @@ class MovieViewModel : ViewModel() {
 
 使用 `flowOf` 函数，你可以创建一个生成指定值或 `vararg` 值的 Flow。在下面的示例中，`flowOf` 函数被用来创建一个包含前三部电影标题的 Flow：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchTop3Titles(): Flow<List<Movie>> {
 ```
 
-```kt
+```java
         val movies = fetchMoviesFromNetwork().sortedBy {
 ```
 
-```kt
+```java
             it.popularity }
 ```
 
-```kt
+```java
         return flowOf(movies[0].title, 
 ```
 
-```kt
+```java
             movies[1].title, 
 ```
 
-```kt
+```java
             movies[2].title)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     private fun fetchMoviesFromNetwork(): List<Movie> {
 ```
 
-```kt
+```java
         …
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -682,43 +682,43 @@ class MovieViewModel : ViewModel() {
 
 `asFlow()` 扩展函数允许你将类型转换为 Flow。你可以在序列、数组、范围、集合和函数类型上使用它。例如，这个 `MovieViewModel` 有 `fetchMovieIds` 返回 `Flow<Int>`，包含电影 ID：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     private fun fetchMovieIds(): Flow<Int> {
 ```
 
-```kt
+```java
         val movies: List<Movie> = fetchMoviesFromNetwork()
 ```
 
-```kt
+```java
         return movies.map { it.id }.asFlow()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     private fun fetchMoviesFromNetwork(): List<Movie> {
 ```
 
-```kt
+```java
         …
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -764,55 +764,55 @@ class MovieViewModel : ViewModel() {
 
 在以下示例中，使用`firstOrNull`终端操作符代替`collect`操作符来从`ViewModel`收集流：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 val topMovie =
 ```
 
-```kt
+```java
                   viewModel.fetchMovies().firstOrNull()
 ```
 
-```kt
+```java
                 displayMovie(topMovie)
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -854,39 +854,39 @@ class MainActivity : AppCompatActivity() {
 
 例如，这个 `MovieViewModel` 有一个 `fetchTopMovieTitles` 函数，它使用 `transform` 返回包含顶级电影的 Flow：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchTopMovies(): Flow<Movie> {
 ```
 
-```kt
+```java
         return fetchMoviesFlow()
 ```
 
-```kt
+```java
             .transform {
 ```
 
-```kt
+```java
                 if (it.popularity > 0.5f) emit(it)
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -926,63 +926,63 @@ class MovieViewModel : ViewModel() {
 
 `buffer()` 允许 Flow 在数据仍在收集时发射值。发射和收集数据在单独的协程中运行，因此它是并行的。以下是如何使用 `buffer` 与 Flow 的示例：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 viewModel.fetchMovies()
 ```
 
-```kt
+```java
                     .buffer()
 ```
 
-```kt
+```java
                     .collect { movie ->
 ```
 
-```kt
+```java
                         processMovie(movie)
 ```
 
-```kt
+```java
                     }   
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -990,63 +990,63 @@ class MainActivity : AppCompatActivity() {
 
 `conflate()` 与 `buffer()` 操作符类似，但 `conflate` 中，收集器将只处理在处理完上一个值之后的最新发出的值。它将忽略之前发出的其他值。以下是在 Flows 中使用 `conflate` 的示例：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 viewModel.getTopMovie()
 ```
 
-```kt
+```java
                     .conflate()
 ```
 
-```kt
+```java
                     .collect { movie ->
 ```
 
-```kt
+```java
                         processMovie(movie)
 ```
 
-```kt
+```java
                     }   
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1054,59 +1054,59 @@ class MainActivity : AppCompatActivity() {
 
 `collectLatest(action)` 是一个终端操作符，它将以与 `collect` 相同的方式收集 Flows，但每当发出新值时，它将重新启动操作并使用这个新值。以下是在 Flows 中使用 `collectLatest` 的示例：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 viewModel.getTopMovie()
 ```
 
-```kt
+```java
                     .collectLatest { movie ->
 ```
 
-```kt
+```java
                         displayMovie(movie)
 ```
 
-```kt
+```java
                     }   
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1130,63 +1130,63 @@ class MainActivity : AppCompatActivity() {
 
 在以下示例中，有两个 Flows 来自 `viewModel.fetchMoviesFromDb` 和 `viewModel.fetchMoviesFromNetwork`，它们使用 `merge` 进行合并：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 merge(viewModel.fetchMoviesFromDb(),
 ```
 
-```kt
+```java
                   viewModel.fetchMoviesFromNetwork())
 ```
 
-```kt
+```java
                     .collect { movie ->
 ```
 
-```kt
+```java
                         processMovie(movie)
 ```
 
-```kt
+```java
                     }   
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1196,71 +1196,71 @@ class MainActivity : AppCompatActivity() {
 
 以下展示了如何使用 `zip` 操作符合并两个 Flows，`userFlow` 和 `taskFlow`：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 val userFlow = viewModel.getUsers()
 ```
 
-```kt
+```java
                 val taskFlow = viewModel.getTasks()
 ```
 
-```kt
+```java
                 userFlow.zip(taskFlow) { user, task ->
 ```
 
-```kt
+```java
                     AssignedTask(user, task)
 ```
 
-```kt
+```java
                 }.collect { assignedTask ->
 ```
 
-```kt
+```java
                     displayAssignedTask(assignedTask)
 ```
 
-```kt
+```java
                 }  
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1270,87 +1270,87 @@ class MainActivity : AppCompatActivity() {
 
 以下示例展示了如何使用 `combine` 操作符在你的应用程序中将两个 Flows 连接起来：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 val yourMesssage =
 ```
 
-```kt
+```java
                   viewModel.getLastMessageSent()
 ```
 
-```kt
+```java
                 val friendMessage =
 ```
 
-```kt
+```java
                   viewModel.getLastMessageReceived()
 ```
 
-```kt
+```java
                 userFlow.combine(taskFlow) { yourMesssage,
 ```
 
-```kt
+```java
                   friendMessage ->
 ```
 
-```kt
+```java
                     Conversation(yourMessage,
 ```
 
-```kt
+```java
                       friendMessage)
 ```
 
-```kt
+```java
                 }.collect { conversation ->
 ```
 
-```kt
+```java
                     displayConversation(conversation)
 ```
 
-```kt
+```java
                 }  
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1370,43 +1370,43 @@ class MainActivity : AppCompatActivity() {
 
 在以下示例中，`SharedFlow` 用于 `MovieViewModel` 中获取的电影列表：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     private val _message = MutableSharedFlow<String>()
 ```
 
-```kt
+```java
     val movies: SharedFlow<String> =
 ```
 
-```kt
+```java
       _message.asSharedFlow()
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun onError(): Flow<List<Movie>> {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         _message.emit("An error was encountered")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1416,97 +1416,97 @@ class MovieViewModel : ViewModel() {
 
 在 Android 中，`StateFlow` 可以作为 `LiveData` 的替代方案。您可以为 `ViewModel` 使用 `StateFlow`，然后您的活动或片段可以收集值。例如，在以下 `ViewModel` 中，使用了 `StateFlow` 来表示电影列表：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     private val _movies =
 ```
 
-```kt
+```java
       MutableStateFlow(emptyList<Movie>())
 ```
 
-```kt
+```java
     val movies: StateFlow<List<Movie>> = _movies
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchMovies(): Flow<List<Movie>> {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         _movies.value = movieRepository.fetchMovies()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 在前面的代码中，从仓库获取的电影列表将被设置为 `_movies` 的 `MutableStateFlow`，这也会改变 `movies` 的 `StateFlow`。然后您可以在活动或片段中收集 `movies` 的 `StateFlow`，如下所示：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         lifecycleScope.launch {
 ```
 
-```kt
+```java
             repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
                 viewModel.movies.collect { movies ->
 ```
 
-```kt
+```java
                     displayMovies(movies)
 ```
 
-```kt
+```java
                 }   
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1524,7 +1524,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  前往`MovieRepository`类，添加一个新的`fetchMoviesFlow()`函数，使用`flow`构建器返回一个 Flow，并发出来自`MovieService`的电影列表，如下面的代码片段所示：
 
-    ```kt
+    ```java
     fun fetchMoviesFlow(): Flow<List<Movie>> {
         return flow {
             emit(movieService.getMovies(apiKey).results)
@@ -1536,7 +1536,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  打开`MovieViewModel`类，将获取自`movieRepository`的`movies` `LiveData`的初始化替换为以下行：
 
-    ```kt
+    ```java
     private val _movies =
       MutableStateFlow(emptyList<Movie>())
     val movies: StateFlow<List<Movie>> = _movies
@@ -1546,7 +1546,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  对`error` `LiveData`做同样的处理，并用以下行替换其初始化，从`movieRepository`获取的值：
 
-    ```kt
+    ```java
     private val _error = MutableStateFlow("")
     val error: StateFlow<String> = _error
     ```
@@ -1555,7 +1555,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  用以下行替换`loading`和`_loading`变量：
 
-    ```kt
+    ```java
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<String> = _loading
     ```
@@ -1566,7 +1566,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  添加一个新的`fetchMovies()`函数，它将收集来自`movieRepository.fetchMoviesFlow`的 Flow，如下面的代码块所示：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         _loading.value = true
         viewModelScope.launch (dispatcher) {
@@ -1583,7 +1583,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  打开`app/build.gradle`文件。在依赖项中添加以下行：
 
-    ```kt
+    ```java
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.1'
     ```
 
@@ -1591,7 +1591,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  打开`MainActivity`，删除观察`movies`、`error`和`loading` `LiveData`的代码行。用以下代码替换它们：
 
-    ```kt
+    ```java
     lifecycleScope.launch {
        repeatOnLifecycle(Lifecycle.State.STARTED) {
            launch {

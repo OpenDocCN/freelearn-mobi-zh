@@ -60,7 +60,7 @@ RxKotlin 缺少的只有文档；我个人认为，ReactiveX 库复杂的学习�
 
 代码块设置如下：
 
-```kt
+```java
    async(CommonPool) { 
         Observable.range(1, 10) 
           .subscribeOn(Schedulers.trampoline())//(1) 
@@ -73,7 +73,7 @@ RxKotlin 缺少的只有文档；我个人认为，ReactiveX 库复杂的学习�
 
 当我们希望将你的注意力引向代码块的一个特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 abstract class BaseActivity : AppCompatActivity() { 
        final override fun onCreate(savedInstanceState: Bundle?) { 
          super.onCreate(savedInstanceState) 
@@ -85,7 +85,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
 任何命令行输入或输出都应如下所示。输入命令可能被分成多行以提高可读性，但需要在提示符中作为一条连续的行输入：
 
-```kt
+```java
 $ git clone https://github.com/ReactiveX/RxKotlin.git
 $ cd RxKotlin/
 $ ./gradlew build

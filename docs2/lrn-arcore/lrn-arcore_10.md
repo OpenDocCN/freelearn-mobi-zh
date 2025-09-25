@@ -58,14 +58,14 @@ HoloKit 的伟大之处在于它自带完整的 Unity 模板项目。这使得�
 
 1.  如果你还没有这样做，从根目录创建一个名为`ARCore`的新文件夹，并导航到它：
 
-```kt
+```java
 mkdir ARCore
 cd ARCore
 ```
 
 1.  将 HoloKit 仓库克隆到其中：
 
-```kt
+```java
 git clone -b android https://github.com/holokit/holokitsdk.git
 ```
 
@@ -255,7 +255,7 @@ WRLD 在 Unity 和其他平台上使用其 API 有几个优秀的示例。我们
 
 1.  在同一文件夹中创建一个新的脚本，命名为 `SceneController` 并替换生成的代码为以下内容：
 
-```kt
+```java
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -274,7 +274,7 @@ namespace Packt.HoloCore
 
 1.  在构造函数之后输入以下内容：
 
-```kt
+```java
 public LatLongAltitude position;
 ```
 
@@ -282,7 +282,7 @@ public LatLongAltitude position;
 
 1.  添加以下新的方法，`LoadScene`，并使用以下代码：
 
-```kt
+```java
 public void LoadScene(string scene, Camera mapCamera)
 {
    if (Api.Instance.CameraApi.HasControlledCamera)
@@ -307,7 +307,7 @@ public void LoadScene(string scene, Camera mapCamera)
 
 1.  创建一个新的 C#脚本，命名为`SceneSwitcher`，并用以下代码替换所有预生成的代码：
 
-```kt
+```java
 using UnityEngine;
 namespace Packt.HoloCore
 {
@@ -319,7 +319,7 @@ namespace Packt.HoloCore
 
 1.  在类内部创建以下属性：
 
-```kt
+```java
 public Camera mapCamera;
 ```
 
@@ -327,7 +327,7 @@ public Camera mapCamera;
 
 1.  然后，创建以下方法：
 
-```kt
+```java
 public void SwitchScenes(string sceneName)
 {
    SceneController.Instance.LoadScene(sceneName, mapCamera);
@@ -380,7 +380,7 @@ public void SwitchScenes(string sceneName)
 
 1.  在指定的行之间插入以下内容：
 
-```kt
+```java
 using Wrld.Scripts.Utilities; //after me
 using Packt.HoloCore;
 #if UNITY_EDITOR //before me
@@ -388,7 +388,7 @@ using Packt.HoloCore;
 
 1.  滚动到`SetupApi`方法并在指定的行之间插入以下代码：
 
-```kt
+```java
 config.Collisions.BuildingCollision = m_buildingCollisions; //after meconfig.DistanceToInterest = SceneController.Instance.position.GetAltitude();
 config.LatitudeDegrees = SceneController.Instance.position.GetLatitude();
 config.LongitudeDegrees = SceneController.Instance.position.GetLongitude();
@@ -427,14 +427,14 @@ Transform rootTransform = null; //before me
 
 1.  在类顶部添加两个新属性：
 
-```kt
+```java
 public bool isLoaded;
 public string status;
 ```
 
 1.  在构造函数下方创建一个新方法：
 
-```kt
+```java
 void Awake()
 {
   StartCoroutine(GetLocationPoint());
@@ -445,7 +445,7 @@ void Awake()
 
 1.  添加以下方法来创建`coroutine`：
 
-```kt
+```java
 IEnumerator GetLocationPoint()
 {
 }
@@ -455,7 +455,7 @@ IEnumerator GetLocationPoint()
 
 1.  在`GetLocationPoint`内部添加以下行：
 
-```kt
+```java
 AndroidPermissionsManager.RequestPermission(new string[] { "android.permission.ACCESS_FINE_LOCATION" });
 ```
 
@@ -465,7 +465,7 @@ Google 通过将无线端点 MAC 地址映射到地理坐标的方式本质上�
 
 1.  然后，添加以下内容：
 
-```kt
+```java
 if (Input.location.isEnabledByUser == false)
 {
   isLoaded = true;
@@ -478,7 +478,7 @@ if (Input.location.isEnabledByUser == false)
 
 1.  在`GetLocationPoint`方法下方向下滚动并添加以下新方法：
 
-```kt
+```java
 public YieldInstruction SetStatus(string status, float time)
 {
   this.status = status;
@@ -492,7 +492,7 @@ public YieldInstruction SetStatus(string status, float time)
 
 1.  现在我们已经理解了`coroutines`，让我们进入下一部分的代码：
 
-```kt
+```java
 yield return SetStatus("-----STARTING LOCATION SERVICE-----", 1);
 Input.location.Start();
 
@@ -509,7 +509,7 @@ while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 
 
 1.  输入以下代码以处理当我们的计数器已过期（`maxWait<1`）的情况：
 
-```kt
+```java
 // Service didn't initialize in 20 seconds
  if (maxWait < 1)
  {
@@ -523,7 +523,7 @@ while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 
 
 1.  接下来，我们想要处理服务失败或启动的情况，如下所示：
 
-```kt
+```java
 if (Input.location.status == LocationServiceStatus.Failed)
 {
   yield return SetStatus("ERROR - Unable to determine device location.", 10.0f);
@@ -543,7 +543,7 @@ else
 
 1.  最后，我们使用以下代码停止服务：
 
-```kt
+```java
  Input.location.Stop();
 ```
 
@@ -553,7 +553,7 @@ else
 
 1.  在这一点上，我们还想更新并重载`LoadScene`方法，如下所示：
 
-```kt
+```java
 public void LoadScene(string scene)
 {
   SceneManager.LoadScene(scene, LoadSceneMode.Single);
@@ -597,7 +597,7 @@ public void LoadScene(string scene, Camera mapCamera)
 
 1.  在`Assets/HoloCore/Scripts`文件夹中创建一个新的 C#脚本名为`SceneLoader`，并用以下代码替换预生成的代码：
 
-```kt
+```java
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -651,7 +651,7 @@ namespace Packt.HoloCore
 
 1.  创建一个新的 C#脚本，并用以下代码替换代码：
 
-```kt
+```java
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;

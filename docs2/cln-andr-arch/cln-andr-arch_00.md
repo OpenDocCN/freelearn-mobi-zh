@@ -64,7 +64,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 data class User(
     val id: String,
     val firstName: String,
@@ -77,7 +77,7 @@ data class User(
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 …
 @Composable
 fun Screen(viewModel: MainViewModel = viewModel(factory = MainViewModelFactory())) {

@@ -226,7 +226,7 @@ UML 用例图用于场景。在服务合同交换系统的例子中，选择了�
 
 以下是一个家庭验证的示例：
 
-```kt
+```java
 data class Household(
     val name: String,
     val members: List<Person>,
@@ -298,7 +298,7 @@ fun Person.validate(): List<String> = listOfNotNull(
 
 例如，假设有一个登录操作有多个内部错误枚举值，那么 Kotlin 枚举类将如下所示：
 
-```kt
+```java
 enum class InternalError {
     WRONG_PASSWORD,
     USERNAME_NOT_FOUND,
@@ -310,7 +310,7 @@ enum class InternalError {
 
 如果我们公开所有这些值，组件的调用者将能够理解即使登录操作失败，用户名是否存在，或者两者都有效但验证码挑战失败。这些对于组件的外部来说是不必要的细节，应该被隐藏。这还不包括显然的安全问题。因此，我们可以创建一个外部错误枚举值列表，只显示对调用者感兴趣的内容：
 
-```kt
+```java
 enum class ExternalError {
     FAILED_AUTHENTICATION,
     TIMED_OUT,
@@ -372,7 +372,7 @@ SRP 指出，一个类应该有一个责任或关注点，只有一个。只有�
 
 让我们看看一个违反 SRP 的类：
 
-```kt
+```java
 interface HouseholdService {
     fun create(household: Household): Household
     fun draftContract(contract: Contract)
@@ -384,7 +384,7 @@ interface HouseholdService {
 
 我们可以将示例重构以符合 SRP：
 
-```kt
+```java
 interface HouseholdService {
     fun create(household: Household): Household
 }
@@ -410,7 +410,7 @@ OCP 声明，软件组件如类、模块和函数应该是可扩展的，但对�
 
 在以下示例中，存在一个`NotificationService`，它会通知涉及合同的住户合同的状态：
 
-```kt
+```java
 interface NotificationService {
     fun notifyHouseholds(contract: Contract)
 }
@@ -442,7 +442,7 @@ LSP 声明，超类中的对象可以被其子类的对象替换，而不会改�
 
 相反，如果存在一个`PhoneNotificationService`，它不仅通知参与合同的住户，还将合同状态更新为`UNDER_REVIEW`，这将违反 LSP。这是因为如果用`PhoneNotificationService`替换`EmailNotificationService`，合同状态将被更新，而这种情况在替换之前是不会发生的：
 
-```kt
+```java
 class PhoneNotificationService : NotificationService {
     override fun notifyHouseholds(contract: Contract) {
          // ring an automated message to household's phone
@@ -469,7 +469,7 @@ ISP 声明，客户端不应该被迫依赖于他们不使用的接口。
 
 这是一个违反 ISP 的例子：
 
-```kt
+```java
 interface Human {
     fun logOn()
     fun exerciseContract()
@@ -520,7 +520,7 @@ DIP 包含两个部分：
 
 让我们看看接下来的例子，看看它是否遵循 DIP：
 
-```kt
+```java
 class ContractWorkflowService(
     val emailNotificationService: EmailNotificationService,
 ) {
@@ -550,7 +550,7 @@ class EmailNotificationService : NotificationService {
 
 假设有一个函数返回人的地址中的城市：
 
-```kt
+```java
 class Person(val name: String, val address: Address) {
     fun getAddressCity(): String {
         return address.city

@@ -120,7 +120,7 @@ IAP 包是从主引擎外部创建的，因为代码旨在非常灵活，可以�
 
 我们需要打开`MainMenuBehaviour`脚本，并将以下函数添加到类中：
 
-```kt
+```java
 public void DisableAds()
 {
     UnityAdController.showAds = false;
@@ -146,7 +146,7 @@ protected virtual void Start()
 
 1.  考虑到这一点，我们还需要更新`PauseScreenBehaviour`的`Start`函数，如下所示：
 
-    ```kt
+    ```java
     protected override void Start()
     {
         /* Initialize Ads if needed */
@@ -163,7 +163,7 @@ protected virtual void Start()
 
 1.  最后，我们需要调整`ObstacleBehaviour`脚本以处理不播放广告的情况。更新`ShowContinue`函数如下：
 
-    ```kt
+    ```java
         // Other code above...
         /* Come back after 1 second and check again */
         yield return new WaitForSeconds(1f);
@@ -190,7 +190,7 @@ protected virtual void Start()
 
 1.  我们还需要对`ResetGame`方法进行轻微调整，通过删除或注释以下行：
 
-    ```kt
+    ```java
     /*If we find the button, we can use it */
     if (continueButton)
     {
@@ -270,7 +270,7 @@ protected virtual void Start()
 
 1.  前往`脚本`文件夹，创建一个名为`RestoreAdsChecker`的 C#脚本。一旦打开，使用以下脚本：
 
-    ```kt
+    ```java
     using UnityEngine;
     /// <summary>
     /// Will show or remove a button depending on whether

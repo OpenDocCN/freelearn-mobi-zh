@@ -46,7 +46,7 @@
 
 一种方法是为它提供一个输出通道：
 
-```kt
+```java
 fun activeActor(out: SendChannel<String>) = actor<Int> {
     for (i in this) {
         out.send(i.toString().reversed())
@@ -61,7 +61,7 @@ fun activeActor(out: SendChannel<String>) = actor<Int> {
 
 为了测试**活动对象**模式，我们将启动两个作业。一个将数据发送到我们的 actor：
 
-```kt
+```java
 val channel = Channel<String>()
 val actor = activeActor(channel)
 
@@ -75,7 +75,7 @@ val j1 = launch {
 
 另一个将等待输出通道上的输出：
 
-```kt
+```java
 val j2 = launch {
     for (i in channel) {
         println(i)
@@ -96,7 +96,7 @@ j2.join()
 
 在你需要返回一个未来将评估的值的占位符的情况下，你可以这样做：
 
-```kt
+```java
 val deferred = CompletableDeferred<String>()
 
 launch {
@@ -118,7 +118,7 @@ println(deferred.await())
 
 如果你对延迟的结果不再感兴趣，也可以取消延迟。只需在它上面调用`cancel()`即可：
 
-```kt
+```java
 deferred.cancel()
 ```
 
@@ -128,7 +128,7 @@ deferred.cancel()
 
 例如，以下是一个类：
 
-```kt
+```java
 data class FavoriteCharacter(val name: String, val catchphrase: String, val repeats: Int)
 ```
 
@@ -136,7 +136,7 @@ data class FavoriteCharacter(val name: String, val catchphrase: String, val repe
 
 最基本的方法是使用 `CountDownLatch`，就像我们在一些之前的例子中所做的那样：
 
-```kt
+```java
 val latch = CountDownLatch(3)
 
 var name: String? = null
@@ -170,7 +170,7 @@ println("${name} says: ${catchphrase.repeat(repeats)}")
 
 你会注意到异步任务完成的顺序正在改变：
 
-```kt
+```java
 Got name
 Got catchphrase
 Got repeats
@@ -178,7 +178,7 @@ Got repeats
 
 但最终，我们总是打印出相同的结果：
 
-```kt
+```java
 Inigo Montoya says: Hello. My name is Inigo Montoya. ...
 ```
 
@@ -190,7 +190,7 @@ Inigo Montoya says: Hello. My name is Inigo Montoya. ...
 
 当然，我们可以传递它们闩锁。我们已经见过几次的闩锁允许一个线程等待，直到其他线程完成工作：
 
-```kt
+```java
 private fun getName(latch: CountDownLatch) = launch {
     ...
     latch.countDown()
@@ -201,7 +201,7 @@ private fun getName(latch: CountDownLatch) = launch {
 
 让我们再试一次：
 
-```kt
+```java
 private fun getName() = async {
     delay(Random().nextInt(100))
     println("Got name")
@@ -223,7 +223,7 @@ private fun getRepeats() = async {
 
 只是一个提醒，`fun getRepeats() = async { ... }` 中并没有什么魔法。它的更长等效形式是：
 
-```kt
+```java
 private fun getCatchphrase(): Deferred<String> {
     return async {
         ...
@@ -233,7 +233,7 @@ private fun getCatchphrase(): Deferred<String> {
 
 我们可以调用我们的代码来得到与之前相同的结果：
 
-```kt
+```java
 val name = getName()
 val catchphrase = getCatchphrase()
 val repeats = getRepeats()
@@ -247,7 +247,7 @@ println("${name.await()} says: ${catchphrase.await().repeat(repeats.await())}")
 
 现在我们的数据类是屏障：
 
-```kt
+```java
 val character = FavoriteCharacter(getName().await(), getCatchphrase().await(), getRepeats().await())
 
 // Will happen only when everything is ready
@@ -258,7 +258,7 @@ with(character) {
 
 数据类作为屏障的额外好处是能够轻松地解构它们：
 
-```kt
+```java
 val (name, catchphrase, repeats) = character
 println("$name says: ${catchphrase.repeat(repeats)}")
 ```
@@ -269,7 +269,7 @@ println("$name says: ${catchphrase.repeat(repeats)}")
 
 例如，让我们问问迈克尔（我们的金丝雀产品负责人），杰克（我们的咖啡师），以及我，我们最喜欢的电影角色是谁：
 
-```kt
+```java
 object Michael {
     fun getFavoriteCharacter() = async {
         // Doesn't like to think much
@@ -296,7 +296,7 @@ object Me {
 
 在那种情况下，我们可以使用列表来收集结果：
 
-```kt
+```java
 val favoriteCharacters = listOf(Me.getFavoriteCharacter().await(),
         Michael.getFavoriteCharacter().await(),
         Jake.getFavoriteCharacter().await())
@@ -312,7 +312,7 @@ println(favoriteCharacters)
 
 这里有一个例子来提醒你，你可以明确指定它：
 
-```kt
+```java
 // Same as launch {}
 launch(CommonPool) {
 ...
@@ -328,7 +328,7 @@ val result = async(CommonPool) {
 
 运行以下代码：
 
-```kt
+```java
 val r1 = async(CommonPool) {
     for (i in 1..1000) {
         println(Thread.currentThread().name)
@@ -341,7 +341,7 @@ r1.await()
 
 有趣的是，同一个协程被不同的线程选中：
 
-```kt
+```java
 ForkJoinPool.commonPool-worker-2
 ForkJoinPool.commonPool-worker-3
 ...
@@ -351,7 +351,7 @@ ForkJoinPool.commonPool-worker-1
 
 你也可以指定上下文为 `Unconfined`：
 
-```kt
+```java
 val r1 = async(Unconfined) {
     ...
 }
@@ -359,7 +359,7 @@ val r1 = async(Unconfined) {
 
 这将在主线程上运行协程。它打印：
 
-```kt
+```java
 main
 main
 ...
@@ -367,7 +367,7 @@ main
 
 你也可以从你的父协程继承上下文：
 
-```kt
+```java
 val r1 = async {
     for (i in 1..1000) {
         val parentThread = Thread.currentThread().name
@@ -387,7 +387,7 @@ val r1 = async {
 
 为了理解不同的上下文，让我们看看下面的代码：
 
-```kt
+```java
 val r1 = async(Unconfined) {
     for (i in 1..1000) {
         println(Thread.currentThread().name)
@@ -402,7 +402,7 @@ r1.await()
 
 但与 `yield()` 相比，输出是不同的：
 
-```kt
+```java
 main
 kotlinx.coroutines.DefaultExecutor
 ...
@@ -414,7 +414,7 @@ kotlinx.coroutines.DefaultExecutor
 
 您也可以为协程创建自己的线程池来运行：
 
-```kt
+```java
 val pool = newFixedThreadPoolContext(2, "My Own Pool")
 val r1 = async(pool) {
     for (i in 1..1000) {
@@ -429,7 +429,7 @@ pool.close()
 
 它打印：
 
-```kt
+```java
 ...
 My Own Pool-2
 My Own Pool-1
@@ -448,7 +448,7 @@ My Own Pool-2
 
 要开始使用 DOM，我们需要一个库，例如`kotlinx.dom`。如果你使用**Gradle**，请确保将以下行添加到你的`build.gradle`文件中：
 
-```kt
+```java
 repositories {
     ...
     jcenter()
@@ -464,7 +464,7 @@ dependencies {
 
 首先，我们希望偶尔抓取新闻页面。为此，我们将有一个生产者：
 
-```kt
+```java
 fun producePages() = produce {
     fun getPages(): List<String> {
         // This should actually fetch something
@@ -492,7 +492,7 @@ fun producePages() = produce {
 
 下一步是创建包含 HTML 的原始字符串的**文档对象模型**（**DOM**）。为此，我们将有一个第二个生产者，这个生产者接收一个连接到第一个生产者的通道：
 
-```kt
+```java
 fun produceDom(pages: ReceiveChannel<String>) = produce {
 
     fun parseDom(page: String): Document {
@@ -509,7 +509,7 @@ fun produceDom(pages: ReceiveChannel<String>) = produce {
 
 在这个生产者中，我们最终使用了我们之前导入的 DOM 解析器。我们还引入了一个方便的`String`扩展函数：
 
-```kt
+```java
 private fun String.toSource(): InputSource {
     return InputSource(StringReader(this))
 }
@@ -517,7 +517,7 @@ private fun String.toSource(): InputSource {
 
 这是因为`parseXml()`期望`InputSource`作为其输入。基本上，这是一个**适配器**设计模式的应用：
 
-```kt
+```java
 fun produceTitles(parsedPages: ReceiveChannel<Document>) = produce {
     fun getTitles(dom: Document): List<String> {
         val h1 = dom.getElementsByTagName("H1")
@@ -542,7 +542,7 @@ fun produceTitles(parsedPages: ReceiveChannel<Document>) = produce {
 
 现在，为了建立我们的管道：
 
-```kt
+```java
 val pagesProducer = producePages()
 
 val domProducer = produceDom(pagesProducer)
@@ -558,7 +558,7 @@ runBlocking {
 
 我们有以下内容：
 
-```kt
+```java
 pagesProducer |> domProducer |> titleProducer |> output
 ```
 
@@ -568,7 +568,7 @@ pagesProducer |> domProducer |> titleProducer |> output
 
 我们可以通过使用扩展函数来实现更友好的 API：
 
-```kt
+```java
 private fun ReceiveChannel<Document>.titles(): ReceiveChannel<String> {
     val channel = this
     fun getTitles(dom: Document): List<String> {
@@ -599,7 +599,7 @@ private fun ReceiveChannel<String>.dom(): ReceiveChannel<Document> {
 
 然后，我们可以这样调用我们的代码：
 
-```kt
+```java
 runBlocking {
     producePages().dom().titles().consumeEach {
         println(it)
@@ -619,7 +619,7 @@ Kotlin 在创建表达性和流畅的 API 方面真的很出色。
 
 我们可以有一个协程产生一些结果：
 
-```kt
+```java
 private fun producePages() = produce {
     for (i in 1..10_000) {
         for (c in 'a'..'z') {
@@ -631,7 +631,7 @@ private fun producePages() = produce {
 
 并有一个函数可以创建一个读取这些结果的协程：
 
-```kt
+```java
 
 private fun consumePages(channel: ReceiveChannel<Pair<Int, String>>) = async {
     for (p in channel) {
@@ -642,7 +642,7 @@ private fun consumePages(channel: ReceiveChannel<Pair<Int, String>>) = async {
 
 这使我们能够生成任意数量的消费者：
 
-```kt
+```java
 val producer = producePages()
 
 val consumers = List(10) {
@@ -668,7 +668,7 @@ runBlocking {
 
 每个资源以自己的速度产生值，并将它们通过通道发送：
 
-```kt
+```java
 private fun techBunch(collector: Channel<String>) = launch {
     repeat(10) {
         delay(Random().nextInt(1000))
@@ -686,7 +686,7 @@ private fun theFerge(collector: Channel<String>) = launch {
 
 通过提供相同的通道，我们可以合并他们的结果：
 
-```kt
+```java
 val collector = Channel<String>()
 
 techBunch(collector)
@@ -706,7 +706,7 @@ runBlocking {
 
 首先，生成 10,000,000 个随机整数的列表：
 
-```kt
+```java
 val numbers = List(10_000_000) {
     Random().nextInt()
 }
@@ -718,7 +718,7 @@ val numbers = List(10_000_000) {
 
 +   分割工人将接收到数字列表，确定列表中的最大数，并将其发送到输出通道：
 
-```kt
+```java
 fun divide(input: ReceiveChannel<List<Int>>, 
            output: SendChannel<Int>) = async {
     var max = 0
@@ -735,7 +735,7 @@ fun divide(input: ReceiveChannel<List<Int>>,
 
 +   收集器将监听这个通道，并且每次有新的子最大数到达时，将决定它是否是史上最大的：
 
-```kt
+```java
 fun collector() = actor<Int> {
     var max = 0
     for (i in this) {
@@ -747,7 +747,7 @@ fun collector() = actor<Int> {
 
 现在，我们只需要建立那些通道：
 
-```kt
+```java
 val input = Channel<List<Int>>()
 val output = collector()
 val dividers = List(10) {
@@ -776,7 +776,7 @@ output.close()
 
 这意味着如果你向这个通道写入，但没有人在读取，发送者将被挂起：
 
-```kt
+```java
 val channel = Channel<Int>()
 
 val j = launch {
@@ -785,7 +785,7 @@ val j = launch {
         println("Sent $i")
 ```
 
-```kt
+```java
     }
 }
 
@@ -796,7 +796,7 @@ j.join()
 
 为了避免这种情况，我们可以创建一个缓冲通道：
 
-```kt
+```java
 val channel = Channel<Int>(5)
 ```
 
@@ -804,7 +804,7 @@ val channel = Channel<Int>(5)
 
 它会打印：
 
-```kt
+```java
 Sent 1
 Sent 2
 Sent 3
@@ -814,7 +814,7 @@ Sent 5
 
 由于`produce()`和`actor()`也由通道支持，我们也可以将其设置为缓冲：
 
-```kt
+```java
 val actor = actor<Int>(capacity = 5) {
     ...
 }
@@ -833,7 +833,7 @@ val producer = produce<Int>(capacity = 10) {
 
 在下面的例子中，我们将有一个生产者，它以很短的延迟发送五个值：
 
-```kt
+```java
 fun producer(name: String, repeats: Int) = produce {
     repeat(repeats) {
         delay(1)
@@ -844,7 +844,7 @@ fun producer(name: String, repeats: Int) = produce {
 
 我们将创建三个这样的生产者并查看结果：
 
-```kt
+```java
 val repeats = 10_000
 val p1 = producer("A", repeats)
 val p2 = producer("B", repeats)
@@ -873,7 +873,7 @@ println(results)
 
 我们运行了五次这个代码。以下是一些结果：
 
-```kt
+```java
 {A=8235, B=1620, C=145}
 {A=7850, B=2062, C=88}
 {A=7878, B=2002, C=120}
@@ -885,7 +885,7 @@ println(results)
 
 现在我们使用`selectUnbiased`代替：
 
-```kt
+```java
 ...
 val result = selectUnbiased<String> {
     p1.onReceive { it }
@@ -897,7 +897,7 @@ val result = selectUnbiased<String> {
 
 前五次执行的结果可能看起来像这样：
 
-```kt
+```java
 {A=3336, B=3327, C=3337}
 {A=3330, B=3332, C=3338}
 {A=3334, B=3333, C=3333}
@@ -913,7 +913,7 @@ val result = selectUnbiased<String> {
 
 让我们从那个陈旧、令人讨厌的反例开始：
 
-```kt
+```java
 var counter = 0
 
 val jobs = List(10) {
@@ -937,7 +937,7 @@ runBlocking {
 
 为了解决这个问题，我们引入了一个互斥锁：
 
-```kt
+```java
 var counter = 0
 val mutex = Mutex()
 
@@ -959,7 +959,7 @@ val jobs = List(10) {
 
 然后，我们必须将所有内容包裹在`try...catch`中，这并不方便：
 
-```kt
+```java
 repeat(1000) {
     try {
         mutex.lock()
@@ -975,7 +975,7 @@ repeat(1000) {
 
 正是为了这个目的，Kotlin 还引入了`withLock()`：
 
-```kt
+```java
 ...
 repeat(1000) {
     mutex.withLock {
@@ -992,7 +992,7 @@ repeat(1000) {
 
 你可以在这里看到那个问题的例子：
 
-```kt
+```java
 val p1 = produce {
     repeat(10) {
         send("A")
@@ -1027,7 +1027,7 @@ runBlocking {
 
 我们可以按任何我们想要的方式处理这个空值，例如，通过使用`elvis`运算符：
 
-```kt
+```java
 repeat(15) {
     val result = selectUnbiased<String> {
         p1.onReceiveOrNull {
@@ -1046,7 +1046,7 @@ repeat(15) {
 
 利用这些知识，我们可以通过跳过空结果来排空两个通道：
 
-```kt
+```java
 var count = 0
 while (count < 15) {
     val result = selectUnbiased<String?> {
@@ -1071,7 +1071,7 @@ while (count < 15) {
 
 让我们看看以下例子：
 
-```kt
+```java
 val batman = actor<String> {
     for (c in this) {
         println("Batman is beating some sense into $c")
@@ -1093,7 +1093,7 @@ val robin = actor<String> {
 
 我们将向这对组合投掷五个恶棍，并观察它们的反应，同时加入一些延迟：
 
-```kt
+```java
 val j = launch {
     for (c in listOf("Jocker", "Bane", "Penguin", "Riddler", "Killer Croc")) {
         val result = select<Pair<String, String>> {
@@ -1112,7 +1112,7 @@ val j = launch {
 
 它打印出：
 
-```kt
+```java
 Batman is beating some sense into Jocker
 (Batman, Jocker)
 Robin is beating some sense into Bane
@@ -1135,7 +1135,7 @@ Robin is beating some sense into Killer Croc
 
 我们将首先创建 10 个异步任务。第一个将延迟很长时间，其余的我们将延迟很短的时间：
 
-```kt
+```java
 val elements = 10
 val deferredChannel = Channel<Deferred<Int>>(elements)
 
@@ -1155,7 +1155,7 @@ launch(CommonPool) {
 
 现在，我们可以从这个通道读取，并使用第二个`select`块，等待结果：
 
-```kt
+```java
 val time = measureTimeMillis {
     repeat(elements) {
         val result = select<Int> {
@@ -1174,7 +1174,7 @@ println("Took ${time}ms")
 
 注意，结果时间是最慢的任务的时间：
 
-```kt
+```java
 Took 1010ms
 ```
 
@@ -1182,7 +1182,7 @@ Took 1010ms
 
 因此，我们将创建一个将在 600 毫秒内完成的异步任务：
 
-```kt
+```java
 val stop = async {
     delay(600)
     true
@@ -1192,7 +1192,7 @@ val stop = async {
 
 并且，就像上一个例子一样，我们将通过缓冲通道发送 10 个延迟值：
 
-```kt
+```java
 val channel = Channel<Deferred<Int>>(10)
 
 repeat(10) {i ->
@@ -1205,7 +1205,7 @@ repeat(10) {i ->
 
 然后，我们将等待新的值或通知通道应该关闭：
 
-```kt
+```java
 runBlocking {
     for (i in 1..10) {
         select<Unit> {

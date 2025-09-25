@@ -46,19 +46,19 @@ Android 支持以下版本的 OpenGL：
 
 1.  打开 Android Manifest 并添加以下 XML：
 
-```kt
+```java
 <uses-feature android:glEsVersion="0x00020000" android:required="true" /> 
 ```
 
 1.  打开 `MainActivity.java` 并添加以下全局变量：
 
-```kt
+```java
 private GLSurfaceView mGLSurfaceView;
 ```
 
 1.  在 `MainActivity` 类中添加以下内部类：
 
-```kt
+```java
 class GLRenderer implements GLSurfaceView.Renderer {
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         GLES20.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -74,7 +74,7 @@ class GLRenderer implements GLSurfaceView.Renderer {
 
 1.  在 `MainActivity` 类中添加另一个内部类：
 
-```kt
+```java
 class CustomGLSurfaceView extends GLSurfaceView {
 
     private final GLRenderer mGLRenderer;
@@ -90,7 +90,7 @@ class CustomGLSurfaceView extends GLSurfaceView {
 
 1.  修改现有的 `onCreate()` 方法如下：
 
-```kt
+```java
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -109,19 +109,19 @@ protected void onCreate(Bundle savedInstanceState) {
 
 我们首先在 Android Manifest 中声明我们使用 OpenGL ES 2.0 的需求，如下所示：
 
-```kt
+```java
 <uses-feature android:glEsVersion="0x00020000" android:required="true" /> 
 ```
 
 如果我们使用的是 3.0 版本，我们会使用以下代码：
 
-```kt
+```java
 <uses-feature android:glEsVersion="0x00030000" android:required="true" /> 
 ```
 
 对于 3.1 版本，使用以下代码：
 
-```kt
+```java
 <uses-feature android:glEsVersion="0x00030001" android:required="true" /> 
 ```
 
@@ -129,7 +129,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 通过扩展 `GLSurfaceView`，创建一个自定义的 OpenGL `SurfaceView` 类，就像我们在这段代码中所做的那样：
 
-```kt
+```java
 class CustomGLSurfaceView extends GLSurfaceView {
 
     private final GLRenderer mGLRenderer;
@@ -157,7 +157,7 @@ class CustomGLSurfaceView extends GLSurfaceView {
 
 以下是需要添加的代码：
 
-```kt
+```java
 class GLRenderer implements GLSurfaceView.Renderer {
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         GLES20.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -227,7 +227,7 @@ class GLRenderer implements GLSurfaceView.Renderer {
 
 1.  将以下全局声明添加到`Triangle`类中：
 
-```kt
+```java
 private final String vertexShaderCode = "attribute vec4 vPosition;" +
                 "void main() {" +
                 "  gl_Position = vPosition;" +
@@ -258,7 +258,7 @@ private final int vertexStride = COORDS_PER_VERTEX * 4;
 
 1.  将以下`loadShader()`方法添加到`Triangle`类中：
 
-```kt
+```java
 public int loadShader(int type, String shaderCode){
      int shader = GLES20.glCreateShader(type);
      GLES20.glShaderSource(shader, shaderCode);
@@ -269,7 +269,7 @@ public int loadShader(int type, String shaderCode){
 
 1.  添加`Triangle`构造函数，如下所示：
 
-```kt
+```java
 public Triangle() {
      int vertexShader = loadShader(
              GLES20.GL_VERTEX_SHADER,
@@ -294,7 +294,7 @@ public Triangle() {
 
 1.  按照以下方式添加`draw()`方法：
 
-```kt
+```java
 public void draw() {
      GLES20.glUseProgram(mProgram);
      mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
@@ -312,19 +312,19 @@ public void draw() {
 
 1.  现在，打开`MainActivity.java`并在`GLRenderer`类中添加一个`Triangle`变量，如下所示：
 
-```kt
+```java
 private Triangle mTriangle; 
 ```
 
 1.  在`onSurfaceCreated()`回调中初始化`Triangle`变量，如下所示：
 
-```kt
+```java
 mTriangle = new Triangle();
 ```
 
 1.  在`onDrawFrame()`回调中，在调用`glClear`之后调用`Triangle`的`draw()`方法：
 
-```kt
+```java
 mTriangle.draw(); 
 ```
 
@@ -334,7 +334,7 @@ mTriangle.draw();
 
 如介绍中所述，要使用 OpenGL 绘图，我们首先必须定义着色器，我们使用以下代码来完成：
 
-```kt
+```java
 private final String vertexShaderCode = "attribute vec4 vPosition;" +
         "void main() {" +
         "  gl_Position = vPosition;" +
@@ -383,13 +383,13 @@ private final String fragmentShaderCode = "precision mediump float;" +
 
 1.  打开`Triangle`类，并在现有声明中添加以下全局声明：
 
-```kt
+```java
 private int mMVPMatrixHandle; 
 ```
 
 1.  在`vertexShaderCode`中添加一个矩阵变量并在位置计算中使用它。以下是最终结果：
 
-```kt
+```java
 private final String vertexShaderCode = "attribute vec4 vPosition;" +
                 "uniform mat4 uMVPMatrix;" +
                 "void main() {" +
@@ -399,20 +399,20 @@ private final String vertexShaderCode = "attribute vec4 vPosition;" +
 
 1.  将`draw()`方法修改为传递一个矩阵参数，如下所示：
 
-```kt
+```java
 public void draw(float[] mvpMatrix) {
 ```
 
 1.  要使用变换矩阵，请在`draw()`方法中在`GLES20.glDrawArrays()`方法之前添加以下代码：
 
-```kt
+```java
 mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix"); 
 GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
 ```
 
 1.  打开`MainActivity.java`并将以下类变量添加到`GLRenderer`类中：
 
-```kt
+```java
 private final float[] mMVPMatrix = new float[16]; 
 private final float[] mProjectionMatrix = new float[16]; 
 private final float[] mViewMatrix = new float[16]; 
@@ -420,7 +420,7 @@ private final float[] mViewMatrix = new float[16];
 
 1.  修改`onSurfaceChanged()`回调以按如下方式计算位置矩阵：
 
-```kt
+```java
 public void onSurfaceChanged(GL10 unused, int width, int height) { 
     GLES20.glViewport(0, 0, width, height); 
     float ratio = (float) width / height; 
@@ -430,7 +430,7 @@ public void onSurfaceChanged(GL10 unused, int width, int height) {
 
 1.  修改`onDrawFrame()`回调以按如下方式计算相机视图：
 
-```kt
+```java
 public void onDrawFrame(GL10 unused) { 
     Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 
          1.0f, 0.0f);    Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, 
@@ -448,7 +448,7 @@ public void onDrawFrame(GL10 unused) {
 
 在调用`draw()`方法之前，我们计算相机视图。这两行代码计算了相机视图：
 
-```kt
+```java
 Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
  Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
 ```
@@ -481,13 +481,13 @@ Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
 
 1.  向 `GLRendered` 类添加一个矩阵：
 
-```kt
+```java
 private float[] mRotationMatrix = new float[16]; 
 ```
 
 1.  在 `onDrawFrame()` 回调中，将现有的 `mTriangle.draw(mMVPMatrix);` 语句替换为以下代码：
 
-```kt
+```java
 float[] tempMatrix = new float[16]; 
 long time = SystemClock.uptimeMillis() % 4000L; 
 float angle = 0.090f * ((int) time); 
@@ -510,7 +510,7 @@ mTriangle.draw(tempMatrix);
 
 OpenGL 提供了一个 `setRenderMode()` 选项，只有在视图变脏时才绘制。这可以通过在 `setRenderer()` 调用下方添加以下代码到 `CustomGLSurfaceView()` 构造函数中来实现：
 
-```kt
+```java
 setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY); 
 ```
 
@@ -538,14 +538,14 @@ setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
 1.  将以下全局变量添加到 `MainActivity` 类中：
 
-```kt
+```java
 private float mCenterX=0; 
 private float mCenterY=0; 
 ```
 
 1.  将以下代码添加到 `GLRendered` 类中：
 
-```kt
+```java
 private float[] mRotationMatrix = new float[16];
 public volatile float mAngle;
 public void setAngle(float angle) {
@@ -555,7 +555,7 @@ public void setAngle(float angle) {
 
 1.  在同一类中，通过将现有的 `mTriangle.draw(mMVPMatrix);` 语句替换为以下代码来修改 `onDrawFrame()` 方法：
 
-```kt
+```java
 float[] tempMatrix = new float[16];
 Matrix.setRotateM(mRotationMatrix, 0, mAngle, 0, 0, -1.0f);
 Matrix.multiplyMM(tempMatrix, 0, mMVPMatrix, 0, mRotationMatrix, 0);
@@ -564,20 +564,20 @@ mTriangle.draw(tempMatrix);
 
 1.  将以下代码添加到 `onSurfaceChanged()` 回调中：
 
-```kt
+```java
 mCenterX=width/2; 
 mCenterY=height/2; 
 ```
 
 1.  将以下代码添加到 `CustomGLSurfaceView` 构造函数中，该函数位于 `setRenderer()` 下方：
 
-```kt
+```java
 setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY); 
 ```
 
 1.  将以下 `onTouchEvent()` 添加到 `CustomGLSurfaceView` 类中：
 
-```kt
+```java
 @Override
 public boolean onTouchEvent(MotionEvent e) {
     float x = e.getX();

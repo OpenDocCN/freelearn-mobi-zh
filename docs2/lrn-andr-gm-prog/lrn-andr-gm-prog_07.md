@@ -38,7 +38,7 @@
 
 因此，现在让我们创建 `UpperBoundary.java` 类。继续前进，创建一个新的类，并在其中写入以下代码：
 
-```kt
+```java
 public class UpperBoundary extends GameObj {
     private Bitmap img;
 
@@ -71,7 +71,7 @@ public class UpperBoundary extends GameObj {
 
 就像我们之前所有的游戏对象一样，这个类也扩展了我们的主 `GameObj` 类。以类似的方式，我们也将创建 `LowerBoundary.java` 类。我们将做的唯一改变是在 `height` 和 `width` 变量上，其余的整个代码与 `UpperBoundary.java` 文件相同：
 
-```kt
+```java
 public class LowerBoundary extends GameObj {
     public LowerBoundary(Bitmap res, int xc, int yc) {
         height = 200;
@@ -95,7 +95,7 @@ public class LowerBoundary extends GameObj {
 
 下面是我们将要声明的新的变量：
 
-```kt
+```java
 private ArrayList<UpperBoundary> upperBoundary;
 private ArrayList<LowerBoundary> lowerBoundary;
 
@@ -119,7 +119,7 @@ private boolean newGameCreated;
 
 正如我们在岩石中分配了一个值一样，我们也会为我们的边界做同样的事情。我们将在`surfaceCreated()`方法中这样做，通过添加以下标记的变量：
 
-```kt
+```java
     @Override
     public void surfaceCreated(SurfaceHolder holder){
 upperBoundary = new ArrayList<UpperBoundary>();
@@ -146,7 +146,7 @@ upperBoundary = new ArrayList<UpperBoundary>();
 
 这是我们的边界逻辑，并且对于我们的上边界和下边界都是重复的。这个代码块是在我们的 `draw()` 方法之后编写的。我们按照以下方式编写它们的代码：
 
-```kt
+```java
 public void updateUpperBound () {
     if(playerCharacter.getScore() % 50 == 0){
         upperBoundary.add(new
@@ -244,7 +244,7 @@ public void updateLowerBound () {
 
 就像我们之前的图像一样，我们使用 `draw()` 方法来编写我们的代码，以便在屏幕上显示我们的地面：
 
-```kt
+```java
 for(UpperBoundary ub : upperBoundary){
     ub.draw(canvas);
 }
@@ -261,7 +261,7 @@ for(LowerBoundary lb: lowerBoundary) {
 
 由于我们已经有了一个碰撞方法，我们只需继续使用该函数。由于前一章，我们已经清楚地理解了碰撞是如何工作的，所以我们将在我们的 `GameView.java` 文件的 `update()` 方法中编写以下代码：
 
-```kt
+```java
 for(int i=0; i<lowerBoundary.size();i++) {
     if(collision(lowerBoundary.get(i),playerCharacter)) {
         playerCharacter.setPlaying(false);
@@ -282,7 +282,7 @@ for(int i=0; i<upperBoundary.size();i++) {
 
 在我们的 `update()` 方法中，我们将根据玩家得分和 `progressDenom` 分配这些值。我们还将使用此方法调用我们在此章中较早创建的 `updateUpperBound()` 和 `updateLowerBound()` 方法：
 
-```kt
+```java
 this.updateUpperBound();
 this.updateLowerBound();
 
@@ -299,7 +299,7 @@ minBoundaryHeight = 5 + playerCharacter.getScore()/progressDenom;
 
 我们将创建一个 `newGame()` 函数，该函数将在玩家与对象碰撞时被调用。我们现在什么都没做，只是将对象重置为游戏开始时的初始状态。所以，我们这样做：
 
-```kt
+```java
 public void newGame () {
     lowerBoundary.clear();
     upperBoundary.clear();
@@ -346,7 +346,7 @@ public void newGame () {
 
 此外，我们仍然需要在某个地方调用这个函数。根据我们的目标，我们需要它在玩家崩溃后调用。所以，我们在 `if(playerCharacter.getPlaying())` 条件之后在我们的更新函数中添加一个 else 块，如下所示：
 
-```kt
+```java
  else {
     newGameCreated = false;
     if(!newGameCreated) {
@@ -358,7 +358,7 @@ public void newGame () {
 
 我们的代码已经准备好了。让我们回顾一下代码中标记的变化，并检查你是否遗漏了任何步骤：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.content.Context;
@@ -571,7 +571,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback
 
 我们将创建一个名为`ExplosionEffect.java`的新类。请注意，我们不会将此文件扩展到`GameObj`文件中，因为我们不需要这个图像的任何碰撞组件。我们只需在屏幕上生成它并使其保持在同一位置。所以，打开你的`ExplosionEffect.java`文件，让我们首先定义我们的变量：
 
-```kt
+```java
 private int xc;
 private int yc;
 private int height;
@@ -586,7 +586,7 @@ private Bitmap spriteSheet;
 
 然后，我们将定义我们类的构造函数如下：
 
-```kt
+```java
 public ExplosionEffect(Bitmap res, int xc, int yc, int w, int h, int noOfFrames){
     this.xc = xc;
     this.yc = yc;
@@ -614,7 +614,7 @@ public ExplosionEffect(Bitmap res, int xc, int yc, int w, int h, int noOfFrames)
 
 现在，我们只剩下这个类的`draw()`和`update()`方法。我们还将创建一个用于精灵图`getHeight()`的方法，以便我们在使用这个方法实际生成爆炸效果时进行计算：
 
-```kt
+```java
 public void draw(Canvas canvas) {
     if(!ac.playedOnce()){
         canvas.drawBitmap(ac.getImage(),xc,yc,null);
@@ -635,7 +635,7 @@ public int getHeight() {
 
 完成这些后，确保你的`ExplosionEffect.java`文件看起来像这样：
 
-```kt
+```java
 public class ExplosionEffect {
 
     //refer variables created above

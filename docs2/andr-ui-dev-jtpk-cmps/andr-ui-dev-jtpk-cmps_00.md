@@ -60,7 +60,7 @@ Jetpack Compose 是 Android 的新框架，用于构建快速、美观且可靠�
 
 代码块设置如下：
 
-```kt
+```java
 @Composable 
 fun Greeting(name: String) { 
   Text( 
@@ -73,7 +73,7 @@ fun Greeting(name: String) {
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 TextField( 
   value = name.value, 
   onValueChange = { 

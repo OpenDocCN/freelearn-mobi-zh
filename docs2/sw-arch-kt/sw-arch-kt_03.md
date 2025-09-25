@@ -68,7 +68,7 @@ Kotlin 被选为本书所有例子的主要编程语言。选择这个语言有�
 
 至少应该有两个函数来执行服务并检查服务是否已执行：
 
-```kt
+```java
 interface Service {
     fun performService(time: Instant)
     fun wasServicePerformed(): Boolean
@@ -91,7 +91,7 @@ interface Service {
 
 家庭的通用接口包含一个名为`performService`的函数，用于表示服务的开始，以及一个名为`wasServicePerformed`的函数，如果服务按照协议执行，则返回 true：
 
-```kt
+```java
 interface Service {
     fun performService(time: Instant)
     fun wasServicePerformed(): Boolean
@@ -106,7 +106,7 @@ interface Service {
 
 `Plumbing`类相对简单。它提供了一个家庭开始服务的函数，一个报告服务完成的函数，以及一个供另一个家庭确认服务已执行的函数。同时，记录了服务执行、完成和确认的时间戳：
 
-```kt
+```java
 class Plumbing : Service {
     var startedAt: Instant? = null
     var completedAt: Instant? = null
@@ -128,7 +128,7 @@ class Plumbing : Service {
 
 `Babysitting`类不同，因为完成标准基于服务的持续时间。类的构造函数接受一个协议中约定的小时数来确定服务是否完成。有一个函数用于保姆家庭开始工作，另一个函数用于其他家庭确认工作的结束。如果持续时间与协议小时数相同或更长，则认为服务已完成：
 
-```kt
+```java
 class Babysitting(val agreedHours: Int) : Service {
     var startedAt: Instant? = null
     var endedAt: Instant? = null
@@ -150,7 +150,7 @@ class Babysitting(val agreedHours: Int) : Service {
 
 当协议中的所有房间都被清洁时，`RoomCleaning`类已执行了服务。构造函数接受一个房间名称的`Set`，稍后用于检查协议中的所有房间是否都已清洁。它有一个函数用于清洁工开始工作，另一个函数用于其他家庭确认每个房间是否已被清洁：
 
-```kt
+```java
 class RoomCleaning(val agreedRooms: Set<String>) : Service {
     var startedAt: Instant? = null
     val roomCleaned: MutableSet<String> = mutableSetOf()
@@ -174,7 +174,7 @@ class RoomCleaning(val agreedRooms: Set<String>) : Service {
 
 有一个`main`函数来让所有这些家庭执行服务，并将结果打印出来：
 
-```kt
+```java
 fun main() {
     val now = Instant.now()
     val plumbing = Plumbing()
@@ -195,7 +195,7 @@ fun main() {
 
 程序应打印出类似以下内容：
 
-```kt
+```java
 Was plumbing service performed? true
 Was babysitting service performed? true
 Was room cleaning service performed? false
@@ -215,7 +215,7 @@ Kotlin 语言有一个名为**密封类**的功能，它限制了类层次结构
 
 以下是之前提到的多态解决方案的一些观察结果。首先，所有子类都有一个`startedAt`字段和一个实现`performService`函数来设置`startedAt`字段的实现。因此，密封类解决方案可以从多态解决方案中修改。接口可以更改为具有`startedAt`字段和`performService`函数的密封类：
 
-```kt
+```java
 sealed class Service {
     var startedAt: Instant? = null
     fun performService(time: Instant) {
@@ -227,7 +227,7 @@ sealed class Service {
 
 可以通过以下方式使用密封类实现来简化子类：
 
-```kt
+```java
 class Plumbing : Service() {
     var completedAt: Instant? = null
     var confirmedAt: Instant? = null
@@ -245,7 +245,7 @@ class Plumbing : Service() {
 
 `performService`函数已在`Service`超类中实现，因此无需在子类中实现它：
 
-```kt
+```java
 class Babysitting(val agreedHours: Int) : Service() {
     var endedAt: Instant? = null
     fun endService(time: Instant) {
@@ -263,7 +263,7 @@ class Babysitting(val agreedHours: Int) : Service() {
 
 同样的简化也适用于`RoomCleaning`子类：
 
-```kt
+```java
 class RoomCleaning(val agreedRooms: Set<String>) : Service() {
     val roomCleaned: MutableSet<String> = mutableSetOf()
     var endedAt: Instant? = null
@@ -285,7 +285,7 @@ class RoomCleaning(val agreedRooms: Set<String>) : Service() {
 
 Kotlin 封闭类的强大之处不在于在编译时对所有子类进行限制。其强大之处在于编译器如何处理这种限制。如果我们使用 `when` 构造与封闭类一起，我们可以将我们的程序简化如下：
 
-```kt
+```java
 sealed class Service {
     var startedAt: Instant? = null
     fun performService(time: Instant) {
@@ -303,7 +303,7 @@ sealed class Service {
 
 由于 `Service` 类使用了 `when` 构造实现 `wasServicePerformed` 函数，子类根本不需要实现这个函数：
 
-```kt
+```java
 class Plumbing : Service() {
     var completedAt: Instant? = null
     var confirmedAt: Instant? = null
@@ -321,7 +321,7 @@ class Plumbing : Service() {
 
 类似于 `Plumbing` 子类，其他子类现在将只包含以各种形式完成服务相关的函数体：
 
-```kt
+```java
 class Babysitting(val agreedHours: Int) : Service() {
     var endedAt: Instant? = null
     fun endService(time: Instant) {
@@ -391,7 +391,7 @@ class RoomCleaning(val agreedRooms: Set<String>) : Service() {
 
 为了重构到代理解决方案，我们将职责分解成更小的接口。我们将有一个启动服务的接口，另一个检查服务是否已执行的接口：
 
-```kt
+```java
 interface ServiceStarter {
   fun start(time: Instant)
 }
@@ -416,7 +416,7 @@ class Started : ServiceStarter {
 
 它可以表示为一个既是`ServiceStarter`又是`ServiceChecker`的`ThreePhaseService`。然而，我们已经有了一个作为`ServiceStarter`实现的`Started`具体类，因此我们可以使用 Kotlin 的代理功能来指定`ServiceStarter`的实现是通过构造函数中提供的具有`Started`默认值的`started`字段来实现的：
 
-```kt
+```java
 interface ThreePhaseService : ServiceStarter, ServiceChecker {
   fun complete(time: Instant)
   fun confirm(time: Instant)
@@ -439,7 +439,7 @@ class ThreePhaseServiceImpl(val started: Started = Started()) :
 
 然后，`Plumbing`仅仅是`ThreePhaseServiceImpl`的一个特化，我们可以通过 Kotlin 的代理定义为一个单行代码：
 
-```kt
+```java
 class Plumbing : ThreePhaseService by ThreePhaseServiceImpl()
 ```
 
@@ -451,7 +451,7 @@ class Plumbing : ThreePhaseService by ThreePhaseServiceImpl()
 
 它可以表示为一个`HourlyService`。同样，我们可以利用 Kotlin 的代理来避免代码重复：
 
-```kt
+```java
 interface HourlyService : ServiceStarter, ServiceChecker {
   fun end(time: Instant)
 }
@@ -472,7 +472,7 @@ class HourlyServiceImpl(val agreedHours: Int, val started: Started = Started()) 
 
 然后，`Babysitting`被声明为一个单行代理类：
 
-```kt
+```java
 class Babysitting(agreedHours: Int) : HourlyService by HourlyServiceImpl(agreedHours)
 ```
 
@@ -484,7 +484,7 @@ class Babysitting(agreedHours: Int) : HourlyService by HourlyServiceImpl(agreedH
 
 我们可以将每个房间视为一个在`ItemizedService`的名义下单独完成的项目。我们还使用泛型`T`类型使其更灵活：
 
-```kt
+```java
 interface ItemizedService<T> : ServiceStarter, ServiceChecker {
   fun complete(time: Instant, item: T)
 }
@@ -504,7 +504,7 @@ class ItemizedServiceImpl<T>(val agreed: Set<T>) : ItemizedService<T>, ServiceSt
 
 `RoomCleaning`现在可以定义如下：
 
-```kt
+```java
 class RoomCleaning(agreedRooms: Set<String>) :
     ItemizedService<String> by ItemizedServiceImpl(agreedRooms)
 ```
@@ -517,7 +517,7 @@ class RoomCleaning(agreedRooms: Set<String>) :
 
 将它们全部放在一起，我们只需要修改一下 `main` 函数，因为函数名不同。程序的行为方式相同：
 
-```kt
+```java
 fun main() {
     val now = Instant.now()
     val plumbing = Plumbing()
@@ -552,7 +552,7 @@ Kotlin 免费提供了 `toString`、`hashCode` 和 `equals` 方法。结合使�
 
 这里是示例中等效的数据结构：
 
-```kt
+```java
 data class Plumbing(
     val startedAt: Instant? = null,
     val completedAt: Instant? = null,
@@ -579,7 +579,7 @@ data class RoomCleaning(
 
 Kotlin 为数据类提供了一个 `copy` 函数，以便作为单独的实例进行可变操作。例如，可以通过以下代码启动管道服务：
 
-```kt
+```java
   val plumbing = Plumbing()
   val started = plumbing.copy(started = Instant.now())
 ```
@@ -594,13 +594,13 @@ Kotlin 为数据类提供了一个 `copy` 函数，以便作为单独的实例�
 
 `start`函数看起来可能如下所示：
 
-```kt
+```java
 fun <T> T.start(time: Instant, transform: T.(Instant) -> T): T = transform(time)
 ```
 
 它声明了一个通用的`T`类型作为函数接收者，因此我们可以以`T.start`的风格调用函数，作为`T`类型来创建一个具有`startAt`时间的`T`类型的新实例。这是`start`函数调用的一个示例：
 
-```kt
+```java
 Plumbing().start(now) { startedAt -> copy(startedAt = startedAt) }
 ```
 
@@ -610,7 +610,7 @@ Plumbing().start(now) { startedAt -> copy(startedAt = startedAt) }
 
 可以单独声明针对服务类型特定的其他函数：
 
-```kt
+```java
 fun Plumbing.complete(time: Instant): Plumbing = copy(completedAt = time)
 fun Plumbing.confirm(time: Instant): Plumbing = copy(confirmedAt = time)
 fun Babysitting.end(time: Instant): Babysitting = copy(endedAt = time)
@@ -628,7 +628,7 @@ fun RoomCleaning.complete(
 
 确定服务是否已执行的功能对于每种类型的服务都是不同的。
 
-```kt
+```java
 fun Plumbing.wasServicePerformed(): Boolean = startedAt != null && completedAt != null && confirmedAt != null
 fun Babysitting.wasServicePerformed(): Boolean =
     if (startedAt == null || endedAt == null) {
@@ -641,7 +641,7 @@ fun RoomCleaning.wasServicePerformed(): Boolean = endedAt != null
 
 最后，`main`函数与其他解决方案看起来不同，主要是因为在使用`main`函数时，对服务的每次更改都会导致一个新的实例：
 
-```kt
+```java
 fun main() {
     val now = Instant.now()
     val plumbing =
@@ -667,7 +667,7 @@ fun main() {
 
 代码最终可能像`Babysitting`对象可以被重构为如下所示：
 
-```kt
+```java
     val babysitting = Babysitting()
         .withAgreedHoursOf(3)
         .startAt(startTime)

@@ -62,7 +62,7 @@
 
 要设置 CameraX，我们需要将必要的依赖项添加到我们的版本目录文件 `libs.versions.toml` 中，如下所示：
 
-```kt
+```java
 [versions]
 ...
 camerax = "1.2.1"
@@ -98,7 +98,7 @@ accompanist = { group = "com.google.accompanist", name = "accompanist-permission
 
 在将这些依赖项添加到版本目录后，我们需要将它们添加到`:feature:stories`模块的`build.gradle.kts`文件中，如下所示：
 
-```kt
+```java
     implementation(libs.cameraCore)
     implementation(libs.cameraCamera2)
     implementation(libs.cameraView)
@@ -123,7 +123,7 @@ Jetpack Compose，Android 的声明式 UI 工具包，也深深植根于生命�
 
 CameraX 不仅仅只是捕获图像。通过 **图像分析**，开发者可以实时处理实时摄像头流。这对于条形码扫描、人脸检测或甚至应用实时滤镜等特性来说非常完美。以下是一个示例：
 
-```kt
+```java
 @Composable
 fun CameraPreviewWithImageAnalysis() {
     val cameraProvider = rememberCameraProvider()
@@ -164,7 +164,7 @@ fun CameraPreviewWithImageAnalysis() {
 
 这是一个应用图像分析的基本示例，但已经存在一些图像分析器，例如 `BarcodeScanner`。以下代码基于上一个示例，添加了此分析器：
 
-```kt
+```java
 @Composable
 fun BarcodeScannerPreview() {
     val cameraProvider = rememberCameraProvider()
@@ -231,7 +231,7 @@ fun BarcodeScannerPreview() {
 
 在处理摄像头时，并不总是只关注一个摄像头——许多现代设备都配备了多个摄像头镜头。这就是`CameraSelector`发挥作用的地方，它允许开发者以编程方式在前后摄像头之间进行选择。无论是构建自拍应用还是更标准的照片应用，`CameraSelector`都能确保一致的行为。让我们看看我们如何允许用户选择他们想要使用的摄像头：
 
-```kt
+```java
 @Composable
 fun CameraSelectorExample() {
     val cameraProvider = rememberCameraProvider()
@@ -282,7 +282,7 @@ fun CameraSelectorExample() {
 
 下面是一个如何使用`CameraControls`来缩放、调整焦点和切换手电筒的示例，从代码的第一部分开始：
 
-```kt
+```java
 @Composable
 fun CameraControlsExample() {
     val cameraProvider = rememberCameraProvider()
@@ -309,7 +309,7 @@ fun CameraControlsExample() {
 
 让我们继续下一部分的代码：
 
-```kt
+```java
     LaunchedEffect(cameraProvider) {
         val cameraControl =
             cameraProvider.getCameraControl(preview)
@@ -335,7 +335,7 @@ fun CameraControlsExample() {
 
 现在，让我们继续到最后一段代码：
 
-```kt
+```java
     Box(modifier = Modifier.fillMaxSize()) {
         Preview(preview)
         Column {
@@ -392,7 +392,7 @@ fun CameraControlsExample() {
 
 在运行时请求任何权限之前，在应用的`AndroidManifest.xml`文件中声明相同的权限是基本要求。这种声明通知 Android 操作系统应用的目的。对于摄像头权限，您需要在`<manifest>`标签内添加以下行：
 
-```kt
+```java
 <uses-permission android:name="android.permission.CAMERA" />
 ```
 
@@ -402,7 +402,7 @@ fun CameraControlsExample() {
 
 首先，我们需要导入所需的库：
 
-```kt
+```java
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
@@ -417,7 +417,7 @@ fun CameraPermissionRequester(onPermissionGranted: () -> Unit) {
 
 现在，在`CameraPermissionRequester`内部，我们需要添加以下内容：
 
-```kt
+```java
 val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 ```
 
@@ -435,7 +435,7 @@ val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
 让我们学习如何处理所有这些可能的流程。首先，我们将创建一个新的可组合函数，称为 `CameraPermissionRequester`。`onPermissionGranted` 回调用于处理摄像头权限已被授予的情况：
 
-```kt
+```java
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun CameraPermissionRequester(onPermissionGranted:
@@ -444,7 +444,7 @@ fun CameraPermissionRequester(onPermissionGranted:
 
 接下来，我们将检索 `cameraPermissionState`：
 
-```kt
+```java
     // Camera permission state
     val cameraPermissionState = rememberPermissionState(
         android.Manifest.permission.CAMERA
@@ -455,7 +455,7 @@ fun CameraPermissionRequester(onPermissionGranted:
 
 现在，让我们评估它可能具有的不同值：
 
-```kt
+```java
     if (cameraPermissionState.status.isGranted) {
         OnPermissionGranted.invoke()
 ```
@@ -464,7 +464,7 @@ fun CameraPermissionRequester(onPermissionGranted:
 
 如果是假的，这意味着权限尚未被授予，因此我们必须向用户传达这种情况，并给他们提供授予权限的选项：
 
-```kt
+```java
     } else {
                 Surface(
                     modifier = Modifier
@@ -541,7 +541,7 @@ fun CameraPermissionRequester(onPermissionGranted:
 
 以下`CameraPreview`组合函数旨在优雅地将 CameraX 集成到 Jetpack Compose 生态系统。在撰写本文时，还没有官方的组合实现用于 CameraX 预览，因此我们将使用`AndroidView`：
 
-```kt
+```java
 @Composable
 @Composable
 fun CameraPreview(cameraController:
@@ -569,7 +569,7 @@ LifecycleCameraController, modifier: Modifier = Modifier) {
 
 现在，让我们将预览集成到我们现有的代码中。在`StoryContent`可组合组件中，我们将包含以下代码，其中我们期望有摄像头图像：
 
-```kt
+```java
     CameraPermissionRequester {
         Box(contentAlignment = Alignment.BottomCenter,
         modifier = Modifier.fillMaxSize()) {
@@ -593,7 +593,7 @@ LifecycleCameraController, modifier: Modifier = Modifier) {
 
 例如，我们需要获取我们将存储图像的 URI（设备存储中的路径）。如果用户的 Android 版本比 9.0 新，位置将不同于之前的版本。以下代码块显示了获取相应路径的检查将看起来像什么：
 
-```kt
+```java
 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MediaStore.Images.Media.getContentUri(
                 MediaStore.VOLUME_EXTERNAL_PRIMARY)
@@ -607,14 +607,14 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
 现在，让我们创建`SaveCaptureUse`类：
 
-```kt
+```java
 class SaveCaptureUseCase(private val context: Context) {
 }
 ```
 
 然后，我们可以创建这个用例的主函数`save()`，它将负责保存捕获的内容：
 
-```kt
+```java
     suspend fun save(capturePhotoBitmap: Bitmap):
     Result<Uri> = withContext(Dispatchers.IO) {
         val resolver: ContentResolver =
@@ -650,7 +650,7 @@ class SaveCaptureUseCase(private val context: Context) {
 
 现在，让我们实现`getImageCollectionUri()`函数，该函数将根据 Android 版本返回正确的 URI：
 
-```kt
+```java
     private fun getImageCollectionUri(): Uri =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
         {
@@ -663,7 +663,7 @@ class SaveCaptureUseCase(private val context: Context) {
 
 然后，我们可以创建`createContentValues`函数：
 
-```kt
+```java
 private fun createContentValues(timestamp: Long):
 ContentValues = ContentValues().apply {
         put(MediaStore.Images.Media.DISPLAY_NAME,
@@ -714,7 +714,7 @@ ContentValues = ContentValues().apply {
 
 现在我们正在处理存储文件所需的 URI，以及创建文件所需的值和元数据，让我们继续进行保存操作。为此，我们将创建一个新的私有函数`saveBitmapToUri`，如下所示：
 
-```kt
+```java
     private fun saveBitmapToUri(
         resolver: ContentResolver,
         uri: Uri,
@@ -736,7 +736,7 @@ ContentValues = ContentValues().apply {
 
 现在，如果图像保存成功，我们必须更新并返回结果。如果发生错误，我们必须返回一个错误：
 
-```kt
+```java
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
         {
             contentValues.clear()
@@ -761,7 +761,7 @@ ContentValues = ContentValues().apply {
 
 剩下的唯一事情就是添加在开发这些类期间将使用的参数。为了简单起见，我们将它们添加为常量，但它们也可以提供给类：
 
-```kt
+```java
 companion object {
     private const val IMAGE_QUALITY = 100
     private const val FILE_NAME_PREFIX = "YourImageName"
@@ -776,7 +776,7 @@ companion object {
 
 在这里，我们需要在 `StoryEditorViewModel` 中创建一个新的属性和函数来存储捕获的图片：
 
-```kt
+```java
 class StoryEditorViewModel(
     private val saveCaptureUseCase: SaveCaptureUseCase
 ): ViewModel() {
@@ -805,7 +805,7 @@ class StoryEditorViewModel(
 
 要将捕获功能添加到 `StoryContent`，我们需要向 `StoryContent` 可组合函数添加一个 Lambda，以便每次使用 `StoryContent` 时，捕获处理将被委派。例如，在我们的案例中，我们将调用已实现的 `storePhotoInGallery` 函数从 `StoryEditorViewModel`：
 
-```kt
+```java
 @Composable
 fun StoryContent(
     isEditing: Boolean = false,
@@ -816,7 +816,7 @@ fun StoryContent(
 
 接下来，让我们集成从我们的相机捕获所需的代码：
 
-```kt
+```java
 fun capturePhoto(
         context: Context,
         cameraController: LifecycleCameraController,
@@ -837,7 +837,7 @@ fun capturePhoto(
 
 让我们继续定义必要的属性：
 
-```kt
+```java
 val mainExecutor: Executor =
 ContextCompat.getMainExecutor(context)
 ```
@@ -846,7 +846,7 @@ ContextCompat.getMainExecutor(context)
 
 接下来，我们将执行拍照动作：
 
-```kt
+```java
         cameraController.takePicture(mainExecutor,
         @ExperimentalGetImage object :
         ImageCapture.OnImageCapturedCallback() {
@@ -891,7 +891,7 @@ ContextCompat.getMainExecutor(context)
 
 现在，让我们将捕获功能与我们的 UI 链接起来。在我们的`StoryContent`可组合组件中，我们已经有了一个用于捕获的按钮`OutlinedButton`，所以让我们看看我们如何从它调用这个捕获函数：
 
-```kt
+```java
 OutlinedButton(
                     onClick = { capturePhoto(
                         context = localContext,
@@ -936,7 +936,7 @@ OutlinedButton(
 
 在现有图片上创建过滤器就像修改包含图片的位图值一样简单。有几个著名的过滤器，如棕褐色、复古和黑白。作为一个例子，我们将实现黑白过滤器，如下所示：
 
-```kt
+```java
 @Composable
 fun BlackAndWhiteFilter(
     imageUri: Uri,
@@ -1007,7 +1007,7 @@ fun BlackAndWhiteFilter(
 
 首先，我们将创建一个包含`Text`和`Image`组件状态的 composable。当用户更新文本时，此状态将更新。以下是代码：
 
-```kt
+```java
 @Composable
 fun ImageWithTextOverlay(capturedBitmap: Bitmap) {
     var textOverlay = remember { mutableStateOf("Add your
@@ -1067,7 +1067,7 @@ fun ImageWithTextOverlay(capturedBitmap: Bitmap) {
 
 现在，假设我们想要允许用户在图像中随时移动文本。让我们实现一些拖放魔法。我们将从更新 `ImageWithTextOverlay` 可组合函数开始：
 
-```kt
+```java
 @Composable
 fun ImageWithTextOverlay(capturedBitmap: Bitmap) {
     var textOverlay = remember { mutableStateOf("Your text
@@ -1081,7 +1081,7 @@ fun ImageWithTextOverlay(capturedBitmap: Bitmap) {
 
 让我们将这个 `DraggableText` 添加到现有的代码中：
 
-```kt
+```java
     val imageModifier = Modifier.fillMaxSize()
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -1125,7 +1125,7 @@ fun ImageWithTextOverlay(capturedBitmap: Bitmap) {
 
 现在，我们准备好创建 `DraggableText` 可组合组件：
 
-```kt
+```java
 @Composable
 fun DraggableText(
     text: String,
@@ -1139,7 +1139,7 @@ fun DraggableText(
 
 最后，定义所需的变量和用于显示文本的 `Text` 可组合组件：
 
-```kt
+```java
     var dragOffset = remember { mutableStateOf(position) }
     Text(
         text = text,
@@ -1201,7 +1201,7 @@ fun DraggableText(
 
 作为示例，我们将创建识别和标记照片中元素的逻辑，这些元素将来可用于对图像进行分类或创建自动标签。我们首先将相应的依赖项添加到 `libs.versions.toml`：
 
-```kt
+```java
 [versions]
 ...
 ml-labeling = "17.0.5"
@@ -1212,13 +1212,13 @@ mlKitLabeling= { group = "com.google.mlkit", name = "image-labeling", version.re
 
 然后，我们将将这些依赖项添加到模块的 `build.gradle` 文件中。这是创建此功能的地方 (`feature:stories`)：
 
-```kt
+```java
     implementation(libs.mlKitLabeling)
 ```
 
 现在，我们可以创建实际的代码。我们将利用 CameraX 的图像分析功能，在将结果写入图像之前使用 MLKitLabeling 分析预览。为此，我们将创建一个新的预览组合器，专门用于此功能：
 
-```kt
+```java
 @Composable
 fun CameraPreviewWithImageLabeler(cameraController: LifecycleCameraController, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -1286,7 +1286,7 @@ fun CameraPreviewWithImageLabeler(cameraController: LifecycleCameraController, m
 
 现在，让我们学习如何实现图像分析器：
 
-```kt
+```java
 @OptIn(ExperimentalGetImage::class)
 private fun processImageProxyForLabeling(imageProxy:
 ImageProxy, onLabelsDetected: (List<String>) -> Unit) {

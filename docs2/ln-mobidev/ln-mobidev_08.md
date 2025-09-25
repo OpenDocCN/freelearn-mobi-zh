@@ -154,7 +154,7 @@ MBaaS 解决方案非常适合快速启动项目。大多数解决方案都包�
 
 如果你更喜欢在 Android Studio 或其他 IDE 中打开应用，你需要修改的是应用中的 Firebase 端点。折叠应用中的`data`包节点并打开`FirebaseRepository`类。在`FirebaseRepository`类中，找到构造函数并调整 Firebase 引用，使其与你的匹配：
 
-```kt
+```java
 public class FirebaseRepository implements IRemoteRepository {
      private Firebase reference;
      private Context context;
@@ -191,7 +191,7 @@ public class FirebaseRepository implements IRemoteRepository {
 
 要检查应用程序的依赖项列表，请打开 `app` 文件夹中的 `build.gradle` 文件。在这里，你将找到 Firebase 和 JSON 反序列化的依赖项，如下所示：
 
-```kt
+```java
 dependencies { 
     compile fileTree(dir: 'libs', include: ['*.jar']) 
     testCompile 'junit:junit:4.12' 
@@ -208,7 +208,7 @@ dependencies {
 
 文件中的 JSON 对象看起来像这样。它将由 `LocalRepository` 类处理：
 
-```kt
+```java
 { 
   "ELEMENTS":  
     ... 
@@ -242,7 +242,7 @@ dependencies {
 
 在应用程序中使用的重要模型是 `Canvas` 和 `CanvasElement` 模型。`Canvas` 和 `CanvasElement` 类都实现了 `Parcelable` 接口。这将使得将（复杂）对象传递给每个片段变得更加容易：
 
-```kt
+```java
 
 public class Canvas implements Parcelable { 
     private String id; 
@@ -261,7 +261,7 @@ public class Canvas implements Parcelable {
 
 `CanvasElement` 类和模板文件中找到的 JSON 对象具有类似的字段。画布的每个元素都有一个 ID、标题、描述和占位符文本。用户输入将填充 `value` 字段：
 
-```kt
+```java
 public class CanvasElement implements Parcelable { 
     public String ID; 
     public String TITLE; 
@@ -306,7 +306,7 @@ public class CanvasElement implements Parcelable {
 
 本地仓库读取包含模板的原始 JSON 文件。它将数据转换为 `CanvasElementsModel` 类，该类本质上是对画布元素的包装：
 
-```kt
+```java
 public class LocalRepository { 
     ... 
     public static CanvasElementsModel getElements(Context context){ 
@@ -322,7 +322,7 @@ public class LocalRepository {
 
 现在是时候处理一些 Firebase 相关的内容了。`IRemoteRepository` 接口已被添加到应用程序中。这将避免供应商锁定。如果你想要使用另一个 MBaaS 或你自己的 API，那么你需要做的就是更改以下三个方法的实现：
 
-```kt
+```java
 public interface IRemoteRepository { 
     Canvas createCanvas(); 
     void loadCanvasModels(OnRepositoryResult handler); 
@@ -332,7 +332,7 @@ public interface IRemoteRepository {
 
 `FirebaseRepository` 类是针对 `IRemoteRepository` 接口的 Firebase 特定实现。以下代码片段展示了存储和检索画布所需的内容。让我们首先看看构造函数。在这里，定义了 Firebase 端点的引用。你可以修改引用值以匹配你自己的 Firebase 应用程序的端点：
 
-```kt
+```java
 public class FirebaseRepository implements IRemoteRepository { 
     private Firebase reference; 
     private Context context; 
@@ -345,7 +345,7 @@ public class FirebaseRepository implements IRemoteRepository {
 
 在 `createCanvas` 方法中，将创建一个新的 `Canvas` 对象。它将通过 `LocalRepository` 类从模板文件中获取的信息进行预填充。我们将引用更改为子节点画布，并将画布节点添加为该节点的子节点。`push` 方法获取画布的唯一标识符。我们将使用 Firebase 创建的该 ID 与 `Canvas` 对象一起存储。最后，此方法返回新的 `Canvas` 对象：
 
-```kt
+```java
     @Override 
     public Canvas createCanvas() { 
         Firebase ref = reference.child("canvases"); 
@@ -367,7 +367,7 @@ Firebase 的一个酷特点是开发者不必太担心在线或离线。如果�
 
 `saveCanvasModel` 方法的实现甚至更小。它将在用户进行了一些更改的情况下更新 Firebase 数据。您需要做的就是使用给定的 `Canvas` 对象调用 `setValue` 方法。该方法检索画布数据节点的引用。我们在 `createCanvas` 方法中较早获得的唯一 ID 将用于找到正确的节点。最后，我们只需调用 `setValue` 方法将数据发送到 Firebase：
 
-```kt
+```java
     @Override 
     public void saveCanvasModel(Canvas model) { 
         Firebase ref = reference.child("canvases").child(model.getId()); 
@@ -379,7 +379,7 @@ Firebase 的一个酷特点是开发者不必太担心在线或离线。如果�
 
 获得的快照的每个子节点都将反序列化为 `Canvas` 对象。`CanvasList` 片段将被通知，以便它可以显示或更新列表：
 
-```kt
+```java
     @Override 
     public void loadCanvasModels(final OnRepositoryResult handler) { 
         Firebase ref = reference.child("canvases"); 
@@ -407,7 +407,7 @@ Firebase 的一个酷特点是开发者不必太担心在线或离线。如果�
 
 如果用户点击 `CanvasList` 片段中显示的任何列出的商业画布，`onEdit` 方法也将被调用。在 `onEdit` 方法中，将传递 `canvas` 参数。`getRepository` 方法返回一个实现 `IRemoteRepository` 接口的类，在我们的例子中是 `FireBaseRepository` 类。如果您想从 Firebase 切换到 Parse 或其他 MBaaS，那么您只需在这里返回另一个存储库：
 
-```kt
+```java
 public void onList(){ 
     CanvasListFragment fragment = CanvasListFragment.newInstance(); 
     showFragment(fragment); 
@@ -436,7 +436,7 @@ public IRemoteRepository getRepository(){
 
 `CanvasListFragment` 有一个 `loadData` 方法，该方法从仓库中调用 `loadCanvasModels` 方法：
 
-```kt
+```java
 public class CanvasListFragment extends Fragment 
         implements OnCardViewClicked, OnRepositoryResult{ 
     private RecyclerView recyclerView; 
@@ -467,7 +467,7 @@ public class CanvasListFragment extends Fragment
 
 当检索到结果时，它们将在 `onResult` 方法中处理，该方法将获取结果并显示列表画布：
 
-```kt
+```java
     @Override 
     public void onResult(CanvasListModel result) { 
         viewModel = result; 
@@ -480,7 +480,7 @@ public class CanvasListFragment extends Fragment
 
 `CanvasPagerFragment` 是一个容器片段。它可以容纳多个画布元素片段，每个片段代表画布的特定元素。用户可以前后滑动：
 
-```kt
+```java
 public class CanvasPagerFragment extends Fragment
        implements OnRepositoryResult, View.OnClickListener { 
 
@@ -517,7 +517,7 @@ public class CanvasPagerFragment extends Fragment
 
 `setOffscreenPageLimit` 方法在此处设置为 `11`（每个画布包含 11 个元素，因此我们需要 11 个 `CanvasElementFragment` 类的实例）以确保我们可以访问所有元素片段。这只是为了演示目的，在实际应用程序中应避免这样做。它可能会导致内存问题：
 
-```kt
+```java
 private void loadData(){ 
         MainActivity ma = (MainActivity)getActivity(); 
         pagerAdapter = new CanvasElementPageAdapter( 
@@ -534,7 +534,7 @@ private void loadData(){
 
 如果用户点击保存按钮，将触发 `onSaveData` 方法。在那里，我们调用仓库中的 `saveCanvasModel` 方法并传递更新的画布对象。最后，我们将导航回画布列表：
 
-```kt
+```java
     private void onSaveData(){ 
         Canvas canvas = pagerAdapter.getCanvas(); 
         MainActivity activity = (MainActivity)getActivity(); 
@@ -548,7 +548,7 @@ private void loadData(){
 
 `CanvasElementFragment` 代表商业模型画布的一个元素。例如，这可能是一个用户可以输入关于价值主张想法的卡片：
 
-```kt
+```java
 public class CanvasElementFragment extends Fragment { 
     private static final String ARG_ELEMENT = "ARG_ELEMENT"; 
     public static CanvasElementFragment newInstance(CanvasElement element) { 
@@ -576,7 +576,7 @@ public class CanvasElementFragment extends Fragment {
 
 在 `OnCreateView` 方法中，我们将元素对象绑定到视图：
 
-```kt
+```java
     @Override 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) { 
         final View view = inflater.inflate(R.layout.fragment_canvas_element, container, false); 

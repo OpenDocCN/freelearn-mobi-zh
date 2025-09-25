@@ -44,69 +44,69 @@
 
 我们可以使用`CompletableDeferred`构造函数创建一个新的异步计算结果的容器：
 
-```kt
+```java
 val deferred = CompletableDeferred<String>()
 ```
 
 要用结果填充`Deferred`值，我们使用`complete()`函数，如果在过程中发生错误，我们可以使用`completeExceptionally()`函数将异常传递给调用者。为了更好地理解它，让我们编写一个返回异步结果的函数。一半的时间结果将包含`OK`，另一半的时间它将包含一个异常。
 
-```kt
+```java
 suspend fun valueAsync(): Deferred<String> = coroutineScope {
 ```
 
-```kt
+```java
     val deferred = CompletableDeferred<String>()
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         delay(100)
 ```
 
-```kt
+```java
         if (Random.nextBoolean()) {
 ```
 
-```kt
+```java
             deferred.complete("OK")
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         else {
 ```
 
-```kt
+```java
             deferred.completeExceptionally(
 ```
 
-```kt
+```java
               RuntimeException()
 ```
 
-```kt
+```java
             )
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     deferred
 ```
 
-```kt
+```java
 }
 ```
 
@@ -114,25 +114,25 @@ suspend fun valueAsync(): Deferred<String> = coroutineScope {
 
 由于过程是异步的，结果不会立即准备好。为了等待结果，我们可以使用我们已经在 *第六章* 中讨论过的 `await()` 函数，*线程和协程*：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     val value = valueAsync()
 ```
 
-```kt
+```java
     println(value.await())
 ```
 
-```kt
+```java
 }
 ```
 
 确保您始终通过调用 `complete()` 或 `completeExceptionally()` 函数之一来完成您的 `Deferred` 值非常重要。否则，您的程序可能会无限期地等待结果。如果您不再对 `deferred` 的结果感兴趣，也可以取消它。为此，只需调用其上的 `cancel()` 即可：
 
-```kt
+```java
 deferred.cancel()
 ```
 
@@ -146,79 +146,79 @@ deferred.cancel()
 
 例如，考虑以下类：
 
-```kt
+```java
 data class FavoriteCharacter(
 ```
 
-```kt
+```java
     val name: String,
 ```
 
-```kt
+```java
     val catchphrase: String,
 ```
 
-```kt
+```java
     val picture: ByteArray = Random.nextBytes(42)
 ```
 
-```kt
+```java
 )
 ```
 
 假设 `catchphrase` 数据来自一个服务，而 `picture` 数据来自另一个服务。我们希望并发获取这两份数据：
 
-```kt
+```java
 fun CoroutineScope.getCatchphraseAsync
 ```
 
-```kt
+```java
 (
 ```
 
-```kt
+```java
     characterName: String
 ```
 
-```kt
+```java
 ) = async { … }
 ```
 
-```kt
+```java
 fun CoroutineScope.getPicture
 ```
 
-```kt
+```java
 (
 ```
 
-```kt
+```java
     characterName: String
 ```
 
-```kt
+```java
 ) = async { … }
 ```
 
 实现并发获取的最基本方式如下：
 
-```kt
+```java
 suspend fun fetchFavoriteCharacter(name: String) = coroutineScope {
 ```
 
-```kt
+```java
     val catchphrase = getCatchphraseAsync(name).await()
 ```
 
-```kt
+```java
     val picture = getPicture(name).await()
 ```
 
-```kt
+```java
     FavoriteCharacter(name, catchphrase, picture)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -228,23 +228,23 @@ suspend fun fetchFavoriteCharacter(name: String) = coroutineScope {
 
 我们可以稍微修改之前的代码，以实现我们想要的并发：
 
-```kt
+```java
 suspend fun fetchFavoriteCharacter(name: String) = coroutineScope { 
 ```
 
-```kt
+```java
     val catchphrase = getCatchphraseAsync(name) 
 ```
 
-```kt
+```java
     val picture = getPicture(name) 
 ```
 
-```kt
+```java
     FavoriteCharacter(name, catchphrase.await(),       picture.await()) 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -252,11 +252,11 @@ suspend fun fetchFavoriteCharacter(name: String) = coroutineScope {
 
 使用数据类作为屏障的额外好处是能够轻松地进行 *解构*：
 
-```kt
+```java
 val (name, catchphrase, _) = fetchFavoriteCharacter("Inigo Montoya")
 ```
 
-```kt
+```java
 println("$name says: $catchphrase")
 ```
 
@@ -264,99 +264,99 @@ println("$name says: $catchphrase")
 
 例如，让我们询问 `Michael`（我们的金丝雀产品所有者），`Taylor`（我们的咖啡师），以及 `Me` 我们最喜欢的电影角色是谁：
 
-```kt
+```java
 object Michael {
 ```
 
-```kt
+```java
     suspend fun getFavoriteCharacter() = coroutineScope {
 ```
 
-```kt
+```java
         async {
 ```
 
-```kt
+```java
             FavoriteCharacter("Terminator", 
 ```
 
-```kt
+```java
               "Hasta la vista, baby")
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 object Taylor {
 ```
 
-```kt
+```java
     suspend fun getFavoriteCharacter() = coroutineScope {
 ```
 
-```kt
+```java
         async {
 ```
 
-```kt
+```java
             FavoriteCharacter("Don Vito Corleone", "I'm 
 ```
 
-```kt
+```java
               going to make him an offer he can't refuse")
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 object Me {
 ```
 
-```kt
+```java
     suspend fun getFavoriteCharacter() = coroutineScope {
 ```
 
-```kt
+```java
         async {
 ```
 
-```kt
+```java
             // I already prepared the answer!
 ```
 
-```kt
+```java
             FavoriteCharacter("Inigo Montoya",               "Hello, my name is...")
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -364,29 +364,29 @@ object Me {
 
 在这种情况下，我们可以使用一个列表来收集结果：
 
-```kt
+```java
 val characters: List<Deferred<FavoriteCharacter>> =    listOf(
 ```
 
-```kt
+```java
         Me.getFavoriteCharacter(),
 ```
 
-```kt
+```java
         Taylor.getFavoriteCharacter(),
 ```
 
-```kt
+```java
         Michael.getFavoriteCharacter(),
 ```
 
-```kt
+```java
     )
 ```
 
 注意列表的类型。它是一个包含 `FavoriteCharacter` 类型 `Deferred` 元素的集合。在这样的集合上，有一个可用的 `awaitAll()` 函数，它也充当一个屏障：
 
-```kt
+```java
 println(characters.awaitAll())
 ```
 
@@ -404,111 +404,111 @@ println(characters.awaitAll())
 
 为了提醒你，协程构建器如 `launch()` 和 `async()` 可以指定要使用哪个分发器。以下是如何明确指定它的一个示例：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     // This will use the Dispatcher from the parent 
 ```
 
-```kt
+```java
     // coroutine
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         // Prints: main
 ```
 
-```kt
+```java
         println(Thread.currentThread().name) 
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     launch(Dispatchers.Default) {
 ```
 
-```kt
+```java
         // Prints DefaultDispatcher-worker-1
 ```
 
-```kt
+```java
         println(Thread.currentThread().name) 
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 默认分发器会根据底层线程池中的 CPU 数量创建线程。你还可以使用另一个分发器，即 **IO 分发器**：
 
-```kt
+```java
 async(Dispatchers.IO) {
 ```
 
-```kt
+```java
     for (i in 1..1000) {
 ```
 
-```kt
+```java
         println(Thread.currentThread().name)
 ```
 
-```kt
+```java
         yield()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 这将输出以下内容：
 
-```kt
+```java
 > …
 ```
 
-```kt
+```java
 > DefaultDispatcher-worker-2
 ```
 
-```kt
+```java
 > DefaultDispatcher-worker-1
 ```
 
-```kt
+```java
 > DefaultDispatcher-worker-1
 ```
 
-```kt
+```java
 > DefaultDispatcher-worker-1
 ```
 
-```kt
+```java
 > DefaultDispatcher-worker-3
 ```
 
-```kt
+```java
 > DefaultDispatcher-worker-3
 ```
 
-```kt
+```java
 > ...
 ```
 
@@ -520,27 +520,27 @@ IO 分发器用于可能运行时间较长或阻塞的操作，并将为此创�
 
 下面是一个创建分发器的例子，该分发器将使用基于 `ForkJoinPool` 的专用线程池，其中包含 `4` 个线程，这对于 *分而治之* 任务是高效的：
 
-```kt
+```java
 val forkJoinPool = ForkJoinPool(4).asCoroutineDispatcher()
 ```
 
-```kt
+```java
 repeat(1000) {
 ```
 
-```kt
+```java
     launch(forkJoinPool) {
 ```
 
-```kt
+```java
         println(Thread.currentThread().name)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -554,71 +554,71 @@ repeat(1000) {
 
 首先，我们希望偶尔抓取新闻页面。为此，我们将有一个生产者：
 
-```kt
+```java
 fun CoroutineScope.producePages() = produce {
 ```
 
-```kt
+```java
     fun getPages(): List<String> {
 ```
 
-```kt
+```java
         // This should actually fetch something
 ```
 
-```kt
+```java
         return listOf(
 ```
 
-```kt
+```java
             "<html><body><h1>
 ```
 
-```kt
+```java
                Cool stuff</h1></body></html>",
 ```
 
-```kt
+```java
             "<html><body><h1>
 ```
 
-```kt
+```java
                Even more stuff</h1></body></html>"
 ```
 
-```kt
+```java
         )
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     val pages = getPages()
 ```
 
-```kt
+```java
     while (this.isActive) {
 ```
 
-```kt
+```java
         for (p in pages) {
 ```
 
-```kt
+```java
             send(p)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -628,43 +628,43 @@ fun CoroutineScope.producePages() = produce {
 
 下一步是创建一个由包含 HTML 的原始字符串组成的 **文档对象模型**（**DOM**）。为此，我们将有一个第二个生产者，这个生产者接收一个连接到第一个生产者的通道：
 
-```kt
+```java
 fun CoroutineScope.produceDom(pages: ReceiveChannel<String>) = produce {
 ```
 
-```kt
+```java
     fun parseDom(page: String): Document {
 ```
 
-```kt
+```java
         // In reality this would use a DOM library to parse 
 ```
 
-```kt
+```java
         // string to DOM
 ```
 
-```kt
+```java
         return Document(page)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     for (p in pages) {
 ```
 
-```kt
+```java
         send(parseDom(p))
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -672,51 +672,51 @@ fun CoroutineScope.produceDom(pages: ReceiveChannel<String>) = produce {
 
 我们将有一个第三个函数，它接收解析后的文档并从每个文档中提取标题：
 
-```kt
+```java
 fun CoroutineScope.produceTitles(parsedPages: ReceiveChannel<Document>) = produce {
 ```
 
-```kt
+```java
     fun getTitles(dom: Document): List<String> {
 ```
 
-```kt
+```java
         return dom.getElementsByTagName("h1").map {
 ```
 
-```kt
+```java
             it.toString()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     for (page in parsedPages) {
 ```
 
-```kt
+```java
         for (t in getTitles(page)) {
 ```
 
-```kt
+```java
             send(t)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -728,41 +728,41 @@ fun CoroutineScope.produceTitles(parsedPages: ReceiveChannel<Document>) = produc
 
 现在我们已经熟悉了管道的组件，让我们看看如何将多个组件组合在一起：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     val pagesProducer = producePages()
 ```
 
-```kt
+```java
     val domProducer = produceDom(pagesProducer)
 ```
 
-```kt
+```java
     val titleProducer = produceTitles(domProducer)
 ```
 
-```kt
+```java
     titleProducer.consumeEach {
 ```
 
-```kt
+```java
         println(it)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 生成的管道将如下所示：
 
-```kt
+```java
 Input=>pagesProducer=>domProducer=>titleProducer=>Output
 ```
 
@@ -780,61 +780,61 @@ Fan Out 设计模式的目的是在多个并发处理器之间分配工作，也
 
 为了简化我们即将讨论的问题，让我们只有一个协程产生一些结果：
 
-```kt
+```java
 fun CoroutineScope.generateWork() = produce {
 ```
 
-```kt
+```java
     for (i in 1..10_000) {
 ```
 
-```kt
+```java
         send("page$i")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     close()
 ```
 
-```kt
+```java
 }
 ```
 
 我们将有一个函数来创建一个新的协程，该协程读取这些结果：
 
-```kt
+```java
 fun CoroutineScope.doWork(
 ```
 
-```kt
+```java
     id: Int,
 ```
 
-```kt
+```java
     channel: ReceiveChannel<String>
 ```
 
-```kt
+```java
 ) = launch(Dispatchers.Default) {
 ```
 
-```kt
+```java
     for (p in channel) {
 ```
 
-```kt
+```java
         println("Worker $id processed $p")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -842,43 +842,43 @@ fun CoroutineScope.doWork(
 
 现在，让我们启动我们的生产者。记住，所有以下代码片段都需要包裹在`runBlocking`函数中，但为了简单起见，我们省略了这部分：
 
-```kt
+```java
 val workChannel = generateWork()
 ```
 
 然后，我们可以创建多个工作者，他们通过从相同的通道读取来相互分配工作：
 
-```kt
+```java
 val workers = List(10) { id ->
 ```
 
-```kt
+```java
     doWork(id, workChannel)
 ```
 
-```kt
+```java
 }
 ```
 
 现在让我们检查这个程序的输出的一部分：
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > Worker 4 processed page9994
 ```
 
-```kt
+```java
 > Worker 8 processed page9993
 ```
 
-```kt
+```java
 > Worker 3 processed page9992
 ```
 
-```kt
+```java
 > Worker 6 processed page9987
 ```
 
@@ -894,35 +894,35 @@ Fan In 设计模式的目的是将多个工作者的结果合并起来。当我�
 
 结合扇出和扇入设计模式是 **MapReduce** 算法的好基础。为了演示这一点，我们将对前一个例子中的工作进程进行轻微的修改，如下所示：
 
-```kt
+```java
 private fun CoroutineScope.doWorkAsync(
 ```
 
-```kt
+```java
     channel: ReceiveChannel<String>,
 ```
 
-```kt
+```java
     resultChannel: Channel<String>
 ```
 
-```kt
+```java
 ) = async(Dispatchers.Default) {
 ```
 
-```kt
+```java
     for (p in channel) {
 ```
 
-```kt
+```java
         resultChannel.send(p.repeat(2))
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -932,43 +932,43 @@ private fun CoroutineScope.doWorkAsync(
 
 为了收集来自工作进程的结果，我们将使用以下代码：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     val workChannel = generateWork()
 ```
 
-```kt
+```java
     val resultChannel = Channel<String>()
 ```
 
-```kt
+```java
     val workers = List(10) {
 ```
 
-```kt
+```java
         doWorkAsync(workChannel, resultChannel)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     resultChannel.consumeEach {
 ```
 
-```kt
+```java
         println(it)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -982,31 +982,31 @@ runBlocking {
 
 这是前面代码的输出样本：
 
-```kt
+```java
 > ...
 ```
 
-```kt
+```java
 > page9995page9995
 ```
 
-```kt
+```java
 > page9996page9996
 ```
 
-```kt
+```java
 > page9997page9997
 ```
 
-```kt
+```java
 > page9999page9999
 ```
 
-```kt
+```java
 > page9998page9998
 ```
 
-```kt
+```java
 > page10000page10000
 ```
 
@@ -1024,35 +1024,35 @@ runBlocking {
 
 首先，让我们声明两个天气生产者：
 
-```kt
+```java
 fun CoroutineScope.preciseWeather() = produce {
 ```
 
-```kt
+```java
     delay(Random.nextLong(100))
 ```
 
-```kt
+```java
     send("Precise Weather" to "+25c")
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 fun CoroutineScope.weatherToday() = produce {
 ```
 
-```kt
+```java
     delay(Random.nextLong(100))
 ```
 
-```kt
+```java
     send("Weather Today" to "+24c")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1060,47 +1060,47 @@ fun CoroutineScope.weatherToday() = produce {
 
 我们可以使用 `select` 表达式同时监听两个通道：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
   val winner = select<Pair<String, String>> {
 ```
 
-```kt
+```java
     preciseWeather().onReceive { preciseWeatherResult ->
 ```
 
-```kt
+```java
             preciseWeatherResult
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         weatherToday().onReceive { weatherTodayResult ->
 ```
 
-```kt
+```java
             weatherTodayResult
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     println(winner)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1118,23 +1118,23 @@ runBlocking {
 
 这次我们只有一个生产者，它通过通道发送我们应该观看的下一部电影：
 
-```kt
+```java
 fun CoroutineScope.fastProducer(
 ```
 
-```kt
+```java
     movieName: String
 ```
 
-```kt
+```java
 ) = produce(capacity = 1) {
 ```
 
-```kt
+```java
     send(movieName)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1142,47 +1142,47 @@ fun CoroutineScope.fastProducer(
 
 现在，让我们启动两个生产者，并使用`select`表达式来查看哪部电影将被选中：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     val firstOption = fastProducer("Quick&Angry 7")
 ```
 
-```kt
+```java
     val secondOption = fastProducer(
 ```
 
-```kt
+```java
       "Revengers: Penultimatum")
 ```
 
-```kt
+```java
     delay(10)
 ```
 
-```kt
+```java
     val movieToWatch = select<String> {
 ```
 
-```kt
+```java
         firstOption.onReceive { it }
 ```
 
-```kt
+```java
         secondOption.onReceive { it }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     println(movieToWatch)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1190,27 +1190,27 @@ runBlocking {
 
 现在，让我们使用`selectUnbiased`而不是`select`子句：
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 val movieToWatch = selectUnbiased<String> {
 ```
 
-```kt
+```java
     firstOption.onReceive { it }
 ```
 
-```kt
+```java
     secondOption.onReceive { it }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 ...
 ```
 
@@ -1222,43 +1222,43 @@ val movieToWatch = selectUnbiased<String> {
 
 让我们从那个古老的令人讨厌的`counter`例子开始，其中多个并发任务尝试更新同一个`counter`：
 
-```kt
+```java
 var counter = 0
 ```
 
-```kt
+```java
 val jobs = List(10) {
 ```
 
-```kt
+```java
     async(Dispatchers.Default) {
 ```
 
-```kt
+```java
         repeat(1000) {
 ```
 
-```kt
+```java
             counter++
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 jobs.awaitAll()
 ```
 
-```kt
+```java
 println(counter)
 ```
 
@@ -1268,47 +1268,47 @@ println(counter)
 
 每个协程都会尝试获取`counter`的所有权。如果另一个协程正在更新`counter`，我们的协程将耐心等待，然后再次尝试获取锁。一旦更新完成，它必须释放锁，以便其他协程可以继续：
 
-```kt
+```java
 var counter = 0
 ```
 
-```kt
+```java
 val mutex = Mutex()
 ```
 
-```kt
+```java
 val jobs = List(10) {
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         repeat(1000) {
 ```
 
-```kt
+```java
             mutex.lock()
 ```
 
-```kt
+```java
             counter++
 ```
 
-```kt
+```java
             mutex.unlock()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1320,31 +1320,31 @@ Kotlin 中的互斥锁与 Java 中的互斥锁不同。在 Java 中，互斥锁�
 
 我们不得不将我们的代码包裹在`try...catch`中，这并不方便：
 
-```kt
+```java
 try { 
 ```
 
-```kt
+```java
     mutex.lock() 
 ```
 
-```kt
+```java
     counter++                      
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 finally { 
 ```
 
-```kt
+```java
     mutex.unlock()                     
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1352,15 +1352,15 @@ finally {
 
 正是为了这个目的，Kotlin 还引入了`withLock()`：
 
-```kt
+```java
 mutex.withLock {
 ```
 
-```kt
+```java
     counter++
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1374,53 +1374,53 @@ mutex.withLock {
 
 首先，我们将`batman`声明为一个处理每秒 10 条消息的 actor 协程：
 
-```kt
+```java
 val batman = actor<String> {
 ```
 
-```kt
+```java
     for (c in channel) {
 ```
 
-```kt
+```java
         println("Batman is beating some sense into $c")
 ```
 
-```kt
+```java
         delay(100)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 接下来，我们将声明 `robin` 作为另一个协程演员，它稍微慢一些，每秒只处理四条消息：
 
-```kt
+```java
 val robin = actor<String> {
 ```
 
-```kt
+```java
     for (c in channel) {
 ```
 
-```kt
+```java
         println("Robin is beating some sense into $c")
 ```
 
-```kt
+```java
         delay(250)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1428,59 +1428,59 @@ val robin = actor<String> {
 
 但在某些情况下，他仍然手头很忙，所以需要一个助手介入。我们将向这对组合投掷五个反派，并观察他们的表现：
 
-```kt
+```java
 val epicFight = launch {
 ```
 
-```kt
+```java
     for (villain in listOf("Jocker", "Bane", "Penguin",       "Riddler", "Killer Croc")) {
 ```
 
-```kt
+```java
         val result = select<Pair<String, String>> {
 ```
 
-```kt
+```java
             batman.onSend(villain) {
 ```
 
-```kt
+```java
                 "Batman" to villain
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             robin.onSend(villain) {
 ```
 
-```kt
+```java
                 "Robin" to villain
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         delay(90)
 ```
 
-```kt
+```java
         println(result)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1488,43 +1488,43 @@ val epicFight = launch {
 
 这段代码打印以下内容：
 
-```kt
+```java
 > Batman is beating some sense into Jocker
 ```
 
-```kt
+```java
 > (Batman, Jocker)
 ```
 
-```kt
+```java
 > Robin is beating some sense into Bane
 ```
 
-```kt
+```java
 > (Robin, Bane)
 ```
 
-```kt
+```java
 > Batman is beating some sense into Penguin
 ```
 
-```kt
+```java
 > (Batman, Penguin)
 ```
 
-```kt
+```java
 > Batman is beating some sense into Riddler
 ```
 
-```kt
+```java
 > (Batman, Riddler)
 ```
 
-```kt
+```java
 > Robin is beating some sense into Killer Croc
 ```
 
-```kt
+```java
 > (Robin, Killer Croc)
 ```
 

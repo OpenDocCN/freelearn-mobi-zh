@@ -36,7 +36,7 @@
 
 为了使事情不那么复杂，我们将创建一个具有自定义`Closable`接口实现的虚拟资源。所以，不再有悬念；看看下面的代码片段：
 
-```kt
+```java
     class Resource():Closeable { 
       init { 
         println("Resource Created") 
@@ -64,7 +64,7 @@
 
 下面是`using`运算符的定义：
 
-```kt
+```java
     fun <T, D> using(resourceSupplier: Callable<out D>, sourceSupplier:    
     Function<in D, out ObservableSource<out T>>, 
      disposer: Consumer<in D>): Observable<T> { 
@@ -76,7 +76,7 @@
 
 你现在迫不及待地想看到示例，对吧？以下是一个示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.using({//(1) 
         Resource() 
@@ -124,7 +124,7 @@ RxKotlin 始终致力于让你的生活更轻松。它有一个专门为此目�
 
 每个自定义操作符都应该实现`ObservableOperator`接口，其外观如下：
 
-```kt
+```java
     interface ObservableOperator<Downstream, Upstream> { 
       /** 
       * Applies a function to the child Observer and returns a new
@@ -146,7 +146,7 @@ RxKotlin 始终致力于让你的生活更轻松。它有一个专门为此目�
 
 足够的理论了。以下是我们`AddSerialNumber`操作符的定义。请在这里仔细看看：
 
-```kt
+```java
     class AddSerialNumber<T> : ObservableOperator<Pair<Int,T>,T> { 
       val counter:AtomicInteger = AtomicInteger() 
 
@@ -186,7 +186,7 @@ RxKotlin 始终致力于让你的生活更轻松。它有一个专门为此目�
 
 那么，接下来是什么？我们创建了一个可以用作操作符的类，但我们如何使用它？很简单，看看这段代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(10,20) 
        .lift(AddSerialNumber<Int>()) 
@@ -214,7 +214,7 @@ RxKotlin 始终致力于让你的生活更轻松。它有一个专门为此目�
 
 正如你可能已经注意到的，`ObservableOperator`接口只有一个方法，因此我们可以显然用 lambda 替换类声明以及一切，如下所示：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf("Reactive","Programming","in","Kotlin",
       "by Rivu Chakraborty","Packt") 
@@ -271,7 +271,7 @@ RxKotlin 始终致力于让你的生活更轻松。它有一个专门为此目�
 
 是的，可以通过将两个操作符一个接一个地添加到链中，来获得两个操作符的好处，如下所示：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
         .map { 
@@ -298,7 +298,7 @@ RxKotlin 提供了`Transformer`接口（`ObservableTransformer`和`FlowableTrans
 
 这是`ObservableTransformer`接口的签名：
 
-```kt
+```java
     interface ObservableTransformer<Upstream, Downstream> { 
        /** 
        * Applies a function to the upstream Observable 
@@ -317,7 +317,7 @@ RxKotlin 提供了`Transformer`接口（`ObservableTransformer`和`FlowableTrans
 
 所以，回到我们的主题，以下代码块应该满足我们的要求：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
         .map { 
@@ -352,7 +352,7 @@ RxKotlin 提供了`Transformer`接口（`ObservableTransformer`和`FlowableTrans
 
 就像`lift`操作符一样，`compose`操作符也可以使用 lambda 函数实现。让我们再举一个例子，我们将把`Observable<Int>`转换成`Observable<List>`。以下是代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
         .compose<List<Int>> { 

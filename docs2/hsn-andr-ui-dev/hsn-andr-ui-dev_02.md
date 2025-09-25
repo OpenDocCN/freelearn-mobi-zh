@@ -162,7 +162,7 @@ Android 标准工具包提供了一组优秀且多样化的控件和布局结构
 
 1.  当前文件将包含以下类似的 XML 内容：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout 
 
@@ -186,7 +186,7 @@ Android 标准工具包提供了一组优秀且多样化的控件和布局结构
 
 1.  将`ConstraintLayout`更改为简单的`LinearLayout`。`LinearLayout`是 Android 上可用的最简单布局之一。它根据其方向属性，将每个子元素渲染成一条直线，水平或垂直。将整个`content_capture_claim.xml`文件替换为以下内容：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout 
 
@@ -445,7 +445,7 @@ Android 中的矢量图形是 XML 文件，代表组成图形的各种形状和�
 
 1.  编辑器将以新的图标副本打开，它仍然是黑色的。文件的代码看起来可能像这样：
 
-```kt
+```java
 <vector
   android:height="32dp"
   android:viewportHeight="24.0"
@@ -469,7 +469,7 @@ Android 中的矢量图形是 XML 文件，代表组成图形的各种形状和�
 
 1.  Android Studio 将现在打开新文件，它将是一个空的选择器文件：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <selector
     >
@@ -480,7 +480,7 @@ Android 中的矢量图形是 XML 文件，代表组成图形的各种形状和�
 
 1.  首先，告诉选择器它将始终保持相同的大小，通过设置其 `constantSize` 属性，然后告诉它应该快速在状态变化之间进行动画。这种简短的动画在用户选择分类时提供了对这些变化的指示：
 
-```kt
+```java
 <selector
 
     android:constantSize="true"
@@ -490,7 +490,7 @@ Android 中的矢量图形是 XML 文件，代表组成图形的各种形状和�
 
 1.  首先，你需要创建一个当分类被选中时的状态；你将使用两层：一层将是一个简单的填充强调色的圆形背景，在其上方将是你之前提到的白色住宿图标：
 
-```kt
+```java
 <item android:state_checked="true">
   <layer-list>
     <item>
@@ -509,7 +509,7 @@ Android 中的矢量图形是 XML 文件，代表组成图形的各种形状和�
 
 1.  然后，创建另一个默认状态的 `item`——黑色填充的住宿图标：
 
-```kt
+```java
 <item android:drawable="@drawable/ic_accommodation_black"/>
 ```
 
@@ -605,7 +605,7 @@ Android 中的矢量图形是 XML 文件，代表组成图形的各种形状和�
 
 1.  在该空间中插入一个 `ViewPager` 元素：
 
-```kt
+```java
    </android.support.v7.widget.CardView>
 
  <android.support.v4.view.ViewPager

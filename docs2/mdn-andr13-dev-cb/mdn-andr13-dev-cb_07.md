@@ -64,11 +64,11 @@
 
 1.  我们需要确保我们有所需的依赖项：
 
-    ```kt
+    ```java
     implementation "androidx.work:work-runtime-ktx:
     ```
 
-    ```kt
+    ```java
     version-number"
     ```
 
@@ -76,91 +76,91 @@
 
 1.  让我们现在继续创建我们的通知通道。为此，谷歌提供了一个很好的指南，说明您如何在[`developer.android.com/develop/ui/views/notifications/channels`](https://developer.android.com/develop/ui/views/notifications/channels)创建一个，所以复制以下代码：
 
-    ```kt
+    ```java
     private fun createCustomNotificationChannel() {
     ```
 
-    ```kt
+    ```java
         if (Build.VERSION.SDK_INT >=
     ```
 
-    ```kt
+    ```java
         Build.VERSION_CODES.O) {
     ```
 
-    ```kt
+    ```java
             val name = getString(
     ```
 
-    ```kt
+    ```java
                 R.string.notification_channel)
     ```
 
-    ```kt
+    ```java
             val notificationDescription = getString(
     ```
 
-    ```kt
+    ```java
                 R.string.notification_description)
     ```
 
-    ```kt
+    ```java
             val importance =
     ```
 
-    ```kt
+    ```java
                 NotificationManager.IMPORTANCE_DEFAULT
     ```
 
-    ```kt
+    ```java
             val channel = NotificationChannel(CHANNEL_ID,
     ```
 
-    ```kt
+    ```java
             name, importance).apply {
     ```
 
-    ```kt
+    ```java
     description = notificationDescription
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             // Register the channel with the system
     ```
 
-    ```kt
+    ```java
             val notificationManager: NotificationManager =
     ```
 
-    ```kt
+    ```java
                 getSystemService(
     ```
 
-    ```kt
+    ```java
                     Context.NOTIFICATION_SERVICE) as
     ```
 
-    ```kt
+    ```java
                         NotificationManager
     ```
 
-    ```kt
+    ```java
             notificationManager.createNotificationChannel(
     ```
 
-    ```kt
+    ```java
                 channel)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -172,149 +172,149 @@
 
 1.  我们现在可以创建`WorkManager`的一个实例：
 
-    ```kt
+    ```java
     val workManagerInstance = WorkManager.getInstance(application.applicationContext)
     ```
 
 1.  现在，我们需要继续设置约束：
 
-    ```kt
+    ```java
     val ourConstraints = Constraints.Builder()
     ```
 
-    ```kt
+    ```java
         .setRequiredNetworkType(NetworkType.CONNECTED)
     ```
 
-    ```kt
+    ```java
         .setRequiresBatteryNotLow(false)
     ```
 
-    ```kt
+    ```java
         .build()
     ```
 
 1.  我们还需要设置要传递给工作者的数据；因此，我们将创建新的值数据，然后我们将字符串放入端点请求中：
 
-    ```kt
+    ```java
     val data = Data.Builder()
     ```
 
-    ```kt
+    ```java
     data.putString(ENDPOINT_REQUEST, endPoint)
     ```
 
 1.  现在，我们可以继续创建我们的`PeriodicWorkRequestBuilder<GetDataWorker>`。在我们的工作中，我们将设置约束，设置我们的输入数据，并传递`GetDataWorker()`类型，我们将创建并构建它。此外，由于我们想要从服务器每 20 或 30 分钟获取数据，我们使用`PeriodicWorkRequestBuilder<Type>()`来达到这个目的：
 
-    ```kt
+    ```java
     val job =
     ```
 
-    ```kt
+    ```java
         PeriodicWorkRequestBuilder<GetDataWorker>(20,
     ```
 
-    ```kt
+    ```java
             TimeUnit.MINUTES)
     ```
 
-    ```kt
+    ```java
         .setConstraints(ourConstraints)
     ```
 
-    ```kt
+    ```java
         .setInputData(data.build())
     ```
 
-    ```kt
+    ```java
         .build()
     ```
 
 1.  我们现在可以最终调用`workManagerInstance`并排队我们的工作：
 
-    ```kt
+    ```java
     workManagerInstance
     ```
 
-    ```kt
+    ```java
         .enqueue(work)
     ```
 
 1.  我们现在可以继续构建我们的 `GetDataWorker()`。在这个类中，我们将扩展 `Worker` 类，这将覆盖 `doWork()` 函数。然而，在我们的情况下，我们不会扩展 `Worker` 类，而是扩展 `CoroutineWorker(context, workerParameters)`，这有助于我们收集数据流。我们还将使用 Hilt，因此我们将调用 `@HiltWorker`：
 
-    ```kt
+    ```java
     @HiltWorker
     ```
 
-    ```kt
+    ```java
     class GetDataWorker @AssistedInject constructor(
     ```
 
-    ```kt
+    ```java
         @Assisted context: Context,
     ```
 
-    ```kt
+    ```java
         @Assisted workerParameters: WorkerParameters,
     ```
 
-    ```kt
+    ```java
         private val viewModel: NotificationViewModel
     ```
 
-    ```kt
+    ```java
     ) : CoroutineWorker(context, workerParameters) {
     ```
 
-    ```kt
+    ```java
         override suspend fun doWork(): Result {
     ```
 
-    ```kt
+    ```java
             val ourEndPoint = inputData.getString(
     ```
 
-    ```kt
+    ```java
                 NotificationConstants.ENDPOINT_REQUEST)
     ```
 
-    ```kt
+    ```java
             if (endPoint != null) {
     ```
 
-    ```kt
+    ```java
                 getData(endPoint)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             val dataToOutput = Data.Builder()
     ```
 
-    ```kt
+    ```java
                 .putString(
     ```
 
-    ```kt
+    ```java
                   NotificationConstants.NOTIFICATION_DATA,
     ```
 
-    ```kt
+    ```java
                   "Data")
     ```
 
-    ```kt
+    ```java
                 .build()
     ```
 
-    ```kt
+    ```java
             return Result.success(dataToOutput)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
@@ -322,143 +322,143 @@
 
 1.  我们现在可以发送通知：
 
-    ```kt
+    ```java
     val notificationIntent = Intent(this, NotifyUser::class.java).apply {
     ```
 
-    ```kt
+    ```java
     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
     ```
 
-    ```kt
+    ```java
             Intent.FLAG_ACTIVITY_CLEAR_TASK
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     notificationIntent.putExtra(NOTIFICATION_EXTRA, true)
     ```
 
-    ```kt
+    ```java
     notificationIntent.putExtra(NOTIFICATION_ID, notificationId)
     ```
 
-    ```kt
+    ```java
     val notifyPendingIntent = PendingIntent.getActivity(
     ```
 
-    ```kt
+    ```java
         this, 0, notificationIntent,
     ```
 
-    ```kt
+    ```java
         PendingIntent.FLAG_UPDATE_CURRENT
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     val builder = NotificationCompat
     ```
 
-    ```kt
+    ```java
         .Builder(context, Channel_ID_DEFAULT)
     ```
 
-    ```kt
+    ```java
         .setSmallIcon(notificationImage)
     ```
 
-    ```kt
+    ```java
         .setContentTitle(notificationTitle)
     ```
 
-    ```kt
+    ```java
         .setContentText(notificationContent)
     ```
 
-    ```kt
+    ```java
         .setPriority(NotificationCompat.PRIORITY_HIGH)
     ```
 
-    ```kt
+    ```java
         .setContentIntent(notifyPendingIntent)
     ```
 
-    ```kt
+    ```java
         .setAutoCancel(true)
     ```
 
-    ```kt
+    ```java
     with(NotificationManagerCompat.from(context)) {
     ```
 
-    ```kt
+    ```java
         notify(notificationId, builder.build())
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们还需要创建一个 `PendingIntent.getActivity()`，这意味着当点击通知时，用户将启动一个活动。为了实现这一点，我们可以在点击通知时调用 `getStringExtra(NotificationConstants.NOTIFICATION_ID)` 并在我们的意图中添加额外的数据。这需要在我们的活动中发生：
 
-    ```kt
+    ```java
     private fun verifyIntent(intent: Intent?) {
     ```
 
-    ```kt
+    ```java
         intent?.let {
     ```
 
-    ```kt
+    ```java
         if (it.hasExtra(
     ```
 
-    ```kt
+    ```java
                NotificationConstants.NOTIFICATION_EXTRA)){
     ```
 
-    ```kt
+    ```java
                it.getStringExtra(
     ```
 
-    ```kt
+    ```java
                NotificationConstants.NOTIFICATION_ID)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在我们的 `onResume()` 中，我们现在可以调用我们的 `verifyIntent()` 函数：
 
-    ```kt
+    ```java
     override fun onResume() {
     ```
 
-    ```kt
+    ```java
         super.onResume()
     ```
 
-    ```kt
+    ```java
         verifyIntent(intent)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -500,11 +500,11 @@
 
 1.  您可能已经注意到我们之前提到过，我们有三种状态：`Success`、`Failure`和`Retry`。然而，`Work`状态有不同的处理类型；我们可以有一个一次性工作状态、周期性工作状态或阻塞状态：
 
-    ```kt
+    ```java
     Result
     ```
 
-    ```kt
+    ```java
         SUCCESS, FAILURE, RETRY
     ```
 
@@ -512,133 +512,133 @@
 
 1.  在第一个菜谱**理解 Jetpack WorkManager 库**中，我们探讨了设置`WorkManager`的步骤。另一个很好的例子是下载文件。您可以重写`fun doWork()`并检查您的 URI 是否不等于 null，然后返回成功，否则失败：
 
-    ```kt
+    ```java
     override suspend fun doWork(): Result {
     ```
 
-    ```kt
+    ```java
         val file = inputData.getString(
     ```
 
-    ```kt
+    ```java
             FileParameters.KEY_FILE_NAME) ?: ""
     ```
 
-    ```kt
+    ```java
         if (file.isEmpty()){
     ```
 
-    ```kt
+    ```java
             Result.failure()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         val uri = getSavedFileUri(fileName = file,
     ```
 
-    ```kt
+    ```java
             context = context)
     ```
 
-    ```kt
+    ```java
         return if (uri != null){
     ```
 
-    ```kt
+    ```java
             Result.success(workDataOf(
     ```
 
-    ```kt
+    ```java
                 FileParameters.KEY_FILE_URI to
     ```
 
-    ```kt
+    ```java
                     uri.toString()))
     ```
 
-    ```kt
+    ```java
         }else{
     ```
 
-    ```kt
+    ```java
             Result.failure()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在处理状态时，您可以轻松检查状态成功指定动作、未能执行动作以及当`WorkInfo.State`等于`RUNNING`时调用`running()`；请参阅以下代码片段：
 
-    ```kt
+    ```java
     when (state) {
     ```
 
-    ```kt
+    ```java
         WorkInfo.State.SUCCEEDED -> {
     ```
 
-    ```kt
+    ```java
             success(
     ```
 
-    ```kt
+    ```java
                 //do something
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         WorkInfo.State.FAILED -> {
     ```
 
-    ```kt
+    ```java
             failed("Downloading failed!")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         WorkInfo.State.RUNNING -> {
     ```
 
-    ```kt
+    ```java
             running()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         else -> {
     ```
 
-    ```kt
+    ```java
             failed("Something went wrong")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -646,11 +646,11 @@
 
 1.  对于提到的状态，您可以使用`enqueueUniqueWork()`，它用于一次性工作，或者使用`PeriodicWorkRequestBuilder`，它用于周期性工作。在我们的例子中，我们使用了`PeriodicWorkRequestBuilder<Type>`：
 
-    ```kt
+    ```java
     WorkManager.enqueueUniqueWork()
     ```
 
-    ```kt
+    ```java
     WorkManager.enqueueUniquePeriodicWork()
     ```
 
@@ -688,139 +688,139 @@
 
 1.  为了手动配置 `WorkManager`，你需要指定你的执行器。这可以通过调用 `WorkManager.initialize()`，然后传递上下文和配置构建器来完成：
 
-    ```kt
+    ```java
     WorkManager.initialize(
     ```
 
-    ```kt
+    ```java
         context,
     ```
 
-    ```kt
+    ```java
         Configuration.Builder()
     ```
 
-    ```kt
+    ```java
             .setExecutor(Executors.newFixedThreadPool(
     ```
 
-    ```kt
+    ```java
                 CONSTANT_THREAD_POOL_INT))
     ```
 
-    ```kt
+    ```java
             .build())
     ```
 
 1.  在先前的菜谱中，*理解 WorkManager 状态*，我们讨论了一个下载文件的使用案例。这些文件可以是 PDF、JPG、PNG 或甚至是 MP4 的形式。我们将查看一个下载内容 20 次的示例；你可以指定你希望内容下载的次数：
 
-    ```kt
+    ```java
     class GetFiles(context: Context, params: WorkerParameters) : Worker(context, params) {
     ```
 
-    ```kt
+    ```java
         override fun doWork(): ListenableWorker.Result {
     ```
 
-    ```kt
+    ```java
             repeat(20) {
     ```
 
-    ```kt
+    ```java
                 try {
     ```
 
-    ```kt
+    ```java
                     downloadSynchronously("Your Link")
     ```
 
-    ```kt
+    ```java
                 } catch (e: IOException) {
     ```
 
-    ```kt
+    ```java
                     return
     ```
 
-    ```kt
+    ```java
                         ListenableWorker.Result.failure()
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             return ListenableWorker.Result.success()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  目前，如果我们没有处理 `Worker()` 被停止的情况，那么确保处理这种情况是一个好的做法，因为这是一个边缘情况。为了处理这种情况，我们需要重写 `Worker.onStopped()` 方法或在必要时调用 `Worker.isStopped` 以释放一些资源：
 
-    ```kt
+    ```java
         override fun doWork(): ListenableWorker.Result {
     ```
 
-    ```kt
+    ```java
             repeat(20) {
     ```
 
-    ```kt
+    ```java
                 if (isStopped) {
     ```
 
-    ```kt
+    ```java
                     break
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
                 try {
     ```
 
-    ```kt
+    ```java
                     downloadSynchronously("Your Link")
     ```
 
-    ```kt
+    ```java
                 } catch (e: IOException) {
     ```
 
-    ```kt
+    ```java
                     return
     ```
 
-    ```kt
+    ```java
                         ListenableWorker.Result.failure()
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             return ListenableWorker.Result.success()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
@@ -864,41 +864,41 @@
 
 1.  我们将使用`WorkManager()`并传入我们的上下文；然后我们将调用`beginWith`并传递一个包含我们作业的列表：
 
-    ```kt
+    ```java
     WorkManager.getInstance(context)
     ```
 
-    ```kt
+    ```java
         .beginWith(listOf(job1, job2, job3, job4))
     ```
 
-    ```kt
+    ```java
         .then(ourCache)
     ```
 
-    ```kt
+    ```java
         .then(upload)
     ```
 
-    ```kt
+    ```java
         .enqueue()
     ```
 
 1.  为了能够维护或保留我们作业的所有输出，我们需要使用`ArrayCreatingInputMerger::class`：
 
-    ```kt
+    ```java
     val ourCache: OneTimeWorkRequest = OneTimeWorkRequestBuilder<GetDataWorker>()
     ```
 
-    ```kt
+    ```java
         .setInputMerger(ArrayCreatingInputMerger::class)
     ```
 
-    ```kt
+    ```java
         .setConstraints(constraints)
     ```
 
-    ```kt
+    ```java
         .build()
     ```
 
@@ -946,103 +946,103 @@
 
 1.  如果你已经在你的项目中有了 Firebase `JobDispatcher`，你可能会有以下代码片段类似的代码：
 
-    ```kt
+    ```java
     class YourProjectJobService : JobService() {
     ```
 
-    ```kt
+    ```java
         override fun onStartJob(job: JobParameters):
     ```
 
-    ```kt
+    ```java
         Boolean {
     ```
 
-    ```kt
+    ```java
             // perform some job
     ```
 
-    ```kt
+    ```java
             return false
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun onStopJob(job: JobParameters):
     ```
 
-    ```kt
+    ```java
         Boolean {
     ```
 
-    ```kt
+    ```java
             return false
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  如果你的应用程序使用`JobServices()`，那么它将映射到`ListenableWorker`。然而，如果你的应用程序正在使用`SimpleJobService`，那么在这种情况下，你应该使用`Worker`：
 
-    ```kt
+    ```java
     class YourWorker(context: Context, params: WorkerParameters) :
     ```
 
-    ```kt
+    ```java
         ListenableWorker(context, params) {
     ```
 
-    ```kt
+    ```java
         override fun startWork():
     ```
 
-    ```kt
+    ```java
         ListenableFuture<ListenableWorker.Result> {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun onStopped() {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  如果你的项目使用`Job.Builder.setRecurring(true)`，在这种情况下，你应该将其更改为`WorkManager`提供的`PeriodicWorkRequest`类。你也可以指定你的标签、服务（如果作业是重复的）、触发窗口等：
 
-    ```kt
+    ```java
     val job = dispatcher.newJobBuilder()
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
         .build()
     ```
 
@@ -1072,45 +1072,45 @@
 
 1.  为了设置调试，我们首先需要在我们的`AndroidManifest.xml`文件中创建一个自定义初始化，即通过禁用`WorkManager`初始化器：
 
-    ```kt
+    ```java
     <provider
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
         tools:node="remove"/>
     ```
 
 1.  然后，我们继续在我们的应用程序类中设置一个最低日志级别以进行调试：
 
-    ```kt
+    ```java
     class App() : Application(), Configuration.Provider {
     ```
 
-    ```kt
+    ```java
         override fun getWorkManagerConfiguration() =
     ```
 
-    ```kt
+    ```java
             Configuration.Builder()
     ```
 
-    ```kt
+    ```java
                 .setMinimumLoggingLevel(
     ```
 
-    ```kt
+    ```java
                     android.util.Log.DEBUG)
     ```
 
-    ```kt
+    ```java
                 .build()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1134,7 +1134,7 @@
 
 1.  首先，你需要在你的`build.gradle`文件中添加测试依赖：
 
-    ```kt
+    ```java
     androidTestImplementation("androidx.work:work-testing:$work_version")
     ```
 
@@ -1142,139 +1142,139 @@
 
 1.  我们需要设置由 Google 提供的`@Before`函数：
 
-    ```kt
+    ```java
     @RunWith(AndroidJUnit4::class)
     ```
 
-    ```kt
+    ```java
     class BasicInstrumentationTest {
     ```
 
-    ```kt
+    ```java
         @Before
     ```
 
-    ```kt
+    ```java
         fun setup() {
     ```
 
-    ```kt
+    ```java
             val context =
     ```
 
-    ```kt
+    ```java
                 InstrumentationRegistry.getTargetContext()
     ```
 
-    ```kt
+    ```java
             val config = Configuration.Builder()
     ```
 
-    ```kt
+    ```java
                 .setMinimumLoggingLevel(Log.DEBUG)
     ```
 
-    ```kt
+    ```java
                 .setExecutor(SynchronousExecutor())
     ```
 
-    ```kt
+    ```java
                 .build()
     ```
 
-    ```kt
+    ```java
             // Initialize WorkManager for instrumentation
     ```
 
-    ```kt
+    ```java
                tests.
     ```
 
-    ```kt
+    ```java
             WorkManagerTestInitHelper.
     ```
 
-    ```kt
+    ```java
                 initializeTestWorkManager(context, config)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在我们已经设置了`WorkManager`，我们可以继续构建我们的测试：
 
-    ```kt
+    ```java
     class GetDataWorker(context: Context, parameters: WorkerParameters) : Worker(context, parameters) {
     ```
 
-    ```kt
+    ```java
         override fun doWork(): Result {
     ```
 
-    ```kt
+    ```java
             return when(endpoint) {
     ```
 
-    ```kt
+    ```java
                 0 -> Result.failure()
     ```
 
-    ```kt
+    ```java
                 else -> Result.success(dataOutput)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  你可以通过以下示例轻松测试和验证状态：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     @Throws(Exception::class)
     ```
 
-    ```kt
+    ```java
     fun testGetDataWorkerHasNoData() {
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
         val workInfo =
     ```
 
-    ```kt
+    ```java
             workManager.getWorkInfoById(request.id).get()
     ```
 
-    ```kt
+    ```java
         assertThat(workInfo.state,
     ```
 
-    ```kt
+    ```java
             `is`(WorkInfo.State.FAILED))
     ```
 
-    ```kt
+    ```java
     }
     ```
 

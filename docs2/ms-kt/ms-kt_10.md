@@ -54,7 +54,7 @@ Android Studio 中的 Logcat 实时显示来自我们应用的日志消息。每
 
 我们使用前面的字母来指定日志级别。例如，如果我们想以调试级别记录一条消息，我们将使用以下代码：
 
-```kt
+```java
 Log.d("TAG", "Message")
 ```
 
@@ -74,7 +74,7 @@ Log.d("TAG", "Message")
 
 现在，让我们看看如何创建我们的第一个 Logcat 消息。让我们转到`MainActivity.kt`文件，并在`onCreate()`方法中添加以下日志消息：
 
-```kt
+```java
 Log.d("First Log", "This is our first log message")
 ```
 
@@ -92,7 +92,7 @@ Log.d("First Log", "This is our first log message")
 
 要能够看到我们的第一个堆栈跟踪，让我们转到`MainActivity.kt`文件，并在`onCreate()`方法中添加以下代码：
 
-```kt
+```java
 throw RuntimeException("This is a crash")
 ```
 
@@ -108,7 +108,7 @@ throw RuntimeException("This is a crash")
 
 Android Studio 允许我们从不同的来源复制和粘贴堆栈跟踪，并在我们的 Logcat 中查看它们。复制以下堆栈跟踪：
 
-```kt
+```java
 FATAL EXCEPTION: main
 Process: com.packt.chapterten, PID: 7168
 java.lang.RuntimeException: Unable to start activity ComponentInfo{com.packt.chapterten/com.packt.chapterten.MainActivity}: java.lang.RuntimeException: This is a crash
@@ -215,13 +215,13 @@ at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
 
 LeakCanary 非常容易设置，使用它不需要代码实现。我们只需在我们的 `libs.version.toml` 文件中添加 `leakcanary-android` 依赖项：
 
-```kt
+```java
 leakcanary-android = "com.squareup.leakcanary:leakcanary-android:2.12"
 ```
 
 点击 `build.gradle.kts` 文件：
 
-```kt
+```java
 debugImplementation(libs.leakcanary.android)
 ```
 
@@ -243,7 +243,7 @@ debugImplementation(libs.leakcanary.android)
 
 1.  在 `com.packt.chapterten` 包内创建一个新文件，并将其命名为 `LeakCanaryTest.kt`。将以下代码添加到文件中：
 
-    ```kt
+    ```java
     class LeakCanaryTest
     class LeakTestUtils {
         companion object {
@@ -256,7 +256,7 @@ debugImplementation(libs.leakcanary.android)
 
 1.  现在让我们转到 `MainActivity.kt` 文件，并在 `onCreate()` 代码中添加以下代码：
 
-    ```kt
+    ```java
     AppWatcher.objectWatcher.expectWeaklyReachable(
         LeakTestUtils.leakCanaryTest,
         "Static reference to LeakCanaryTest"
@@ -297,7 +297,7 @@ Chucker 简化了检查我们 Android 应用发出的 HTTP(S) 请求/响应的�
 
 1.  在 `libs.versions.toml` 文件中添加 `chucker` 依赖项：
 
-    ```kt
+    ```java
     chucker = "com.github.chuckerteam.chucker:library:4.0.0"
     chucker-no-op = "com.github.chuckerteam.chucker:library-no-op:4.0.0"
     ```
@@ -308,7 +308,7 @@ Chucker 简化了检查我们 Android 应用发出的 HTTP(S) 请求/响应的�
 
 1.  接下来，我们需要在我们的应用程序的 `build.gradle.kts` 文件中添加依赖项：
 
-    ```kt
+    ```java
     debugImplementation(libs.chucker)
     releaseImplementation(libs.chucker.no.op)
     ```
@@ -317,7 +317,7 @@ Chucker 简化了检查我们 Android 应用发出的 HTTP(S) 请求/响应的�
 
 1.  接下来，我们需要创建一个新的 `OkHttp` 客户端并将 Chucker 拦截器添加到其中。让我们转到 `Modules.kt` 文件并添加以下模块到 `appModules` 模块块：
 
-    ```kt
+    ```java
     single {
         val chuckerCollector = ChuckerCollector(
             context = androidContext(),
@@ -348,7 +348,7 @@ Chucker 简化了检查我们 Android 应用发出的 HTTP(S) 请求/响应的�
 
 1.  让我们修改我们的 `Retrofit` 实例以使用我们刚刚创建的 `OkHttpClient` 实例。仍然在 `Modules.kt` 文件中，按如下方式修改 Retrofit 实例：
 
-    ```kt
+    ```java
     single {
         Retrofit.Builder()
             .addConverterFactory(
@@ -430,7 +430,7 @@ Chucker 在调试我们应用中的网络请求方面非常有帮助。当非技
 
 我们想运行一个显示具有特定 `id` 的猫的查询。我们可以通过运行以下查询来完成此操作：
 
-```kt
+```java
 SELECT * FROM CAT WHERE id == "rrsvsbRgL7zaJuR3"
 ```
 

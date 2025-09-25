@@ -118,7 +118,7 @@ UI 测试使我们能够评估我们的 Compose 代码的行为是否符合预�
 
 1.  首先，在 app 级别的`build.gradle`文件的`dependencies`块中添加以下测试依赖项：
 
-    ```kt
+    ```java
     dependencies {
         […]
         androidTestImplementation "androidx.compose.ui:ui-
@@ -148,7 +148,7 @@ UI 测试使我们能够评估我们的 Compose 代码的行为是否符合预�
 
 1.  在创建我们的第一个测试方法之前，在`RestaurantsScreenTest`类内部添加以下代码：
 
-    ```kt
+    ```java
     import androidx.compose.ui.test.junit4.*
     import org.junit.Rule
     class RestaurantsScreenTest {
@@ -168,7 +168,7 @@ UI 测试使我们能够评估我们的 Compose 代码的行为是否符合预�
 
 让我们看看我们的`RestaurantsScreen()`可组合组件是如何从其`state`参数中消费`RestaurantsScreenState`实例的，以及它是如何通过`onItemClick`和`onFavoriteClick`函数参数将事件传递给调用者的：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(
     state: RestaurantsScreenState,
@@ -197,7 +197,7 @@ fun RestaurantsScreen(
 
 为了了解我们想要输入到`RestaurantsScreen()`中以测试其行为的可能状态，我们需要查看其状态生成器，`RestaurantsViewModel`：
 
-```kt
+```java
 class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
     private val _state = mutableStateOf(
         RestaurantsScreenState(
@@ -242,7 +242,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 1.  在`RestaurantsScreenTest`类内部，添加一个名为`initialState_isRendered()`的空测试函数，稍后它将测试我们的`RestaurantsScreen()`可组合组件是否正确渲染初始状态：
 
-    ```kt
+    ```java
     class RestaurantsScreenTest {
         @get:Rule
         val testRule: ComposeContentTestRule = 
@@ -263,7 +263,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 1.  准备`initialState_isRendered()`方法，通过调用`testRule.setContent()`来设置 Compose UI，就像我们的`MainActivity`使用自己的`setContent()`方法一样：
 
-    ```kt
+    ```java
         @Test
         fun initialState_isRendered() {
             testRule.setContent { }
@@ -274,7 +274,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 在我们的情况下，我们将传递`RestaurantsScreen()`可组合组件，而不是在将其包裹在`RestaurantsAppTheme()`主题函数之前，这样被测试的 Compose UI 将模仿我们的实际生产代码中显示的内容：
 
-```kt
+```java
 @Test
 fun initialState_isRendered() {
     testRule.setContent {
@@ -289,7 +289,7 @@ fun initialState_isRendered() {
 
 1.  现在，`RestaurantsScreen()`可组合组件正在期待一个`RestaurantsScreenState`对象作为其`state`参数，以及两个函数用于其`onFavoriteClick()`和`onItemClick()`参数。让我们添加这些，同时传递屏幕`ViewModel`中预期的初始状态：
 
-    ```kt
+    ```java
         @Test
         fun initialState_isRendered() {
             testRule.setContent {
@@ -312,7 +312,7 @@ fun initialState_isRendered() {
 
 在`RestaurantsScreen()`可组合组件中，初始状态主要由表示应用等待内容的加载指示器定义：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(…) {
     Box(…) {
@@ -341,7 +341,7 @@ Compose 为我们提供了几个测试 API，帮助我们查找元素、验证�
 
 然而，如果我们再次审视`CircularProgressIndicator()`的使用，我们可以看到它没有暴露任何语义，我们可以在之后的测试中用来识别它：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(…) {
     Box(…) {
@@ -357,7 +357,7 @@ fun RestaurantsScreen(…) {
 
 1.  让我们暂时离开`androidTest`目录，回到我们的生产代码所在的主包内部。在`presentation`包内部，创建一个名为`Description`的新`object`类，并定义一个常量描述`String`变量用于我们的加载组合：
 
-    ```kt
+    ```java
     object Description {
         const val RESTAURANTS_LOADING =
                 "Circular loading icon"
@@ -366,7 +366,7 @@ fun RestaurantsScreen(…) {
 
 1.  在`RestaurantsScreen()`组合内部，将`semantics`修饰符传递给`CircularProgressIndicator()`组合，并将其`contentDescription`属性设置为之前定义的`RESTAURANTS_LOADING`：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(…) {
         Box(…) {
@@ -386,7 +386,7 @@ fun RestaurantsScreen(…) {
 
 1.  现在，回到`androidTest`目录内部，导航到`RestaurantsScreenTest`类，并在`initialState_isRendered()`测试方法中，使用`testRule`变量通过`onNodeWithContentDescription()`方法识别具有`RESTAURANT_LOADING`内容描述的节点，并最终使用`assertIsDisplayed()`方法验证节点是否显示：
 
-    ```kt
+    ```java
     @Test
     fun initialState_isRendered() {
         testRule.setContent {
@@ -414,7 +414,7 @@ fun RestaurantsScreen(…) {
 
 1.  在 `RestaurantsScreenTest` 类内部，添加另一个名为 `stateWithContent_isRendered()` 的测试函数，该函数应测试带有内容的州是否正确渲染：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_isRendered() {
         testRule.setContent {
@@ -436,7 +436,7 @@ fun RestaurantsScreen(…) {
 
 1.  让我们暂时离开 `androidTest` 目录，回到我们的生产代码所在的主包内部。在 `restaurants` 包内部，创建一个名为 `DummyContent` 的新 `object` 类，并在该类内部添加一个 `getDomainRestaurants()` 方法，该方法将返回一个包含 `Restaurant` 对象的模拟数组列表：
 
-    ```kt
+    ```java
     object DummyContent {
         fun getDomainRestaurants() = arrayListOf(
             Restaurant(0, "title0", "description0", false),
@@ -448,7 +448,7 @@ fun RestaurantsScreen(…) {
 
 1.  现在，回到 `androidTest` 目录，导航到 `RestaurantsScreenTest` 类。在 `stateWithContent_isRendered()` 方法内部，声明一个 `restaurants` 变量，该变量将保存来自 `DummyContent` 类的模拟餐厅，并将其传递给 `RestaurantsScreenState` 的 `restaurants` 参数：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_isRendered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -465,7 +465,7 @@ fun RestaurantsScreen(…) {
 
 现在我们已经完成了这个测试方法的设置部分，是时候执行我们的断言了。由于我们正在测试 `RestaurantsScreen()` 是否正确渲染包含餐厅的状态，让我们快速查看一下正在测试的组件：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(state: RestaurantsScreenState, […]) {
     Box(…) {
@@ -494,7 +494,7 @@ fun RestaurantsScreen(state: RestaurantsScreenState, […]) {
 
 通过将`restaurants`变量中第一个元素的标题传递给`onNodeWithText()`方法，从而识别其对应的节点。最后，调用`assertIsDisplayed()`方法来验证此节点是否显示：
 
-```kt
+```java
 @Test
 fun stateWithContent_isRendered() {
     val restaurants = DummyContent.getDomainRestaurants()
@@ -515,7 +515,7 @@ fun stateWithContent_isRendered() {
 
 1.  同样，为了断言我们模拟列表中第一家餐厅的标题节点是否显示，验证第一家餐厅的描述节点是否显示：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_isRendered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -537,7 +537,7 @@ fun stateWithContent_isRendered() {
 
 1.  最后，让我们断言对应于`CircularProgressIndicator()`可组合组件的节点不存在，从而确保应用不再加载任何内容。通过在具有`RESTAURANTS_LOADING`内容描述的节点上调用`assertDoesNotExist()`方法来完成此操作：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_isRendered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -564,7 +564,7 @@ fun stateWithContent_isRendered() {
 
 1.  在 `RestaurantsScreenTest` 类中，添加另一个名为 `stateWithContent_ClickOnItem_isRegistered()` 的测试函数。在这个方法中，将模拟列表存储在 `restaurants` 变量中，然后将我们将要点击的第一个餐厅存储在 `targetRestaurant` 变量中：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_ClickOnItem_isRegistered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -574,7 +574,7 @@ fun stateWithContent_isRendered() {
 
 1.  然后，将 `RestaurantsScreen()` 设置为测试对象，并通过将 `restaurants` 变量的内容传递给 `RestaurantsScreenState` 的 `restaurants` 参数来提供具有内容的状态：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_ClickOnItem_isRegistered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -594,7 +594,7 @@ fun stateWithContent_isRendered() {
 
 1.  然后，识别包含 `targetRestaurant` 的 `title` 文本的节点，然后通过调用 `performClick()` 方法模拟用户点击此节点：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_ClickOnItem_isRegistered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -616,7 +616,7 @@ fun stateWithContent_isRendered() {
 
 1.  现在我们已经模拟了用户点击交互，让我们断言由 `RestaurantsScreen()` 组合函数暴露的 `onItemClick` 回调中的 `id` 值与我们所点击的餐厅的 `id` 值相匹配：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_ClickOnItem_isRegistered() {
         val restaurants = DummyContent.getDomainRestaurants()
@@ -683,7 +683,7 @@ fun stateWithContent_isRendered() {
 
 在开始编写我们的第一个测试方法之前，让我们再次查看 `RestaurantsViewModel` 类，以便我们可以提醒自己我们要测试哪些情况：
 
-```kt
+```java
 class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
     private val _state = mutableStateOf(
         RestaurantsScreenState(
@@ -728,7 +728,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 1.  在 `RestaurantsViewModelTest` 类中，添加一个名为 `initialState_isProduced()` 的空测试函数，稍后它将测试我们的 `RestaurantsViewModel` 类是否正确地产生了初始状态：
 
-    ```kt
+    ```java
         @Test
         fun initialState_isProduced() {  }
     ```
@@ -739,7 +739,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 1.  在 `initialState_isProduced()` 方法内部，我们必须创建被测试主题的实例 – 那就是说，`RestaurantsViewModel`。定义一个 `viewModel` 变量，并用 `getViewModel()` 方法返回的值来实例化它，我们将在稍后定义这个方法：
 
-    ```kt
+    ```java
     @Test
     fun initialState_isProduced() {
         val viewModel = getViewModel()
@@ -748,7 +748,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 1.  仍然在`RestaurantsViewModelTest`类内部，定义`getViewModel()`方法，它将返回一个`RestaurantsViewModel`实例：
 
-    ```kt
+    ```java
     private fun getViewModel(): RestaurantsViewModel {
         return RestaurantsViewModel()
     }
@@ -768,7 +768,7 @@ class RestaurantsViewModel @Inject constructor(…) : ViewModel() {
 
 1.  在`RestaurantsViewModelTest`类内部，重构`getViewModel()`方法以构建`RestaurantsViewModel`的所有必要依赖项：
 
-    ```kt
+    ```java
     private fun getViewModel(): RestaurantsViewModel {
         val restaurantsRepository = 
             RestaurantsRepository(?, ?)
@@ -820,7 +820,7 @@ RestaurantsViewModel 的依赖项
 
 1.  要为 `RestaurantsApiService` 接口创建一个伪造对象，我们必须定义一个将实现该接口并模拟 REST API 功能的类。在 `test` 包内，创建一个名为 `FakeApiService` 的 Kotlin 类，实现 `RestaurantsApiService` 接口，并在其中添加以下代码：
 
-    ```kt
+    ```java
     class FakeApiService : RestaurantsApiService {
         override suspend fun getRestaurants()
                 : List<RemoteRestaurant> {
@@ -840,7 +840,7 @@ RestaurantsViewModel 的依赖项
 
 1.  回到主源集，我们的生产代码就在那里。在 `DummyContent` 类中，添加一个名为 `getRemoteRestaurants()` 的新方法，该方法将 `getDomainRestaurants()` 方法返回的 `Restaurant` 对象列表映射到 `RemoteRestaurant` 对象：
 
-    ```kt
+    ```java
     object DummyContent {
         fun getDomainRestaurants() = arrayListOf(…)
         fun getRemoteRestaurants() = getDomainRestaurants()
@@ -856,7 +856,7 @@ RestaurantsViewModel 的依赖项
 
 1.  现在，回到`test`包中。我们已经为`RestaurantsApiService`接口创建了一个模拟，但我们也必须为`RestaurantsDao`接口创建一个模拟，该模拟将实现接口并模拟本地数据库的功能。在`test`包内部，创建一个名为`FakeRoomDao`的 Kotlin 类，该类实现`RestaurantsDao`接口，并在其中添加以下代码：
 
-    ```kt
+    ```java
     class FakeRoomDao : RestaurantsDao {
         private var restaurants =
                   HashMap<Int, LocalRestaurant>()
@@ -902,7 +902,7 @@ RestaurantsViewModel 的依赖项
 
 1.  在`FakeRoom`类的末尾，添加缺失的`updateRestaurant()`方法，该方法切换`isFavorite`字段的值：
 
-    ```kt
+    ```java
     class FakeRoomDao : RestaurantsDao {
         [...]
         override suspend fun getAllFavorited()
@@ -926,7 +926,7 @@ RestaurantsViewModel 的依赖项
 
 回到`RestaurantsViewModelTest`类中，并更新`getViewModel()`函数，将`FakeApiService`和`FakeRoomDao`类的实例传递给`RestaurantsRepository`：
 
-```kt
+```java
 private fun getViewModel(): RestaurantsViewModel {
     val restaurantsRepository = RestaurantsRepository(
         FakeApiService(), FakeRoomDao())
@@ -937,7 +937,7 @@ private fun getViewModel(): RestaurantsViewModel {
 
 现在，`getViewModel()`方法能够返回一个`RestaurantsViewModel`实例，我们可以轻松地进行测试，让我们回到`initialState_isProduced()`测试方法，它目前看起来是这样的：
 
-```kt
+```java
 @Test
 fun initialState_isProduced() {
     val viewModel = getViewModel()
@@ -948,7 +948,7 @@ fun initialState_isProduced() {
 
 1.  首先，在`initialState_isProduced()`测试方法中，将初始状态存储在`initialState`变量中：
 
-    ```kt
+    ```java
     @Test
     fun initialState_isProduced() {
         val viewModel = getViewModel()
@@ -958,7 +958,7 @@ fun initialState_isProduced() {
 
 1.  接下来，使用内置的`assert()`函数，验证`initialState`的内容是否符合预期：
 
-    ```kt
+    ```java
     @Test
     fun initialState_isProduced() {
         val viewModel = getViewModel()
@@ -988,7 +988,7 @@ fun initialState_isProduced() {
 
 例如，我们的 `RestaurantsViewModel` 启动了调用多个挂起函数的协程，所有这些都在 `viewModelScope` 上发生，该作用域默认设置了 `Dispatchers.Main` 分派器：
 
-```kt
+```java
 @HiltViewModel
 class RestaurantsViewModel @Inject constructor(...) : […] {
     [...]
@@ -1013,7 +1013,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  在应用级别的 `build.gradle` 文件中，向 Kotlin 协程测试包添加一个 `testImplementation` 依赖项：
 
-    ```kt
+    ```java
     dependencies {
         […]
         testImplementation "com.google.truth:truth:1.1.2"
@@ -1026,7 +1026,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  返回到 `RestaurantsViewModelTest` 类中，定义一个 `StandardTestDispatcher` 对象的变量和一个基于之前定义的分派器的 `TestScope` 对象的变量：
 
-    ```kt
+    ```java
     @ExperimentalCoroutinesApi
     class RestaurantsViewModelTest {
         private val dispatcher = StandardTestDispatcher()
@@ -1041,7 +1041,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  接下来，确保 `initialState_isProduced()` 测试方法体内的所有代码都在一个特定于测试的协程中运行。为此，通过在 `TestScope` 类型的 `scope` 变量上调用 `runTest()` 协程构建器来启动一个封装此方法体的协程：
 
-    ```kt
+    ```java
     @Test
     fun initialState_isProduced() = scope.runTest {
         val viewModel = getViewModel()
@@ -1058,7 +1058,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 如果我们再次查看 `RestaurantsViewModel`，我们可以注意到，使用 `viewModelScope` 启动的所有协程都没有设置分派器，因此它们在幕后使用 `Dispatchers.Main`：
 
-```kt
+```java
 @HiltViewModel
 class RestaurantsViewModel @Inject constructor(...) : […] {
     [...]
@@ -1083,7 +1083,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  返回到主要源集，其中包含我们的生产代码。在`RestaurantsViewModel`内部，添加一个类型为`CoroutineDispatcher`的`dispatcher`构造函数参数，并将其传递给`viewModelScope()`调用：
 
-    ```kt
+    ```java
     @HiltViewModel
     class RestaurantsViewModel @Inject constructor(
        private val getRestaurantsUseCase: […],
@@ -1108,7 +1108,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  在`di`包内部，创建一个名为`DispatcherModule`的新类，并添加以下代码，告诉 Hilt 如何使用`Dispatchers.Main`提供任何`CoroutineDispatcher`依赖项：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     object DispatcherModule {
@@ -1122,7 +1122,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  在`DispatcherModule`类的主体部分，定义一个名为`MainDispatcher`的注解类，并使用`@Qualifier`注解进行标注：
 
-    ```kt
+    ```java
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
     annotation class MainDispatcher
@@ -1136,7 +1136,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  将`@MainDispatcher`注解添加到`providesMainDispatcher()`方法中，这样当这样的注解用于依赖项时，Hilt 将知道提供哪个调度器：
 
-    ```kt
+    ```java
     @Qualifier
     @Retention(AnnotationRetention.BINARY)
     annotation class MainDispatcher
@@ -1152,7 +1152,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  然后，在`RestaurantsViewModel`内部，使用新创建的`@MainDispatcher`注解标注`dispatcher`参数，这样 Hilt 就会为我们提供`Dispatchers.Main`调度器：
 
-    ```kt
+    ```java
     @HiltViewModel
     class RestaurantsViewModel @Inject constructor(
        private val getRestaurantsUseCase: […],
@@ -1164,7 +1164,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  现在，由于`RestaurantsViewModel`在我们的生产代码中使用`Dispatcher.Main`调度器，返回到`test`源集，并在`RestaurantsViewModelTest`类内部，通过将`dispatcher`成员字段传递给`RestaurantsViewModel`构造函数调用，更新其`getViewModel()`方法：
 
-    ```kt
+    ```java
     @ExperimentalCoroutinesApi
     class RestaurantsViewModelTest {
         private val dispatcher = StandardTestDispatcher()
@@ -1195,7 +1195,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  在 `RestaurantsViewModelTest` 中添加一个新的测试方法，名为 `stateWithContent_isProduced()`，断言是否产生了预期的包含餐厅的状态：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_isProduced() = scope.runTest {
         val testVM = getViewModel()
@@ -1220,7 +1220,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 1.  在 `stateWithContent_isProduced()` 测试方法中，在 `RestaurantsViewModel` 实例化之后但在我们的断言之前，添加 `advanceUntilIdle()` 方法调用：
 
-    ```kt
+    ```java
     @Test
     fun stateWithContent_isProduced() = scope.runTest {
         val testVM = getViewModel()
@@ -1244,7 +1244,7 @@ class RestaurantsViewModel @Inject constructor(...) : […] {
 
 如果我们更仔细地查看我们的`RestaurantsRepository`，我们可以看到它正在将一个用于生产的`Dispatchers.IO`分发器传递给所有的`withContext()`调用：
 
-```kt
+```java
 @Singleton
 class RestaurantsRepository @Inject constructor(…) {
     suspend fun toggleFavoriteRestaurant(…) =
@@ -1265,7 +1265,7 @@ class RestaurantsRepository @Inject constructor(…) {
 
 进入`DispatchersModule`类中，就像我们为`Dispatchers.Main`分发器所做的那样，指导 Hilt 如何为我们提供`Dispatchers.IO`分发器：
 
-```kt
+```java
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class MainDispatcher
@@ -1288,7 +1288,7 @@ fun providesIoDispatcher(): CoroutineDispatcher =
 
 1.  回到主源集，我们的生产代码就位于其中。在`RestaurantsRepository`类中，注入`CoroutineDispatcher`，用`@IoDispatcher`注解它，然后将注入的`dispatcher`传递给所有的`withContext()`调用：
 
-    ```kt
+    ```java
     @Singleton
     class RestaurantsRepository @Inject constructor(
         private val restInterface: RestaurantsApiService,
@@ -1309,7 +1309,7 @@ fun providesIoDispatcher(): CoroutineDispatcher =
 
 1.  然后，回到我们的`test`包中，在`RestaurantsViewModelTest`类中，更新`getViewModel()`方法，将我们的`StandardTestDispatcher`类型的`dispatcher`字段传递给`RestaurantsRepository`构造函数：
 
-    ```kt
+    ```java
     private fun getViewModel(): RestaurantsViewModel {
         val restaurantsRepository = RestaurantsRepository(
             FakeApiService(), 
@@ -1337,7 +1337,7 @@ fun providesIoDispatcher(): CoroutineDispatcher =
 
 让我们看看`ToggleRestaurantUseCase`的单元测试将如何进行：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 class ToggleRestaurantUseCaseTest {
     private val dispatcher = StandardTestDispatcher()

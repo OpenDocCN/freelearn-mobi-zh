@@ -38,7 +38,7 @@
 
 `ExampleViewModel` 类可能包含一个类型为 `Repository` 的 `repository` 变量：
 
-```kt
+```java
 class ExampleViewModel {
     private val repository: Repository = Repository()
     fun doSomething() {
@@ -49,7 +49,7 @@ class ExampleViewModel {
 
 因此，`ExampleViewModel` 依赖于 `Repository`，或者 `Repository` 是 `ExampleViewModel` 的依赖项。大多数情况下，类有更多的依赖项，但为了简单起见，我们将只关注一个。在这种情况下，`ExampleViewModel` 提供了自己的依赖项，因此创建其实例非常简单：
 
-```kt
+```java
 fun main() {
     val vm = ExampleViewModel()
     vm.doSomething()
@@ -60,7 +60,7 @@ fun main() {
 
 为了实现 DI，我们必须创建一个提供`ExampleViewModel`依赖项的组件：
 
-```kt
+```java
 object DependencyContainer {
     val repo: Repository = Repository()
 }
@@ -74,7 +74,7 @@ object DependencyContainer {
 
 回到实现 DI，我们接下来必须允许`DependencyContainer`为`ExampleViewModel`提供一个`Repository`实例：
 
-```kt
+```java
 class ExampleViewModel {
     private val repository: Repository = 
         DependencyContainer.repo
@@ -98,7 +98,7 @@ class ExampleViewModel {
 
 为了减轻这些问题，我们首先必须重构`ExampleViewModel`，使其通过其公共 API 向外界暴露其依赖项。最合适的方法是通过其公共`构造函数`：
 
-```kt
+```java
 class ExampleViewModel constructor(private val repo: Repository) {
     fun doSomething() { repo.use() }
 }
@@ -108,7 +108,7 @@ class ExampleViewModel constructor(private val repo: Repository) {
 
 当我们需要实例化`ExampleViewModel`时，`DependencyContainer`将提供它所需的依赖项：
 
-```kt
+```java
 fun main() {
     val repoDependency = DependencyContainer.repository
 val vm = ExampleViewModel(repoDependency)
@@ -152,7 +152,7 @@ DI 并非所有项目都必须使用。到目前为止，我们的餐厅应用�
 
 让我们回到我们的餐厅应用，看看我们如何在`RestaurantsRepository`类中实例化 Retrofit 接口：
 
-```kt
+```java
 class RestaurantsRepository {
     private var restInterface: RestaurantsApiService =
         Retrofit.Builder()
@@ -167,7 +167,7 @@ class RestaurantsRepository {
 
 现在，让我们看看我们如何在`RestaurantsDetailsViewModel`类中类似地实例化 Retrofit 接口：
 
-```kt
+```java
 class RestaurantDetailsViewModel(…): ViewModel() {
     private var restInterface: RestaurantsApiService
     [...]
@@ -198,7 +198,7 @@ DI 将帮助我们集中管理此类基础设施代码，并将消除在整个�
 
 假设我们想要测试`RestaurantsRepository`的行为，以确保它按预期执行。但首先，让我们快速查看`RestaurantsRepository`的现有实现：
 
-```kt
+```java
 class RestaurantsRepository {
     private var restInterface: RestaurantsApiService = 
         Retrofit.Builder()
@@ -218,7 +218,7 @@ class RestaurantsRepository {
 
 现在，假设我们想要测试这个`RestaurantsRepository`类，并通过运行不同的验证来确保它表现正确。让我们想象这样一个测试类会是什么样子：
 
-```kt
+```java
 class RestaurantsRepositoryTest {
     @Test
     fun repository_worksCorrectly() {
@@ -253,7 +253,7 @@ class RestaurantsRepositoryTest {
 
 这是有道理的，因为如果我们再次查看`RestaurantsRepository`，我们可以看到为了获取`restaurantsDao`实例，`Repository`调用`RestaurantsDb.getDaoInstance()`来初始化 Room 数据库，而这需要`Context`实例来完成：
 
-```kt
+```java
 class RestaurantsRepository {
     […]
     private var restaurantsDao = RestaurantsDb
@@ -316,7 +316,7 @@ Dagger Hilt 需要知道我们希望它为我们提供的实例类型。当我�
 
 假设在我们用于手动 DI 示例的 `main()` 函数中，我们不再想使用手动 DI 来获取 `ExampleViewModel` 的实例。相反，我们希望 Dagger 实例化这个类。这就是为什么我们将 `ExampleViewModel` 变量用 Java 的 `@Inject` 注解，并避免自己实例化 `ViewModel` 类。现在，Dagger Hilt 应该为我们做这件事：
 
-```kt
+```java
 import javax.inject.Inject
 @Inject
 val vm: ExampleViewModel
@@ -329,7 +329,7 @@ fun main() {
 
 由于 `ExampleViewModel` 的依赖项位于构造函数中（从我们使用手动构造函数注入时开始），我们可以直接在 `constructor` 上添加 `@Inject` 注解：
 
-```kt
+```java
 class ExampleViewModel @Inject constructor(private val repo:Repository) {
     fun doSomething() { repo.use() }
 }
@@ -339,7 +339,7 @@ class ExampleViewModel @Inject constructor(private val repo:Repository) {
 
 让我们假设 `Repository` 只有一个依赖项，一个 `Retrofit` 构造函数变量。为了使 Dagger 知道如何注入 `Repository` 类，我们必须用 `@Inject` 注解其构造函数：
 
-```kt
+```java
 class Repository @Inject constructor(val retrofit: Retrofit){
     fun use() { retrofit.baseUrl() }
 }
@@ -353,7 +353,7 @@ class Repository @Inject constructor(val retrofit: Retrofit){
 
 `@Module`允许我们指导 Dagger Hilt 如何提供依赖。例如，我们需要 Dagger Hilt 为我们提供`Repository`中的`Retrofit`实例，因此我们可以定义一个`DataModule`类，告诉 Dagger Hilt 如何这样做：
 
-```kt
+```java
 @Module
 object DataModule {
     @Provides
@@ -379,14 +379,14 @@ object DataModule {
 
 使用 Dagger Hilt，你可以使用`@DefineComponent`注解定义一个组件：
 
-```kt
+```java
 @DefineComponent()
 interface MyCustomComponent(…) { /* component build code */ }
 ```
 
 然后，我们可以在该组件中安装我们的`DataModule`：
 
-```kt
+```java
 @Module
 @InstallIn(MyCustomComponent::class)
 object DataModule {
@@ -425,7 +425,7 @@ object DataModule {
 
 1.  在项目级别的 `build.gradle` 文件中，在 `dependencies` 块内，添加 Hilt-Android Gradle 依赖项：
 
-    ```kt
+    ```java
     buildscript {
         ...
         dependencies {
@@ -438,7 +438,7 @@ object DataModule {
 
 1.  在应用级别的 `build.gradle` 文件中移动，在 `plugins` 块内添加 Dagger Hilt 插件：
 
-    ```kt
+    ```java
     plugins {
         […]
         id 'kotlin-kapt'
@@ -448,7 +448,7 @@ object DataModule {
 
 1.  仍然在应用级别的 `build.gradle` 中，在 `dependencies` 块内，添加 Android-Hilt 依赖项：
 
-    ```kt
+    ```java
     dependencies {
         […]
         implementation "com.google.dagger:hilt-
@@ -463,7 +463,7 @@ object DataModule {
 
 1.  使用 `@HiltAndroidApp` 注解标注 `RestaurantsApplication` 类：
 
-    ```kt
+    ```java
     @HiltAndroidApp
     class RestaurantsApplication: Application() { […] }
     ```
@@ -488,7 +488,7 @@ object DataModule {
 
 为了有一个起点，让我们看看 `RestaurantsScreen()` 目的地中的 `RestaurantsApp()` 组合函数，看看我们首先需要注入什么：
 
-```kt
+```java
 @Composable
 private fun RestaurantsApp() {
    val navController = rememberNavController()
@@ -508,7 +508,7 @@ private fun RestaurantsApp() {
 
 1.  由于我们无法在组合函数内部添加 `@Inject` 注解，我们必须使用一个特殊的组合函数来注入 `ViewModel`。为此，首先，在应用级别的 `build.gradle` 文件的 `dependencies` 块中添加 `hilt-navigation-compose` 依赖项：
 
-    ```kt
+    ```java
     dependencies {
         […]
         implementation "com.google.dagger:hilt-
@@ -523,7 +523,7 @@ private fun RestaurantsApp() {
 
 1.  然后，回到 `RestaurantsApp()` 组合函数内部，在我们的 `RestaurantsScreen()` 组合函数的 DSL `composable()` 目标中，将 `RestaurantsViewModel` 的 `viewModel()` 构造函数替换为 `hiltViewModel()` 组合函数：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantsApp() {
        val navController = rememberNavController()
@@ -543,7 +543,7 @@ private fun RestaurantsApp() {
 
 1.  由于现在我们的组合层次结构在 Hilt 的帮助下在某个点注入了一个 `ViewModel`，我们必须使用 `@AndroidEntryPoint` 注解来注释 `RestaurantsApp()` 根组合函数的宿主 Android 组件。在我们的例子中，`RestaurantsApp()` 组合函数由 `MainActivity` 类托管，因此我们必须使用 `@AndroidEntryPoint` 注解来注释它：
 
-    ```kt
+    ```java
     @AndroidEntryPoint
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
@@ -559,7 +559,7 @@ private fun RestaurantsApp() {
 
 1.  在 `RestaurantsViewModel` 类中，首先将其重构为通过将其移动到其构造函数中来显式声明其依赖项，从而通过构造函数注入提高可测试性：
 
-    ```kt
+    ```java
     class RestaurantsViewModel constructor(
        private val getRestaurantsUseCase: 
            GetInitialRestaurantsUseCase,
@@ -575,7 +575,7 @@ private fun RestaurantsApp() {
 
 1.  为了让 Hilt 帮我们注入 `RestaurantsViewModel`，用 `@HiltViewModel` 注解标记 `ViewModel`，同时用 `@Inject` 注解其构造函数，以便 Hilt 理解 `ViewModel` 的哪些依赖项必须由 Hilt 提供：
 
-    ```kt
+    ```java
     @HiltViewModel
     class RestaurantsViewModel @Inject constructor(
        private val getRestaurantsUseCase: […] ,
@@ -599,7 +599,7 @@ private fun RestaurantsApp() {
 
 1.  让我们先确保 Hilt 知道如何将 `GetInitialRestaurantsUseCase` 注入到 `RestaurantsViewModel` 中。在 `GetInitialRestaurantsUseCase` 类中，将其依赖项移动到构造函数中，并用 `@Inject` 标记，就像我们对 `RestaurantsViewModel` 做的那样：
 
-    ```kt
+    ```java
     class GetInitialRestaurantsUseCase @Inject constructor(
         private val repository: RestaurantsRepository,
         private val getSortedRestaurantsUseCase: 
@@ -616,7 +616,7 @@ private fun RestaurantsApp() {
 
 我们需要确保 Hilt 知道如何提供 `RestaurantsRepository` 的实例。我们可以看到，它的依赖项是 `RestaurantsApiService`（Retrofit 接口）和 `RestaurantsDao`（Room 数据访问对象接口）：
 
-```kt
+```java
 class RestaurantsRepository {
     private var restInterface: RestaurantsApiService =
         Retrofit.Builder()
@@ -636,7 +636,7 @@ class RestaurantsRepository {
 
 1.  展开 `restaurants` 包，然后在 `data` 包上右键单击，创建一个名为 `di`（代表依赖注入）的新包。在这个包内部，创建一个名为 `RestaurantsModule` 的新 `object` 类，并在其中添加以下代码：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     object RestaurantsModule { }
@@ -652,7 +652,7 @@ class RestaurantsRepository {
 
 添加一个带有 `@Provides` 注解的 `provideRoomDatabase` 方法，该方法将指导 Hilt 如何通过从 `RestaurantsDb` 类的 `companion object` 中借用部分 `database` 类的实例化代码来提供一个 `RestaurantsDb` 对象：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 object RestaurantsModule {
@@ -678,7 +678,7 @@ object RestaurantsModule {
 
 1.  现在，Hilt 知道为我们提供 `RestaurantsDb`，我们可以创建另一个 `@Provides` 方法，该方法接受一个 `RestaurantsDb` 变量（Hilt 将知道如何提供）并返回一个 `RestaurantsDao` 实例：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     object RestaurantsModule {
@@ -697,7 +697,7 @@ object RestaurantsModule {
 
 1.  仍然在 `RestaurantsModule` 中，我们现在必须告诉 Hilt 如何为我们提供一个 `RestaurantsApiService` 的实例。像之前一样操作，但这次添加一个为 `Retrofit` 实例的 `@Provides` 方法，以及一个为 `RestaurantsApiService` 实例的 `@Provides` 方法。现在，`RestaurantsModule` 应该看起来像这样：
 
-    ```kt
+    ```java
     @Module
     @InstallIn(SingletonComponent::class)
     object RestaurantsModule {
@@ -730,7 +730,7 @@ object RestaurantsModule {
 
 1.  现在 Hilt 知道如何提供 `RestaurantsRepository` 的两个依赖项，让我们回到 `RestaurantsRepository` 类，并使用 Hilt 应用构造函数注入，通过在构造函数上添加 `@Inject` 注解，并将其 `RestaurantsApiService` 和 `RestaurantsDao` 依赖项移动到构造函数中：
 
-    ```kt
+    ```java
     @Singleton
     class RestaurantsRepository @Inject constructor(
         private val restInterface: RestaurantsApiService,
@@ -747,7 +747,7 @@ object RestaurantsModule {
 
 1.  现在 Hilt 知道如何注入 `RestaurantsRepository`，让我们回到 `GetInitialRestaurantsUseCase` 的其他剩余依赖项：`GetSortedRestaurantsUseCase` 类。进入这个类，并确保通过将 `repository` 变量移动到构造函数中（就像我们之前对其他类所做的那样）来注入其依赖项：
 
-    ```kt
+    ```java
     class GetSortedRestaurantsUseCase @Inject constructor(
         private val repository: RestaurantsRepository
     ) {
@@ -764,7 +764,7 @@ object RestaurantsModule {
 
 1.  接下来，让我们告诉 Hilt 如何为 `RestaurantsViewModel` 的第二个和最后一个依赖项 `ToggleRestaurantUseCase` 类提供依赖项。进入这个类，并确保通过将 `repository` 和 `getSortedRestaurantsUseCase` 变量移动到构造函数中（就像我们之前对其他类所做的那样）来注入其依赖项：
 
-    ```kt
+    ```java
     class ToggleRestaurantUseCase @Inject constructor(
         private val repository: RestaurantsRepository,
     private val getSortedRestaurantsUseCase: 
@@ -781,7 +781,7 @@ object RestaurantsModule {
 
 1.  可选地，你可以进入 `RestaurantsDb` 类并删除负责为我们 `RestaurantsDao` 提供单例实例的整个 `companion object`。现在，`RestaurantsDb` 类应该更加精简，看起来应该是这样的：
 
-    ```kt
+    ```java
     @Database(
         entities = [LocalRestaurant::class],
         version = 3,
@@ -798,7 +798,7 @@ object RestaurantsModule {
 
 `RestaurantsApplication` 类应该更加精简，看起来应该是这样的：
 
-```kt
+```java
 @HiltAndroidApp
 class RestaurantsApplication: Application()
 ```

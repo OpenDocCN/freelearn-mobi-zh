@@ -90,7 +90,7 @@ List 是使用最广泛的集合数据类型之一。它是一个`Collection`接
 
 `listOf`函数声明如下（可以在`Collections.kt`中的`kotlin.collections`包内找到）：
 
-```kt
+```java
 public fun <T> listOf(vararg elements: T): List<T> 
 ```
 
@@ -98,7 +98,7 @@ public fun <T> listOf(vararg elements: T): List<T>
 
 以下程序是`listOf`函数的一个示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
  val list = listOf<Int>(1,2,3,4,5,6,7,8,9,10) 
 
@@ -122,7 +122,7 @@ fun main(args: Array<String>) {
 
 让我们逐一分析以下程序：
 
-```kt
+```java
 fun main(args: Array<String>) { 
  val emptyList1 = listOf<Any>() val emptyList2 = emptyList<Any>() 
 
@@ -141,7 +141,7 @@ fun main(args: Array<String>) {
 
 以下示例将帮助您理解不可变列表：
 
-```kt
+```java
 fun main(args: Array<String>) { 
  val list = mutableListOf(1,2,4)//(1) 
 
@@ -175,7 +175,7 @@ fun main(args: Array<String>) {
 
 因此，我们在`list`数组中添加了元素，并通过`for`循环访问所有项目，但如何访问单个元素呢？让我们通过以下示例来了解如何在 Kotlin 中访问和修改单个元素。请看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = listOf( 
             "1st Item", 
@@ -216,7 +216,7 @@ fun main(args: Array<String>) {
 
 以下是一个使用 `MutableSet` 的示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val set = mutableSetOf(1,2,3,3,2) 
 
@@ -239,7 +239,7 @@ fun main(args: Array<String>) {
 
 现在，你可能很好奇，这与自定义类和数据类会发生什么；让我们通过以下示例来检查：
 
-```kt
+```java
 data class MyDataClass (val someNumericValue:Int, val someStringValue:String)
 class MyCustomClass (val someNumericValue:Int, val someStringValue:String) {
     override fun toString(): String {
@@ -294,7 +294,7 @@ fun main(args: Array<String>) {
 
 因此，如果我们实现这些函数，那么 `set` 也将能够区分 `customClassSet` 值中的重复项。显然，这对于数据类也是这样工作的。只需将以下代码添加到 `MyCustomClass` 定义中并运行程序，自己看看效果：
 
-```kt
+```java
 override fun hashCode() = someStringValue.hashCode()+someNumericValue.hashCode() 
 
     override fun equals(other: Any?): Boolean { 
@@ -344,7 +344,7 @@ Kotlin 中`Map`的声明读起来像接口`Map<K, out V>`，`K`值是键的泛�
 
 让我们通过以下示例进行说明：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val map = mapOf( 
             "One".to(1), 
@@ -429,7 +429,7 @@ Kotlin 支持其所有集合框架接口、对象和类的数据操作函数。�
 
 以下是一个示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = listOf<Int>(1,2,3,4,5,6,7,8,9,10) 
     val modifiedList = list.map { it*2 } 
@@ -454,7 +454,7 @@ fun main(args: Array<String>) {
 
 以下是一个程序示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = 1.until(50).toList()//(1) 
     val filteredListEven = list.filter { it%2==0 }//(2) 
@@ -486,7 +486,7 @@ fun main(args: Array<String>) {
 
 看看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = listOf(10,20,30) 
 
@@ -508,7 +508,7 @@ fun main(args: Array<String>) {
 
 可能存在一些场景，当你想要丢弃集合的一部分（比如说，前 5 个或最后 10 个）并处理剩余的部分时。Kotlin 的集合框架为你提供了一组`drop`函数，这些函数可以帮助你在这些场景下。看看以下程序：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = 1.until(50).toList() 
 
@@ -531,7 +531,7 @@ fun main(args: Array<String>) {
 
 看看以下程序：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = 1.until(50).toList() 
 
@@ -558,7 +558,7 @@ fun main(args: Array<String>) {
 
 `zip`函数确实如其名所示，它将集合“压缩”在一起。令人困惑？让我们看看以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list1 = listOf(1,2,3,4,5) 
     val list2 = listOf( 
@@ -587,7 +587,7 @@ fun main(args: Array<String>) {
 
 让我们再举一个例子。看看以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list1 = listOf(1,2,3,4,5,6,7,8) 
     val list2 = listOf( 
@@ -622,7 +622,7 @@ Kotlin 的集合框架允许您根据需求对集合进行分组。例如，如�
 
 因此，以下是一个简短的示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val list = 1.rangeTo(50).toList() 
 

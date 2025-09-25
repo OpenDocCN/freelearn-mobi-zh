@@ -26,7 +26,7 @@ Retrofit 是由 Square 开发的 Android、Java 和 Kotlin 的 Type-safe REST �
 
 首先，我们将使用我们新创建的版本目录添加 Retrofit 依赖项。让我们在`libs.versions.toml`文件中定义版本，如下所示：
 
-```kt
+```java
 retrofit = "2.9.0"
 retrofitSerializationConverter = "1.0.0"
 serializationJson = "1.5.1"
@@ -36,7 +36,7 @@ okhttp3 = "4.11.0"
 
 接下来，让我们在版本目录的库部分中定义`libs.versions.toml`文件中的库，如下所示：
 
-```kt
+```java
 retrofit = { module = "com.squareup.retrofit2:retrofit" , version.ref = "retrofit" }
 retrofit-serialization = { module = "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter", version.ref = "retrofitSerializationConverter" }
 coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" , version.ref = "coroutines" }
@@ -69,7 +69,7 @@ okhttp3 = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 
 所有这些依赖项都将一起添加，因此这是我们可以在我们的 `libs.versions.toml` 文件中将它们分组的机会，在 Koin 包下面添加此包：
 
-```kt
+```java
 networking = ["retrofit", "retrofit-serialization", "serialization-json", "coroutines", "coroutines-android"]
 ```
 
@@ -77,25 +77,25 @@ networking = ["retrofit", "retrofit-serialization", "serialization-json", "corou
 
 首先，在我们的项目级别 `build.gradle.kts` 文件中，我们需要添加 Kotlinx 序列化插件。打开项目级别的 `build.gradle.kts` 文件，并在插件块中添加以下内容：
 
-```kt
+```java
 id("org.jetbrains.kotlin.plugin.serialization") version "1.8.20" apply false
 ```
 
 我们定义了 Kotlinx 序列化插件并指定了要使用的版本。这将为我们设置 Kotlinx 序列化插件。该插件为可序列化类生成 Kotlin 代码。我们将使用此插件来生成我们的模型。接下来，让我们在我们的应用模块中设置此插件。打开应用级别的 `build.gradle.kts` 文件，并在插件块中添加以下内容：
 
-```kt
+```java
 id("kotlinx-serialization")
 ```
 
 这确保了我们的模块已设置好以使用 Kotlinx 序列化插件。接下来，我们将添加我们的 `networking` 包到我们的应用模块中。在应用级别的 `build.gradle.kts` 文件中，添加以下内容：
 
-```kt
+```java
 implementation(libs.bundles.networking)
 ```
 
 这将添加我们在 `networking` 包中指定的所有依赖项。完成所有这些后，我们的项目已设置好以使用 Retrofit。我们将使用 Koin 创建一个 Retrofit 实例，该实例将被注入到需要它的类中。让我们转到 `Module.kt` 文件并添加 `PetsViewModel` 定义：
 
-```kt
+```java
 single {
     Retrofit.Builder()
         .addConverterFactory(
@@ -108,7 +108,7 @@ single {
 
 在前面的代码中，我们使用 Retrofit 构建器创建了 Retrofit 实例。我们还添加了一个使用 Kotlinx 序列化来将 Kotlin 对象转换为 JSON 并从 JSON 转换回 Kotlin 对象的转换器工厂。我们还指定了我们的 API 的基本 URL。我们使用 `CatsAPI.kt` 并添加以下方法：
 
-```kt
+```java
 @GET("cats")
 suspend fun fetchCats(
     @Query("tag") tag: String,
@@ -131,7 +131,7 @@ suspend fun fetchCats(
 
 回到我们的`fetchCats()`函数，你可以注意到我们使用了`@Query`注解来指定请求的查询参数。我们使用`tag`查询参数来指定我们想要获取的猫的类型。我们还使用了`suspend`关键字来指定这个方法将从协程或另一个`suspend`函数中被调用。我们将在本章的*Kotlin 协程简介*部分稍后了解更多关于协程的内容。我们还使用了`Response`类来封装我们的响应。这个类由 Retrofit 提供，它包含了 HTTP 响应元数据，如响应代码、头信息和原始响应体。我们还指定响应将是一个`Cat`对象的列表。Retrofit 会将响应映射到一个`Cat`对象的列表。为了解决`Cat`数据类的错误，让我们创建它。在数据包内创建一个新的 Kotlin 数据类，命名为`Cat.kt`，并添加以下内容：
 
-```kt
+```java
 @Serializable
 data class Cat(
     @SerialName ("createdAt")
@@ -151,7 +151,7 @@ data class Cat(
 
 在我们的项目中，我们使用 Koin 进行依赖注入。因此，我们现在需要在我们的 Koin 模块中创建`CatsAPI`类的实例。让我们回到`Module.kt`文件，并在 Retrofit 实例下面添加以下内容：
 
-```kt
+```java
 single { get<Retrofit>().create(CatsAPI::class.java) }
 ```
 
@@ -205,7 +205,7 @@ JetBrains 为 Kotlin 引入的协程提供了一种以更可读和同步的方�
 
 让我们首先创建一个`NetworkResult`密封类，它将表示我们的网络请求的不同状态：
 
-```kt
+```java
 sealed class NetworkResult<out T> {
     data class Success<out T>(val data: T) : NetworkResult<T>()
     data class Error(val error: String) : NetworkResult<Nothing>()
@@ -216,7 +216,7 @@ sealed class NetworkResult<out T> {
 
 接下来，让我们按照以下方式修改`PetsRepository`：
 
-```kt
+```java
 interface PetsRepository {
     suspend fun getPets(): NetworkResult<List<Cat>>
 }
@@ -224,7 +224,7 @@ interface PetsRepository {
 
 我们已更新界面以使用`NetworkResult`类。我们还将`getPets()`函数标记为`suspend`函数。我们将使用此方法从 API 获取猫。接下来，让我们修改`PetsRepositoryImpl`以添加来自`PetsRepository`的更改：
 
-```kt
+```java
 class PetsRepositoryImpl(
     private  val catsAPI: CatsAPI,
     private val dispatcher: CoroutineDispatcher
@@ -262,14 +262,14 @@ class PetsRepositoryImpl(
 
 在我们的 Koin 模块中，我们还需要更改我们实例化我们的仓库的方式。让我们转到`Module.kt`并更新`PetsRepository`定义如下：
 
-```kt
+```java
 single<PetsRepository> { PetsRepositoryImpl(get(), get()) }
 single { Dispatchers.IO }
 ```
 
 我们将 `CatsAPI` 实例和 `dispatcher` 注入到我们的仓库中。我们还声明 `dispatcher` 为一个单例实例。现在我们需要修改我们的 `PetsViewModel` 以适应这些更改。首先，我们需要创建一个状态类来保存我们的网络请求状态并将其暴露给我们的视图。在 `view` 包中创建一个新的 Kotlin 数据类，命名为 `PetsUIState.kt`：
 
-```kt
+```java
 data class PetsUIState(
     val isLoading: Boolean = false,
     val pets: List<Cat> = emptyList(),
@@ -287,13 +287,13 @@ data class PetsUIState(
 
 接下来，在 `PetsViewModel` 中，让我们创建一个变量来保存我们的网络请求状态：
 
-```kt
+```java
 val petsUIState = MutableStateFlow(PetsUIState())
 ```
 
 我们使用 `MutableStateFlow` 类来保存我们的网络请求状态。`MutableStateFlow` 允许我们更新状态的值。我们用空的 `PetsUIState` 对象初始化它。接下来，让我们更新 `getPets()` 方法如下：
 
-```kt
+```java
 private fun getPets() {
     petsUIState.value = PetsUIState(isLoading = true)
     viewModelScope.launch {
@@ -323,7 +323,7 @@ private fun getPets() {
 
 在 `PetsViewModel` 中，让我们添加一个新的 `init` 块，该块将调用 `getPets()` 函数：
 
-```kt
+```java
 init {
     getPets()
 }
@@ -331,19 +331,19 @@ init {
 
 这将确保在创建 `ViewModel` 时调用 `getPets()` 函数。我们现在需要更新我们的 `PetList` 可组合组件以适应这些更改，我们还将添加更多的 UI 组件，因为我们需要显示加载状态、图片和错误信息。让我们首先添加一个允许我们从 URL 加载图片的库。我们将使用 Coil ([`coil-kt.github.io/coil/`](https://coil-kt.github.io/coil/))，这是一个图像加载库。在版本目录中，让我们添加以下内容：
 
-```kt
+```java
 coil-compose = "io.coil-kt:coil-compose:2.4.0"
 ```
 
 我们还将向 `compose` 包添加 `coil-compose` 依赖项，以便它可以与其他 compose 库一起提供。更新的 `compose` 包将如下所示：
 
-```kt
+```java
 compose = ["compose.ui", "compose.ui.graphics", "compose.ui.tooling", "compose.material3", "compose.viewmodel", "coil-compose"]
 ```
 
 现在，让我们在名为 `PetListItem.kt` 的 `view` 包中创建一个新的可组合组件，用于显示每只猫的图片和标签，并添加以下内容：
 
-```kt
+```java
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PetListItem(cat: Cat) {
@@ -389,7 +389,7 @@ fun PetListItem(cat: Cat) {
 
 接下来，让我们更新我们的`PetList`可组合组件以适应这些更改。在`PetList.kt`文件中，更新`PetList`可组合组件如下：
 
-```kt
+```java
 @Composable
 fun PetList(modifier: Modifier) {
     val petsViewModel: PetsViewModel = koinViewModel()
@@ -433,13 +433,13 @@ fun PetList(modifier: Modifier) {
 
 `collectAsStateWithLifecycle()`显示了一个错误，因为我们还没有添加其依赖项。让我们将其添加到版本目录中的库部分，如下所示：
 
-```kt
+```java
 compose-lifecycle = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 ```
 
 我们还将将其添加到我们的`compose`包中，以便它可以与其他`compose`库一起提供。更新后的`compose`包如下所示：
 
-```kt
+```java
 compose = ["compose.ui", "compose.ui.graphics", "compose.ui.tooling", "compose.material3", "compose.viewmodel", "coil-compose", "compose-lifecycle"]
 ```
 
@@ -447,7 +447,7 @@ compose = ["compose.ui", "compose.ui.graphics", "compose.ui.tooling", "compose.m
 
 我们已经完成了所有层的更新，以使用新的协程方法。到目前为止做得很好！最后一件事：由于我们的应用现在是从在线托管 API 中获取这些项目，我们需要向我们的应用添加`INTERNET`权限。打开`AndroidManifest.xml`文件，并添加以下内容：
 
-```kt
+```java
 <uses-permission android:name="android.permission.INTERNET" />
 ```
 

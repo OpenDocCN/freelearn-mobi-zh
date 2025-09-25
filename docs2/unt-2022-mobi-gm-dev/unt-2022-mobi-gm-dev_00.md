@@ -77,7 +77,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 public void ShowNotification(string title, string body,
                                 DateTime deliveryTime)
 {
@@ -97,7 +97,7 @@ public void ShowNotification(string title, string body,
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 ShowNotification("Endless Runner", notifText, notifTime);
         // Example of cancelling a notification
 var id = ShowNotification("Test", "Should Not Happen", 
@@ -114,7 +114,7 @@ var id = ShowNotification("Test", "Should Not Happen",
 
 任何命令行输入或输出都按照以下方式编写：
 
-```kt
+```java
 $ mkdir css
 $ cd css
 ```

@@ -36,14 +36,14 @@
 
 假设我们有一个以下类，它是一种应用视图层的控制器：
 
-```kt
+```java
 class RegistrationScreen : Activity() {
     private val submitButton: Button by lazy { findViewById(R.id.submit_button) }  
 
     override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
         // hook function called once the screen is displayed
     }
 }
@@ -53,7 +53,7 @@ class RegistrationScreen : Activity() {
 
 为了在按钮点击时执行某些操作，我们需要在 `View` 子类上调用 `View.setOnClickListener(listener: OnClickListener)` 函数。`OnClickListener` 是一个如下定义的函数式接口：
 
-```kt
+```java
 public interface OnClickListener {
     void onClick(View view);
 }
@@ -65,7 +65,7 @@ public interface OnClickListener {
 
 +   定义实现接口的对象：
 
-```kt
+```java
 val myInterfaceInstance = object: MyInterface {
     override fun foo() {
         // foo function body
@@ -75,7 +75,7 @@ val myInterfaceInstance = object: MyInterface {
 
 +   将接口作为函数处理并实现它，例如，以 lambda 的形式：
 
-```kt
+```java
 val myInterfaceAsFunction: () -> Unit = { 
     // foo function body
 }
@@ -85,7 +85,7 @@ val myInterfaceAsFunction: () -> Unit = {
 
 1.  调用 `setOnClickListener` 函数，并传递一个空的 `OnClickListener` 实例作为 lambda 表达式：
 
-```kt
+```java
 class RegistrationScreen : Activity() {
     private val submitButton: Button by lazy { findViewById(R.id.submit_button) }  
 
@@ -99,7 +99,7 @@ class RegistrationScreen : Activity() {
 
 1.  在函数体内部修改 `submitButton` 实例的可见性：
 
-```kt
+```java
 class RegistrationScreen : Activity() {
     private val submitButton: Button by lazy { findViewById(R.id.submit_button) }  
 
@@ -117,7 +117,7 @@ class RegistrationScreen : Activity() {
 
 Lambda 表达式是语言中最基本的函数特性之一，在标准库组件中被广泛使用。它们可以看作是函数或函数式接口实现的缩写形式。Lambda 帮助正确组织代码并减少大量样板代码。lambda 表达式的语法可以看作是放置在 `{` `}` 符号之间的代码块。Lambda 表达式可以显式定义函数参数，例如：
 
-```kt
+```java
 val myFunction: (View) -> Unit = { view ->
    view.visibility = View.INVISIBLE
 }
@@ -125,7 +125,7 @@ val myFunction: (View) -> Unit = { view ->
 
 为了简洁起见，可以省略显式参数。然而，我们仍然可以使用 `it` 修饰符来访问它：
 
-```kt
+```java
 val myFunction: (View) -> Unit = { 
    it.visibility = View.INVISIBLE
 }
@@ -135,7 +135,7 @@ val myFunction: (View) -> Unit = {
 
 当与 lambda 一起工作时，每次我们想要执行它们体内的代码时，我们都需要在它们上调用 `invoke()` 函数或其等效的 `()` 操作符：
 
-```kt
+```java
 val callback: () -> Unit = { println("The job is done!") }
 callback.invoke()
 callback()
@@ -143,14 +143,14 @@ callback()
 
 上述代码将打印文本两次：
 
-```kt
+```java
 "The job is done!"
 "The job is done!"
 ```
 
 还有另一种将函数作为参数传递给其他函数的简洁方式。我们可以使用函数引用来完成：
 
-```kt
+```java
 fun hideView(view: View): Unit  {
     view.visibility = View.INVISIBLE
 }
@@ -168,13 +168,13 @@ submitButton.setOnClickListener(::hideView)
 
 假设我们可以使用以下函数获取日期：
 
-```kt
+```java
 fun getPlayers(): List<Player>? 
 ```
 
 这里，`Player` 类是这样定义的：
 
-```kt
+```java
 data class Player(val name: String, val bestScore: Int)
 ```
 
@@ -190,7 +190,7 @@ data class Player(val name: String, val bestScore: Int)
 
 为了完成这个任务，首先，我们需要熟悉 `let`、`also` 和 `apply` 函数的特性。它们作为泛型类型的扩展函数提供在标准库中。让我们探索 `let`、`also` 和 `apply` 函数的头部：
 
-```kt
+```java
 public inline fun <T, R> T.let(block: (T) -> R): R
 
 public inline fun <T> T.also(block: (T) -> Unit): T
@@ -210,13 +210,13 @@ public inline fun <T> T.apply(block: T.() -> Unit): T
 
 1.  将 `let` 函数与安全运算符一起使用以确保空安全：
 
-```kt
+```java
 getPlayers()?.let {}
 ```
 
 1.  在 `let` 函数的 lambda 参数块内部，使用 `also()` 函数将列表中的原始玩家集打印到控制台：
 
-```kt
+```java
 getPlayers()?.let {
  it.also {
         println("${it.size} players records fetched")
@@ -227,7 +227,7 @@ getPlayers()?.let {
 
 1.  使用 `let()` 函数执行排序和映射转换：
 
-```kt
+```java
 getPlayers()?.let {
     it.also {
         println("${it.size} players records fetched")
@@ -239,7 +239,7 @@ getPlayers()?.let {
 
 1.  使用 `let()` 函数将玩家集合限制为具有最高分数的单个 `Player` 实例：
 
-```kt
+```java
 getPlayers()?.let {
     it.also {
         println("${it.size} players records fetched")
@@ -253,7 +253,7 @@ getPlayers()?.let {
 
 1.  将最佳玩家的名字打印到控制台：
 
-```kt
+```java
 getPlayers()?.let {
     it.also {
         println("${it.size} players records fetched")
@@ -273,7 +273,7 @@ getPlayers()?.let {
 
 让我们测试我们的实现。为了测试的目的，我们可以假设 `getPlayers()` 函数返回以下结果：
 
-```kt
+```java
 
 fun getPlayers(): List<Player>? = listOf(
         Player("Stefan Madej", 109),
@@ -283,7 +283,7 @@ fun getPlayers(): List<Player>? = listOf(
 
 我们实现的代码将打印以下输出到控制台：
 
-```kt
+```java
 3 players records fetched
 [Player(name=Stefan Madej, bestScore=109), Player(name=Adam Ondra, bestScore=323), Player(name=Chris Charma, bestScore=239)]
 Best Player: Adam Ondra
@@ -291,7 +291,7 @@ Best Player: Adam Ondra
 
 注意，在 `apply()` 函数的情况下，在函数 lambda 块内部访问类属性和函数时，我们可以省略 `this` 关键字：
 
-```kt
+```java
 apply {
     print("Best Player: $name")
 }
@@ -301,7 +301,7 @@ apply {
 
 `let()` 函数的有用特性是它可以用来确保给定对象的空安全。在以下 `let` 范围内的示例中，即使某些后台线程试图修改可变 `results` 变量的原始值，`players` 参数也始终持有非空值：
 
-```kt
+```java
 var result: List<Player>? = getPlayers()
 result?.let { players: List<Player> ->
     ...
@@ -320,7 +320,7 @@ result?.let { players: List<Player> ->
 
 首先，让我们通过以下函数头探索标准库中定义的 `run()` 函数的特性：
 
-```kt
+```java
 public inline fun <T, R> T.run(block: T.() -> R): R
 ```
 
@@ -330,7 +330,7 @@ public inline fun <T, R> T.run(block: T.() -> R): R
 
 1.  声明`Calendar.Builder`类的实例并将其`run()`函数应用于它：
 
-```kt
+```java
 val calendar = Calendar.Builder().run {
     build()
 }
@@ -338,7 +338,7 @@ val calendar = Calendar.Builder().run {
 
 1.  将所需的属性添加到构建器中：
 
-```kt
+```java
 val calendar = Calendar.Builder().run {
     setCalendarType("iso8601")
  setDate(2018, 1, 18)
@@ -349,7 +349,7 @@ val calendar = Calendar.Builder().run {
 
 1.  将日历中的日期打印到控制台：
 
-```kt
+```java
 val calendar = Calendar.Builder().run {
     setCalendarType("iso8601")
     setDate(2018, 1, 18)
@@ -367,7 +367,7 @@ print(calendar.time)
 
 我们还可以将`run()`函数与安全的`?`运算符一起使用，以提供`run()`函数作用域内`this`关键字引用的对象的 null 安全性。您可以在以下配置 Android `WebView`类的示例中看到它的实际应用：
 
-```kt
+```java
 webview.settings?.run {
     this.javaScriptEnabled = true
     this.domStorageEnabled = false
@@ -388,7 +388,7 @@ Kotlin 被设计为提供对函数的一等支持。例如，我们能够轻松�
 
 实现`measureTime`函数：
 
-```kt
+```java
 fun measureTime(block: () -> Unit): Long {
     val start = System.currentTimeMillis()
     block()
@@ -404,7 +404,7 @@ fun measureTime(block: () -> Unit): Long {
 
 让我们分析以下示例，展示`measureTime()`函数的实际应用。我们可以考虑以下函数负责计算给定整数的阶乘：
 
-```kt
+```java
 fun factorial(n: Int): Long {
     sleep(10)
     return if (n == 1) n.toLong() else n * factorial(n - 1)
@@ -413,7 +413,7 @@ fun factorial(n: Int): Long {
 
 为了测量`factorial()`函数的执行时间，我们可以使用`measureTime()`函数如下：
 
-```kt
+```java
 val duration = measureTime {
     factorial(13)
 }
@@ -422,13 +422,13 @@ print("$duration ms")
 
 结果，我们得到打印到控制台上的执行时间：
 
-```kt
+```java
 154 ms
 ```
 
 注意，也可以将函数引用而不是 lambda 实例作为`measureTime()`函数的参数传递：
 
-```kt
+```java
 fun foo() = sleep(1000)
 val duration = measureTime(::foo)
 print("$duration ms")
@@ -444,13 +444,13 @@ print("$duration ms")
 
 为了理解函数柯里化的概念，让我们考虑以下处理三个参数的函数的示例：
 
-```kt
+```java
 fun foo(a: A, b: B, c: C): D 
 ```
 
 它的柯里化形式看起来是这样的：
 
-```kt
+```java
 fun carriedFoo(a: A): (B) -> (C) -> D 
 ```
 
@@ -462,13 +462,13 @@ fun carriedFoo(a: A): (B) -> (C) -> D
 
 1.  声明`curried()`函数的标题：
 
-```kt
+```java
 fun <P1, P2, P3, R> ((P1, P2, P3) -> R).curried(): (P1) -> (P2) -> (P3) -> R 
 ```
 
 1.  实现函数`curried()`的主体：
 
-```kt
+```java
 fun <P1, P2, P3, R> ((P1, P2, P3) -> R).curried(): (P1) -> (P2) -> (P3) -> R =
         { p1: P1 ->
             { p2: P2 ->
@@ -483,19 +483,19 @@ fun <P1, P2, P3, R> ((P1, P2, P3) -> R).curried(): (P1) -> (P2) -> (P3) -> R =
 
 让我们探索如何在实际中使用`curried()`函数。在以下示例中，我们将对以下函数实例调用`curried()`，该实例负责计算三个整数的和：
 
-```kt
+```java
 fun sum(a: Int, b: Int, c: Int): Int = a + b + c
 ```
 
 为了获得`sum()`函数的柯里化形式，我们必须在它的引用上调用`curried()`函数：
 
-```kt
+```java
 ::sum.curried()
 ```
 
 然后，我们可以以以下方式调用柯里化的求和函数：
 
-```kt
+```java
 val result: Int = ::sum.curried()(1)(2)(3)
 ```
 
@@ -505,7 +505,7 @@ val result: Int = ::sum.curried()(1)(2)(3)
 
 之前的代码可以用更冗长的形式来写，带有显式的类型声明：
 
-```kt
+```java
 val sum3: (a: Int) -> (b: Int) -> (c: Int) -> Int = ::sum.curried()
 val sum2: (b: Int) -> (c: Int) -> Int = sum3(1)
 val sum1: (c: Int) -> Int = sum2(2)
@@ -518,13 +518,13 @@ val result: Int = sum1(3)
 
 有一个类似的模式称为*部分应用*。它比柯里化更灵活，因为它不限制每个函数处理的参数数量。例如，给定一个如下声明的`foo`函数：
 
-```kt
+```java
 fun foo(a: A, b: B, c: C): D 
 ```
 
 我们可以将其转换为以下形式：
 
-```kt
+```java
 fun foo(a: A, c: C) -> (B) -> D
 ```
 
@@ -538,20 +538,20 @@ fun foo(a: A, c: C) -> (B) -> D
 
 为了熟悉函数组合，让我们研究以下示例。假设我们定义了以下函数：
 
-```kt
+```java
 fun length(word: String) = word.length
 fun isEven(x:Int): Boolean = x.rem(2) == 0
 ```
 
 第一个函数负责返回给定字符串的长度。第二个函数检查给定的整数是否为偶数。为了定义一个基于这两个函数的新函数，我们可以进行嵌套函数调用：
 
-```kt
+```java
 fun isCharCountEven(word: String): Boolean = isEven(length(word))
 ```
 
 然而，如果我们能够对函数引用进行操作，那就更好了。为了使其更加简洁，我们希望能够使用以下语法声明`isCharCountEven()`函数，用于函数组合：
 
-```kt
+```java
 val isCharCountEven: (word: String) -> Boolean = ::length and ::isEven
 ```
 
@@ -559,7 +559,7 @@ val isCharCountEven: (word: String) -> Boolean = ::length and ::isEven
 
 1.  声明一个名为`and()`的单参数函数的`infix`扩展函数：
 
-```kt
+```java
 infix fun <P1, R, R2> ((P1) -> R).and(function: (R) -> R2): (P1) -> R2 = {
 
 }
@@ -567,7 +567,7 @@ infix fun <P1, R, R2> ((P1) -> R).and(function: (R) -> R2): (P1) -> R2 = {
 
 1.  内部调用基本函数和`and()`函数的参数：
 
-```kt
+```java
 infix fun <P1, R, R2> ((P1) -> R).and(function: (R) -> R2): (P1) -> R2 = {
     function(this(it))
 }
@@ -577,7 +577,7 @@ infix fun <P1, R, R2> ((P1) -> R).and(function: (R) -> R2): (P1) -> R2 = {
 
 为了探索我们的函数组合实现，让我们使用`and()`函数，通过`length()`属性和`isEven()`函数组合`isCharCountEven()`函数：
 
-```kt
+```java
 fun length(word: String) = word.length
 fun isEven(x:Int): Boolean = x.rem(2) == 0
 val isCharCountEven: (word: String) -> Boolean = ::length and ::isEven
@@ -586,7 +586,7 @@ print(isCharCountEven("pneumonoultramicroscopicsilicovolcanoconiosis"))
 
 上述代码将返回以下输出：
 
-```kt
+```java
 false
 ```
 
@@ -602,13 +602,13 @@ Monad 的概念是函数式编程设计模式之一。我们可以将 Monad 理�
 
 1.  将`Either`声明为一个`sealed`类：
 
-```kt
+```java
 sealed class Either<out E, out V>
 ```
 
 1.  添加两个`Either`的子类，分别表示错误和值：
 
-```kt
+```java
 sealed class Either<out L, out R> {
     data class Left<out L>(val left: L) : Either<L, Nothing>()
     data class Right<out R>(val right: R) : Either<Nothing, R>()
@@ -617,7 +617,7 @@ sealed class Either<out L, out R> {
 
 1.  添加用于方便实例化`Either`的工厂函数：
 
-```kt
+```java
 sealed class Either<out L, out R> {
     data class Left<out L>(val left: L) : Either<L, Nothing>()
     data class Right<out R>(val right: R) : Either<Nothing, R>()
@@ -635,7 +635,7 @@ sealed class Either<out L, out R> {
 
 为了使用`Either`类并从中受益于`Either.right()`和`Either.left()`方法，我们可以实现一个`getEither()`函数，该函数将尝试执行作为参数传递给它的某些操作。如果操作成功，它将返回包含操作结果的`Either.Right`实例，否则，它将返回`Either.Left`，包含一个抛出的异常实例：
 
-```kt
+```java
 fun <V> getEither(action: () -> V): Either<Exception, V> =
         try { Either.right(action()) } catch (e: Exception) { Either.left(e) }
 ```
@@ -646,7 +646,7 @@ fun <V> getEither(action: () -> V): Either<Exception, V> =
 
 `Either` Monad 可以提供的一个基本函数式编程特性，是能够对其值应用函数。我们可以简单地通过`fold()`函数扩展`Either`类，该函数可以接受两个函数作为参数。第一个函数应用于`Either.Left`类型，第二个函数应用于`Either.Right`：
 
-```kt
+```java
 sealed class Either<out L, out R> {
     data class Left<out L>(val left: L) : Either<L, Nothing>()
     data class Right<out R>(val right: R) : Either<Nothing, R>()
@@ -664,20 +664,20 @@ sealed class Either<out L, out R> {
 
 假设我们声明了以下类型：
 
-```kt
+```java
 data class Response(val json: JsonObject)
 data class ErrorResponse(val code: Int, val message: String)
 ```
 
 我们还有一个负责提供后端响应的函数：
 
-```kt
+```java
 fun someGetRequest(): Either<ErrorResponse, Response> = //..
 ```
 
 我们可以使用`fold()`函数以正确的方式处理返回值：
 
-```kt
+```java
 someGetRequest().fold({
     showErrorInfo(it.message)
 }, {
@@ -695,7 +695,7 @@ someGetRequest().fold({
 
 1.  声明一个负责缓存结果的`Memoizer`类：
 
-```kt
+```java
 class Memoizer<P, R> private constructor() {
 
     private val map = ConcurrentHashMap<P, R>()
@@ -716,7 +716,7 @@ class Memoizer<P, R> private constructor() {
 
 1.  为`(P) -> R`函数类型提供一个`memoized()`扩展函数：
 
-```kt
+```java
 fun <P, R> ((P) -> R).memoized(): (P) -> R = Memoizer.memoize<P, R>(this)
 ```
 
@@ -730,13 +730,13 @@ Kotlin 中的底层函数被编译成 Java 字节码中的`FunctionN`接口实�
 
 现在，让我们看看我们如何从`memoized()`函数的实际应用中受益。让我们考虑一个递归计算整数的阶乘的函数：
 
-```kt
+```java
 fun factorial(n: Int): Long = if (n == 1) n.toLong() else n * factorial(n - 1)
 ```
 
 我们可以将`memoized()`扩展函数应用于启用结果缓存：
 
-```kt
+```java
 val cachedFactorial = ::factorial.memoized()
 println(" Execution time: " + measureNanoTime { cachedFactorial(12) } + " ns")
 println(" Execution time: " + measureNanoTime { cachedFactorial(13) } + " ns")
@@ -744,7 +744,7 @@ println(" Execution time: " + measureNanoTime { cachedFactorial(13) } + " ns")
 
 以下代码在标准计算机上给出以下输出：
 
-```kt
+```java
 Execution time: 1547274 ns
 Execution time: 24690 ns
 ```

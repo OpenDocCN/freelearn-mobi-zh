@@ -128,7 +128,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  在应用模块的 `build.gradle` 文件中，在 `dependencies` 块内添加 Room 的依赖项：
 
-    ```kt
+    ```java
     implementation "androidx.room:room-runtime:2.4.2"
     kapt "androidx.room:room-compiler:2.4.2"
     implementation "androidx.room:room-ktx:2.4.2"
@@ -136,7 +136,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  当您仍在 `build.gradle` 文件中时，在 `plugins` 块内添加 Room 的 `kotlin-kapt` 插件：
 
-    ```kt
+    ```java
     plugins {
         id 'com.android.application'
         id 'kotlin-android'
@@ -150,7 +150,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  由于我们想在本地数据库中存储餐厅对象，让我们指示 Room，`Restaurant`数据类是一个必须保存的实体。进入`Restaurant.kt`文件，并在类声明上方添加`@Entity`注解：
 
-    ```kt
+    ```java
     @Entity(tableName = "restaurants")
     data class Restaurant(…)
     ```
@@ -159,7 +159,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  现在，Room 将创建一个以`Restaurant`对象为行的表，是时候定义实体的列（或字段）了。当我们在`Restaurant.kt`类内部时，让我们在每个我们感兴趣的、应该代表列的字段上添加`@ColumnInfo`注解：
 
-    ```kt
+    ```java
     @Entity(tableName = "restaurants")
     data class Restaurant(
         @ColumnInfo(name = "r_id")
@@ -179,7 +179,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  代表表的实体应该有一个主键列，以确保在数据库中的唯一性。为此，我们可以使用从我们的 Firebase 数据库配置为唯一的`id`字段。当仍在`Restaurant.kt`类内部时，让我们在`id`字段上添加`@PrimaryKey`注解：
 
-    ```kt
+    ```java
     @Entity(tableName = "restaurants")
     data class Restaurant(
         @PrimaryKey()
@@ -195,7 +195,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  通过单击应用程序包，选择`RestaurantsDao`作为名称，并选择**接口**作为类型来创建一个 DAO。在新的文件中，添加以下代码：
 
-    ```kt
+    ```java
     import androidx.room.*
     @Dao
     interface RestaurantsDao { }
@@ -205,7 +205,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  在`RestaurantsDao`接口内部，添加两个`suspend`函数，这将帮助我们保存餐厅并从数据库中检索它们：
 
-    ```kt
+    ```java
     @Dao
     interface RestaurantsDao {
         @Query("SELECT * FROM restaurants")
@@ -227,7 +227,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  通过点击应用程序包创建 Room 数据库类。将名称选为`RestaurantsDb`，并将类型选为**文件**。在新的文件中，添加以下代码：
 
-    ```kt
+    ```java
     @Database(
         entities = [Restaurant::class], 
         version = 1, 
@@ -249,7 +249,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  在`RestaurantsDb`类内部，添加一个抽象的`RestaurantsDao`变量：
 
-    ```kt
+    ```java
     @Database(…)
     abstract class RestaurantsDb : RoomDatabase() {
         abstract val dao: RestaurantsDao
@@ -260,7 +260,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  尽管我们声明了一个变量来保存我们的 DAO 对象，我们仍然需要找到一种方法来构建数据库并获取 Room 为我们创建的`RestaurantsDao`实例的引用。在`RestaurantsDb`类内部，添加`companion object`然后添加`buildDatabase`方法：
 
-    ```kt
+    ```java
     @Database(…)
     abstract class RestaurantsDb : RoomDatabase() {
         abstract val dao: RestaurantsDao
@@ -293,7 +293,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 1.  仍然在`RestaurantsDb`类的`companion object`内部，添加以下代码：
 
-    ```kt
+    ```java
     companion object {
         @Volatile
         private var INSTANCE: RestaurantsDao? = null
@@ -326,7 +326,7 @@ Android 内置了 SQLite 数据库实现，允许我们保存结构化数据。
 
 让我们从应用程序类中暴露应用上下文！通过点击应用程序包，将名称设置为`RestaurantsApplication`，并选择**文件**类型来创建应用程序类。在新文件中，添加以下代码：
 
-```kt
+```java
 class RestaurantsApplication: Application() {
     init { app = this }
     companion object {
@@ -341,7 +341,7 @@ class RestaurantsApplication: Application() {
 
 1.  在 `AndroidManifest.xml` 文件中，在 `<application>` 元素内部，添加设置我们的 `RestaurantsApplication` 类为应用程序类的 `android:name` 标识符：
 
-    ```kt
+    ```java
     <application
         android:allowBackup="true"
         android:name=".RestaurantsApplication"
@@ -355,7 +355,7 @@ class RestaurantsApplication: Application() {
 
 1.  在 `RestaurantsViewModel` 类内部，添加一个 `restaurantsDao` 变量。然后，通过静态方法 `RestaurantsDb.getDaoInstance` 实例化它：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(…) : ViewModel() {
         private var restInterface: RestaurantsApiService
         private var restaurantsDao = RestaurantsDb
@@ -370,7 +370,7 @@ class RestaurantsApplication: Application() {
 
 1.  现在我们已经准备好在本地保存餐厅了！当你仍然在 `RestaurantsViewModel` 类中时，在 `getRemoteRestaurants()` 方法中添加这些新行代码：
 
-    ```kt
+    ```java
     private suspend fun getRemoteRestaurants(): 
         List<Restaurant> {
         return withContext(Dispatchers.IO) {
@@ -401,7 +401,7 @@ III. 最后，将餐厅返回到 UI。
 
 1.  让我们利用这样一个事实：当我们离线时，`restinterface.getRestaurants()` 函数调用会抛出异常。这样我们就可以将 `getRemoteRestaurants()` 内部的整个代码块包裹在一个 `try-catch` 块中：
 
-    ```kt
+    ```java
     private suspend fun getRemoteRestaurants():
     List<Restaurant> {
         return withContext(Dispatchers.IO) {
@@ -433,14 +433,14 @@ III. 最后，将餐厅返回到 UI。
 
 将`getRemoteRestaurants()`方法重命名为`getAllRestaurants()`：
 
-```kt
+```java
 private suspend fun getAllRestaurants(): 
     List<Restaurant> {  }
 ```
 
 此外，请记住在启动协程的`getRestaurants()`方法中更改其使用方式：
 
-```kt
+```java
 private fun getRestaurants() {
     viewModelScope.launch(errorHandler) {
         val restaurants = getAllRestaurants()
@@ -469,7 +469,7 @@ private fun getRestaurants() {
 
 这不是一个坏的方法；然而，每次我们标记一家餐厅为收藏时，我们并没有更新 Room 中的对应餐厅。如果我们查看`RestaurantsViewModel`类，并检查其`toggleFavorite()`方法，我们可以看到我们只更新了`state`变量中餐厅的`isFavorite`标志：
 
-```kt
+```java
 fun toggleFavorite(id: Int) {
     val restaurants = state.value.toMutableList()
     val itemIndex = restaurants.indexOfFirst { it.id == id }
@@ -489,7 +489,7 @@ fun toggleFavorite(id: Int) {
 
 1.  通过单击应用程序包，选择`PartialRestaurant`作为名称，并选择**文件**作为类型来创建一个部分实体类。在新的文件中，添加以下代码：
 
-    ```kt
+    ```java
     @Entity
     class PartialRestaurant(
         @ColumnInfo(name = "r_id")
@@ -506,7 +506,7 @@ fun toggleFavorite(id: Int) {
 
 1.  现在，我们的部分实体 `PartialRestaurant` 已经有一个与 `isFavorite` 字段对应的列，是时候也为 `Restaurant` 实体的 `isFavorite` 字段添加一个具有相同值（`"is_favorite"`) 的 `@ColumnInfo()` 注解了：
 
-    ```kt
+    ```java
     @Entity(tableName = "restaurants")
     data class Restaurant(
         …
@@ -524,7 +524,7 @@ fun toggleFavorite(id: Int) {
 
 1.  由于 `isFavorite` 字段现在是 `val`，`RestaurantViewModel` 内部的 `restoreSelections()` 扩展函数已损坏。更新其代码如下：
 
-    ```kt
+    ```java
     private fun List<Restaurant>.restoreSelections(): … {
         stateHandle.[…]let { selectedIds ->
             val restaurantsMap = this.associateBy { it.id }
@@ -545,7 +545,7 @@ fun toggleFavorite(id: Int) {
 
 1.  现在我们已经定义了一个部分实体，我们需要在 DAO 中添加另一个函数，该函数将通过 `PartialRestaurant` 实体更新 `Restaurant` 实体。在 `RestaurantsDao` 中添加 `update()` 函数：
 
-    ```kt
+    ```java
     @Dao
     interface RestaurantsDao {
         …
@@ -575,7 +575,7 @@ ii. 一旦匹配完成，`isFavorite`字段的值被设置为匹配的`Restauran
 
 首先，在`RestaurantsViewModel`内部添加一个新的挂起函数，称为`toggleFavoriteRestaurant()`：
 
-```kt
+```java
 private suspend fun toggleFavoriteRestaurant(id: Int, oldValue: Boolean) =
     withContext(Dispatchers.IO) {
         restaurantsDao.update(
@@ -599,7 +599,7 @@ III. 它构建一个`PartialRestaurant`对象，然后将其传递给之前创�
 
 1.  当你仍然在`RestaurantsViewModel`中时，让`toggleFavorite`方法在其主体末尾启动一个协程。然后，在它内部，调用新的`toggleFavoriteRestaurant()`挂起函数：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int) {
         …
         restaurants[itemIndex] = item.copy(isFavorite =  
@@ -622,7 +622,7 @@ III. 它构建一个`PartialRestaurant`对象，然后将其传递给之前创�
 
 1.  构建并运行应用程序，因为现在是时候测试我们刚刚实现的内容了！不幸的是，应用程序崩溃了。你能想到一个导致这种情况的原因吗？如果我们查看错误的堆栈跟踪，我们将看到以下消息：
 
-    ```kt
+    ```java
     java.lang.IllegalStateException: Room cannot verify the data integrity. Looks like you've changed schema but forgot to update the version number.
     ```
 
@@ -632,7 +632,7 @@ III. 它构建一个`PartialRestaurant`对象，然后将其传递给之前创�
 
 1.  为了减轻这个问题，我们必须增加数据库的`version`号。在`RestaurantsDb`类中，将`version`号从`1`增加到`2`：
 
-    ```kt
+    ```java
     @Database(
         entities = [Restaurant::class],
         version = 2,
@@ -670,7 +670,7 @@ III. 它构建一个`PartialRestaurant`对象，然后将其传递给之前创�
 
 为了识别问题，让我们回到`RestaurantsViewModel`内部，并检查`getAllRestaurants()`方法：
 
-```kt
+```java
 private suspend fun getAllRestaurants(): List<Restaurant> {
     return withContext(Dispatchers.IO) {
         try {
@@ -693,7 +693,7 @@ private suspend fun getAllRestaurants(): List<Restaurant> {
 
 +   我们通过调用`restInterface.getRestaurants()`从服务器加载餐厅。对于这些餐厅，我们没有收到`isFavorite`标志，所以我们自动将其设置为`false`。这是因为我们的`Restaurant`类默认将`isFavorite`的值设置为`false`，如果没有从 Gson 反序列化传递值：
 
-    ```kt
+    ```java
     @Entity(tableName = "restaurants")
     data class Restaurant(
         …
@@ -759,7 +759,7 @@ private suspend fun getAllRestaurants(): List<Restaurant> {
 
 1.  在`RestaurantsViewModel`内部，重构`getAllRestaurants()`函数，使其始终返回 Room 数据库中的餐厅：
 
-    ```kt
+    ```java
     private suspend fun getAllRestaurants(): 
          List<Restaurant> {
         return withContext(Dispatchers.IO) {
@@ -775,7 +775,7 @@ private suspend fun getAllRestaurants(): List<Restaurant> {
 
 将`try { }`块内的内容替换为新的`refreshCache()`方法：
 
-```kt
+```java
 return withContext(Dispatchers.IO) {
     try {
         refreshCache()
@@ -786,7 +786,7 @@ return withContext(Dispatchers.IO) {
 
 1.  此外，我们想要定义`refreshCache()`函数，从远程服务器获取餐厅并将它们缓存到本地数据库中，从而刷新其内容：
 
-    ```kt
+    ```java
     private suspend fun refreshCache() {
         val remoteRestaurants = restInterface
             .getRestaurants()
@@ -798,7 +798,7 @@ return withContext(Dispatchers.IO) {
 
 继续重构`getAllRestaurants()`方法，更新其`catch`块。你可以通过从`is UnknownHostException, is ConnectException, is HttpException`分支中移除（现在已冗余）`return@withContext restaurantsDao.getAll()`调用，并用以下代码替换它：
 
-```kt
+```java
 try { … } catch (e: Exception) {
     when (e) {
         is UnknownHostException, is ConnectException,
@@ -821,7 +821,7 @@ try { … } catch (e: Exception) {
 
 现在，在 `ViewModel` 的 `toggleFavorite()` 函数内部，无论何时切换餐厅的收藏状态，我们都可以观察到我们在使用部分更新更新 Room 数据库。然而，我们没有再次从 Room 中获取餐厅，因此 UI 永远不会被告知这种变化：
 
-```kt
+```java
 fun toggleFavorite(id: Int) {
     …
     restaurants[itemIndex] = item.copy(isFavorite =
@@ -838,7 +838,7 @@ fun toggleFavorite(id: Int) {
 
 1.  让 `toggleFavoriteRestaurant()` 函数返回我们本地数据库中的餐厅。你可以通过在 `withContext()` 块内部调用 `restaurantsDao.getAll()` 函数来实现这一点：
 
-    ```kt
+    ```java
     private suspend fun toggleFavoriteRestaurant(
         id: Int,
         oldValue: Boolean
@@ -852,7 +852,7 @@ fun toggleFavorite(id: Int) {
 
 1.  在 `toggleFavorite()` 方法内部，将 `toggleFavoriteRestaurant()` 方法返回的更新后的餐厅存储在 `updatedRestaurants` 变量中，然后，这次将 `state.value = restaurants` 行从协程外部移动到内部，同时让它接收由 `updatedRestaurants` 变量存储的值：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int) {
         val restaurants = state.value.toMutableList()
         […]
@@ -871,7 +871,7 @@ fun toggleFavorite(id: Int) {
 
 正因如此，最终问题在于 `refreshCache()` 方法：
 
-```kt
+```java
 private suspend fun refreshCache() {
     val remoteRestaurants = restInterface
         .getRestaurants()
@@ -885,7 +885,7 @@ private suspend fun refreshCache() {
 
 1.  在 `refreshCache()` 函数内部，添加以下代码：
 
-    ```kt
+    ```java
     private suspend fun refreshCache() {
         val remoteRestaurants = restInterface
             .getRestaurants()
@@ -913,7 +913,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  在 `RestaurantsDao` 中，我们必须实现之前使用的两个方法：
 
-    ```kt
+    ```java
     @Dao
     interface RestaurantsDao {
         […]
@@ -958,7 +958,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  在 `RestaurantsViewModel` 中，移除 `stateHandle: SavedStateHandle` 参数：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() { … }
     ```
 
@@ -968,7 +968,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  当您仍然在 `ViewModel` 中时，从 `toggleFavorite()` 方法中移除所有与 `stateHandle` 变量相关的逻辑。现在该方法应如下所示：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int) {
         viewModelScope.launch(errorHandler) {
             val updatedRestaurants =
@@ -982,7 +982,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  向`toggleFavorite()`方法添加一个新参数，称为`oldValue`：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int, oldValue: Boolean) {
         viewModelScope.launch(errorHandler) {
             val updatedRestaurants =
@@ -996,7 +996,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  然后，重构`getRestaurants()`方法，使其不再使用`restoreSelections()`方法。该方法现在应该看起来像这样：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(errorHandler) {
             state.value = getAllRestaurants()
@@ -1006,7 +1006,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  接下来，导航到`RestaurantsScreen`文件。然后，在`RestaurantItem`可组合组件内部，向`onFavoriteClick`回调函数添加另一个`oldValue`参数：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem([…],
             onFavoriteClick: (id: Int, oldValue: Boolean)
@@ -1030,7 +1030,7 @@ iv. 最后，我们通过调用 `restaurantsDao.updateAll()` 部分更新了 Roo
 
 1.  在`RestaurantsScreen()`可组合组件内部，确保您注册并传递新接收的`oldValue`函数参数到`ViewModel`的`toggleFavorite`方法：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         val viewModel: RestaurantsViewModel = viewModel()

@@ -18,7 +18,7 @@ Android 提供了一整套工具，你可以使用这些工具来完善你的应
 
 当你为你的应用程序应用自定义颜色时，确保你不会使用太多颜色，并且它们在应用程序中应用是一致的。颜色传达意义；它可以用来告诉用户*新*按钮与*删除*按钮是相反的。这些样式应该定义为资源，并在整个应用程序中一致应用。一致的样式有助于用户更快地理解应用程序中的每个屏幕，通过告诉他们他们在看什么。通常，样式信息定义在你的项目`res/values/styles.xml`文件中。这是我们探索颜色并完善应用程序的一个很好的起点。如果你打开旅行索赔示例应用程序的`res/values/styles.xml`文件，你会在文件顶部附近看到类似以下内容：
 
-```kt
+```java
 <!-- Base application theme. -->
 <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
     <!-- Customize your theme here. -->
@@ -78,7 +78,7 @@ Android 提供了一整套工具，你可以使用这些工具来完善你的应
 
 1.  在文件底部的`dependencies`中，通过声明以下内容来包含`Palette` API：
 
-```kt
+```java
 implementation 'com.android.support:palette-v7:+'
 ```
 
@@ -96,7 +96,7 @@ implementation 'com.android.support:palette-v7:+'
 
 1.  添加所需的`View`构造函数，以便可以从 XML 文件中使用该类：
 
-```kt
+```java
 public ColorizedCardView(final Context context) {
   super(context);
 }
@@ -117,7 +117,7 @@ public ColorizedCardView(
 
 1.  `ColorizedCardView`不仅改变自己的背景，还需要改变任何文本的颜色，以确保用户能够清晰地阅读文本。这意味着`ColorizedCardView`需要找到所有没有设置背景`Drawable`的`TextView`实例（一个`Button`只是一个具有特定背景的`TextView`，我们希望保持原样）。此方法将遍历（深度优先）`ColorizedCardView`，并将找到的任何`TextView`对象添加到`Collection`中：
 
-```kt
+```java
 static Collection<TextView> findTextViews(
     final ViewGroup viewGroup,
     final Collection<TextView> textViews) {
@@ -141,7 +141,7 @@ static Collection<TextView> findTextViews(
 
 1.  每个`Palette`实际上是一个`Swatch`对象的列表，每个`Swatch`都包含一个基础颜色以及适合标题文本和正文文本的颜色。`ColorizedCardView`允许你直接指定`Swatch`来着色背景和所有文本：
 
-```kt
+```java
 public void setSwatch(final Palette.Swatch swatch) {
   setCardBackgroundColor(swatch.getRgb());
 
@@ -159,7 +159,7 @@ public void setSwatch(final Palette.Swatch swatch) {
 
 1.  当生成`Palette`时，它可以包含任意数量的`Swatch`对象。有一系列*标准*的`Swatch`，通常在从`Bitmap`创建`Palette`时生成，但其中任意数量的`Swatch`可能未被填充（`null`）。当你通过`Palette`对象着色卡片时，你需要在`ColorizedCardView`实现中查找一个可用的`Swatch`；我们将优先选择*浅色*的`Swatch`而不是*深色*的`Swatch`，以及*柔和*的`Swatch`而不是*鲜艳*的`Swatch`：
 
-```kt
+```java
 public void setPalette(final Palette palette) {
   if (palette.getLightMutedSwatch() != null) {
     setSwatch(palette.getLightMutedSwatch());
@@ -177,7 +177,7 @@ public void setPalette(final Palette palette) {
 
 1.  现在，我们需要一种方法来指定一个`Bitmap`以着色整个`ColorizedCardView`。`Palette`使用一个`Builder`对象来生成其`Swatch`，并且有一个内置的`AsyncTask`来处理在后台线程上生成`Palette`（在较大的图像或较慢的设备上可能需要几秒钟）。`setColorizeBitmap`方法被定义为从数据绑定布局 XML 文件中调用它很容易。`Palette.Builder`需要一个回调来处理生成的`Palette`，这将是一个`ColorizedCardView`实例（记住你已经实现了`PaletteAsyncListener`接口）：
 
-```kt
+```java
 public void setColorizeBitmap(final Bitmap image) {
   new Palette.Builder(image).generate(this);
 }
@@ -190,7 +190,7 @@ public void onGenerated(final Palette palette) {
 
 1.  你还需要一种方法来根据`Drawable`对象对`ColorizedCardView`进行着色，这将提供与应用程序`Resources`更好的互操作性。以下`renderDrawable`方法如果`Drawable`对象是`BitmapDrawable`（它只是包装了一个`Bitmap`）的话，有一个快捷方式；否则，它将尝试将`Drawable`渲染到`Bitmap`对象。由于`Drawable`的边界包括其位置（而不仅仅是大小），你需要将要在其上绘制的`Canvas`进行平移，以便它在`Bitmap`的左上角渲染：
 
-```kt
+```java
 private Bitmap renderDrawable(final Drawable drawable) {
   if (drawable instanceof BitmapDrawable) {
     return ((BitmapDrawable) drawable).getBitmap();
@@ -227,7 +227,7 @@ public void setColorizeDrawable(final Drawable drawable) {
 
 1.  将`CardView`的声明更改为`ColorizedCardView`，并使用`app:colorizeDrawable`数据绑定属性调用`setColorizeDrawable`，使用与将作为图标渲染的相同`Drawable`：
 
-```kt
+```java
 <com.packtpub.claim.widget.ColorizedCardView
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -241,7 +241,7 @@ public void setColorizeDrawable(final Drawable drawable) {
 
 1.  将`getCategoryIcon`方法返回的图标更改为返回您的新图标，而不是类别选择器使用的图标：
 
-```kt
+```java
 public Drawable getCategoryIcon(final Category category) {
   final Resources resources = context.getResources();
   switch (category) {
@@ -334,7 +334,7 @@ Android 动画实际上是资源文件，就像图标或布局一样。应用于
 
 1.  在 `<set>` 元素上，我们需要定义动画将持续多长时间，以及插值器。**插值器**定义了动画的相对运动。它是以线性平滑的方式发生（这通常看起来很假，但最容易），还是动画看起来像 *弹跳*，或者完全是其他的东西？在这种情况下，我们将使用标准的 `anticipate_overshoot_interpolator`，它包括动画结束时的轻微 *弹跳* 效果：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <set 
     android:interpolator="@android:anim/anticipate_overshoot_interpolator"
@@ -345,7 +345,7 @@ Android 动画实际上是资源文件，就像图标或布局一样。应用于
 
 1.  这个动画将包含两个部分。第一部分是从屏幕外向下移动到文本应该正常出现的位置。第二部分是从完全透明到不透明的淡入。每个视图动画的动作都是根据动画开始时和结束时应该有的值来定义的（从和到）。中间的值由每帧的时间以及插值器定义。在 `<set>` 元素内部，添加一个 `translation` 来将视图沿着 y 轴从上方移动到结束位置：
 
-```kt
+```java
 <translate
     android:fromYDelta="-50%p"
     android:toYDelta="0" />
@@ -353,7 +353,7 @@ Android 动画实际上是资源文件，就像图标或布局一样。应用于
 
 1.  现在，添加使用 `alpha` 动作的淡入。零 alpha 值表示小部件应该是不可见的，而一表示它应该是完全不透明的。alpha 是一个浮点数，因此你可以定义介于零和一之间的任何值来实现部分透明度：
 
-```kt
+```java
 <alpha
     android:fromAlpha="0.0"
     android:toAlpha="1.0" />
@@ -367,7 +367,7 @@ Android 动画实际上是资源文件，就像图标或布局一样。应用于
 
 1.  这个动画与 `slide_in_top` 的工作方式相同，但它将视图向下推并使其透明：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <set 
     android:interpolator="@android:anim/anticipate_overshoot_interpolator"
@@ -388,7 +388,7 @@ Android 动画实际上是资源文件，就像图标或布局一样。应用于
 
 1.  定位到文件底部的 `TextView`，并将其更改为 `TextSwitcher`。`TextSwitcher` 需要两个 `TextView` 子元素来在它们之间进行动画。每次你在 `TextSwitcher` 上更改文本时，它都会将新文本放在不可见的 `TextView` 上，然后在这两个可见的 `TextView` 和不可见的 `TextView` 之间进行动画（即切换它们，因此得名）。你需要告诉 `TextSwitcher` 使用你刚刚创建的动画资源作为其 *进入* 和 *退出* 动画：
 
-```kt
+```java
 <TextSwitcher
     android:id="@+id/selected_category"
     android:inAnimation="@anim/slide_in_top"
@@ -410,7 +410,7 @@ Android 动画实际上是资源文件，就像图标或布局一样。应用于
 
 1.  打开 `CategoryPickerFragment` 源文件，并将对 `TextView` 的引用更改为 `TextSwitcher`。其中一个将作为字段，另一个应该在 `onCreateView` 方法中：
 
-```kt
+```java
 private RadioGroup categories;
 private TextSwitcher categoryLabel;
 
@@ -422,7 +422,7 @@ categoryLabel = (TextSwitcher) picker.findViewById(R.id.selected_category);
 
 1.  打开 `IconPickerWrapper` 源文件。目前它包装了一个 `TextView`，但现在需要包装一个 `TextSwitcher`。像 `CategoryPickerFragment` 一样，将 `TextView` 的引用更改为 `TextSwitcher`：
 
-```kt
+```java
 private final TextSwitcher label;
 public IconPickerWrapper(final TextSwitcher label) {
     this.label = label;
@@ -431,7 +431,7 @@ public IconPickerWrapper(final TextSwitcher label) {
 
 在这种情况下，你只需要做这些；现在 `CaptureClaimActivity` 将在类别选择器中的文本上有一个非常令人愉悦的动画，这表明图标被用来更改类别。虽然 `TextSwitcher` 不继承自 `TextView`，但它确实暴露了这些情况下的相同关键方法--`setText(CharSequence)`。不幸的是，这意味着你不能直接替换这些类。相反，你需要将每个都视为一个单独的类型（如之前所述）。然而，你可以创建一个 `abstract` `wrapper` 类来包装这两个类，并允许你的布局定义是否应该有动画：
 
-```kt
+```java
 public abstract class TextWrapper<V extends View> {
   public final V view;
 
@@ -491,7 +491,7 @@ public abstract class TextWrapper<V extends View> {
 
 Android 还有一些其他小方法可以提供动画，让用户知道正在发生什么。例如，你可以告诉任何 `ViewGroup` 实现（任何 `Layout` 类：`FrameLayout`、`LinearLayout` 或 `ConstraintLayout`）动画布局的变化。你只需在布局资源中简单地打开 `animateLayoutChanges` 即可完成此操作：
 
-```kt
+```java
 <android.support.v7.widget.CardView
  android:animateLayoutChanges="true"
     android:layout_width="match_parent"
@@ -500,7 +500,7 @@ Android 还有一些其他小方法可以提供动画，让用户知道正在发
 
 这在你提供展开卡片以显示更多功能或更多信息的能力时特别有用。将 `animateLayoutChanges` 属性与 `ViewGroup` 类结合使用是一个非常强大的组合。`ViewStub` 是一种特殊的控件，可以像 `<include>` 一样使用，只有当你告诉它时才会加载。当它加载时，它不会作为容器，而是用它加载的布局来*替换自己*。使用 `animateLayoutChanges` 来膨胀 `ViewStub` 可以自动触发一个漂亮的动画，向用户展示新内容。以下代码片段是一个 `CardView`，它将动画菜单的膨胀，该菜单可以被设置为出现在卡片的底部：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.v7.widget.CardView
 
@@ -559,7 +559,7 @@ Android 还有一些其他小方法可以提供动画，让用户知道正在发
 
 当你膨胀前面的 `ViewStub` 时，它将用 `card_menu` 布局资源的内容来替换自己，`ConstraintLayout` 将动画变化，使 `card_menu` 看起来像是在展开。你可以使用以下代码片段在用户点击 `CardView` 时膨胀 `ViewStub`：
 
-```kt
+```java
 cardView.setOnClickListener(new View.OnClickListener() {
   @Override public void onClick(final View view) {
     final ViewStub menu = (ViewStub) findViewById(R.id.menu);
@@ -591,20 +591,20 @@ Android 允许你定义自己的样式，而不仅仅是系统定义的样式。
 
 1.  你会注意到在这个文件中，你已经通过 Android Studio 模板定义了几个样式。这些样式大多是主题相关的，并且将应用于整个应用程序。我们想要定义一个新的样式，该样式可以应用于特定的控件。声明一个新的样式元素，命名为 `AmountInput`：
 
-```kt
+```java
 <style name="AmountInput">
 </style>
 ```
 
 1.  我们首先想要这个样式做的第一件事是将文本对齐到输入框的右侧。这通常是通过更改 `EditText` 框上的 `android:gravity` 属性来完成的。在 `style` 元素中，你需要声明这是一个你希望覆盖的 `item`：
 
-```kt
+```java
 <item name="android:gravity">right</item>
 ```
 
 1.  你还想要改变焦点行为，以便当用户点击编辑金额时，现有的值会被选中。这允许他们更容易地输入一个新的数字，这比编辑现有数字更为常见。`TextView` 类定义了一个名为 `selectAllOnFocus` 的属性，非常适合这个目的：
 
-```kt
+```java
 <item name="android:selectAllOnFocus">true</item>
 ```
 
@@ -612,7 +612,7 @@ Android 允许你定义自己的样式，而不仅仅是系统定义的样式。
 
 1.  找到金额的 `EditText` 条目，并应用该样式。重要的是要注意，样式属性不在 android XML 命名空间中：
 
-```kt
+```java
 <EditText
     style="@style/AmountInput"
     android:id="@+id/amount"
@@ -628,7 +628,7 @@ Android 允许你定义自己的样式，而不仅仅是系统定义的样式。
 
 样式本身可以在每一层被覆盖。当你从另一个样式继承时，子样式可以覆盖其父项中的任何项。当一个小部件应用了样式时，小部件 XML 元素上指定的任何属性都将优先于正在应用的样式。例如，如果您想创建一个左对齐文本内容（而不是样式的右对齐）的`AmountInput`样式小部件，您可能使用以下代码：
 
-```kt
+```java
 <EditText
     style="@style/AmountInput"
     android:id="@+id/amount"

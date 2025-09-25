@@ -52,13 +52,13 @@
 
 JSON 服务器作为一个 NPM 包提供，因此我们可以简单地运行以下命令来安装它：
 
-```kt
+```java
 $ npm install -g json-server
 ```
 
 `-g` 选项使包能够在你的系统上全局安装。一旦安装成功，运行以下命令进行交叉检查：
 
-```kt
+```java
 $ json-server -v
 ```
 
@@ -68,7 +68,7 @@ $ json-server -v
 
 `Json-server` 在 JSON 文件中工作，创建一个 JSON 文件很简单。创建一个新文件名为 `Books.json`，填充以下内容，并保存。注意，我们指定的数组名称是 `Movie`，因此 `json-server` 将基于此名称创建 REST API：
 
-```kt
+```java
 {
   "Movie": [
     {
@@ -103,7 +103,7 @@ $ json-server -v
 
 最后一步是运行 `json-server` 以确保本地正在运行模拟服务器。运行以下命令：
 
-```kt
+```java
 $ json-server --watch db.json
 ```
 
@@ -125,7 +125,7 @@ $ json-server --watch db.json
 
 我们使用 `Future` 函数，这是 Dart 的一个核心类，用于处理异步任务，并且与 `http` 一起使用可以返回成功的 `http` 调用的数据：
 
-```kt
+```java
 Future<http.Response> fetchPost() {
   return http.get('http://localhost:3000/Movie/1');
 }
@@ -133,7 +133,7 @@ Future<http.Response> fetchPost() {
 
 现在我们创建一个 `Post` 类，它将包含我们网络请求的数据。为了确保我们能够从 JSON 正确创建 `Post` 对象，我们将包括一个 `factory` 构造函数。在我们的示例中，我们为每个要获取的数组提供了四个数据类别，即 `id`、`movieName`、`year` 和 `category`：
 
-```kt
+```java
 class Post {
   final int id;
   final String movieName;
@@ -157,7 +157,7 @@ class Post {
 
 1.  首先，使用 `dart:convert` 包将响应体转换为 JSON Map。这个包包含用于在不同数据表示之间转换的编码器和解码器。为了使用它，你首先必须在你的包的 `pubspec.yaml` 文件中添加依赖项：
 
-```kt
+```java
 dependencies: convert: ².1.1
 ```
 
@@ -169,7 +169,7 @@ dependencies: convert: ².1.1
 
 这里是检查之前提到的情况的代码片段：
 
-```kt
+```java
 Future<Post> fetchPost() async {
   final response =
   await http.get('http://localhost:3000/Movies/1');
@@ -191,7 +191,7 @@ Future<Post> fetchPost() async {
 
 +   一个构建函数，它根据 Flutter 的状态（加载、成功或错误）告诉 Flutter 应该渲染什么：
 
-```kt
+```java
 FutureBuilder<Post>(
             future: post,
             builder: (context, snapshot) {
@@ -211,7 +211,7 @@ FutureBuilder<Post>(
 
 使用这种方法，你将使父级小部件负责调用获取方法，存储其结果，然后将它传递给你的小部件：
 
-```kt
+```java
 class MyApp extends StatelessWidget {
   final Future<Post> post;
 
@@ -220,7 +220,7 @@ class MyApp extends StatelessWidget {
 
 这是完整的代码，它将使用 `json-server` 通过读取 `Movies.json` 来获取 JSON 内容：
 
-```kt
+```java
 import 'dart:async';
 import 'dart:convert';
 
@@ -315,7 +315,7 @@ Flutter 支持三个用于可访问性支持的功能：
 
 Flutter 具有自动处理文本大小计算的特性。例如，`Text` 小部件有一个 `textScaleFactor` 属性，允许对文本进行缩放。字体大小通过乘以 `textScaleFactor` 值来确定在屏幕上渲染的新字体大小，该大小以逻辑像素为单位。例如，如果 `textScaleFactor` 是 `1.5`，文本将比指定的字体大小大 50%，如下所示：
 
-```kt
+```java
 Text(
   'Hello India, how are you?',
   textAlign: TextAlign.center,
@@ -349,7 +349,7 @@ W3C 推荐以下内容：
 
 在开始国际化之前，必须在 `pubspec.yaml` 中添加依赖项：
 
-```kt
+```java
 dependencies:
   flutter:
     sdk: flutter
@@ -359,7 +359,7 @@ dependencies:
 
 下一步是导入 `flutter_localizations` 库，并为 `MaterialApp` 指定 `localizationsDelegates` 和 `supportedLocales`。同时，导入 `package:flutter_localizations/flutter_localizations.dart`：
 
-```kt
+```java
 Widget build(BuildContext context) {
   return MaterialApp(
     onGenerateTitle: (BuildContext context) => DemoLocalizations.of(context).title,
@@ -390,7 +390,7 @@ Widget build(BuildContext context) {
 
 以下是为您提供的完整代码：
 
-```kt
+```java
 import 'dart:async';
 
 import 'package:flutter/material.dart';

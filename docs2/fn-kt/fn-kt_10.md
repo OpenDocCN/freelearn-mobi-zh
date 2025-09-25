@@ -20,7 +20,7 @@
 
 如果我告诉你，你已经在 Kotlin 中使用了函子，你会感到惊讶吗？让我们看看以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     listOf(1, 2, 3)
             .map { i -> i * 2 }
@@ -35,7 +35,7 @@ fun main(args: Array<String>) {
 
 让我们为函子类型定义一个泛型接口：
 
-```kt
+```java
 interface Functor<C<_>> { //Invalid Kotlin code
     fun <A,B> map(ca: C<A>, transform: (A) -> B): C<B>
 }
@@ -47,7 +47,7 @@ interface Functor<C<_>> { //Invalid Kotlin code
 
 在支持高阶类型的语言中，例如 **Scala** 和 **Haskell**，可以定义一个 `Functor` 类型，例如 Scala cats 函子：
 
-```kt
+```java
 trait Functor[F[_]] extends Invariant[F] { self =>
   def mapA, B(f: A => B): F[B]
 
@@ -58,7 +58,7 @@ trait Functor[F[_]] extends Invariant[F] { self =>
 
 我们可以有一个简单的 `Option` 类型：
 
-```kt
+```java
 sealed class Option<out T> {
     object None : Option<Nothing>() {
         override fun toString() = "None"
@@ -72,7 +72,7 @@ sealed class Option<out T> {
 
 然后，你可以为它定义一个 `map` 函数：
 
-```kt
+```java
 fun <T, R> Option<T>.map(transform: (T) -> R): Option<R> = when (this) {
     Option.None -> Option.None
     is Option.Some -> Option.Some(transform(value))
@@ -81,7 +81,7 @@ fun <T, R> Option<T>.map(transform: (T) -> R): Option<R> = when (this) {
 
 然后按照以下方式使用它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(Option.Some("Kotlin")
             .map(String::toUpperCase)) //Some(value=KOTLIN)
@@ -90,7 +90,7 @@ fun main(args: Array<String>) {
 
 现在，一个 `Option` 值对于 `Some` 和 `None` 将有不同的行为：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(Option.Some("Kotlin").map(String::toUpperCase)) //Some(value=KOTLIN)
     println(Option.None.map(String::toUpperCase)) //None
@@ -99,13 +99,13 @@ fun main(args: Array<String>) {
 
 扩展函数非常灵活，以至于我们可以为函数类型编写一个 `map` 函数，即 `(A) -> B`，因此将函数转换为函子：
 
-```kt
+```java
 fun <A, B, C> ((A) -> B).map(transform: (B) -> C): (A) -> C = { t -> transform(this(t)) }
 ```
 
 我们在这里改变的是通过应用参数函数 `transform: (B) -> C` 到函数 `(A) -> B` 的结果，将返回类型从 `B` 改为 `C`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val add3AndMultiplyBy2: (Int) -> Int = { i: Int -> i + 3 }.map { j -> j * 2 }
     println(add3AndMultiplyBy2(0)) //6
@@ -120,7 +120,7 @@ fun main(args: Array<String>) {
 
 **monad** 是一个定义了 `flatMap`（或在其他语言中的 `bind`）函数的 funtor 类型，该函数接收一个返回相同类型的 lambda。让我用一个例子来解释它。幸运的是，`List<T>` 定义了一个 `flatMap` 函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val result = listOf(1, 2, 3)
             .flatMap { i ->
@@ -136,7 +136,7 @@ fun main(args: Array<String>) {
 
 因此，一个通用的 monad 将看起来像这样（记住我们没有高阶类型）：
 
-```kt
+```java
 interface Monad<C<_>>: Functor<C> { //Invalid Kotlin code
     fun <A, B> flatMap(ca:C<A>, fm:(A) -> C<B>): C<B>
 }
@@ -144,7 +144,7 @@ interface Monad<C<_>>: Functor<C> { //Invalid Kotlin code
 
 现在，我们可以为我们的 `Option` 类型编写一个 `flatMap` 函数：
 
-```kt
+```java
 fun <T, R> Option<T>.flatMap(fm: (T) -> Option<R>): Option<R> = when (this) {
     Option.None -> Option.None
     is Option.Some -> fm(value)
@@ -153,13 +153,13 @@ fun <T, R> Option<T>.flatMap(fm: (T) -> Option<R>): Option<R> = when (this) {
 
 如果你仔细观察，你会发现 `flatMap` 和 `map` 非常相似；相似到我们可以用 `flatMap` 重写 `map`：
 
-```kt
+```java
 fun <T, R> Option<T>.map(transform: (T) -> R): Option<R> = flatMap { t -> Option.Some(transform(t)) }
 ```
 
 现在我们可以用 `flatMap` 函数的强大功能以一些酷炫的方式使用它，这些方式在普通的 `map` 中是不可能的：
 
-```kt
+```java
 fun calculateDiscount(price: Option<Double>): Option<Double> {
     return price.flatMap { p ->
         if (p > 50.0) {
@@ -181,7 +181,7 @@ fun main(args: Array<String>) {
 
 `flatMap` 的一个酷炫技巧是它可以嵌套：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val maybeFive = Option.Some(5)
     val maybeTwo = Option.Some(2)
@@ -198,7 +198,7 @@ fun main(args: Array<String>) {
 
 我们可以通过组合 `flatMap` 和 `map` 来稍微缩短这个示例的写法：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val maybeFive = Option.Some(5)
     val maybeTwo = Option.Some(2)
@@ -213,7 +213,7 @@ fun main(args: Array<String>) {
 
 因此，我们可以将我们的第一个 `flatMap` 示例重写为两个列表的组合——一个包含数字，另一个包含函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val numbers = listOf(1, 2, 3)
     val functions = listOf<(Int) -> Int>({ i -> i * 2 }, { i -> i + 3 })
@@ -235,7 +235,7 @@ fun main(args: Array<String>) {
 
 在上一节中，当我们解释 monads 时，我们让它们直接从 funtor 扩展，但事实上，monad 是从 applicative 扩展的，而 applicative 是从 funtor 扩展的。因此，我们的通用 applicative 的伪代码以及整个层次结构将看起来像这样：
 
-```kt
+```java
 interface Functor<C<_>> { //Invalid Kotlin code
     fun <A,B> map(ca:C<A>, transform:(A) -> B): C<B>
 }
@@ -255,13 +255,13 @@ interface Monad<C<_>>: Applicative<C> { //Invalid Kotlin code
 
 现在，让我们为 `List<T>` 写一个 `ap` 扩展函数：
 
-```kt
+```java
 fun <T, R> List<T>.ap(fab: List<(T) -> R>): List<R> = fab.flatMap { f -> this.map(f) }
 ```
 
 我们可以回顾一下上一节中 *Monads* 部分的最后一个示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val numbers = listOf(1, 2, 3)
     val functions = listOf<(Int) -> Int>({ i -> i * 2 }, { i -> i + 3 })
@@ -275,7 +275,7 @@ fun main(args: Array<String>) {
 
 让我们用 `ap` 函数来重写它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val numbers = listOf(1, 2, 3)
     val functions = listOf<(Int) -> Int>({ i -> i * 2 }, { i -> i + 3 })
@@ -290,7 +290,7 @@ fun main(args: Array<String>) {
 
 我们可以向我们的`Option`类添加`pure`和`ap`：
 
-```kt
+```java
 fun <T> Option.Companion.pure(t: T): Option<T> = Option.Some(t)
 
 ```
@@ -299,7 +299,7 @@ fun <T> Option.Companion.pure(t: T): Option<T> = Option.Some(t)
 
 我们的`Option.ap`函数非常迷人：
 
-```kt
+```java
 //Option
 fun <T, R> Option<T>.ap(fab: Option<(T) -> R>): Option<R> = fab.flatMap { f -> map(f) }
 
@@ -311,7 +311,7 @@ fun <T, R> List<T>.ap(fab: List<(T) -> R>): List<R> = fab.flatMap { f -> this.ma
 
 使用单子，我们使用`flatMap`和`map`对两个`Option<Int>`进行求和：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val maybeFive = Option.Some(5)
     val maybeTwo = Option.Some(2)
@@ -326,7 +326,7 @@ fun main(args: Array<String>) {
 
 现在，使用应用函数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val maybeFive = Option.pure(5)
     val maybeTwo = Option.pure(2)
@@ -339,13 +339,13 @@ fun main(args: Array<String>) {
 
 我们可以用一个小技巧（我从 Haskell 那里借来的）使事情更容易阅读：
 
-```kt
+```java
 infix fun <T, R> Option<(T) -> R>.`(*)`(o: Option<T>): Option<R> = flatMap { f: (T) -> R -> o.map(f) }
 ```
 
 `infix`扩展函数`Option<(T) -> R>.`(*)` ``将允许我们从左到右读取`sum`操作；这有多酷？现在，让我们看看以下代码，它是使用应用函数对两个`Option<Int>`进行求和
 
-```kt
+```java
 fun main(args: Array<String>) {
     val maybeFive = Option.pure(5)
     val maybeTwo = Option.pure(2)
@@ -360,7 +360,7 @@ fun main(args: Array<String>) {
 
 回到函数，我们可以使一个函数表现得像一个应用函数。首先，我们应该添加一个纯函数：
 
-```kt
+```java
 object Function1 {
     fun <A, B> pure(b: B) = { _: A -> b }
 }
@@ -368,7 +368,7 @@ object Function1 {
 
 首先，我们创建一个对象`Function1`，因为函数类型`(A) -> B`没有伴随对象来添加新的扩展函数，就像我们为`Option`所做的那样：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val f: (String) -> Int = Function1.pure(0)
     println(f("Hello,"))    //0
@@ -381,7 +381,7 @@ fun main(args: Array<String>) {
 
 让我们在一个函数`(A) -> B`中添加`flatMap`和`ap`：
 
-```kt
+```java
 fun <A, B, C> ((A) -> B).map(transform: (B) -> C): (A) -> C = { t -> transform(this(t)) }
 
 fun <A, B, C> ((A) -> B).flatMap(fm: (B) -> (A) -> C): (A) -> C = { t -> fm(this(t))(t) }
@@ -393,7 +393,7 @@ fun <A, B, C> ((A) -> B).ap(fab: (A) -> (B) -> C): (A) -> C = fab.flatMap { f ->
 
 但是，我们能用函数的 `ap` 做些什么呢？让我们看看下面的代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val add3AndMultiplyBy2: (Int) -> Int = { i: Int -> i + 3 }.ap { { j: Int -> j * 2 } }
     println(add3AndMultiplyBy2(0)) //6
@@ -404,7 +404,7 @@ fun main(args: Array<String>) {
 
 嗯，我们可以组合函数，这并不令人兴奋，因为我们已经用 `map` 做过这样的事情。但是函数的 `ap` 有一个小技巧。我们可以访问原始参数：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val add3AndMultiplyBy2: (Int) -> Pair<Int, Int> = { i:Int -> i + 3 }.ap { original -> { j:Int -> original to (j * 2) } }
     println(add3AndMultiplyBy2(0)) //(0, 6)

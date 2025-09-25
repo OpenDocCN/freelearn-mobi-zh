@@ -80,23 +80,23 @@
 
 `.kts` 扩展名意味着我们的 Kotlin 项目的配置文件是用 Kotlin 编写的，或者更准确地说，是在 `dependencies` 块中，它应该看起来像这样：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     implementation(...)
 ```
 
-```kt
+```java
     testImplementation("org.junit.jupiter:junit-jupiter-        api:5.6.0")
 ```
 
-```kt
+```java
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-        engine:5.6.0")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -104,13 +104,13 @@ dependencies {
 
 现在，让我们看看以下示例中是如何定义库的：
 
-```kt
+```java
 "org.junit.jupiter:junit-jupiter-api:5.6.0"
 ```
 
 这是一个被分成三个部分的常规字符串，如下所示：
 
-```kt
+```java
 "group:name:version"
 ```
 
@@ -118,27 +118,27 @@ dependencies {
 
 现在，让我们修改 `dependencies` 块，如下所示：
 
-```kt
+```java
 val ktorVersion = "1.6.0"
 ```
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     implementation("io.ktor:ktor-server-
 ```
 
-```kt
+```java
         netty:$ktorVersion")
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -154,43 +154,43 @@ dependencies {
 
 现在，让我们将以下内容添加到 `server.kt` 文件中：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     embeddedServer(Netty, port = 8080) {
 ```
 
-```kt
+```java
         routing {
 ```
 
-```kt
+```java
             get("/") {
 ```
 
-```kt
+```java
                 call.respondText("OK")
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }.start(wait = true)
 ```
 
-```kt
+```java
     println("open http://localhost:8080")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -210,37 +210,37 @@ fun main() {
 
 要切换到使用 `CIO`，我们只需要添加一个新的依赖项：
 
-```kt
+```java
 dependencies { 
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     implementation("io.ktor:ktor-server-cio:$ktorVersion") 
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
 }
 ```
 
 然后，我们需要将另一个服务器引擎 `CIO` 传递给 `embeddedServer` 函数：
 
-```kt
+```java
 embeddedServer(CIO, port = 8080) { 
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }.start(wait = true)
 ```
 
@@ -252,23 +252,23 @@ embeddedServer(CIO, port = 8080) {
 
 现在，让我们看看 `routing` 块：
 
-```kt
+```java
 routing { 
 ```
 
-```kt
+```java
     get("/") { 
 ```
 
-```kt
+```java
         call.respondText("OK") 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -276,15 +276,15 @@ routing {
 
 以下代码返回文本响应。现在，让我们看看我们如何返回 JSON 响应：
 
-```kt
+```java
 get("/status") {
 ```
 
-```kt
+```java
     call.respond(mapOf("status" to "OK"))
 ```
 
-```kt
+```java
 }
 ```
 
@@ -292,43 +292,43 @@ get("/status") {
 
 这是因为默认情况下，对象不会被序列化为 JSON。多个库可以为我们完成这项工作。在这个例子中，我们将使用 `kotlinx-serialization` 库。让我们首先将其添加到我们的依赖项中：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     implementation("org.jetbrains.kotlinx:kotlinx-        serialization-json-jvm:1.3.0")
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
 接下来，我们需要在我们的 `routing` 块之前添加以下行：
 
-```kt
+```java
 install(ContentNegotiation) {
 ```
 
-```kt
+```java
     json()
 ```
 
-```kt
+```java
 } 
 ```
 
 现在，如果我们再次运行我们的代码，它将在我们的浏览器上输出以下内容：
 
-```kt
+```java
 > {"status":"OK"}
 ```
 
@@ -340,65 +340,65 @@ install(ContentNegotiation) {
 
 现在，让我们添加一个新的依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     testImplementation("io.ktor:ktor-server-
 ```
 
-```kt
+```java
         tests:$ktorVersion")
 ```
 
-```kt
+```java
 }
 ```
 
 接下来，让我们将以下内容添加到我们的 `ServerTest.kt` 文件中：
 
-```kt
+```java
 internal class ServerTest {
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun testStatus() {
 ```
 
-```kt
+```java
         withTestApplication {
 ```
 
-```kt
+```java
             val response = handleRequest(HttpMethod.Get,                 "/status").response
 ```
 
-```kt
+```java
             assertEquals(HttpStatusCode.OK,                 response.status())
 ```
 
-```kt
+```java
             assertEquals("""{"status": "OK"}""",                 response.content)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -414,31 +414,31 @@ Kotlin 中的测试被分组到类中，每个测试都是类中的一个方法�
 
 在 Ktor 中，代码通常组织成模块。让我们重写我们的`main`函数，如下所示：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     embeddedServer(
 ```
 
-```kt
+```java
         CIO,
 ```
 
-```kt
+```java
         port = 8080,
 ```
 
-```kt
+```java
         module = Application::mainModule
 ```
 
-```kt
+```java
     ).start(wait = true)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -446,47 +446,47 @@ fun main() {
 
 此模块定义为`Application`对象上的扩展函数：
 
-```kt
+```java
 fun Application.mainModule() {
 ```
 
-```kt
+```java
     install(ContentNegotiation) {
 ```
 
-```kt
+```java
         json()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     routing {
 ```
 
-```kt
+```java
         get("/status") {
 ```
 
-```kt
+```java
             call.respond(mapOf("status" to "OK"))
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     println("open http://localhost:8080")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -494,27 +494,27 @@ fun Application.mainModule() {
 
 现在，我们只需要回到我们的测试中，并指定我们想要测试哪个模块：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun testStatus() {
 ```
 
-```kt
+```java
     withTestApplication(Application::mainModule) {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -530,61 +530,61 @@ fun testStatus() {
 
 让我们在`build.gradle.kts`文件中添加以下依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     implementation("org.jetbrains.exposed:exposed:0.17.14")
 ```
 
-```kt
+```java
     implementation("org.postgresql:postgresql:42.2.24")
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
 一旦库就位，我们需要连接到它们。为此，让我们在`/src/main/kotlin`下创建一个名为`DB.kt`的新文件，并包含以下内容：
 
-```kt
+```java
 object DB {
 ```
 
-```kt
+```java
     private val host=System.getenv("DB_HOST")?:"localhost"
 ```
 
-```kt
+```java
     private val port =         System.getenv("DB_PORT")?.toIntOrNull() ?: 5432
 ```
 
-```kt
+```java
     private val dbName = System.getenv("DB_NAME") ?:         "cats_db"
 ```
 
-```kt
+```java
     private val dbUser = System.getenv("DB_USER") ?:         "cats_admin"
 ```
 
-```kt
+```java
     private val dbPassword = System.getenv("DB_PASSWORD")         ?: "abcd1234"
 ```
 
-```kt
+```java
   fun connect() = Database.connect(      "jdbc:postgresql://$host:$port/$dbName",      driver = "org.postgresql.Driver",      user = dbUser,      password = dbPassword
 ```
 
-```kt
+```java
   )
 ```
 
-```kt
+```java
 }
 ```
 
@@ -598,11 +598,11 @@ object DB {
 
 或者，你可以在命令行中简单地运行以下两个命令：
 
-```kt
+```java
 $ createuser cats_admin -W –d
 ```
 
-```kt
+```java
 $ createdb cats_db -U cats_admin
 ```
 
@@ -610,19 +610,19 @@ $ createdb cats_db -U cats_admin
 
 为了做到这一点，让我们在 `DB.kt` 文件中定义另一个 Singleton 对象，它将代表一个表：
 
-```kt
+```java
 object CatsTable : IntIdTable() {
 ```
 
-```kt
+```java
     val name = varchar("name", 20).uniqueIndex()
 ```
 
-```kt
+```java
     val age = integer("age").default(0)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -638,33 +638,33 @@ object CatsTable : IntIdTable() {
 
 我们还将有一个 `data` 类来表示单个猫：
 
-```kt
+```java
 data class Cat(val id: Int,
 ```
 
-```kt
+```java
                val name: String,
 ```
 
-```kt
+```java
                val age: Int)
 ```
 
 我们剩下要做的唯一一件事是将以下代码行添加到我们的 `mainModule()` 函数中：
 
-```kt
+```java
 DB.connect()
 ```
 
-```kt
+```java
 transaction {
 ```
 
-```kt
+```java
     SchemaUtils.create(CatsTable)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -678,25 +678,25 @@ transaction {
 
 遵循 REST 原则，它应该是一个 `POST` 请求，其中请求的体可能看起来像这样：
 
-```kt
+```java
 {"name": "Meatloaf", "age": 4}
 ```
 
 我们将首先编写一个新的测试：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun `POST creates a new cat`() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -704,63 +704,63 @@ fun `POST creates a new cat`() {
 
 接下来，让我们看看我们的测试体：
 
-```kt
+```java
 withTestApplication(Application::mainModule) {
 ```
 
-```kt
+```java
     val response = handleRequest(HttpMethod.Post, "/cats") {
 ```
 
-```kt
+```java
         addHeader(
 ```
 
-```kt
+```java
           HttpHeaders.ContentType,
 ```
 
-```kt
+```java
           ContentType.Application.FormUrlEncoded.toString()
 ```
 
-```kt
+```java
         )
 ```
 
-```kt
+```java
         setBody(
 ```
 
-```kt
+```java
             listOf(
 ```
 
-```kt
+```java
                 "name" to "Meatloaf",
 ```
 
-```kt
+```java
                 "age" to 4.toString()
 ```
 
-```kt
+```java
             ).formUrlEncode()
 ```
 
-```kt
+```java
         )
 ```
 
-```kt
+```java
     }.response
 ```
 
-```kt
+```java
     assertEquals(HttpStatusCode.Created, response.status())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -772,33 +772,33 @@ withTestApplication(Application::mainModule) {
 
 让我们回到我们的 `routing` 块并添加一个新的端点：
 
-```kt
+```java
 post("/cats") {
 ```
 
-```kt
+```java
     ...    
 ```
 
-```kt
+```java
     call.respond(HttpStatusCode.Created)
 ```
 
-```kt
+```java
 }
 ```
 
 要创建一个新的猫，我们需要读取 `POST` 请求的体。我们将为此使用 `receiveParameters()` 函数：
 
-```kt
+```java
 val parameters = call.receiveParameters()
 ```
 
-```kt
+```java
 val name = requireNotNull(parameters["name"])
 ```
 
-```kt
+```java
 val age = parameters["age"]?.toInt() ?: 0
 ```
 
@@ -808,27 +808,27 @@ val age = parameters["age"]?.toInt() ?: 0
 
 现在，我们必须将这些值插入到数据库中：
 
-```kt
+```java
 transaction {
 ```
 
-```kt
+```java
     CatsTable.insert { cat ->
 ```
 
-```kt
+```java
         cat[CatsTable.name] = name
 ```
 
-```kt
+```java
         cat[CatsTable.age] = age
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -842,31 +842,31 @@ transaction {
 
 让我们回到我们的测试并添加以下代码片段：
 
-```kt
+```java
 @BeforeEach
 ```
 
-```kt
+```java
 fun setup() {
 ```
 
-```kt
+```java
     DB.connect()
 ```
 
-```kt
+```java
     transaction {
 ```
 
-```kt
+```java
         SchemaUtils.drop(CatsTable)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -880,27 +880,27 @@ fun setup() {
 
 让我们添加两个新的路由来实现这一点：
 
-```kt
+```java
 get("/cats") {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 get("/cats/{id}") {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -908,29 +908,29 @@ get("/cats/{id}") {
 
 为了读取查询参数，我们可以访问`parameters`映射：
 
-```kt
+```java
 val id = requireNotNull(call.parameters["id"]).toInt()
 ```
 
 如果 URL 上有 ID，我们需要尝试从数据库中获取一只猫：
 
-```kt
+```java
 val cat = transaction {
 ```
 
-```kt
+```java
     CatsTable.select {
 ```
 
-```kt
+```java
         CatsTable.id.eq(id)
 ```
 
-```kt
+```java
     }.firstOrNull()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -938,105 +938,105 @@ val cat = transaction {
 
 如果返回了一个对象，我们会将其转换为 JSON。否则，我们会返回 HTTP 代码`404`，即`Not Found`：
 
-```kt
+```java
 if (row == null) {
 ```
 
-```kt
+```java
     call.respond(HttpStatusCode.NotFound)
 ```
 
-```kt
+```java
 } else {
 ```
 
-```kt
+```java
     call.respond(
 ```
 
-```kt
+```java
         Cat(
 ```
 
-```kt
+```java
             row[CatsTable.id].value,
 ```
 
-```kt
+```java
             row[CatsTable.name],
 ```
 
-```kt
+```java
             row[CatsTable.age]
 ```
 
-```kt
+```java
         )
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
 }
 ```
 
 现在，让我们添加一个用于获取单个猫的测试：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun `GET with ID fetches a single cat`() {
 ```
 
-```kt
+```java
     withTestApplication(Application::mainModule) {
 ```
 
-```kt
+```java
         val id = transaction {
 ```
 
-```kt
+```java
             CatsTable.insertAndGetId { cat ->
 ```
 
-```kt
+```java
                 cat[name] = "Fluffy"
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
          val response = handleRequest(HttpMethod.Get, 
 ```
 
-```kt
+```java
             "/cats/$id").response
 ```
 
-```kt
+```java
         assertEquals("""{"id":1,"name":
 ```
 
-```kt
+```java
             "Fluffy","age":0}""", response.content)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1044,55 +1044,55 @@ fun `GET with ID fetches a single cat`() {
 
 如果我们尝试运行这个测试，它将会因为以下异常而失败：
 
-```kt
+```java
 > Serializer for class 'Cat' is not found.
 ```
 
 默认情况下，Ktor 不知道如何将我们的自定义数据类转换为 JSON。为了解决这个问题，我们需要在我们的`build.gradle.kts`文件中添加一个新的插件：
 
-```kt
+```java
 plugins {
 ```
 
-```kt
+```java
     kotlin("jvm") version "1.5.10"
 ```
 
-```kt
+```java
     application
 ```
 
-```kt
+```java
     kotlin("plugin.serialization") version "1.5.10"
 ```
 
-```kt
+```java
 }
 ```
 
 此插件将为任何带有`@Serializable`注解的类在编译时创建序列化器。为了使测试通过，我们现在需要将此注解添加到我们的`Cat`类中：
 
-```kt
+```java
 @Serializable
 ```
 
-```kt
+```java
 data class Cat(
 ```
 
-```kt
+```java
     val id: Int,
 ```
 
-```kt
+```java
     val name: String,
 ```
 
-```kt
+```java
     val age: Int
 ```
 
-```kt
+```java
 )
 ```
 
@@ -1100,75 +1100,75 @@ data class Cat(
 
 最后，我们希望能够从数据库中获取所有猫。为了做到这一点，我们必须稍微改变我们的测试设置：
 
-```kt
+```java
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 ```
 
-```kt
+```java
 class ServerTest {
 ```
 
-```kt
+```java
     @BeforeAll
 ```
 
-```kt
+```java
     fun setup() {
 ```
 
-```kt
+```java
         DB.connect()
 ```
 
-```kt
+```java
         transaction {
 ```
 
-```kt
+```java
             SchemaUtils.create(CatsTable)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     @AfterAll
 ```
 
-```kt
+```java
     fun cleanup() {
 ```
 
-```kt
+```java
         DB.connect()
 ```
 
-```kt
+```java
         transaction {
 ```
 
-```kt
+```java
             SchemaUtils.drop(CatsTable)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1178,31 +1178,31 @@ class ServerTest {
 
 接下来，让我们将我们的测试封装到一个嵌套类中，如下所示：
 
-```kt
+```java
 @Nested
 ```
 
-```kt
+```java
 inner class `With cat in DB` {
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun `GET with ID fetches a single cat`() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1210,71 +1210,71 @@ inner class `With cat in DB` {
 
 现在，让我们将以下设置代码添加到我们的嵌套测试中：
 
-```kt
+```java
 lateinit var id: EntityID<Int>
 ```
 
-```kt
+```java
 @BeforeEach
 ```
 
-```kt
+```java
 fun setup() {
 ```
 
-```kt
+```java
     DB.connect()
 ```
 
-```kt
+```java
     id = transaction {
 ```
 
-```kt
+```java
         CatsTable.insertAndGetId { cat ->
 ```
 
-```kt
+```java
             cat[name] = "Fluffy"
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 @AfterEach
 ```
 
-```kt
+```java
 fun teardown() {
 ```
 
-```kt
+```java
     DB.connect()
 ```
 
-```kt
+```java
     transaction {
 ```
 
-```kt
+```java
         CatsTable.deleteAll()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1282,27 +1282,27 @@ fun teardown() {
 
 现在，我们的用于检索单个实体的测试类看起来像这样：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun `GET with ID fetches a single cat`() {
 ```
 
-```kt
+```java
     withTestApplication(Application::mainModule) {
 ```
 
-```kt
+```java
         val response = handleRequest(HttpMethod.Get,             "/cats/$id").response         assertEquals("""{"id":$id,"name":"Fluffy",            "age":0}""", response.content)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1310,27 +1310,27 @@ fun `GET with ID fetches a single cat`() {
 
 从数据库中检索所有猫的测试看起来几乎一样：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun `GET without ID fetches all cats`() {
 ```
 
-```kt
+```java
     withTestApplication(Application::mainModule) {
 ```
 
-```kt
+```java
         val response = handleRequest(HttpMethod.Get,             "/cats").response         assertEquals("""[{"id":$id,"name":"Fluffy",            "age":0}]""", response.content)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1338,51 +1338,51 @@ fun `GET without ID fetches all cats`() {
 
 现在，我们只需要实现这个新路由：
 
-```kt
+```java
 get("/cats") {
 ```
 
-```kt
+```java
     val cats = transaction {
 ```
 
-```kt
+```java
         CatsTable.selectAll().map { row ->
 ```
 
-```kt
+```java
             Cat(
 ```
 
-```kt
+```java
                 row[CatsTable.id].value,
 ```
 
-```kt
+```java
                 row[CatsTable.name],
 ```
 
-```kt
+```java
                 row[CatsTable.age]
 ```
 
-```kt
+```java
             )
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     call.respond(cats)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1394,145 +1394,145 @@ get("/cats") {
 
 我们当前的`routing`块看起来像这样：
 
-```kt
+```java
 routing {
 ```
 
-```kt
+```java
     get("/status") {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     post("/cats") {
 ```
 
-```kt
+```java
         ...    
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     get("/cats") {
 ```
 
-```kt
+```java
         …
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     get("/cats/{id}") {
 ```
 
-```kt
+```java
         ...    
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 如果我们能将所有与猫相关的路由提取到一个单独的文件中会更好。让我们首先用函数替换所有猫的路由：
 
-```kt
+```java
 routing { 
 ```
 
-```kt
+```java
     get("/status") { 
 ```
 
-```kt
+```java
         ... 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
     cats() 
 ```
 
-```kt
+```java
 }
 ```
 
 如果你使用 IntelliJ IDEA，它甚至会建议你在`Routing`类上生成一个扩展函数：
 
-```kt
+```java
 fun Routing.cats() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
 现在，我们可以将所有我们的猫路由移动到这个函数中：
 
-```kt
+```java
 fun Routing.cats() {
 ```
 
-```kt
+```java
     post("/cats") {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     get("/cats") {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     get("/cats/{id}") {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 

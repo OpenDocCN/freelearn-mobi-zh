@@ -66,7 +66,7 @@
 
 在开始编写测试用例之前，我们必须添加以下 Gradle 依赖项：
 
-```kt
+```java
     testCompile 'junit:junit:4.12' 
     testCompile "org.mockito:mockito-core:1.9.5" 
     testCompile "org.jetbrains.kotlin:kotlin-test-   
@@ -77,7 +77,7 @@
 
 因此，我们已经准备好了所有东西，让我们编写我们的第一个测试用例。请参考以下代码：
 
-```kt
+```java
     package com.rivuchk.packtpub.reactivekotlin 
 
     import org.junit.Test 
@@ -107,7 +107,7 @@
 
 您还可以传递一个错误消息，该消息将在失败时显示，如下所示：
 
-```kt
+```java
     class TestClass { 
       @Test//(1) 
       fun `my first test`() {//(2) 
@@ -131,7 +131,7 @@
 
 以下是一个包含一些计算方法的 Kotlin 小文件，我们将在该文件上执行测试：
 
-```kt
+```java
     package com.rivuchk.packtpub.reactivekotlin.chapter8 
 
     fun add(a:Int, b:Int):Int = a+b 
@@ -142,7 +142,7 @@
 
 然后，以下类包含测试用例，仔细查看代码，然后我们将对其进行描述：
 
-```kt
+```java
     package com.rivuchk.packtpub.reactivekotlin.chapter8//(1) 
 
     import org.junit.Test 
@@ -178,7 +178,7 @@
 
 但在每个先前的例子中，我们只使用了`assertEquals`；看到这一点，你可能会有疑问，`assertEquals`是唯一的测试函数吗？答案是绝对不是。我们有大量的测试函数可用。以下是一些具有未知值的测试用例，只是为了让你了解 Kotlin 中最有用的测试函数。请参考以下代码：
 
-```kt
+```java
     package com.rivuchk.packtpub.reactivekotlin.chapter8 
 
     import org.junit.Test 
@@ -249,7 +249,7 @@
 
 尝试回忆一下之前章节中的代码块，我们在使用 `delay` 使主线程等待时使用了它，无论我们使用的是在另一个线程上操作的 `Observable` 或 `Flowable`。一个完美的例子是当我们使用 `Observable.interval` 作为工厂方法或使用 `subscribeOn` 操作符时。为了让您回忆起来，以下是一个这样的代码示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
          .subscribeOn(Schedulers.computation()) 
@@ -262,7 +262,7 @@
 
 在这个例子中，我们将订阅切换到了 `Schedulers.computation`。现在让我们看看，我们如何测试这个 Observable 并检查我们是否接收到了正好 `10` 个发射：
 
-```kt
+```java
     @Test 
     fun `check emissions count` () { 
       val emissionsCount = AtomicInteger()//(1) 
@@ -312,7 +312,7 @@
 
 我们将要讨论的第一个阻塞操作符是 `blockingFirst` 操作符。此操作符会阻塞调用线程，直到第一个项被发出并返回它。以下是一个理想的 `blockingFirst()` 测试用例，其中我们在 Observable 上执行排序操作，并通过检查第一个发出的项是否是最小的来测试它。请参考以下代码：
 
-```kt
+```java
     @Test 
     fun `test with blockingFirst`() { 
       val observable = listOf(2,10,5,6,9,8,7,1,4,3).toObservable() 
@@ -337,7 +337,7 @@
 
 因此，让我们通过修改最后一个测试用例来创建两个新的测试用例，如下所示：
 
-```kt
+```java
     @Test 
     fun `test Single with blockingGet`() { 
       val observable = listOf(2,10,5,6,9,8,7,1,4,3).toObservable() 
@@ -371,7 +371,7 @@
 
 我们有`blockingFirst`，所以很明显我们会有一个`blockingLast`。正如预期的那样，它会在阻塞线程直到源发出它之前获取最后一个发出项。以下是一个代码示例：
 
-```kt
+```java
     @Test 
     fun `test with blockingLast`() { 
       val observable = listOf(2,10,5,6,9,8,7,1,4,3).toObservable() 
@@ -394,7 +394,7 @@
 
 所以以下是一个示例，其中我们获取了完整的列表，然后我们将返回的`Iterable`转换为`List`，并在排序后与源`list`进行比较以检查等价性。请参考以下代码：
 
-```kt
+```java
     @Test 
     fun `test with blockingIterable`() { 
       val list = listOf(2,10,5,6,9,8,7,1,4,3) 
@@ -419,7 +419,7 @@
 
 在下面的示例中，我们从一个`Int`列表创建了一个`Observable`，然后只应用了偶数的过滤器，然后在`blockingForEach`中测试是否所有接收到的数字都是偶数：
 
-```kt
+```java
     @Test 
     fun `test with blockingForEach`() { 
       val list =  
@@ -455,7 +455,7 @@
 
 那么，让我们从一个例子开始：
 
-```kt
+```java
     @Test 
     fun `test with TestObserver`() { 
      val list = 
@@ -517,7 +517,7 @@
 
 因此，以下是对应的实现：
 
-```kt
+```java
     @Test 
     fun `test by fast forwarding time`() { 
       val testScheduler = TestScheduler() 

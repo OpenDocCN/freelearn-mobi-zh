@@ -90,7 +90,7 @@ MVC 模式将数据管理（模型）、用户界面（视图）和用户交互�
 
 屏幕布局由位于 `/app/src/main/res/layout` 项目文件夹下的 XML 文件作为资源定义。例如，**您的家庭** 文本字段声明如下：
 
-```kt
+```java
     <EditText
         android:id="@+id/your_household_name_edit"
         android:layout_width="wrap_content"
@@ -108,7 +108,7 @@ XML 块定义了视图为一个具有分配 ID、对齐方式和尺寸的 `EditT
 
 在 XML 布局中的视图组件可以声明性地绑定到数据源，使用 Android Jetpack 库。当模型中的数据发生变化时，视图会自动更新，无需在代码中进行手动更新。这种机制创建了一个更动态和响应式的用户界面。数据绑定可以表示如下 XML：
 
-```kt
+```java
     <data>
         <variable
             name="household"
@@ -118,7 +118,7 @@ XML 块定义了视图为一个具有分配 ID、对齐方式和尺寸的 `EditT
 
 数据定义后，视图可以绑定到模型。在以下示例中，`TextView` 显示 `Household` 的名称：
 
-```kt
+```java
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -129,7 +129,7 @@ XML 块定义了视图为一个具有分配 ID、对齐方式和尺寸的 `EditT
 
 模型应该有两个数据类。`HouseholdInput` 捕获家庭的名字和提供的服务，而 `DraftContractInput` 包含两个 `HouseholdInput` 对象以形成一个合同。这两个数据类如下所示：
 
-```kt
+```java
 data class DraftContractInput(
     val initiator: HouseholdInput,
     val neighbor: HouseholdInput
@@ -142,7 +142,7 @@ data class HouseholdInput(
 
 此外，还有一个用于处理草稿合同提交的示例仓库类，`ContractRepository`。仓库类如下所示：
 
-```kt
+```java
 class ContractRepository {
     fun submit(contract: DraftContractInput): Boolean {
         return true.also {
@@ -156,7 +156,7 @@ class ContractRepository {
 
 MVC 模式中的`Controller`接口是协调 View 和模型之间的接口。在这个例子中，定义了一个接口来描述 Controller 可以做什么：
 
-```kt
+```java
 interface Controller {
     fun submitContract(contract: DraftContractInput)
 }
@@ -164,7 +164,7 @@ interface Controller {
 
 `MainActivity`类实现了`Controller`接口，并且是 Android SDK 中的`AppCompatActivity`的子类。它设置 View 的内容，控制屏幕导航，并与模型连接：
 
-```kt
+```java
 class MainActivity : AppCompatActivity(), Controller {
     private val contractRepository: ContractRepository = ContractRepository()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -177,7 +177,7 @@ supportFragmentManager.beginTransaction().replace(R.id.fragment_container, contr
 
 到`MainActivity`类的这部分，它从模型中创建了一个`ContractRepository`对象。它还创建了一个`ContractDraftFragment`屏幕作为第一个应用程序屏幕，如*图 5.2*中左侧所示。`Controller`接口中的`submitContract`函数调用模型中的函数以提交草稿合同：
 
-```kt
+```java
     override fun submitContract(contract: DraftContractInput) {
         contractRepository.submit(contract)
          val bundle = Bundle()
@@ -193,7 +193,7 @@ supportFragmentManager.beginTransaction().replace(R.id.fragment_container, contr
 
 在 Controller 将 View 导航到确认屏幕之前，它创建一个包含提交数据的`Bundle`对象。数据传递给`ConfirmationFragment`，这是*图 5.2*中右侧显示的屏幕。`ContractDraftFragment`将用户操作发送到 Controller 以提交草稿合同。这是在`ContractDraftFragment`类的`onCreateView`函数中实现的：
 
-```kt
+```java
 class ContractDraftFragment : Fragment() {
     lateinit var controller: Controller
     lateinit var inflated: View
@@ -211,7 +211,7 @@ Android SDK 中的基本元素
 
 Android SDK 提供了一套全面的工具和组件，用于构建 Android 应用程序。本章中使用了几个关键元素。Activity 是一个带有 UI 的单个屏幕，作为用户与应用程序交互的入口点。Fragment 是 Activity 的模块化部分，它们可以在多个 Activity 之间重用。View 是 UI 的基本构建块，例如按钮、文本字段和图像。Layout 是以 XML 格式声明的 UI 定义，它指定了 View 在屏幕上的排列方式。
 
-```kt
+```java
         inflated.findViewById<Button>(R.id.submit_button)
             ?.setOnClickListener {
                 controller.submitContract(
@@ -236,7 +236,7 @@ Android SDK 提供了一套全面的工具和组件，用于构建 Android 应�
 
 最后，`ContractDraftFragment`检索从上一屏幕传递过来的`Bundle`对象。然后，使用`Bundle`对象中的数据设置 View 组件，以显示包含草稿合同详细信息的确认屏幕：
 
-```kt
+```java
 class ConfirmationFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -308,7 +308,7 @@ MVP 明确标准化了发送给和接收由 Presenter 的消息。它确保没�
 
 尽管声明的函数没有改变，但 `Controller` 接口被重命名为 `Presenter`：
 
-```kt
+```java
 interface Presenter {
     fun submitContract(contract: DraftContractInput)
 }
@@ -316,13 +316,13 @@ interface Presenter {
 
 Presenter 与视图和模型都有双向通信。因此，第一个变化是支持当模型发生变化时的回调：
 
-```kt
+```java
 typealias DraftContractSubmittedListener = (DraftContractInput) -> Unit
 ```
 
 `DraftContractSubmittedListener` 类型别名在草案合同提交给模型时充当回调接口。`ContractRepository` 类被增强以保持一个 `DraftContractSubmittedListener` 对象，并在提交草案合同时调用回调。仓库类的实现如下所示：
 
-```kt
+```java
 class ContractRepository {
     var onSubmitListener: DraftContractSubmittedListener? = null
     fun submit(contract: DraftContractInput): Boolean {
@@ -337,7 +337,7 @@ class ContractRepository {
 
 当模型更新时，回调函数可用于导航到带有提交的草案合同的确认屏幕。这是 `MainActivity` 类中更新的 `submitContract` 函数：
 
-```kt
+```java
     override fun submitContract(contract: DraftContractInput) {
         contractRepository.onSubmitListener = {
             val confirmationFragment = ConfirmationFragment()
@@ -349,7 +349,7 @@ class ContractRepository {
 
 另一方面，`ConfirmationFragment` 类被更新。屏幕直接从刚刚从 `DraftContractSubmittedListener` 设置到 `MainActivity` 的提交草稿合同中获取值：
 
-```kt
+```java
 class ConfirmationFragment : Fragment() {
     lateinit var lastSubmittedContract: DraftContractInput
     override fun onCreateView(
@@ -418,7 +418,7 @@ UI 设计师可以更好地与前端工程师协作。UI 设计师可以专注�
 
 视图模型被引入并命名为 `DraftContractViewModel`，用于在它准备好成为草稿联系人之前存储过渡数据：
 
-```kt
+```java
 class DraftContractViewModel : ViewModel() {
     var yourHouseholdName: String? = null
     var yourHouseholdService: String? = null
@@ -429,7 +429,7 @@ class DraftContractViewModel : ViewModel() {
 
 `DraftContractViewModel` 对象将在 `Fragments` 之间共享，以继续构建草稿合同所需的数据。这反映在可变字段（在 Kotlin 中称为 `var`）。此外，视图模型充当视图和模型之间的桥梁。`toModel` 函数将视图模型 `DraftContractViewModel` 对象转换为模型 `DraftContractInput` 对象：
 
-```kt
+```java
 fun DraftContractViewModel.toModel(): DraftContractInput? =
     if (yourHouseholdName != null
         && yourHouseholdService != null
@@ -453,7 +453,7 @@ fun DraftContractViewModel.toModel(): DraftContractInput? =
 
 注意，已经应用了数据完整性逻辑到该函数中，以确保模型对象只能在所有字段都存在的情况下创建。这种转换逻辑也可以独立测试，如下所示：
 
-```kt
+```java
     @Test
     fun `do not create model if the view model is empty`() {
         assertNull(DraftContractViewModel().toModel())
@@ -478,7 +478,7 @@ fun DraftContractViewModel.toModel(): DraftContractInput? =
 
 视图和视图模型之间的数据绑定和同步是自动进行的，使用以下自定义函数：
 
-```kt
+```java
 fun EditText.bind(consume: (String) -> Unit) {
     consume(text.toString())
     addTextChangedListener {
@@ -489,7 +489,7 @@ fun EditText.bind(consume: (String) -> Unit) {
 
 初始时，当创建`EditText`视图组件时，默认值设置为视图模型`DraftContractViewModel`对象。随后，任何文本更改都会触发一个回调来更新视图模型。数据绑定过程在第一个屏幕的`onCreate`函数中启动，由`ContractDraftFragment`类表示：
 
-```kt
+```java
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -501,7 +501,7 @@ fun EditText.bind(consume: (String) -> Unit) {
 
 视图模型在这里查找，并将所有者设置为活动，以便它可以与下一个屏幕共享。然后，在点击`toModel`函数时注册一个回调，用于将视图模型转换为模型对象：
 
-```kt
+```java
         inflated.findViewById<Button>(R.id.submit_button)
             ?.setOnClickListener {
                 viewModel.toModel()?.let {
@@ -512,7 +512,7 @@ fun EditText.bind(consume: (String) -> Unit) {
 
 然后使用前面提到的`bind`函数，逐字段将`EditText`视图组件与视图模型绑定：
 
-```kt
+```java
 inflated.findViewById<EditText>(R.id.your_household_name_edit)?.bind {
             viewModel.yourHouseholdName = it
         } inflated.findViewById<EditText>(R.id.your_household_service_edit)?.bind {
@@ -528,7 +528,7 @@ inflated.findViewById<EditText>(R.id.your_household_name_edit)?.bind {
 
 确认屏幕直接从视图模型获取提交的数据：
 
-```kt
+```java
 class ConfirmationFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -540,7 +540,7 @@ class ConfirmationFragment : Fragment() {
 
 视图模型在这里通过活动作为所有者与第一个屏幕共享来查找。然后，视图从相同的视图模型对象获取数据。现在有两个屏幕共享相同的视图模型对象，但视图的渲染方式不同：
 
-```kt
+```java
 inflated.findViewById<TextView>(R.id.your_household_summary).text =
             "Your household \"${viewModel.yourHouseholdName}\" providing ${viewModel.yourHouseholdService}"
         inflated.findViewById<TextView>(R.id.your_neighbor_summary).text =

@@ -122,7 +122,7 @@
 
 1.  您需要从[这里](https://dev.mysql.com/downloads/workbench/)下载此软件，如果您还没有的话。然后安装并运行它。正如我们之前提到的，我们有一些默认值：
 
-```kt
+```java
 Host -- localhost // our hosting URL
 Port -- 3306 // our hosting port
 Username -- root // username of the MySQL
@@ -195,7 +195,7 @@ Password -- 12345678 // password of the MySQL
 
 这是这个类的代码：
 
-```kt
+```java
 @SpringBootApplication
 @EnableJpaAuditing class SocialNetworkApplication
 
@@ -212,7 +212,7 @@ fun main(args: Array<String>) {
 
 使用 `@Entity` 注解创建一个名为 `Profile.kt` 的 `Profile` 实体，将其转换为实体类。以下是这个模型类的代码（完整代码可以在提供的 GitHub 链接中找到）：
 
-```kt
+```java
 @Entity
 class Profile : Serializable {
 
@@ -241,7 +241,7 @@ class Profile : Serializable {
 
 在这个类中，我们有 `11` 个元素，包含所有用户详情。我们有四个构造函数，可以根据我们的任务使用这个模型。以下是构造函数：
 
-```kt
+```java
 constructor(id: Long) {
   ----
   ----
@@ -267,7 +267,7 @@ constructor(username: String, password: String, email: String, accCreatedTime: I
 
 现在我们来讨论这个类中使用的注解：
 
-```kt
+```java
 @Id
 @GeneratedValue
 var id: Long? = 0
@@ -277,7 +277,7 @@ var id: Long? = 0
 
 这是 `password` 对象的代码片段：
 
-```kt
+```java
 @JsonIgnore
 @JsonProperty("password")
 var password: String = ""
@@ -291,7 +291,7 @@ var password: String = ""
 
 创建一个名为 `Post.kt` 的帖子实体，并使用 `@Entity` 注解将其转换为实体类。以下是这个模型类的代码：
 
-```kt
+```java
 @Entity
 class Post(text: String, postedBy: Profile) : Serializable {
 
@@ -321,7 +321,7 @@ class Post(text: String, postedBy: Profile) : Serializable {
 
 这里有两个元素和一个构造函数。以下是构造函数：
 
-```kt
+```java
 @Entity
 class Post(text: String, postedBy: Profile) : Serializable {
    -----
@@ -331,7 +331,7 @@ class Post(text: String, postedBy: Profile) : Serializable {
 
 现在是时候讨论一些在这个类中使用的新注解了：
 
-```kt
+```java
 @ManyToOne(fetch = FetchType.LAZY)
 @JoinColumn(name = "profile_id")
 @JsonIgnoreProperties("username","password", "email","accCreatedTime","firstName","lastName",
@@ -351,7 +351,7 @@ class Post(text: String, postedBy: Profile) : Serializable {
 
 现在创建一个 `Comment` 的可变列表，并用 `@OneToMany` 注解它，如下所示：
 
-```kt
+```java
  @OneToMany(cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval=true)
     val comments = mutableListOf<Comment>()
 ```
@@ -368,7 +368,7 @@ class Post(text: String, postedBy: Profile) : Serializable {
 
 创建一个名为 `Comment.kt` 的 `Comment` 实体，并使用 `@Entity` 注解将其转换为实体类。以下是这个模型类的代码：
 
-```kt
+```java
 @Entity
 class Comment(text: String, postedBy: Profile) : Serializable {
 
@@ -391,7 +391,7 @@ class Comment(text: String, postedBy: Profile) : Serializable {
 
 这里有三个元素和一个构造函数。以下是构造函数：
 
-```kt
+```java
 @Entity
 class Comment(text: String, postedBy: Profile) : Serializable {
    -----
@@ -403,7 +403,7 @@ class Comment(text: String, postedBy: Profile) : Serializable {
 
 创建一个名为 `LikeObj.kt` 的点赞实体，并使用 `@Entity` 注解将其转换为实体类。以下是这个模型类的代码：
 
-```kt
+```java
 @Entity
 class LikeObj(mProfile: Profile) : Serializable {
 
@@ -421,7 +421,7 @@ class LikeObj(mProfile: Profile) : Serializable {
 
 这里有一个元素和一个构造函数。以下是构造函数：
 
-```kt
+```java
 @Entity
 class LikeObj(profile: Profile) : Serializable {
    -----
@@ -433,35 +433,35 @@ class LikeObj(profile: Profile) : Serializable {
 
 创建一个名为 `ProfileRepository.kt` 的用户资料仓库，并实现具有所有必要的 CRUD 请求方法的 `JpaRepository` 仓库以获取数据库。以下是这个类的代码：
 
-```kt
+```java
 @Repository
 interface ProfileRepository : JpaRepository<Profile, Long>
 ```
 
 现在创建一个名为 `PostRepository.kt` 的帖子仓库，并实现具有所有必要的 CRUD 请求方法的 `JpaRepository` 仓库以获取数据库。以下是这个类的代码：
 
-```kt
+```java
 @Repository
 interface PostRepository : JpaRepository<Post, Long>
 ```
 
 然后创建一个名为 `CommentRepository.kt` 的评论仓库，并实现具有所有必要的 CRUD 请求方法的 `JpaRepository<>` 仓库以获取数据库。以下是这个类的代码：
 
-```kt
+```java
 @Repository
 interface CommentRepository : JpaRepository<Comment, Long>
 ```
 
 最后，创建一个名为 `LikeRepository.kt` 的 `like` 模型存储库，并实现具有所有必要 CRUD 请求方法的 `JpaRepository<>` 存储库以获取数据库。以下是该类的代码：
 
-```kt
+```java
 @Repository
 interface LikeRepository : JpaRepository<LikeObj, Long>
 ```
 
 要删除与已删除帖子相关的所有数据，我们需要为名为 `DeletePCLRepository.kt` 的 `profile` 创建一个存储库，并实现一个名为 `DeletePCLByIDInterface.kt` 的接口，该接口有一个函数，用于删除与已删除用户相关的所有数据。以下是该接口的代码：
 
-```kt
+```java
 interface DeletePCLByIDInterface {
     fun deleteAllUsersInfoByUserID(userID: Long): Any
 }
@@ -469,7 +469,7 @@ interface DeletePCLByIDInterface {
 
 这里是 `DeletePCLRepository.kt` 类的代码：
 
-```kt
+```java
 @Repository
 class DeletePCLRepository : DeletePCLByIDInterface {
 
@@ -495,7 +495,7 @@ class DeletePCLRepository : DeletePCLByIDInterface {
 
 这里是接口的代码：
 
-```kt
+```java
 interface UserExistInterface{
     fun isUserExist(name: String): Boolean
 }
@@ -505,7 +505,7 @@ interface UserExistInterface{
 
 这里是 `UserExistRepository.kt` 类的代码：
 
-```kt
+```java
 @Repository
 class UserExistRepository: UserExistInterface {
     @Autowired
@@ -527,7 +527,7 @@ class UserExistRepository: UserExistInterface {
 
 现在，创建一个名为 `AppController.kt` 的控制器类，并使用 `@RestController` 注解将其转换为控制器类：
 
-```kt
+```java
 @RestController class AppController {
     -----
     -----
@@ -536,7 +536,7 @@ class UserExistRepository: UserExistInterface {
 
 现在按照以下代码自动装配存储库。
 
-```kt
+```java
 @Autowired
 private lateinit var profileRepository: ProfileRepository
 
@@ -564,7 +564,7 @@ private lateinit var deletePCLRepository : DeletePCLRepository
 
 这里是创建个人资料 `POST` 请求的函数：
 
-```kt
+```java
 // New Profile registration
 @PostMapping("/profile/new")
 fun registerUser(@RequestBody profile: Profile): Any {
@@ -579,7 +579,7 @@ fun registerUser(@RequestBody profile: Profile): Any {
 
 这里是创建个人资料 `GET` 请求的函数：
 
-```kt
+```java
 // Get Profile by ID
 @GetMapping("/profile/{id}")
 fun getUserById(@PathVariable("id") id: Long): Any {
@@ -589,7 +589,7 @@ fun getUserById(@PathVariable("id") id: Long): Any {
 
 这里是创建个人资料 `PUT` 请求的函数：
 
-```kt
+```java
 //     Update Profile by ID
 @PutMapping("/profile/{id}")
 fun updateUserById(@PathVariable("id") id: Long, @RequestBody mUser: Profile): Any {
@@ -605,7 +605,7 @@ fun updateUserById(@PathVariable("id") id: Long, @RequestBody mUser: Profile): A
 
 这里是创建个人资料 `DELETE` 请求的函数：
 
-```kt
+```java
 // Delete Profile by ID
 @DeleteMapping("/profile/{userId}")
 fun deleteUserById(@PathVariable("userId") userId: Long): Any {
@@ -620,7 +620,7 @@ fun deleteUserById(@PathVariable("userId") userId: Long): Any {
 
 这里是创建帖子 `POST` 请求的函数：
 
-```kt
+```java
 // Post status by Profile ID
 @PostMapping("/post/{profile_id}/new")
 fun submitPost(@PathVariable("profile_id") profile_id: Long, @RequestParam text: String): Any {
@@ -633,7 +633,7 @@ fun submitPost(@PathVariable("profile_id") profile_id: Long, @RequestParam text:
 
 这里是创建帖子 `GET` 请求以获取所有帖子的函数：
 
-```kt
+```java
 // Get all posted status
 @GetMapping("/posts")
 fun getPostList(): Any {
@@ -643,7 +643,7 @@ fun getPostList(): Any {
 
 这里是创建帖子 `GET` 请求以获取单个帖子的函数：
 
-```kt
+```java
 // Get all posted status by Profile ID
 @GetMapping("/post/{id}")
 fun getPostById(@PathVariable("id") id: Long): Any {
@@ -653,7 +653,7 @@ fun getPostById(@PathVariable("id") id: Long): Any {
 
 这里是创建帖子 `PUT` 请求以更新单个帖子的函数：
 
-```kt
+```java
 // Update all posted status by Profile ID
  @PutMapping("/post/{profile_id}")
     fun updatePostById(@PathVariable("profile_id") id: Long, @RequestParam text: String): Any {
@@ -665,7 +665,7 @@ fun getPostById(@PathVariable("id") id: Long): Any {
 
 这里是创建帖子 `DELETE` 请求的函数：
 
-```kt
+```java
 // Delete a posted status by Profile ID
 @DeleteMapping("/post/{id}")
 fun deletePostByUserId(@PathVariable("id") id: Long): Any {
@@ -679,7 +679,7 @@ fun deletePostByUserId(@PathVariable("id") id: Long): Any {
 
 这里是创建评论 `POST` 请求的函数：
 
-```kt
+```java
 // Post comment in a post by Profile ID and Post ID
     @PostMapping("/comment/{post_id}")
     fun postCommentByPostId(@PathVariable("post_id") postId: Long, @RequestParam id: Long, @RequestParam commentText: String): Any {
@@ -700,7 +700,7 @@ fun deletePostByUserId(@PathVariable("id") id: Long): Any {
 
 这里是创建评论 `GET` 请求的函数：
 
-```kt
+```java
 // get comment List of a post
 @GetMapping("/comment/{id}")
 fun getCommentListByPostId(@PathVariable("id") id: Long): Any {
@@ -710,7 +710,7 @@ fun getCommentListByPostId(@PathVariable("id") id: Long): Any {
 
 这里是创建评论 `PUT` 请求的函数：
 
-```kt
+```java
 // get comment List of a post
 @GetMapping("/comment/{id}")
 fun getCommentListByPostId(@PathVariable("id") id: Long, @RequestParam text: String): Any {
@@ -722,7 +722,7 @@ fun getCommentListByPostId(@PathVariable("id") id: Long, @RequestParam text: Str
 
 这里是创建评论 `DELETE` 请求的函数：
 
-```kt
+```java
 // delete comment List of a status
 @DeleteMapping("/comment/{id}")
 fun deleteCommentByPostId(@PathVariable("id") id: Long): Any {
@@ -738,7 +738,7 @@ fun deleteCommentByPostId(@PathVariable("id") id: Long): Any {
 
 1.  实现 `UserDetailsService` 并用 `@Service` 注解，使其成为一个服务类。以下是这个服务类的代码：
 
-```kt
+```java
 @Service
 class CustomUserDetailsService: UserDetailsService {
 
@@ -757,7 +757,7 @@ class CustomUserDetailsService: UserDetailsService {
 
 1.  在这里，我们自动装配了 `UserByNameRepository.kt` 存储库并覆盖了 `loadUserByUsername(username: String)`。我们将从存储库中获取 `username` 和 `password` 并与客户端提供的 `username` 和 `password` 进行匹配。以下是 `UserByNameRepository.kt` 的代码：
 
-```kt
+```java
 @Repository
 class UserByNameRepository: UserByNameInterface {
  @Autowired
@@ -785,7 +785,7 @@ interface UserByNameInterface {
 
 1.  现在创建名为 `UserRowMapper.kt` 的用户 `RowMapper` 类的代码，以获取用户详细信息。以下是这个类中的一段代码：
 
-```kt
+```java
 class UserRowMapper : RowMapper<Profile> {
 
     @Throws(SQLException::class)
@@ -800,7 +800,7 @@ class UserRowMapper : RowMapper<Profile> {
 
 1.  让我们创建一个名为 `SecurityConfigurer.kt` 的 `WebSecurityConfigurerAdapter` 类，并用 `@Configuration` 和 `@EnableWebSecurity` 注解它，以创建一个配置文件并启用网络安全。以下是 `SecurityConfigurer.kt` 类的代码：
 
-```kt
+```java
 @Configuration
 @EnableWebSecurity
 class SecurityConfigurer : WebSecurityConfigurerAdapter() {
@@ -859,7 +859,7 @@ class SecurityConfigurer : WebSecurityConfigurerAdapter() {
 
 `application.properties` 文件用于将数据库与应用程序连接，并定义数据库将如何行为。以下是 `application.properties` 的代码：
 
-```kt
+```java
 # ===============================
 # DATABASE
 # ===============================
@@ -923,7 +923,7 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL5Dialect
 
 在构建项目后，在 `build.gradle (Module:app)` 的 `dependencies{}` 块中添加以下依赖项：这些是用于 Material Design、Retrofit 和 RxJava 的：
 
-```kt
+```java
 // Design
 implementation 'com.android.support:design:28.0.0'
 implementation 'com.android.support:recyclerview-v7:28.0.0'
@@ -949,7 +949,7 @@ implementation 'io.reactivex.rxjava2:rxjava:2.2.0'
 
 现在转到活动，以下是此类的默认代码：
 
-```kt
+```java
 class HomeActivity : AppCompatActivity() {
 
  override fun onCreate(savedInstanceState: Bundle?) {
@@ -969,7 +969,7 @@ class HomeActivity : AppCompatActivity() {
 
 首先，创建一个名为 `home_content.xml` 的布局，添加 `FrameLayout` 并添加一个 `id` 名称。以下是此 XML 文件的代码（您可以在 GitHub 上查看完整版本）：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1019,7 +1019,7 @@ class HomeActivity : AppCompatActivity() {
 
 创建一个名为 `Profile.kt` 的 `Profile` 数据类，以下是一个示例代码：
 
-```kt
+```java
 data class Profile(
     @SerializedName("id") var userID: String,
     @SerializedName("username") var username: String,
@@ -1037,7 +1037,7 @@ data class Profile(
 
 创建一个名为 `Post.kt` 的 `Post` 数据类，以下是一个示例代码：
 
-```kt
+```java
 data class Post(
     @SerializedName("id") var postId: Long?,
     @SerializedName("text") var text: String?,
@@ -1052,7 +1052,7 @@ data class Post(
 
 创建一个名为 `Comment.kt` 的注释数据类，以下是一个示例代码：
 
-```kt
+```java
 data class Comment (
     @SerializedName("id") var comment: Long?,
     @SerializedName("text") var text: String?,
@@ -1069,7 +1069,7 @@ data class Comment (
 
 根据我们的服务器，我们有四个针对个人资料的 `HTTP` 请求。因此，我们将使用 Retrofit 注解创建三个 `HTTP` 请求。现在创建一个名为 `ProfileService.kt` 的接口，以下是代码：
 
-```kt
+```java
 interface ProfileService {
 
     // New Profile registration
@@ -1104,7 +1104,7 @@ interface ProfileService {
 
 根据我们的服务器，我们有三个针对个人资料的 `HTTP` 请求。因此，我们将使用 Retrofit 注解创建三个 `HTTP` 请求。现在创建一个名为 `ProfileService.kt` 的接口，以下是代码：
 
-```kt
+```java
 interface PostService {
     @Headers("Content-Type: application/json")
     @POST("/post/{profile_id}/new")
@@ -1135,7 +1135,7 @@ interface PostService {
 
 为了处理评论 REST API，我们将创建两个 `HTTP` 请求。因此，我们将使用 Retrofit 注解创建两个 `POST` 和 `DELETE` 请求。现在创建一个名为 `PostService.kt` 的接口，以下是代码：
 
-```kt
+```java
 interface CommentService {
     // Post comment in a post by Profile ID and Post ID
     @POST("/comment/{user_id}/{post_id}")
@@ -1164,7 +1164,7 @@ interface CommentService {
 
 我们在 第四章 中解释了此过程，*Android 的 Spring 模块*。因此，我们只需向您展示代码并解释新功能。创建一个名为 `APIService.kt` 的对象，并添加 `gsonConverter()` 和 `getOkhttpClient(username, password)`：
 
-```kt
+```java
 object APIService{
    fun getRetrofitBuilder(username:String, password:String): Retrofit {
        return Retrofit.Builder()
@@ -1199,7 +1199,7 @@ object APIService{
 
 现在，我们需要初始化服务的`RetrofitBuilder`函数。我们有四个服务接口，现在我们将为它们创建四个`RetrofitBuilder`函数。在`APIService.kt`文件中添加以下代码：
 
-```kt
+```java
 // get profile request builder
 fun profileAPICall(username:String, password:String) = getRetrofitBuilder(username, password)
     .create(ProfileService::class.java)
@@ -1223,7 +1223,7 @@ fun commentAPICall(username:String, password:String) = getRetrofitBuilder(userna
 
 创建一个名为`LoginActivity.kt`的空活动和一个名为`activity_login.xml`的布局。以下是`xml`中的代码（您可以在 GitHub 上找到该布局的完整版本）：
 
-```kt
+```java
 ------
 ------
 <android.support.v7.widget.CardView
@@ -1288,7 +1288,7 @@ fun commentAPICall(username:String, password:String) = getRetrofitBuilder(userna
 
 首先，我们将检查`SharedPreferences`以查看我们是否保存了`username`和`password`。它将显示在用户名和密码字段中，或者它将保持空白，以便您可以输入值。以下是这个逻辑的功能：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_login)
@@ -1307,7 +1307,7 @@ private fun setUsernamePassword() {
 
 现在，在名为`need_reg`的`TextView`上设置`OnClickListener()`监听器函数，它将带我们到`RegistrationActivity`。以下是该函数的代码：
 
-```kt
+```java
 need_reg.setOnClickListener {
     val intent = Intent(this, RegistrationActivity::class.java)
     startActivity(intent)
@@ -1318,7 +1318,7 @@ need_reg.setOnClickListener {
 
 现在，我们将创建一个名为`logInUser()`的函数，该函数将向服务器发送`POST`请求并匹配`username`和`password`。如果失败，它将获取错误并显示错误消息，或者它将带您到`MainActivity`。以下是该函数的代码：
 
-```kt
+```java
 private fun logInUser(){
 
     APIClient.profileAPICall(username_input_login.text.toString(), password_input_login.text.toString())
@@ -1356,7 +1356,7 @@ private fun logInUser(){
 
 为`RegistrationActivity.kt`创建一个名为`activity_registration.xml`的布局。在这里，我添加了 UI，请查看 GitHub 上的完整版本文件。以下是该文件中的一段代码：
 
-```kt
+```java
  <Button android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:text="@string/title_reg"
                         android:id="@+id/reg_submit" android:layout_marginTop="32dp"
@@ -1382,7 +1382,7 @@ private fun logInUser(){
 
 这是`RegistrationActivity`的代码：
 
-```kt
+```java
 class RegistrationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1395,7 +1395,7 @@ class RegistrationActivity : AppCompatActivity() {
 
 现在添加一些逻辑来验证`用户名`、`密码`和`电子邮件 ID`。以下是代码：
 
-```kt
+```java
 
 private fun validateName(): Boolean {
     if (username_input_reg.text.toString().trim().isEmpty()) {
@@ -1444,7 +1444,7 @@ private fun validatePassword(): Boolean {
 
 添加一个`TextWatcher`内部类，如果输入有任何无效内容，它将发送一个警报：
 
-```kt
+```java
 private inner class MyTextWatcher (private val view: View) : TextWatcher {
 
     override fun beforeTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
@@ -1467,7 +1467,7 @@ private inner class MyTextWatcher (private val view: View) : TextWatcher {
 
 现在我们将创建一个名为`registerUser()`的函数，该函数将帮助你向服务器发送请求并从服务器获取输出。我们将在第八章反应式编程和第四章 Android 的 Spring 模块中展示如何使用 RxJava。以下是`registerUser()`的代码：
 
-```kt
+```java
 private fun registerUser(){
     val newProfile = Profile(null,
         username_input_reg.text.toString(),
@@ -1513,7 +1513,7 @@ private fun registerUser(){
 
 `MainActivity`的布局在`activity_main.xml`文件中。在这里，我们添加了`RecyclerView`以显示列表，一个`FabButton`用于提交帖子，以及一个`TextView`以显示如果没有帖子可用。以下是代码片段：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1550,7 +1550,7 @@ private fun registerUser(){
 
 前往`MainAcitivty.kt`。在这里，我们有`RecycleView`和帖子适配器。我们将在`onCreate()`函数中添加一个全局的`List<Post>`并将`recycleView`设置如下：
 
-```kt
+```java
 private var postList: List<Post> = listOf()
 
 override fun onCreate(savedInstanceState: Bundle?) {
@@ -1569,7 +1569,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 我们将使用`getAllPosts()`函数获取所有帖子。此函数将向服务器发送请求以获取所有帖子列表。作为回报，我们将得到名为`newPostList`的更新列表，并使用`setItems(newPostList)`传递给`PostRecycleViewAdapter`，并使用`notifyDataSetChanged()`通知。对于错误处理，我们使用了 toast。以下是`getAllPosts()`函数的代码：
 
-```kt
+```java
 private fun getAllPosts() {
         APIClient.postAPICall(PrefUtils.getUsername(this)!!, PrefUtils.getPassword(this)!!)
         .getPostList()
@@ -1592,7 +1592,7 @@ private fun getAllPosts() {
 
 这是`submitPost()`函数的代码：
 
-```kt
+```java
 private fun submitPost(id: Long, text: String){
     APIClient.postAPICall(PrefUtils.getUsername(this)!!, PrefUtils.getPassword(this)!!)
         .submitNewPost(id, text)
@@ -1615,7 +1615,7 @@ private fun submitPost(id: Long, text: String){
 
 下面是 `menu_main.xml` 的代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
@@ -1637,7 +1637,7 @@ private fun submitPost(id: Long, text: String){
 
 我们将在 `onCreateOptionsMenu()` 中使用 `menuInflater.inflate()` 绑定 `menu_main` 菜单 XML 文件，并在 `onOptionsItemSelected()` 中写下每个菜单项的逻辑：
 
-```kt
+```java
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
@@ -1669,7 +1669,7 @@ private fun submitPost(id: Long, text: String){
 
 要利用帖子适配器，我们需要创建一个名为 `post_item.xml` 的 `xml` 文件，在这里我们将实现 UI。下面是一段代码（完整代码可以在 GitHub 上找到）：
 
-```kt
+```java
 ----
 ----
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -1704,7 +1704,7 @@ private fun submitPost(id: Long, text: String){
 
 让我们创建一个名为 `PostRecycleViewAdapter.kt` 的自定义 `RecycleView` 适配器来显示帖子列表。我们已经展示了如何在 第四章，*Spring Modules for Android* 中创建自定义适配器，所以我们将不再重复。以下是 `PostRecycleViewAdapter` 类：
 
-```kt
+```java
 class PostRecycleViewAdapter(private var context: Context,
                        private val postList: List<Post>):
 RecyclerView.Adapter<PostRecycleViewAdapter.ViewHolder>() {
@@ -1715,7 +1715,7 @@ RecyclerView.Adapter<PostRecycleViewAdapter.ViewHolder>() {
 
 现在在 `PostRecycleViewAdapter.kt` 中创建 `ViewHolder` 类，并初始化 `post_item` 布局的所有内容，如下面的代码所示：
 
-```kt
+```java
 class ViewHolder(view: View): RecyclerView.ViewHolder(view){
     val postRoot = view.findViewById(R.id.postRoot) as ConstraintLayout
 
@@ -1728,7 +1728,7 @@ class ViewHolder(view: View): RecyclerView.ViewHolder(view){
 
 现在重写 `onCreateViewHolder()` 并返回 `ViewHolder` 类：
 
-```kt
+```java
 override fun onCreateViewHolder(viewGroup: ViewGroup, p1: Int): ViewHolder {
     val layoutInflater = LayoutInflater.from(context).inflate(R.layout.post_item, viewGroup, false)
     return ViewHolder(layoutInflater)
@@ -1737,7 +1737,7 @@ override fun onCreateViewHolder(viewGroup: ViewGroup, p1: Int): ViewHolder {
 
 现在，我们需要根据其位置设置列表中每一行的值。为此，重写 `onBindViewHolder()` 函数并添加以下代码：
 
-```kt
+```java
 override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
 
     val userDetails = postList[position]
@@ -1754,7 +1754,7 @@ override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
 
 这个布局将帮助从用户那里获取配置文件详情。打开 `activity_profile.xml` 并按以下方式修改（请检查 GitHub 上的完整布局代码）：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 
     <!--full name-->
@@ -1794,7 +1794,7 @@ override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
 
 创建一个新的活动名为 `ProfileActivity.kt`，以下是代码：
 
-```kt
+```java
 class ProfileActivity : AppCompatActivity() {
 
         private var username: String = ""
@@ -1815,7 +1815,7 @@ class ProfileActivity : AppCompatActivity() {
 
 要获取个人资料详情，我们需要创建一个名为 `getUser()` 的函数，在其中我们将从 `Profile` 服务中调用 `getUserById()`。作为回报，它将提供用户详情，或者如果有错误，它将显示错误消息。以下是 `getUserById()` 函数的代码：
 
-```kt
+```java
 private fun getUser(){
         APIClient.profileAPICall(username,password)
             .getUserById(PrefUtils.getUsernameID(this)!!)
@@ -1845,7 +1845,7 @@ private fun getUser(){
 
 这个视图将显示具体的帖子详情。以下是 `activity_post_details.xml` 中的一个代码片段：
 
-```kt
+```java
 -----
 ----
 <android.support.v7.widget.RecyclerView
@@ -1880,7 +1880,7 @@ private fun getUser(){
 
 这是一个处理特定帖子的活动。这个帖子将通过 `postId` 获取，我们将通过从 `PostRecycleViewAdapter` 发送的 intent 获取它。要获取 intent 视图，我们需要使用 `intent.extras`。我们使用 `Long` 与 `"postId"` 的 *键名*，如下面的代码所示：
 
-```kt
+```java
 private var postId:Long = -1
 
 if(intent.extras!=null){
@@ -1892,7 +1892,7 @@ if(intent.extras!=null){
 
 现在创建一个名为 `getPostById(id: Long)` 的函数，我们将从 `MainActivity` 传递给定的 `postId`。我们将处理特定的 `TextView` 中的所有值，例如 `MainActivity`：
 
-```kt
+```java
 @SuppressLint("CheckResult")
 private fun getPostById(id: Long){
     UtilMethods.showLoading(this)
@@ -1927,7 +1927,7 @@ private fun getPostById(id: Long){
 
 要提交评论，点击 `fabButton` 并输入评论。评论提交系统与帖子提交系统类似。我们创建一个名为 `submitComment(id: Long, text: String)` 的函数，并使用它来提交评论。以下是 `submitComment()` 函数：
 
-```kt
+```java
 @SuppressLint("CheckResult")
 private fun submitComment(id: Long, text: String){
     UtilMethods.showLoading(this)

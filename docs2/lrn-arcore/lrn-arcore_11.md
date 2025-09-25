@@ -198,7 +198,7 @@ Unity 工具提供了用于性能分析应用的最强大和直观的界面。�
 
 1.  在你选择的编辑器中打开`Test`脚本，并添加以下突出显示的代码行：
 
-```kt
+```java
 using UnityEngine;
 public class Test : MonoBehaviour {
   public GameObject monster;  //add me
@@ -237,7 +237,7 @@ public class Test : MonoBehaviour {
 
 1.  我们下一步是记录日志。在`Update`方法中添加以下代码行：
 
-```kt
+```java
 Debug.LogFormat("Monster is at position ({0})", monster.transform.position);
 ```
 

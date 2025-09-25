@@ -70,7 +70,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 @Composable 
 fun FriendlyMessage(name: String) { 
    Text(text = "Greetings $name!") 
@@ -79,7 +79,7 @@ fun FriendlyMessage(name: String) {
 
 当我们希望您注意代码块中特定部分时，表示代码的一部分已被添加或修改，相关的行或项目将以粗体显示：
 
-```kt
+```java
 @Composable 
 fun ColoredBox() { 
    Box(modifier = Modifier.size(120.dp)) 
@@ -88,7 +88,7 @@ fun ColoredBox() {
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 npm install component_name
 ```
 

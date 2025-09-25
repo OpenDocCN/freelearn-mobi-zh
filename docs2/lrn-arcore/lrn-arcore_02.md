@@ -66,7 +66,7 @@ Android Studio 内置了 OpenJDK。这意味着我们至少在 Windows 上可以
 
 1.  输入以下命令：
 
-```kt
+```java
 git clone https://github.com/google-ar/arcore-android-sdk.git
 ```
 
@@ -104,7 +104,7 @@ git clone https://github.com/google-ar/arcore-android-sdk.git
 
 1.  返回到命令提示符或 Windows shell，并运行以下命令：
 
-```kt
+```java
 adb install -r -d arcore-preview.apk
 //ON WINDOWS USE:
 sdk\platform-tools\adb install -r -d arcore-preview.apk 
@@ -162,7 +162,7 @@ sdk\platform-tools\adb install -r -d arcore-preview.apk
 
 1.  在源代码加载后，滚动到以下部分：
 
-```kt
+```java
 private void showLoadingMessage() {
  runOnUiThread(new Runnable() {
   @Override

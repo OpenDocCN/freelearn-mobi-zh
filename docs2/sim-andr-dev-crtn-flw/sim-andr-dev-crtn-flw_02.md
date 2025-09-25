@@ -74,27 +74,27 @@ ANR 对话框和崩溃可能会让您的用户感到烦恼。如果它们经常�
 
 线程是并发运行代码的执行单元。在 Android 中，UI 线程是主线程。你可以使用`java.lang.Thread`类在另一个线程上执行任务：
 
-```kt
+```java
 private fun fetchTextWithThread() {
 ```
 
-```kt
+```java
   Thread {
 ```
 
-```kt
+```java
         // get text from network
 ```
 
-```kt
+```java
         val text = getTextFromNetwork()
 ```
 
-```kt
+```java
   }.start()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -102,43 +102,43 @@ private fun fetchTextWithThread() {
 
 要更新 UI，例如从网络中获取并显示在`TextView`中的文本，你需要使用`Activity.runOnUiThread()`。`runOnUIThread`内部的代码将在主线程上执行，如下所示：
 
-```kt
+```java
 private fun fetchTextWithThread() {
 ```
 
-```kt
+```java
   Thread {
 ```
 
-```kt
+```java
           // get text from network
 ```
 
-```kt
+```java
           val text = getTextFromNetwork()
 ```
 
-```kt
+```java
     runOnUiThread {
 ```
 
-```kt
+```java
         // Display on UI
 ```
 
-```kt
+```java
         displayText(text)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
   }.start()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -154,43 +154,43 @@ private fun fetchTextWithThread() {
 
 要将处理器附加到主线程，你应该使用`Looper.getMainLooper()`，如下例所示：
 
-```kt
+```java
 private fun fetchTextWithThreadAndHandler() {
 ```
 
-```kt
+```java
   Thread {
 ```
 
-```kt
+```java
     // get text from network
 ```
 
-```kt
+```java
            val text = getTextFromNetwork()
 ```
 
-```kt
+```java
     Handler(Looper.getMainLooper()).post {
 ```
 
-```kt
+```java
       // Display on UI
 ```
 
-```kt
+```java
       displayText(text)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
   }.start()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -212,87 +212,87 @@ private fun fetchTextWithThreadAndHandler() {
 
 您可以使用以下函数来发送消息：`sendMessage(Message)`、`sendMessageAtTime(Message, uptimeMillis)` 和 `sendMessageDelayed(Message, delayMillis)`。以下代码显示了使用 `sendMessage` 函数发送包含数据包的消息的用法：
 
-```kt
+```java
 private val key = "key"
 ```
 
-```kt
+```java
 private val messageHandler = object :
 ```
 
-```kt
+```java
    Handler(Looper.getMainLooper()) {
 ```
 
-```kt
+```java
     override fun handleMessage(message: Message) {
 ```
 
-```kt
+```java
     val bundle = message.data
 ```
 
-```kt
+```java
     val text = bundle.getString(key, "")
 ```
 
-```kt
+```java
     //Display text
 ```
 
-```kt
+```java
     displayText(text)
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 private fun fetchTextWithHandlerMessage() {
 ```
 
-```kt
+```java
   Thread {
 ```
 
-```kt
+```java
     // get text from network
 ```
 
-```kt
+```java
     val text = getTextFromNetwork()
 ```
 
-```kt
+```java
     val message = handler.obtainMessage()
 ```
 
-```kt
+```java
     val bundle = Bundle()
 ```
 
-```kt
+```java
     bundle.putString(key, text)
 ```
 
-```kt
+```java
     message.data = bundle
 ```
 
-```kt
+```java
     messageHandler.sendMessage(message)
 ```
 
-```kt
+```java
   }.start()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -302,87 +302,87 @@ private fun fetchTextWithHandlerMessage() {
 
 此示例使用 `0` 和 `1` 作为值来表示什么（“what” 是 `Message` 类的一个字段，它是一个用户定义的消息代码，以便接收者可以识别这条消息的内容）：`1` 表示后台任务成功的情况，`0` 表示失败的情况：
 
-```kt
+```java
 private val emptymesageHandler = object :
 ```
 
-```kt
+```java
   Handler(Looper.getMainLooper()) {
 ```
 
-```kt
+```java
   override fun handleMessage(message: Message) {
 ```
 
-```kt
+```java
     if (message.what == 1) {
 ```
 
-```kt
+```java
       //Update UI
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
       //Show Error
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 private fun fetchTextWithEmptyMessage() {
 ```
 
-```kt
+```java
   Thread {
 ```
 
-```kt
+```java
     // get text from network
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
     if (failed) {  
 ```
 
-```kt
+```java
       emptyMessageHandler.sendEmptyMessage(0)
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
       emptyMessageHandler.sendEmptyMessage(1)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
   }.start()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -412,51 +412,51 @@ private fun fetchTextWithEmptyMessage() {
 
 以下是一个简单的回调示例：
 
-```kt
+```java
 private fun fetchTextWithCallback() {
 ```
 
-```kt
+```java
   fetchTextWithCallback { text ->
 ```
 
-```kt
+```java
     //display text
 ```
 
-```kt
+```java
     displayText(text)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 fun fetchTextWithCallback(onSuccess: (String) -> Unit) {    
 ```
 
-```kt
+```java
      Thread {
 ```
 
-```kt
+```java
           val text = getTextFromNetwork()    
 ```
 
-```kt
+```java
           onSuccess(text)
 ```
 
-```kt
+```java
     }.start()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -470,7 +470,7 @@ fun fetchTextWithCallback(onSuccess: (String) -> Unit) {    
 
 要使用 `AsyncTask`，你必须创建一个具有三个泛型类型的子类：
 
-```kt
+```java
 AsyncTask<Params?, Progress?, Result?>()
 ```
 
@@ -484,17 +484,17 @@ AsyncTask<Params?, Progress?, Result?>()
 
 例如，如果你要创建用于从特定端点下载文本的 `AsyncTask`，你的 `Params` 将是 URL (`String`)，而 `Result` 将是文本输出 (`String`)。如果你想跟踪下载文本剩余时间的百分比，你可以使用 `Integer` 作为 `Progress`。你的类声明可能如下所示：
 
-```kt
+```java
 class DownloadTextAsyncTask : AsyncTask<String, Integer,
 ```
 
-```kt
+```java
  String>()
 ```
 
 你可以使用以下代码启动 `AsyncTask`：
 
-```kt
+```java
 DownloadTextAsyncTask().execute("https://example.com")
 ```
 
@@ -518,51 +518,51 @@ DownloadTextAsyncTask().execute("https://example.com")
 
 回到我们的例子，你的 `DownloadTextAsync` 类可能如下所示：
 
-```kt
+```java
 class DownloadTextAsyncTask : AsyncTask<String, Void,
 ```
 
-```kt
+```java
  String>() {
 ```
 
-```kt
+```java
         override fun doInBackground(vararg params:
 ```
 
-```kt
+```java
           String?): String? {
 ```
 
-```kt
+```java
             valtext = getTextFromNetwork(params[0] ?: "")
 ```
 
-```kt
+```java
             //get text from network
 ```
 
-```kt
+```java
             return text
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         override fun onPostExecute(result: String?) {
 ```
 
-```kt
+```java
             //Display on UI
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -582,47 +582,47 @@ class DownloadTextAsyncTask : AsyncTask<String, Void,
 
 使用`Executor`的异步代码将如下所示：
 
-```kt
+```java
 val handler = Handler(Looper.getMainLooper())
 ```
 
-```kt
+```java
 private fun fetchTextWithExecutor() {
 ```
 
-```kt
+```java
   val executor = Executors.newSingleThreadExecutor()
 ```
 
-```kt
+```java
   executor.execute {
 ```
 
-```kt
+```java
     // get text from network
 ```
 
-```kt
+```java
            val text = getTextFromNetwork()
 ```
 
-```kt
+```java
     handler.post {
 ```
 
-```kt
+```java
       // Display on UI
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -634,39 +634,39 @@ private fun fetchTextWithExecutor() {
 
 `Future`对象有两个你可以使用的功能，`Future.isDone()`用于检查执行器是否已完成任务，`Future.get()`用于获取任务的结果，如下所示：
 
-```kt
+```java
 val handler = Handler(Looper.getMainLooper()
 ```
 
-```kt
+```java
 private fun fetchTextWithExecutorService() {
 ```
 
-```kt
+```java
   val executor = Executors.newSingleThreadExecutor()
 ```
 
-```kt
+```java
   val future = executor.submit {
 ```
 
-```kt
+```java
      displayText(getTextFromNetwork())    
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
   val result = future.get()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -688,19 +688,19 @@ private fun fetchTextWithExecutorService() {
 
 你可以通过在 `app/build.gradle` 文件依赖项中添加以下行来将协程添加到你的 Android 项目中：
 
-```kt
+```java
 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-
 ```
 
-```kt
+```java
   core:1.6.0"
 ```
 
-```kt
+```java
 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-
 ```
 
-```kt
+```java
   android:1.6.0"
 ```
 
@@ -708,47 +708,47 @@ implementation "org.jetbrains.kotlinx:kotlinx-coroutines-
 
 要将一个函数标记为挂起函数，你可以向它添加 `suspend` 关键字；例如，这里有一个调用 `fetchText()` 函数的函数，它从端点检索文本，然后在 UI 线程中显示它：
 
-```kt
+```java
 fun fetchText(): String {
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
 }
 ```
 
 你可以通过在 `suspend` 关键字前缀来将 `fetchText()` 函数制作成挂起函数，如下所示：
 
-```kt
+```java
 suspend fun fetchText(): String { ... }
 ```
 
 然后，你可以创建一个协程，该协程将调用 `fetchText()` 挂起函数并显示列表，如下所示：
 
-```kt
+```java
 lifecycleScope.launch(Dispatchers.IO) {
 ```
 
-```kt
+```java
     val fetchedText = fetchText()  
 ```
 
-```kt
+```java
     withContext(Dispatchers.Main) {
 ```
 
-```kt
+```java
       displayText(fetchedText)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -778,55 +778,55 @@ Flow 现在已用于 Jetpack 库如 Room-KTX，Android 开发者已经在他们�
 
 假设在你的 Android 应用中，你有一个 `getTextFromNetwork` 函数，它从网络端点获取文本并将其作为 `String` 对象返回：
 
-```kt
+```java
 fun getTextFromNetwork(): String { ... }
 ```
 
 如果我们想要创建一个包含文本中每个单词的流，我们可以用以下代码实现：
 
-```kt
+```java
 private fun getWords(): Flow<String> = flow {
 ```
 
-```kt
+```java
   getTextFromNetwork().split(" ").forEach {
 ```
 
-```kt
+```java
     delay(1_000)
 ```
 
-```kt
+```java
     emit(it)
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
 Flow 不会运行或发出值，直到使用任何终端操作符（如 `collect`、`launchIn` 或 `single`）收集流。你可以使用 `collect()` 函数启动流并处理每个值，如下所示：
 
-```kt
+```java
 private suspend fun displayWords() {
 ```
 
-```kt
+```java
           getWords().collect {
 ```
 
-```kt
+```java
           Log.d("flow", it)
 ```
 
-```kt
+```java
            }
 ```
 
-```kt
+```java
 }
 ```
 

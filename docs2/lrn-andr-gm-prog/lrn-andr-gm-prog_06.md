@@ -34,7 +34,7 @@
 
 在我们前面的解释中，我们看到边界框碰撞技术是最简单的之一。这是因为我们只是在两个矩形之间进行测试。考虑以下伪代码以更好地理解：
 
-```kt
+```java
 rectangle1 = {x: 5, y: 5, width: 50, height: 50}
 rectangle2 = {x: 20, y: 10, width: 10, height: 10}
 
@@ -56,7 +56,7 @@ if (5 < 30 && 55 > 20 && 5 < 20 && 55 > 10) {
 
 另一种简单的碰撞类型，它涉及绘制两个圆心之间的距离以检测碰撞。其算法如下：
 
-```kt
+```java
 circle1 = {radius: 20, x: 5, y: 5};
 circle2 = {radius: 12, x: 10, y: 5};
 
@@ -89,7 +89,7 @@ if (distance < circle1.radius + circle2.radius) {
 
 我们在`update()`方法中添加了一个条件，即只有当玩家正在玩游戏时，我们才会更新背景图像和玩家角色。这意味着如果没有信号，游戏将不会开始：
 
-```kt
+```java
 public void update(){
  if(playerCharacter.getPlaying()) { bgImg.update(); playerCharacter.update(); }
 }
@@ -108,7 +108,7 @@ public void update(){
 
 我们将为事件再次编写一个`return true`语句。以下是我们的`onTouchEvent()`代码将看起来像：
 
-```kt
+```java
     @Override
     public boolean onTouchEvent(MotionEvent event)
     {
@@ -131,7 +131,7 @@ public void update(){
 
 从这次编辑中，我们只定义了设置玩家上下功能所需的调用。然而，我们还需要为我们的玩家添加加速度和减速度，以便实际上能够上下移动。我们将通过编辑我们的`PlayerCharacter.java`文件来实现这一点。让我们在这个文件中编写一些跳跃代码。打开它，并在`update()`方法中写下以下加粗的代码：
 
-```kt
+```java
     public void update() {
         long elapsed = (System.nanoTime()-startTime)/1000000;
         if(elapsed > 100) {
@@ -201,7 +201,7 @@ public void update(){
 
 现在，由于我们将处理一个新的对象，所以到这一点为止，必须非常清楚我们需要创建一个新的类。所以，让我们继续并创建一个新的类，命名为 `Rock.java`。这将包含我们障碍石头的所有代码。然后，你将有一个空白 java 文件，你需要将其扩展到我们的 `GameObj.java` 文件，就像我们游戏中的其他任何游戏对象一样：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 /**
@@ -223,7 +223,7 @@ public class Rock extends GameObj {
 
 让我们从构造函数和变量开始。我们需要一个`score`和`speed`变量，以及一个用于`Bitmap`和预定义的`AnimationClass`的变量，因为我们还将对这个石头进行动画处理。让我们开始吧。我们首先声明游戏所需的变量，包括`score`、`speed`、我们的`animationClass`引用和`spriteSheet`引用。我们还取了一个`Random`数字引用变量，用于根据游戏循环中即将看到的唯一条件生成分数。目前，我们没有在屏幕上显示分数，但很快你将看到它：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Bitmap;
@@ -252,7 +252,7 @@ public class Rock extends GameObj{
 
 之后，我们需要我们的石头在生存时间更长后跑得更快，因此我们将编写代码，使得随着分数的增加，我们的石头会变得更快。我们将使用一点数学知识来完成这个任务，其中我们将使用我们的随机变量。基本上，这将是我们公式：`speed = 7 + (int) (rnd.nextDouble()*score/30);`。然后我们将设置我们的`Bitmap`引用变量，以便它可以扫描我们的精灵图集，随后通过一个`for`循环扫描相同的图集。最后，我们将设置我们的帧到`animationClass`，并为动画添加延迟。让我们看看这在我们的代码中是如何工作的：
 
-```kt
+```java
     public Rock (Bitmap res, int xc, int yc, int w, int h, int s, int noOfFrames) {
         this.xc = xc;
         this.yc = yc;
@@ -285,7 +285,7 @@ public class Rock extends GameObj{
 
 现在我们已经准备好了构造函数，我们可以继续编写`update()`和`draw()`方法的代码。在我们的`update()`方法中，我们不需要做太多。我们只需将我们的石头从右向左移动，因此我们将使用我们的`speed`变量，在每一帧中将石头向左移动一定的单位。我们将使用`draw()`方法，借助`animationClass`引用变量，在屏幕上简单地绘制我们的石头：
 
-```kt
+```java
     public void update() {
         xc -= speed;
         animationClass.update();
@@ -309,7 +309,7 @@ public class Rock extends GameObj{
 
 我们将创建三个新的引用变量，`rockStartTime`、`rocks`和`rnd`，分别对应岩石游戏对象的起始时间、实际岩石游戏对象以及用于随机化屏幕上岩石生成位置的随机变量。由于我们将在屏幕上生成多个岩石，我们将它的数据类型设置为`ArrayList`，因为动态数组可以通过`ArrayList`来支持。我们将主要需要这个，因为当我们的岩石离开屏幕空间后，我们将移除它们，从而实现资源的适当内存管理：
 
-```kt
+```java
  private long rockStartTime; private ArrayList<Rock> rocks;
  private Random rnd = new Random();
 
@@ -317,7 +317,7 @@ public class Rock extends GameObj{
 
 我们将对我们的`surfaceDestroyed()`方法进行一些改进，并创建一个`counter`以及调整我们的`retry`变量块，以避免无限循环的情况。代码更改用粗体标出：
 
-```kt
+```java
     @Override
     public void surfaceDestroyed(SurfaceHolder holder){
         boolean retry = true;
@@ -336,7 +336,7 @@ public class Rock extends GameObj{
 
 在我们的`surfaceCreated()`方法中，我们将我们的引用变量`rocks`赋值为`Rock`类，并将`rockStartTime`变量初始化为当前`System.nanoTime()`，如下所示：
 
-```kt
+```java
     @Override
     public void surfaceCreated(SurfaceHolder holder){
 
@@ -371,7 +371,7 @@ public class Rock extends GameObj{
 
 让我们为这个写代码：
 
-```kt
+```java
     public void update(){
         if(playerCharacter.getPlaying()) {
             bgImg.update();
@@ -416,7 +416,7 @@ public class Rock extends GameObj{
 
 我们接下来编写我们的碰撞检测函数。我们这样做是基于你在本章前面学到的边界框碰撞技术。你可以很容易地从这段代码中观察到，`Rect.intersects(a.getRectangle(), b.getRectangle())`，我们只是使用预定义在我们的`android.graphics.Rect`导入中的`Rect`类来比较我们两个对象的矩形。如果存在重叠的矩形，那么这个函数返回一个`true`值；否则，它返回`false`。这个函数的返回类型是`boolean`，因此它返回一个`boolean`值是很重要的：
 
-```kt
+```java
  public boolean collision(GameObj a, GameObj b) {
 
  if(Rect.intersects(a.getRectangle(), b.getRectangle())) {
@@ -429,7 +429,7 @@ public class Rock extends GameObj{
 
 然后最后，我们在屏幕上绘制我们的岩石对象。我们再次使用`for`循环和我们的`draw()`方法来完成：
 
-```kt
+```java
     @Override
     public void draw(Canvas canvas)
     {
@@ -458,7 +458,7 @@ public class Rock extends GameObj{
 
 我们通过添加我们想要的变量，如`rockStartTime`、`rocks`和`rnd`来定义所需的变量：
 
-```kt
+```java
 public static final int WIDTH = 1920;
 public static final int HEIGHT = 1080;
 public static final int MOVINGSPEED = -5;
@@ -478,7 +478,7 @@ private Random rnd = new Random();
 
 在我们前面的代码中，有可能遇到无限循环的情况，所以我们替换了重试并添加了一个计数器，以在`surfaceDestroyed()`方法中无限循环情况发生时提供额外的安全性。我们的重试可能在每次运行时返回一个`false`值或一个`true`值，因此有可能出现无限循环的情况。为了避免这种情况，我们有一个计数器，每次 while 循环运行时都会增加，并在之后停止。你可以自己尝试一下，看看如果不使用计数器会发生什么问题：
 
-```kt
+```java
 @Override
 public void surfaceDestroyed(SurfaceHolder holder){
     boolean retry = true;
@@ -502,7 +502,7 @@ public void surfaceDestroyed(SurfaceHolder holder){
 
 在定义变量之后，初始化它们也是至关重要的。我们从`surfaceCreated()`方法中这样做，如下所示：
 
-```kt
+```java
 @Override
 public void surfaceCreated(SurfaceHolder holder){
 
@@ -528,7 +528,7 @@ public void surfaceCreated(SurfaceHolder holder){
 
 在此之后，我们定义了如果两个对象之间发生碰撞时会发生什么，这定义在我们的`update()`方法中。我们还处理了岩石飞出屏幕的情况：
 
-```kt
+```java
 long rockElapsed = (System.nanoTime() - rockStartTime/1000000);
 
 if(rockElapsed>(2000 - playerCharacter.getScore())){
@@ -573,7 +573,7 @@ for(int i=0; i<rocks.size();i++) {
 
 我们定义了碰撞行为，但编写一个定义碰撞本身的逻辑也是必要的。因此，我们创建了一个碰撞检测函数：
 
-```kt
+```java
 public boolean collision(GameObj a, GameObj b) {
 
     if(Rect.intersects(a.getRectangle(), b.getRectangle())) {
@@ -590,7 +590,7 @@ public boolean collision(GameObj a, GameObj b) {
 
 一旦我们完成，我们只需在我们的`draw()`方法的`if`块中绘制我们的对象即可：
 
-```kt
+```java
 for(Rock r : rocks) {
     r.draw(canvas);
 }
@@ -601,7 +601,7 @@ for(Rock r : rocks) {
 
 现在我们已经完成了碰撞逻辑，让我们对我们的玩家角色做一些调整。那里有一些未使用的变量，所以让我们去掉它们，并进一步定制它。在此之前，它们是了解事物工作原理所必需的。但现在它们对我们来说几乎毫无用处，所以没有必要让它们随意存在。打开你的`PlayerCharacter.java`文件，对你的代码进行以下更改：
 
-```kt
+```java
 package nikhil.nikmlnkr.game;
 
 import android.graphics.Bitmap;
@@ -705,7 +705,7 @@ public class PlayerCharacter extends GameObj{
 
 打开你的`GameView.java`文件，对以下加粗的部分进行更改。删除所有加粗的注释代码，并添加以下`if(rocks.size() < 2)`语句：
 
-```kt
+```java
 public class GameView extends SurfaceView implements SurfaceHolder.Callback
 {
     public static final int WIDTH = 1920;

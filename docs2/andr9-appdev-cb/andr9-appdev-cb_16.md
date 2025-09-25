@@ -54,7 +54,7 @@ Kotlin 支持需要 Android Studio 3.0 或更高版本，因此对于本食谱�
 
 IDE 已经处理了您开始使用 Kotlin 开发所需的所有操作。甚至第一个 Activity 现在也是使用 Kotlin 代码创建的，正如您在打开 `MainActivity.kt` 文件时可以看到的那样：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,7 +104,7 @@ Toast 是开发应用程序时非常有用的工具，尤其是在学习新语�
 
 1.  将现有的 `<TextView>` 元素替换为 `<Button>`，如下所示：
 
-```kt
+```java
 <Button
  android:id="@+id/button"
  android:layout_width="wrap_content"
@@ -118,7 +118,7 @@ Toast 是开发应用程序时非常有用的工具，尤其是在学习新语�
 
 1.  现在，打开 `ActivityMain.kt` 并将以下代码添加到现有的 `onCreate()` 方法中：
 
-```kt
+```java
 val button = findViewById<Button>(R.id.button)
 button.setOnClickListener {
     Toast.makeText(this, "First Toast in Kotlin", Toast.LENGTH_LONG).show()
@@ -131,7 +131,7 @@ button.setOnClickListener {
 
 显示 Toast 实际上只有两个部分：创建事件监听器和调用 Toast 本身。我们使用`setOnClickListener`创建事件监听器。这与 Java 中的概念相同，只是代码语法更简洁。在大括号中，我们有将被调用的代码。在我们的例子中，它是 Toast。这基本上看起来是一样的，因为它调用的是完全相同的库，正如你将在导入语句中看到的那样：
 
-```kt
+```java
 import android.widget.Toast
 ```
 
@@ -157,13 +157,13 @@ import android.widget.Toast
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.SEND_SMS"/>
 ```
 
 1.  打开`activity_main.xml`并将现有的`TextView`替换为以下按钮：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -178,13 +178,13 @@ import android.widget.Toast
 
 1.  打开`MainActivity.kt`并在 MainActivity 类上方（外部）添加以下常量：
 
-```kt
+```java
 private const val REQUEST_PERMISSION = 1
 ```
 
 1.  添加此方法以进行权限检查：
 
-```kt
+```java
 private fun checkPermission(permission: String): Boolean {
     val permissionCheck = ContextCompat.checkSelfPermission(this, permission)
     return permissionCheck == PackageManager.PERMISSION_GRANTED
@@ -193,7 +193,7 @@ private fun checkPermission(permission: String): Boolean {
 
 1.  添加此方法以请求权限：
 
-```kt
+```java
 private fun requestPermission(permissionName: String, permissionRequestCode: Int) {
     ActivityCompat.requestPermissions(this, arrayOf(permissionName),
             permissionRequestCode)
@@ -202,7 +202,7 @@ private fun requestPermission(permissionName: String, permissionRequestCode: Int
 
 1.  添加此方法以显示解释对话框：
 
-```kt
+```java
 private fun showExplanation(title: String, message: String,
                             permission: String,
                             permissionRequestCode: Int) {
@@ -217,7 +217,7 @@ private fun showExplanation(title: String, message: String,
 
 1.  添加此方法以处理按钮点击：
 
-```kt
+```java
 fun doSomething(view: View) {
     if (!checkPermission(Manifest.permission.SEND_SMS)) {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this,
@@ -237,7 +237,7 @@ fun doSomething(view: View) {
 
 1.  如下重写`onRequestPermissionsResult()`：
 
-```kt
+```java
 override fun onRequestPermissionsResult(requestCode: Int,
                                         permissions: Array<String>,
                                         grantResults: IntArray) {

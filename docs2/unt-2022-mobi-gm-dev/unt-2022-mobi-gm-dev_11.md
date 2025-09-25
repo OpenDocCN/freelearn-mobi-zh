@@ -110,7 +110,7 @@
 
 1.  在`RemoteConfigManager`脚本中打开它，并用你选择的脚本编辑器替换其脚本，如下所示：
 
-    ```kt
+    ```java
     using UnityEngine;
     using Unity.RemoteConfig; /* ConfigManager */
     public class RemoteConfigManager : MonoBehaviour
@@ -155,13 +155,13 @@
 
 1.  然后，我们需要转到`PlayerBehaviour`脚本，并将以下内容添加到顶部部分，与其余的`using`语句一起：
 
-    ```kt
+    ```java
       using Unity.RemoteConfig; /* ConfigManager */
     ```
 
 1.  之后，我们需要将`UpdateRemoteConfigValues`函数添加到`PlayerBehaviour`类中，因为它目前不存在；否则，我们将得到编译器错误：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will update each value for this component we are using with /// Remote Config
     /// </summary>
@@ -201,7 +201,7 @@
 
 1.  由于`dodgeSpeed`和`rollSpeed`变量现在是通过`UpdateRemoteConfigValues`函数设置的，因此我们现在可以将它们从`PlayerBehaviour`脚本中隐藏起来，使类看起来如下所示：
 
-    ```kt
+    ```java
     /// <summary>
     /// How fast the ball moves left/right
     /// </summary>

@@ -136,7 +136,7 @@ QA 是确保软件质量在每个步骤都得到关注的角色，因此结果�
 
 这里是一个由 Kotest 框架驱动的 Kotlin 单元测试的例子：
 
-```kt
+```java
 class FindBiggestNumberKtTest : FunSpec({
     test("Find the biggest out of positive numbers") {
         findBiggestNumber(listOf(17, 18, 6)) shouldBe 18
@@ -150,7 +150,7 @@ Kotest 框架提供了许多作为规范的测试模板。`FunSpec` 是示例中
 
 你可能会质疑是否一个测试用例不足以彻底测试这个函数。Kotest 框架支持以下参数化测试：
 
-```kt
+```java
 class FindBiggestNumberParameterizedTest : FunSpec({
     context("Find the biggest out of positive numbers") {
         withData(
@@ -200,7 +200,7 @@ class FindBiggestNumberParameterizedTest : FunSpec({
 
 在我们详细讨论这两种测试风格之前，让我们揭示实现：
 
-```kt
+```java
 fun findBiggestNumber(numbers: List<Int>): Int? = numbers.maxOrNull()
 ```
 
@@ -256,7 +256,7 @@ fun findBiggestNumber(numbers: List<Int>): Int? = numbers.maxOrNull()
 
 这里是一个使用 Kotest 进行组件测试的模拟示例：
 
-```kt
+```java
 class ExerciseExecutorTest : BehaviorSpec({
     Given("Today is sunny") {
         val exerciseLog = mockk<ExerciseLog>()
@@ -284,7 +284,7 @@ class ExerciseExecutorTest : BehaviorSpec({
 
 其次，存在一个外部的`ExerciseLog`依赖项，可能涉及在文件或数据库中持久化数据：
 
-```kt
+```java
 interface ExerciseLog {
     fun record(time: Instant, exercise: Exercise)
 }
@@ -292,7 +292,7 @@ interface ExerciseLog {
 
 函数记录接受一个`Exercise`对象和练习完成时的相应时间：
 
-```kt
+```java
 enum class Weather {
     SUNNY,
     RAINY,
@@ -305,7 +305,7 @@ enum class Weather {
 
 主要验证是当天气晴朗时，该函数返回由这个密封类定义的`RunInThePark`：
 
-```kt
+```java
 sealed class Exercise {
     data object RunInThePark: Exercise()
     data object GoToGym: Exercise()
@@ -314,7 +314,7 @@ sealed class Exercise {
 
 第二个验证是`ExerciseExecutor`已将正确的参数传递给`ExerciseLog`以记录此练习。以下是`ExerciseExecutor`的完整实现：
 
-```kt
+```java
 class ExerciseExecutor(
     private val log: ExerciseLog
 ) {
@@ -378,13 +378,13 @@ class ExerciseExecutor(
 
 在扩展练习代码示例的基础上，我们将编写一个针对`ExerciseLog`接口实现的集成测试，该接口为每次调用向文件追加一行。每行以 UTC 使用的本地日期时间开始，由冒号分隔，以锻炼的名称结束，如下所示：
 
-```kt
+```java
 2024-09-30T18:39:03.353250: GoToGym
 ```
 
 集成测试可以编写如下：
 
-```kt
+```java
 class ExerciseExecutorIntegrationTest : StringSpec({
     "Gym when cloudy and run in the park when rainy as recorded in file log" {
         val file = File.createTempFile("Exer", "cise")
@@ -407,7 +407,7 @@ class ExerciseExecutorIntegrationTest : StringSpec({
 
 `ExerciseFileLog`类本身很简单：
 
-```kt
+```java
 class ExerciseFileLog(
     private val file: File,
 ) : ExerciseLog {
@@ -531,7 +531,7 @@ TDD 的第一步是编写测试场景列表。QAs 和工程师应该向利益相
 
 我们想要断言创建一个姓氏为空的家庭记录会导致失败。再次，我们使用 Kotest 框架的 `StringSpec` 作为测试风格：
 
-```kt
+```java
 class HouseholdServiceTest : StringSpec({
         "fail to create household of empty surname" {
             val service = HouseholdService()
@@ -550,7 +550,7 @@ class HouseholdServiceTest : StringSpec({
 
 您的 IDE 应该会显示非现有类和函数的编译错误。希望您的 IDE 有一个“快速修复”功能，可以为您创建类。建议首先让 IDE 创建所有类，然后创建函数，这样 IDE 就有上下文来生成带有新类的函数。这些类是空的，可能看起来像这样：
 
-```kt
+```java
 class Failure(reason: String) { }
 class Household(surname: String) { }
 class HouseholdService {
@@ -562,7 +562,7 @@ class HouseholdService {
 
 我们已经准备好运行测试。它失败了，并显示以下信息：
 
-```kt
+```java
 kotlin.NotImplementedError: An operation is not implemented: Not yet implemented.
 ```
 
@@ -570,7 +570,7 @@ kotlin.NotImplementedError: An operation is not implemented: Not yet implemented
 
 将函数硬编码为返回预期的 `Failure` 对象可能是最简单的方法，不是吗？大多数工程师都会有修复一切并使类合理的冲动。然而，这里的目的是编写尽可能少的代码来使测试通过。以下是更改内容：
 
-```kt
+```java
 data class Failure(val reason: String)
 class Household(surname: String) { }
 class HouseholdService {
@@ -586,7 +586,7 @@ class HouseholdService {
 
 下一个测试场景是成功创建一个家庭记录。家庭的姓氏不再为空，测试期望 `HouseholdService` 返回一个包含已创建 `Household` 记录的成功结果。请在此查看测试用例的代码：
 
-```kt
+```java
 "successfully create a household" {
     val service = HouseholdService()
     val household = Household(surname = Arb.string(minSize = 3).next())
@@ -602,13 +602,13 @@ class HouseholdService {
 
 旨在让两个测试用例通过将推动代码的开发。这可以说是由测试驱动的开发。我们可以使用 IDE 功能来生成 `Success` 类。自己编写一个也是足够简单的：
 
-```kt
+```java
 data class Success(val household: Household)
 ```
 
 编译错误已解决。在 TDD 循环中，我们需要运行 *所有* 测试。这是为了确保我们没有破坏现有的测试。测试结果显示第一个测试仍然通过，但第二个测试失败，并显示以下信息：
 
-```kt
+```java
 Expected :Success(household=example.tdd.step2_2.Household@1f958876)
 Actual   :Failure(reason=Surname must be non-empty)
 ```
@@ -621,7 +621,7 @@ Actual   :Failure(reason=Surname must be non-empty)
 
 `sealed` 类的方法看起来是这样的：
 
-```kt
+```java
 sealed class Result {
     data class Success(val household: Household): Result()
     data class Failure(val reason: String): Result()
@@ -630,13 +630,13 @@ sealed class Result {
 
 `createHousehold` 函数需要进化以处理这两个测试用例。这样做将需要移除之前的黑客实现并实现实际的验证逻辑。`Household` 类被改为 `data` 类，以便函数可以访问姓氏以执行验证：
 
-```kt
+```java
 data class Household(val surname: String)
 ```
 
 函数已将返回类型更改为 `Result`。还添加了一个简单的验证，以确保只接受非空姓氏：
 
-```kt
+```java
 fun createHousehold(household: Household): Result =
     if (household.surname.isNotBlank()) {
         Success(household)
@@ -651,7 +651,7 @@ fun createHousehold(household: Household): Result =
 
 我们希望通过参数化几个空字符串以及混合空格、制表符和换行符来增强第一个测试用例。Kotest 中的 `DescribeSpec` 更好地支持这种参数化，因此测试类被修改为继承自 `DescribeSpec`。这个更改也影响了第二个测试用例，并且所有测试名称都相应地进行了更新：
 
-```kt
+```java
 class HouseholdServiceTest : DescribeSpec({
   val blankStrings = listOf("", " ", "\t", "\n", "  ", " \t", " \t \n ")
   describe("household creation") {
@@ -700,7 +700,7 @@ BDD 的概念是由 Dan North 在 2003 年提出的，当时是在讨论技术�
 
 我们在 TDD 练习中工作的测试场景可以用以下 Gherkin 语言表达：
 
-```kt
+```java
 Feature: Household creation
   Scenario: Creation of households with non-empty surnames
     Given the household surname is non-empty

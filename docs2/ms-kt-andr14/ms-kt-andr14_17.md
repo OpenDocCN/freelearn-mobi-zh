@@ -126,7 +126,7 @@
 
 让我们转到我们的应用级别的`build.gradle.kts`文件，并修改如这里所示的`buildTypes`块：
 
-```kt
+```java
 buildTypes {
     release {
         isMinifyEnabled = true
@@ -153,7 +153,7 @@ buildTypes {
 
 现在，让我们导航到`proguard-rules.pro`文件并添加以下规则：
 
-```kt
+```java
 -keep class com.packt.chapterthirteen.data.Cat.** { *; }
 -keep class com.packt.chapterthirteen.data.CatEntity.** { *; }
 # With R8 full mode generic signatures are stripped for classes that are not
@@ -174,7 +174,7 @@ buildTypes {
 
 在选择发布构建变体后，我们需要设置我们之前创建的密钥签名证书，以便我们的发布变体可以运行。为此，让我们在我们的应用级`build.gradle.kts`文件中添加以下内容：
 
-```kt
+```java
 signingConfigs {
     create("release") {
         storeFile = file("../keystore/packt.jks")
@@ -189,7 +189,7 @@ signingConfigs {
 
 点击`signingConfig`到我们的发布构建类型。为此，让我们在我们的发布构建类型中添加以下内容：
 
-```kt
+```java
 signingConfig = signingConfigs.getByName("release")
 ```
 

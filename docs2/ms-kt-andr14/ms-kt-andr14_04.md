@@ -50,7 +50,7 @@ Jetpack Compose 完全使用 Kotlin 编写，这意味着它利用了 Kotlin 提
 
 既然我们已经理解了命令式和声明式方法，让我们看看每个方法的示例。让我们创建一个简单的计数器 UI，使用 Jetpack Compose（Kotlin）中的声明式 UI 和 XML（Android XML 布局）中的命令式 UI。示例将展示两种方法在语法和方式上的差异。Jetpack Compose 版本如下所示：
 
-```kt
+```java
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -88,7 +88,7 @@ fun MyApp() {
 
 使用命令式方法时，我们必须首先创建 XML UI，如下面的代码块所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout 
 
@@ -115,7 +115,7 @@ fun MyApp() {
 
 在创建布局文件之后，我们现在可以创建活动类，该类将展开布局文件并处理按钮点击：
 
-```kt
+```java
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity() {
 
 让我们看看一个可组合函数的例子：
 
-```kt
+```java
 @Composable
 fun PacktPublishing(bookName: String) {
     Text(text = "Title of the book is: $bookName")
@@ -173,7 +173,7 @@ PacktPublishing function is annotated with the @Composable annotation. The funct
 
 这就是我们的`PacktPublishing`可组合函数在预览中的样子：
 
-```kt
+```java
 @Preview(showBackground = true)
 @Composable
 fun PacktPublishingPreview() {
@@ -211,7 +211,7 @@ fun PacktPublishingPreview() {
 
 使用修饰符，我们可以改变我们可组合的各种方面，例如大小、填充、颜色和形状。库中的大多数 Jetpack Compose 组件都允许我们将修饰符作为参数提供。例如，如果我们需要为我们的预览文本提供填充，我们将得到以下内容：
 
-```kt
+```java
 Text(
     modifier = Modifier.padding(16.dp),
     text = "Title of the book is: $bookName"
@@ -222,7 +222,7 @@ Text(
 
 我们可以在一个可组合中链式调用不同的修饰符函数。在链式调用修饰符时，应用顺序至关重要。如果我们没有达到预期的结果，我们需要仔细检查顺序。让我们在实践中观察这个概念：
 
-```kt
+```java
 Text(
     modifier = Modifier
         .fillMaxWidth()
@@ -286,7 +286,7 @@ Jetpack Compose 提供了以下布局：
 
 当我们想要垂直组织项目时，我们使用`Column`。`Column`的使用示例如下：
 
-```kt
+```java
 Column {
     Text(text = "Android")
     Text(text = "Kotlin")
@@ -302,7 +302,7 @@ Column {
 
 如前一个截图所示，设计是基本的。我们将通过使用修饰符来稍作润色，因为 Jetpack Compose 也提供了对这些布局的修饰符支持。让我们将这些更改添加到我们的列中：
 
-```kt
+```java
 Column(
     modifier = Modifier
         .fillMaxSize()
@@ -332,7 +332,7 @@ Column(
 
 当我们想要水平组织项目时，我们使用`Row`。以下是一个`Row`的使用示例：
 
-```kt
+```java
 Row {
     Text(text = "Android")
     Text(text = "Kotlin")
@@ -348,7 +348,7 @@ Row {
 
 文本元素都排列在水平行中。`Row`，就像可组合元素一样，支持添加修饰符。让我们修改我们的`Row`，使其看起来如下：
 
-```kt
+```java
 Row(
     modifier = Modifier
         .fillMaxSize()
@@ -376,7 +376,7 @@ Row(
 
 `Box`布局允许我们使用 X 和 Y 坐标以灵活的方式定位子元素。让我们看一个代码示例：
 
-```kt
+```java
 Box(
     modifier = Modifier
         .size(100.dp),
@@ -409,7 +409,7 @@ Box(
 
 让我们看看`LazyColumn`的一个例子：
 
-```kt
+```java
 LazyColumn(
     modifier = Modifier
         .fillMaxSize()
@@ -435,7 +435,7 @@ LazyColumn(
 
 让我们看看`LazyRow`的等效例子：
 
-```kt
+```java
 LazyRow(
     modifier = Modifier
         .fillMaxWidth()
@@ -462,7 +462,7 @@ LazyRow(
 
 我们还有两种更多类型的列表布局，`LazyVerticalGrid`和`LazyHorizontalGrid`。这两个布局是懒加载网格的一部分，帮助我们以网格的形式排列我们的内容。它们通常用于如画廊、电影和电子表格等应用程序。`LazyVerticalGrid`在网格中创建项目的垂直列表。让我们看看`LazyVerticalGrid`的示例代码：
 
-```kt
+```java
 LazyVerticalGrid(
     modifier = Modifier
         .fillMaxSize()
@@ -488,7 +488,7 @@ LazyVerticalGrid(
 
 我们有三个列的文本元素网格。我们现在能够垂直滚动项目。现在让我们看看`LazyHorizontalGrid`的代码：
 
-```kt
+```java
 LazyHorizontalGrid(
     modifier = Modifier
         .fillMaxSize()
@@ -524,13 +524,13 @@ LazyHorizontalGrid(
 
 它作为一个单独的依赖项存在，我们需要将其添加到我们的项目中。为了添加它，让我们将这个依赖项添加到我们的应用`build.gradle`文件中：
 
-```kt
+```java
  implementation 'androidx.constraintlayout:constraintlayout-compose:1.0.1'
 ```
 
 这将 Jetpack Compose 依赖项添加到我们的项目中。约束布局的布局代码如下：
 
-```kt
+```java
 ConstraintLayout(
   modifier = Modifier
     .padding(16.dp)

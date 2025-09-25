@@ -40,7 +40,7 @@ Android 对从用户界面传递的事件有一系列要求，这些要求非常
 
 当在 Android 中监听用户界面事件时，你通常会连接一个监听器对象到你想接收事件的组件上。然而，监听器对象的定义可能遵循多种不同的模式，监听器也可以有多种形式。你经常会看到定义一个简单的匿名类作为监听器，这可能是这样的：
 
-```kt
+```java
 closeButton.setOnClickListener(new View.OnClickListener() {
   @Override
   public void onClick(View v) {
@@ -59,7 +59,7 @@ closeButton.setOnClickListener(new View.OnClickListener() {
 
 如果你的项目中有 Java 8，当然可以使用 lambda 表达式，并缩短语法。然而，这仍然会导致创建一个匿名内部类。另一种监听事件的模式是让包含布局的类（通常是`Activity`或`Fragment`）实现监听器接口，并使用`switch`语句来处理来自不同组件的事件：
 
-```kt
+```java
 public class MyListenerActivity extends Activity implements View.OnClickListener {
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -118,13 +118,13 @@ public class MyListenerActivity extends Activity implements View.OnClickListener
 
 1.  现在，你需要一种方式来格式化日期字符串供用户使用，并且它应该是本地化的，因此声明一个 `java.text.DateFormat` 用于此目的：
 
-```kt
+```java
 private final DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.LONG);
 ```
 
 1.  此类是一个包装器，还需要一些字段来跟踪它所包装的内容，即 `TextView`，其中它将向用户显示日期（并且用户可以点击以打开日期选择器对话框），一个用于向用户显示的 `DatePickerDialog` 实例，以及当前所选/显示的 `Date`：
 
-```kt
+```java
 private final TextView display;
 
 private DatePickerDialog dialog = null;
@@ -133,7 +133,7 @@ private Date currentDate = null;
 
 1.  然后，我们需要一个简单的构造函数，它将捕获用于显示的 `TextView`，并将其设置为日期显示并配置事件：
 
-```kt
+```java
 public DatePickerWrapper(final TextView display) {
   this.display = display;
   this.display.setFocusable(true);
@@ -147,7 +147,7 @@ public DatePickerWrapper(final TextView display) {
 
 1.  现在，我们需要类似 getter 和 setter 的方法来更改和检索日期选择器的状态：
 
-```kt
+```java
 public void setDate(final Date date) {
   if(date == null) {
     throw new IllegalArgumentException("date may not be null");
@@ -174,7 +174,7 @@ public Date getDate() {
 
 1.  在我们实际处理事件之前，我们需要一个方法来显示 `DatePickerDialog`，这将允许用户更改日期：
 
-```kt
+```java
 void openDatePickerDialog() {
   if (dialog == null) {
     final GregorianCalendar calendar = new GregorianCalendar();
@@ -193,7 +193,7 @@ void openDatePickerDialog() {
 
 1.  然后，我们需要完成事件监听器方法，以便当用户选择显示的日期时，我们打开 `DatePickerDialog`，允许他们更改所选日期：
 
-```kt
+```java
 @Override
 public void onClick(final View v) {
   openDatePickerDialog();
@@ -209,7 +209,7 @@ public void onFocusChange(final View v, final boolean hasFocus) {
 
 1.  最后，我们需要处理从 `DatePickerDialog` 返回的事件，该事件指示用户已选择日期：
 
-```kt
+```java
 @Override
 public void onDateSet(
       final DatePicker view,
@@ -235,13 +235,13 @@ public void onDateSet(
 
 1.  现在，在类中（在`onCreate`方法之前）声明一个新的字段用于你编写的`DatePickerWrapper`（Android Studio 可以通过为你编写导入语句来帮助你）：
 
-```kt
+```java
 private DatePickerWrapper selectedDate;
 ```
 
 1.  你会注意到（默认情况下），`FloatingActionButton`对象与一个简单的匿名事件处理器连接，其外观可能如下所示：
 
-```kt
+```java
 fab.setOnClickListener(new View.OnClickListener() {
   @Override
   public void onClick(View view) {
@@ -258,7 +258,7 @@ fab.setOnClickListener(new View.OnClickListener() {
 
 1.  在`onCreate`方法的末尾，通过搜索你添加到布局中的`date` `TextView`来实例化`DatePickerWrapper`对象：
 
-```kt
+```java
 selectedDate = new DatePickerWrapper((TextView) findViewById(R.id.date));
 ```
 
@@ -274,7 +274,7 @@ selectedDate = new DatePickerWrapper((TextView) findViewById(R.id.date));
 
 1.  为`TextView`标签创建一个字段，并创建一个构造函数来捕获它：
 
-```kt
+```java
 private final TextView label;
 
 public IconPickerWrapper(final TextView label) {
@@ -284,7 +284,7 @@ public IconPickerWrapper(final TextView label) {
 
 1.  添加一个方法来设置标签文本内容：
 
-```kt
+```java
 public void setLabelText(final CharSequence text) {
   label.setText(text);
 }
@@ -292,7 +292,7 @@ public void setLabelText(final CharSequence text) {
 
 1.  完成设置标签文本的`onCheckedChange`方法，从所选`RadioButton`的`contentDescription`字段中设置：
 
-```kt
+```java
 @Override
 public void onCheckedChanged(
     final RadioGroup group,
@@ -313,13 +313,13 @@ public void onCheckedChanged(
 
 1.  在`onCreate`方法之前，创建一个新的字段来跟踪用户可以从中选择类别图标的`RadioGroup`：
 
-```kt
+```java
 private RadioGroup categories;
 ```
 
 1.  然后，在`onCreate`方法的末尾，您需要找到布局中的`RadioGroup`，并实例化其事件处理器：
 
-```kt
+```java
 categories = (RadioGroup) findViewById(R.id.categories);
 categories.setOnCheckedChangeListener(
   new IconPickerWrapper(
@@ -330,7 +330,7 @@ categories.setOnCheckedChangeListener(
 
 1.  最后，将默认选择设置为`other`；此操作还会在屏幕呈现给用户之前触发事件处理器。这意味着当用户第一次看到捕获报销屏幕时，标签也会被填充：
 
-```kt
+```java
 categories.check(R.id.other);
 ```
 
@@ -346,39 +346,39 @@ categories.check(R.id.other);
 
 1.  打开`CaptureClaimActivity`类，并使该类实现`View.OnClickListener`接口：
 
-```kt
+```java
 public class CaptureClaimActivity extends AppCompatActivity
                                   implements View.OnClickListener {
 ```
 
 1.  创建两个新的常量来保存请求代码。每当您的用户离开当前`Activity`，并且您期望得到结果时，您需要一个请求代码：
 
-```kt
+```java
 private static final int REQUEST_ATTACH_FILE = 1;
 private static final int REQUEST_ATTACH_PERMISSION = 1001;
 ```
 
 1.  在`onCreate`方法中，找到 Android Studio 模板捕获`FloatingActionButton`的行：
 
-```kt
+```java
 FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
 ```
 
 1.  将按钮重命名为`attach`，如下所示（使用 Android Studio 重构更改 ID，布局文件中的 ID 也将相应更改）：
 
-```kt
+```java
 FloatingActionButton attach = (FloatingActionButton) findViewById(R.id.attach);
 ```
 
 1.  现在，为`FloatingActionButton`设置`OnClickListener`为`Activity`：
 
-```kt
+```java
 attach.setOnClickListener(this);
 ```
 
 1.  现在，在`CaptureClaimActivity`的末尾实现`onClick`方法，并将`FloatingActionButton`的点击事件委托：
 
-```kt
+```java
 @Override
 public void onClick(View v) {
   switch (v.getId()){
@@ -395,7 +395,7 @@ public void onClick(View v) {
 
 1.  在 `manifest` 元素内的文件顶部，但在应用程序元素之前，添加以下权限声明：
 
-```kt
+```java
 <manifest 
     package="com.packtpub.claim">
 
@@ -409,7 +409,7 @@ public void onClick(View v) {
 
 1.  前面的权限仅适用于在安装期间请求权限的 Android 版本；在 Android 6.0 及更高版本中，你需要在运行时检查和请求权限。当用户点击 `FloatingActionButton` 附加文件时进行此操作是最佳时机，因为这正是在他们实际选择你将需要权限读取的文件之前：实现 `onAttachClick` 方法，从检查权限开始，如果尚未授予，则请求权限：
 
-```kt
+```java
 public void onAttachClick() {
   final int permissionStatus = ContextCompat.checkSelfPermission(
     this,
@@ -426,7 +426,7 @@ public void onAttachClick() {
 
 1.  现在，应用程序可以请求系统启动一个 `Activity`，允许用户选择任何可打开的文件。这就是你之前定义的 `REQUEST_ATTACH_FILE` 常量开始被使用的地方：
 
-```kt
+```java
   final Intent attach = new Intent(Intent.ACTION_GET_CONTENT)
         .addCategory(Intent.CATEGORY_OPENABLE)
         .setType("*/*");
@@ -437,7 +437,7 @@ public void onAttachClick() {
 
 1.  如果我们之前的权限检查失败，系统将启动一个对话框询问用户是否授予访问外部文件的权限。当用户从该对话框返回时，将调用一个名为 `onRequestPermissionsResult` 的方法。在这里，你需要检查他们是否授予了你的请求，如果是的话，你可以简单地触发 `onAttachClick()` 方法以顺利继续流程：
 
-```kt
+```java
 @Override
 public void onRequestPermissionsResult(
       final int requestCode,
@@ -456,7 +456,7 @@ public void onRequestPermissionsResult(
 
 1.  现在当系统从文件选择器 `Activity` 返回时，它将调用一个名为 `onActivityResult` 的方法，这个方法的结构与 `onRequestPermissionResult` 方法非常相似：
 
-```kt
+```java
 @Override
 protected void onActivityResult(
       final int requestCode,
@@ -473,14 +473,14 @@ protected void onActivityResult(
 
 1.  在前面的 `onActivityResult` 中，你只需检查它是否响应了你附加文件的请求，然后将剩余的操作委托给一个需要处理结果数据的方法：
 
-```kt
+```java
 public void onAttachFileResult(
     final int resultCode, final Intent data) {
 ```
 
 1.  验证 `resultCode` 是否正常，并且数据是否有效：
 
-```kt
+```java
 if (resultCode != RESULT_OK
     || data == null
     || data.getData() == null) {
@@ -490,7 +490,7 @@ if (resultCode != RESULT_OK
 
 1.  目前，你只需要一个 `Toast` 弹出显示此代码已运行；稍后，你可以构建完整的逻辑来附加选定的文件。`Toast` 是一个出现后消失的小消息，无需用户交互，非常适合临时消息或调试：
 
-```kt
+```java
 Toast.makeText(this, data.getDataString(), Toast.LENGTH_SHORT).show();
 ```
 
@@ -528,13 +528,13 @@ Android 对应用程序中线程的使用施加了非常严格的限制：每个
 
 1.  将类定义修改为包含用于“参数”和“返回值”的泛型参数：
 
-```kt
+```java
 public abstract class ActionCommand<P, R> {
 ```
 
 1.  在新类顶部创建一个静态常量，通过 `android.os.Handler` 对象引用应用程序的主线程：
 
-```kt
+```java
 private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
 ```
 
@@ -542,7 +542,7 @@ private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
 
 1.  创建三个方法声明，用于在后台工作者、主线程上运行代码以及处理错误（具有默认实现）：
 
-```kt
+```java
 public abstract R onBackground(final P value) throws Exception;
 public abstract void onForeground(final R value);
 
@@ -557,7 +557,7 @@ public void onError(final Exception error) {
 
 1.  然后，创建两个 exec 方法的变体，用于启动 `ActionCommand` 对象。第一个使用 `AsyncTask` 提供的标准 `Executor`，该 `Executor` 使用单个后台线程来处理任务（这是您在应用程序中希望看到的最常见行为）：
 
-```kt
+```java
 public void exec(final P parameter) {
    exec(parameter, AsyncTask.SERIAL_EXECUTOR);
 }
@@ -569,13 +569,13 @@ public void exec(final P parameter, final Executor background) {
 
 1.  在前面的方法中，我们向后台 `Executor` 对象提交一个 `ActionCommandRunner` 对象；这是一个 `private` 内部类，将在后台和主线程之间传递状态，这使 `ActionCommand` 类可重用且无状态：
 
-```kt
+```java
 private static class ActionCommandRunner implements Runnable {
 ```
 
 1.  `ActionCommandRunner` 将处于三种可能状态之一：后台、前台或错误。声明三个常量作为名称，并声明一个字段来跟踪对象所处的状态：
 
-```kt
+```java
 private static final int STATE_BACKGROUND = 1;
 private static final int STATE_FOREGROUND = 2;
 private static final int STATE_ERROR = 3;
@@ -584,7 +584,7 @@ private int state = STATE_BACKGROUND;
 
 1.  然后，您需要为正在运行的 `ActionCommand` 和当前值创建字段。`value` 字段是本类的一个通配符，它包含输入参数、后台代码的输出或从后台代码抛出的 `Exception`：
 
-```kt
+```java
 private final ActionCommand command;
 private Object value;
 
@@ -599,7 +599,7 @@ ActionCommandRunner(
 
 1.  现在，创建处理每个 `ActionCommandRunner` 状态的方法：
 
-```kt
+```java
 void onBackground() {
    try {
        // our current "value" is the commands parameter
@@ -632,7 +632,7 @@ void onError() {
 
 1.  最后，创建一个`run`方法，该方法将根据`ActionCommandRunner`的当前执行状态调用前面的`onBackground`、`onForeground`或`onError`方法：
 
-```kt
+```java
 @Override
 public void run() {
    switch (state) {
@@ -659,7 +659,7 @@ public void run() {
 
 如果你发现自己需要一个事件和仅提供单个监听器槽的小部件的多个监听器，只需简单地编写一个简单的委托类，如下所示：
 
-```kt
+```java
 public class MultiOnClickListener implements View.OnClickListener {
   private final List<View.OnClickListener> listeners =
       new CopyOnWriteArrayList<>();

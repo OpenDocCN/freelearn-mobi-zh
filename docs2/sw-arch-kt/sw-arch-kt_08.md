@@ -290,7 +290,7 @@ DDD 包含两种设计方法：
 
 +   `Address` 类是一个值对象，因为它没有标识符，但封装了构成地址的多个字段：
 
-    ```kt
+    ```java
     data class Address(
         val line1: String,
         val line2: String? = null,
@@ -303,7 +303,7 @@ DDD 包含两种设计方法：
 
 +   `Household` 类是一个通过 `name` 标识的实体：
 
-    ```kt
+    ```java
     data class Household(
         val name: String,
         val emailAddress: String
@@ -312,7 +312,7 @@ DDD 包含两种设计方法：
 
 +   `Party` 类是一个聚合，因为它包含 `Household` 实体类：
 
-    ```kt
+    ```java
     data class Party(
         val household: Household,
         val serviceProvided: String,
@@ -323,7 +323,7 @@ DDD 包含两种设计方法：
 
     `Contract` 类是一个聚合根，因为它是对其他聚合（如 `Party`）和其他实体（如 `Household`）的最高级别入口：
 
-    ```kt
+    ```java
     data class Contract(
         val partyA: Party,
         val partyB: Party,
@@ -359,7 +359,7 @@ DDD 包含两种设计方法：
 
 这里选择的边界上下文是**合同服务**，它代表**合同**的核心领域。这个边界上下文的目标是维护合同的整个生命周期，从最初起草到双方共同执行。
 
-```kt
+```java
 data class Contract(
     val partyA: Party,
     val partyB: Party,

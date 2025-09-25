@@ -42,73 +42,73 @@ JVM 提供的最基本并发模型被称为**线程**。线程允许我们并发
 
 让我们先学习如何在 Java 中创建两个线程。每个线程将输出`0`到`100`之间的数字：
 
-```kt
+```java
  for (int t = 0; t < 2; t++) {
 ```
 
-```kt
+```java
     int finalT = t;
 ```
 
-```kt
+```java
     new Thread(() -> {
 ```
 
-```kt
+```java
         for (int i = 0; i < 100; i++) {
 ```
 
-```kt
+```java
             System.out.println("Thread " + finalT + ":               " + i);
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }).start();
 ```
 
-```kt
+```java
 }
 ```
 
 输出将类似于以下内容：
 
-```kt
+```java
 > ... 
 ```
 
-```kt
+```java
 > T0: 12 
 ```
 
-```kt
+```java
 > T0: 13 
 ```
 
-```kt
+```java
 > T1: 60 
 ```
 
-```kt
+```java
 > T0: 14 
 ```
 
-```kt
+```java
 > T1: 61 
 ```
 
-```kt
+```java
 > T0: 15 
 ```
 
-```kt
+```java
 > T1: 16 
 ```
 
-```kt
+```java
 > ...
 ```
 
@@ -116,49 +116,49 @@ JVM 提供的最基本并发模型被称为**线程**。线程允许我们并发
 
 Kotlin 中的相同代码如下所示：
 
-```kt
+```java
 repeat(2) { t ->
 ```
 
-```kt
+```java
     thread { 
 ```
 
-```kt
+```java
         for (i in 1..100) { 
 ```
 
-```kt
+```java
             println("T$t: $i") 
 ```
 
-```kt
+```java
         } 
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 在 Kotlin 中，由于有一个帮助我们创建新线程的函数，所以代码更简洁。注意，与 Java 不同，我们不需要调用`start()`来启动线程。它默认启动。如果我们想稍后启动它，我们可以将`start`参数设置为`false`：
 
-```kt
+```java
 val t = thread(start = false) 
 ```
 
-```kt
+```java
 ... 
 ```
 
-```kt
+```java
 // Later 
 ```
 
-```kt
+```java
 t.start()
 ```
 
@@ -166,23 +166,23 @@ Java 中另一个有用的概念是**守护线程**。这些线程不会阻止 J
 
 在 Java 中，API 不够流畅，因此我们需要将我们的线程分配给一个变量，将其设置为守护线程，然后启动它。在 Kotlin 中，这要简单得多：
 
-```kt
+```java
 thread(isDaemon = true) { 
 ```
 
-```kt
+```java
     for (i in 1..1_000_000) { 
 ```
 
-```kt
+```java
         println("daemon thread says: $i") 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -194,51 +194,51 @@ thread(isDaemon = true) {
 
 我们将从以下示例开始，该示例创建 100,000 个线程来增加一个`counter`。为了确保在检查值之前所有线程都完成了它们的工作，我们将使用`CountDownLatch`：
 
-```kt
+```java
 var counter = 0
 ```
 
-```kt
+```java
 val latch = CountDownLatch(100_000)
 ```
 
-```kt
+```java
 repeat(100) {
 ```
 
-```kt
+```java
     thread {
 ```
 
-```kt
+```java
         repeat(1000) {
 ```
 
-```kt
+```java
             counter++
 ```
 
-```kt
+```java
             latch.countDown()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 latch.await()
 ```
 
-```kt
+```java
 println("Counter $counter")
 ```
 
@@ -246,35 +246,35 @@ println("Counter $counter")
 
 与 Java 不同，Kotlin 中没有`synchronized`关键字。这是因为 Kotlin 的设计者认为一种语言不应该针对特定的并发模型进行定制。相反，我们可以使用`synchronized()`函数：
 
-```kt
+```java
 thread {
 ```
 
-```kt
+```java
     repeat(1000) {
 ```
 
-```kt
+```java
         synchronized(latch) {
 ```
 
-```kt
+```java
             counter++
 ```
 
-```kt
+```java
             latch.countDown()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -296,51 +296,51 @@ thread {
 
 在以下代码片段中，我们将尝试创建 10,000 个线程，每个线程休眠一个相对较短的时间：
 
-```kt
+```java
 val counter = AtomicInteger() 
 ```
 
-```kt
+```java
 try { 
 ```
 
-```kt
+```java
     for (i in 0..10_000) { 
 ```
 
-```kt
+```java
         thread { 
 ```
 
-```kt
+```java
             counter.incrementAndGet() 
 ```
 
-```kt
+```java
             Thread.sleep(100) 
 ```
 
-```kt
+```java
         } 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 } catch (oome: OutOfMemoryError) { 
 ```
 
-```kt
+```java
     println("Spawned ${counter.get()} threads before       crashing") 
 ```
 
-```kt
+```java
     System.exit(-42) 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -352,57 +352,57 @@ try {
 
 使用该 API，我们可以创建一个指定大小的新的线程池。尝试将`pool`的大小设置为`1`，机器上的核心数设置为`100`和`2000`，看看会发生什么：
 
-```kt
+```java
 val pool = Executors.newFixedThreadPool(100)
 ```
 
 现在，我们想要提交一个新的任务。我们可以通过调用`pool.submit()`来实现：
 
-```kt
+```java
 val counter = AtomicInteger(0) 
 ```
 
-```kt
+```java
 val start = System.currentTimeMillis() 
 ```
 
-```kt
+```java
 for (i in 1..10_000) { 
 ```
 
-```kt
+```java
     pool.submit { 
 ```
 
-```kt
+```java
         // Do something 
 ```
 
-```kt
+```java
         counter.incrementAndGet() 
 ```
 
-```kt
+```java
         // Simulate wait on IO 
 ```
 
-```kt
+```java
         Thread.sleep(100) 
 ```
 
-```kt
+```java
         // Do something again 
 ```
 
-```kt
+```java
         counter.incrementAndGet() 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -410,15 +410,15 @@ for (i in 1..10_000) {
 
 然后，我们需要确保池终止，并使用以下行给它`20`秒的时间来完成：
 
-```kt
+```java
 pool.awaitTermination(20, TimeUnit.SECONDS) 
 ```
 
-```kt
+```java
 pool.shutdown() 
 ```
 
-```kt
+```java
 println("Took me ${System.currentTimeMillis() - start}   millis to complete ${counter.get() / 2} tasks")
 ```
 
@@ -434,19 +434,19 @@ println("Took me ${System.currentTimeMillis() - start}   millis to complete ${
 
 首先你需要知道的是，协程不是语言的一部分。它们只是 JetBrains 提供的另一个库。因此，如果我们想使用它们，我们需要在 Gradle 配置文件中指定这一点；即`build.gradle.kts`：
 
-```kt
+```java
 dependencies { 
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
     implementation("org.jetbrains.kotlinx:kotlinx-      coroutines-core:1.5.1") 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -462,55 +462,55 @@ dependencies {
 
 我们将创建几乎与线程相同的示例。每个协程将增加某个计数器，休眠一段时间来模拟某种类型的 I/O，然后再次增加它：
 
-```kt
+```java
 val latch = CountDownLatch(10_000)
 ```
 
-```kt
+```java
 val c = AtomicInteger()
 ```
 
-```kt
+```java
 val start = System.currentTimeMillis()
 ```
 
-```kt
+```java
 for (i in 1..10_000) {
 ```
 
-```kt
+```java
     GlobalScope.launch {
 ```
 
-```kt
+```java
         c.incrementAndGet()
 ```
 
-```kt
+```java
         delay(100)
 ```
 
-```kt
+```java
         c.incrementAndGet()
 ```
 
-```kt
+```java
         latch.countDown()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 latch.await(10, TimeUnit.SECONDS)
 ```
 
-```kt
+```java
 println("Executed ${c.get() / 2} coroutines in   ${System.currentTimeMillis() - start}ms")
 ```
 
@@ -532,25 +532,25 @@ println("Executed ${c.get() / 2} coroutines in   ${System.currentTimeMillis() 
 
 例如，以下函数将启动一个异步生成 UUID 并返回它的协程：
 
-```kt
+```java
 fun fastUuidAsync() = GlobalScope.async {
 ```
 
-```kt
+```java
     UUID.randomUUID()
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 println(fastUuidAsync())
 ```
 
 如果你从我们的 `main` 方法中运行以下代码，则不会打印出预期的结果。这段代码打印出的结果而不是某个 UUID 值如下：
 
-```kt
+```java
 > DeferredCoroutine{Active}
 ```
 
@@ -562,11 +562,11 @@ println(fastUuidAsync())
 
 这意味着我们试图做的是这个：
 
-```kt
+```java
 val job: Job = fastUuidAsync()
 ```
 
-```kt
+```java
 println(job)
 ```
 
@@ -592,7 +592,7 @@ println(job)
 
 拥有值的任务被称为`Deffered`：
 
-```kt
+```java
 val job: Deferred<UUID> = fastUuidAsync()
 ```
 
@@ -600,17 +600,17 @@ val job: Deferred<UUID> = fastUuidAsync()
 
 为了等待任务完成并获取实际值，我们可以使用`await()`函数：
 
-```kt
+```java
 val job: Deferred<UUID> = fastUuidAsync()
 ```
 
-```kt
+```java
 println(job.await())
 ```
 
 这段代码无法编译：
 
-```kt
+```java
 > Suspend function 'await' should be called only from a coroutine or another suspend function
 ```
 
@@ -618,19 +618,19 @@ println(job.await())
 
 我们可以通过将我们的代码包裹在`runBlocking`函数中来修复这个问题：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     val job: Deferred<UUID> = fastUuidAsync()
 ```
 
-```kt
+```java
     println(job.await())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -656,39 +656,39 @@ runBlocking {
 
 例如，让我们看看一个组合用户配置文件的函数：
 
-```kt
+```java
 fun profileBlocking(id: String): Profile { 
 ```
 
-```kt
+```java
     // Takes 1s
 ```
 
-```kt
+```java
     val bio = fetchBioOverHttpBlocking(id)  
 ```
 
-```kt
+```java
     // Takes 100ms
 ```
 
-```kt
+```java
     val picture = fetchPictureFromDBBlocking(id)  
 ```
 
-```kt
+```java
     // Takes 500ms
 ```
 
-```kt
+```java
     val friends = fetchFriendsFromDBBlocking(id) 
 ```
 
-```kt
+```java
     return Profile(bio, picture, friends) 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -696,39 +696,39 @@ fun profileBlocking(id: String): Profile {
 
 我们可以重新设计这个函数，使其与协程一起工作，如下所示：
 
-```kt
+```java
 suspend fun profile(id: String): Profile {
 ```
 
-```kt
+```java
     // Takes 1s    
 ```
 
-```kt
+```java
     val bio = fetchBioOverHttpAsync(id) 
 ```
 
-```kt
+```java
     // Takes 100ms
 ```
 
-```kt
+```java
     val picture = fetchPictureFromDBAsync(id) 
 ```
 
-```kt
+```java
     // Takes 500ms
 ```
 
-```kt
+```java
     val friends = fetchFriendsFromDBAsync(id) 
 ```
 
-```kt
+```java
     return Profile(bio.await(), picture.await(),       friends.await())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -736,23 +736,23 @@ suspend fun profile(id: String): Profile {
 
 为了理解每个异步函数看起来像什么，让我们以其中一个为例：
 
-```kt
+```java
 fun fetchFriendsFromDBAsync(id: String) = GlobalScope.async 
 ```
 
-```kt
+```java
 {
 ```
 
-```kt
+```java
     delay(500)
 ```
 
-```kt
+```java
     emptyList<String>()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -760,53 +760,53 @@ fun fetchFriendsFromDBAsync(id: String) = GlobalScope.async
 
 我们可以使用之前看到的 `runBlocking` 函数包装这两个函数，并使用 `measureTimeMillis` 测量它们完成所需的时间：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     val t1 = measureTimeMillis {
 ```
 
-```kt
+```java
         blockingProfile("123")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     val t2 = measureTimeMillis {
 ```
 
-```kt
+```java
         profile("123")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     println("Blocking code: $t1")
 ```
 
-```kt
+```java
     println("Async: $t2")
 ```
 
-```kt
+```java
 }
 ```
 
 输出将类似于以下内容：
 
-```kt
+```java
 > Blocking code: 1623
 ```
 
-```kt
+```java
 > Coroutines: 1021
 ```
 
@@ -816,19 +816,19 @@ runBlocking {
 
 我们将使用 `suspend` 关键字标记每个函数：
 
-```kt
+```java
 suspend fun fetchFriendsFromDB(id: String): List<String> {
 ```
 
-```kt
+```java
     delay(500)
 ```
 
-```kt
+```java
     return emptyList()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -838,83 +838,83 @@ suspend fun fetchFriendsFromDB(id: String): List<String> {
 
 当 Kotlin 编译器看到 `suspend` 关键字时，它知道它可以分割并重新编写函数，如下所示：
 
-```kt
+```java
 fun profile(state: Int, id: String, context: ArrayList<Any>): Profile {
 ```
 
-```kt
+```java
     when (state) {
 ```
 
-```kt
+```java
         0 -> {
 ```
 
-```kt
+```java
             context += fetchBioOverHttp(id) 
 ```
 
-```kt
+```java
             profile(1, id, context)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         1 -> {
 ```
 
-```kt
+```java
             context += fetchPictureFromDB(id) 
 ```
 
-```kt
+```java
             profile(2, id, context)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         2 -> {
 ```
 
-```kt
+```java
             context += fetchFriendsFromDB(id) 
 ```
 
-```kt
+```java
             profile(3, id, context)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         3 -> {
 ```
 
-```kt
+```java
             val (bio, picture, friends) = context
 ```
 
-```kt
+```java
             return Profile(bio, picture, friends)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -940,47 +940,47 @@ fun profile(state: Int, id: String, context: ArrayList<Any>): Profile {
 
 为了展示这一点，我们将创建一个偶尔产生 `yield` 的协程：
 
-```kt
+```java
 val cancellable = launch {
 ```
 
-```kt
+```java
     try {
 ```
 
-```kt
+```java
         for (i in 1..10_000) {
 ```
 
-```kt
+```java
             println("Cancellable: $i")
 ```
 
-```kt
+```java
             yield()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     catch (e: CancellationException) {
 ```
 
-```kt
+```java
         e.printStackTrace()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -988,31 +988,31 @@ val cancellable = launch {
 
 我们还将创建另一个不产生 `yield` 的协程：
 
-```kt
+```java
 val notCancellable = launch {
 ```
 
-```kt
+```java
     for (i in 1..10_000) {
 ```
 
-```kt
+```java
         if (i % 100 == 0) {
 ```
 
-```kt
+```java
             println("Not cancellable $i")
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1020,37 +1020,37 @@ val notCancellable = launch {
 
 现在，让我们尝试取消两个协程：
 
-```kt
+```java
 println("Canceling cancellable") 
 ```
 
-```kt
+```java
 cancellable.cancel() 
 ```
 
-```kt
+```java
 println("Canceling not cancellable") 
 ```
 
-```kt
+```java
 notCancellable.cancel()
 ```
 
 然后，我们将等待结果：
 
-```kt
+```java
 runBlocking { 
 ```
 
-```kt
+```java
     cancellable.join() 
 ```
 
-```kt
+```java
     notCancellable.join() 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1058,27 +1058,27 @@ runBlocking {
 
 让我们看看我们代码的输出：
 
-```kt
+```java
 > Canceling cancellable
 ```
 
-```kt
+```java
 > Cancellable: 1
 ```
 
-```kt
+```java
 > Not cancellable 100
 ```
 
-```kt
+```java
 >...
 ```
 
-```kt
+```java
 > Not cancellable 1000
 ```
 
-```kt
+```java
 > Canceling not cancellable
 ```
 
@@ -1100,59 +1100,59 @@ runBlocking {
 
 这可以通过使用 `withTimeout()` 函数来实现：
 
-```kt
+```java
 val coroutine = async {
 ```
 
-```kt
+```java
     withTimeout(500) {
 ```
 
-```kt
+```java
         try {
 ```
 
-```kt
+```java
             val time = Random.nextLong(1000)
 ```
 
-```kt
+```java
             println("It will take me $time to do")
 ```
 
-```kt
+```java
             delay(time)
 ```
 
-```kt
+```java
             println("Returning profile")
 ```
 
-```kt
+```java
             "Profile"
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         catch (e: TimeoutCancellationException) {
 ```
 
-```kt
+```java
             e.printStackTrace()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1160,31 +1160,31 @@ val coroutine = async {
 
 我们将等待协程的结果并查看会发生什么：
 
-```kt
+```java
 val result = try { 
 ```
 
-```kt
+```java
     coroutine.await() 
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 catch (e: TimeoutCancellationException) { 
 ```
 
-```kt
+```java
     "No Profile" 
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 println(result)
 ```
 
@@ -1200,51 +1200,51 @@ println(result)
 
 你可以通过运行以下代码来检查：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         println(Thread.currentThread().name) // Prints 
 ```
 
-```kt
+```java
           "main"
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 相比之下，当我们使用 `GlobalScope` 运行协程时，它运行在称为 `DefaultDispatcher` 的东西上：
 
-```kt
+```java
 GlobalScope.launch {
 ```
 
-```kt
+```java
     println("GlobalScope.launch: 
 ```
 
-```kt
+```java
       ${Thread.currentThread().name}")
 ```
 
-```kt
+```java
 }
 ```
 
 这会打印以下输出：
 
-```kt
+```java
 > DefaultDispatcher-worker-1
 ```
 
@@ -1252,43 +1252,43 @@ GlobalScope.launch {
 
 协程生成器，如 `launch()` 和 `async()`，依赖于默认参数，其中一个参数是它们将要启动的分发器。要指定替代分发器，您可以将它作为参数提供给协程构建器：
 
-```kt
+```java
 runBlocking {
 ```
 
-```kt
+```java
     launch(Dispatchers.Default) {
 ```
 
-```kt
+```java
         println(Thread.currentThread().name)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 上述代码将打印以下输出：
 
-```kt
+```java
 > DefaultDispatcher-worker-1
 ```
 
 除了我们已讨论的 `Main` 和 `Default` 分发器之外，还有一个 `IO` 分发器，用于长时间运行的任务。您可以通过将其提供给协程构建器以类似方式使用它，如下所示：
 
-```kt
+```java
 async(Dispatchers.IO) { 
 ```
 
-```kt
+```java
     // Some long running task here
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1300,93 +1300,93 @@ async(Dispatchers.IO) {
 
 这意味着如果我们查看以下代码，它启动了 10 个子协程，父协程不需要显式等待它们全部完成：
 
-```kt
+```java
 val parent = launch(Dispatchers.Default) {
 ```
 
-```kt
+```java
     val children = List(10) { childId ->
 ```
 
-```kt
+```java
         launch {
 ```
 
-```kt
+```java
             for (i in 1..1_000_000) {
 ```
 
-```kt
+```java
                 UUID.randomUUID()
 ```
 
-```kt
+```java
                 if (i % 100_000 == 0) {
 ```
 
-```kt
+```java
                     println("$childId - $i")
 ```
 
-```kt
+```java
                     yield()
 ```
 
-```kt
+```java
                 }
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 } 
 ```
 
 现在，让我们决定其中一个协程在一段时间后抛出异常：
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 if (i % 100_000 == 0) {
 ```
 
-```kt
+```java
     println("$childId - $i")
 ```
 
-```kt
+```java
     yield()
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 if (childId == 8 && i == 300_000) {
 ```
 
-```kt
+```java
     throw RuntimeException("Something bad happened")
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 ...
 ```
 
@@ -1396,31 +1396,31 @@ if (childId == 8 && i == 300_000) {
 
 通常，这是期望的行为。如果我们想防止子异常停止父协程，我们可以使用 `supervisorScope`：
 
-```kt
+```java
 val parent = launch(Dispatchers.Default) {
 ```
 
-```kt
+```java
     supervisorScope {
 ```
 
-```kt
+```java
         val children = List(10) { childId ->
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 

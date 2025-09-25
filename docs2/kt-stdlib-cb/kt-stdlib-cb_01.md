@@ -26,13 +26,13 @@ Kotlin 标准库提供的范围是一个强大的解决方案，用于以自然�
 
 Kotlin 标准库提供了允许声明整数、原始类型（如`Int`、`Long`和`Char`）范围的函数。要定义一个新的范围实例，我们可以使用`rangeTo()`函数。例如，我们可以以下这种方式声明一个从`0`到`1000`的整数范围：
 
-```kt
+```java
 val range: IntRange = 0.rangeTo(1000)
 ```
 
 `rangeTo()`函数也有其自己的特殊运算符等价物，即`..`，它允许使用更自然的语法声明一个范围：
 
-```kt
+```java
 val range: IntRange = 0..1000
 ```
 
@@ -42,13 +42,13 @@ val range: IntRange = 0..1000
 
 1.  声明字母字符的降序范围：
 
-```kt
+```java
 'Z' downTo 'A'
 ```
 
 2. 创建一个`for`循环来遍历范围：
 
-```kt
+```java
 for (letter in 'Z' downTo 'A') print(letter)
 ```
 
@@ -56,7 +56,7 @@ for (letter in 'Z' downTo 'A') print(letter)
 
 因此，我们将得到以下代码打印到控制台：
 
-```kt
+```java
 ZYXWVUTSRQPONMLKJIHGFEDCBA
 ```
 
@@ -70,7 +70,7 @@ ZYXWVUTSRQPONMLKJIHGFEDCBA
 
 还有一个方便的方法可以反转已定义进度的顺序。我们可以使用为`IntProgression`、`LongProgression`和`CharProgression`类型提供的扩展函数`reversed()`来实现这一点。它返回具有元素顺序反转的新进度实例。以下是如何使用`reversed()`函数的示例：
 
-```kt
+```java
 val daysOfYear: IntRange = 1..365
 for(day in daysOfYear.reversed()) {
     println("Remaining days: $day")
@@ -79,7 +79,7 @@ for(day in daysOfYear.reversed()) {
 
 前面的`for`循环将以下文本打印到控制台：
 
-```kt
+```java
 Remaining days: 365
 Remaining days: 364
 Remaining days: 363
@@ -90,7 +90,7 @@ Remaining days: 1
 
 Kotlin 标准库还提供了一个名为`until()`的便捷扩展函数，它允许声明不包含最后一个元素的范围。当与包含内部集合且不提供优雅接口访问它们的类一起工作时，这非常有用。一个很好的例子是 Android 的`ViewGroup`类，它是一个用于子`View`类型对象的容器。以下示例展示了如何遍历任何给定`ViewGroup`实例子元素的下一个索引，以修改每个子元素的状态：
 
-```kt
+```java
 val container: ViewGroup = activity.findViewById(R.id.container) as ViewGroup
 (0 until container.childCount).forEach {
     val child: View = container.getChildAt(it)
@@ -114,13 +114,13 @@ val container: ViewGroup = activity.findViewById(R.id.container) as ViewGroup
 
 Kotlin 标准库提供了一个方便的方法来创建具有自定义`step`值的进度。我们可以使用名为`step()`的进度整型类型的扩展函数来实现这一点。我们还可以利用中缀表示法，如下声明具有自定义`step`的进度：
 
-```kt
+```java
 val progression: IntProgression = 0..1000 step 100
 ```
 
 如果我们在`for`循环中使用`progression`，它将迭代 10 次：
 
-```kt
+```java
 val progression: IntProgression = 0..1000 step 100
 for (i in progression) {
     println(i)
@@ -129,7 +129,7 @@ for (i in progression) {
 
 我们也可以通过以下方式使用`while`循环达到相同的结果：
 
-```kt
+```java
 var i = 0
 while (i <= 1000) {
     println(i)
@@ -141,19 +141,19 @@ while (i <= 1000) {
 
 1.  使用`downTo()`函数声明一个`Char`类型的范围：
 
-```kt
+```java
 'z' downTo 'a'
 ```
 
 1.  使用`step()`函数将范围转换为具有自定义`step`值的进度：
 
-```kt
+```java
 'z' downTo 'a' step 2
 ```
 
 1.  使用`forEach()`函数遍历进度的元素，并将每个元素打印到控制台：
 
-```kt
+```java
 ('z' downTo 'a' step 2).forEach { character -> print(character) }
 ```
 
@@ -161,7 +161,7 @@ while (i <= 1000) {
 
 在结果中，我们将得到以下代码打印到控制台：
 
-```kt
+```java
 zxvtrpnljhfdb
 ```
 
@@ -181,7 +181,7 @@ Kotlin 为原始类型的范围提供了内置支持。在之前的菜谱中，�
 
 为了完成任务，我们首先需要熟悉`ClosedRange`和`Iterator`接口。我们需要使用它们来为`LocalDate`类声明一个自定义的递增：
 
-```kt
+```java
 public interface ClosedRange<T: Comparable<T>> {
     public val start: T
     public val endInclusive: T
@@ -194,7 +194,7 @@ public interface ClosedRange<T: Comparable<T>> {
 
 `Iterator`接口提供了关于后续值及其可用性的信息：
 
-```kt
+```java
 public interface Iterator<out T> {
     public operator fun next(): T
     public operator fun hasNext(): Boolean
@@ -207,7 +207,7 @@ public interface Iterator<out T> {
 
 1.  让我们从为`LocalDate`类型实现`Iterator`接口开始。我们将创建一个自定义的`LocalDateIterator`类，该类将实现`Iterator<LocalDate>`接口：
 
-```kt
+```java
 class DateIterator(startDate: LocalDate,
                    val endDateInclusive: LocalDate,
                    val stepDays: Long) : Iterator<LocalDate> {
@@ -223,7 +223,7 @@ class DateIterator(startDate: LocalDate,
 
 1.  现在，我们可以实现`LocalDate`类型的递增。让我们创建一个新的类，称为`DateProgression`，它将实现`Iterable<LocalDate>`和`ClosedRange<LocalDate>`接口：
 
-```kt
+```java
 class DateProgression(override val start: LocalDate,
                       override val endInclusive: LocalDate,
                       val stepDays: Long = 1) : 
@@ -239,7 +239,7 @@ class DateProgression(override val start: LocalDate,
 
 1.  最后，为`LocalDate`类声明一个自定义的`rangeTo`操作符：
 
-```kt
+```java
 operator fun LocalDate.rangeTo(other: LocalDate) = DateProgression(this, other)
 ```
 
@@ -247,7 +247,7 @@ operator fun LocalDate.rangeTo(other: LocalDate) = DateProgression(this, other)
 
 现在，我们能够为`LocalDate`类型声明范围表达式。让我们看看如何使用我们的实现。在下面的示例中，我们将使用我们自定义的`LocalDate.rangeTo`操作符实现来创建一个日期范围并迭代其元素：
 
-```kt
+```java
 val startDate = LocalDate.of(2020, 1, 1)
 val endDate = LocalDate.of(2020, 12, 31)
 for (date in startDate..endDate step 7) {
@@ -257,7 +257,7 @@ for (date in startDate..endDate step 7) {
 
 因此，我们将以一周为间隔将日期打印到控制台：
 
-```kt
+```java
 WEDNESDAY 2020-01-01
 WEDNESDAY 2020-01-08
 WEDNESDAY 2020-01-15
@@ -288,13 +288,13 @@ Kotlin 范围表达式——由 `ClosedRange` 接口表示——实现了一个 
 
 1.  让我们创建一个变量，并给它分配一个随机整数值：
 
-```kt
+```java
 val randomInt = Random().nextInt()
 ```
 
 1.  现在，我们可以使用范围表达式检查 `randomInt` 值是否属于从 `0` 到 `10`（包括 `10`）的整数范围：
 
-```kt
+```java
 if (randomInt in 0..10) {
     print("$randomInt belongs to <0, 10> range")
 } else {
@@ -306,7 +306,7 @@ if (randomInt in 0..10) {
 
 我们已经使用范围表达式与 `in` 操作符一起定义了 `if` 语句的条件。条件语句易于阅读且简洁。相比之下，等效的经典实现可能看起来像这样：
 
-```kt
+```java
 val randomInt = Random(20).nextInt()
 if (randomInt >= 0 && randomInt <= 10) {
     print("$randomInt belongs to <0, 10> range")
@@ -321,13 +321,13 @@ if (randomInt >= 0 && randomInt <= 10) {
 
 范围表达式还可以增强 `when` 表达式的使用。在下面的示例中，我们将实现一个简单的函数，该函数将负责将学生的考试成绩映射到相应的等级。假设我们有以下用于学生等级的枚举类模型：
 
-```kt
+```java
 enum class Grade { A, B, C, D }
 ```
 
 我们可以定义一个函数，将考试分数值（在 `0` 到 `100` % 范围内）映射到适当的等级（`A`、`B`、`C` 或 `D`），使用 `when` 表达式，如下所示：
 
-```kt
+```java
 fun computeGrade(score: Int): Grade =
         when (score) {
             in 90..100 -> Grade.A
@@ -352,7 +352,7 @@ fun computeGrade(score: Int): Grade =
 
 让我们考虑以下示例：
 
-```kt
+```java
 val collection = listOf("a", "b", "c", "d", "e", "f", "g", "h")
 val transformedCollection = collection.map {
     println("Applying map function for $it")
@@ -365,7 +365,7 @@ println(transformedCollection.take(2))
 
 最后，前面的代码将打印以下输出：
 
-```kt
+```java
 Applying map function for a
 Applying map function for b
 Applying map function for c
@@ -383,13 +383,13 @@ Applying map function for h
 
 1.  为给定元素声明一个`Sequence`实例：
 
-```kt
+```java
 val sequence = sequenceOf("a", "b", "c", "d", "e", "f", "g", "h")
 ```
 
 1.  将映射操作应用于序列的元素：
 
-```kt
+```java
 val sequence = sequenceOf("a", "b", "c", "d", "e", "f", "g", "h")
 val transformedSequence = sequence.map {
     println("Applying map function for $it")
@@ -399,7 +399,7 @@ val transformedSequence = sequence.map {
 
 1.  将序列的前两个元素打印到控制台：
 
-```kt
+```java
 val sequence = sequenceOf("a", "b", "c", "d", "e", "f", "g", "h")
 
 val transformedSequence = sequence.map {
@@ -413,7 +413,7 @@ println(transformedSequence.take(2).toList())
 
 基于序列（`Sequence`）的实现将给出以下输出：
 
-```kt
+```java
 Applying map function for a
 Applying map function for b
 [a, b]
@@ -423,7 +423,7 @@ Applying map function for b
 
 在本食谱中考虑的场景被实现得完全相同——首先使用`List`，然后使用`Sequence`类型。然而，我们可以注意到`Sequence`数据结构与`Collection`的行为差异。`map()`函数仅应用于序列的前两个元素，尽管在映射转换声明之后调用了`take()`函数。还值得注意的是，在使用`Collection`的示例中，当调用`map()`函数时，映射是立即执行的。在`Sequence`的情况下，映射是在将元素打印到控制台时进行的，更确切地说，是在将`Sequence`转换为以下代码行中的`List`类型时进行的：
 
-```kt
+```java
 println(transformedSequence.take(2).toList())
 ```
 
@@ -445,7 +445,7 @@ println(transformedSequence.take(2).toList())
 
 `generateSequence()`函数的基本变体声明如下：
 
-```kt
+```java
 fun <T : Any> generateSequence(nextFunction: () -> T?): Sequence<T>
 ```
 
@@ -453,7 +453,7 @@ fun <T : Any> generateSequence(nextFunction: () -> T?): Sequence<T>
 
 在以下示例中，我们将实现一个有限序列，该序列从`10`到`0`发出整数：
 
-```kt
+```java
 var counter = 10
 val sequence: Sequence<Int> = generateSequence {
     counter--.takeIf { value: Int -> value >= 0 }
@@ -463,13 +463,13 @@ print(sequence.toList())
 
 应用到当前`counter`值的`takeIf()`函数检查其值是否大于或等于`0`。如果条件得到满足，它返回`counter`值；否则，它返回`null`。每当`generateSequence()`函数返回`null`时，序列停止。在`takeIf`函数返回值后，`counter`值将进行后递减。前面的代码将导致以下数字被打印到控制台：
 
-```kt
+```java
 [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 ```
 
 斐波那契数列的后续值是通过将它们的两个前一个值相加生成的。此外，前两个值等于 `0` 和 `1`。为了实现这样一个序列，我们将使用一个带有额外 `seed` 参数的 `generateSequence()` 函数的扩展版本，声明如下：
 
-```kt
+```java
 fun <T : Any> generateSequence(seed: T?, nextFunction: (T) -> T?): Sequence<T>
 ```
 
@@ -477,7 +477,7 @@ fun <T : Any> generateSequence(seed: T?, nextFunction: (T) -> T?): Sequence<T>
 
 1.  声明一个名为 `fibonacci()` 的函数，并使用 `generateSequence()` 函数定义序列的下一个元素的公式：
 
-```kt
+```java
 fun fibonacci(): Sequence<Int> {
     return generateSequence(Pair(0, 1)) { Pair(it.second, it.first + it.second) }
             .map { it.first }
@@ -486,7 +486,7 @@ fun fibonacci(): Sequence<Int> {
 
 1.  使用 `fibonacci()` 函数将下一个斐波那契数打印到控制台：
 
-```kt
+```java
 println(fibonacci().take(20).toList())
 ```
 
@@ -494,7 +494,7 @@ println(fibonacci().take(20).toList())
 
 因此，我们将得到下一个 20 个斐波那契数打印到控制台：
 
-```kt
+```java
 [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181]
 ```
 

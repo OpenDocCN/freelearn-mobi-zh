@@ -56,13 +56,13 @@ Android 社区是一个充满活力和动态的生态系统，以创新、协作
 
 代码块设置如下：
 
-```kt
+```java
 class MessagesRepository @Inject constructor(    private val dataSource: MessagesSocketDataSource ): IMessagesRepository {    override suspend fun getMessages(): Flow<Message> {        return dataSource.connect()    }
 ```
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 Scaffold(
     topBar = {
         TopAppBar(

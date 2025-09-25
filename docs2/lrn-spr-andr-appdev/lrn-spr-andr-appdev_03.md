@@ -181,7 +181,7 @@ Bean 是由 Spring IoC 实例化和组装的对象。这些 Bean 是通过配置
 
 让我们看看一个基于 XML 的配置文件示例，其中包含各种 Bean 定义，包括作用域、初始化技术和销毁策略，然后我们将讨论这个问题。以下是`bean.xml`的代码片段：
 
-```kt
+```java
 <!-- A simple bean definition -->
 <bean id = "..." class = "...">
 <!-- collaborators and configuration-->
@@ -220,7 +220,7 @@ Spring 框架支持以下五个作用域，其中三个在如果我们使用一�
 
 默认作用域始终是`单例`。这是 Spring IoC 容器的一个 Bean 定义，它在每次对象初始化时返回一个单一的对象实例。以下是一个单例作用域的代码示例：
 
-```kt
+```java
 <!-- A bean example with singleton scope -->
 <bean id = "..." class = "..." scope = "singleton"/>
 <!-- You can remove the scope for the singleton -->
@@ -233,7 +233,7 @@ Spring 框架支持以下五个作用域，其中三个在如果我们使用一�
 
 以下是一个`CreateUserGreeting.kt`的代码片段：
 
-```kt
+```java
 class UserGreeting {
     private var globalGreeting: String? = "Sasuke Uchiha"
 
@@ -249,7 +249,7 @@ class UserGreeting {
 
 `BeansScopeApplication.kt`的内容如下：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val context = ClassPathXmlApplicationContext("Beans.xml")
 
@@ -268,7 +268,7 @@ fun main(args: Array<String>) {
 
 以下是一个`beans.xml`配置文件：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns = "http://www.springframework.org/schema/beans"
        xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
@@ -282,7 +282,7 @@ fun main(args: Array<String>) {
 
 运行此项目后，您将看到以下输出：
 
-```kt
+```java
 Welcome, Naruto Uzumaki!!  <--- value of objectA 
 Welcome, Naruto Uzumaki!!  <--- value of objectB 
 ```
@@ -291,7 +291,7 @@ Welcome, Naruto Uzumaki!!  <--- value of objectB
 
 `原型`作用域在每次对象初始化时都会创建一个 Bean 的新实例。这个作用域更适合有状态的 Bean。容器不管理这个`原型`作用域的完整生命周期。以下是一个`原型`作用域的代码示例：
 
-```kt
+```java
 <!-- A bean example with prototype scope -->
 <bean id = "..." class = "..." scope = "prototype"/>
 ```
@@ -300,7 +300,7 @@ Welcome, Naruto Uzumaki!!  <--- value of objectB
 
 重新使用之前的工程，并修改 Bean XML 配置文件，如下所示：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns = "http://www.springframework.org/schema/beans"
        xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
@@ -314,7 +314,7 @@ Welcome, Naruto Uzumaki!!  <--- value of objectB
 
 一旦我们完成创建源文件和 Bean 配置文件，我们就可以运行应用程序。如果没有错误，我们将得到以下消息：
 
-```kt
+```java
 Welcome, Naruto Uzumaki!!  <--- value of objectA 
 Welcome, Sasuke Uchiha!!  <--- value of objectB 
 ```
@@ -333,7 +333,7 @@ Welcome, Sasuke Uchiha!!  <--- value of objectB
 
 让我们看看一个 bean 生命周期的例子。在这里，我们将看看如何初始化和销毁 bean 函数。重新使用之前的工程，并按如下修改 bean XML 配置文件：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns = "http://www.springframework.org/schema/beans"
        xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
@@ -348,7 +348,7 @@ Welcome, Sasuke Uchiha!!  <--- value of objectB
 
 现在在 `UserGreeting.kt` 中添加两个函数：
 
-```kt
+```java
 class UserGreeting {
     private var globalGreeting: String? = "Sasuke Uchiha"
 
@@ -372,7 +372,7 @@ class UserGreeting {
 
 在类的 `main` 函数任务完成后调用 `registerShutdownHook()`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val context = ClassPathXmlApplicationContext("Beans.xml")
     val objectA = context.getBean("userGreeting", UserGreeting::class.java)
@@ -385,7 +385,7 @@ fun main(args: Array<String>) {
 
 输出将如下所示：
 
-```kt
+```java
 Bean is going to start.
 Welcome, Naruto Uzumaki!!
 Bean is going to destroy.
@@ -399,7 +399,7 @@ DI 是一个系统，其中对象的依赖由外部容器提供。Spring DI 帮�
 
 构造函数注入将依赖项注入到类构造函数中。让我们看看构造函数注入的一个例子。重新使用之前的工程，并修改 `beans.xml` 的内容：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -419,7 +419,7 @@ DI 是一个系统，其中对象的依赖由外部容器提供。Spring DI 帮�
 
 创建一个 `UserSurname.kt` 类来查看构造函数注入的使用**。**我们将从这个类中获取姓氏，如下所示：
 
-```kt
+```java
 class UserSurname {
  init {
  println("This is init of UserSurname")
@@ -433,7 +433,7 @@ class UserSurname {
 
 初始化 `UserSurname` 并将 `getUserSurname()` 函数添加到 `CreateUserGreeting.kt`：
 
-```kt
+```java
 // added a constractor of UserSurname
 class UserGreeting(surname: UserSurname) {
     private var userSurname: UserSurname ?= surname
@@ -469,7 +469,7 @@ class UserGreeting(surname: UserSurname) {
 
 下面是 `BeansScopeApplication.kt` 的示例代码**：**
 
-```kt
+```java
 fun main(args: Array<String>) {
     val context = ClassPathXmlApplicationContext("Beans.xml")
     val objectA = context.getBean("userGreeting", UserGreeting::class.java)
@@ -483,7 +483,7 @@ fun main(args: Array<String>) {
 
 输出将如下所示：
 
-```kt
+```java
 This is init of UserSurname                <------ init from UserSurname.kt
 It is a constructor for user's surname     <------ init from UserGreeting.kt
 This is the surname of user                <------ getUserSurname() of UserGreeting.kt
@@ -495,7 +495,7 @@ This is the surname of user                <------ getUserSurname() of UserGreet
 
 让我们看看`setter`注入的一个示例。这里，重用之前的工程并修改`beans.xml`的内容：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -512,7 +512,7 @@ This is the surname of user                <------ getUserSurname() of UserGreet
 
 修改 bean 文件后，将`UserSurname`的 setter 和 getter 添加到`CreateUserGreeting.kt`文件中：
 
-```kt
+```java
 class UserGreeting {
     private var userSurname: UserSurname? = null
 
@@ -550,7 +550,7 @@ class UserGreeting {
 
 结果将如下所示：
 
-```kt
+```java
 This is init of UserSurname
 Setting User Surname in UserGreeting
 This is the surname of user
@@ -558,7 +558,7 @@ This is the surname of user
 
 空字符串或`null`值的示例如下：
 
-```kt
+```java
 <bean id="app" class="App">
 <property name="name" value=""/>
 </bean>
@@ -578,13 +578,13 @@ This is the surname of user
 
 +   `byName`：要`自动装配`一个 bean，Spring 容器通过类名选择 bean。下面是`byName`使用的一个示例：
 
-```kt
+```java
 <bean id="app" class="App" autowire="byName"/>
 ```
 
 +   `byType`：要自动装配一个 bean，Spring 容器根据类类型选择 bean。下面是`byType`使用的一个示例：
 
-```kt
+```java
 <bean id="app" class="App" autowire="byType"/>
 ```
 
@@ -596,7 +596,7 @@ This is the surname of user
 
 下面是如何在`beans.xml`中处理`Service`接口多个实现类的一个示例：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -614,7 +614,7 @@ This is the surname of user
 
 对于`byName`，可以在应用程序类中将`mainService`重命名为实际化类之一（即`userSurname`），或者在该类的 XML 配置中将 bean 的`id`重命名为`mainService`：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -648,7 +648,7 @@ This is the surname of user
 
 下面是一段`bean.xml`代码：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans 
 
@@ -672,7 +672,7 @@ This is the surname of user
 
 `bean.xml`配置文件的内容如下：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -693,7 +693,7 @@ This is the surname of user
 
 `UsersForReq.kt`的内容如下：
 
-```kt
+```java
 class Users{
     private var village: String? = null
     private var name: String? = null
@@ -718,7 +718,7 @@ class Users{
 
 `AnnotationBasedReqApp.kt`的内容如下：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val context = ClassPathXmlApplicationContext("requiredAnnotation/beans_for_req.xml")
     val users = context.getBean("users") as UsersForReq
@@ -730,7 +730,7 @@ fun main(args: Array<String>) {
 
 此项目的输出将如下所示：
 
-```kt
+```java
 Name: Naruto Uzumaki
 Village: Konohagakure
 ```
@@ -741,7 +741,7 @@ Village: Konohagakure
 
 下面是使用`@Autowired`注解在属性上的示例代码：
 
-```kt
+```java
 class User(val name: String,
             val id: String)
 
@@ -753,7 +753,7 @@ class Users{
 
 下面是使用`@Autowired`注解在属性上的示例代码：
 
-```kt
+```java
 class UsersForAutowired{
     private lateinit var userDetails: UserDetails
 
@@ -770,7 +770,7 @@ class UsersForAutowired{
 
 `UserDetails.kt`的内容如下：
 
-```kt
+```java
 class UserDetails{
     init {
         println("This class has all the details of the user")
@@ -785,7 +785,7 @@ class UserDetails{
 
 项目的输出将如下所示：
 
-```kt
+```java
 This class has all the details of the user
 Name: Naruto Uzumaki
 Village: Konohagakure
@@ -794,7 +794,7 @@ Village: Konohagakure
 
 我们可以利用`@Autowired`注解在属性上，以消除 setter 函数。当我们使用`<property>`传递自动装配属性的值时，Spring 将使用传递的值或引用分配这些属性。因此，使用属性上的`@Autowired`，`UsersForAutowired.kt`文件将如下所示：
 
-```kt
+```java
 class UsersForAutowired{
     init {
  println("UsersForAutowired constructor." )
@@ -811,7 +811,7 @@ class UsersForAutowired{
 
 结果将如下所示：
 
-```kt
+```java
 UsersForAutowired constructor.
 This class has all the details of the user
 Name: Naruto Uzumaki
@@ -822,7 +822,7 @@ Village: Konohagakure
 
 下面是`UsersForAutowired.kt`修改后的内容：
 
-```kt
+```java
 class UsersForAutowired @Autowired constructor(private var userDetails: UserDetails) {
     init {
         println("UsersForAutowired constructor.")
@@ -836,7 +836,7 @@ class UsersForAutowired @Autowired constructor(private var userDetails: UserDeta
 
 结果将如下所示：
 
-```kt
+```java
 This class has all the details of the user
 UsersForAutowired constructor.
 Name: Naruto Uzumaki
@@ -849,7 +849,7 @@ Village: Konohagakure
 
 `bean.xml`配置文件的内容如下：
 
-```kt
+```java
 <?xml version = "1.0" encoding = "UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -880,7 +880,7 @@ Village: Konohagakure
 
 下面是`AnnotationBasedQualifierApp.kt`的内容：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val context = ClassPathXmlApplicationContext("qualifierAnnotation/beans_for_qualifier.xml")
     val fighters = context.getBean("fighters") as Fighters
@@ -891,7 +891,7 @@ fun main(args: Array<String>) {
 
 现在，添加另一个类。以下是`UsersForQualifier.kt`的内容：
 
-```kt
+```java
 class UsersForQualifier{
     private var village: String? = null
     private var name: String? = null
@@ -916,7 +916,7 @@ class UsersForQualifier{
 
 最后，添加`Fighters.kt`类。以下是该类的内容：
 
-```kt
+```java
 class Fighters {
     @Autowired
  @Qualifier("fighter1")
@@ -938,7 +938,7 @@ class Fighters {
 
 如果您运行输出，它将是以下内容：
 
-```kt
+```java
 Fighters constructor.
 Name: Naruto Uzumaki
 Village: Konohagakure
@@ -946,13 +946,13 @@ Village: Konohagakure
 
 修改限定符值如下：
 
-```kt
+```java
  @Qualifier("fighter2")
 ```
 
 它将创建以下输出：
 
-```kt
+```java
 Fighters constructor.
 Name: Gaara
 Village: Sunagakure
@@ -972,7 +972,7 @@ Village: Sunagakure
 
 下面是`@Configuration`和`@Bean`的示例代码：
 
-```kt
+```java
 @Configuration
 open class CodeBasedConfiguration{
  @Bean
@@ -984,7 +984,7 @@ open class CodeBasedConfiguration{
 
 之前的代码将与以下 XML 配置等效：
 
-```kt
+```java
 <beans>
   <bean id = "mainApp" class = "MainApp"/>
 </beans>
@@ -994,7 +994,7 @@ open class CodeBasedConfiguration{
 
 `GreetingConfigurationConfBean.kt`的内容如下：
 
-```kt
+```java
 @Configuration
 open class GreetingConfigurationConfBean{
  @Bean
@@ -1006,7 +1006,7 @@ open class GreetingConfigurationConfBean{
 
 `GreetingConfBean.kt`的内容如下：
 
-```kt
+```java
 class GreetingConfBean{
     private var users: String? = null
     fun setUsers(users: String) {
@@ -1020,7 +1020,7 @@ class GreetingConfBean{
 
 `MainAppConfBean.kt`的内容如下：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val applicationContext = AnnotationConfigApplicationContext(GreetingConfigurationConfBean::class.java)
 
@@ -1032,7 +1032,7 @@ fun main(args: Array<String>) {
 
 结果将是以下内容：
 
-```kt
+```java
 Welcome, Naruto Uzumaki!!
 ```
 
@@ -1040,7 +1040,7 @@ Welcome, Naruto Uzumaki!!
 
 注释`@Bean`注解以注入依赖项。以下是`GreetingConfigurationDIBean.kt`的内容**：**
 
-```kt
+```java
 @Configuration
 open class GreetingConfigurationDIBean{
     @Bean
@@ -1059,7 +1059,7 @@ open class GreetingConfigurationDIBean{
 
 `GreetingDIBean.kt`的内容如下：
 
-```kt
+```java
 class GreetingDIBean (private val userDetails: GreetingDetailsDIBean){
     init {
         println("Inside DependenciesInjectBean.GreetingDIBean constructor.")
@@ -1073,7 +1073,7 @@ class GreetingDIBean (private val userDetails: GreetingDetailsDIBean){
 
 `GreetingDetailsDIBean.kt`的内容如下：
 
-```kt
+```java
 class GreetingDetailsDIBean{
     init {
         println("This class has all the details of the user")
@@ -1087,7 +1087,7 @@ class GreetingDetailsDIBean{
 
 `MainApp.kt`的内容如下：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val applicationContext = AnnotationConfigApplicationContext(GreetingConfigurationDIBean::class.java)
 
@@ -1098,7 +1098,7 @@ fun main(args: Array<String>) {
 
 结果将是以下内容：
 
-```kt
+```java
 This class has all the details of the user
 Inside Greeting constructor.
 Welcome, Naruto Uzumaki!!
@@ -1110,7 +1110,7 @@ Spring 的`@Import`注解提供了类似于 Spring XML 中的`<import/>`元素�
 
 `Boo.kt`的内容如下：
 
-```kt
+```java
 class Foo{
     init {
         println("This is class Foo")
@@ -1125,7 +1125,7 @@ class Boo{
 
 `ConfigBoo.kt`的内容如下：
 
-```kt
+```java
 @Configuration class ConfigFoo {
  @Bean    fun foo(): Foo{
         return Foo()
@@ -1143,19 +1143,19 @@ class ConfigBoo {
 
 在实例化上下文时，您不需要指定`ConfigFoo.class`和`ConfigBoo.class`，因此当您初始化`AnnotationConfigApplicationContext`时，以下代码是不必要的：
 
-```kt
+```java
 val applicationContext = AnnotationConfigApplicationContext(ConfigBoo::class.java, ConfigFoo::class.java)
 ```
 
 由于`ConfigFoo`的 bean 定义已经通过使用带有`ConfigBoo` bean 的`@Import`注解加载，因此只需显式指定`ConfigBoo`：
 
-```kt
+```java
 val applicationContext = AnnotationConfigApplicationContext(ConfigBoo::class.java)
 ```
 
 这里是`MainAppImport.kt`的`main`函数修改后的完整代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val applicationContext = AnnotationConfigApplicationContext(ConfigBoo::class.java)
 
@@ -1167,7 +1167,7 @@ fun main(args: Array<String>) {
 
 结果将如下所示：
 
-```kt
+```java
 This is class Boo
 This is class Foo
 ```
@@ -1176,13 +1176,13 @@ This is class Foo
 
 `@Bean`注解支持确定可选的引入和销毁回调函数。如果您注意到了`XMLBasedSpringConfiguration`项目中的`beans.xml`，您可以在其中找到`init-method`和`destroy-method`属性。以下是如何初始化`init-method`和`destroy-method`属性的示例：
 
-```kt
+```java
 <bean id="userGreeting" class="ktPackage.UserGreeting" init-method="afterPropertiesSet" destroy-method="destroy"/>
 ```
 
 这里是`MainAppLifeCall.kt`的修改代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val applicationContext = AnnotationConfigApplicationContext(ConfigFoo::class.java)
 
@@ -1193,7 +1193,7 @@ fun main(args: Array<String>) {
 
 `Foo.kt`的修改代码如下：
 
-```kt
+```java
 class Foo{
     fun init(){
         println("Foo is initializing...")
@@ -1207,7 +1207,7 @@ class Foo{
 
 现在为`Foo`创建一个配置类。`ConfigFoo.kt`的修改代码如下：
 
-```kt
+```java
 @Configuration
 open class ConfigFoo {
     @Bean(initMethod = "init", destroyMethod = "destroy")
@@ -1219,7 +1219,7 @@ open class ConfigFoo {
 
 此项目的输出将如下所示：
 
-```kt
+```java
 Foo is initializing...
 Foo is destroying...
 ```
@@ -1228,7 +1228,7 @@ Foo is destroying...
 
 使用`@Configuration`创建一个`@Scope` bean 以创建原型作用域。`@Configuration`代表 SpringBoot 项目的配置文件。以下是一段展示如何使用`@Scope`原型注解的代码：
 
-```kt
+```java
 @Configuration public class ConfigFoo {
    @Bean @Scope("prototype") public Foo foo() {
       return new Foo();
@@ -1306,7 +1306,7 @@ MVC 有三个部分：
 
 我们必须在 `pom.xml` 中包含 `spring-web` 和 `spring**-**webmvc` 依赖项，以及包括一个 servlet 编程接口、JSP 编程接口和 JSTL 依赖项。以下是我们的项目 `pom.xml` 文件的部分内容（完整版本在 GitHub 上），其中包含 `Spring Core`、`Kotlin` 和 `Web` 依赖项：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -1350,7 +1350,7 @@ MVC 有三个部分：
 
 前往 `/WebContent/WEB-INF/` 目录并创建一个名为 `spring-mvc-kotlin-servlet.xml` 的 XML 文件：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:mvc="http://www.springframework.org/schema/mvc"
@@ -1391,7 +1391,7 @@ MVC 有三个部分：
 
 +   在 `/WebContent/WEB-INF/` 目录下有一个 `web.xml` 文件。如果您找不到它，请在 `/WebContent/WEB-INF/` 目录中创建它。以下是 `web.xml` 的一部分代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://xmlns.jcp.org/xml/ns/javaee"
@@ -1428,7 +1428,7 @@ MVC 有三个部分：
 
 创建一个控制器 `.kt` 文件。我们称这个为 `MVCKotlinAppController.kt`：
 
-```kt
+```java
 @Controller class MVCKotlinAppController {
     @RequestMapping("/greeting")
     fun greetingMessage(): ModelAndView {
@@ -1451,7 +1451,7 @@ MVC 有三个部分：
 
 创建一个名为 `/WebContent/index.jsp` 的新文件，内容如下：
 
-```kt
+```java
 <%@ page contentType="text/html;charset=UTF-8" language="kotlin" %>
 <html>
 <head>
@@ -1474,7 +1474,7 @@ MVC 有三个部分：
 
 然后创建另一个名为 `/WebContent/WEB-INF/jsp/greeting.jsp` 的文件，内容如下：
 
-```kt
+```java
 <html>
 <head>
     <title>Spring MVC Kotlin</title>
@@ -1555,7 +1555,7 @@ SpringBoot 不会生成代码或更改您的文件。相反，当您启动应用
 
 这里是`controller`文件中的一段代码：
 
-```kt
+```java
 @RestController
 class HtmlController {
  @GetMapping("/")
@@ -1574,7 +1574,7 @@ class HtmlController {
 
 在 `**`src/main/kotlin/{packageName}`**` 下创建一个名为 `SpringBootKotlinApplication.kt` 的应用程序类：
 
-```kt
+```java
 @SpringBootApplication class SpringBootKotlinApplication
 
 fun main(args: Array<String>) {
@@ -1600,7 +1600,7 @@ fun main(args: Array<String>) {
 
 `index.html` 的内容如下：
 
-```kt
+```java
 <!DOCTYPE html>
 <html lang="en">
 <head>

@@ -142,7 +142,7 @@
 
 1.  双击脚本以打开您选择的脚本编辑器（IDE），并向其中添加以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     public class PlayerBehaviour : MonoBehaviour
     {
@@ -217,7 +217,7 @@
 
 如果你已经使用 Unity 一段时间了，你可能已经注意到 `Rigidbody` 中的一些组件有一个很好的功能——如果你将鼠标移到变量名上，你会看到变量是什么以及如何使用它们的描述。你首先会学到的是，我们可以通过使用 `Tooltip` 属性在我们的组件中实现相同的效果。如果我们对 `dodgeSpeed` 和 `rollSpeed` 变量这样做，它看起来可能就像这样：
 
-```kt
+```java
 [Tooltip("How fast the ball moves left/right")]
 public float dodgeSpeed = 5;
 [Tooltip("How fast the ball moves forward  automatically")]
@@ -240,7 +240,7 @@ public float rollSpeed = 5;
 
 我们还可以用来保护我们的代码的是 `Range` 属性。这将允许我们为变量指定一个最小值和最大值。由于我们希望玩家始终向前移动，我们可能希望限制玩家向后移动。为此，我们可以添加以下突出显示的代码行：
 
-```kt
+```java
 [Tooltip("How fast the ball moves forward  automatically")]
 [Range(0, 10)]
 public float rollSpeed = 5;
@@ -260,7 +260,7 @@ public float rollSpeed = 5;
 
 看起来像这样：
 
-```kt
+```java
 using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerBehaviour : MonoBehaviour
@@ -284,7 +284,7 @@ public class PlayerBehaviour : MonoBehaviour
 
 XML 注释看起来像这样：
 
-```kt
+```java
 /// <summary>
 /// A reference to the Rigidbody component
 /// </summary> 
@@ -315,7 +315,7 @@ private Rigidbody rb;
 
 `FixedUpdate` 与 `Update` 类似，但有一些关键区别。首先，它是在固定时间步长被调用，这意味着调用之间的时间相同。还重要的是要注意，在调用 `FixedUpdate` 之后才会进行物理计算。这意味着通常应该在 `FixedUpdate` 函数中执行基于物理的对象代码修改，除了像跳跃这样的单次事件：
 
-```kt
+```java
 /// <summary>
 /// FixedUpdate is a prime place to put physics
 /// calculations happening over a period of time.
@@ -339,7 +339,7 @@ void FixedUpdate()
 
 在讨论了所有这些内容之后，我们现在可以拥有脚本的最终版本，其外观如下：
 
-```kt
+```java
 using UnityEngine;
 /// <summary>
 /// Responsible for moving the player automatically and
@@ -386,7 +386,7 @@ public class PlayerBehaviour : MonoBehaviour
 
 1.  前往项目窗口并创建一个新的 C# 脚本，命名为 `CameraBehaviour`。从那里，使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     /// <summary>
     /// Will adjust the camera to follow and face a target
@@ -528,7 +528,7 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  在你的 IDE 中打开脚本并使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     /// <summary>
     /// Manages the main gameplay of the game
@@ -602,7 +602,7 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  进入 `TileEndBehaviour`，使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     /// <summary>
     /// Handles spawning a new tile and destroying this
@@ -676,7 +676,7 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  如前一个屏幕截图所示，玩家被阻止，但并没有真正发生什么。在这种情况下，我们希望玩家在碰到这个障碍物时失去游戏，然后重新开始游戏；为此，我们需要编写一个脚本。从`ObstacleBehaviour`中，我们将使用以下代码：
 
-    ```kt
+    ```java
     using UnityEngine;
     using UnityEngine.SceneManagement; // LoadScene
     public class ObstacleBehaviour : MonoBehaviour
@@ -769,7 +769,7 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  然后，我们需要进入`GameManager`脚本并做一些修改。首先，我们需要引入一些新变量：
 
-    ```kt
+    ```java
     /// <summary>
     /// Manages the main gameplay of the game
     /// </summary>
@@ -797,7 +797,7 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  然后，我们需要修改`SpawnNextTile`函数以生成障碍物：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will spawn a tile at a certain location and setup
     /// the next position
@@ -824,14 +824,14 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  在这里，我们询问值是否为`true`以调用名为`SpawnObstacle`的函数，但这个函数还没有编写。我们将在下一部分添加它，但首先，我们将使用`List`类，并确保编译器知道我们指的是哪个`List`类，因此需要在文件顶部添加一个`using`语句：
 
-    ```kt
+    ```java
     using UnityEngine;
     using System.Collections.Generic; // List
     ```
 
 1.  现在我们可以编写`SpawnObstacle`函数。将以下函数添加到脚本中：
 
-    ```kt
+    ```java
     private void SpawnObstacle(Transform newTile)
     {
         // Now we need to get all of the possible places
@@ -869,7 +869,7 @@ Unity 最近的添加是 **叠加层** 的概念，它已经取代了原始的�
 
 1.  最后，让我们更新`Start`函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Start is called before the first frame update
     /// </summary>

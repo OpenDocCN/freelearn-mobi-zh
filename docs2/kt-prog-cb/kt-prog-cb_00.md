@@ -74,7 +74,7 @@ Kotlin 烹饪秘籍将成为新 Kotlin 开发者遇到难题时的首选指南�
 
 代码块设置如下：
 
-```kt
+```java
 sourceSets {
    main.kotlin.srcDirs += 'src/main/myKotlin'
    main.java.srcDirs += 'src/main/myJava'
@@ -83,7 +83,7 @@ sourceSets {
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 sourceSets {
  main.java.srcDirs += 'src/main/kotlin/'
 }
@@ -91,7 +91,7 @@ sourceSets {
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 $ kotlinc hello.kt -include-runtime -d hello.jar. $ java -jar hello.jar
 ```
 

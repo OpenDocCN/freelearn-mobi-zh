@@ -58,7 +58,7 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 1.  打开 `activity_main.xml` 并将现有的 `TextView` 替换为以下 `Button`：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -72,7 +72,7 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 1.  现在打开 `MainActivy.java` 并将以下代码添加到现有的 `onCreate()` 方法中：
 
-```kt
+```java
 Button button = findViewById(R.id.button);
 button.setOnClickListener(new View.OnClickListener() {
     @Override
@@ -95,13 +95,13 @@ button.setOnLongClickListener(new View.OnLongClickListener() {
 
 在本书中使用的多数示例中，我们使用以下属性在 XML 中设置 `onClick` 监听器：
 
-```kt
+```java
 android:onClick="" 
 ```
 
 你可能会注意到 XML `onClick()` 方法回调需要与 `setOnClickListener` 的 `.onClick()` 回调相同的方法签名。
 
-```kt
+```java
 public void onClick(View v) {} 
 ```
 
@@ -115,7 +115,7 @@ public void onClick(View v) {}
 
 如介绍中所述，还有其他事件监听器。你可以通过输入以下内容使用 Android Studio 的自动完成功能来列出可用监听器：
 
-```kt
+```java
 button.setOn 
 ```
 
@@ -161,13 +161,13 @@ button.setOn
 
 1.  在 `MainActivity` 类中添加以下全局变量：
 
-```kt
+```java
 private GestureDetectorCompat mGestureDetector; 
 ```
 
 1.  在 `MainActivity` 类中添加以下 `GestureListener` 类：
 
-```kt
+```java
 private class GestureListener extends GestureDetector.SimpleOnGestureListener {
     @Override
     public boolean onSingleTapConfirmed(MotionEvent e) {
@@ -184,7 +184,7 @@ private class GestureListener extends GestureDetector.SimpleOnGestureListener {
 
 1.  将以下 `onTouchEvent()` 方法添加到 `MainActivity` 类中，以处理触摸事件通知：
 
-```kt
+```java
 public boolean onTouchEvent(MotionEvent event) {
     mGestureDetector.onTouchEvent(event);
     return super.onTouchEvent(event);
@@ -193,7 +193,7 @@ public boolean onTouchEvent(MotionEvent event) {
 
 1.  最后，将以下行代码添加到 `onCreate()` 中：
 
-```kt
+```java
 mGestureDetector = new GestureDetectorCompat(this, new  GestureListener());
 ```
 
@@ -235,7 +235,7 @@ mGestureDetector = new GestureDetectorCompat(this, new  GestureListener());
 
 1.  用以下 `ImageView` 替换现有的 `TextView`：
 
-```kt
+```java
 <android.support.v7.widget.AppCompatImageView
     android:id="@+id/imageView"
     android:layout_width="wrap_content"
@@ -249,7 +249,7 @@ mGestureDetector = new GestureDetectorCompat(this, new  GestureListener());
 
 1.  现在，打开 `MainActivity.java` 并将以下全局变量添加到类中：
 
-```kt
+```java
 private ScaleGestureDetector mScaleGestureDetector;
 private float mScaleFactor = 1.0f;
 private AppCompatImageView mImageView;
@@ -257,7 +257,7 @@ private AppCompatImageView mImageView;
 
 1.  将以下 `onTouchEvent()` 实现添加到 `MainActivity` 类中：
 
-```kt
+```java
 public boolean onTouchEvent(MotionEvent motionEvent) { 
     mScaleGestureDetector.onTouchEvent(motionEvent); 
     return true; 
@@ -266,7 +266,7 @@ public boolean onTouchEvent(MotionEvent motionEvent) {
 
 1.  将以下 `ScaleListener` 类添加到 `MainActivity` 类中：
 
-```kt
+```java
 private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
     @Override
     public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
@@ -281,7 +281,7 @@ private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureLis
 
 1.  将以下代码添加到现有的 `onCreate()` 方法中：
 
-```kt
+```java
 mImageView=findViewById(R.id.imageView);
 mScaleGestureDetector = new ScaleGestureDetector(this, new ScaleListener());
 ```
@@ -294,7 +294,7 @@ mScaleGestureDetector = new ScaleGestureDetector(this, new ScaleListener());
 
 我们使用带有应用程序图标的 `ImageView` 来提供缩放的视觉表示，通过设置 `ImageView` 的缩放，使用从 `ScaleGestureDetector` 返回的缩放因子。我们使用以下代码来防止缩放变得过大或过小：
 
-```kt
+```java
 mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f)); 
 ```
 
@@ -316,7 +316,7 @@ mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f));
 
 1.  打开`activity_main.xml`并用以下内容替换现有的约束布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -338,7 +338,7 @@ mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f));
 
 1.  现在打开`MainActivity.java`并为该类添加以下全局变量：
 
-```kt
+```java
 SwipeRefreshLayout mSwipeRefreshLayout;
 ListView mListView;
 List mArrayList = new ArrayList<>();
@@ -347,7 +347,7 @@ private int mRefreshCount=0;
 
 1.  将以下方法添加到`MainActivity`类中，以处理刷新：
 
-```kt
+```java
 private void refreshList() {
     mRefreshCount++;
     mArrayList.add("Refresh: " + mRefreshCount);
@@ -360,7 +360,7 @@ private void refreshList() {
 
 1.  将以下代码添加到现有的`onCreate()`方法中：
 
-```kt
+```java
 mSwipeRefreshLayout = findViewById(R.id.swipeRefresh);
 mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
     @Override
@@ -397,7 +397,7 @@ mListView.setAdapter(countryAdapter);
 
 虽然 Swipe-to-Refresh 手势现在是一个常见的功能，但仍然是一个好习惯，包括一个菜单项（特别是为了可访问性原因）。以下是一个 XML 菜单布局的片段：
 
-```kt
+```java
 <menu  > 
     <item 
         android:id="@+id/menu_refresh" 
@@ -408,7 +408,7 @@ mListView.setAdapter(countryAdapter);
 
 在`onOptionsItemSelected()`回调中调用您的刷新方法。当从代码执行刷新操作，例如从菜单项事件时，您想通知`SwipeRefreshLayout`刷新，以便它可以更新 UI。以下代码可以做到这一点：
 
-```kt
+```java
 SwipeRefreshLayout.setRefreshing(true); 
 ```
 
@@ -434,7 +434,7 @@ Android 使用 Android 传感器框架支持硬件传感器。该框架包括以
 
 要指定您的应用程序使用传感器，请在 AndroidManifest 中包含`<uses-feature>`声明。以下是一个需要可用指南针的示例：
 
-```kt
+```java
 <uses-feature android:name="android.hardware.sensor.compass" android:required="true"/>
 ```
 
@@ -480,7 +480,7 @@ Android SDK 支持以下传感器类型：
 
 1.  打开`activity_main.xml`，将现有的`TextView`替换为以下内容：
 
-```kt
+```java
 <ListView
     android:id="@+id/list"
     android:layout_width="match_parent"
@@ -493,7 +493,7 @@ Android SDK 支持以下传感器类型：
 
 1.  接下来，打开`ActivityMain.java`，并将以下代码添加到现有的`onCreate()`方法中：
 
-```kt
+```java
 ListView listView = findViewById(R.id.list);
 List sensorList = new ArrayList<String>();
 
@@ -513,7 +513,7 @@ listView.setAdapter(sensorAdapter);
 
 以下代码行负责获取可用传感器的列表；其余代码将填充`ListView`：
 
-```kt
+```java
 List<Sensor> sensors = ((SensorManager) getSystemService(
      Context.SENSOR_SERVICE)).getSensorList(Sensor.TYPE_ALL);
 ```
@@ -524,13 +524,13 @@ List<Sensor> sensors = ((SensorManager) getSystemService(
 
 重要的是要注意，一个设备可以有多种相同类型的传感器。如果你正在寻找特定的传感器，你可以传递介绍中显示的表中的一个常量。在这种情况下，如果你想查看所有可用的加速度计传感器，你可以使用这个调用：
 
-```kt
+```java
 List<Sensor> sensors = sensorManager.getSensorList(Sensor.TYPE_ACCELEROMETER); 
 ```
 
 如果你不是在寻找传感器列表，而是需要与特定传感器一起工作，你可以使用以下代码检查默认传感器：
 
-```kt
+```java
 SensorManager sensorManager =  ((SensorManager) getSystemService(Context.SENSOR_SERVICE));
 if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null){
     //Sensor is available - do something here 
@@ -561,7 +561,7 @@ if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null){
 
 1.  按照以下方式修改现有的`TextView`：
 
-```kt
+```java
 <TextView
     android:id="@+id/textView"
     android:layout_width="wrap_content"
@@ -575,7 +575,7 @@ if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null){
 
 1.  现在，打开`MainActivity.java`并添加以下全局变量声明：
 
-```kt
+```java
 private SensorManager mSensorManager; 
 private Sensor mSensor; 
 private TextView mTextView; 
@@ -583,7 +583,7 @@ private TextView mTextView;
 
 1.  在`MainActivity`类中实现`SensorListener`类，如下所示：
 
-```kt
+```java
 private SensorEventListener mSensorListener = new SensorEventListener() {
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -598,7 +598,7 @@ private SensorEventListener mSensorListener = new SensorEventListener() {
 
 1.  我们将在`onResume()`和`onPause()`中注册和取消注册传感器事件，如下所示：
 
-```kt
+```java
 @Override
 protected void onResume() {
     super.onResume();
@@ -614,7 +614,7 @@ protected void onPause() {
 
 1.  将以下代码添加到`onCreate()`中：
 
-```kt
+```java
 mTextView = (TextView)findViewById(R.id.textView);
 mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
@@ -718,7 +718,7 @@ Android 支持以下四种环境传感器：
 
 虽然 Android 框架会在方向更改时自动加载新资源（如布局），但有时您可能希望禁用此行为。如果您希望被通知方向更改而不是 Android 自动处理，请将以下属性添加到 Android Manifest 中的 Activity：
 
-```kt
+```java
 android:configChanges="keyboardHidden|orientation|screenSize" 
 ```
 
@@ -732,7 +732,7 @@ android:configChanges="keyboardHidden|orientation|screenSize"
 
 `onConfigurationChanged()` 方法的签名如下：
 
-```kt
+```java
 onConfigurationChanged (Configuration newConfig) 
 ```
 
@@ -752,7 +752,7 @@ onConfigurationChanged (Configuration newConfig)
 
 1.  用以下 `Button` 替换现有的 `TextView`：
 
-```kt
+```java
 <Button
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -767,7 +767,7 @@ onConfigurationChanged (Configuration newConfig)
 
 1.  添加以下方法来处理按钮点击：
 
-```kt
+```java
 public void checkOrientation(View view){
     int orientation = getResources()
             .getConfiguration().orientation;
@@ -796,7 +796,7 @@ public void checkOrientation(View view){
 
 要获取当前方向，我们只需调用此行代码：
 
-```kt
+```java
 getResources().getConfiguration().orientation 
 ```
 
@@ -810,7 +810,7 @@ getResources().getConfiguration().orientation
 
 通常，图像可能会根据设备方向或为了补偿当前方向而旋转。在这种情况下，还有一个选项可以获取旋转：
 
-```kt
+```java
 int rotation = getWindowManager().getDefaultDisplay().getRotation();
 ```
 

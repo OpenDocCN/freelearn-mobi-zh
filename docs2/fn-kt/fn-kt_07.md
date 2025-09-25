@@ -18,7 +18,7 @@ Kotlin 对协程的实现是构建异步应用程序的优秀工具。
 
 让我们从没有协程的简单例子开始：
 
-```kt
+```java
 import kotlin.concurrent.thread
 
 fun main(args: Array<String>) {
@@ -35,7 +35,7 @@ fun main(args: Array<String>) {
 
 这段代码并不美观，我们可以做得更好：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val computation = thread {
       Thread.sleep(1000)
@@ -58,7 +58,7 @@ JVM 中的线程非常快且响应迅速，但它们也有代价。每个 `Threa
 
 在典型的开发机器上，一个 JVM 应用程序可以轻松地处理 100 个线程：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val threads = List(100){
       thread {
@@ -94,7 +94,7 @@ fun main(args: Array<String>) {
 
 在现代 JVM 应用程序中，创建和销毁线程被视为一种不良做法；相反，我们使用`Executor`，这是一个抽象，允许我们管理和重用线程，从而降低创建和销毁的成本：
 
-```kt
+```java
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -124,7 +124,7 @@ fun main(args: Array<String>){
 
 但是，嘿！什么是协程？基本上，协程是一个非常轻量级的线程，它运行一段代码，具有类似的生命周期，但可以带有返回值或异常完成。技术上讲，协程是可挂起计算的一个实例，这种计算可能会挂起。协程不绑定到特定的线程，可以在一个`Thread`中挂起并在另一个中恢复执行：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.launch
 import kotlinx.coroutines.experimental.runBlocking
@@ -164,7 +164,7 @@ fun main(args: Array<String>) = runBlocking {
 
 正如我们之前讨论的，计算可能具有不同的执行时间。因此，`delay` 在我们的 `Hello World` 示例中并不理想：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
    val job = launch {
       delay(1000)
@@ -181,7 +181,7 @@ fun main(args: Array<String>) = runBlocking {
 
 让我们通过执行以下代码片段来试一试：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
       val jobs = List(10000) {
          launch {
@@ -212,7 +212,7 @@ fun main(args: Array<String>) = runBlocking {
 
 让我们介绍我们的真实场景：
 
-```kt
+```java
 enum class Gender {
    MALE, FEMALE;
 
@@ -238,7 +238,7 @@ interface UserService {
 
 现在，让我们介绍其他接口，HTTP 客户端——`UserClient`和`FactClient`：
 
-```kt
+```java
 interface UserClient {
    fun getUser(id: UserId): User
 }
@@ -250,7 +250,7 @@ interface FactClient {
 
 我们将使用`http4k`（[`www.http4k.org/`](https://www.http4k.org/)）实现客户端的 HTTP 通信，并使用 Kotson（[`github.com/SalomonBrys/Kotson`](https://github.com/SalomonBrys/Kotson)）进行 JSON 处理。这两个库都是为 Kotlin 设计的，但任何其他库都应该工作得很好：
 
-```kt
+```java
 import com.github.salomonbrys.kotson.*
 import com.google.gson.GsonBuilder
 import org.http4k.client.ApacheClient
@@ -281,7 +281,7 @@ abstract class WebClient {
 
 两个客户端都将扩展一个包含`http4k ApacheClient`和用 Kotson DSL 配置的`Gson`值的公共父类：
 
-```kt
+```java
 import org.http4k.core.Method
 import org.http4k.core.Request
 
@@ -296,7 +296,7 @@ class Http4KUserClient : WebClient(), UserClient {
 
 `Http4KUserClient`非常简单，这两个库都很容易使用，我们将大量代码移动到父类：
 
-```kt
+```java
 class Http4KFactClient : WebClient(), FactClient {
    override fun getFact(user: User): Fact {
       return gson.fromJson<Fact>(apacheClient(Request(Method.GET, "http://api.icndb.com/jokes/random")
@@ -312,7 +312,7 @@ class Http4KFactClient : WebClient(), FactClient {
 
 这些类实现得非常好，但为了测试我们算法的实际性能，我们将模拟这些接口：
 
-```kt
+```java
 class MockUserClient : UserClient {
    override fun getUser(id: UserId): User {
       println("MockUserClient.getUser")
@@ -332,7 +332,7 @@ class MockFactClient : FactClient {
 
 看一下以下数据库存储库，`UserRepository`和`FactRepository`：
 
-```kt
+```java
 interface UserRepository {
    fun getUserById(id: UserId): User?
    fun insertUser(user: User)
@@ -346,7 +346,7 @@ interface FactRepository {
 
 对于我们的存储库，我们将使用 Spring 5 的`JdbcTemplate`。Spring 5 提供了对 Kotlin 的支持，包括用于简化 Kotlin 使用的扩展函数（你可以在任何应用程序中使用`JdbcTemplate`，它不需要是 Spring 应用程序）：
 
-```kt
+```java
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.jdbc.core.JdbcTemplate
 
@@ -365,7 +365,7 @@ abstract class JdbcRepository(protected val template: JdbcTemplate) {
 
 两个实现都很直接，如下所示：
 
-```kt
+```java
 import org.springframework.jdbc.core.queryForObject
 
 class JdbcUserRepository(template: JdbcTemplate) : JdbcRepository(template), UserRepository {
@@ -415,7 +415,7 @@ class JdbcFactRepository(template: JdbcTemplate) : JdbcRepository(template), Fac
 
 对于我们的数据库，我们使用的是 H2 内存数据库，但任何数据库都可以工作（你可以使这个应用程序与一些不同的持久化机制一起工作，例如 NoSQL 数据库或任何缓存）：
 
-```kt
+```java
 fun initJdbcTemplate(): JdbcTemplate {
    return JdbcTemplate(JdbcDataSource()
          .apply {
@@ -430,7 +430,7 @@ fun initJdbcTemplate(): JdbcTemplate {
 
 函数`initJdbcTemplate`使用 H2 `DataSource`创建`JdbcTemplate`，一旦准备就绪，它就在`apply`扩展函数内部创建表。`apply`扩展函数用于配置属性和调用初始化代码，并返回相同的值：
 
-```kt
+```java
 public inline fun <T> T.apply(block: T.() -> Unit): T {
     block()
     return this
@@ -439,7 +439,7 @@ public inline fun <T> T.apply(block: T.() -> Unit): T {
 
 与客户端一样，为了测试，我们将使用模拟：
 
-```kt
+```java
 class MockUserRepository : UserRepository {
    private val users = hashMapOf<UserId, User>()
 
@@ -493,7 +493,7 @@ class MockFactRepository : FactRepository {
 
 同步代码易于编写，可预测，且易于测试，但在某些情况下，它并没有以最佳方式使用系统资源：
 
-```kt
+```java
 class SynchronousUserService(private val userClient: UserClient,
                       private val factClient: FactClient,
                       private val userRepository: UserRepository,
@@ -520,7 +520,7 @@ class SynchronousUserService(private val userClient: UserClient,
 
 这里没有什么花哨的，只是你正常的、老套的代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    fun execute(userService: UserService, id: Int) {
@@ -562,7 +562,7 @@ fun main(args: Array<String>) {
 
 对于我们的回调实现，我们需要为我们的客户端和仓库提供适配器：
 
-```kt
+```java
 import kotlin.concurrent.thread
 
 class CallbackUserClient(private val client: UserClient) {
@@ -615,7 +615,7 @@ class CallbackFactRepository(private val factRepository: FactRepository) {
 
 这些适配器在单独的线程中执行我们的代码，并在完成后调用回调，lambda：
 
-```kt
+```java
 class CallbackUserService(private val userClient: CallbackUserClient,
                     private val factClient: CallbackFactClient,
                     private val userRepository: CallbackUserRepository,
@@ -662,7 +662,7 @@ class CallbackUserService(private val userClient: CallbackUserClient,
 
 由于回调风格难以维护，近年来出现了其他风格。其中一种风格是未来。**未来**是指可能在将来完成的计算。当我们调用`Future.get`方法时，它将获取其结果，但我们也会阻塞线程：
 
-```kt
+```java
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -704,7 +704,7 @@ class FutureUserService(private val userClient: UserClient,
 
 **Kovenant** ([`kovenant.komponents.nl/`](http://kovenant.komponents.nl/)) 是 Kotlin 中对承诺的实现：
 
-```kt
+```java
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
 import nl.komponents.kovenant.then
@@ -761,7 +761,7 @@ class PromiseUserService(private val userClient: UserClient,
 
 现在，让我们用协程重新整理我们的示例：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.launch
@@ -812,7 +812,7 @@ class CoroutineUserService(private val userClient: UserClient,
 
 协程总是在上下文中运行。所有协程构建器默认指定上下文，并且该上下文可以通过协程体内的 `coroutineContext` 值访问：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.*
 
 fun main(args: Array<String>) = runBlocking {
@@ -861,7 +861,7 @@ fun main(args: Array<String>) = runBlocking {
 
 协程上下文可以用来控制其子协程。我们的 100 万个协程示例可以被重新设计，以便将所有子协程连接起来：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
 
    val job = launch {
@@ -883,7 +883,7 @@ fun main(args: Array<String>) = runBlocking {
 
 两个协程之间通信（或者协程与外部世界通信，如 `async`）的一种方式是通过 `Deferred<T>`：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.launch
 import kotlinx.coroutines.experimental.runBlocking
@@ -907,7 +907,7 @@ fun main(args: Array<String>) = runBlocking {
 
 对于单个值，延迟调用（Deferreds）是可行的，但有时我们希望发送一个序列或流。在这种情况下，我们可以使用 `Channel`。`Channel` 类似于 `BlockingQueue`，但使用的是挂起操作而不是阻塞操作，而且 `Channel` 可以被 `close`：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.channels.*
 
 fun main(args: Array<String>) = runBlocking<Unit> {
@@ -929,7 +929,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
 让我们用通道的方式编写我们的 100 万个协程示例，如下所示：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking<Unit> {
 
    val channel = Channel<Char>()
@@ -951,7 +951,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
 当然，这不是通道的预期用途。通常，单个协程（或多个）向通道发送消息：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking<Unit> {
 
    val channel = Channel<Char>()
@@ -979,7 +979,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
 编写此代码的一个更简单的方法是使用 `produce` 构建器，如下所示：
 
-```kt
+```java
 fun dotsAndCommas(size: Int) = produce {
    repeat(size) {
       delay(10)
@@ -1006,7 +1006,7 @@ fun main(args: Array<String>) = runBlocking<Unit> {
 
 让我们使用 EIPs 编写自己的销售系统。首先，让我们看看模型：
 
-```kt
+```java
 data class Quote(val value: Double, val client: String, val item: String, val quantity: Int)
 
 data class Bill(val value: Double, val client: String)
@@ -1016,7 +1016,7 @@ data class PickingOrder(val item: String, val quantity: Int)
 
 现在，让我们看看模式：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.CoroutineContext
 
 fun calculatePriceTransformer(coroutineContext: CoroutineContext, quoteChannel: ReceiveChannel<Quote>) = produce(coroutineContext) {
@@ -1028,7 +1028,7 @@ fun calculatePriceTransformer(coroutineContext: CoroutineContext, quoteChannel: 
 
 `calculatePriceTransformer` 函数从通道接收报价并将其转换为 `Pair<Bill, PickingOrder>`：
 
-```kt
+```java
 fun cheapBillFilter(coroutineContext: CoroutineContext, billChannel: ReceiveChannel<Pair<Bill, PickingOrder>>) = produce(coroutineContext) {
    billChannel.consumeEach { (bill, order) ->
       if (bill.value >= 100) {
@@ -1042,7 +1042,7 @@ fun cheapBillFilter(coroutineContext: CoroutineContext, billChannel: ReceiveChan
 
 `cheapBillFilter` 函数很好地过滤了低于 `100` 的 `bill` 值：
 
-```kt
+```java
 suspend fun splitter(filteredChannel: ReceiveChannel<Pair<Bill, PickingOrder>>,
                 accountingChannel: SendChannel<Bill>,
                 warehouseChannel: SendChannel<PickingOrder>) = launch {
@@ -1055,7 +1055,7 @@ suspend fun splitter(filteredChannel: ReceiveChannel<Pair<Bill, PickingOrder>>,
 
 `splitter` 将 `Pair<Bill, PickingOrder>` 分割成各自的通道：
 
-```kt
+```java
 suspend fun accountingEndpoint(accountingChannel: ReceiveChannel<Bill>) = launch {
    accountingChannel.consumeEach { bill ->
       println("Processing bill = $bill")
@@ -1071,7 +1071,7 @@ suspend fun warehouseEndpoint(warehouseChannel: ReceiveChannel<PickingOrder>) = 
 
 `accountingEndpoint` 和 `warehouseEndpoint` 都通过打印处理它们各自的消息，但在实际场景中，我们可以将这些消息存储到数据库中，发送电子邮件或使用 **JMS**、**AMQP** 或 **Kafka** 向其他系统发送消息：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
 
    val quoteChannel = Channel<Quote>()
@@ -1109,7 +1109,7 @@ fun main(args: Array<String>) = runBlocking {
 
 在以下示例中，我们将使用几个协程来更新一个计数器：
 
-```kt
+```java
 import kotlin.system.measureTimeMillis
 
 suspend fun repeatInParallel(times: Int, block: suspend () -> Unit) {
@@ -1144,7 +1144,7 @@ fun main(args: Array<String>) = runBlocking {
 
 我们的第一种选择是使用不同的上下文来更新操作：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.*
 
 fun main(args: Array<String>) = runBlocking {
@@ -1170,7 +1170,7 @@ fun main(args: Array<String>) = runBlocking {
 
 从 Java 5 开始，我们可以访问一些原子线程安全的结构，这些结构在协程中仍然很有用：
 
-```kt
+```java
 import java.util.concurrent.atomic.AtomicInteger
 
 fun main(args: Array<String>) = runBlocking {
@@ -1192,7 +1192,7 @@ fun main(args: Array<String>) = runBlocking {
 
 一个 `Mutex`（互斥锁）对象允许多个协程访问相同的资源，但不能同时访问：
 
-```kt
+```java
 import kotilnx.coroutines.experimental.sync.Mutex
 import kotlinx.coroutines.experimental.sync.withLock
 
@@ -1218,7 +1218,7 @@ fun main(args: Array<String>) = runBlocking {
 
 `actor` 是一种与其它 `actor` 和外部世界通过消息交互的对象。一个 `actor` 对象可以有一个私有的内部可变状态，该状态可以通过消息修改和访问，但不能直接访问。由于它们一致的编程模型，演员在近年来越来越受欢迎，并在多百万用户的应用程序中成功进行了测试，例如用 **Erlang** 编写的 **WhatsApp**，这种语言使演员成为焦点：
 
-```kt
+```java
 import kotlinx.coroutines.experimental.channels.actor
 
 sealed class CounterMsg
@@ -1241,7 +1241,7 @@ fun counterActor(start:Int) = actor<CounterMsg> {
 
 我们可以使用 `actor<CounterMsg>` 构建器来创建 `actor`。在我们的 `actor` 协程内部，我们可以访问 `channel` 属性，即 `ReceiveChannel<CounterMsg>`，以接收消息并对它们做出反应。`counterActor(Int)` 函数将返回 `SendChannel<CounterMsg>`；因此，我们只能调用 `send(CounterMsg)` 和 `close()` 这两个函数：
 
-```kt
+```java
 fun main(args: Array<String>) = runBlocking {
    val counterActor = counterActor(0)
 

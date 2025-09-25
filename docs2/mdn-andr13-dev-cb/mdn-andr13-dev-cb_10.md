@@ -114,181 +114,181 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  然后创建一个新的 `Composable` 函数来定义您的按钮。您可以使用 Jetpack Compose 提供的 `Button` 函数：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun SampleButton() {
     ```
 
-    ```kt
+    ```java
         Button(
     ```
 
-    ```kt
+    ```java
            onClick = { /* Handle button click */ },
     ```
 
-    ```kt
+    ```java
            modifier = Modifier.fillMaxWidth()
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
     Text("Click me")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  然后，在我们的 `WearApp()` 函数中调用新函数：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun WearApp() {
     ```
 
-    ```kt
+    ```java
         WearOSExampleTheme {
     ```
 
-    ```kt
+    ```java
             /* If you have enough items in your list, use
     ```
 
-    ```kt
+    ```java
                [ScalingLazyColumn] which is an optimized
     ```
 
-    ```kt
+    ```java
                version of LazyColumn for wear devices with
     ```
 
-    ```kt
+    ```java
                some added features. For more information,
     ```
 
-    ```kt
+    ```java
                see d.android.com/wear/compose./
     ```
 
-    ```kt
+    ```java
             */
     ```
 
-    ```kt
+    ```java
             Column(
     ```
 
-    ```kt
+    ```java
                 modifier = Modifier
     ```
 
-    ```kt
+    ```java
                     .fillMaxSize()
     ```
 
-    ```kt
+    ```java
                     .background(
     ```
 
-    ```kt
+    ```java
                         MaterialTheme.colors.background),
     ```
 
-    ```kt
+    ```java
                 verticalArrangement = Arrangement.Center
     ```
 
-    ```kt
+    ```java
             ) {
     ```
 
-    ```kt
+    ```java
     SampleButton()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  然后，在我们的活动中，使用按钮的 `Composable` 函数作为参数调用 `setContent` 方法：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
     ```
 
-    ```kt
+    ```java
         override fun onCreate(savedInstanceState: Bundle?)
     ```
 
-    ```kt
+    ```java
         {
     ```
 
-    ```kt
+    ```java
             super.onCreate(savedInstanceState)
     ```
 
-    ```kt
+    ```java
             setContent {
     ```
 
-    ```kt
+    ```java
     WearApp()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  您还可以利用已提供的 `Preview` 函数来查看更改。您会注意到我们明确指定了设备，`@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)`：
 
-    ```kt
+    ```java
     @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
     ```
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun DefaultPreview() {
     ```
 
-    ```kt
+    ```java
         WearApp()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -302,111 +302,111 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  创建一个名为 `SampleButton2()` 的新函数，并添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun SampleButton2(
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         Row(
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .padding(bottom = 10.dp),
     ```
 
-    ```kt
+    ```java
             horizontalArrangement = Arrangement.Center
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
     Button(
     ```
 
-    ```kt
+    ```java
                 modifier = Modifier.size(
     ```
 
-    ```kt
+    ```java
                     ButtonDefaults.LargeButtonSize),
     ```
 
-    ```kt
+    ```java
                 onClick = { /* Handle button click */ },
     ```
 
-    ```kt
+    ```java
             ) {
     ```
 
-    ```kt
+    ```java
     Icon(
     ```
 
-    ```kt
+    ```java
                     imageVector =
     ```
 
-    ```kt
+    ```java
                         Icons.Rounded.AccountBox,
     ```
 
-    ```kt
+    ```java
                     contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                         id = R.string.account_box_icon),
     ```
 
-    ```kt
+    ```java
                     modifier = Modifier
     ```
 
-    ```kt
+    ```java
                         .size(24.dp)
     ```
 
-    ```kt
+    ```java
                         .wrapContentSize(
     ```
 
-    ```kt
+    ```java
                             align = Alignment.Center)
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -450,37 +450,37 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  在我们的`WearOSList`函数中，我们需要一个字符串列表作为示例；我们只需创建一些示例数据来展示一个例子：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun WearOSList(itemList: List<String>) {. . .}
     ```
 
 1.  在我们的`WearOSList`函数内部，创建`ScalingLazyColumn`，它是针对 Wear OS 优化的。这将是我们的可滚动列表的容器。我们将在本章后面讨论`ScalingLazyColumn`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun  WearOSList(itemList: List<String>) {
     ```
 
-    ```kt
+    ```java
         ScalingLazyColumn() {
     ```
 
-    ```kt
+    ```java
             // TODO: Add items to the list here
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -488,87 +488,87 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  对于我们的项目，我们将创建一个新的`Composable`函数，命名为`WearOSListItem`，它将只有一个`text`，因为我们只是展示文本：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun WearOSListItem(item: String) {
     ```
 
-    ```kt
+    ```java
         Text(text = item)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  对于我们的数据，我们将创建一个虚拟列表，所以请继续在 `WearApp()` 函数中添加以下内容：
 
-    ```kt
+    ```java
     val itemList = listOf(
     ```
 
-    ```kt
+    ```java
         "Item 1",
     ```
 
-    ```kt
+    ```java
         "Item 2",
     ```
 
-    ```kt
+    ```java
         "Item 3",
     ```
 
-    ```kt
+    ```java
         "Item 4",
     ```
 
-    ```kt
+    ```java
         "Item 5",
     ```
 
-    ```kt
+    ```java
         . . .
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  最后，注释掉我们创建的两个按钮，调用 `WearOSList`，传入 `itemList`，并运行应用程序：
 
-    ```kt
+    ```java
     {
     ```
 
-    ```kt
+    ```java
         // SampleButton()
     ```
 
-    ```kt
+    ```java
         //SampleButton2()
     ```
 
-    ```kt
+    ```java
         WearOSList(
     ```
 
-    ```kt
+    ```java
             itemList = itemList,
     ```
 
-    ```kt
+    ```java
             modifier = contentModifier
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -608,11 +608,11 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  在 `MessageCardExample` 内部，创建一个新的可组合函数，命名为 `MessageCard`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun MessageCard(){. . .}
     ```
 
@@ -624,149 +624,149 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  这使得我们的工作更容易，作为开发者，我们知道在构建时需要什么，从而提高了开发者的生产力：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun MessageCard() {
     ```
 
-    ```kt
+    ```java
         AppCard(
     ```
 
-    ```kt
+    ```java
             onClick = { /*TODO*/ },
     ```
 
-    ```kt
+    ```java
             appName = { /*TODO*/ },
     ```
 
-    ```kt
+    ```java
             time = { /*TODO*/ },
     ```
 
-    ```kt
+    ```java
             title = { /*TODO*/ }) {
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，让我们继续实现我们的 `AppCard()` 并向我们的用户发送消息。在我们的例子中，我们将硬编码数据，但如果你有一个端点，你可以拉取数据并按需显示：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun MessageCard() {
     ```
 
-    ```kt
+    ```java
         AppCard(
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .padding(bottom = 8.dp),
     ```
 
-    ```kt
+    ```java
             appImage = {
     ```
 
-    ```kt
+    ```java
     Icon(
     ```
 
-    ```kt
+    ```java
                     modifier = Modifier
     ```
 
-    ```kt
+    ```java
                         .size(24.dp)
     ```
 
-    ```kt
+    ```java
                         .wrapContentSize(
     ```
 
-    ```kt
+    ```java
                             align = Alignment.Center),
     ```
 
-    ```kt
+    ```java
                     imageVector = Icons.Rounded.Email,
     ```
 
-    ```kt
+    ```java
                     contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                         id = R.string.message_icon)
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             },
     ```
 
-    ```kt
+    ```java
             onClick = { /*Do something*/ },
     ```
 
-    ```kt
+    ```java
             appName = {  stringResource(
     ```
 
-    ```kt
+    ```java
                 id = R.string.notification_message) },
     ```
 
-    ```kt
+    ```java
            time = {  stringResource(id = R.string.time) },
     ```
 
-    ```kt
+    ```java
            title = { stringResource(
     ```
 
-    ```kt
+    ```java
                id = R.string.notification_owner) }) {
     ```
 
-    ```kt
+    ```java
     Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                id = R.string.hi_android))
     ```
 
-    ```kt
+    ```java
            }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -828,115 +828,115 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  现在，让我们调用 `Chip()` 可组合函数。你还可以使用 `Chip` 组件来显示动态信息。为此，你可以使用 `modifier` 属性来指定一个函数，该函数将被调用来更新芯片上显示的信息：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun ChipWearExample(){
     ```
 
-    ```kt
+    ```java
         Chip(
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .padding(bottom = 8.dp),
     ```
 
-    ```kt
+    ```java
             onClick = { /*TODO */ },
     ```
 
-    ```kt
+    ```java
             label = {
     ```
 
-    ```kt
+    ```java
     Text(
     ```
 
-    ```kt
+    ```java
                     text = stringResource(
     ```
 
-    ```kt
+    ```java
                         id = R.string.chip_detail),
     ```
 
-    ```kt
+    ```java
                     maxLines = 1,
     ```
 
-    ```kt
+    ```java
                     overflow = TextOverflow.Ellipsis
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             },
     ```
 
-    ```kt
+    ```java
             icon = {
     ```
 
-    ```kt
+    ```java
     Icon(
     ```
 
-    ```kt
+    ```java
                     imageVector = Icons.Rounded.Phone,
     ```
 
-    ```kt
+    ```java
                     contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                         id = R.string.phone),
     ```
 
-    ```kt
+    ```java
                     modifier = Modifier
     ```
 
-    ```kt
+    ```java
                         .size(24.dp)
     ```
 
-    ```kt
+    ```java
                         .wrapContentSize(
     ```
 
-    ```kt
+    ```java
                             align = Alignment.Center)
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             },
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -950,107 +950,107 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  在 `ToggleChipExample` 内部，创建一个名为 `ToggleChipWearExample()` 的 `Composable` 函数。我们将使用 `ToggleChip()` 组件：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun ToggleChipWearExample() {
     ```
 
-    ```kt
+    ```java
         var isChecked by remember { mutableStateOf(true) }
     ```
 
-    ```kt
+    ```java
     ToggleChip(
     ```
 
-    ```kt
+    ```java
                 modifier = Modifier
     ```
 
-    ```kt
+    ```java
                     .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                     .padding(bottom = 8.dp),
     ```
 
-    ```kt
+    ```java
                 checked = isChecked,
     ```
 
-    ```kt
+    ```java
                 toggleControl = {
     ```
 
-    ```kt
+    ```java
     Switch(
     ```
 
-    ```kt
+    ```java
                         checked = isChecked
     ```
 
-    ```kt
+    ```java
                     )
     ```
 
-    ```kt
+    ```java
                 },
     ```
 
-    ```kt
+    ```java
                 onCheckedChange = {
     ```
 
-    ```kt
+    ```java
     isChecked = it
     ```
 
-    ```kt
+    ```java
                 },
     ```
 
-    ```kt
+    ```java
                 label = {
     ```
 
-    ```kt
+    ```java
     Text(
     ```
 
-    ```kt
+    ```java
                         text = stringResource(
     ```
 
-    ```kt
+    ```java
                             id = R.string.alert),
     ```
 
-    ```kt
+    ```java
                         maxLines = 1,
     ```
 
-    ```kt
+    ```java
                         overflow = TextOverflow.Ellipsis
     ```
 
-    ```kt
+    ```java
                     )
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1098,19 +1098,19 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  在`MainActivity`中，您会注意到一条注释：
 
-    ```kt
+    ```java
     /* If you have enough items in your list, use [ScalingLazyColumn] which is an optimized
     ```
 
-    ```kt
+    ```java
     * version of LazyColumn for wear devices with some added features. For more information,
     ```
 
-    ```kt
+    ```java
     * see d.android.com/wear/compose.
     ```
 
-    ```kt
+    ```java
     */
     ```
 
@@ -1118,7 +1118,7 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  我们需要首先创建一个`scalingListState`值并将其初始化为`rememberScalingLazyListState()`：
 
-    ```kt
+    ```java
     val scalingListState = rememberScalingLazyListState()
     ```
 
@@ -1126,27 +1126,27 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  现在，我们需要通过移除我们添加的修饰符并使用一个修饰符来处理所有视图来清理我们的 Composable 函数。让我们创建一个`contentModifier = Modifier`，以及一个用于我们的图标：
 
-    ```kt
+    ```java
     val contentModifier =  Modifier
     ```
 
-    ```kt
+    ```java
         .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
         .padding(bottom = 8.dp)
     ```
 
-    ```kt
+    ```java
     val iconModifier =  Modifier
     ```
 
-    ```kt
+    ```java
         .size(24.dp)
     ```
 
-    ```kt
+    ```java
         .wrapContentSize(align = Alignment.Center)
     ```
 
@@ -1154,141 +1154,141 @@ Android 操作系统在全球范围内被广泛使用，其中一种使用案例
 
 1.  让我们继续构建我们的屏幕。在`Scaffold`中，我们将使用三个参数：`vignette`（这是一个全屏槽，用于在 scaffold 的内容上应用 vignette）、`positionIndicator`和`timeText`。查看*它如何工作…*部分以了解更多关于参数的信息：
 
-    ```kt
+    ```java
     Scaffold(timeText = {} , vignette = {}, positionIndicator = {}) {. . .}
     ```
 
 1.  对于`TimeText`，我们将调用`Modifier.scrollAway`并传递`scalingListState`：
 
-    ```kt
+    ```java
     TimeText(modifier = Modifier.scrollAway(scalingListState))
     ```
 
 1.  由于我们的项目样本只有一个屏幕，且可滚动，我们将尝试同时显示所有项目并始终保持。因此，在`vignette`中，我们将说位置将是`TopAndBottom`：
 
-    ```kt
+    ```java
     Vignette(vignettePosition = VignettePosition.TopAndBottom)
     ```
 
 1.  最后，在`positionIndicator`上，我们只需传递`scalingListState`：
 
-    ```kt
+    ```java
     PositionIndicator( scalingLazyListState = scalingListState)
     ```
 
 1.  现在，我们终于可以构建我们的 `ScalingLazyColumn()`。我们将使用 `fillMaxSize` 作为修饰符，并将 `autoCentering` 设置为零索引；然后对于 `state`，传递我们已创建的 `scalingListState`，在项目项中传递我们的组件：
 
-    ```kt
+    ```java
     Scaffold(
     ```
 
-    ```kt
+    ```java
         timeText = { TimeText(modifier =
     ```
 
-    ```kt
+    ```java
             Modifier.scrollAway(scalingListState)) },
     ```
 
-    ```kt
+    ```java
         vignette = { Vignette(vignettePosition =
     ```
 
-    ```kt
+    ```java
             VignettePosition.TopAndBottom) },
     ```
 
-    ```kt
+    ```java
         positionIndicator = {
     ```
 
-    ```kt
+    ```java
     PositionIndicator(
     ```
 
-    ```kt
+    ```java
                 scalingLazyListState = scalingListState
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
     ScalingLazyColumn(
     ```
 
-    ```kt
+    ```java
             modifier = Modifier.fillMaxSize(),
     ```
 
-    ```kt
+    ```java
             autoCentering = AutoCenteringParams(
     ```
 
-    ```kt
+    ```java
                 itemIndex = 0),
     ```
 
-    ```kt
+    ```java
             state = scalingListState
     ```
 
-    ```kt
+    ```java
         ){
     ```
 
-    ```kt
+    ```java
     item { /*TODO*/ }
     ```
 
-    ```kt
+    ```java
     item { /*TODO*/ }
     ```
 
-    ```kt
+    ```java
     item { /*TODO*/ }
     ```
 
-    ```kt
+    ```java
     item { /*TODO*/ }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  您可以在 *技术要求* 部分获取完整的代码。为了清理 `item{}` 中的部分代码，我们有以下内容：
 
-    ```kt
+    ```java
     item { SampleButton(contentModifier) }
     ```
 
-    ```kt
+    ```java
     item { SampleButton2(contentModifier, iconModifier) }
     ```
 
-    ```kt
+    ```java
     item { MessageCard(contentModifier, iconModifier) }
     ```
 
-    ```kt
+    ```java
     item { ChipWearExample(contentModifier, iconModifier) }
     ```
 
-    ```kt
+    ```java
     item { ToggleChipWearExample(contentModifier) }
     ```
 

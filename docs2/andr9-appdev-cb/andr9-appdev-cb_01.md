@@ -70,7 +70,7 @@ Android Studio，现在版本为 3.2，用于本书中展示的所有代码示�
 
 如果您查看 `MainActivity.java` 文件，您会意识到它非常基础。这是因为我们选择了“空活动”选项（在第 5 步中）。现在，查看 `AndroidManifest.xml` 文件。这是我们实际声明活动的地方。在 `<application>` 元素内是 `<activity>` 元素：
 
-```kt
+```java
 <activity android:name=".MainActivity" android:label="@string/app_name"> <intent-filter> <action android:name="android.intent.action.MAIN"/> <category android:name=
  "android.intent.category.LAUNCHER"/> </intent-filter> </activity>
 ```
@@ -103,7 +103,7 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 1.  打开`MainActivity.java`类并添加以下函数：
 
-```kt
+```java
 public void launchIntent(View view) { 
     Intent intent = new Intent(Intent.ACTION_VIEW); 
     intent.setData(Uri.parse("https://www.packtpub.com/")); 
@@ -115,7 +115,7 @@ public void launchIntent(View view) {
 
 +   这意味着您需要将库引用添加到项目中。您可以通过在`import`部分输入以下代码手动完成此操作：
 
-```kt
+```java
         import android.content.Intent;
         import android.net.Uri;
         import android.support.v7.app.AppCompatActivity;
@@ -127,7 +127,7 @@ public void launchIntent(View view) {
 
 1.  打开`activity_main.xml`文件并将`<TextView />`块替换为以下 XML：
 
-```kt
+```java
 <Button
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -186,7 +186,7 @@ public void launchIntent(View view) {
 
 1.  打开`MainActivity.java`文件，并添加以下函数：
 
-```kt
+```java
     public void onClickSwitchActivity(View view) { 
         Intent intent = new Intent(this, SecondActivity.class); 
         startActivity(intent); 
@@ -195,7 +195,7 @@ public void launchIntent(View view) {
 
 1.  现在，打开位于`res/layout`文件夹中的`activity_main.xml`文件，并用以下 XML 替换`<TextView />`以创建按钮：
 
-```kt
+```java
     <Button
         android:id="@+id/button"
         android:layout_width="wrap_content"
@@ -214,7 +214,7 @@ public void launchIntent(View view) {
 
     添加此功能：
 
-```kt
+```java
     public void onClickClose(View view) { 
         finish(); 
     } 
@@ -222,7 +222,7 @@ public void launchIntent(View view) {
 
 1.  最后，将关闭按钮添加到`SecondActivity`布局中。打开`activity_second.xml`文件，并将以下`<Button>`元素添加到自动生成的`ConstraintLayout`中：
 
-```kt
+```java
     <Button
         android:id="@+id/buttonClose"
         android:layout_width="wrap_content"
@@ -247,7 +247,7 @@ public void launchIntent(View view) {
 
 如果我们手动创建了活动，我们需要将它们添加到清单中。使用“新建 Android 活动”向导将自动将必要的元素添加到 Android Manifest 文件中。要查看 Android Studio 为你做了什么，请打开 `AndroidManifest.xml` 文件并查看 `<application>` 元素：
 
-```kt
+```java
 <activity android:name=".MainActivity">
     <intent-filter>
         <action android:name="android.intent.action.MAIN" />
@@ -278,7 +278,7 @@ public void launchIntent(View view) {
 
 1.  打开 `activity_main.xml` 并在按钮上方添加以下 `<EditText>` 元素：
 
-```kt
+```java
 <EditText
     android:id="@+id/editTextData"
     android:layout_width="match_parent"
@@ -293,7 +293,7 @@ public void launchIntent(View view) {
 
 1.  现在，打开 `MainActivity.java` 文件，并按照以下方式修改 `onClickSwitchActivity()` 方法：
 
-```kt
+```java
 public void onClickSwitchActivity(View view) { 
     EditText editText = (EditText)findViewById(R.id.editTextData); 
     String text = editText.getText().toString(); 
@@ -305,7 +305,7 @@ public void onClickSwitchActivity(View view) {
 
 1.  接下来，打开 `activity_second.xml` 文件并添加以下 `<TextView>` 元素：
 
-```kt
+```java
 <TextView
     android:id="@+id/textViewText"
     android:layout_width="wrap_content"
@@ -318,7 +318,7 @@ public void onClickSwitchActivity(View view) {
 
 1.  最后一个更改是编辑第二个活动以查找新数据并在屏幕上显示它。打开 `SecondActivity.java` 并按以下方式编辑 `onCreate()`：
 
-```kt
+```java
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_second);
@@ -339,7 +339,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 第二个活动是使用我们创建的意图启动的，所以这只是一个获取意图并检查随它发送的数据的问题。我们在 `onCreate()` 中这样做：
 
-```kt
+```java
 textView.setText(getIntent().getStringExtra(Intent.EXTRA_TEXT)); 
 ```
 
@@ -361,13 +361,13 @@ textView.setText(getIntent().getStringExtra(Intent.EXTRA_TEXT));
 
 1.  首先，打开 `MainActivity.java` 并将以下常量添加到类中：
 
-```kt
+```java
 public static final String REQUEST_RESULT="REQUEST_RESULT"; 
 ```
 
 1.  接下来，通过修改 `onClickSwitchActivity()` 方法来更改调用意图的方式，使其期望一个结果：
 
-```kt
+```java
 public void onClickSwitchActivity(View view) {
     EditText editText = (EditText)findViewById(R.id.editTextData);
     String text = editText.getText().toString();
@@ -379,7 +379,7 @@ public void onClickSwitchActivity(View view) {
 
 1.  然后，添加此新方法以接收结果：
 
-```kt
+```java
 @Override
 protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
@@ -392,7 +392,7 @@ protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
 1.  最后，修改 `SecondActivity.java` 中的 `onClickClose` 以设置返回值如下：
 
-```kt
+```java
 public void onClickClose(View view) { 
     Intent returnIntent = new Intent(); 
     returnIntent.putExtra(MainActivity.REQUEST_RESULT,42); 
@@ -413,7 +413,7 @@ public void onClickClose(View view) {
 
 除了结果码之外，`onActivityResults()`还包括一个**请求码**。你在想它从哪里来吗？它只是与`startActivityForResult()`调用一起传递的整数值，其形式如下：
 
-```kt
+```java
 startActivityForResult(Intent intent, int requestCode); 
 ```
 
@@ -443,7 +443,7 @@ startActivityForResult(Intent intent, int requestCode);
 
 在 Android Studio 中创建一个新的项目，并将其命名为 `StateSaver`。我们只需要一个活动，因此自动生成的主活动就足够了。但是，我们需要一些小部件，包括 `EditText`、`Button` 和 `TextView`。它们的布局（在 `activity_main.xml` 中）如下所示：
 
-```kt
+```java
 <EditText
     android:id="@+id/editText"
     android:layout_width="match_parent"
@@ -484,14 +484,14 @@ startActivityForResult(Intent intent, int requestCode);
 
 1.  为了跟踪计数器，我们需要向项目中添加一个全局变量，以及一个用于保存和恢复的键。将以下代码添加到 `MainActivity.java` 类中：
 
-```kt
+```java
 static final String KEY_COUNTER = "COUNTER"; 
 private int mCounter=0; 
 ```
 
 1.  然后，添加处理按钮点击所需的代码；它增加计数器并在 `TextView` 小部件中显示结果：
 
-```kt
+```java
 public void onClickCounter(View view) {
     mCounter++;
     ((TextView)findViewById(R.id.textViewCounter))
@@ -501,7 +501,7 @@ public void onClickCounter(View view) {
 
 1.  要接收应用程序状态更改的通知，我们需要将 `onSaveInstanceState()` 和 `onRestoreInstanceState()` 方法添加到我们的应用程序中。打开 `MainActivity.java` 并添加以下代码：
 
-```kt
+```java
 @Override 
 protected void onSaveInstanceState(Bundle outState) { 
     super.onSaveInstanceState(outState); 
@@ -531,13 +531,13 @@ protected void onRestoreInstanceState(Bundle savedInstanceState) {
 
 `onRestoreInstanceState()` 回调并不是唯一可以恢复状态的地方。看看 `onCreate()` 的签名：
 
-```kt
+```java
 onCreate(Bundle savedInstanceState) 
 ```
 
 这两种方法都接收同一个名为 `savedInstanceState` 的 `Bundle` 实例。您可以将恢复代码移动到 `onCreate()` 方法，并且它将按相同的方式工作。但有一个要注意的是，如果没有数据，例如在活动的初始创建期间，`savedInstanceState` 包将是一个空值。如果您想从 `onRestoreInstanceState()` 回调中移动代码，只需确保数据不是空值。以下是该代码的示例：
 
-```kt
+```java
 if (savedInstanceState!=null) { 
     mCounter = savedInstanceState.getInt(KEY_COUNTER); 
 } 
@@ -567,7 +567,7 @@ Android 支持 SQLite，但对于简单的数据，如用户名或高分，这�
 
 1.  在活动关闭前添加以下`onPause()`方法以保存数据：
 
-```kt
+```java
 @Override
 protected void onPause() {
     super.onPause();
@@ -580,7 +580,7 @@ protected void onPause() {
 
 1.  然后，在`onCreate()`的末尾添加以下代码以恢复计数器：
 
-```kt
+```java
 SharedPreferences settings = getPreferences(MODE_PRIVATE);
 int defaultCounter = 0;
 mCounter = settings.getInt(KEY_COUNTER, defaultCounter);
@@ -604,7 +604,7 @@ mCounter = settings.getInt(KEY_COUNTER, defaultCounter);
 
 使用`getSharedPreferences()`与使用其对应方法没有区别，但它允许使用多个偏好文件。其形式如下：
 
-```kt
+```java
 getSharedPreferences(String name, int mode) 
 ```
 
@@ -636,20 +636,20 @@ getSharedPreferences(String name, int mode)
 
 1.  打开 `activity_main.xml` 并为自动生成的 `TextView` 添加一个 ID：
 
-```kt
+```java
 android:id="@+id/textViewState" 
 ```
 
 1.  剩余步骤将在 `MainActivity.java` 中进行。修改 `onCreate()` 方法以设置初始文本：
 
-```kt
+```java
 ((TextView)findViewById(R.id.textViewState)).setText("onCreate()n");
 
 ```
 
 1.  添加以下方法来处理剩余的事件：
 
-```kt
+```java
 @Override
 protected void onStart() {
     super.onStart();
@@ -703,7 +703,7 @@ protected void onDestroy() {
 
 +   值得注意的是，我们实际上从未看到`onDestroy()`方法的结果，因为到这时活动已经被移除。如果你想进一步探索这些方法，那么使用`Activity.isFinishing()`来查看在`onDestroy()`执行之前活动是否真的正在结束是非常有价值的，如下面的代码片段所示：
 
-```kt
+```java
 @Override
 public void onPause() {
     super.onPause();

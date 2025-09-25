@@ -30,7 +30,7 @@
 
 使用以下命令安装 SDKMAN（如果你还没有安装）：
 
-```kt
+```java
 $ curl -s "https://get.sdkman.io" | bash
 ```
 
@@ -40,7 +40,7 @@ $ curl -s "https://get.sdkman.io" | bash
 
 要通过 SDKMAN 安装 Kotlin，你只需输入以下内容：
 
-```kt
+```java
 $ sdk install kotlin
 ```
 
@@ -50,13 +50,13 @@ $ sdk install kotlin
 
 要与 Kotlin 的 REPL 互动，你可以输入以下内容：
 
-```kt
+```java
 $ kotlinc
 ```
 
 现在你可以输入并执行 Kotlin 表达式：
 
-```kt
+```java
 $ kotlinc
 Welcome to Kotlin version 1.2.21 (JRE 1.8.0_111-b14)
 Type :help for help, :quit for quit
@@ -77,7 +77,7 @@ Hello, World!
 
 在你喜欢的编辑器中，创建一个名为`hello.kt`的文件，并输入以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println("Hello, World!")
 }
@@ -85,13 +85,13 @@ fun main(args: Array<String>) {
 
 现在在你的控制台中，使用以下命令编译你的程序：
 
-```kt
+```java
 $ kotlinc hello.kt
 ```
 
 要执行它，请在你的控制台中输入以下内容：
 
-```kt
+```java
 $ kotlin HelloKt
 ```
 
@@ -103,7 +103,7 @@ $ kotlin HelloKt
 
 要通过 SDKMAN 安装 Gradle，你只需输入以下内容：
 
-```kt
+```java
 sdk install gradle
 ```
 
@@ -115,7 +115,7 @@ sdk install gradle
 
 在一个新、干净的目录中，在您的控制台输入以下内容：
 
-```kt
+```java
 $ gradle wrapper
 ```
 
@@ -127,7 +127,7 @@ $ gradle wrapper
 
 对于我们的基本 `Hello World` 程序，我们的文件必须看起来像这样：
 
-```kt
+```java
 group 'com.packtpub'
 version '1.0'
 
@@ -175,7 +175,7 @@ compileTestKotlin {
 
 Gradle 默认搜索 Kotlin 文件的目录位置是 `src/main/kotlin`。我们将 `hello.kt` 文件放置在 `src/main/kotlin/com/packtpub/appendix` 目录中：
 
-```kt
+```java
 package com.packtpub.appendix
 
 fun main(args: Array<String>) {
@@ -185,7 +185,7 @@ fun main(args: Array<String>) {
 
 现在我们可以使用以下命令一次性编译和运行：
 
-```kt
+```java
 $ ./gradlew
 ```
 
@@ -235,7 +235,7 @@ IntelliJ IDEA 和 Android Studio（它基于 IntelliJ IDEA 的开源版本）是
 
 要设置特定包中的文件，请在第一行使用 `package` 关键字：
 
-```kt
+```java
 package com.packt.functionalkotlin
 ```
 
@@ -245,7 +245,7 @@ package com.packt.functionalkotlin
 
 Kotlin 中的字符串连接使用加号（`+`）运算符：
 
-```kt
+```java
 val temperature = 12
 
 println("Current temperature: " + temperature + " Celsius degrees")
@@ -253,7 +253,7 @@ println("Current temperature: " + temperature + " Celsius degrees")
 
 字符串插值是进行复杂连接的简单方法：
 
-```kt
+```java
 val temperature = 12
 
 println("Current temperature: $temperature Celsius degrees")
@@ -261,7 +261,7 @@ println("Current temperature: $temperature Celsius degrees")
 
 使用符号美元（`$`）让你可以在字符串内部使用简单值：
 
-```kt
+```java
 val temperature = 12
 
 println("Temperature for tonight: ${temperature - 4} Celsius degrees")
@@ -273,7 +273,7 @@ println("Temperature for tonight: ${temperature - 4} Celsius degrees")
 
 单行注释使用双斜杠（`//`）：
 
-```kt
+```java
 // This is a single line comment
 
 println("Hello, World!") // This is a single line comment too, after valid code
@@ -281,7 +281,7 @@ println("Hello, World!") // This is a single line comment too, after valid code
 
 块注释使用斜杠和星号来打开块（`/*`）以及星号和斜杠来关闭（`*/`）：
 
-```kt
+```java
 /*
 This is a multi-line comment,
 Roses are red
@@ -300,7 +300,7 @@ Kotlin 有四种基本的控制结构——`if`、`when`、`for` 和 `while`。
 
 Kotlin 中的 `if` 看起来与任何其他 C 风格语言完全一样：
 
-```kt
+```java
 if (2 > 1) { //Boolean expression
     println("2 is greater than 1")
 } else {
@@ -310,7 +310,7 @@ if (2 > 1) { //Boolean expression
 
 在 Kotlin 中，`if`（以及 `when`）是一个表达式。这意味着 `if` 语句会返回一个值：
 
-```kt
+```java
 val message = if (2 > 1) {
     "2 is greater than 1"
 } else {
@@ -322,7 +322,7 @@ println(message)
 
 Kotlin 没有三元表达式，但可以用单行写一个 `if` 表达式：
 
-```kt
+```java
 println(if(2 > 1) "2 is greater than 1" else "This never gonna happen")
 ```
 
@@ -330,7 +330,7 @@ println(if(2 > 1) "2 is greater than 1" else "This never gonna happen")
 
 与其他 C 风格语言不同，Kotlin 没有使用 `switch` 语句，但有一个更加灵活的 `when` 表达式：
 
-```kt
+```java
 val x: Int = /*Some unknown value here*/
 
 when (x) {
@@ -343,7 +343,7 @@ when (x) {
 
 `when` 是表达式：
 
-```kt
+```java
 val message = when {
     2 > 1 -> "2 is greater than 1"
     else -> "This never gonna happen"
@@ -358,7 +358,7 @@ println(message)
 
 `for` 循环可以遍历任何提供迭代器的对象（例如，集合和范围）：
 
-```kt
+```java
 for(i in 1..10) { // range
     println("i = $i")
 }
@@ -368,7 +368,7 @@ for(i in 1..10) { // range
 
 `while` 和 `do` 循环是标准的 C 风格循环：
 
-```kt
+```java
 var i = 1
 
 while (i <= 10) {

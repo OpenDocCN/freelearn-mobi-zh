@@ -110,7 +110,7 @@ Android 应用是一项迷人的技术。在 Android 上开发的应用具有全
 
 1.  在你创建了项目之后，你将拥有 `build.gradle` 文件，它看起来可能如下所示：
 
-```kt
+```java
 version '1.0-SNAPSHOT'
 
 buildscript {
@@ -152,7 +152,7 @@ compileTestKotlin {
 
 1.  现在，能够直接运行此代码将非常酷。为了做到这一点，我们将使用 `gradle run` 命令。然而，在这样做之前，我们需要启用应用程序插件，这将允许我们直接运行此代码。我们需要在 `build.gradle` 文件中添加两行来设置它：
 
-```kt
+```java
 apply plugin: 'application'
 mainClassName = "HelloWorldKt"
 ```
@@ -165,7 +165,7 @@ mainClassName = "HelloWorldKt"
 
 当你在 IntelliJ 中创建新项目时，项目的默认结构如图所示：
 
-```kt
+```java
 project
    - src
        - main (root)
@@ -177,7 +177,7 @@ project
 
 如果不使用默认约定，应更新相应的 `sourceSets` 属性：
 
-```kt
+```java
 sourceSets {
    main.kotlin.srcDirs += 'src/main/myKotlin'
    main.java.srcDirs += 'src/main/myJava'
@@ -206,7 +206,7 @@ sourceSets {
 
 1.  创建一个名为 `hello.kt` 的文件，并在该文件中添加以下代码行：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println("Hello, World!")
  }
@@ -214,19 +214,19 @@ fun main(args: Array<String>) {
 
 1.  现在我们使用以下命令编译文件：
 
-```kt
+```java
 $ kotlinc hello.kt -include-runtime -d hello.jar
 ```
 
 1.  现在我们使用以下命令运行应用程序：
 
-```kt
+```java
 $ java -jar hello.jar
 ```
 
 1.  假设你想创建一个可以与其他 Kotlin 应用程序一起使用的库；我们可以简单地编译相关的 Kotlin 应用程序为 `.jar` 可执行文件，而不使用 `-include-runtime` 选项，即新的命令如下：
 
-```kt
+```java
 $ kotlinc hello.kt -d hello.jar
 ```
 
@@ -262,7 +262,7 @@ Kotlin 脚本文件具有 `.kts` 扩展名，而不是 Kotlin 应用程序的常
 
 要运行脚本文件，只需将 `-script` 选项传递给编译器：
 
-```kt
+```java
 $ kotlinc -script kotlin_script_file_example.kts
 ```
 
@@ -274,7 +274,7 @@ Kotlin 是创建小型命令行工具的绝佳选择，这些工具可以打包�
 
 您需要一个集成开发环境（最好是 IntelliJ 或 Android Studio），并且需要告诉它 Kotlin 文件所在的位置。您可以通过在 `build.gradle` 文件中指定它来实现，添加以下内容：
 
-```kt
+```java
 sourceSets {
    main.java.srcDirs += 'src/main/kotlin/'
 }
@@ -290,7 +290,7 @@ sourceSets {
 
 1.  我们将创建一个简单的类 `HelloWorld.kt`，其中包含主函数，该函数只打印出 “Hello world!”：
 
-```kt
+```java
 fun main(args:Array<String>){
    println("Hello world")
 }
@@ -298,7 +298,7 @@ fun main(args:Array<String>){
 
 1.  现在我们需要配置一个 `jar` 任务，Gradle 构建过程会通过它来告知我们的项目入口。在一个 Java 项目中，这将是我们 `main()` 函数所在类的路径，因此您需要在 `build.gradle` 中添加此 `jar` 任务：
 
-```kt
+```java
 jar {
    manifest {
        attributes 'Main-Class': 'HelloWorldKt'
@@ -309,7 +309,7 @@ jar {
 
 1.  在将前面的代码片段添加到 `build.gradle` 后，您需要运行以下 gradle 命令来创建 JAR 文件：
 
-```kt
+```java
 ./gradlew clean jar
 ```
 
@@ -325,7 +325,7 @@ jar {
 
 有些人可能会争论，尽管我们没有顶级类声明，但我们已经在 jar 任务中的代码中将其指定为 `HelloWorldKt`：
 
-```kt
+```java
 manifest {
        attributes 'Main-Class': 'HelloWorldKt'
    }
@@ -349,13 +349,13 @@ manifest {
 
 1.  我们将从一个简单的打印一行输出到控制台开始，随着我们的前进，我们将逐步转向更高级的逻辑：
 
-```kt
+```java
 println("Just a line")
 ```
 
 1.  现在，我们将尝试从控制台读取字符串输入并将其再次输出：
 
-```kt
+```java
 println("Input your first name")
 var first_name = readLine()
 println("Your first name: $first_name")
@@ -363,7 +363,7 @@ println("Your first name: $first_name")
 
 1.  好的，我们是否可以用 Int 重复这个过程？
 
-```kt
+```java
 println("Hi $first_name, let us have a quick math test. Enter two numbers separated by space.")
 val (a, b) = readLine()!!.split(' ').map(String::toInt)
 println("$a + $b = ${a+b}")
@@ -371,7 +371,7 @@ println("$a + $b = ${a+b}")
 
 1.  现在，让我们尝试一段复杂的代码，然后再开始解释：
 
-```kt
+```java
 fun main(args: Array<String>) {
    println("Input your first name")
    var first_name = readLine()
@@ -401,7 +401,7 @@ fun main(args: Array<String>) {
 
 这是从 Kotlin `stdlib` 中用于控制台 I/O 的实际代码的一部分：
 
-```kt
+```java
 /** Prints the given message and newline to the standard output stream. */
 @kotlin.internal.InlineOnly
 public inline fun println(message: Any?) {
@@ -465,7 +465,7 @@ Kotlin 中包含了一些非常强大的功能，我们应该利用这些功能�
 
 1.  首先，让我们看看在 Java 中是如何实现的。在 Java 中，使用 SLF4J，并且被认为是事实上的标准，以至于在 Java 语言中日志记录似乎是一个已经解决的问题。下面是一个 Java 实现的样子：
 
-```kt
+```java
 private static final Logger logger = LoggerFactory.getLogger(CurrentClass.class);
 …
 logger.info(“Hi, {}”, name);
@@ -473,7 +473,7 @@ logger.info(“Hi, {}”, name);
 
 1.  显然，它也适用于 Kotlin，当然需要一些小的修改：
 
-```kt
+```java
 val logger = LoggerFactory.getLogger(CurrentClass::class)
 …
 logger.info(“Hi, {}”, name)
@@ -483,7 +483,7 @@ logger.info(“Hi, {}”, name)
 
 1.  我们将内部使用 `java.util.Logging`，但这适用于你选择的任何 Logging 库。所以，让我们使用 Kotlin 的懒委托来获取我们的 logger：
 
-```kt
+```java
 public fun <R : Any> R.logger(): Lazy<Logger> {
    return lazy { Logger.getLogger(this.javaClass.name) }
 }
@@ -491,7 +491,7 @@ public fun <R : Any> R.logger(): Lazy<Logger> {
 
 1.  现在在我们的类中，我们可以简单地调用方法来获取我们的 logger 并使用它：
 
-```kt
+```java
 class SomeClass {
   companion object { val log by logger() }
 
@@ -503,7 +503,7 @@ class SomeClass {
 
 当你运行代码时，你可以看到以下输出：
 
-```kt
+```java
 Sep 25, 2017 10:49:00 PM packageA.SomeClass do_something
 INFO: Did Something
 ```
@@ -522,7 +522,7 @@ Anko 是一个使用 Kotlin 的 Android 库，它通过扩展函数使 Android �
 
 在 Anko 中，一个标准的 logger 实现看起来可能如下所示：
 
-```kt
+```java
 class SomeActivity : Activity(), AnkoLogger {
    private fun someMethod() {
        info("London is the capital of Great Britain")
@@ -536,11 +536,11 @@ class SomeActivity : Activity(), AnkoLogger {
 
 每个方法都有两种版本：普通和懒（内联）：
 
-```kt
+```java
 info("String " + "concatenation")
 ```
 
-```kt
+```java
 info { "String " + "concatenation" }
 ```
 
@@ -562,7 +562,7 @@ Kotlin 的设计理念是**互操作性**。现有的 Java 代码可以无缝地
 
 创建一个方法名等于任何 Kotlin 关键字的 Java 类。我使用 `is` 作为方法名，所以我的 Java 类如下所示：
 
-```kt
+```java
 public class ASimpleJavaClass {
    static void is(){
        System.out.print("Nothing fancy here");
@@ -572,7 +572,7 @@ public class ASimpleJavaClass {
 
 现在尝试从 Kotlin 代码中调用该方法。如果您使用的是具有自动完成功能的任何代码编辑器，它将自动将方法名称用反引号（`` ` ` ``）括起来：
 
-```kt
+```java
 fun main(args: Array<String>) {
    ASimpleJavaClass.`is`()   
 }
@@ -598,7 +598,7 @@ Kotlin 中的其他关键字（在 Java 中是合格标识符）也有类似的�
 
 然而，如果您尝试将两个类导入到一个文件中会发生什么？尽管您应该始终为不同的类使用不同的名称，但有时这是不可避免的。例如，在库的类具有相同名称的情况下。在 Java 中，有一个解决方案；您必须使用完全限定符，看起来像这样：
 
-```kt
+```java
 class X {
    com.very.very.long.prefix.bar.Foo a;
    org.other.very.very.long.prefix.baz.Foo b;
@@ -620,14 +620,14 @@ class X {
 
 1.  在 Kotlin 中，您可以使用 `as` 关键字来消除歧义，局部重命名冲突实体。所以，在 Kotlin 中，它看起来会像这样：
 
-```kt
+```java
 import foo.Bar // Bar is accessible
 import bar.Bar as bBar // bBar stands for 'bar.Bar'
 ```
 
 1.  然后，像这样访问它们的方法：
 
-```kt
+```java
 Bar.methodOfFooBar()
 bBar.methodOfBarBar()
 ```
@@ -636,7 +636,7 @@ bBar.methodOfBarBar()
 
 `SameClass.kt (packageA)`
 
-```kt
+```java
 package packageA
 class SameClass {
   companion object {
@@ -649,7 +649,7 @@ class SameClass {
 
 `SameClass.kt (packageB)`
 
-```kt
+```java
 package packageB
 class SameClass {
   companion object {
@@ -662,7 +662,7 @@ class SameClass {
 
 `HelloWorld.kt` 是使用具有相似名称的类的类：
 
-```kt
+```java
 import packageA.SameClass as anotherSameClass
 import packageB.SameClass
 fun main(args: Array<String>) {
@@ -704,7 +704,7 @@ Kotlin 提供了几个函数（以中缀形式）来执行位和位移操作。�
 
 考虑以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
   val a=2
   val b=3
@@ -715,7 +715,7 @@ fun main(args: Array<String>) {
 
 下面是输出结果：
 
-```kt
+```java
  3
 ```
 
@@ -739,7 +739,7 @@ fun main(args: Array<String>) {
 
 考虑以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
   val a=2
   val b=3
@@ -749,7 +749,7 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
  2
 ```
 
@@ -773,7 +773,7 @@ fun main(args: Array<String>) {
 
 看看这个示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
   val a=2
   val b=3
@@ -783,7 +783,7 @@ fun main(args: Array<String>) {
 
 下面是输出结果：
 
-```kt
+```java
  1
 ```
 
@@ -807,7 +807,7 @@ fun main(args: Array<String>) {
 
 下面是一个示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val a=2
    print(a.inv())}
@@ -815,7 +815,7 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
  -3
 ```
 
@@ -833,7 +833,7 @@ fun main(args: Array<String>) {
 
 考虑以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
        println( 5 shl 0)
        println( 5 shl 1)
@@ -843,7 +843,7 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 5
 10
 20
@@ -865,7 +865,7 @@ fun main(args: Array<String>) {
 
 考虑以下示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
        println( 5 shr 0)
        println( 5 shr 1)
@@ -875,7 +875,7 @@ fun main(args: Array<String>) {
 
 这里是输出结果：
 
-```kt
+```java
 5
 2
 1
@@ -897,7 +897,7 @@ fun main(args: Array<String>) {
 
 下面是一个示例：
 
-```kt
+```java
 fun main(args: Array<String>) {
        println( 5 ushr 0)
        println( 5 ushr 1)
@@ -907,7 +907,7 @@ fun main(args: Array<String>) {
 
 这将输出以下内容：
 
-```kt
+```java
 5
 2
 1
@@ -927,7 +927,7 @@ fun main(args: Array<String>) {
 
 Kotlin 中的位运算符不是像 Java 中的内置运算符，但它们仍然可以用作运算符。为什么？看看它的实现：
 
-```kt
+```java
 public infix fun shr(bitCount: Int): Int
 ```
 
@@ -951,7 +951,7 @@ Kotlin 使得将字符串解析为其他数据类型（如 Long、Integer 或 Do
 
 这里有一个示例，展示了将字符串解析为长整型的过程：
 
-```kt
+```java
 fun main(args: Array<String>) {
   val str="123"
   print(str.toLong())
@@ -960,7 +960,7 @@ fun main(args: Array<String>) {
 
 当您运行前面的代码时，您将看到以下输出：
 
-```kt
+```java
 123
 ```
 
@@ -970,7 +970,7 @@ fun main(args: Array<String>) {
 
 在这个示例中，我们将看到如何使用 `.toLongOrNull()` 方法解析字符串：
 
-```kt
+```java
 fun main(args: Array<String>) {
   val str="123.4"
   val str2="123"
@@ -981,7 +981,7 @@ fun main(args: Array<String>) {
 
 运行前面的程序，将生成以下输出：
 
-```kt
+```java
  null 123
 ```
 
@@ -1009,7 +1009,7 @@ fun main(args: Array<String>) {
 
 +   **二进制**：由于二进制数由 0 和 1 组成，因此使用的基数是 2：
 
-```kt
+```java
 fun main(args: Array<String>) {
        val str="11111111"
        print(str.toLongOrNull(2))   }
@@ -1017,13 +1017,13 @@ fun main(args: Array<String>) {
 
 运行前面的程序，将生成以下输出：
 
-```kt
+```java
  255
 ```
 
 +   **八进制**：八进制数制，简称八进制，是基数为 8 的数制，使用数字 0 到 7。因此，我们将使用 8 作为基数：
 
-```kt
+```java
 fun main(args: Array<String>) {
       val str="377"
        print(str.toLongOrNull(8))
@@ -1032,13 +1032,13 @@ fun main(args: Array<String>) {
 
 运行前面的程序，将生成以下输出：
 
-```kt
+```java
  255
 ```
 
 +   **十进制**：十进制系统中有 10 个数字（0-9）；因此，我们将使用 10 作为基数。请注意，没有基数参数的方法（`.toLong() , .toLongOrNull()`）默认使用基数 10：
 
-```kt
+```java
 fun main(args: Array<String>) {
       val str="255"
        print(str.toLongOrNull(10))
@@ -1047,7 +1047,7 @@ fun main(args: Array<String>) {
 
 运行前面的程序，将生成以下输出：
 
-```kt
+```java
  255
 ```
 
@@ -1057,7 +1057,7 @@ Kotlin 使用如 `.toLong()` 和 `toLongOrNull()` 这样的字符串扩展函数
 
 +   对于 `Long` 类型，使用此方法：
 
-```kt
+```java
 public inline fun String.toLong(): Long = java.lang.Long.parseLong(this)
 ```
 
@@ -1065,19 +1065,19 @@ public inline fun String.toLong(): Long = java.lang.Long.parseLong(this)
 
 +   对于 `Short` 类型，它是以下内容：
 
-```kt
+```java
 public inline fun String.toShort(): Short = java.lang.Short.parseShort(this)
 ```
 
 +   使用此方法进行 `Int` 解析：
 
-```kt
+```java
 public inline fun String.toInt(): Int = java.lang.Integer.parseInt(this)
 ```
 
 +   对于使用基数进行解析，请使用以下方法：
 
-```kt
+```java
 public inline fun String.toLong(radix: Int): Long = java.lang.Long.parseLong(this, checkRadix(radix))
 ```
 
@@ -1109,7 +1109,7 @@ Kotlin 将许多常用数据类型字符串的强大功能打包在一起。其�
 
 在 Java 中，你必须使用 **StrSubstitutor** ([`commons.apache.org/proper/commons-text/javadocs/api-release/org/apache/commons/text/StrSubstitutor.html`](https://commons.apache.org/proper/commons-text/javadocs/api-release/org/apache/commons/text/StrSubstitutor.html)) 和相应的映射。Java 中的模板表达式将如下所示：
 
-```kt
+```java
 Map<String, String> valuesMap = new HashMap<String, String>();
 valuesMap.put("city", "Paris");
 valuesMap.put("monument", "Eiffel Tower");
@@ -1130,13 +1130,13 @@ Kotlin 简化了编写模板表达式的痛苦，使其变得有趣、简洁，�
 
 1.  字符串模板的语法如下：
 
-```kt
+```java
 $variableName
 ```
 
 或者，它也可以是这样的：
 
-```kt
+```java
 ${expression}
 ```
 
@@ -1144,7 +1144,7 @@ ${expression}
 
 +   考虑一个带有变量的字符串模板的例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val foo = 5;
     val myString = "foo = $foo"
@@ -1156,7 +1156,7 @@ fun main(args: Array<String>) {
 
 +   考虑一个带有表达式的字符串模板的例子：
 
-```kt
+```java
 fun main(arr: Array<String>){
   val lang = "Kotlin"
   val str = "The word Kotlin has ${lang.length} characters."
@@ -1168,7 +1168,7 @@ fun main(arr: Array<String>){
 
     +   **原始字符串**：一个由换行符组成且没有使用 `\n` 的任意字符串。它是一个原始字符串，并放置在三个引号（`"""`）中：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val a = 5
     val b = 6
@@ -1192,7 +1192,7 @@ fun main(args: Array<String>) {
 
 字符串模板在字符串属性和函数中也很有用。以下是一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
       val str1="abcdefghijklmnopqrs"
        val str2="tuvwxyz"
@@ -1204,7 +1204,7 @@ fun main(args: Array<String>) {
 
 这里是输出结果：
 
-```kt
+```java
 str1 equals str2 ? = false
 subsequence is bcd
 2nd character is b

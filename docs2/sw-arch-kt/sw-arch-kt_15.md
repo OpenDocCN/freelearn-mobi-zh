@@ -34,7 +34,7 @@ Kotlin 扩展函数允许在不修改其源代码的情况下向现有类添加�
 
 +   向来自外部库或最终类的类添加更多函数。例如，我们想要提取每个单词的首字母并用点连接起来，所以`Sam Payne`将变成`S.P`。Kotlin 字符串不提供这样的函数，因此我们可以编写一个扩展函数来代替：
 
-    ```kt
+    ```java
     fun String.getFirstLetters(): String =
         split(" ").joinToString(".") {
             it.first().toString()
@@ -45,7 +45,7 @@ Kotlin 扩展函数允许在不修改其源代码的情况下向现有类添加�
 
 +   向处理诸如尝试连接一个可空字符串列表等场景的函数添加空安全功能。在扩展函数中将接收者作为`List<String>?`确保，无论列表是否为空，都会创建一个字符串。实现方式如下：
 
-    ```kt
+    ```java
     fun List<String>?.concat(): String = this?.joinToString(",")?: ""
     ```
 
@@ -57,7 +57,7 @@ Kotlin 扩展函数允许在不修改其源代码的情况下向现有类添加�
 
 +   `Name` 类已将对象的 JSON 表示暴露给所有使用场景：
 
-    ```kt
+    ```java
     data class Name(val value: String) {
         fun toJson(): String = "{\"name\":\"$value\"}"
     }
@@ -67,19 +67,19 @@ Kotlin 扩展函数允许在不修改其源代码的情况下向现有类添加�
 
 +   `toJson` 现在对所有可以访问 `Name` 类的项目都是公开的：
 
-    ```kt
+    ```java
     fun toJson(name: Name): String = "{\"name\":\"${name.value}\"}"
     ```
 
 它在功能上等同于**非局部扩展函数**实现；区别在于扩展函数将参数移动到函数接收者：
 
-```kt
+```java
 fun Name.toJson(): String = "{\"name\":\"$value\"}"
 ```
 
 当工程师搜索以 `to` 开头的函数名称时，原始函数实现会创建噪声，尤其是在 IDE 中，如果所有数据类都有单独的 `toJson` 函数。这种现象被称为**作用域污染**，因为我们暴露了比必要的更多函数。一个快速的解决方案是有一个类或 Kotlin 单例对象，其中包含一个成员函数用于此目的：
 
-```kt
+```java
 object NameJsonConverter {
     fun toJson(name: Name): String = "{\"name\":\"${name.value}\"}"
 }
@@ -87,7 +87,7 @@ object NameJsonConverter {
 
 然而，如果 JSON 转换仅适用于外部集成，那么将转换函数与外部集成代码一起定位可能是有可能的，并且函数可以作为**局部****扩展函数**是私有的：
 
-```kt
+```java
 private fun Name.toJson(): String = "{\"name\":\"$value\"}"
 ```
 
@@ -111,13 +111,13 @@ Kotlin 扩展函数通过允许工程师以模块化方式向现有类添加新�
 
 Kotlin 的 infix 修饰符是创建更易读和更具表现力的代码的另一种方式。我们在这里讨论了 `When`：
 
-```kt
+```java
 object When
 ```
 
 让我们定义一个与整数（`Int`）相关的 `PreCondition` 类和一个 `Action` 类，如下所示：
 
-```kt
+```java
 typealias PreCondition = () -> Int
 typealias Action = (Int) -> Int
 ```
@@ -126,14 +126,14 @@ typealias Action = (Int) -> Int
 
 到目前为止，它们看起来像 BDD 测试场景的 Gherkin 语言可能仍然令人困惑。当我们添加`infix`函数时，代码将开始支持自然语言：
 
-```kt
+```java
 infix fun When.number(n: Int): PreCondition = { n }
 infix fun PreCondition.then(action: Action): Int = action(this())
 ```
 
 在这里，`PreCondition`用作返回类型和另一个函数的接收者。我们需要实现`Action`并有一个函数来验证结果，以完成一个简单的测试场景：
 
-```kt
+```java
 object Square: Action {
     override fun invoke(p1: Int): Int = p1 * p1
 }
@@ -146,19 +146,19 @@ infix fun Int.shouldBe(expected: Int) {
 
 将它们全部放在一起，我们可以生成如下测试场景：
 
-```kt
+```java
 ((When.number(2)).then(Square)).shouldBe(5)
 ```
 
 当运行此行时，它应该抛出一个包含以下消息的异常：
 
-```kt
+```java
 Expected: 5 but was 4
 ```
 
 这个示例令人兴奋的部分是，Kotlin 的中缀特性让我们可以省略函数调用的点和中缀函数单个参数的括号。因此，代码变得非常接近自然语言和 Gherkin 语言语法：
 
-```kt
+```java
 When number 2 then Square shouldBe 5
 ```
 
@@ -176,7 +176,7 @@ When number 2 then Square shouldBe 5
 
 操作符重载是使您的代码可读性和直观性的另一种方法。它允许工程师为`+`、`-`等运算符定义自定义行为。当我们在讨论扩展函数时，已经展示了语法：
 
-```kt
+```java
 data class Name(val value: String)
 operator fun Name.plus(other: Name): Name =
     Name("$value ${other.value}")
@@ -190,19 +190,19 @@ fun main() { println(Name("Sam") + Name("Payne")) }
 
 |
 
-```kt
+```java
 +
 ```
 
 |
 
-```kt
+```java
 plus
 ```
 
 |
 
-```kt
+```java
 a + b
 ```
 
@@ -210,19 +210,19 @@ a + b
 
 |
 
-```kt
+```java
 +
 ```
 
 |
 
-```kt
+```java
 unaryPlus
 ```
 
 |
 
-```kt
+```java
 +a
 ```
 
@@ -230,19 +230,19 @@ unaryPlus
 
 |
 
-```kt
+```java
 -
 ```
 
 |
 
-```kt
+```java
 minus
 ```
 
 |
 
-```kt
+```java
 a - b
 ```
 
@@ -250,19 +250,19 @@ a - b
 
 |
 
-```kt
+```java
 -
 ```
 
 |
 
-```kt
+```java
 unaryMinus
 ```
 
 |
 
-```kt
+```java
 -a
 ```
 
@@ -270,19 +270,19 @@ unaryMinus
 
 |
 
-```kt
+```java
 *
 ```
 
 |
 
-```kt
+```java
 times
 ```
 
 |
 
-```kt
+```java
 a * b
 ```
 
@@ -290,19 +290,19 @@ a * b
 
 |
 
-```kt
+```java
 /
 ```
 
 |
 
-```kt
+```java
 div
 ```
 
 |
 
-```kt
+```java
 a / b
 ```
 
@@ -310,19 +310,19 @@ a / b
 
 |
 
-```kt
+```java
 %
 ```
 
 |
 
-```kt
+```java
 rem
 ```
 
 |
 
-```kt
+```java
 a % b
 ```
 
@@ -330,19 +330,19 @@ a % b
 
 |
 
-```kt
+```java
 ==
 ```
 
 |
 
-```kt
+```java
 equals
 ```
 
 |
 
-```kt
+```java
 a == b
 ```
 
@@ -350,19 +350,19 @@ a == b
 
 |
 
-```kt
+```java
 !=
 ```
 
 |
 
-```kt
+```java
 notEquals
 ```
 
 |
 
-```kt
+```java
 a != b
 ```
 
@@ -370,19 +370,19 @@ a != b
 
 |
 
-```kt
+```java
 >
 ```
 
 |
 
-```kt
+```java
 compareTo
 ```
 
 |
 
-```kt
+```java
 a > b
 ```
 
@@ -390,19 +390,19 @@ a > b
 
 |
 
-```kt
+```java
 []
 ```
 
 |
 
-```kt
+```java
 get
 ```
 
 |
 
-```kt
+```java
 val value = a[key]
 ```
 
@@ -410,19 +410,19 @@ val value = a[key]
 
 |
 
-```kt
+```java
 []
 ```
 
 |
 
-```kt
+```java
 set
 ```
 
 |
 
-```kt
+```java
 a[key] = value
 ```
 
@@ -430,19 +430,19 @@ a[key] = value
 
 |
 
-```kt
+```java
 +
 ```
 
 |
 
-```kt
+```java
 unaryPlus
 ```
 
 |
 
-```kt
+```java
 +a
 ```
 
@@ -450,19 +450,19 @@ unaryPlus
 
 |
 
-```kt
+```java
 ()
 ```
 
 |
 
-```kt
+```java
 invoke
 ```
 
 |
 
-```kt
+```java
 a()
 ```
 
@@ -488,7 +488,7 @@ Kotlin 中的作用域函数提供了另一种拥有有限作用域的方法，�
 
 以下三个语句返回相同的 `"35"` 结果：
 
-```kt
+```java
 "3".let { it + "5" }
 "3".run { this + "5" }
 with("3") { this + "5" }
@@ -500,7 +500,7 @@ with("3") { this + "5" }
 
 第二个区别是 lambda 或接收者的结果是否返回。这就像是一个窥视函数，工程师想要插入一个额外的操作，但不想改变结果。以下两个语句返回相同的 `"3"` 结果：
 
-```kt
+```java
     "3".also { println(it) }
     "3".apply { println(this) }
 ```
@@ -513,7 +513,7 @@ with("3") { this + "5" }
 
 我们需要一个可以累积验证错误的构建器类，如下所示：
 
-```kt
+```java
 class ValidationBuilder {
     private val failures = mutableListOf<String>()
     fun evaluate(
@@ -528,7 +528,7 @@ class ValidationBuilder {
 
 `ValidationBuilder` 类使用可变字符串列表来收集在过程中找到的所有验证错误。然后，我们可以定义一个自定义作用域函数，该函数定义验证的开始和结束，并在作用域内执行验证：
 
-```kt
+```java
 fun <T> T.validate(
     build: ValidationBuilder.(T) -> Unit
 ): List<String> =
@@ -541,7 +541,7 @@ fun <T> T.validate(
 
 一个示例用法可能如下所示：
 
-```kt
+```java
 fun main() {
     val failures = "Some very%long nickname".validate {
         evaluate(it.length < 20) { "Must be under 20 characters: \"$it\"" }
@@ -559,7 +559,7 @@ fun main() {
 
 验证从具有`validate`扩展函数的`String`对象开始。在 lambda 作用域内，`evaluate`函数被调用两次，用于评估和错误消息。如果评估失败，`ValidationBuilder`会收集错误消息。返回一个验证错误列表并打印到控制台。控制台应该有如下输出：
 
-```kt
+```java
 failures: [Must be under 20 characters: "Some very%long nickname", Must not contains % character]
 ```
 
@@ -567,7 +567,7 @@ failures: [Must be under 20 characters: "Some very%long nickname", Must not cont
 
 自定义作用域函数在构建复杂对象，如大型域对象时也很受欢迎。实际上，它在流行的框架**Ktor**中用于构建服务器端路由配置：
 
-```kt
+```java
 routing {
     route("/hello", HttpMethod.Get) {
         handle {
@@ -599,7 +599,7 @@ JetBrains 的 IntelliJ IDEs 提供了一个工具，可以将 Java 文件代码�
 
 如果项目使用 Gradle，添加 Kotlin 插件就足够了，例如以下使用 Gradle Kotlin DSL 的代码：
 
-```kt
+```java
 plugins {
     kotlin("jvm") version "2.0.20"
 }
@@ -607,7 +607,7 @@ plugins {
 
 这与 Gradle Groovy 的设置等效：
 
-```kt
+```java
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.0.20'
 }
@@ -615,7 +615,7 @@ plugins {
 
 使用 Maven 的项目需要在`pom.xml`中进行以下更改：
 
-```kt
+```java
 <properties>
     <kotlin.version>2.0.20</kotlin.version>
 </properties>
@@ -636,7 +636,7 @@ Kotlin 文件可以位于`src/main/java`和`src/test/java`文件夹下，但建�
 
 让我们使用 IntelliJ 的转换工具将以下 Java 类转换为 Kotlin：
 
-```kt
+```java
 public class Household {
     private final String name;
     private final List<String> members = new ArrayList<>();
@@ -657,7 +657,7 @@ public class Household {
 
 这是工具转换后的 Kotlin 类（在 IntelliJ 中，右键单击 Java 文件并选择**Convert Java File to** **Kotlin File**）：
 
-```kt
+```java
 class Household(val name: String, members: List<String?>) {
     private val members: MutableList<String?> = ArrayList()
     init {
@@ -683,7 +683,7 @@ class Household(val name: String, members: List<String?>) {
 
 这是转换的结果，它从工具开始，以一些手动修正结束：
 
-```kt
+```java
 data class Household(val name: String, val members: List<String>)
 ```
 
@@ -691,13 +691,13 @@ data class Household(val name: String, val members: List<String>)
 
 Java 14 引入了一个名为**record classes**的新特性，它的工作方式类似于 Kotlin 数据类。这里展示了一个 Java 记录类的示例：
 
-```kt
+```java
 public record Account(String number, String holderName) {}
 ```
 
 转换为 Kotlin 相对简单，但有一个`JvmRecord`注解保留了下来：
 
-```kt
+```java
 @JvmRecord
 data class Account(val number: String, val holderName: String)
 ```

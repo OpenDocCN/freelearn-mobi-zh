@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Kotlin 标准库秘籍
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/e231444d5fdb5db5bf5bbb1f0dd473c7`](https://zh.annas-archive.org/md5/e231444d5fdb5db5bf5bbb1f0dd473c7)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

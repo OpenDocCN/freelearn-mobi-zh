@@ -42,13 +42,13 @@ Kotlin 是一个实用的语言，它允许使用任何这些范式。它有类�
 
 在 Java 中，每一行代码都必须以分号结束：
 
-```kt
+```java
 System.out.println("Hello"); //<- This is a semicolon System.out.println("World"); //<- I still see you, semicolon 
 ```
 
 但 Kotlin 是一种实用主义语言。因此，它会在编译期间推断出应该放置分号的位置：
 
-```kt
+```java
 println("Hello") //<- No semicolon here
 println("World") //<- Not here
 ```
@@ -69,7 +69,7 @@ println("World") //<- Not here
 
 与 Java 一样，Kotlin 使用包：
 
-```kt
+```java
 package me.soshin.controllers
 ```
 
@@ -87,7 +87,7 @@ Java 示例是为了熟悉，并不是为了证明 Kotlin 在任何一个方面�
 
 让我们在 Java 中定义一个简单的字符串：
 
-```kt
+```java
 String s = "Hello World";
 ```
 
@@ -95,13 +95,13 @@ String s = "Hello World";
 
 Kotlin 为我们提供了类型推断：
 
-```kt
+```java
 val s = "Hello World"
 ```
 
 现在，编译器将决定应该使用哪种类型的变量。与解释型语言（如 JavaScript、Groovy 或 Ruby）不同，变量的类型只定义一次。这不会起作用：
 
-```kt
+```java
 var s = "I'm a string"
 s = 1 // s is a String
 ```
@@ -112,21 +112,21 @@ s = 1 // s is a String
 
 在 Java 中，变量可以被声明为`final`。`final`变量只能赋值一次：
 
-```kt
+```java
 final String s = "Hi";
 s = "Bye"; // Doesn't work
 ```
 
 Kotlin 强烈建议尽可能使用不可变数据。Kotlin 中的`final`变量只是`val`：
 
-```kt
+```java
 val s = "Hi"
 s = "Bye" // Doesn't work
 ```
 
 如果你确实有一个想要重新分配变量的情况，请使用`var`：
 
-```kt
+```java
 var s = "Hi"
 s = "Bye" // Works now
 ```
@@ -137,7 +137,7 @@ s = "Bye" // Works now
 
 JVM 在基本情况下进行字符串池化以防止这种情况，因此为了示例，我们将使用`new String()`来避免这种情况：
 
-```kt
+```java
 String s1 = "ABC";
 String s2 = new String(s1);
 
@@ -146,7 +146,7 @@ System.out.println(s1 == s2); // false
 
 Kotlin 将`==`转换为`equals()`：
 
-```kt
+```java
 val s1 = "ABC"
 val s2 = String(s1.toCharArray())
 
@@ -155,7 +155,7 @@ println(s1 == s2) // true
 
 如果你确实想检查引用相等性，请使用`===`：
 
-```kt
+```java
 println(s1 === s2) // false
 ```
 
@@ -165,7 +165,7 @@ println(s1 === s2) // false
 
 这种异常背后的原因是 Java 中的每个对象都可以是`null`。这里的代码展示了原因：
 
-```kt
+```java
 String s = "Hello";
 ...
 s = null;
@@ -176,7 +176,7 @@ System.out.println(s.length); // Causes NullPointerException
 
 但这个呢：
 
-```kt
+```java
 public class Printer {    
     public static void printLength(final String s) {
        System.out.println(s.length);
@@ -186,13 +186,13 @@ public class Printer {
 
 从代码的任何地方都可以传递`null`：
 
-```kt
+```java
 Printer.printLength(null); // Again, NullPointerException
 ```
 
 自 Java 8 以来，有一个`optional`构造：
 
-```kt
+```java
 if (optional.isPresent()) {
     System.out.println(optional.get());
 }
@@ -200,7 +200,7 @@ if (optional.isPresent()) {
 
 在更函数式的方式中：
 
-```kt
+```java
 optional.ifPresent(System.out::println);
 ```
 
@@ -208,13 +208,13 @@ optional.ifPresent(System.out::println);
 
 Kotlin 在编译时就会检查它：
 
-```kt
+```java
 val s : String = null // Won't compile
 ```
 
 让我们回到我们的`printLength()`函数：
 
-```kt
+```java
 fun printLength(s: String) {
     println(s.length)
 }
@@ -222,13 +222,13 @@ fun printLength(s: String) {
 
 使用 null 调用这个函数将无法编译：
 
-```kt
+```java
 printLength(null) // Null can not be a value of a non-null type String
 ```
 
 如果您希望您的类型能够接收 null 值，您需要使用问号将其标记为可空：
 
-```kt
+```java
 val notSoSafe : String? = null
 ```
 
@@ -238,11 +238,11 @@ val notSoSafe : String? = null
 
 在 Kotlin 中，函数可以声明在类外部，而不是以下代码：
 
-```kt
+```java
 public class MyFirstClass {
 ```
 
-```kt
+```java
 
     public static void main(String[] args) {
         System.out.println("Hello world");
@@ -252,7 +252,7 @@ public class MyFirstClass {
 
 只需这样就可以了：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println("Hello, world!")
 }
@@ -268,7 +268,7 @@ fun main(args: Array<String>) {
 
 如果您确实想声明返回类型？同样，它将紧跟在函数声明之后：
 
-```kt
+```java
 fun getGreeting(): String {
     return "Hello, world!"
 }
@@ -288,7 +288,7 @@ fun main(args: Array<String>) {
 
 之前提到 Kotlin 喜欢变量只分配一次。它也不太喜欢 null。您可能想知道这在现实世界中是如何工作的。在 Java 中，这样的结构相当常见：
 
-```kt
+```java
 public String getUnixSocketPolling(boolean isBsd) {
     String value = null;
     if (isBsd) {
@@ -306,7 +306,7 @@ public String getUnixSocketPolling(boolean isBsd) {
 
 在 Java 中，`if`只是一个语句，不返回任何内容。相反，在 Kotlin 中，`if`是一个表达式，意味着它返回一个值：
 
-```kt
+```java
 fun getUnixSocketPolling(isBsd : Boolean) : String {
     val value = if (isBsd) {
         "kqueue"
@@ -329,7 +329,7 @@ fun getUnixSocketPolling(isBsd : Boolean) : String {
 
 因此，我们的最终结果在 Kotlin 中将看起来像这样：
 
-```kt
+```java
 fun getUnixSocketPolling(isBsd : Boolean) = if (isBsd) "kqueue" else "epoll"
 ```
 
@@ -343,7 +343,7 @@ Kotlin 中的单行函数非常酷且实用。但您应该确保除了您之外�
 
 让我们创建一个基于将产生建议一个不错的生日礼物的原因的金额的方法：
 
-```kt
+```java
 fun suggestGift(amount : Int) : String {
     return when (amount) {
         in (0..10) -> "a book"
@@ -365,26 +365,26 @@ fun suggestGift(amount : Int) : String {
 
 但是，更重要的是，就像许多其他现代语言一样，Kotlin 支持使用`${}`语法进行字符串插值。在之前的示例之后继续：
 
-```kt
+```java
 println("I would suggest: ${suggestGift(10)} ")
 ```
 
 上述代码将打印以下内容：
 
-```kt
+```java
 I would suggest: a book
 ```
 
 如果你正在插值一个变量，而不是一个函数，可以省略大括号：
 
-```kt
+```java
 val gift = suggestGift(100)
 println("I would suggest: $gift ")
 ```
 
 这将打印以下输出：
 
-```kt
+```java
 I would suggest: a guitar
 ```
 
@@ -396,21 +396,21 @@ I would suggest: a guitar
 
 为了声明一个`class`，我们使用类关键字，就像在 Java 中一样：
 
-```kt
+```java
 class Player {
 }
 ```
 
 Kotlin 中没有`new`关键字。类的实例化看起来就像这样：
 
-```kt
+```java
 // Kotlin figured out you want to create a new player
 val p = Player() 
 ```
 
 如果类没有主体，就像这个简单的例子一样，我们可以省略大括号：
 
-```kt
+```java
 class Player // Totally fine
 ```
 
@@ -418,7 +418,7 @@ class Player // Totally fine
 
 正如 Java 中的情况一样，抽象类由`abstract`关键字标记，接口由`interface`关键字标记：
 
-```kt
+```java
 abstract class AbstractDungeonMaster {
     abstract val gameName: String
 
@@ -432,7 +432,7 @@ interface Dragon
 
 就像 Java 8 一样，Kotlin 中的接口可以有函数的默认实现，只要它们不依赖于任何状态：
 
-```kt
+```java
 interface Greeter {
  fun sayHello() {
  println("Hello")
@@ -442,7 +442,7 @@ interface Greeter {
 
 Kotlin 中没有`inherits`和`implements`关键字。相反，抽象类的名称以及该类实现的所有接口的名称都放在冒号后面：
 
-```kt
+```java
 class DungeonMaster: Greeter, AbstractDungeonMaster() {
     override val gameName: String
         get() = "Dungeon of the Beholder"
@@ -453,7 +453,7 @@ class DungeonMaster: Greeter, AbstractDungeonMaster() {
 
 我们的`DungeonMaster`可以访问`Greeter`和`AbstractDungeonMaster`中的两个函数：
 
-```kt
+```java
 val p = DungeonMaster()
 p.sayHello()  // From Greeter interface
 p.startGame() // From AbstractDungeonMaster abstract class
@@ -461,7 +461,7 @@ p.startGame() // From AbstractDungeonMaster abstract class
 
 调用前面的代码，它将打印以下输出：
 
-```kt
+```java
 Hello
 Game Dungeon of the Beholder has started!
 ```
@@ -470,7 +470,7 @@ Game Dungeon of the Beholder has started!
 
 我们的`DungeonMaster`现在看起来有点尴尬，因为它只能宣布开始一个游戏。让我们给我们的`abstract`类添加一个非空构造函数来解决这个问题：
 
-```kt
+```java
 abstract class AbstractDungeonMaster(private val gameName : String) {
     fun startGame() {
         println("Game $gameName has started!")
@@ -480,7 +480,7 @@ abstract class AbstractDungeonMaster(private val gameName : String) {
 
 现在，我们的`DungeonMaster`必须接收游戏名称并将其传递给`abstract`类：
 
-```kt
+```java
 open class DungeonMaster(gameName: String):
         Greeter, AbstractDungeonMaster(gameName)
 ```
@@ -491,7 +491,7 @@ open class DungeonMaster(gameName: String):
 
 我们将对`AbstractDungeonMaster`进行一些修改，以赋予邪恶统治者更多的权力：
 
-```kt
+```java
 open fun startGame() {
     // Everything else stays the same
 }
@@ -499,7 +499,7 @@ open fun startGame() {
 
 现在，我们在我们的`EvilDungeonMaster`实现中添加以下内容：
 
-```kt
+```java
 class EvilDungeonMaster(private val awfulGame: String) : DungeonMaster(awfulGame) {
     override fun sayHello() {
         println("Prepare to die! Muwahaha!!!")
@@ -519,7 +519,7 @@ class EvilDungeonMaster(private val awfulGame: String) : DungeonMaster(awfulGame
 
 在 Java 中，我们习惯于 getter 和 setter 的概念。一个典型的类可能看起来像这样：
 
-```kt
+```java
 public class Person {
     private String name;
 
@@ -539,7 +539,7 @@ public class Person {
 
 如果我们只想在对象实例化期间设置一次名字，我们可以指定非默认构造函数并删除 setter，如下所示：
 
-```kt
+```java
 public class ImmutablePerson {
     private String name;
 
@@ -557,7 +557,7 @@ public class ImmutablePerson {
 
 但如果你例如与 C#一起工作过，你可能熟悉属性的概念。为了理解它们，让我们回到第一个示例并稍作修改：
 
-```kt
+```java
 public class PublicPerson {
     public String name;
 }
@@ -571,7 +571,7 @@ public class PublicPerson {
 
 属性为所有这些问题提供了一个解决方案：
 
-```kt
+```java
 class Person() {
     var name : String = ""
 }
@@ -581,7 +581,7 @@ class Person() {
 
 由于 Kotlin 中的属性被转换为 getter 和 setter，我们也可以控制它们的行为：
 
-```kt
+```java
 class Person {
     var name : String = ""
     set(value) {
@@ -600,7 +600,7 @@ class Person {
 
 这个任务如此常见，以至于 Kotlin 将其内置到语言中：
 
-```kt
+```java
 data class User (val username : String, val password : String)
 ```
 
@@ -616,7 +616,7 @@ data class User (val username : String, val password : String)
 
 Java 中的 `for` 循环，它将字符串的每个字符打印在新的一行上，可能看起来像这样：
 
-```kt
+```java
 final String word = "Word";
 for (int i = 0; i < word.length; i++) {
 
@@ -625,7 +625,7 @@ for (int i = 0; i < word.length; i++) {
 
 Kotlin 中的相同循环如下：
 
-```kt
+```java
 val word = "Word";
 for (i in 0..(word.length-1)) {
     println(word[i])
@@ -636,7 +636,7 @@ for (i in 0..(word.length-1)) {
 
 如果你想避免这种情况，可以使用 `until` 函数：
 
-```kt
+```java
 val word = "Word";
 for (i in 0 until word.length) {
     println(word[i])
@@ -645,7 +645,7 @@ for (i in 0 until word.length) {
 
 与其他一些语言不同，反转范围索引不起作用：
 
-```kt
+```java
 val word = "Word";
 for (i in (word.length-1)..0) {
     println(word[i])
@@ -654,7 +654,7 @@ for (i in (word.length-1)..0) {
 
 如果你想要以相反的顺序打印单词，例如，使用 `downTo` 函数：
 
-```kt
+```java
 val word = "Word";
 for (i in (word.length-1) downTo 0) {
     println(word[i])
@@ -663,7 +663,7 @@ for (i in (word.length-1) downTo 0) {
 
 它将打印以下输出：
 
-```kt
+```java
 d
 r
 o
@@ -676,7 +676,7 @@ W
 
 当然，如果你对 Java 有点熟悉，你可能会争辩说，前面的代码可以通过使用 `for-each` 构造来改进：
 
-```kt
+```java
 final String word = "Word";
 
 for (Character c : word.toCharArray()) {
@@ -686,7 +686,7 @@ for (Character c : word.toCharArray()) {
 
 在 Kotlin 中，这将是相同的：
 
-```kt
+```java
 val word = "Word"
 
 for (c in word) {
@@ -698,7 +698,7 @@ for (c in word) {
 
 `while` 循环的功能没有变化，所以我们非常简短地介绍它们：
 
-```kt
+```java
 var x = 0
 while (x < 10) { 
    x++ 
@@ -710,7 +710,7 @@ while (x < 10) {
 
 较少使用的 `do while` 循环也存在于该语言中：
 
-```kt
+```java
 var x = 5
    do { 
       println(x)
@@ -724,7 +724,7 @@ var x = 5
 
 如果你查看源代码，你会发现以下内容：
 
-```kt
+```java
 public inline fun String.reversed(): String {
     return (this as CharSequence).reversed().toString()
 }

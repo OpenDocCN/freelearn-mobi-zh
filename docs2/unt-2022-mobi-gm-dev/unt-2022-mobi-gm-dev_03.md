@@ -42,7 +42,7 @@
 
 要使用基于桌面的鼠标点击事件来移动玩家，首先，在 Unity 中，打开你的`PlayerBehaviour`脚本，并将`FixedUpdate`函数更新为以下内容：
 
-```kt
+```java
 /// <summary>
 /// FixedUpdate is a prime place to put physics
 /// calculations happening over a period of time.
@@ -146,7 +146,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 1.  调整我们前面的代码，使其看起来像以下这样：
 
-    ```kt
+    ```java
     /// <summary>
     /// FixedUpdate is a prime place to put physics
     /// calculations happening over a period of time.
@@ -193,7 +193,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 1.  考虑到这一点，让我们将以下函数添加到 `PlayerBehaviour` 类中：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will figure out where to move the player
     /// horizontally
@@ -230,7 +230,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 1.  现在，更新 `Update` 函数，如下所示：
 
-    ```kt
+    ```java
     /// <summary>
     /// FixedUpdate is a prime place to put physics
     /// calculations happening over a period of time.
@@ -443,7 +443,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 1.  在 `PlayerBehaviour` 脚本中，继续添加一些新的变量供我们使用：
 
-    ```kt
+    ```java
     [Header("Swipe Properties")]
     [Tooltip("How far will the player move upon swiping")]
     public float swipeMove = 2f;
@@ -474,7 +474,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 1.  返回到 `PlayerBehaviour` 的 `Start` 函数，添加以下突出显示的代码：
 
-    ```kt
+    ```java
     // Start is called before the first frame update
     public void Start()
     {
@@ -497,7 +497,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 1.  现在，回到 `PlayerBehaviour` 脚本中，为项目添加以下函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Update is called once per frame
     /// </summary>
@@ -521,7 +521,7 @@ Unity 的输入引擎有一个名为 `Input.touches` 的属性，它是一个 `T
 
 然后，我们将创建一个函数来处理这种新的滑动行为，如下所示：
 
-```kt
+```java
 /// <summary>
 /// Will teleport the player if swiped to the left or
 /// right
@@ -593,7 +593,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  打开 `PlayerBehaviour` 脚本并添加以下属性：
 
-    ```kt
+    ```java
     [Header("Scaling Properties")]
     [Tooltip("The minimum size (in Unity units) that the
         player should be")]
@@ -609,7 +609,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  接下来，添加以下函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will change the player's scale via pinching and
     /// stretching two touch events
@@ -663,7 +663,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  接下来，我们需要通过更新 `Update` 函数来调用该函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Update is called once per frame
     /// </summary>
@@ -702,7 +702,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  我们可能希望允许我们的设计师设置他们是否想要使用`加速度计`模式或`ScreenTouch`，这是我们之前使用的。考虑到这一点，让我们在**滑动****属性**标题上方创建一个新的`enum`类型`PlayerBehaviour`脚本：
 
-    ```kt
+    ```java
     [Tooltip("How fast the ball moves forwards
         automatically")]
     [Range(0, 10)]
@@ -731,7 +731,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  接下来，让我们更新`Update`#elif UNITY_IOS || UNITY_ANDROID`代码块：
 
-    ```kt
+    ```java
     /* Check if we are running on a mobile device */
     #elif UNITY_IOS || UNITY_ANDROID
         switch (horizMovement)
@@ -801,7 +801,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  在`PlayerBehaviour`脚本中，添加以下新函数：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will determine if we are touching a game object
     /// and if so call events for it
@@ -880,7 +880,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  现在，在`UpdateTouchObjects`函数中调整代码，以便我们可以在 Unity 编辑器中测试功能：
 
-    ```kt
+    ```java
     /// <summary>
     /// Update is called once per frame
     /// </summary>
@@ -919,7 +919,7 @@ private void SwipeTeleport(Touch touch)
 
 1.  最后，我们调用`PlayerTouchObstacleBehaviour`脚本并添加以下代码：
 
-    ```kt
+    ```java
     [Tooltip("Explosion effect to play when tapped")]
     public GameObject explosion;
     /// <summary>

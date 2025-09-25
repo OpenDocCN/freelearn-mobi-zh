@@ -150,7 +150,7 @@ iPhone 用户将看到一个弹出问题，询问他是否希望允许应用接�
 
 因此，这里有一个 Android Java 示例，展示如何在`App`类中进行此类注册。`GCM_PROJECT_NUMBER`指的是 Google 开发者控制台中的项目编号，但我们会稍后讨论：
 
-```kt
+```java
 private GoogleCloudMessaging gcm; 
 ... 
 String regid = gcm.register(FlavorConstants.PushConfiguration.GoogleConfiguration.  
@@ -160,7 +160,7 @@ Log.i(getClass().toString(), "Obtained RegId from GCM : " + regid);
 
 此外，这里是如何在 iOS（Swift 3.x，iOS 10）的`AppDelegate`类中完成的。对于 iOS，您还需要在开发者门户中配置一些内容，我们稍后会看到：
 
-```kt
+```java
  func registerForPushNotifications(){         
         print ("PN - register for PN")         
         let center = UNUserNotificationCenter.current() 
@@ -240,7 +240,7 @@ Log.i(getClass().toString(), "Obtained RegId from GCM : " + regid);
 
 如果收到通知，它将在消息传递部分显示，这是操作系统为我们提供的。此外，我们可以定义如何处理它。在 Android 中，我们可以实现一个`PushHandler`类来消费通知，并使用`NotificationCompat`构建器为它定义特定的操作。以下是一个 Android Java 示例：
 
-```kt
+```java
 public class PushHandler extends NotificationsHandler { 
 
     Context ctx; 
@@ -299,7 +299,7 @@ public class PushHandler extends NotificationsHandler {
 
 在这里，我们也可以确定当推送通知到达时应该发生什么（在一定程度上）。完成处理程序确定是否显示通知或徽章，以及是否播放声音：
 
-```kt
+```java
     func application(_ application: UIApplication,  didFailToRegisterForRemoteNotificationsWithError error: Error) { 
         print("Failed to register: \(error)") 
     } 
@@ -337,7 +337,7 @@ public class PushHandler extends NotificationsHandler {
 
 以下是一个针对 Parse Server（Back4App）的云代码示例。它向所有监听特定频道的设备发送消息。您可以向所有用户发送推送通知，或者您可以设置用于客户分段的频道。您可以设置图标上的徽章数量（仅限 iOS），标题和消息：
 
-```kt
+```java
  Parse.Push.send({ channels: "channel or channels", data: { title: "title", sound: 'default',  badge: 2, alert: "message", extraParam: "something" } },  
     {   success: function () {   response.success("ok");   }, 
         error: function (error) { response.success("nok: " + error); }, 
@@ -347,7 +347,7 @@ public class PushHandler extends NotificationsHandler {
 
 无论您使用哪种服务，基本的有效负载总是相同的。此外，请注意，您可以使用它发送自定义参数：
 
-```kt
+```java
 data: { title: "title", sound: 'default',  badge: 2, alert: "message", extraParam: "something" }  
 ```
 

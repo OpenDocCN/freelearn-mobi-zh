@@ -58,43 +58,43 @@
 
 接下来，将以下依赖项添加到您的 `build.gradle.kts` 文件中：
 
-```kt
+```java
 val vertxVersion = "4.1.5"
 ```
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     implementation("io.vertx:vertx-core:$vertxVersion")
 ```
 
-```kt
+```java
     implementation("io.vertx:vertx-web:$vertxVersion")
 ```
 
-```kt
+```java
     implementation("io.vertx:vertx-lang-
 ```
 
-```kt
+```java
         kotlin:$vertxVersion")
 ```
 
-```kt
+```java
     implementation("io.vertx:vertx-lang-kotlin-
 ```
 
-```kt
+```java
         coroutines:$vertxVersion")
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -112,31 +112,31 @@ dependencies {
 
 然后，我们必须在`src/main/kotlin`文件夹中创建一个名为`server.kt`的文件，并包含以下内容：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     val vertx = Vertx.vertx()
 ```
 
-```kt
+```java
     vertx.createHttpServer().requestHandler{ ctx ->
 ```
 
-```kt
+```java
         ctx.response().end("OK")
 ```
 
-```kt
+```java
     }.listen(8081)
 ```
 
-```kt
+```java
     println("open http://localhost:8081")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -154,15 +154,15 @@ fun main() {
 
 为了做到这一点，我们将使用`Router`：
 
-```kt
+```java
 val vertx = Vertx.vertx()  
 ```
 
-```kt
+```java
 val router = Router.router(vertx) 
 ```
 
-```kt
+```java
 ...
 ```
 
@@ -170,35 +170,35 @@ val router = Router.router(vertx)
 
 现在，让我们添加一个`/status`端点，它将返回 HTTP 状态码`200`和一个消息，告知用户`OK`：
 
-```kt
+```java
 router.get("/status").handler { ctx ->
 ```
 
-```kt
+```java
     ctx.response()
 ```
 
-```kt
+```java
         .setStatusCode(200)
 ```
 
-```kt
+```java
         .end("OK")
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 vertx.createHttpServer()
 ```
 
-```kt
+```java
     .requestHandler(router)
 ```
 
-```kt
+```java
     .listen(8081)
 ```
 
@@ -206,35 +206,35 @@ vertx.createHttpServer()
 
 我们在第一个示例中学习了如何返回纯文本响应。所以，现在，让我们返回 JSON。大多数实际应用都使用 JSON 进行通信。让我们用以下代码替换状态处理器的主体：
 
-```kt
+```java
 val json = json {
 ```
 
-```kt
+```java
     obj(
 ```
 
-```kt
+```java
         "status" to "OK"
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 ctx.response()
 ```
 
-```kt
+```java
     .setStatusCode(200)
 ```
 
-```kt
+```java
     .end(json.toString())
 ```
 
@@ -252,63 +252,63 @@ ctx.response()
 
 让我们看看我们如何创建一个新的 verticle，它将封装我们的服务器：
 
-```kt
+```java
 class ServerVerticle : CoroutineVerticle() {
 ```
 
-```kt
+```java
     override suspend fun start() {
 ```
 
-```kt
+```java
         val router = router()
 ```
 
-```kt
+```java
         vertx.createHttpServer()
 ```
 
-```kt
+```java
             .requestHandler(router)
 ```
 
-```kt
+```java
             .listen(8081)
 ```
 
-```kt
+```java
         println("open http://localhost:8081")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     private fun router(): Router {
 ```
 
-```kt
+```java
         // Our router code comes here now  
 ```
 
-```kt
+```java
         val router = Router.router(vertx)
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         return router
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -316,37 +316,37 @@ class ServerVerticle : CoroutineVerticle() {
 
 开始一个垂直方向有多种方法，但最简单的方法是将类的实例传递给`deployVerticle()`方法。在我们的例子中，这是`ServerVerticle`类：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     val vertx = Vertx.vertx()
 ```
 
-```kt
+```java
     vertx.deployVerticle(ServerVerticle())
 ```
 
-```kt
+```java
 }
 ```
 
 这里是另一种更灵活的方法来指定类名作为字符串：
 
-```kt
+```java
 fun main() {
 ```
 
-```kt
+```java
     val vertx = Vertx.vertx()
 ```
 
-```kt
+```java
     vertx.deployVerticle("ServerVerticle")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -360,27 +360,27 @@ fun main() {
 
 我们将声明两个端点，用于从数据库中删除猫和更新特定猫的信息。我们将分别使用`delete`和`put`动词：
 
-```kt
+```java
 router.delete("/cats/:id").handler { ctx ->
 ```
 
-```kt
+```java
     // Code for deleting a cat
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 router.put("/cats/:id").handler { ctx ->
 ```
 
-```kt
+```java
     // Code for updating a cat
 ```
 
-```kt
+```java
 }
 ```
 
@@ -388,11 +388,11 @@ router.put("/cats/:id").handler { ctx ->
 
 为了能够解析 JSON 请求和响应，Vert.x 有一个`BodyHandler`类。现在，让我们也声明它。这应该在创建我们的路由对象之后进行：
 
-```kt
+```java
 val router = Router.router(vertx)
 ```
 
-```kt
+```java
 router.route().handler(BodyHandler.create())
 ```
 
@@ -406,7 +406,7 @@ router.route().handler(BodyHandler.create())
 
 1.  我们将保持`/alive`端点不变，但将所有其他端点提取到一个单独的函数中：
 
-    ```kt
+    ```java
     private fun catsRouter(): Router {
         val router = Router.router(vertx)
         router.delete("/:id").handler { ctx ->
@@ -423,7 +423,7 @@ router.route().handler(BodyHandler.create())
 
 1.  现在，我们需要将`SubRouter`连接到我们的主路由：
 
-    ```kt
+    ```java
     router.mountSubRouter("/cats", catsRouter())
     ```
 
@@ -437,31 +437,31 @@ router.route().handler(BodyHandler.create())
 
 你需要在你的`build.gradle.kts`文件中添加以下两个依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     testImplementation("org.junit.jupiter:junit-jupiter-
 ```
 
-```kt
+```java
         api:5.6.0")
 ```
 
-```kt
+```java
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-
 ```
 
-```kt
+```java
         engine:5.6.0")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -469,75 +469,75 @@ dependencies {
 
 所有集成测试的基本结构看起来像这样：
 
-```kt
+```java
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 ```
 
-```kt
+```java
 class ServerTest {
 ```
 
-```kt
+```java
     private val vertx: Vertx = Vertx.vertx()
 ```
 
-```kt
+```java
     @BeforeAll
 ```
 
-```kt
+```java
     fun setup() {
 ```
 
-```kt
+```java
         runBlocking {
 ```
 
-```kt
+```java
             vertx.deployVerticle(ServerVerticle()).await()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     @AfterAll
 ```
 
-```kt
+```java
     fun tearDown() {
 ```
 
-```kt
+```java
         // And you want to stop your server once
 ```
 
-```kt
+```java
         vertx.close()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun `status should return 200`() {
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -551,7 +551,7 @@ class ServerTest {
 
 让我们将它添加到我们的 `build.gradle.kts` 依赖项部分：
 
-```kt
+```java
 testImplementation("io.vertx:vertx-web-client:$vertxVersion")
 ```
 
@@ -559,47 +559,47 @@ testImplementation("io.vertx:vertx-web-client:$vertxVersion")
 
 添加了这个新的依赖项之后，我们需要在 `setup` 方法中实例化我们的网络客户端：
 
-```kt
+```java
 lateinit var client: WebClient
 ```
 
-```kt
+```java
 @BeforeAll
 ```
 
-```kt
+```java
 fun setup() {
 ```
 
-```kt
+```java
     vertx.deployVerticle(ServerVerticle())
 ```
 
-```kt
+```java
     client = WebClient.create(
 ```
 
-```kt
+```java
         vertx,
 ```
 
-```kt
+```java
         WebClientOptions()
 ```
 
-```kt
+```java
             .setDefaultPort(8081)
 ```
 
-```kt
+```java
             .setDefaultHost("localhost")
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
 }
 ```
 
@@ -607,31 +607,31 @@ fun setup() {
 
 现在，让我们编写一个测试来检查我们的服务器是否正在运行：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun `status should return 200`() {
 ```
 
-```kt
+```java
     runBlocking {
 ```
 
-```kt
+```java
         val response = client.get("/status").send().await()
 ```
 
-```kt
+```java
         assertEquals(201, response.statusCode())
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -651,11 +651,11 @@ fun `status should return 200`() {
 
 首先，让我们将以下两行添加到我们的 `build.gradle.kts` 依赖项部分：
 
-```kt
+```java
 implementation("org.postgresql:postgresql:42.3.0")
 ```
 
-```kt
+```java
 implementation("io.vertx:vertx-pg-client:$vertxVersion")
 ```
 
@@ -677,7 +677,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
     我们将存储上述参数在一个 `Singleton` 对象中：
 
-    ```kt
+    ```java
     object Db {
         val username = System.getenv("DATABASE_USERNAME")         ?: "cats_admin"
         val password = System.getenv("DATABASE_PASSWORD")         ?: "abcd1234"
@@ -690,7 +690,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 1.  现在，让我们添加一个函数，该函数将返回一个连接池：
 
-    ```kt
+    ```java
     fun connect(vertx: Vertx): SqlClient {
         val connectOptions = PgConnectOptions()
             .setPort(5432)
@@ -714,7 +714,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 1.  现在，我们只需要在我们的测试中实例化数据库客户端：
 
-    ```kt
+    ```java
     ...
     lateinit var db: SqlClient
 
@@ -729,7 +729,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 1.  做完这些之后，让我们在我们的测试文件中创建一个新的`Nested`类，用于处理我们预期数据库中会有猫的情况：
 
-    ```kt
+    ```java
     @Nested
     inner class `With Cat` {
         @BeforeEach
@@ -748,7 +748,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 1.  首先，让我们编写一个查询来清理我们的数据库：
 
-    ```kt
+    ```java
     @AfterEach
     fun deleteAll() {
         runBlocking {
@@ -763,7 +763,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 1.  现在，让我们编写另一个查询，在每次测试运行之前将猫添加到数据库中：
 
-    ```kt
+    ```java
     lateinit var catRow: Row
 
     @BeforeEach
@@ -787,7 +787,7 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 1.  现在我们已经为编写测试做好了准备：
 
-    ```kt
+    ```java
     @Test
     fun `delete deletes a cat by ID`() {
         runBlocking {
@@ -817,27 +817,27 @@ implementation("io.vertx:vertx-pg-client:$vertxVersion")
 
 为了更好地理解事件循环的概念，让我们回到我们的服务器代码，并尝试实现一个删除猫的端点：
 
-```kt
+```java
 val db = Db.connect(vertx)
 ```
 
-```kt
+```java
 router.delete("/:id").handler { ctx ->
 ```
 
-```kt
+```java
     val id = ctx.request().getParam("id").toInt()
 ```
 
-```kt
+```java
     db.preparedQuery("DELETE FROM cats WHERE ID = $1")        .execute(Tuple.of(id)).await()
 ```
 
-```kt
+```java
     ctx.end()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -847,31 +847,31 @@ Vert.x 使用有限数量的线程，大约是 CPU 核心数的两倍，以高�
 
 为了解决这个问题，我们可以使用我们已熟悉的协程构建器：`launch()`。让我们看看它是如何工作的：
 
-```kt
+```java
 router.delete("/:id").handler { ctx ->
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         val id = ctx.request().getParam("id").toInt()
 ```
 
-```kt
+```java
         db.preparedQuery("DELETE FROM cats WHERE ID = $1")            .execute(Tuple.of(id)).await()
 ```
 
-```kt
+```java
         ctx.end()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -879,97 +879,97 @@ router.delete("/:id").handler { ctx ->
 
 现在，我们只需要将我们的路由函数标记为 `suspend` 关键字：
 
-```kt
+```java
 private suspend fun router(): Router {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 private suspend fun catsRouter(): Router {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
 现在，让我们添加另一个测试来更新一只猫：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun `put updates a cat by ID`() {
 ```
 
-```kt
+```java
     runBlocking {
 ```
 
-```kt
+```java
         val catId = catRow.getInteger(0)
 ```
 
-```kt
+```java
         val requestBody = json {
 ```
 
-```kt
+```java
             obj("name" to "Meatloaf", "age" to 4)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         client.put("/cats/${catId}")
 ```
 
-```kt
+```java
             .sendBuffer(Buffer.buffer(requestBody.toString()))
 ```
 
-```kt
+```java
             .await()
 ```
 
-```kt
+```java
         val result = db.preparedQuery("SELECT * FROM cats 
 ```
 
-```kt
+```java
             WHERE id = $1")
 ```
 
-```kt
+```java
             .execute(Tuple.of(catId)).await()
 ```
 
-```kt
+```java
         assertEquals("Meatloaf",             result.first().getString("name"))
 ```
 
-```kt
+```java
         assertEquals(4, result.first().getInteger("age"))
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -979,63 +979,63 @@ fun `put updates a cat by ID`() {
 
 现在，让我们实现 `put` 端点以通过测试：
 
-```kt
+```java
 router.put("/:id").handler { ctx ->
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         val id = ctx.request().getParam("id").toInt()
 ```
 
-```kt
+```java
         val body = ctx.bodyAsJson
 ```
 
-```kt
+```java
         db.preparedQuery("UPDATE cats SET name = $1, age =             $2 WHERE ID = $3")
 ```
 
-```kt
+```java
             .execute(
 ```
 
-```kt
+```java
                 Tuple.of(
 ```
 
-```kt
+```java
                     body.getString("name"),
 ```
 
-```kt
+```java
                     body.getInteger("age"),
 ```
 
-```kt
+```java
                     id
 ```
 
-```kt
+```java
                 )
 ```
 
-```kt
+```java
             ).await()
 ```
 
-```kt
+```java
         ctx.end()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1063,55 +1063,55 @@ router.put("/:id").handler { ctx ->
 
 现在，让我们在我们的`CatsVerticle`类中订阅一个事件：
 
-```kt
+```java
 class CatsVerticle : CoroutineVerticle() {
 ```
 
-```kt
+```java
     override suspend fun start() {
 ```
 
-```kt
+```java
         val db = Db.connect(vertx)
 ```
 
-```kt
+```java
         vertx.eventBus().consumer<Int>("cats:delete"){req->
 ```
 
-```kt
+```java
             launch {
 ```
 
-```kt
+```java
                 val id = req.body()
 ```
 
-```kt
+```java
                 db.preparedQuery("DELETE FROM                   cats WHERE ID = $1")
 ```
 
-```kt
+```java
                     .execute(Tuple.of(id)).await()
 ```
 
-```kt
+```java
                 req.reply(null)
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1123,27 +1123,27 @@ class CatsVerticle : CoroutineVerticle() {
 
 现在，让我们用以下代码替换我们之前的`delete`路由：
 
-```kt
+```java
 router.delete("/:id").handler { ctx ->
 ```
 
-```kt
+```java
     val id = ctx.request().getParam("id").toInt()
 ```
 
-```kt
+```java
     vertx.eventBus().request<Nothing>("cats:delete", id) {
 ```
 
-```kt
+```java
         ctx.end()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1151,7 +1151,7 @@ router.delete("/:id").handler { ctx ->
 
 由于我们将代码拆分成了一个新的 verticle，我们需要记住也要启动它。在你的测试中，向`main()`函数和`setup()`方法中添加以下行：
 
-```kt
+```java
 vertx.deployVerticle(CatsVerticle())
 ```
 
@@ -1163,47 +1163,47 @@ vertx.deployVerticle(CatsVerticle())
 
 让我们重写我们的`put`处理器，如下所示：
 
-```kt
+```java
 router.put("/:id").handler { ctx ->
 ```
 
-```kt
+```java
     launch {
 ```
 
-```kt
+```java
         val id = ctx.request().getParam("id").toInt()
 ```
 
-```kt
+```java
         val body: JsonObject = ctx.bodyAsJson.mergeIn(json{            obj("id" to id)
 ```
 
-```kt
+```java
         })
 ```
 
-```kt
+```java
         vertx.eventBus().request<Int>("cats:update", body) 
 ```
 
-```kt
+```java
           { res ->
 ```
 
-```kt
+```java
             ctx.end(res.result().body().toString())
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1211,55 +1211,55 @@ router.put("/:id").handler { ctx ->
 
 现在，让我们看看我们如何消费我们刚刚发送的事件：
 
-```kt
+```java
 vertx.eventBus().consumer<JsonObject>("cats:update"){req ->    launch {
 ```
 
-```kt
+```java
         val body = req.body()
 ```
 
-```kt
+```java
         db.preparedQuery("UPDATE cats SET name = $1, age =             $2 WHERE ID = $3")
 ```
 
-```kt
+```java
             .execute(
 ```
 
-```kt
+```java
                 Tuple.of(
 ```
 
-```kt
+```java
                     body.getString("name"),
 ```
 
-```kt
+```java
                     body.getInteger("age"),
 ```
 
-```kt
+```java
                     body.getInteger("id")
 ```
 
-```kt
+```java
                 )
 ```
 
-```kt
+```java
             ).await()
 ```
 
-```kt
+```java
         req.reply(body.getInteger("id"))
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 

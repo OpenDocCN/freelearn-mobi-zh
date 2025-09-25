@@ -30,7 +30,7 @@
 
 1.  实现`Printer`类：
 
-```kt
+```java
 class Printer(val textFormattingStrategy: (String) -> String) {
     fun printText(text: String) {
         val processedText = textFormattingStrategy(text)
@@ -41,7 +41,7 @@ class Printer(val textFormattingStrategy: (String) -> String) {
 
 1.  添加示例策略：
 
-```kt
+```java
 val lowerCaseFormattingStrategy: (String) -> String = {
     it.toLowerCase()
 }
@@ -55,14 +55,14 @@ val upperCaseFormattingStrategy: (String) -> String = {
 
 让我们先测试一下我们的`Printer`类在实际操作中的工作情况。首先，声明两个`Printer`类的实例——第一个实例使用`lowerCaseFormattingStrategy`作为`textFormattingStrategy`属性的值，第二个实例使用`upperCaseFormattingStrategy`：
 
-```kt
+```java
 val lowerCasePrinter = Printer(lowerCaseFormattingStrategy)
 val upperCasePrinter = Printer(upperCaseFormattingStrategy)
 ```
 
 接下来，让我们使用它们来格式化和显示以下文本：
 
-```kt
+```java
 val text = "This functional-style Strategy pattern looks tasty!"
 
 lowerCasePrinter.printText(text)
@@ -71,7 +71,7 @@ upperCasePrinter.printText(text)
 
 以下输出将打印到控制台：
 
-```kt
+```java
 this functional-style strategy pattern looks tasty!
 THIS FUNCTIONAL-STYLE STRATEGY PATTERN LOOKS TASTY!
 ```
@@ -108,7 +108,7 @@ THIS FUNCTIONAL-STYLE STRATEGY PATTERN LOOKS TASTY!
 
 1.  声明实现 `Publication` 接口的 `Magazine` 类：
 
-```kt
+```java
 class Magazine(val number: Int,
                title: String,
                pageCount: Int) : Publication
@@ -116,7 +116,7 @@ class Magazine(val number: Int,
 
 1.  将 `Publication` 接口委托给 `Publication` 类型的类属性：
 
-```kt
+```java
 class Magazine(val number: Int,
                val publication: Publication) :
         Publication by publication
@@ -124,7 +124,7 @@ class Magazine(val number: Int,
 
 1.  实现 `Rentable` 接口：
 
-```kt
+```java
 interface Rentable {
     var currentUser: Optional<User>
 
@@ -143,7 +143,7 @@ interface Rentable {
 
 1.  实现 `Book` 类，将其 `Publication` 接口功能委托给类成员：
 
-```kt
+```java
 class Book(val publicationDate: Instant,
            val author: String,
            val publication: Publication) :
@@ -155,7 +155,7 @@ class Book(val publicationDate: Instant,
 
 1.  实现 `Member` 和 `Librarian` 类，实现 `User` 接口并将其委托给它们的类属性：
 
-```kt
+```java
 class Member(val currentRentals: List<Rentable>,
              name: String,
              isActive: Boolean,
@@ -170,14 +170,14 @@ class Librarian(user: User) : User by user
 
 现在，让我们探索如何使用委托类型。让我们首先创建一个 `Book` 类的实例。我们通过重用原始的 `BasePublication` 类声明提供了一个 `Book.publication` 属性，其类型为 `Publication`：
 
-```kt
+```java
 class BasePublication(override val title: String, 
                       override val pageCount: Int): Publication
 ```
 
 注意，我们能够直接从 `Book` 类实例访问 `Publication` 接口的所有公共成员。对这些 `Publication` 接口属性的任何请求都被重定向到 `Book` 类的 `val publication` 属性：
 
-```kt
+```java
 val book = Book(Instant.now(), "Sam", 
         BasePublication("Kotlin Standard Library Cookbook",
          Integer.MAX_VALUE))
@@ -187,7 +187,7 @@ println("${book.title} written by ${book.author} has ${book.pageCount} pages.")
 
 在结果中，前面的代码应该在控制台输出以下内容：
 
-```kt
+```java
 Kotlin Standard Library Cookbook written by Sam has 2147483647 pages.
 ```
 
@@ -211,7 +211,7 @@ Kotlin 中的类属性不仅仅是普通的类字段。Kotlin 属性的关键特
 
 类似于接口委托，类属性委托是通过以下方式使用`by`关键字实现的：
 
-```kt
+```java
 class MyClass {
     var property: String by MyDelegate
 }
@@ -221,7 +221,7 @@ class MyClass {
 
 我们将使用`Gson`库将对象转换为它们的 JSON 格式表示。这是一个广泛使用的 Java 库，用于处理 JSON 格式的对象。您可以在其 GitHub 网站上了解更多关于该库的信息（[`github.com/google/gson`](https://github.com/google/gson)）。如果您使用 Gradle 构建工具，您需要将 Gson 工件添加到项目依赖项中：
 
-```kt
+```java
 dependencies {
     implementation 'com.google.code.gson:gson:2.8.4'
 }
@@ -231,13 +231,13 @@ dependencies {
 
 1.  实现包含`Map<String, Any>`类型数据属性的`Client`类：
 
-```kt
+```java
 data class Client(private val data: Map<String, Any>)
 ```
 
 1.  实现以下`CreditCard`类：
 
-```kt
+```java
 data class CreditCard(val holderName: String,
                       val number: String,
                       val cvcCode: String,
@@ -246,7 +246,7 @@ data class CreditCard(val holderName: String,
 
 1.  将`name`、`email`和`creditCards`属性添加到`Client`类中，并将它们委托给`data`属性：
 
-```kt
+```java
 data class Client(private val data: Map<String, Any>) {
     val name: String by data
     val email: String by data
@@ -256,7 +256,7 @@ data class Client(private val data: Map<String, Any>) {
 
 1.  实现成员函数`toJson(): String`，允许我们将`Client`类型对象序列化为 JSON 格式，以及负责相反操作的实用函数`fromJson(json: String): Client`：
 
-```kt
+```java
 data class Client(private val data: Map<String, Any>) {
     val name: String by data
     val email: String by data
@@ -292,7 +292,7 @@ data class Client(private val data: Map<String, Any>) {
 
 让我们看看如何利用这个菜谱中实现的 `Client` 类。我们可以通过将 `Map` 实例传递给类构造函数来实例化 `Client` 类：
 
-```kt
+```java
 val SAMPLE_CLIENT_MAP = mapOf("name" to "Mark Zuck",
         "email" to "mark@fb.com",
         "creditCards" to listOf(
@@ -306,7 +306,7 @@ val client1 = Client(SAMPLE_CLIENT_MAP)
 
 我们还可以使用 `fromJson()` 函数实例化 `Client` 类，传递一个包含样本 `Client` 类型对象 JSON 表示的字符串：
 
-```kt
+```java
 @Language("JSON")
 const val SAMPLE_CLIENT_JSON =
         "{\n  \"name\": \"Mark Zuck\",
@@ -335,14 +335,14 @@ val client2 = Client.fromJson(SAMPLE_CLIENT_JSON)
 
 我们现在可以测试这两种方法，并将 `client1` 和 `client2` 对象的内容打印到控制台：
 
-```kt
+```java
 println("name: ${client1.name}, mail: ${client1.email}, cards: ${client1.creditCards}")
 println("name: ${client2.name}, email: ${client2.email}, cards: ${client2.creditCards}")
 ```
 
 作为结果，我们将得到以下输出打印到控制台：
 
-```kt
+```java
 name: Mark Zuck, email: mark@fb.com, cards: [{holderName=Mark Zuckerber, number=123345456789, cvc=123, expiration=1.527330705017E12}, {holderName=Mark Zuckerber, number=987654321, cvc=321, expiration=1.527330719816E12}]
 
 name: Mark Zuck, email: mark@fb.com, cards: [CreditCard(holderName=Mark Zuckerberg, number=123345456789, cvcCode=123, expiration=1527330705017), CreditCard(holderName=Mark Zuckerberg, number=987654321, cvcCode=321, expiration=1527330719816)]
@@ -370,13 +370,13 @@ name: Mark Zuck, email: mark@fb.com, cards: [CreditCard(holderName=Mark Zuckerbe
 
 1.  定义温度变量的初始值：
 
-```kt
+```java
 val initialValue = 1
 ```
 
 1.  声明将被观察的变量的监听器：
 
-```kt
+```java
 val initialValue = 1
 val changesListener: (KProperty<*>, Int, Int) -> Unit =
  { _, _: Int, newValue: Int -> println("Current temperature: $newValue") }
@@ -384,7 +384,7 @@ val changesListener: (KProperty<*>, Int, Int) -> Unit =
 
 1.  声明`temperature`变量，将其值委托给由`Delegates.observable()`函数返回的`ReadWriteProperty`实例：
 
-```kt
+```java
 val initialValue = 1
 val changesListener: (KProperty<*>, Int, Int) -> Unit =
         { _, _: Int, newValue: Int -> println("Current temperature: $newValue") }
@@ -397,7 +397,7 @@ var temperature: Int by Delegates.observable(initialValue, changesListener)
 
 让我们测试我们的实现将如何工作。我们将直接修改温度值几次：
 
-```kt
+```java
 temperature = 10
 temperature = 11
 temperature = 12
@@ -406,7 +406,7 @@ temperature = 30
 
 因此，我们得到以下输出：
 
-```kt
+```java
 Current temperature: 10
 Current temperature: 11
 Current temperature: 12
@@ -427,13 +427,13 @@ Current temperature: 30
 
 1.  让我们从为温度变量定义一个初始值开始：
 
-```kt
+```java
 val initialValue = 1
 ```
 
 1.  定义观察变量的更新条件：
 
-```kt
+```java
 val initialTemperature = 1
 val updateCondition: (KProperty<*>, Int, Int) -> Boolean =
  { _, oldValue: Int, newValue: Int -> Math.abs(oldValue - newValue) >= 10 }
@@ -441,7 +441,7 @@ val updateCondition: (KProperty<*>, Int, Int) -> Boolean =
 
 1.  声明 `temperature: Int` 变量并将其委派给 `Delegates.vetoable()` 函数的结果：
 
-```kt
+```java
 val initialTemperature = 1
 val updateCondition: (KProperty<*>, Int, Int) -> Boolean =
         { _, oldValue: Int, newValue: Int -> Math.abs(oldValue - newValue) >= 10 }
@@ -454,13 +454,13 @@ var temperature: Int by Delegates.vetoable(initialTemperature, updateCondition)
 
 该函数提供了委派变量的当前值和新值的候选者。作为结果，该函数返回一个布尔值——如果值可以更新，则返回 `true`，如果更新条件不满足，则返回 `false`。在我们的情况下，我们将该函数实例化为 lambda 块，在其中检查变化的绝对值是否大于或等于 `10`：
 
-```kt
+```java
 { _, oldValue: Int, newValue: Int -> Math.abs(oldValue - newValue) >= 10 }
 ```
 
 让我们测试我们的实现将如何工作。我们将直接修改 `temperature` 的值几次，使用不同的值，并通过将 `temperature` 状态打印到控制台来验证更新是否被批准：
 
-```kt
+```java
 temperature = 10
 println("Current temperature: $temperature")
 
@@ -476,7 +476,7 @@ println("Current temperature: $temperature")
 
 因此，我们得到以下输出打印出来：
 
-```kt
+```java
 Current temperature: 1
 Current temperature: 11
 Current temperature: 11
@@ -497,7 +497,7 @@ Current temperature: 30
 
 1.  定义一个名为 `ObservableVetoableDelegate` 的自定义属性代理，作为 `ObservableProperty` 类的子类：
 
-```kt
+```java
 class ObservableVetoable<T>(initialValue: T,
                           val updatePrecondition: (old: T, new: T)
                            -> Boolean,
@@ -519,7 +519,7 @@ class ObservableVetoable<T>(initialValue: T,
 
 1.  定义 `ObservableVetoable` 类所需的 `initialTemperature`、`updatePrecondition` 和 `updateListener` 参数：
 
-```kt
+```java
 val initialTemperature = 1
 val updatePrecondition: (Int, Int) -> Boolean =
         { oldValue, newValue -> Math.abs(oldValue - newValue) >= 10 }
@@ -529,7 +529,7 @@ val updateListener: (Int, Int) -> Unit = { _, newValue -> println(newValue) }
 
 1.  通过委托给`ObservableVetoable`类实例来声明`temperature: Int`变量：
 
-```kt
+```java
 var temperature: Int by ObservableVetoable(initialTemperature, 
                                            updatePrecondition, 
                                            updateListener)
@@ -539,7 +539,7 @@ var temperature: Int by ObservableVetoable(initialTemperature,
 
 我们已经定义了`ObservableVetoable`类，并将`var temperature: Int`变量委托给`ObservableVetoable`实例。我们的`ObservableVetoable`类扩展了`ObservableProperty`类，后者在底层实现了`ReadWriteProperty`接口。正因为如此，`ObservableProperty`允许我们将可变属性委托给它。`ObservableProperty`类还具有`beforeChange(): Boolean`和`afterChange(): Unit`公开函数，这些函数在`setValue()`函数内部被调用：
 
-```kt
+```java
 public override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
     val oldValue = this.value
     if (!beforeChange(property, oldValue, value)) {
@@ -554,7 +554,7 @@ public override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
 
 例如，我们可以通过用不同的值更新`temperature`变量五次来测试我们的实现：
 
-```kt
+```java
 temperature = 11
 temperature = 12
 temperature = 13
@@ -564,7 +564,7 @@ temperature = 30
 
 结果，我们将在控制台输出只有两行：
 
-```kt
+```java
 11
 30
 ```
@@ -585,7 +585,7 @@ temperature = 30
 
 1.  让我们从定义`CoffeeMaker`类开始：
 
-```kt
+```java
 class CoffeeMaker {
     init {
         println("I'm being created right now... Ready to make some
@@ -604,7 +604,7 @@ class CoffeeMaker {
 
 1.  使用`lazy`委托声明一个`CoffeMaker`类型的变量：
 
-```kt
+```java
 val coffeeMaker: CoffeeMaker by lazy { CoffeeMaker() }
 ```
 
@@ -612,20 +612,20 @@ val coffeeMaker: CoffeeMaker by lazy { CoffeeMaker() }
 
 让我们通过运行以下代码来测试 `coffeeMaker` 实例的行为：
 
-```kt
+```java
 val coffeMaker: CoffeeMaker by lazy { CoffeeMaker() }
 println("Is the CoffeMaker created already?")
 
 ```
 
-```kt
+```java
 coffeMaker.makeEspresso()
 coffeMaker.makeAmericano()
 ```
 
 下面是打印到控制台的结果：
 
-```kt
+```java
 Is the CoffeMaker created already?
 I'm being created right now... Ready to make some coffe!
 Un espresso, per favore!
@@ -638,7 +638,7 @@ Un caffè americano, per favore!
 
 `lazy()` 函数创建并返回 `Lazy<T>` 接口的实例：
 
-```kt
+```java
 public interface Lazy<out T> {
     public val value: T
     public fun isInitialized(): Boolean
@@ -659,7 +659,7 @@ public interface Lazy<out T> {
 
 假设我们有一个 `Dialog` 类在外部依赖中指定，提供的接口如下：
 
-```kt
+```java
 class Dialog {
     lateinit var title: String
     lateinit var message: String
@@ -675,7 +675,7 @@ class Dialog {
 
 `Dialog` 类公开以下属性——`title: String`、`message: String`、`messageColor: String` 和 `image: File`。我们将实现一个 `DialogBuilder` 类，它允许我们使用构建器模式实例化 `Dialog` 类。作为结果，我们希望创建一个机制，允许我们使用类似于 JSON 格式的 DSL 语法实例化 `Dialog` 类型：
 
-```kt
+```java
 val dialog: Dialog = 
     dialog {
         title {
@@ -695,7 +695,7 @@ val dialog: Dialog =
 
 1.  创建一个包含 `Dialog` 类属性所需值的 `DialogBuilder` 类：
 
-```kt
+```java
 class DialogBuilder() {
  private var titleHolder = "-"
   private var messageHolder = StyleableText("-", "#000")
@@ -710,7 +710,7 @@ class DialogBuilder() {
 
 1.  添加 `title()`、`message()` 和 `image()` 函数，允许我们修改 `titleHolder`、`message` 和 `image` 属性：
 
-```kt
+```java
 class DialogBuilder() {
   private var titleHolder = "-"
   private var messageHolder = StyleableText("-", "#000")
@@ -737,7 +737,7 @@ class DialogBuilder() {
 
 1.  添加 `build()` 函数，返回 `Dialog` 类实例：
 
-```kt
+```java
 class DialogBuilder() {
   private var titleHolder = "-"
   private var messageHolder = StyleableText("-", "#000")
@@ -773,7 +773,7 @@ class DialogBuilder() {
 
 1.  声明一个构造函数，它接受一个负责初始化 `DialogBuilder` 类的函数：
 
-```kt
+```java
 class DialogBuilder() {
   private var titleHolder = "-"
   private var messageHolder = StyleableText("-", "#000")
@@ -814,7 +814,7 @@ class DialogBuilder() {
 
 1.  实现一个 `dialog()` 辅助函数，它接受一个负责初始化 `DialogBuilder` 的函数，并返回 `Dialog` 类实例：
 
-```kt
+```java
 fun dialog(block: DialogBuilder.() -> Unit): Dialog =            DialogBuilder(block).build()
 ```
 
@@ -822,7 +822,7 @@ fun dialog(block: DialogBuilder.() -> Unit): Dialog =            DialogBuilder(b
 
 让我们先测试一下如何在实际操作中使用我们的 `dialog()` 函数。让我们用它来定义一个示例 `Dialog` 类实例：
 
-```kt
+```java
 val dialog =
         dialog {
             title {
@@ -840,7 +840,7 @@ val dialog =
 
 现在，我们可以在 `dialog` 变量上调用 `show()` 函数，这将打印以下输出到控制台：
 
-```kt
+```java
 Dialog...
 Title: Warning! 
 Image: [B@548c4f57 
@@ -855,7 +855,7 @@ Message: You have 99999 viruses on your computer!
 
 例如，`title(block: () -> String)` 函数简单地调用块函数并将结果分配给 `DialogBuilder.titleHolder` 属性。另一方面，当我们处理复杂类型，如 `StyleableText` 时，我们使用带有接收者类型函数参数的第二种方法。例如，让我们分析 `message(block: StyleableText.() -> Unit)` 函数：
 
-```kt
+```java
 fun message(block: StyleableText.() -> Unit) {
     messageHolder.apply { block() }
 }
@@ -863,7 +863,7 @@ fun message(block: StyleableText.() -> Unit) {
 
 在底层，它执行的是 `block: StyleableText.() -> Unit` 参数来直接修改 `messageHolder: StyleableText` 属性实例。`block` 参数通过 `apply` 函数内部的 `()` 修饰符被调用，在这种情况下，它通过局部 `this` 关键字提供了对 `messageHolder` 实例的访问。同样的方法也用于 `DialogBuilder` 类的构造函数中：
 
-```kt
+```java
 constructor(initBlock: DialogBuilder.() -> Unit): this() {
     initBlock()
 }
@@ -875,7 +875,7 @@ constructor(initBlock: DialogBuilder.() -> Unit): this() {
 
 DSL 风格构建器的概念在许多 Kotlin 库和框架中被广泛使用。它也被标准库所采用。例如，我们可以使用 `kotlinx.html` 库中的 `html` 函数([`github.com/Kotlin/kotlinx.html`](https://github.com/Kotlin/kotlinx.html))来生成 HTML 代码：
 
-```kt
+```java
 val result =
         html {
             head {
@@ -894,7 +894,7 @@ println(result)
 
 上述代码将生成有效的 HTML 代码并将其打印到控制台：
 
-```kt
+```java
 <html>   
     <head>     
         <title>HTML encoding with Kotlin</title>   

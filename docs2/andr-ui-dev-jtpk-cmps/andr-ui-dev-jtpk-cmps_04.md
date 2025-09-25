@@ -54,7 +54,7 @@ Kotlin 函数的签名由以下部分或构建块组成：
 
 你想要传递给可组合函数的所有数据都通过一个逗号分隔的列表提供，该列表被括号包围。如果一个可组合函数不需要值，列表保持为空。以下是一个可以接收两个参数的可组合函数示例：
 
-```kt
+```java
 @Composable
 fun ColoredTextDemo(
   text: String = "",
@@ -73,7 +73,7 @@ fun ColoredTextDemo(
 
 如果一个函数的代码包含多个语句或表达式，它将被括号包围。Kotlin 提供了一个很好的缩写，如果只需要执行一个表达式，那就是 Jetpack Compose 本身经常使用的。
 
-```kt
+```java
 @Composable
 fun ShortColoredTextDemo(
     text: String = "",
@@ -90,7 +90,7 @@ fun ShortColoredTextDemo(
 
 让我们通过打印调用一个可组合函数的结果来测试这一点：
 
-```kt
+```java
 class SandboxActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -106,7 +106,7 @@ class SandboxActivity : ComponentActivity() {
 
 如果您运行应用程序，以下行将被打印：
 
-```kt
+```java
 I/System.out: kotlin.Unit
 ```
 
@@ -178,7 +178,7 @@ I/System.out: kotlin.Unit
 
 让我们看看`stringResource()`来了解原因。记住，你可以按 Ctrl + 点击一个名称来查看其源代码。这个函数相当短；它只做了两件事：
 
-```kt
+```java
 val resources = resources()
 return resources.getString(id)
 ```
@@ -211,7 +211,7 @@ return resources.getString(id)
 
 有时候，您可能想在多个可组合函数中使用一个状态。例如，您可能希望使用一个滑块设置的颜色部分来创建完整的颜色，而这个颜色反过来又成为文本的背景色。那么，您如何共享状态？让我们先看看`ColorPicker()` – 它在`Column()`中垂直排列三个滑块：
 
-```kt
+```java
 @Composable
 fun ColorPicker(color: MutableState<Color>) {
   val red = color.value.red
@@ -249,7 +249,7 @@ fun ColorPicker(color: MutableState<Color>) {
 
 现在，让我们学习颜色是如何传递给文本的：
 
-```kt
+```java
 Column(
   modifier = Modifier.width(min(400.dp, maxWidth)),
   horizontalAlignment = Alignment.CenterHorizontally
@@ -274,7 +274,7 @@ Column(
 
 `ColorPicker()`和`Text()`在`Column()`内部垂直排列（水平居中）。列的宽度是`400`密度无关像素或`maxWidth`，取决于哪个值更小。`maxWidth`由预定义的`BoxWithConstraints()`组合函数定义（你将在*控制大小*部分了解更多关于它的内容）。`ColorPicker()`和`Text()`的颜色定义如下：
 
-```kt
+```java
 val color = remember { mutableStateOf(Color.Magenta) }
 ```
 
@@ -286,7 +286,7 @@ val color = remember { mutableStateOf(Color.Magenta) }
 
 此外，你注意到`TextStyle()`内部的`complementary()`调用吗？这是它的作用：
 
-```kt
+```java
 fun Color.complementary() = Color(
   red = 1F - red,
   green = 1F - green,
@@ -320,7 +320,7 @@ fun Color.complementary() = Color(
 
 然而，`fillMaxWidth()` 可能不是滑块的合适选择。在我看来，由于需要拖动滑块的手柄到达最小或最大值，大滑块使用起来会感到笨拙。所以，问题是如何限制其宽度？最直接的方法是使用 `width()` 修饰符。它将组合函数的首选宽度设置为特定的大小。我希望滑块的最大宽度为 400 密度无关像素。如果屏幕更小，则使用其宽度。以下是实现方法：
 
-```kt
+```java
 modifier = Modifier.width(min(400.dp, maxWidth)),
 ```
 
@@ -328,7 +328,7 @@ modifier = Modifier.width(min(400.dp, maxWidth)),
 
 `maxWidth` 由 `BoxWithConstraints()` 组合函数提供：
 
-```kt
+```java
 BoxWithConstraints(
   contentAlignment = Alignment.Center,
   modifier = Modifier.fillMaxSize()
@@ -395,7 +395,7 @@ BoxWithConstraints(
 
 这就是代码的样子：
 
-```kt
+```java
 @Composable
 fun OrderDemo() {
   var color by remember { mutableStateOf(Color.Blue) }
@@ -425,7 +425,7 @@ fun OrderDemo() {
 
 让我们看看一个可组合函数如何接收 `modifier` 参数：
 
-```kt
+```java
 @Composable
 fun TextWithYellowBackground(
   text: String,
@@ -466,7 +466,7 @@ fun TextWithYellowBackground(
 
 修饰符的调用方式如下：
 
-```kt
+```java
 Text(
   text = "Hello Compose",
   modifier = Modifier
@@ -479,7 +479,7 @@ Text(
 
 如你所见，修饰符很好地整合到了现有的修饰符链中。现在，让我们看看源代码：
 
-```kt
+```java
 fun Modifier.drawYellowCross() = then(
   object : DrawModifier {
     override fun ContentDrawScope.draw() {

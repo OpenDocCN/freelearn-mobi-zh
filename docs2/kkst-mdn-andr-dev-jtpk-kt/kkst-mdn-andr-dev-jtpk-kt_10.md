@@ -76,7 +76,7 @@ Clean Architecture 的另一个基本原则是 **依赖规则**，我们将在 *
 
 1.  在`RestaurantsRepository`内部，重构`getAllRestaurants()`方法，通过在返回的餐厅上调用`sortedBy { }`扩展函数来按`title`排序餐厅：
 
-    ```kt
+    ```java
     suspend fun getAllRestaurants(): List<Restaurant> {
         return withContext(Dispatchers.IO) {
             try {
@@ -94,7 +94,7 @@ Clean Architecture 的另一个基本原则是 **依赖规则**，我们将在 *
 
 这里的问题是，在`RestaurantsRepository`中，`toggleFavoriteRestaurant()`方法从**数据访问对象**（**DAO**）返回未排序的餐厅版本：
 
-```kt
+```java
 suspend fun toggleFavoriteRestaurant(…)= withContext(…){
     …
     restaurantsDao.getAll()
@@ -163,7 +163,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…){
 
 1.  点击应用程序包，将`GetRestaurantsUseCase`作为名称，选择**类**，并添加以下代码：
 
-    ```kt
+    ```java
     class GetRestaurantsUseCase {
         private val repository: RestaurantsRepository = 
             RestaurantsRepository()
@@ -180,7 +180,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…){
 
 我们这样做是因为 Kotlin 允许我们在类上定义一个`invoke`操作符，这样我们就可以在类的任何实例上调用它而不需要方法名。这就是我们将如何调用`GetRestaurantsUseCase`的`invoke()`操作符：
 
-```kt
+```java
 val useCase = GetRestaurantsUseCase()
 val result = useCase()
 ```
@@ -189,7 +189,7 @@ val result = useCase()
 
 1.  确保删除我们在`RestaurantsRepository`的`getAllRestaurants()`方法中最初添加的排序逻辑。该方法返回的数据应如下所示：
 
-    ```kt
+    ```java
     suspend fun getAllRestaurants(): List<Restaurant> {
         return withContext(Dispatchers.IO) {
             try { … } catch (e: Exception) {…}
@@ -200,7 +200,7 @@ val result = useCase()
 
 1.  在`RestaurantsViewModel`内部，向`GetRestaurantsUseCase`类添加一个新的依赖项：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
       private val repository = RestaurantsRepository()
       private val getRestaurantsUseCase = GetRestaurantsUseCase()
@@ -210,7 +210,7 @@ val result = useCase()
 
 1.  然后，在`ViewModel`的`getRestaurants()`方法中，移除对`repository`变量的餐厅调用，而是调用`getRestaurantsUseCase`变量的`invoke()`操作符：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(errorHandler) {
             val restaurants = getRestaurantsUseCase()
@@ -224,7 +224,7 @@ val result = useCase()
 
 如果我们查看`RestaurantsRepository`内部，`toggleFavoriteRestaurant()`方法接受一个`oldValue: Boolean`参数，并在将其传递给`PartialRestaurant`的`isFavorite`字段之前对其进行取反：
 
-```kt
+```java
 suspend fun toggleFavoriteRestaurant(
     id: Int,
     oldValue: Boolean
@@ -246,7 +246,7 @@ suspend fun toggleFavoriteRestaurant(
 
 1.  首先，在`RestaurantsRepository`内部，将`oldValue`参数重命名为`value`，并确保在将其传递给`PartialRestaurant`的`isFavorite`字段时不再对其进行取反：
 
-    ```kt
+    ```java
     suspend fun toggleFavoriteRestaurant(id: Int, value: Boolean)=
         withContext(Dispatchers.IO) {
             restaurantsDao.update(
@@ -258,7 +258,7 @@ suspend fun toggleFavoriteRestaurant(
 
 1.  点击应用程序包，将`ToggleRestaurantUseCase`作为名称，选择**类**，并添加以下代码：
 
-    ```kt
+    ```java
     class ToggleRestaurantUseCase {
         private val repository: RestaurantsRepository =
             RestaurantsRepository()
@@ -277,7 +277,7 @@ suspend fun toggleFavoriteRestaurant(
 
 1.  在`RestaurantsViewModel`内部，添加对`ToggleRestaurantUseCase`类的新依赖：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         private val getRestaurantsUseCase =
     GetRestaurantsUseCase()
@@ -290,7 +290,7 @@ suspend fun toggleFavoriteRestaurant(
 
 1.  然后，在`ViewModel`的`toggleFavorite()`方法中，移除对`repository`变量的切换餐厅调用，而是调用`toggleRestaurantUseCase`变量的`invoke()`运算符：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int, oldValue: Boolean) {
         viewModelScope.launch(errorHandler) {
             val updatedRestaurants = 
@@ -308,7 +308,7 @@ suspend fun toggleFavoriteRestaurant(
 
 让我们回到`RestaurantsRepository`并检查`toggleFavoriteRestaurant`方法：
 
-```kt
+```java
 suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
     restaurantsDao.update(
         PartialRestaurant(id = id, isFavorite = value)
@@ -323,7 +323,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  首先，在`RestaurantsRepository`内部，从`toggleFavoriteRestaurant`方法中移除`restaurantsDao.getAll()`调用：
 
-    ```kt
+    ```java
     suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
         restaurantsDao.update(
             PartialRestaurant(id = id, isFavorite = value)
@@ -335,7 +335,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  然后，在`ToggleRestaurantUseCase`类中，移除`repository.toggleFavoriteRestaurant()`行的返回语句，而是通过直接实例化和调用`GetRestaurantsUseCase`类的`invoke()`运算符来返回排序后的餐厅列表：
 
-    ```kt
+    ```java
     class ToggleRestaurantUseCase {
         private val repository: … = RestaurantsRepository()
         suspend operator fun invoke(…): List<Restaurant> {
@@ -354,7 +354,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  首先，在`RestaurantsRepository`内部添加一个名为`getRestaurants()`的新方法，该方法仅从我们的 Room DAO 检索餐厅：
 
-    ```kt
+    ```java
     suspend fun getRestaurants() : List<Restaurant> {
         return withContext(Dispatchers.IO) {
             return@withContext restaurantsDao.getAll()
@@ -364,7 +364,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  点击应用程序包，选择`GetSortedRestaurantsUseCase`作为名称，选择**类**，并添加以下代码：
 
-    ```kt
+    ```java
     class GetSortedRestaurantsUseCase {
         private val repository: RestaurantsRepository = 
             RestaurantsRepository()
@@ -379,7 +379,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  在`ToggleRestaurantUseCase`中使用新创建的`GetSortedRestaurantsUseCase`类，这样我们每次切换餐厅的收藏或不收藏状态时都只获取缓存的餐厅：
 
-    ```kt
+    ```java
     class ToggleRestaurantUseCase {
         private val repository: … = RestaurantsRepository()
         private val getSortedRestaurantsUseCase =
@@ -396,7 +396,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  首先，在`RestaurantsRepository`内部更新`getAllRestaurants`方法，不再通过不再返回`restaurantsDao.getAll()`来返回餐厅，同时删除函数的返回类型：
 
-    ```kt
+    ```java
     suspend fun getAllRestaurants() {
         return withContext(Dispatchers.IO) {
             try { … } catch (e: Exception) { … }
@@ -406,7 +406,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  将`getAllRestaurants`方法重命名为`loadRestaurants()`以更好地反映其职责：
 
-    ```kt
+    ```java
     suspend fun loadRestaurants() {
         return withContext(Dispatchers.IO) {
             try { … } catch (e: Exception) { … }
@@ -416,7 +416,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  在`GetRestaurantsUseCase`内部添加一个新依赖项到`GetSortedRestaurantUseCase`类，并按以下方式重构该类：
 
-    ```kt
+    ```java
     class GetRestaurantsUseCase {
         private val repository: … = RestaurantsRepository()
         private val getSortedRestaurantsUseCase = 
@@ -432,7 +432,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  为了更好地反映其目的，将`GetRestaurantsUseCase`类重命名为`GetInitialRestaurantsUseCase`：
 
-    ```kt
+    ```java
     class GetInitialRestaurantsUseCase {
         private val repository: … = RestaurantsRepository()
         private val getSortedRestaurantsUseCase = 
@@ -443,7 +443,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 1.  作为结果，在`RestaurantsViewModel`内部更新`getRestaurantsUseCase`变量的类型：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
       private val repository = RestaurantsRepository()
       private val getRestaurantsUseCase = 
@@ -474,7 +474,7 @@ suspend fun toggleFavoriteRestaurant(…)= withContext(…) {
 
 尽管如此，如果我们看一下我们的 `Restaurant` 数据类，我们可以识别出一个严重的问题：
 
-```kt
+```java
 import androidx.room.ColumnInfo
       …
 import com.google.gson.annotations.SerializedName
@@ -523,7 +523,7 @@ data class Restaurant(
 
 1.  点击应用程序包，选择`RemoteRestaurant`作为名称，选择**类**，并将此代码添加以定义我们的远程源（Firebase 远程数据库）的 DTO：
 
-    ```kt
+    ```java
     data class RemoteRestaurant(
         @SerializedName("r_id")
         val id: Int,
@@ -539,7 +539,7 @@ data class Restaurant(
 
 1.  点击应用程序包并创建一个名为`LocalRestaurant`的新文件。将此代码添加以定义我们的本地源（Room 本地数据库）的 DTO：
 
-    ```kt
+    ```java
     @Entity(tableName = "restaurants")
     data class LocalRestaurant(
         @PrimaryKey()
@@ -557,7 +557,7 @@ data class Restaurant(
 
 1.  现在，导航到`Restaurant`类。是时候移除所有对 Room 和 GSON 的第三方依赖，将其保留为一个简单的领域模型类，包含定义我们餐厅实体的字段。现在它应该看起来像这样：
 
-    ```kt
+    ```java
     data class Restaurant(
         val id: Int,
         val title: String,
@@ -569,7 +569,7 @@ data class Restaurant(
 
 1.  在`RestaurantsDb`类内部，更新 Room 中使用的实体为我们的新创建的`LocalRestaurant`，同时更新模式版本为`3`，只是为了确保 Room 将提供一个全新的开始：
 
-    ```kt
+    ```java
     @Database(
         entities = [LocalRestaurant::class],
         version = 3,
@@ -582,7 +582,7 @@ data class Restaurant(
 
 1.  将`PartialRestaurant`类重命名为`PartialLocalRestaurant`以更好地说明这个类是用于我们的本地数据源，Room：
 
-    ```kt
+    ```java
     @Entity
     class PartialLocalRestaurant(
     @ColumnInfo(name = "r_id")
@@ -593,7 +593,7 @@ data class Restaurant(
 
 1.  在`RestaurantsDao`接口内部，将`Restaurant`类的使用替换为`LocalRestaurant`，将`PartialRestaurant`类的使用替换为`PartialLocalRestaurant`：
 
-    ```kt
+    ```java
     @Dao
     interface RestaurantsDao {
         @Query("SELECT * FROM restaurants")
@@ -615,7 +615,7 @@ data class Restaurant(
 
 1.  在`RestaurantsRepository`内部，导航到`toggleFavoriteRestaurant()`方法，并将`PartialRestaurant`的使用替换为`PartialLocalRestaurant`：
 
-    ```kt
+    ```java
     suspend fun toggleFavoriteRestaurant(
           …
     ) = withContext(Dispatchers.IO) {
@@ -627,7 +627,7 @@ data class Restaurant(
 
 1.  仍然在`RestaurantsRepository`内部，导航到`getRestaurants()`方法，并将`LocalRestaurant`对象（通过`restaurantsDao.getAll()`方法调用接收）映射到`Restaurant`对象：
 
-    ```kt
+    ```java
     suspend fun getRestaurants() : List<Restaurant> {
         return withContext(Dispatchers.IO) {
             return@withContext restaurantsDao.getAll().map {
@@ -646,7 +646,7 @@ data class Restaurant(
 
 1.  导航到 `RestaurantsApiService` 接口（Retrofit 接口）并将 `Restaurant` 类的使用替换为 `RemoteRestaurant`：
 
-    ```kt
+    ```java
     interface RestaurantsApiService {
        @GET("restaurants.json")
         suspend fun getRestaurants(): List<RemoteRestaurant>
@@ -658,7 +658,7 @@ data class Restaurant(
 
 1.  回到 `RestaurantsRepository`，导航到 `refreshCache()` 方法并将 Retrofit 的 `remoteRestaurants` 列表映射到 `LocalRestaurant` 对象，以便 `restaurantsDao` 可以缓存它们：
 
-    ```kt
+    ```java
     private suspend fun refreshCache() {
         val remoteRestaurants = restInterface
             .getRestaurants()
@@ -686,7 +686,7 @@ data class Restaurant(
 
 1.  导航到 `RestaurantsDetailsViewModel` 并在 `getRemoteRestaurant()` 方法中，使用 `?.let{ }` 扩展函数将从 Retrofit API 收到的 `RemoteRestaurant` 对象映射到 `Restaurant` 对象：
 
-    ```kt
+    ```java
     private suspend fun getRemoteRestaurant(id: Int): Restaurant {
         return withContext(Dispatchers.IO) {
             val response =  restInterface.getRestaurant(id)
@@ -719,7 +719,7 @@ data class Restaurant(
 
 然而，请注意，当将 `MainActivity.kt` 文件从其初始位置移动到 `presentation` 包时，你可能需要更新 `Manifest.xml` 文件以引用新的正确路径到 `MainActivity.kt` 文件：
 
-```kt
+```java
 <manifest […]>
     […]
     <application
@@ -762,7 +762,7 @@ Compose 项目的自动生成文件（`Color.kt`、`Shape.kt`、`Theme.kt` 和 `
 
 例如，我们可以看到 `RestaurantsScreen()` 组合函数是如何使用 `RestaurantsViewModel` 实例的：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
     val viewModel: RestaurantsViewModel = viewModel()
@@ -793,7 +793,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  在 `RestaurantsScreen` 文件中，通过删除其 `viewModel` 和 `state` 变量来更新 `RestaurantsScreen()` 组合器，同时确保它接收一个 `RestaurantsScreenState` 对象作为 `state` 参数和一个 `onFavoriteClick` 函数：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(
         state: RestaurantsScreenState,
@@ -823,7 +823,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  由于我们更改了 `RestaurantsScreen()` 函数的签名，我们必须更新 `DefaultPreview()` 组合器以正确调用 `RestaurantsScreen()` 组合器：
 
-    ```kt
+    ```java
     @Preview(showBackground = true)
     @Composable
     fun DefaultPreview() {
@@ -839,7 +839,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  在 `MainActivity` 类和 `RestaurantsApp()` 组合器内部，使 `RestaurantsScreen()` 的目标组合器负责连接屏幕组合器与其 `ViewModel`，从而确保 `RestaurantsScreen()` 和 `RestaurantsViewModel` 之间良好的通信：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantsApp() {
         val navController = rememberNavController()

@@ -50,7 +50,7 @@
 
 在上一章中，我们介绍了 `startWith` 操作符，但还有很多内容要介绍。这个操作符还允许你组合多个生产者。看看下面的例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       println("startWith Iterator") 
       Observable.range(5,10) 
@@ -71,7 +71,7 @@
 
 在前面的程序中，在注释 `(1)` 处，我们使用了 `startWith` 操作符并将其传递了一个 `Iterator` 实例。`startWith` 操作符内部将传递的 `Iterator` 实例转换为 `Observable` 实例（如果你使用 `Flowable`，它将转换为 `Flowable` 实例）。以下是 `startWith` 操作符的签名：
 
-```kt
+```java
     fun startWith(items: Iterable<T>): Observable<T> { 
       return concatArray<T>(fromIterable<out T>(items), this) 
     } 
@@ -99,7 +99,7 @@
 
 考虑以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.range(1,10) 
       val observable2 = Observable.range(11,10) 
@@ -131,7 +131,7 @@
 
 这里有一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.range(1,10) 
       val observable2 = listOf("String 1","String 2","String 3",
@@ -158,7 +158,7 @@
 
 为了更好地理解这个操作符，我们将通过`zip`和`combineLatest`操作符的例子来展示。让我们首先尝试使用`zip`操作符的例子，因为我们已经对其有所了解：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 =  
       Observable.interval(100,TimeUnit.MILLISECONDS)//(1) 
@@ -183,7 +183,7 @@
 
 现在，让我们用`combineLatest`测试相同的代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.interval(100, TimeUnit.MILLISECONDS) 
       val observable2 = Observable.interval(250, TimeUnit.MILLISECONDS) 
@@ -212,7 +212,7 @@
 
 因此，让我们在这里举一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = listOf("Kotlin", "Scala",
       "Groovy").toObservable() 
@@ -235,7 +235,7 @@
 
 然而，合并操作并不保持指定的顺序；相反，它将立即开始监听所有提供的生产者，并在它们从源处发出时立即触发排放。让我们看看一个说明这一点的例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.interval(500,  
       TimeUnit.MILLISECONDS).map { "Observable 1 $it" }//(1) 
@@ -261,7 +261,7 @@
 
 然而，`merge`操作符支持多达四个参数。作为一个后备方案，我们有`mergeArray`操作符，它接受`vararg`的`Observable`；以下是一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = listOf("A", "B", "C").toObservable() 
       val observable2 = listOf("D", "E", "F", "G").toObservable() 
@@ -285,7 +285,7 @@
 
 与`zip`操作符一样，`merge`操作符也有一个用于调用`Observable`实例的版本，而不是静态的`mergeWith`；我们可以在`Observable`实例上调用此操作符。所以，让我们看看一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = listOf("Kotlin", "Scala",
       "Groovy").toObservable() 
@@ -314,7 +314,7 @@
 
 因此，让我们使用`concatenate`操作符修改我们最后的程序，看看变化：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.interval(500, TimeUnit.MILLISECONDS) 
         .take(2)//(1) 
@@ -352,7 +352,7 @@
 
 以下示例将帮助我们更好地理解：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.interval(500, 
       TimeUnit.MILLISECONDS).map { "Observable 1 $it" }//(1) 
@@ -383,7 +383,7 @@
 
 让我们举一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,30) 
 
@@ -416,7 +416,7 @@
 
 在前一章中，我们提到`flatMap`内部使用`merge`操作符，而`concatMap`内部使用`concat`操作符。然而，这有什么区别呢？你刚刚学习了`merge`和`concat`操作符之间的区别，但是基于它们有两个独立的映射操作符有什么意义呢？所以，让我们从一个例子开始。我们将看到一个使用`flatMap`的例子，然后我们将尝试使用`concatMap`实现相同的操作：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
         .flatMap { 
@@ -441,7 +441,7 @@
 
 现在，让我们使用`concatMap`操作符来实现代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
          .concatMap { 
@@ -487,7 +487,7 @@
 
 当源`Observable`在`switchMap`发射任何项之前连续发射多个项时，`switchMap`将只取最后一个，并丢弃任何介于其间的发射。让我们通过一个例子来更好地理解它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       println("Without delay") 
       Observable.range(1,10) 
@@ -519,7 +519,7 @@
 
 仍然感到困惑？让我们进一步修改程序：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
         .switchMap { 
@@ -568,7 +568,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 让我们从`skip`开始：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.range(1,20) 
       observable1 
@@ -633,7 +633,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 现在，让我们看看`skipLast`操作符是如何工作的：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,20) 
       observable 
@@ -667,7 +667,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 与`skip`和`skipLast`不同，这两个操作符都是基于计数或时间来跳过发射，而`skipWhile`是基于谓词（逻辑表达式）来跳过发射。你需要向`skipWhile`操作符传递一个谓词，就像`filter`操作符一样。它会在谓词评估为 true 时继续跳过发射。一旦谓词返回 false，它将开始将所有发射传递到下游。让我们看看以下代码片段：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,20) 
       observable 
@@ -701,7 +701,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 想象一个场景，你正在处理两个生产者，producer1 和 producer2，并且希望在 producer2 开始发射时立即开始处理 producer1 的发射。在这种情况下，`skipUntil`可以帮助你。让我们看看这个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.interval(100, TimeUnit.MILLISECONDS) 
       val observable2 =
@@ -744,7 +744,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 `take`操作符与`skip`操作符正好相反。让我们逐个举例说明，了解它们是如何工作的：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable1 = Observable.range(1,20) 
       observable1 
@@ -807,7 +807,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 让我们用`takeLast`操作符来测试一下：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,20) 
       observable 
@@ -839,7 +839,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 现在看看`takeWhile`：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,20) 
       observable 
@@ -873,7 +873,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 在开发应用程序时，可能会发生错误。我们必须正确处理这些错误，以确保我们的应用程序在用户端无缝运行。以下程序为例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.just(1,2,3,4,5) 
         .map { it/(3-it) } 
@@ -893,7 +893,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 `onErrorReturn`为你提供了一个技术，以便在上游发生错误时指定一个默认值返回给下游。看看下面的代码片段：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.just(1,2,3,4,5) 
         .map { it/(3-it) } 
@@ -918,7 +918,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 这里是一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.just(1,2,3,4,5) 
         .map { it/(3-it) } 
@@ -939,7 +939,7 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 `retry` 操作符是另一个错误处理操作符，它允许你在发生错误时重新尝试/重新订阅相同的生产者。你只需要提供一个谓词或重试限制，以确定何时停止重试。所以，让我们看看一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.just(1,2,3,4,5) 
         .map { it/(3-it) } 
@@ -975,14 +975,14 @@ RxKotlin 为我们提供了`skip`操作符的许多变体和重载；我们将�
 
 我们为这个例子使用了一个额外的插件——`RxJava-Apache-HTTP`。如果你使用 Gradle 作为构建工具，请添加以下依赖项：
 
-```kt
+```java
     //RxJava - Apache - HTTP 
     compile "com.netflix.rxjava:rxjava-apache-http:0.20.7" 
 ```
 
 这里是代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val httpClient = HttpAsyncClients.createDefault()//(1) 
       httpClient.start()//(2) 

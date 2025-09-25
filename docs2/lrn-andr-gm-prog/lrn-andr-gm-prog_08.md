@@ -24,7 +24,7 @@
 
 如您现在所知，我们将处理我们的`GameView.java`文件来显示爆炸。所以打开你的`GameView.java`文件。我们将首先创建一些变量，如下所示：
 
-```kt
+```java
 private ExplosionEffect explosionEffect;
 private long startReset;
 private boolean reset;
@@ -38,7 +38,7 @@ private boolean started;
 
 我们将通过在创建表面后移动`mainThread`来对我们的游戏进行一些优化。因此，我们将从构造函数中移除`mainThread = new MainGameThread(getHolder(), this);`并将其写入我们在`surfaceCreated()`方法中开始运行它的地方，如下所示：
 
-```kt
+```java
 @Override
 public void surfaceCreated(SurfaceHolder holder){
 
@@ -61,7 +61,7 @@ public void surfaceCreated(SurfaceHolder holder){
 
 看起来很整洁！现在，我们还需要对我们的触摸事件做一些改进，因为如果我们的玩家与一块石头碰撞，我们将重置游戏到初始状态。所以，我们需要确保只有在游戏处于播放模式或创建或重置了新游戏时才能播放。因此，我们将修改我们的`onTouchEvent()`，使其看起来如下：
 
-```kt
+```java
 @Override
 public boolean onTouchEvent(MotionEvent event)
 {
@@ -100,7 +100,7 @@ public boolean onTouchEvent(MotionEvent event)
 
 我们将进入`update()`函数的`else`块并修改我们之前编写的代码，使其看起来像这样：
 
-```kt
+```java
 else {
     playerCharacter.resetDYC();
     if(!reset) {
@@ -124,7 +124,7 @@ else {
 
 我们仍然需要在屏幕上绘制我们的爆炸效果，是的，您说得对！我们将在我们的`draw()`方法中这样做。我们还必须确保我们只绘制一次爆炸，即在游戏开始时，因此我们将使用我们的`started`变量来跟踪它：
 
-```kt
+```java
 if(started) {
     explosionEffect.draw(canvas);
 }
@@ -133,7 +133,7 @@ if(started) {
 
 我们已经完成了我们的绘制逻辑。我们已经完成了爆炸效果的整个逻辑，现在您的`GameView.java`文件的整个代码应该看起来像以下这样；本章所做的所有更改都以粗体标注：
 
-```kt
+```java
 //Package name and import statements remain same as previous chapter
 public class GameView extends SurfaceView implements SurfaceHolder.Callback
 {
@@ -251,7 +251,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback
 
 因此，在这里我们需要显示最佳得分。然而，我们还没有创建最佳得分变量。对于这部分，我们将完全在我们的`GameView.java`文件中工作。所以，让我们在这个类中定义我们的最佳得分变量：
 
-```kt
+```java
 private int bestScore;
 
 ```
@@ -260,7 +260,7 @@ private int bestScore;
 
 在此之前，让我们先计算最佳得分。显然，我们的最佳得分将在第一局游戏结束后计算，所以我们将这个逻辑放入`newGame()`函数中。这个逻辑相当简单。如果当前得分大于初始化为`0`的`bestScore`，那么我们的`bestScore`等于通过`playerCharacter.getScore();`获取的当前得分，这将在`newGame()`函数中：
 
-```kt
+```java
 if(playerCharacter.getScore() > bestScore) {
     bestScore = playerCharacter.getScore();
 }
@@ -269,7 +269,7 @@ if(playerCharacter.getScore() > bestScore) {
 
 好的，问题解决了，现在我们有了`bestScore`变量，可以用来存储最佳得分；我们的`newGame()`函数看起来是这样的：
 
-```kt
+```java
 public void newGame () {
     //clear code and minBoundaryHeight, maxBoundaryHeight code same as 
     before
@@ -283,7 +283,7 @@ public void newGame () {
 
 我们现在可以编写我们的`drawText()`方法。为此，我们将使用 Android 中的`Paint`类。`Paint`类包含有关样式、颜色以及如何绘制几何图形、文本和位图的信息。使用这个类，我们可以定义文本的颜色、大小和字体。然后，以我们的画布作为参考，我们可以在画布上绘制文本。所以，让我们在屏幕上显示当前距离和最佳得分：
 
-```kt
+```java
 public void drawText(Canvas canvas) {
     Paint p = new Paint();
     p.setColor(Color.BLACK);
@@ -298,7 +298,7 @@ public void drawText(Canvas canvas) {
 
 好的，看起来很棒，但是嘿，我们还有一个部分没有完成：教程。游戏开始时，我们需要指导玩家如何玩游戏。所以，我们将添加一个`if`语句来控制教程信息的可见性。我们将指导玩家进行“点击开始”、“按住向上移动”和“松开向下移动”：
 
-```kt
+```java
 if(!playerCharacter.getPlaying() && newGameCreated && reset) {
 
     Paint p1 = new Paint();
@@ -316,7 +316,7 @@ if(!playerCharacter.getPlaying() && newGameCreated && reset) {
 
 好的，我们已经完成了`drawText()`方法，整体看起来是这样的：
 
-```kt
+```java
 public void drawText(Canvas canvas) {
     Paint p = new Paint();
     p.setColor(Color.BLACK);
@@ -346,7 +346,7 @@ if(!playerCharacter.getPlaying() && newGameCreated && reset) {
 
 现在，还有最后一件事要做。我们需要调用我们的`drawText()`方法。你猜我们在哪里做这件事？我们将在我们类中的`draw()`方法中这样做；让我们来做吧：
 
-```kt
+```java
 @Override
 public void draw(Canvas canvas)
 {
@@ -370,7 +370,7 @@ public void draw(Canvas canvas)
 
 让我们回顾一下我们在本章的这一部分所做的代码更改；代码更改以粗体标注：
 
-```kt
+```java
 //package name and import statements remain the same as before
 public class GameView extends SurfaceView implements SurfaceHolder.Callback
 {

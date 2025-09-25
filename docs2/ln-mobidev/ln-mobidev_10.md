@@ -58,7 +58,7 @@ API 和 SDK 的本质是它们将经常更新。因此，一个智能的依赖�
 
 对于 Android，你应该使用外部 Gradle 依赖项，而不是将库模块添加到你的项目中。如果你使用 Android Studio，那么你就可以立即开始使用 Gradle。你将在项目中的应用文件夹中的`build.gradle`文件中找到你应用的依赖项列表。依赖项部分看起来可能如下所示：
 
-```kt
+```java
 dependencies { 
 ... 
     compile 'com.android.support:recyclerview-v7:23.1.1' 
@@ -81,7 +81,7 @@ dependencies {
 
 `pod`文件包含依赖项列表，其外观如下：
 
-```kt
+```java
 platform :ios, '8.0' 
 use_frameworks! 
 target 'example-project' do 
@@ -93,7 +93,7 @@ end
 
 如此例所示，`pod`文件在众多 pods 中，引用了`Zxing`库。这是一个创建和扫描条形码图像的完美解决方案。安装和配置`cocoapods`相当简单。你只需在你的终端应用程序中输入`gem install cocoapods`即可。接下来要做的事情是定义包含项目将使用的引用的`pod`文件。你需要执行`pod install`来实际获取依赖库。在终端应用程序中运行此命令将在`pod`文件中列出所有依赖项。我们将在构建 MVP 的段落中更详细地了解此过程：
 
-```kt
+```java
 $ gem install cocoapods
 $ pod install 
 ```
@@ -178,13 +178,13 @@ Uber 为各种平台提供 API 和 SDK，包括 iOS Swift 库，可在 GitHub �
 
 对于这个，我们将下载 SDK。同时，我们还将从[`github.com/socrata/soda-swift`](https://github.com/socrata/soda-swift)下载 Socrata 示例应用。我们将使用这个示例应用来构建我们的最小可行产品（MVP）。我们将修改一些东西，比如数据令牌和数据集。要获取令牌，你首先需要在 Socrata 上有一个开发者账户。你可以在[`dev.socrata.com`](https://dev.socrata.com/foundry/data.sfgov.org/wwmu-gmzc)免费注册。接下来，你需要在他们的网站上创建一个应用。在 Xcode 中打开 Socrata-Swift 项目，然后从 SODASample 项目打开 QueryViewController。修改客户端的域名和令牌：
 
-```kt
+```java
 let client = SODAClient(domain: "data.sfgov.org", token: "<your token>") 
 ```
 
 在`refesh`方法中，你需要修改查询的数据集，并将排序字段改为`title`：
 
-```kt
+```java
 func refresh (sender: AnyObject!) { 
 ...         
         let cngQuery = client.queryDataset("wwmu-gmzc")         
@@ -199,7 +199,7 @@ func refresh (sender: AnyObject!) {
 
 在`cellForRowAtIndexPath`函数中，将项目的字段改为`title`和`locations`，如下面的代码所示：
 
-```kt
+```java
   override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) ->   
     UITableViewCell { 
 
@@ -229,7 +229,7 @@ func refresh (sender: AnyObject!) {
 
 代码将看起来像这样：
 
-```kt
+```java
 func updateWithData(data: [[String: AnyObject]]!, animated: Bool) {         
     self.data = data         
      if (!isViewLoaded()) { 
@@ -296,19 +296,19 @@ func updateWithData(data: [[String: AnyObject]]!, animated: Bool) {
 
 如果您之前没有这样做，请先安装 CocoaPods：
 
-```kt
+```java
 $ gem install cocoapods
 ```
 
 在控制台应用中，转到 Soda Swift 项目所在的文件夹。要创建一个新的`pod`文件，请输入以下内容：
 
-```kt
+```java
 $ pod init  
 ```
 
 打开为您创建和修改的`pod`文件，这样它就会将 UberRides 项目加载到我们的工作区中：
 
-```kt
+```java
     use_frameworks!
     target 'SODAKit' do
     end
@@ -322,13 +322,13 @@ $ pod init
 
 接下来，使用以下命令安装依赖项：
 
-```kt
+```java
 $ pod install
 ```
 
 通过右键单击文件并选择“以源代码方式打开”来修改`info.plist`内容。将以下键值对添加到字典中，并添加您在 Uber 开发者网站上可以找到的 Uber 客户端 ID：
 
-```kt
+```java
 <key>UberClientID</key> 
     <string>your uber client id</string> 
     <key>UberCallbackURI</key> 
@@ -341,7 +341,7 @@ $ pod install
 
 以一种方式修改`AppDelegate`文件，使其使用 Uber 的沙盒模式进行测试。每次测试应用时，在您的位置被接走可能有些不便。在`didFinishLaunchWithOptions`函数中导入`UberRides`并启用沙盒模式：
 
-```kt
+```java
 import UIKit 
 import UberRides 
 
@@ -362,7 +362,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 在 QueryViewController 中，在 UIKit 导入的下方添加对`MapKit`和`UberRides`的新导入：
 
-```kt
+```java
 import MapKit 
 import UberRides 
 import CoreLocation 
@@ -372,7 +372,7 @@ import CoreLocation
 
 Uber Rides SDK 会检查`CLLocationManager`中的`locationServicesEnabled()`的值，它必须是 true 才能检索用户的当前位置：
 
-```kt
+```java
 override func tableView(tableView: UITableView!,    
   didSelectRowAtIndexPath indexPath: NSIndexPath!) { 
 
@@ -425,7 +425,7 @@ override func tableView(tableView: UITableView!,
 
 这个查询的响应看起来像这样：
 
-```kt
+```java
 "Title":"Basic Instinct","Year":"1992","Rated":"R","Released":"20 Mar 1992","Runtime":"127 min","Genre":"Drama, Mystery, Thriller","Director":"Paul Verhoeven","Writer":"Joe Eszterhas","Actors":"Michael Douglas, Sharon Stone, George Dzundza, Jeanne Tripplehorn","Plot":"A violent, suspended police detective investigates a brutal murder, in which a seductive woman could be involved.","Language":"English","Country":"France, USA","Awards":"Nominated for 2 Oscars. Another 5 wins & 18 nominations.","Poster":"http://ia.media-imdb.com/images/M/MV5BMTcxMjY2NzcyMV5BMl5BanBnXkFtZTYwMjAxNTQ5._V1_SX300.jpg","Metascore":"41","imdbRating":"6.9","imdbVotes":"131,796","  
 ```
 

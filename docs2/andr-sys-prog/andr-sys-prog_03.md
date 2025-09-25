@@ -82,7 +82,7 @@
 
 如前图所示，当应用程序想要访问硬件资源时，它首先需要获取硬件管理器的一个实例。对于 goldfish 灯光，应用程序中的代码可能如下所示：
 
-```kt
+```java
 LightsManager lights =  
 LocalServices.getService(LightsManager.class); 
 mBacklight = lights.getLight(LightsManager.LIGHT_ID_BACKLIGHT); 
@@ -102,7 +102,7 @@ mBacklight.setBrightness(brightness);
 
 goldfish 灯光 HAL 实现可以在`$AOSP/device/generic/goldfish/lights`文件夹中找到。要实现 HAL 层，硬件供应商通常需要实现以下三个数据结构：
 
-```kt
+```java
 struct hw_module_t; 
 struct hw_module_methods_t; 
 struct hw_device_t; 
@@ -111,7 +111,7 @@ struct hw_device_t;
 
 所有的前三个数据结构都在 goldfish 的`lights_qemu.c`文件中实现。在 HAL 实现中，我们首先需要定义名为`HAL_MODULE_INFO_SYM`的`struct hw_module_t`，如下所示。这将在系统中注册硬件模块 ID `LIGHTS_HARDWARE_MODULE_ID`。之后，灯光系统服务可以使用`hw_get_module`函数获取该模块：
 
-```kt
+```java
 /* 
  * The emulator lights Module 
  */ 
@@ -129,7 +129,7 @@ struct hw_module_t HAL_MODULE_INFO_SYM = {
 
 你可能会注意到，在前面的数据结构中`method`字段有一个指向`lights_module_methods`的指针。它如下定义：
 
-```kt
+```java
 static struct hw_module_methods_t lights_module_methods = { 
     .open =  open_lights, 
 }; 
@@ -138,7 +138,7 @@ static struct hw_module_methods_t lights_module_methods = {
 
 这定义了第二个 HAL 数据结构`hw_module_methods_t`。在这个数据结构内部，它定义了一个`open_lights`方法，这是 HAL 初始化硬件的函数。让我们看一下这个函数如下：
 
-```kt
+```java
 /** Open a new instance of a lights device using name */ 
 static int 
 open_lights( const struct hw_module_t* module, char const *name, 
@@ -186,7 +186,7 @@ struct light_device_t *dev =
 
 在每个`set_light_xxx`函数内部，它通过 QEMU 管道设备`/dev/qemu_pipe`与内核空间通信。例如，我们可以看一下`set_light_backlight`：
 
-```kt
+```java
 static int 
 set_light_backlight( struct light_device_t* dev, struct light_state_t const* state ) 
 { 
@@ -216,7 +216,7 @@ set_light_backlight( struct light_device_t* dev, struct light_state_t const* sta
 
 要分析应用程序如何访问灯光硬件，请参考灯光服务调用序列的图示。在一个应用程序中，调用`getService(LightsManager.class)`函数以获取`LightsManager`实例如下：
 
-```kt
+```java
 LightsManager lights =  
 LocalServices.getService(LightsManager.class); 
 mBacklight = lights.getLight(LightsManager.LIGHT_ID_BACKLIGHT); 
@@ -229,7 +229,7 @@ mBacklight = lights.getLight(LightsManager.LIGHT_ID_BACKLIGHT);
 
 这个目录中有三个文件，如下所示。它们实现了 `LightsManager` 和 `LightsService`：
 
-```kt
+```java
 $ ls
 Light.java  LightsManager.java  LightsService.java  
 
@@ -237,7 +237,7 @@ Light.java  LightsManager.java  LightsService.java
 
 让我们先看看 `LightsManager`。从以下代码片段中我们可以看到，`LightsManager` 只向调用者返回一个抽象类 `Light`：
 
-```kt
+```java
 package com.android.server.lights; 
 
 public abstract class LightsManager { 
@@ -258,7 +258,7 @@ public abstract class LightsManager {
 
 让我们跟随代码来查看抽象类 `Light`。在 `Light` 抽象类中，它定义了一系列必须实现的功能。这些功能在 `LightsService` 类中实现：
 
-```kt
+```java
 package com.android.server.lights; 
 
 public abstract class Light { 
@@ -291,7 +291,7 @@ public abstract class Light {
 
 在以下代码片段中的 `LightsService.java` 中，它实现了 `Light` 类定义的功能列表：
 
-```kt
+```java
 ... 
 private final class LightImpl extends Light { 
 
@@ -309,7 +309,7 @@ private final class LightImpl extends Light {
 
 抽象类 `Light` 中的这组函数调用 `setLightLocked` 函数来完成实际工作。在这个函数中，它调用一个本地函数，`setLight_native`，来调用 `LightsService` 的本地部分：
 
-```kt
+```java
 private void setLightLocked(int color, int mode, int onMS, int offMS, int brightnessMode) { 
      if (color != mColor || mode != mMode || onMS != mOnMS
      || offMS != mOffMS) { 
@@ -336,7 +336,7 @@ private void setLightLocked(int color, int mode, int onMS, int offMS, int bright
 
 除了 `setLight_native`，`LightService` 还调用了另外两个本地函数，`init_native` 和 `finalize_native`。我们可以在以下代码片段中看到这一点。这两个函数调用到 HAL 层函数，正如我们在上一节中讨论的那样：
 
-```kt
+```java
 public LightsService(Context context) { 
     super(context); 
 
@@ -366,7 +366,7 @@ static native void setLight_native(long ptr, int light, int color, int mode, int
 
 我们已经看到了 `LightsManager` 的实现和 `LightsService` 的 Java 实现。现在，让我们探索 `LightsService` 实现的 JNI 部分。JNI 部分在 `com_android_server_lights_LightsService.cpp` 中实现，可以在 `$AOSP/frameworks/base/services/core/jni` 目录下找到。我们将看看这些在 `LightsService` 中使用的三个本地函数是如何连接到 HAL 层的：
 
-```kt
+```java
 static jlong init_native(JNIEnv* /* env */, jobject /* clazz */) 
 { 
     int err; 
@@ -405,7 +405,7 @@ static jlong init_native(JNIEnv* /* env */, jobject /* clazz */)
 
 在 `init_native` 函数中，它调用 `hw_get_module` 函数使用 `LIGHTS_HARDWARE_MODULE_ID` 作为硬件 ID 来获取灯 HAL 模块。如果你回顾一下，它在 HAL 中定义。这个函数加载了 HAL 实现的共享库。在这种情况下，它加载了 `lights.goldfish.so`。在加载共享库之后，它调用 `get_device` 来初始化所有灯设备。我们可以在以下代码片段中看到 `get_device` 的实现：
 
-```kt
+```java
 static light_device_t* get_device(hw_module_t* module, char const* name) 
 { 
     int err; 
@@ -424,7 +424,7 @@ static light_device_t* get_device(hw_module_t* module, char const* name)
 
 现在，让我们看看另一个本地函数，`setLight_native`：
 
-```kt
+```java
 static void setLight_native(JNIEnv* /* env */, jobject /* clazz */, jlong ptr, jint light, jint colorARGB, jint flashMode, jint onMS, jint offMS, jint brightnessMode) 
 { 
     Devices* devices = (Devices*)ptr; 
@@ -455,7 +455,7 @@ static void setLight_native(JNIEnv* /* env */, jobject /* clazz */, jlong ptr, j
 
 最后，让我们看看本地方法`finalize_native`的实现：
 
-```kt
+```java
 static void finalize_native(JNIEnv* /* env */, jobject /* clazz */, jlong ptr) 
 { 
     Devices* devices = (Devices*)ptr; 
@@ -575,7 +575,7 @@ Android 模拟器有其自己的虚拟串口实现。它始终保留前两个虚
 
 CMD I/O 寄存器用于向设备发送各种命令，以下值用于标识：
 
-```kt
+```java
 0x00 CMD_INT_DISABLE   Disable device. 
 0x01 CMD_INT_ENABLE    Enable device. 
 0x02 CMD_WRITE_BUFFER  Write buffer from kernel to device. 
@@ -589,7 +589,7 @@ CMD I/O 寄存器用于向设备发送各种命令，以下值用于标识：
 
 Goldfish 内核可以从 AOSP 源代码库中下载。您可以使用以下命令下载和构建内核源代码：
 
-```kt
+```java
 $ git clone https://android.googlesource.com/kernel/goldfish.git 
 $ cd goldfish 
 $ git checkout -b android-goldfish-3.10 origin/android-goldfish-3.10 
@@ -616,7 +616,7 @@ $ make
 
 由于 QEMU 管道被用作模拟许多金鱼设备的通道，我们可以回顾其中一个主要功能，`goldfish_pipe_read_write`，以了解虚拟机和主机之间的数据传输：
 
-```kt
+```java
 static ssize_t goldfish_pipe_read_write(struct file *filp, char __user *buffer, size_t bufflen, int is_write) 
 { 
 ... 
@@ -648,7 +648,7 @@ put_page(page);
 
 从前面的代码中我们可以看到，它首先调用了 `access_with_param` 函数。这是在虚拟机和模拟器之间使用共享内存进行数据传输的最快方式。使用这种方法，金鱼内核在启动时分配一块内存。虚拟机和模拟器将使用这块共享内存来交换它们之间的参数。如果 `access_with_param` 函数失败，它将通过以下序列通过 QEMU 管道设备传输数据：
 
-```kt
+```java
 write_channel(<channel>) 
 write_address(<buffer-address>) 
 REG_SIZE    = <buffer-size> 
@@ -659,7 +659,7 @@ status = REG_STATUS
 
 现在让我们看一下下面的 `access_with_param` 函数：
 
-```kt
+```java
 /* A value that will not be set by qemu emulator */ 
 #define INITIAL_BATCH_RESULT (0xdeadbeaf) 
 static int access_with_param(struct goldfish_pipe_dev *dev, const int cmd, unsigned long address, unsigned long avail, struct goldfish_pipe *pipe, int *status) 

@@ -42,7 +42,7 @@
 
     要检查用户的设备是否与 PiP 兼容，我们可以实现以下代码：
 
-    ```kt
+    ```java
     val minApiLevel = Build.VERSION_CODES.O
     if (android.os.Build.VERSION.SDK_INT < minApiLevel) {
       // PiP not supported on this device
@@ -62,7 +62,7 @@
 
 正如我们所知，PiP 模式为用户提供在切换应用或关闭屏幕时继续在迷你窗口中播放视频的便利性。为此，我们将使用`Activity`类中可用的`enterPictureInPictureMode()`方法：
 
-```kt
+```java
 activity.enterPictureInPictureMode()
 ```
 
@@ -70,7 +70,7 @@ activity.enterPictureInPictureMode()
 
 虽然进入 PiP 模式是通过编程方式触发的，但退出主要是用户驱动的。用户可以通过滑动迷你播放器或轻触系统提供的指定**关闭**按钮来退出 PiP 模式。然而，作为开发者，我们仍然可以在确保平滑过渡回全屏体验方面发挥作用。当 PiP 模式退出时，系统会在您的活动中触发特定的回调。以下是我们可以如何利用这些回调：
 
-```kt
+```java
 override fun onPictureInPictureExited() {
   super.onPictureInPictureExited()
   // Any logic that we want to add when the user comes back
@@ -92,7 +92,7 @@ override fun onPictureInPictureExited() {
 
 在我们可以在项目中使用 PiP 之前的第一步是，我们必须在`AndroidManifest.xml`文件中声明对其的支持。这一步对于通知 Android 系统我们的`PlaybackActivity`类能够以 PiP 模式运行至关重要。我们这样做：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
     xmlns:android =
@@ -118,7 +118,7 @@ override fun onPictureInPictureExited() {
 
 既然我们已经明确选择在我们的`Activity`类中使用 PiP 功能，让我们来实现它。我们将重写`onUserLeaveHint()`回调，该回调在用户按下**主页**按钮或切换到另一个应用时触发：
 
-```kt
+```java
 override fun onUserLeaveHint() {
     super.onUserLeaveHint()
     val aspectRatio = Rational(16, 9)
@@ -185,7 +185,7 @@ Android 中的 `BroadcastReceiver` 实例是一个基本组件，它使应用程
 
 让我们先创建我们的`BroadcastReceiver`子类。这个类将扩展`BroadcastReceiver`并重写`onReceive()`方法，在那里你将定义你的应用应该如何对 PiP 动作`Intent`对象做出反应：
 
-```kt
+```java
 class PiPActionReceiver(private val togglePlayPause: () -> Unit) : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent:
     Intent?) {
@@ -212,7 +212,7 @@ class PiPActionReceiver(private val togglePlayPause: () -> Unit) : BroadcastRece
 
 我们将使用动态注册来注册`BroadcastReceiver`实例。在我们的`PlaybackActivity`类中，实现将如下所示：
 
-```kt
+```java
 private lateinit var pipActionReceiver: PiPActionReceiver
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -246,7 +246,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 现在，让我们创建一个将触发启动 `BroadcastReceiver` 实例所需的 `Intent` 操作的动作：
 
-```kt
+```java
 private fun getIntentForTogglePlayPauseAction():
 RemoteAction {
     val icon: Icon = Icon.createWithResource(this,
@@ -273,7 +273,7 @@ RemoteAction {
 
 现在，我们需要将此操作配置为我们的 PiP 配置的参数。我们将按以下方式修改现有配置：
 
-```kt
+```java
 override fun onUserLeaveHint() {
     super.onUserLeaveHint()
     val aspectRatio = Rational(16, 9)
@@ -290,7 +290,7 @@ override fun onUserLeaveHint() {
 
 最后一步是处理在播放和暂停之间有效切换的逻辑。我们已经在 `ViewModel` 组件中实现了此功能，所以我们只需在 `Activity` 类中注入 `PlaybackViewModel` 组件并调用 `togglePlayPause()` 函数：
 
-```kt
+```java
 @AndroidEntryPoint
 class PlaybackActivity: ComponentActivity() {
     private val viewModel: PlaybackViewModel by
@@ -343,7 +343,7 @@ Android 的`MediaRouter` API 提供了一个框架，开发人员可以利用它
 
 首先，我们需要在我们的 `libs.versions.toml` 文件中包含 `MediaRouter` 库依赖项。这个库提供了发现和与媒体路由提供者交互所需的类和接口：
 
-```kt
+```java
 [versions]
 ...
 mediarouter = "1.7.0"
@@ -358,14 +358,14 @@ google-cast = { group = "com.google.android.gms", name="play-services-cast-frame
 
 下一步将是将其添加到我们的 `build.gradle` 模块中：
 
-```kt
+```java
     implementation(libs.media.router)
     implementation(libs.google.cast)
 ```
 
 现在，为了使 `MediaRouter` 能够发现和与本地网络上的设备交互，我们必须在应用的 `AndroidManifest.xml` 文件中声明必要的权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
 <uses-permission android:name="android.permission.INTERNET"/>
@@ -408,7 +408,7 @@ google-cast = { group = "com.google.android.gms", name="play-services-cast-frame
 
 我们将首先定义一个 `MediaRouteSelector` 实例，并允许它开始发现其他设备以发送媒体。我们将使用 `LaunchedEffect` 将发现过程与可组合组件的生命周期绑定：
 
-```kt
+```java
 @Composable
 fun MediaRouteDiscoveryOptions(mediaRouter: MediaRouter) {
     val context = LocalContext.current
@@ -439,7 +439,7 @@ fun MediaRouteDiscoveryOptions(mediaRouter: MediaRouter) {
 
 现在，我们将创建一个回调，它包含在之前描述的 `addCallback` 函数中：
 
-```kt
+```java
 val callback = remember {
     object : MediaRouter.Callback() {
         override fun onRouteAdded(router: MediaRouter,
@@ -462,7 +462,7 @@ val callback = remember {
 
 为了给用户提供一个方便的方式来选择这些可用的设备，我们需要集成一个为此目的设计的按钮。`MediaRouter` API 提供了一个显示可传输设备的现成按钮。尽管这个按钮是一个 Android 视图而不是可组合组件，我们仍然可以使用 `AndroidView` 可组合组件来使用它。以下是我们可以如何做到这一点：
 
-```kt
+```java
 AndroidView(
     factory = { ctx ->
         MediaRouteButton(ctx).apply {
@@ -477,7 +477,7 @@ AndroidView(
 
 现在，我们只需使用我们的回放屏幕中的 `MediaRouteDiscoveryOptions` 可组合组件：
 
-```kt
+```java
 @Composable
 fun TopMediaRow(mediaRouter: MediaRouter, modifier:
 Modifier = Modifier) {
@@ -499,7 +499,7 @@ Modifier = Modifier) {
 
 当调用 `TopMediaRow` 函数时，我们将传递之前获得的 `mediaRouter` 实例，使用 `LocalContext`：
 
-```kt
+```java
 TopMediaRow(
     mediaRouter =
         MediaRouter.getInstance(LocalContext.current),
@@ -538,7 +538,7 @@ Google Cast 的功能不仅限于从互联网流式传输媒体。它还允许�
 
 首先，我们需要确保你在应用程序中初始化了 `CastContext`。这通常在 `Application` 子类或你的主活动中完成。我们将在 `PlaybackActivity` 类中初始化它：
 
-```kt
+```java
 val castContext = CastContext.getSharedInstance(context)
 ```
 
@@ -548,7 +548,7 @@ Cast SDK 为会话事件（如启动、结束、恢复和挂起）提供回调�
 
 要监听这些会话事件，我们必须实现 `SessionManagerListener`:
 
-```kt
+```java
 private val sessionManagerListener = object : SessionManagerListener<CastSession> {
     override fun onSessionStarted(session: CastSession,
     sessionId: String) {
@@ -593,7 +593,7 @@ private val sessionManagerListener = object : SessionManagerListener<CastSession
 
 一旦我们实现了我们的监听器，我们需要使用 `castContext.sessionManager` 来注册它：
 
-```kt
+```java
 override fun onStart() {
     super.onStart()
     castContext.sessionManager.addSessionManagerListener(
@@ -610,7 +610,7 @@ override fun onStop() {
 
 现在，让我们实现 `updateUIForCastSession` 函数：
 
-```kt
+```java
 private fun updateUIForCastSession(isCasting: Boolean) {
     viewModel.setCastingState(isCasting)
 }
@@ -620,14 +620,14 @@ private fun updateUIForCastSession(isCasting: Boolean) {
 
 在我们的 `PlaybackViewModel` 组件中，我们将引入以下更改。我们将开始添加一个新的属性，`isCasting`：
 
-```kt
+```java
 private val _isCasting = MutableStateFlow<Boolean>(false)
 val isCasting: MutableStateFlow<Boolean> = _isCasting
 ```
 
 然后，当调用 `setCastingState` 函数时，我们将更改其值：
 
-```kt
+```java
 fun setCastingState(isCasting: Boolean) {
     _isCasting.value = isCasting
 }
@@ -635,7 +635,7 @@ fun setCastingState(isCasting: Boolean) {
 
 然后，我们将在我们的 `PlaybackScreen` 组合组件中使用它：
 
-```kt
+```java
 @Composable
 fun PlaybackScreen() {
     ...
@@ -656,7 +656,7 @@ fun PlaybackScreen() {
 
 接下来，我们将构建一个新的 `NowCastingView` 组合组件：
 
-```kt
+```java
 @Composable
 fun NowCastingView() {
     Card(
@@ -681,7 +681,7 @@ fun NowCastingView() {
 
 我们必须做的一件事是：在远程设备上加载媒体。我们将修改 `SessionManagerListener` 接口中的 `onSessionStarted` 回调，包括调用一个新函数来加载媒体：
 
-```kt
+```java
 override fun onSessionStarted(session: CastSession,
 sessionId: String) {
     castSession = session
@@ -692,7 +692,7 @@ sessionId: String) {
 
 最后，我们将如下实现这个函数：
 
-```kt
+```java
 private fun loadMedia(castSession: CastSession) {
     val mediaInfo = MediaInfo.Builder(viewModel.mediaUrl)
         .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)

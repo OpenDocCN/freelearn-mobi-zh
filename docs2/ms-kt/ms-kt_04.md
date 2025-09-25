@@ -68,7 +68,7 @@ Material 库包含预构建的组件，我们可以使用它们来构建常见�
 
 让我们看看这些顶部应用栏的示例代码：
 
-```kt
+```java
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PacktCenterAlignedTopBar() {
@@ -88,7 +88,7 @@ fun PacktCenterAlignedTopBar() {
 
 大多数应用都使用该组件来表示在应用中经常使用的操作调用。例如，在聊天应用中创建一个新的聊天。它通常位于屏幕的右下角或其他位置，具体取决于您的用例。这就是我们创建组件的方式：
 
-```kt
+```java
 FloatingActionButton(
     onClick = { /*TODO*/ },
     content = {
@@ -116,7 +116,7 @@ FloatingActionButton(
 
 如前图所示，`ExtendedFloatingActionButton` 组件允许我们向我们的 FAB 添加更多项目。它们比正常的 `FloatActionButton` 组件更宽。在这种情况下，我们有一个带有文本 **新聊天** 的 `Text` 组合组件，以及图标。你可以带图标或不带图标使用它。这个实现的代码如下：
 
-```kt
+```java
 ExtendedFloatingActionButton(
     onClick = { /*TODO*/ },
     content = {
@@ -142,7 +142,7 @@ ExtendedFloatingActionButton(
 
 让我们看看底部应用栏的代码：
 
-```kt
+```java
 BottomAppBar(
     actions = {
         Icon(imageVector = Icons.Rounded.Home, contentDescription = "Home Screen")
@@ -162,7 +162,7 @@ BottomAppBar(
 
 此外，在 `BottomAppBar` 中，我们还可以提供 `FloatingActionButton` 组件。我们将使用我们早期使用的 `FloatingActionButton` 组件。更新的组件代码如下：
 
-```kt
+```java
 BottomAppBar(
     actions = {
         Icon(imageVector = Icons.Rounded.Home, contentDescription = "Home Screen")
@@ -191,7 +191,7 @@ BottomAppBar(
 
 让我们看看一个具有顶部应用栏、浮动操作按钮、屏幕居中文本和底部导航栏的 `Scaffold` 示例：
 
-```kt
+```java
 Scaffold(
     topBar = {
         PacktSmallTopAppBar()
@@ -249,7 +249,7 @@ Scaffold(
 
 为了利用上一节中我们查看的 Material 3 特性，我们需要将其添加到我们的应用中。幸运的是，随着 Android Studio Hedgehog 的推出，我们有 Material 3 模板。甚至我们一直在使用的示例应用也已经使用了 Material 3。真是太酷了！让我们快速扫描依赖项，了解正在发生的事情：
 
-```kt
+```java
 implementation 'androidx.core:core-ktx:1.10.1'
 implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.0')
 implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
@@ -278,7 +278,7 @@ debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
 转到`ui/theme`包并打开`Color.kt`文件，其中包含以下代码：
 
-```kt
+```java
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
@@ -321,7 +321,7 @@ val Pink40 = Color(0xFF7D5260)
 
 让我们打开`Color.kt`文件，其中包含以下代码：
 
-```kt
+```java
 val md_theme_light_primary = Color(0xFF006C49)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFF7AFAC0)
@@ -388,7 +388,7 @@ val md_theme_dark_scrim = Color(0xFF000000)
 
 我们会注意到它与`Theme.kt`文件类似，但它定义了所有 Material 3 颜色方案。复制此文件的全部内容并将其粘贴到我们项目中的`Theme.kt`文件中。我们将对代码进行一些小的编辑，以确保我们保持主题中的`ChapterFourTheme`名称和动态颜色逻辑。接下来，我们需要将`DarkColorScheme`变量的值更改为以下内容：
 
-```kt
+```java
 private val DarkColorScheme = darkColorScheme(
     primary = md_theme_light_primary,
     onPrimary = md_theme_light_onPrimary,
@@ -424,7 +424,7 @@ private val DarkColorScheme = darkColorScheme(
 
 在前面的代码中，我们使用 `DarkColorScheme` 函数来创建一个深色颜色方案。我们传递了使用 Material Theme Builder 工具生成的颜色。我们将使用此颜色方案来创建深色主题。深色颜色方案变量以类似的方式定义，并且我们可以从工具的 `Theme.kt` 文件中复制值并添加到那里。现在让我们看看我们的主题可组合项：
 
-```kt
+```java
 @Composable
 fun ChapterFourTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -475,7 +475,7 @@ fun ChapterFourTheme(
 
 为了能够看到我们所做的更改，我们需要调用我们之前在 `ChapterFourTheme` 块中 `MainActivity.kt` 文件内创建的 `PacktScaffold`：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -524,7 +524,7 @@ Material 3 提供了**规范布局**作为创建大屏幕和可折叠设备 UI �
 
 为了使用 `WindowSizeClass`，我们必须在我们的应用中添加以下依赖项：
 
-```kt
+```java
 implementation 'androidx.compose.material3:material3-window-size-class'
 ```
 
@@ -542,7 +542,7 @@ implementation 'androidx.compose.material3:material3-window-size-class'
 
 让我们看看 `widthSizeClass` 的实际应用：
 
-```kt
+```java
 when(calculateWindowSizeClass(activity = this).widthSizeClass) {
     WindowWidthSizeClass.Compact -> {
         CharactersScreen(
@@ -599,7 +599,7 @@ when(calculateWindowSizeClass(activity = this).widthSizeClass) {
 
 +   我们应该为我们的可组合元素添加内容描述。例如，`Icon`和`Image`组件提供了这个参数来描述视觉元素以供辅助服务使用。我们应该始终为这些组件提供内容描述。以下是一个示例：
 
-    ```kt
+    ```java
     Icon(
         modifier = Modifier.size(48.dp),
         painter = painterResource(id = R.drawable.ic_launcher_foreground),
@@ -611,7 +611,7 @@ when(calculateWindowSizeClass(activity = this).widthSizeClass) {
 
 +   我们应该为可点击元素添加标签。我们可以将可点击标签传递给可点击修饰符。这使得我们能够为我们的可点击元素添加描述。以下是一个示例：
 
-    ```kt
+    ```java
     Text(
         modifier = Modifier
             .clickable(
@@ -627,7 +627,7 @@ when(calculateWindowSizeClass(activity = this).widthSizeClass) {
 
 +   通过使用语义，我们还可以描述标题。标题用于描述其后的内容。我们可以使用语义为我们的可组合元素添加标题。以下是一个示例：
 
-    ```kt
+    ```java
     Text(
         modifier = Modifier
             .semantics { heading() }
@@ -638,7 +638,7 @@ when(calculateWindowSizeClass(activity = this).widthSizeClass) {
 
 +   我们还可以提供关于我们可组合元素状态的信息。例如，我们可以提供关于按钮状态的信息。我们可以使用语义来提供这些信息。以下是一个示例：
 
-    ```kt
+    ```java
     Button(
         modifier = Modifier
             .semantics { stateDescription = "Disabled" }
@@ -654,7 +654,7 @@ when(calculateWindowSizeClass(activity = this).widthSizeClass) {
 
 +   对于某些组件组，我们也可以使用`mergeDescendants`参数合并子可组合元素的语义。以下是一个示例：
 
-    ```kt
+    ```java
     Column(
         modifier = Modifier
             .padding(10.dp)

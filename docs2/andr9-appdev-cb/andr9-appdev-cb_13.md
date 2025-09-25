@@ -34,7 +34,7 @@
 
 下面是设置并调用 Intent 以使用默认电话应用的代码：
 
-```kt
+```java
 Intent intent = new Intent(Intent.ACTION_DIAL); 
 intent.setData(Uri.parse("tel:" + number)); 
 startActivity(intent); 
@@ -52,13 +52,13 @@ startActivity(intent);
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.CALL_PHONE"/>
 ```
 
 1.  打开`activity_main.xml`并将现有的`TextView`替换为以下按钮：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -73,7 +73,7 @@ startActivity(intent);
 
 1.  添加此方法，它将检查您的应用是否已被授予`CALL_PHONE`权限：
 
-```kt
+```java
 private boolean checkPermission(String permission) {
     int permissionCheck = ContextCompat.checkSelfPermission(this, permission);
     return (permissionCheck == PackageManager.PERMISSION_GRANTED);
@@ -82,7 +82,7 @@ private boolean checkPermission(String permission) {
 
 1.  添加拨打电话的代码：
 
-```kt
+```java
 public void dialPhone(View view){
     if (checkPermission(Manifest.permission.CALL_PHONE)) {
         Intent intent = new Intent(Intent.ACTION_CALL);
@@ -122,7 +122,7 @@ public void dialPhone(View view){
 
 1.  添加或修改`TextView`如下：
 
-```kt
+```java
 <TextView
     android:id="@+id/textView"
     android:layout_width="wrap_content"
@@ -133,13 +133,13 @@ public void dialPhone(View view){
 
 1.  将以下权限添加到 AndroidManifest.xml 中：
 
-```kt
+```java
 <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
 ```
 
 1.  打开`MainActivity.java`并将以下`PhoneStateListener`类添加到`MainActivity`类中：
 
-```kt
+```java
 PhoneStateListener mPhoneStateListener = new PhoneStateListener() {
     @Override
     public void onCallStateChanged(int state, String number) {
@@ -163,7 +163,7 @@ PhoneStateListener mPhoneStateListener = new PhoneStateListener() {
 
 1.  修改`onCreate()`以设置监听器：
 
-```kt
+```java
 final TelephonyManager telephonyManager = 
         (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 telephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
@@ -175,7 +175,7 @@ telephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STAT
 
 为了演示使用监听器，我们在`onCreate()`方法中创建 Telephony 监听器，使用以下代码：
 
-```kt
+```java
 final TelephonyManager telephonyManager =
         (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 telephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
@@ -197,7 +197,7 @@ telephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STAT
 
 当我们完成对事件的监听后，调用`listen()`方法并传递`LISTEN_NONE`，如下所示：
 
-```kt
+```java
 telephonyManager.listen(mPhoneStateListener,PhoneStateListener.LISTEN_NONE); 
 ```
 
@@ -219,13 +219,13 @@ telephonyManager.listen(mPhoneStateListener,PhoneStateListener.LISTEN_NONE);
 
 1.  打开 AndroidManifest 并添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.SEND_SMS"/>
 ```
 
 1.  打开`activity_main.xml`并用以下 XML 替换现有的布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -260,14 +260,14 @@ telephonyManager.listen(mPhoneStateListener,PhoneStateListener.LISTEN_NONE);
 
 1.  打开`MainActivity.java`并添加以下全局变量：
 
-```kt
+```java
 final int SEND_SMS_PERMISSION_REQUEST_CODE=1; 
 Button mButtonSend; 
 ```
 
 1.  将以下代码添加到现有的`onCreate()`回调中：
 
-```kt
+```java
 mButtonSend = findViewById(R.id.buttonSend);
 mButtonSend.setEnabled(false);
 
@@ -281,7 +281,7 @@ if (checkPermission(Manifest.permission.SEND_SMS)) {
 
 1.  添加以下方法来检查权限：
 
-```kt
+```java
 private boolean checkPermission(String permission) {
     int permissionCheck = ContextCompat.checkSelfPermission(this,permission);
     return (permissionCheck == PackageManager.PERMISSION_GRANTED);
@@ -292,7 +292,7 @@ private boolean checkPermission(String permission) {
 
     请求响应：
 
-```kt
+```java
 @Override
 public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
     switch (requestCode) {
@@ -310,7 +310,7 @@ public void onRequestPermissionsResult(int requestCode, String permissions[], in
 
 1.  最后，添加实际发送短信的方法：
 
-```kt
+```java
 public void send(View view) {
     String phoneNumber = ((EditText)findViewById(R.id.editTextNumber)).getText().toString();
     String msg = ((EditText)findViewById(R.id.editTextMsg)).getText().toString();
@@ -334,7 +334,7 @@ public void send(View view) {
 
 发送短信的代码只有两行，如下所示：
 
-```kt
+```java
 SmsManager smsManager = SmsManager.getDefault(); 
 smsManager.sendTextMessage(phoneNumber, null, msg, null, null); 
 ```
@@ -349,7 +349,7 @@ smsManager.sendTextMessage(phoneNumber, null, msg, null, null);
 
 尽管这取决于运营商，但通常每个短信允许的最大字符数是 160 个。你可以修改前面的代码来检查消息是否超过 160 个字符，如果是的话，你可以调用 SMSManager 的 divideMessage()方法。该方法返回`ArrayList`，你可以将其发送到`sendMultipartTextMessage()`。以下是一个示例：
 
-```kt
+```java
 ArrayList<String> messages=smsManager.divideMessage(msg);
 smsManager.sendMultipartTextMessage(phoneNumber, null, messages, null, null);
 ```
@@ -360,7 +360,7 @@ smsManager.sendMultipartTextMessage(phoneNumber, null, messages, null, null);
 
 如果你希望被通知消息的状态，有两个可选字段你可以使用。以下是 SMSManager 文档中定义的`sendTextMessage()`方法：
 
-```kt
+```java
 sendTextMessage(String destinationAddress, String scAddress, String text, 
         PendingIntent sentIntent, PendingIntent deliveryIntent)
 ```
@@ -395,13 +395,13 @@ sendTextMessage(String destinationAddress, String scAddress, String text,
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.RECEIVE_SMS" />
 ```
 
 1.  将以下广播接收器声明添加到应用程序元素中：
 
-```kt
+```java
 <receiver android:name=".SMSBroadcastReceiver">
     <intent-filter>
         <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
@@ -411,7 +411,7 @@ sendTextMessage(String destinationAddress, String scAddress, String text,
 
 1.  打开 `MainActivity.java` 并添加以下方法：
 
-```kt
+```java
 private boolean checkPermission(String permission) {
     int permissionCheck = ContextCompat.checkSelfPermission(this, permission);
     return (permissionCheck == PackageManager.PERMISSION_GRANTED);
@@ -420,7 +420,7 @@ private boolean checkPermission(String permission) {
 
 1.  修改现有的 `onCreate()` 回调以检查权限：
 
-```kt
+```java
 if (!checkPermission(Manifest.permission.RECEIVE_SMS)) {
     ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECEIVE_SMS}, 0);
 }
@@ -428,7 +428,7 @@ if (!checkPermission(Manifest.permission.RECEIVE_SMS)) {
 
 1.  使用以下代码在项目中添加一个新的 Java 类，命名为 `SMSBroadcastReceiver`：
 
-```kt
+```java
 public class SMSBroadcastReceiver extends BroadcastReceiver {
     final String SMS_RECEIVED = "android.provider.Telephony.SMS_RECEIVED";
 
@@ -463,7 +463,7 @@ public class SMSBroadcastReceiver extends BroadcastReceiver {
 
 如你所见，广播接收器接收新短信消息的通知。我们通过在 AndroidManifest 中使用以下代码告诉系统我们想要接收新的短信接收广播：
 
-```kt
+```java
 <receiver android:name=".SMSBroadcastReceiver">
     <intent-filter>
         <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
@@ -473,13 +473,13 @@ public class SMSBroadcastReceiver extends BroadcastReceiver {
 
 通知通过标准的 `onReceive()` 回调传入，因此我们使用以下代码检查操作：
 
-```kt
+```java
 if (SMS_RECEIVED.equals(intent.getAction())) {} 
 ```
 
 这可能是这个食谱中最复杂的一行代码：
 
-```kt
+```java
 messages[i] = SmsMessage.createFromPdu((byte[]) pdus[i]); 
 ```
 
@@ -487,7 +487,7 @@ messages[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
 
 如果你的应用没有接收短信广播消息，可能是因为其他现有应用阻止了你的应用。你可以尝试增加 intent-filter 中的优先级值，如所示，或者禁用/卸载其他应用：
 
-```kt
+```java
 <intent-filter   android:priority="100">   
     <action android:name=
            "android.provider.Telephony.SMS_RECEIVED" />   
@@ -502,13 +502,13 @@ messages[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
 
 首先，为了读取现有消息，你需要以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.READ_SMS" /> 
 ```
 
 下面是使用 SMS 内容提供程序获取游标的示例：
 
-```kt
+```java
 Cursor cursor = getContentResolver().query(
         Uri.parse("content://sms/"), null, null, null, null);
 while (cursor.moveToNext()) {
@@ -554,7 +554,7 @@ while (cursor.moveToNext()) {
 
 当你想显示一个网页时，你有两个选择：调用默认浏览器或在你的应用程序中显示内容。如果你只想调用默认浏览器，使用以下 Intent：
 
-```kt
+```java
 Uri uri = Uri.parse("https://www.packtpub.com/"); 
 Intent intent = new Intent(Intent.ACTION_VIEW, uri); 
 startActivity(intent); 
@@ -574,13 +574,13 @@ startActivity(intent);
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.INTERNET"/>
 ```
 
 1.  修改现有的 `onCreate()` 方法以包含以下代码：
 
-```kt
+```java
 WebView webview = new WebView(this);
 setContentView(webview);
 webview.loadUrl("https://www.packtpub.com/");
@@ -596,7 +596,7 @@ webview.loadUrl("https://www.packtpub.com/");
 
 如果你想要全功能的网页浏览功能，即用户点击的任何链接都仍在你的 `WebView` 中加载，创建 `WebViewClient` 如下代码所示：
 
-```kt
+```java
 webview.setWebViewClient(new WebViewClient()); 
 ```
 
@@ -604,7 +604,7 @@ webview.setWebViewClient(new WebViewClient());
 
 如果你想要对页面导航有更多控制，你可以创建自己的 `WebViewClient` 类。如果你只想允许链接在你的网站内，则覆盖 `shouldOverrideUrlLoading()` 回调，如下所示：
 
-```kt
+```java
 private class mWebViewClient extends WebViewClient {
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -620,7 +620,7 @@ private class mWebViewClient extends WebViewClient {
 
 然后，使用以下代码设置客户端：
 
-```kt
+```java
 webview.setWebViewClient(new mWebViewClient());
 ```
 
@@ -628,7 +628,7 @@ webview.setWebViewClient(new mWebViewClient());
 
 我们可以通过 WebSetting 来自定义许多其他的 WebView 选项。如果你想要启用 JavaScript，从 WebView 中获取 `webSettings` 并调用 `setJavaScriptEnabled()`，如下所示：
 
-```kt
+```java
 WebSettings webSettings = webview.getSettings(); 
 webSettings.setJavaScriptEnabled(true); 
 ```
@@ -637,7 +637,7 @@ webSettings.setJavaScriptEnabled(true);
 
 另一个 `webSettings` 选项是 `setBuiltInZoomControls()`。从前面的代码继续，只需添加以下内容：
 
-```kt
+```java
 webSettings.setBuiltInZoomControls(true); 
 ```
 
@@ -665,14 +665,14 @@ webSettings.setBuiltInZoomControls(true);
 
 1.  添加以下权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 ```
 
 1.  打开 `activity_main.xml` 文件，并用以下内容替换现有的布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -694,7 +694,7 @@ webSettings.setBuiltInZoomControls(true);
 
 1.  将此方法添加到检查连接状态：
 
-```kt
+```java
 private boolean isOnline() {
     ConnectivityManager connectivityManager = (ConnectivityManager)
                     getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -705,7 +705,7 @@ private boolean isOnline() {
 
 1.  添加以下方法来处理按钮点击：
 
-```kt
+```java
 public void getStatus(View view) {
     TextView textView = findViewById(R.id.textView);
     if (isOnline()) {
@@ -753,7 +753,7 @@ public void getStatus(View view) {
 
 下面是一个如何在 Android Manifest 中通过接收器意图过滤器包含动作的示例：
 
-```kt
+```java
 <receiver android:name=".MyBroadcastReceiver"> 
     <intent-filter> 
         <action android:name="android.net.conn.CONNECTIVITY_CHANGE" /> 
@@ -767,7 +767,7 @@ public void getStatus(View view) {
 
 更好的解决方案（并且对于 Android 7.0 及以后的版本是必需的）是通过代码注册你的意图过滤器。以下是一个示例：
 
-```kt
+```java
 registerReceiver(mReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 ```
 
@@ -801,7 +801,7 @@ Android Nougat（API 24）引入的新功能是在操作系统级别处理阻止
 
 1.  用以下 XML 代码替换现有的布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -848,19 +848,19 @@ Android Nougat（API 24）引入的新功能是在操作系统级别处理阻止
 
 1.  打开`MainActivity.java`并在类声明中添加以下代码：
 
-```kt
+```java
 private EditText mEditTextNumber;
 ```
 
 1.  将以下代码行添加到`onCreate()`方法的末尾：
 
-```kt
+```java
 mEditTextNumber=findViewById(R.id.editTextNumber);
 ```
 
 1.  添加处理按钮点击的三个方法：
 
-```kt
+```java
 public void onClickBlock(View view) {
     String number = mEditTextNumber.getText().toString();
     if (number!=null && number.length()>0) {
@@ -883,7 +883,7 @@ public void onClickIsBlocked(View view) {
 
 1.  添加以下函数以阻止号码：
 
-```kt
+```java
 private void blockNumber(String number) {
     if (BlockedNumberContract.canCurrentUserBlockNumbers(this)) {
         ContentValues values = new ContentValues();
@@ -895,7 +895,7 @@ private void blockNumber(String number) {
 
 1.  添加以下函数以取消阻止号码：
 
-```kt
+```java
 private void unblockNumber(String number) {
     if (BlockedNumberContract.canCurrentUserBlockNumbers(this)) {
         ContentValues values = new ContentValues();
@@ -909,7 +909,7 @@ private void unblockNumber(String number) {
 
 1.  添加以下函数以检查号码是否被阻止：
 
-```kt
+```java
 public void isBlocked(String number) {
     if (BlockedNumberContract.canCurrentUserBlockNumbers(this)) {
         boolean blocked = BlockedNumberContract.isBlocked(this,number);
@@ -928,7 +928,7 @@ public void isBlocked(String number) {
 
 在我们调用`BlockedNumberContract` API 之前，我们通过调用`canCurrentUserBlockNumbers()`来检查我们是否有权限，就像以下代码所示：
 
-```kt
+```java
 if (BlockedNumberContract.canCurrentUserBlockNumbers(this)) {
 ```
 
@@ -942,7 +942,7 @@ if (BlockedNumberContract.canCurrentUserBlockNumbers(this)) {
 
 要检查一个号码是否已在阻止列表中，调用`isBlocked()`方法，传入当前上下文和要检查的号码，就像我们在以下代码中所做的那样：
 
-```kt
+```java
 boolean blocked = BlockedNumberContract.isBlocked(this,number);
 ```
 
@@ -950,7 +950,7 @@ boolean blocked = BlockedNumberContract.isBlocked(this,number);
 
 要获取所有当前被阻止号码的列表，使用以下代码创建一个带有列表的游标：
 
-```kt
+```java
 Cursor cursor = getContentResolver().query(
         BlockedNumberContract.BlockedNumbers.CONTENT_URI,
         new String[]{BlockedNumberContract.BlockedNumbers.COLUMN_ID,

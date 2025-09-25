@@ -70,7 +70,7 @@ Flutter 插件支持在 Android 和 iOS 上启动 URL，包括 web、手机、SM
 
 1.  接下来，从终端运行以下命令，这将通过命令行安装包：
 
-```kt
+```java
 flutter packages get
 ```
 
@@ -80,7 +80,7 @@ flutter packages get
 
 1.  下一步是将相应的`import`片段添加到你的 Dart 代码中：
 
-```kt
+```java
 import 'package:url_launcher/url_launcher.dart';
 ```
 
@@ -92,14 +92,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 1.  使用范围约束指定版本，如下所示，其中你指定最小和最大版本：
 
-```kt
+```java
 dependencies: 
 url_launcher: '>=0.4.1 <5.0.1'
 ```
 
 1.  使用`Carat Syntax`进行范围约束：
 
-```kt
+```java
 dependencies:
 url_launcher: '⁵.0.1'
 ```
@@ -108,7 +108,7 @@ url_launcher: '⁵.0.1'
 
 大多数包都提供了如何将包组件包含到代码中的见解。包的“示例”标签提供了关于代码执行的更多信息。在我们的例子中，我们使用一个梯度按钮来打开代码中指定的 URL：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -227,7 +227,7 @@ Google 的 Flutter 团队列出了以下表格（来源：[`flutter.dev/docs/dev
 
 因此，我们将使用 `MethodChannel` 作为包含单个平台方法的通道，该方法将返回 Android 手机的电池级别。客户端和主机端通过传递给通道构造函数的唯一通道名称进行通信。在我们的案例中，我们将其命名为 `call.flutter.io/battery`：
 
-```kt
+```java
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -242,7 +242,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 下一步是调用方法通道上的方法，我们将使用返回的结果（电池级别）来更新 `setState` 内的值：
 
-```kt
+```java
 String _batteryLevel = 'Battery Levels are Unknown';
 
 Future<void> _getPhoneBatteryLevel() async {
@@ -264,7 +264,7 @@ Future<void> _getPhoneBatteryLevel() async {
 
 完整的 `Main.Dart` 代码如下所示：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -357,7 +357,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
 包含以下导入：
 
-```kt
+```java
 package androcid.flutterapp1;
 
 import android.os.Bundle;
@@ -378,13 +378,13 @@ import android.os.Build.VERSION_CODES;
 
 接下来，创建一个 `String` 来保存通道名称：
 
-```kt
+```java
 private static final String CHANNEL = "call.flutter.io/battery";
 ```
 
 最后，添加 `MethodChannel` 方法：
 
-```kt
+```java
 new MethodChannel(getFlutterView(), CHANNEL).setMethodCallHandler(
                 new MethodCallHandler() {
                     @Override
@@ -396,7 +396,7 @@ new MethodChannel(getFlutterView(), CHANNEL).setMethodCallHandler(
 
 在下一步中，我们必须编写 Android 的 `onCreate` 方法：
 
-```kt
+```java
 private int getBatteryLevel() {
     int phoneBatteryLevel = -1;
     if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
@@ -418,7 +418,7 @@ private int getBatteryLevel() {
 
 我们的最后一步是完成之前添加的 `onMethodCall` 方法。使用单个平台方法 `getbatteryLevel`，您可以简单地调用之前步骤中编写的 Android 代码，并使用响应参数在成功和错误情况下返回响应，如下所示：
 
-```kt
+```java
 protected void onCreate(Bundle savedInstanceState) {
   super.onCreate(savedInstanceState);
   GeneratedPluginRegistrant.registerWith(this);
@@ -447,7 +447,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 以下为完整的 Android 代码：
 
-```kt
+```java
 package androcid.flutterapp1;
 
 import android.os.Bundle;
@@ -535,13 +535,13 @@ public class MainActivity extends FlutterActivity {
 
 要发布你自己的插件，请使用以下命令：
 
-```kt
+```java
 flutter packages pub publish --dry-run
 ```
 
 如果执行过程中没有错误，你可以执行以下命令来发布插件，你的插件将在几分钟内上线：
 
-```kt
+```java
 flutter packages pub publish
 
 ```

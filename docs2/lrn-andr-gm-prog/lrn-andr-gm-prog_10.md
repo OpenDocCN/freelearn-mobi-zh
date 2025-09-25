@@ -36,7 +36,7 @@
 
 让我们看看我们如何做到这一点；只需在你的`MyGLRenderer.java`文件中输入以下加粗代码：
 
-```kt
+```java
 //The import statements are same as our previous chapter
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
@@ -90,7 +90,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 此外，由于这是三角形的原生属性，我们将在这我们创建的`Triangle.java`类中编写此代码，而不是在`MyGLRenderer.java`类中。在输入代码时，请记住前面的步骤，并输入以下加粗的代码：
 
-```kt
+```java
 //Import statements remain the same
 public class Triangle {
 private FloatBuffer vb;
@@ -150,7 +150,7 @@ private FloatBuffer vb;
 
 让我们来做这件事；我们将在开始时简单地声明两个变量来表示旋转角度和速度；然后在我们的`onDrawFrame()`方法中实现我们的旋转逻辑，如下所示：
 
-```kt
+```java
 //Import statements as before
 public class MyGLRenderer implements GLSurfaceView.Renderer {
 
@@ -193,7 +193,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
 我们的金字塔有五个面，因此我们需要五个顶点来绘制金字塔。所以，在您创建了`Pyramid.java`之后，我们将定义我们的顶点，如下所示：
 
-```kt
+```java
 //Package name of our game
 
 public class Pyramid {
@@ -210,7 +210,7 @@ public class Pyramid {
 
 好吧，现在我们已经设置了顶点，但就像我们的三角形一样，我们仍然需要处理我们的缓冲区和索引。我们将快速定义我们的形状和颜色以及将构成金字塔面的索引的浮点缓冲区和字节数据缓冲区：
 
-```kt
+```java
 private FloatBuffer vb;  // Buffer for vertex-array
 private FloatBuffer cb;   // Buffer for color-array
 private ByteBuffer ib;    // Buffer for index-array
@@ -234,7 +234,7 @@ private byte[] ind = { // Vertex indices
 
 现在，我们将根据三角形的逻辑编写我们的`Pyramid`构造函数：
 
-```kt
+```java
 public Pyramid() {
     ByteBuffer vbb = ByteBuffer.allocateDirect(vp.length * 4);
     vbb.order(ByteOrder.nativeOrder());
@@ -257,7 +257,7 @@ public Pyramid() {
 
 最后，当然，如以下代码所示，我们的`draw()`方法：
 
-```kt
+```java
    public void draw(GL10 gles) {
       gles.glFrontFace(GL10.GL_CCW);
 
@@ -277,7 +277,7 @@ public Pyramid() {
 
 我们已经完成了对`Pyramid`形状的定义。所以，最终您的整个`Pyramid`代码将如下所示：
 
-```kt
+```java
 //Package name and our import statements
 public class Pyramid {
 
@@ -353,7 +353,7 @@ public class Pyramid {
 
 我们将工作在`MyGLRenderer.java`文件上，所以打开该文件，并编写以下加粗代码；其余部分保持不变：
 
-```kt
+```java
 //Package name and import statements
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {

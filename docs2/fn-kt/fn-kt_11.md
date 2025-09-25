@@ -28,7 +28,7 @@
 
 那么，什么是流呢？你可以将流想象为一个抽象层，它覆盖了一系列元素以执行聚合操作。困惑吗？让我们通过一个代码示例来尝试理解：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val stream = 1.rangeTo(10).asSequence().asStream() 
       val resultantList = stream.skip(5).collect(Collectors.toList()) 
@@ -80,7 +80,7 @@ Stream API 拥有丰富的函数式接口，就像我们在集合中看到的那
 
 为了更清楚地说明，请回顾以下示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val stream = 1.rangeTo(10).asSequence().asStream() 
        val resultantList = stream.filter{ 
@@ -130,7 +130,7 @@ Stream API 拥有丰富的函数式接口，就像我们在集合中看到的那
 
 那么，让我们举一个例子；看看以下程序：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val intStream = IntStream.range(1,10) 
       val result = intStream.sum() 
@@ -142,7 +142,7 @@ Stream API 拥有丰富的函数式接口，就像我们在集合中看到的那
 
 下面是另一个原始流的例子：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val doubleStream = DoubleStream.iterate(1.5,{item ->     item*1.3})//(1) 
       val avg = doubleStream 
@@ -188,7 +188,7 @@ Streams API 提供了多种获取`Stream`实例的方法。以下是创建 Strea
 
 `Stream Builder`接口使得轻松创建流实例变得非常容易。看看以下示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val stream = Stream.builder<String>() 
               .add("Item 1") 
@@ -216,7 +216,7 @@ Streams API 提供了多种获取`Stream`实例的方法。以下是创建 Strea
 
 使用`Streams.empty()`工厂方法创建空流非常简单。考虑以下示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val emptyStream = Stream.empty<String>() 
       val item = emptyStream.findAny() 
@@ -236,7 +236,7 @@ Streams API 提供了多种获取`Stream`实例的方法。以下是创建 Strea
 
 看看以下示例：
 
-```kt
+```java
  fun main(args: Array<String>) { 
       val stream = Stream.of("Item 1",2,"Item 3",4,5.0,"Item 6") 
       println("Items in Stream =            ${stream.collect(Collectors.toList())}") 
@@ -255,7 +255,7 @@ Streams API 提供了多种获取`Stream`实例的方法。以下是创建 Strea
 
 考虑以下示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val stream = Stream.generate { 
           //return a random number 
@@ -286,7 +286,7 @@ Streams API 提供了多种获取`Stream`实例的方法。以下是创建 Strea
 
 `Collectors` 类包含预定义的 `Collector` 实现。所有这些都可以通过以下行导入：
 
-```kt
+```java
 import java.util.stream.Collectors 
 ```
 
@@ -316,7 +316,7 @@ import java.util.stream.Collectors
 
 考虑以下示例来解释它：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val resultantSet = (0..10).asSequence().asStream() 
               .collect(Collectors.toCollection{LinkedHashSet<Int>()}) 
@@ -336,7 +336,7 @@ import java.util.stream.Collectors
 
 看一下以下示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val resultantMap = (0..10).asSequence().asStream() 
               .collect(Collectors.toMap<Int,Int,Int>({ 
@@ -360,7 +360,7 @@ import java.util.stream.Collectors
 
 考虑以下程序的示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val resultantString = Stream.builder<String>() 
               .add("Item 1") 
@@ -386,7 +386,7 @@ import java.util.stream.Collectors
 
 考虑以下示例：
 
-```kt
+```java
   fun main(args: Array<String>) { 
       val resultantSet = (1..20).asSequence().asStream() 
               .collect(Collectors.groupingBy<Int,Int> { it%5 }) 

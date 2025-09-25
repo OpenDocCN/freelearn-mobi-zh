@@ -46,7 +46,7 @@ Android Studio 的 3.0 版本由 Google 发布，并推广 Kotlin 作为 Android
 
 在前面的截图中，**应用程序名称**字段根据本书的名称填写，**公司域名**字段为`packt.com`。Android Studio 将这两个值连接起来，创建一个等于应用程序 ID 标识符的**包名**标识符。在我们的情况下，应用程序 ID 如下所示：
 
-```kt
+```java
 com.packt.learn_spring_for_android_application_development
 ```
 
@@ -58,7 +58,7 @@ Android Studio 是 Android 开发的官方 IDE，它基于 IntelliJ IDEA 平台�
 
 `build.gradle`文件包含项目配置并管理库依赖项。要添加对 Spring for Android 扩展的依赖项，我们应该添加以下行：
 
-```kt
+```java
 repositories {
     maven {
         url 'https://repo.spring.io/libs-milestone'
@@ -89,7 +89,7 @@ dependencies {
 
 打包是一种机制，允许我们将类、接口和子包分组。在我们的情况下，文件中包的声明可能如下所示：
 
-```kt
+```java
 package com.packt.learn_spring_for_android_application_development
 ```
 
@@ -101,7 +101,7 @@ package com.packt.learn_spring_for_android_application_development
 
 以下示例展示了如何定义只读和可变变量：
 
-```kt
+```java
 val readOnly = 3
 var mutable = 3
 ```
@@ -110,7 +110,7 @@ var mutable = 3
 
 要定义一个函数，我们必须使用`fun`关键字；这也可以被声明为第一类公民。这意味着函数只能在一个文件中定义。我们将在*函数*部分更详细地介绍函数，但就目前而言，让我们看看一个简单的例子，该例子会改变`mutable`变量的值：
 
-```kt
+```java
 fun changeMutable() {
     mutable = 4
 }
@@ -122,7 +122,7 @@ fun changeMutable() {
 
 要定义一个类，我们必须使用`class`关键字。在 Kotlin 中，所有类默认都是最终的，如果我们想扩展一个类，我们应该使用`open`关键字声明它。一个包含`readOnly`和`mutable`变量以及`changeMutable`方法的类可能看起来像这样：
 
-```kt
+```java
 class Foo {
     val readOnly = 3
     var mutable = 3
@@ -139,7 +139,7 @@ class Foo {
 
 **面向对象编程**是一种基于可以表示数据的对象的编程语言模型。Kotlin 以与 Java 相同的方式支持面向对象编程，但更为严格。这是因为 Kotlin 没有原始类型和静态成员。相反，它提供了一个`companion object`：
 
-```kt
+```java
 class Bar {
     companion object {
         const val NAME = "Igor"
@@ -151,7 +151,7 @@ class Bar {
 
 `companion object` 是在类初始化期间创建一次的对象。在 Kotlin 中，我们可以像在 Java 中的 `static` 一样引用 `companion object` 的成员：
 
-```kt
+```java
 fun test() {
     Bar.NAME
     Bar.printName()
@@ -160,7 +160,7 @@ fun test() {
 
 然而，在底层，嵌套的 `Companion` 类被创建，我们实际上使用这个类的实例，如下所示：
 
-```kt
+```java
 Bar.Companion.printName();
 ```
 
@@ -184,7 +184,7 @@ Bar.Companion.printName();
 
 要在 Kotlin 中定义一个函数，你必须使用 `fun` 关键字，如下所示：
 
-```kt
+```java
 fun firstClass() {
     println("First class function")
 }
@@ -192,7 +192,7 @@ fun firstClass() {
 
 前面的代码片段演示了我们可以将函数声明为第一类公民。我们还可以将函数定义为类成员，如下所示：
 
-```kt
+```java
 class A {
     fun classMember() {
         println("Class member")
@@ -202,7 +202,7 @@ class A {
 
 一个 `local` 函数是在另一个函数中声明的函数，如下所示：
 
-```kt
+```java
 fun outer() {
     fun local() {
         println("Local")
@@ -240,7 +240,7 @@ Kotlin 特别支持一种函数式风格，允许我们以与变量相同的方�
 
 以下示例演示了函数式编程在特定情况下如何有用。让我们想象我们有一个数字列表，我们想要找到大于`4`的数字。在命令式风格中，这可能会如下所示：
 
-```kt
+```java
 fun imperative() {
 val numbers = listOf(1, 4, 6, 2, 9)
 for (i in 0 until numbers.lastIndex) {
@@ -253,7 +253,7 @@ println(numbers)
 
 如您所见，我们必须使用大量的控制流语句来实现这个简单的逻辑。在声明式风格中，它可能看起来如下：
 
-```kt
+```java
 fun declarative() {
     println(listOf(1, 4, 6, 2, 9).find { it > 4 })
 }
@@ -269,7 +269,7 @@ Kotlin 的扩展函数特性与函数式编程无关，但最好在继续前进�
 
 在以下代码片段中，`extension`函数被添加到`A`类的功能中：
 
-```kt
+```java
 fun A.extension() {
     println("Extension")
 }
@@ -277,7 +277,7 @@ fun A.extension() {
 
 如您所见，使用这个特性很容易。我们只需要指定一个类名，在点号后面声明一个函数名。现在，我们可以像通常一样调用扩展函数：
 
-```kt
+```java
 fun testExtension() {
     A().extension()
 }
@@ -319,7 +319,7 @@ fun testExtension() {
 
 让我们看看`firstOrNull`函数的实现，如下所示：
 
-```kt
+```java
 public inline fun <T> Iterable<T>.firstOrNull(predicate: (T) -> Boolean): T? {
     for (element in this) if (predicate(element)) return element
     return null
@@ -334,13 +334,13 @@ Lambda 是一个未声明的函数。这在我们需要执行一个动作，但�
 
 以下 Lambda 表达式返回一个隐式的`Unit`类型的对象：
 
-```kt
+```java
 {x: Int -> println(x)}
 ```
 
 `Unit`对象的声明如下：
 
-```kt
+```java
 public object Unit {
     override fun toString() = "kotlin.Unit"
 }
@@ -348,13 +348,13 @@ public object Unit {
 
 Lambda 的引用可以保存到变量中：
 
-```kt
+```java
 val predicate: (Int) -> Unit = { println(it) }
 ```
 
 我们可以使用这个变量来调用保存的 Lambda：
 
-```kt
+```java
 predicate(3)
 ```
 
@@ -370,7 +370,7 @@ predicate(3)
 
 在 Kotlin 中，`if`控制流元素可以像在 Java 中使用一样使用。以下示例演示了`if`作为常规语句的使用：
 
-```kt
+```java
 fun ifStatement() {
     val a = 4
     if (a < 5) {
@@ -381,7 +381,7 @@ fun ifStatement() {
 
 如果你使用`if { ... } else { ... }`控制流元素作为表达式，你必须声明`else`块，如下所示：
 
-```kt
+```java
 fun ifExpression() {
     val a = 5
     val b = 4
@@ -397,7 +397,7 @@ Kotlin 中的`switch { ... }`控制流元素被`when { ... }`所取代。Kotlin 
 
 以下示例演示了如何使用`when { ... }`作为语句：
 
-```kt
+```java
 fun whenStatement() {
     val x = 1
     when (x) {
@@ -412,7 +412,7 @@ fun whenStatement() {
 
 前面的代码片段包含`else`分支，对于具有语句的案例，它是可选的。如果所有其他分支都没有匹配的条件，则调用`else`分支。如果您使用`when { ... }`作为表达式，并且编译器无法确定所有可能的案例都被覆盖，则`else`分支是必需的。以下表达式返回`Unit`：
 
-```kt
+```java
 fun whenExpression(x: Int) = when (x) {
     1 -> println("1")
     2 -> println("2")
@@ -434,7 +434,7 @@ Enum 是一个特殊类型的类，用于定义一组常量。Sealed 类是一�
 
 以下示例演示了如何实现这一点：
 
-```kt
+```java
 sealed class Method
 class POST: Method()
 class GET: Method()
@@ -442,7 +442,7 @@ class GET: Method()
 
 使用`when { ... }`表达式，我们可以使用`Method`类型的类，如下所示：
 
-```kt
+```java
 fun handleRequest(method: Method): String = when(method) {
     is POST -> TODO("Handle POST")
     is GET -> TODO("Handle GET")
@@ -467,7 +467,7 @@ fun handleRequest(method: Method): String = when(method) {
 
 `Iterator`接口如下所示：
 
-```kt
+```java
 public interface Iterator<E> {
 
     boolean hasNext();
@@ -478,7 +478,7 @@ public interface Iterator<E> {
 
 如果我们想将`iterator()`、`hasNext()`和`next()`方法作为类成员提供，我们必须使用`operator`关键字声明它们。以下示例演示了这种情况：
 
-```kt
+```java
 class Numbers(val numbers: Array<Int>) {
 
     private var currentIndex: Int = 0
@@ -493,7 +493,7 @@ class Numbers(val numbers: Array<Int>) {
 
 `Numbers`类可以如下使用：
 
-```kt
+```java
 fun testForLoop() {
     val numbers = Numbers(arrayOf(1, 2, 3))
     for (item in numbers) {
@@ -504,7 +504,7 @@ fun testForLoop() {
 
 使用扩展函数的实现如下：
 
-```kt
+```java
 class Numbers(val numbers: Array<Int>)
 
 private var currentIndex = 0
@@ -522,7 +522,7 @@ operator fun Numbers.next(): Int = numbers[currentIndex ++]
 
 `while() { ... }`和`do { ... } while()`语句的工作方式与 Java 中的方式相同。`while`语句接受一个条件，而`do`指定了一个在条件为`true`时应调用的代码块。以下示例演示了`do { ... } while()`在 Kotlin 中的样子：
 
-```kt
+```java
 fun testWhileLoop() {
     val array = arrayOf(1, 2, 3)
     do {
@@ -538,7 +538,7 @@ fun testWhileLoop() {
 
 Kotlin 支持范围的概念，它表示可比较类型的序列。要创建范围，我们可以使用在类中实现的`rangeTo`方法，如下所示：
 
-```kt
+```java
 public operator fun rangeTo(other: Byte): LongRange = LongRange(this, other)
 
 public operator fun rangeTo(other: Short): LongRange = LongRange(this, other)
@@ -556,7 +556,7 @@ public operator fun rangeTo(other: Long): LongRange = LongRange(this, other)
 
 范围在我们使用循环时非常有用：
 
-```kt
+```java
 for (i in 0..100) {
     // .....
 }
@@ -566,25 +566,25 @@ for (i in 0..100) {
 
 如果您想排除最后一个值，可以使用`until`函数，如下所示：
 
-```kt
+```java
 0 until 100
 ```
 
 我们还可以使用`step`函数，如下所示：
 
-```kt
+```java
 1..100 step 2
 ```
 
 前面的代码片段表示如下范围：
 
-```kt
+```java
 [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, ... 99]
 ```
 
 值得注意的是，范围支持许多`until`函数，例如`filter`或`map`：
 
-```kt
+```java
 (0..100)
         .filter { it > 50 }
         .map { it * 2 }
@@ -596,14 +596,14 @@ Kotlin 支持一个更强大的功能——字符串模板。字符串可以包�
 
 字符串模板的最简单用法如下所示：
 
-```kt
+```java
 var number = 1
 val string = "number is $number" 
 ```
 
 包含表达式的更高级示例如下：
 
-```kt
+```java
 val name = "Igor"
 val lengthOfName = "length is ${name.length}"
 ```
@@ -640,33 +640,33 @@ val lengthOfName = "length is ${name.length}"
 
 如果我们使用不可空变量，则不能将其赋值为 `null`，以下代码无法编译：
 
-```kt
+```java
 var name = "Igor"
 name = null
 ```
 
 要能够编译此代码，我们必须显式声明 `name` 变量为可空：
 
-```kt
+```java
 var name: String? = "Igor"
 name = null
 ```
 
 在完成此操作后，我们无法编译以下代码：
 
-```kt
+```java
 name.length
 ```
 
 要访问可空类型的成员，我们必须使用 `?.` 操作符，如下例所示：
 
-```kt
+```java
 name?.length
 ```
 
 一个表达式可以多次包含 `?.` 操作符，所需次数如下：
 
-```kt
+```java
 name?.length?.compareTo(4)
 ```
 
@@ -674,7 +674,7 @@ name?.length?.compareTo(4)
 
 为了提供一个替代的程序流程，如果遇到 `null`，我们可以使用 Elvis 操作符 (`?:`)。这可以按以下方式使用：
 
-```kt
+```java
 name?.length?.compareTo(4) ?: { println("name is null") }()
 ```
 
@@ -686,7 +686,7 @@ name?.length?.compareTo(4) ?: { println("name is null") }()
 
 要获取元素引用，我们应该使用 `::` 操作符。以下示例演示了如何获取类引用：
 
-```kt
+```java
 val reference: KClass<String> = String::class
 ```
 
@@ -694,14 +694,14 @@ val reference: KClass<String> = String::class
 
 函数引用也可以传递给高阶函数。以下示例显示了这可能看起来像什么：
 
-```kt
+```java
 fun isOdd(number: Int): Boolean = number % 2 == 0
 val odds = listOf(1, 2, 3, 4, 5).filter(::isOdd)
 ```
 
 属性的引用由 `KProperty` 类表示，并且可以通过以下方式获得：
 
-```kt
+```java
 val referenceToOddsPreperty = ::odds
 ```
 
@@ -711,13 +711,13 @@ val referenceToOddsPreperty = ::odds
 
 注解用于将元数据附加到代码。这是使用 `annotation` 关键字创建的：
 
-```kt
+```java
 public annotation class JvmStatic
 ```
 
 在最常见的情况下，注解由注解处理工具使用，以生成或修改代码。让我们看看以下示例：
 
-```kt
+```java
 class Example1 {
     companion object {
         fun companionClassMember() {}
@@ -727,7 +727,7 @@ class Example1 {
 
 Kotlin 字节码查看器显示了以下代码：
 
-```kt
+```java
 public final class Example1 {
    public static final Example1.Companion Companion = new Example1.Companion((DefaultConstructorMarker)null);
 
@@ -748,7 +748,7 @@ public final class Example1 {
 
 如你所见，`Example1` 类包含嵌套的 `Companion` 类，该类包含 `companionClassMember` 方法。当使用 `@JvmStatic` 注解和反编译后的 Java 代码版本时，我们可以标记 `companionClassMember` 方法，其代码如下：
 
-```kt
+```java
 public final class Example1 {
    public static final Example1.Companion Companion = new Example1.Companion((DefaultConstructorMarker)null);
 

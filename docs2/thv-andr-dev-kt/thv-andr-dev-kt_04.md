@@ -76,7 +76,7 @@ Room 中的`Database`类是一个高级类，作为您应用持久数据的主�
 
 `Database`类使用`@Database`注解，指定其包含的实体和数据库版本。如果您修改数据库模式，您需要更新版本号并定义一个迁移策略，如下例所示：
 
-```kt
+```java
 @Database(entities = [Message::class, Conversation::class],
     version = 1)
 abstract class ChatAppDatabase : RoomDatabase() {
@@ -93,7 +93,7 @@ abstract class ChatAppDatabase : RoomDatabase() {
 
 您可以通过在数据类上标注`@Entity`来声明一个实体。每个`@Entity`类代表数据库中的一个表，并且您可以定义表名。如果您没有定义表名，Room 将使用类名作为表名，如下例所示：
 
-```kt
+```java
 @Entity(tableName = "messages")
 data class Message(
     @PrimaryKey val id: String,
@@ -111,7 +111,7 @@ DAO 是定义您想要执行的所有数据库操作的接口。对于每个 DAO
 
 您应该使用`@Dao`注解一个接口，然后使用相应的操作注解每个方法，例如`@Insert`、`@Delete`、`@Update`或`@Query`用于自定义查询。然后，Room 将在编译时自动生成执行这些操作所需的代码。以下是一个示例：
 
-```kt
+```java
 @Dao
 interface MessageDao {
     @Insert
@@ -135,7 +135,7 @@ interface MessageDao {
 
 要开始使用 Room，我们首先需要在项目中包含必要的依赖项。打开你的 `build.gradle` 文件，并在 `dependencies` 下添加以下依赖项：
 
-```kt
+```java
 dependencies {
     implementation "androidx.room:room-runtime:2.3.0"
     kapt "androidx.room:room-compiler:2.3.0"
@@ -159,7 +159,7 @@ dependencies {
 
 如前所述，`Database` 组件是我们应用程序数据的主要访问点。因此，让我们创建一个 `ChatAppDatabase` 类：
 
-```kt
+```java
 @Database(entities = [Message::class, Conversation::class],
 version = 1)
 abstract class ChatAppDatabase : RoomDatabase() {
@@ -211,7 +211,7 @@ abstract class ChatAppDatabase : RoomDatabase() {
 
 我们将要创建的第一个实体类是`Message`类：
 
-```kt
+```java
 @Entity(
     tableName = "messages",
     foreignKeys = [
@@ -262,7 +262,7 @@ data class Message(
 
 现在，让我们创建一个`Conversation`实体：
 
-```kt
+```java
 @Entity(
     tableName = "conversations",
 )
@@ -284,7 +284,7 @@ DAO 是一个接口，它作为应用程序代码和数据库之间的通信层�
 
 让我们从`Message`实体的 DAO 开始：
 
-```kt
+```java
 @Dao
 interface MessageDao {
     @Query("SELECT * FROM messages WHERE conversation_id =
@@ -310,7 +310,7 @@ interface MessageDao {
 
 现在，让我们为`Conversation`实体创建一个 DAO：
 
-```kt
+```java
 @Dao
 interface ConversationDao {
     @Query("SELECT * FROM conversations ORDER BY
@@ -329,7 +329,7 @@ interface ConversationDao {
 
 现在，我们需要为其他应用组件提供这些 DAO，以便它们可以被注入。考虑到这一点，我们将创建以下模块：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -366,7 +366,7 @@ object DatabaseModule {
 
 在下面的代码中，我们只是调用我们在 DAO 中已经定义的函数：
 
-```kt
+```java
 class MessagesLocalDataSource @Inject constructor(private
 val messageDao: MessageDao) {
     fun getMessagesInConversation(conversationId: Int):
@@ -396,7 +396,7 @@ val messageDao: MessageDao) {
 
 负责组合两个数据源的组件是 `MessagesRepository`，我们在上一章中已经实现，使其连接到 `WebsocketDataSource`。现在让我们修改它以包含两个数据源，并协调数据检索和本地存储：
 
-```kt
+```java
 class MessagesRepository @Inject constructor(
     private val dataSource: MessagesSocketDataSource,
     private val localDataSource: DatabaseDataSource
@@ -405,7 +405,7 @@ class MessagesRepository @Inject constructor(
 
 接下来，我们将修改 `getMessages()` 方法，以包含将来自 `MessagesSocketDataSource`（远程数据源）的信息存储到 `DatabaseDataSource`（本地数据源）的逻辑：
 
-```kt
+```java
 override suspend fun getMessages(chatId: String, userId:
 String): Flow<Message> {
         return flow {
@@ -431,7 +431,7 @@ String): Flow<Message> {
 
 现在，我们还将修改 `sendMessage` 方法，其中我们将存储每条新发送的消息：
 
-```kt
+```java
     override suspend fun sendMessage(chatId: String,
     message: Message) {
         dataSource.sendMessage(message)
@@ -441,7 +441,7 @@ String): Flow<Message> {
 
 断开连接将与之前保持一致，因为我们不需要做任何与新的数据源相关的事情：
 
-```kt
+```java
     override suspend fun disconnect() {
         dataSource.disconnect()
     }
@@ -449,7 +449,7 @@ String): Flow<Message> {
 
 最后，这是我们将实施的机制，以保持数据库的大小在商定的每场对话消息数量之下：
 
-```kt
+```java
     private suspend fun manageDatabaseSize() {
         val messages =
             localDataSource.getMessagesInConversation(
@@ -504,7 +504,7 @@ String): Flow<Message> {
 
 当您将文件上传到 Firebase 存储时，您创建一个指向您将要存储文件的位置的引用。此引用由一个 `StorageReference` 对象表示，您通过在指向您的 Firebase 存储 bucket 的引用上调用 `child()` 方法并传递路径作为参数来创建它，如下例所示：
 
-```kt
+```java
 val storageRef = Firebase.storage.reference
 val fileRef =
 storageRef.child("images/profiles/user123.jpg")
@@ -524,13 +524,13 @@ Firebase 存储中的路径是灵活的，您可以根据应用程序的需要�
 
 要开始使用 Firebase 存储，我们首先需要将 Firebase Cloud Storage Android 库添加到我们的应用程序中。这可以通过将以下行添加到我们的模块的 `build.gradle` 文件中完成：
 
-```kt
+```java
 implementation 'com.google.firebase:firebase-storage-ktx'
 ```
 
 关于聊天消息，一种方法是将聊天记录保存为 Firebase Storage 中的文本文件。每个对话可以有自己的文本文件，每条消息都是该文件中的一行。因此，我们将创建一个数据源来上传这些文件：
 
-```kt
+```java
 class StorageDataSource @Inject constructor(private val
 firebaseStorage: FirebaseStorage) {
     suspend fun uploadFile(localFile: File, remotePath:
@@ -552,7 +552,7 @@ firebaseStorage: FirebaseStorage) {
 
 为了能够使用 Firebase 存储实例，我们需要提供 `FirebaseStorage` 依赖项。为此，我们需要创建以下模块，以便 Hilt 了解如何获取它：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 object StorageModule {
@@ -569,7 +569,7 @@ object StorageModule {
 
 这是此存储库的代码：
 
-```kt
+```java
 class BackupRepository @Inject constructor(
     private val messageDao: MessageDao,
     private val conversationDao: ConversationDao,
@@ -629,7 +629,7 @@ class BackupRepository @Inject constructor(
 
 `UploadMessagesUseCase`的责任将是使用`BackupRepository`执行备份。由于大部分逻辑已经在仓库中，代码将更简单，看起来像这样：
 
-```kt
+```java
 class UploadMessagesUseCase @Inject constructor(
     private val backupRepository: BackupRepository
 ) {
@@ -673,7 +673,7 @@ class UploadMessagesUseCase @Inject constructor(
 
 下面是一个基本的 `Worker` 类的示例：
 
-```kt
+```java
 class ExampleWorker(appContext: Context, workerParams:
 WorkerParameters)
     : Worker(appContext, workerParams) {
@@ -724,7 +724,7 @@ WorkerParameters)
 
 下面是一个配置`WorkRequest`实例的示例：
 
-```kt
+```java
 val constraints = Constraints.Builder()
     .setRequiresCharging(true)
     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -750,7 +750,7 @@ val workRequest = OneTimeWorkRequestBuilder<MyWorker>()
 
 首先，为了支持`WorkManager` API，我们需要在我们的代码中包含相关的依赖项：
 
-```kt
+```java
 dependencies {
     implementation "androidx.work:work-runtime-ktx:$2.9.0"
     // Hilt AndroidX WorkManager integration
@@ -765,7 +765,7 @@ dependencies {
 
 这里是我们`Worker`类的完整代码：
 
-```kt
+```java
 @HiltWorker
 class UploadMessagesWorker @AssistedInject constructor(
     @Assisted appContext: Context,
@@ -808,7 +808,7 @@ class UploadMessagesWorker @AssistedInject constructor(
 
 在`WorkRequest`类的情况下，我们需要考虑我们希望消息备份的频率；例如，我们可以每周备份一次。此外，我们将配置`WorkRequest`类，使其仅在用户有 Wi-Fi 连接时被调用。以下是我们的做法：
 
-```kt
+```java
 val constraints = Constraints.Builder()
     .setRequiredNetworkType(NetworkType.UNMETERED)
     .build()
@@ -832,7 +832,7 @@ WorkManager.getInstance(this).enqueue(
 
 我们可以从应用中的任何地方调用此代码并将`WorkRequest`实例入队，但要确保它被安排，最方便的地方是在我们启动应用时，在`WhatsPacktApplication.onCreate`方法中：
 
-```kt
+```java
 @HiltAndroidApp
 class WhatsPacktApp: Application() {
     override fun onCreate() {
@@ -878,7 +878,7 @@ class WhatsPacktApp: Application() {
 
 我们可以通过在`build.gradle`文件中添加以下依赖项将 AWS S3 SDK 集成到我们的 Android 项目中：
 
-```kt
+```java
 implementation 'com.amazonaws:aws-android-sdk-s3:
 $latest_version'
 implementation 'com.amazonaws:aws-android-sdk-
@@ -917,7 +917,7 @@ cognitoidentityprovider:$latest_version'
 
 1.  接下来，在我们的应用中，我们需要获取 AWS 凭证提供者。为此，我们将使用我们的 **IdentityPoolId** 类初始化 **CognitoCachingCredentialsProvider**，在配置的区域：
 
-    ```kt
+    ```java
     val credentialsProvider =
     CognitoCachingCredentialsProvider(
         applicationContext,
@@ -928,7 +928,7 @@ cognitoidentityprovider:$latest_version'
 
 1.  现在，我们可以在创建 AWS 服务客户端时使用凭证提供者实例。例如，要与其配合使用 Amazon S3，请使用以下代码：
 
-    ```kt
+    ```java
     val s3 = AmazonS3Client(credentialsProvider)
     ```
 
@@ -940,7 +940,7 @@ cognitoidentityprovider:$latest_version'
 
 这就是我们可以这样实现的方式：
 
-```kt
+```java
 class AWSS3Provider(
     private val context: Context,
     private val credentialsProvider:
@@ -1010,7 +1010,7 @@ class AWSS3Provider(
 
 这就是我们实现 `S3StorageDataSource` 的方法：
 
-```kt
+```java
 class S3StorageDataSource @Inject constructor(
     private val awsS3Provider: AWSS3Provider
 ) : IStorageDataSource {
@@ -1029,7 +1029,7 @@ class S3StorageDataSource @Inject constructor(
 
 这个新的 `S3StorageDataSource` 类可以通过 Hilt 以类似的方式提供，就像之前的 `FirebaseStorageDataSource` 类一样：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 object StorageModule {
@@ -1046,7 +1046,7 @@ object StorageModule {
 
 最后，我们需要将其集成到我们的 `BackupRepository` 类中。这就像替换 `StorageDataSource` 依赖项为 `IStorageDataSource` 依赖项一样简单：
 
-```kt
+```java
 class BackupRepository @Inject constructor(
     private val messageDao: MessageDao,
     private val conversationDao: ConversationDao,

@@ -24,7 +24,7 @@
 
 要在设备上启用恢复，我们需要再次查看设备分区。在 Android SDK 中，我们有以下可用于模拟器的镜像文件：
 
-```kt
+```java
 $ ls system-images/android-25/default/x86
 build.prop   kernel-ranchu  ramdisk.img        system.img
 kernel-qemu  NOTICE.txt     source.properties  userdata.img  
@@ -33,7 +33,7 @@ kernel-qemu  NOTICE.txt     source.properties  userdata.img
 
 启动模拟器后，我们可以看到以下分区已挂载：
 
-```kt
+```java
 root@x86emu:/ # mount
 rootfs / rootfs ro,seclabel,relatime 0 0
 tmpfs /dev tmpfs rw,seclabel,nosuid,relatime,mode=755 0 0
@@ -99,7 +99,7 @@ BCB 以原始分区格式存储在`/misc`分区中，这意味着这个分区就
 
 恢复使用`recovery.fstab`文件挂载系统中的所有分区。如果我们查看`recovery.fstab`中`/misc`分区的文件系统类型，它是`emmc`，这是恢复中使用的原始文件系统之一：
 
-```kt
+```java
 /dev/block/by-name/misc    /misc    emmc    defaults    defaults  
 
 ```
@@ -124,7 +124,7 @@ BCB 以原始分区格式存储在`/misc`分区中，这意味着这个分区就
 
 让我们回到 BCB 的话题。在`$AOSP/bootable/recovery/bootloader.h`文件中，BCB 被定义为以下数据结构：
 
-```kt
+```java
 struct bootloader_message { 
     char command[32]; 
     char status[32]; 
@@ -191,7 +191,7 @@ struct bootloader_message {
 
 根据前面的流程分析，我们可以查看 `$AOSP/bootable/recovery/recovery.cpp` 中的 `main` 函数的代码片段如下：
 
-```kt
+```java
 int 
 main(int argc, char **argv) { 
     time_t start = time(NULL); 
@@ -279,7 +279,7 @@ get_args 流程图
 
 从以下代码片段中，我们可以看到它调用了 `get_bootloader_message` 函数来获取 BCB 数据结构 `boot`：
 
-```kt
+```java
 static void 
 get_args(int *argc, char ***argv) { 
     struct bootloader_message boot; 
@@ -293,7 +293,7 @@ get_args(int *argc, char ***argv) {
 
 如果没有参数，`argc` 的值将小于或等于 1。它将尝试从 BCB 中获取参数，如下面的代码片段所示。在 BCB 的 `recovery` 字段中，命令将以 `recovery\n` 开始。`recovery\n` 之后的内容与缓存命令文件格式相同，即 `/cache/recovery/command`：
 
-```kt
+```java
 if (*argc <= 1) { 
     boot.recovery[sizeof(boot.recovery) - 1] = '\0'; 
     const char *arg = strtok(boot.recovery, "\n"); 
@@ -314,7 +314,7 @@ if (*argc <= 1) {
 
 如果可以从 BCB 中检索到参数，它将跳过缓存命令文件。否则，它将尝试按照以下方式从缓存命令文件中读取参数：
 
-```kt
+```java
 if (*argc <= 1) { 
     FILE *fp = fopen_path(COMMAND_FILE, "r"); 
     if (fp != NULL) { 
@@ -343,7 +343,7 @@ if (*argc <= 1) {
 
 在处理完 BCB 和缓存命令文件后，它将 BCB 块写入`/misc`分区，以便在更新或擦除过程中出现任何错误时，重启后相同的进程将继续：
 
-```kt
+```java
 strlcpy(boot.command, "boot-recovery", sizeof(boot.command)); 
 strlcpy(boot.recovery, "recovery\n", sizeof(boot.recovery)); 
 int i; 
@@ -361,7 +361,7 @@ set_bootloader_message(&boot);
 
 我们可以快速查看`get_bootloader_message`函数及其支持函数`get_bootloader_message_block`，如下所示：
 
-```kt
+```java
 int get_bootloader_message(struct bootloader_message *out) { 
     Volume* v = volume_for_path("/misc"); 
     if (v == NULL) { 
@@ -381,7 +381,7 @@ int get_bootloader_message(struct bootloader_message *out) {
 
 在`get_bootloader_message`函数中，它将根据分区类型调用另一个函数，`/misc`。正如我们所见，支持的原始文件系统类型是`mtd`和`emmc`。我们可以查看`emmc`版本的`get_bootloader_message_block`，如下所示：
 
-```kt
+```java
 static int get_bootloader_message_block(struct bootloader_message *out, 
 const Volume* v) { 
     wait_for_device(v->blk_device); 
@@ -442,7 +442,7 @@ const Volume* v) {
 
 我们已经分析了前面的大多数步骤，除了`finish_recovery`。让我们看看`finish_recovery`函数：
 
-```kt
+```java
 static void 
 finish_recovery(const char *send_intent) { 
     // By this point, we're ready to return to the main system... 
@@ -506,7 +506,7 @@ OTA 更新是恢复的另一个主要功能。在手动进入恢复模式后，�
 
 一旦更新包下载完成，安装将由`install_package`函数完成：
 
-```kt
+```java
 int 
 install_package(const char* path, bool* wipe_cache, const char* install_file, bool needs_mount) 
 { 
@@ -539,7 +539,7 @@ install_package(const char* path, bool* wipe_cache, const char* install_file, bo
 
 在`install_package`函数中，它首先设置安装日志文件。日志文件路径是`/tmp/last_install`。然后，它调用`setup_install_mounts`来挂载相关分区。实际的安装是在`really_install_package`函数中完成的，如下面的代码片段所示：
 
-```kt
+```java
 static int 
 really_install_package(const char *path, bool* wipe_cache, bool needs_mount) 
 { 
@@ -610,7 +610,7 @@ really_install_package(const char *path, bool* wipe_cache, bool needs_mount)
 
 让我们详细了解这三个任务：
 
-```kt
+```java
 static int 
 try_update_binary(const char* path, ZipArchive* zip, bool* wipe_cache) { 
     const ZipEntry* binary_entry = 
@@ -643,7 +643,7 @@ try_update_binary(const char* path, ZipArchive* zip, bool* wipe_cache) {
 
 如果`update_binary`可以成功提取，它将被复制到`/tmp/update_binary`：
 
-```kt
+```java
 int pipefd[2]; 
 pipe(pipefd); 
 const char** args = (const char**)malloc(sizeof(char*) * 5); 
@@ -678,7 +678,7 @@ if (pid == 0) {
 
 在环境准备就绪后，它将派生一个子进程来运行`update_binary`。父进程将通过管道与子进程通信来监控安装进度：
 
-```kt
+```java
     close(pipefd[1]); 
 
     *wipe_cache = false; 
@@ -743,7 +743,7 @@ if (pid == 0) {
 
 在我们查看本章的更改之前，让我们先看看配置文件。像往常一样，我们为每个章节都有一个清单文件。我们根据第十一章的源代码，*启用 VirtualBox 特定的硬件接口*进行本章的更改。以下是我们将要更改的项目：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -775,7 +775,7 @@ if (pid == 0) {
 
 我们可以使用以下命令从 GitHub 和 AOSP 获取源代码：
 
-```kt
+```java
 $ repo init -u https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch12_aosp
 $ repo sync 
 
@@ -783,7 +783,7 @@ $ repo sync
 
 在我们获取本章的源代码后，我们可以设置环境并按如下方式构建系统：
 
-```kt
+```java
 $ source build/envsetup.sh
 $ lunch x86vbox-eng
 $ make -j4
@@ -792,7 +792,7 @@ $ make -j4
 
 要构建`initrd.img`，您可以运行以下命令：
 
-```kt
+```java
 $ make initrd USE_SQUASHFS=0 
 
 ```
@@ -801,7 +801,7 @@ $ make initrd USE_SQUASHFS=0
 
 对于 x86vbox 设备，我们首先需要更改 Makefiles 设备。由于我们从通用的 Android-x86 设备继承了 x86vbox，所以我们只有以下 Makefiles：
 
-```kt
+```java
 $ ls *.mk
 AndroidProducts.mk  BoardConfig.mk  x86vbox.mk  
 
@@ -809,7 +809,7 @@ AndroidProducts.mk  BoardConfig.mk  x86vbox.mk
 
 `AndroidProducts.mk`是 Android 构建系统的入口，它包括我们的`x86vbox.mk` Makefile。在`x86vbox.mk`中，我们添加以下与恢复相关的文件：
 
-```kt
+```java
 PRODUCT_COPY_FILES += \ 
 ... 
 device/generic/x86vbox/recovery.fstab:recovery/root/etc/recovery.fstab \    device/generic/x86vbox/recovery/root/init.recovery.x86vbox.rc:root/init.recovery.x86vbox.rc \    device/generic/x86vbox/recovery/root/sbin/network_start.sh:recovery/root/sbin/network_start.sh \    device/generic/x86vbox/recovery/root/sbin/create_partitions.sh:recovery/root/sbin/create_partitions.sh \ 
@@ -821,7 +821,7 @@ device/generic/x86vbox/recovery.fstab:recovery/root/etc/recovery.fstab \    devi
 
 第二部分与存储设备的分区有关。正如我们在前面的章节中讨论的，我们不能像在第八章，*在 VirtualBox 上创建自己的设备*，到第十一章，*启用 VirtualBox 特定的硬件接口*中那样，使用单个分区进行恢复。分区表定义在 `recovery.fstab` 文件中。让我们首先看看启动脚本，`init.recovery.x86vbox.rc`：
 
-```kt
+```java
 on init 
     exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh 
 
@@ -849,7 +849,7 @@ on property:ro.debuggable=1
 
 `x86vbox.mk` 中的另一个重要部分是我们为恢复添加了一个 `recovery.fstab` 分区表，如下所示：
 
-```kt
+```java
 /dev/block/sda1 /system  ext4  ro          wait 
 /dev/block/sda2 /data    ext4  noatime,... wait 
 /dev/block/sda3 /sdcard  vfat  defaults    voldmanaged=sdcard:auto 
@@ -865,7 +865,7 @@ on property:ro.debuggable=1
 
 我们需要在 `device/generic/common/fstab.x86` 中添加两个条目，如下所示：
 
-```kt
+```java
 /dev/block/sda3  /sdcard  vfat  defaults  voldmanaged=sdcard:auto 
 /dev/block/sda5  /cache   ext4  noatime,... wait 
 
@@ -877,7 +877,7 @@ on property:ro.debuggable=1
 
 这就是`x86vbox.mk`更改的全部内容，现在让我们看看另一个 Makefile，`BoardConfig.mk`。为了启用恢复的构建，我们需要在`BoardConfig.mk`中添加以下两个宏：
 
-```kt
+```java
 TARGET_NO_KERNEL := false 
 TARGET_NO_RECOVERY := false 
 
@@ -887,7 +887,7 @@ TARGET_NO_RECOVERY := false
 
 我们添加了另一个与恢复源代码更改相关的宏，我们将在稍后查看源代码更改：
 
-```kt
+```java
 # Double buffer cannot work well on virtualbox 
 RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER := true 
 
@@ -901,7 +901,7 @@ AOSP 恢复代码在 VirtualBox 上可以很好地工作。只有一个与显示
 
 我们使用前面提到的`RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER`宏来配置帧缓冲区更改。我们首先需要将其添加到恢复 Makefile `minui/Android.mk`中，如下所示：
 
-```kt
+```java
 ifeq ($(RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER), true) 
 LOCAL_CFLAGS += -DRECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER 
 endif 
@@ -910,7 +910,7 @@ endif
 
 由于双缓冲在 VirtualBox 上目前无法很好地工作，我们必须将其禁用如下：
 
-```kt
+```java
 ... 
     /* check if we can use double buffering */ 
 #ifndef RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER 
@@ -963,7 +963,7 @@ endif
 
 为了实现前面的逻辑，我们在`$AOSP/bootable/newinstaller/initrd/init`文件中添加了一个 shell 函数`find_ramdisk`，如下所示：
 
-```kt
+```java
 find_ramdisk() 
 { 
    busybox mount /dev/sda5 /hd 
@@ -986,7 +986,7 @@ find_ramdisk()
 
 在这个函数中，我们将缓存分区挂载到`/hd`，并检查`/hd/recovery/command`是否存在。如果存在，我们将`RAMDISK`变量设置为`ramdisk-recovery.img`；否则，我们将其设置为`ramdisk.img`。init 脚本将在稍后提取`RAMDISK`变量中包含的 ramdisk，如下所示：
 
-```kt
+```java
 ... 
    zcat $RAMDISK | cpio -id > /dev/null  
 ... 

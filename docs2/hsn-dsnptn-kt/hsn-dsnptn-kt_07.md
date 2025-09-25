@@ -88,7 +88,7 @@
 
 我们将首先在我们的 Gradle 项目中添加以下依赖项：
 
-```kt
+```java
 compile "io.reactivex.rxjava2:rxjava:2.1.14"
 ```
 
@@ -104,13 +104,13 @@ compile "io.reactivex.rxjava2:rxjava:2.1.14"
 
 以下代码将创建我们的第一个发布者：
 
-```kt
+```java
 val publisher = Observable.fromArray(5, 6, 7)
 ```
 
 要开始消费这些数字，我们可以向 `subscribe()` 函数提供一个 lambda 表达式：
 
-```kt
+```java
 publisher.subscribe {
     println(it)
 } // Prints 1, 2, 3
@@ -118,7 +118,7 @@ publisher.subscribe {
 
 `Observable` 上还有其他可用的函数，您会立即认出：例如 `map()` 和 `filter()`。这些函数与 Kotlin 中常规数组上的函数相同：
 
-```kt
+```java
 publisher.filter {
     it > 5
 }.map {
@@ -132,7 +132,7 @@ publisher.filter {
 
 让我们看看以下示例：
 
-```kt
+```java
 val publisher = Observable.interval(1, TimeUnit.SECONDS)
 
 publisher.subscribe {
@@ -148,7 +148,7 @@ Thread.sleep(TimeUnit.SECONDS.toMillis(5))
 
 此代码将在终止前等待五毫秒，并打印以下内容：
 
-```kt
+```java
 Sleeping <= This was the last line in our code, actually
 P2 0     <= P2 came after P1 in code, but it comes before now
 P1 0
@@ -168,7 +168,7 @@ P1 2
 
 让我们用以下代码替换第二个监听器：
 
-```kt
+```java
 ...
 val subscription = publisher.subscribe {
     println("P2 $it")
@@ -184,7 +184,7 @@ subscription.dispose()
 
 你的输出可能看起来像这样：
 
-```kt
+```java
 Sleeping
 P1 0        <= Notice that P1 is the first one now
 P2 0
@@ -198,7 +198,7 @@ P1 4        <= No more prints from P2, it unsubscribed
 
 如果我们要创建自己的 `Observable`，具有它自己的特定逻辑怎么办？有一个 `create()` 方法可以做到这一点：
 
-```kt
+```java
 val o = Observable.create<Int> {
     for (i in 1..10_000) {
         it.onNext(i)
@@ -211,7 +211,7 @@ val o = Observable.create<Int> {
 
 你会注意到，如果我们尝试实际调用 `onError()`，我们会得到一个异常：
 
-```kt
+```java
 val o = Observable.create<Int> {
     it.onError(RuntimeException())
 }
@@ -225,7 +225,7 @@ o.subscribe {
 
 如果我们想要正确处理错误，我们还需要提供 *错误处理器* 作为第二个参数：
 
-```kt
+```java
 o.subscribe({
     println("All went good: $it")
 }, {
@@ -235,7 +235,7 @@ o.subscribe({
 
 还有一个第三个参数，即 `onComplete` 处理器：
 
-```kt
+```java
 o.subscribe({
     println("All went good: $it")
 }, {
@@ -253,7 +253,7 @@ o.subscribe({
 
 如你可能已经注意到的，到目前为止，所有我们的订阅者总是得到所有数据，无论他们何时订阅：
 
-```kt
+```java
 publisher.subscribe {
     println("S1 $it")
 } // Prints 10K times
@@ -265,7 +265,7 @@ publisher.subscribe {
 
 但情况并不总是这样。更常见的是，数据源来自外部，而不是每次都由 `publisher` 创建：
 
-```kt
+```java
 val iterator = (1..10).iterator()
 
 val publisher = Observable.create<Int> {
@@ -280,7 +280,7 @@ val publisher = Observable.create<Int> {
 
 让我们看看以下代码现在是如何表现的：
 
-```kt
+```java
 publisher.subscribeOn(Schedulers.newThread()).subscribe {
     println("S1: $it")
     Thread.sleep(10)
@@ -300,7 +300,7 @@ Thread.sleep(50)
 
 输出可能看起来像这样：
 
-```kt
+```java
 S1: 1
 S1: 2
 S1: 3
@@ -323,7 +323,7 @@ S2: 10
 
 有一个 `publish()` 方法可以做到这一点：
 
-```kt
+```java
 val iterator = (1..5).iterator()
 val subject = Observable.create<Int> {
     while (iterator.hasNext()) {
@@ -339,7 +339,7 @@ val subject = Observable.create<Int> {
 
 如果我们仅仅订阅这种类型的`Observable`，将不会发生任何事情。我们需要告诉它何时开始运行。我们使用`connect()`方法来做这件事。由于`connect()`方法是阻塞的，我们将在这个例子中从单独的线程执行它：
 
-```kt
+```java
 thread { // Connect is blocking, so we run in on another thread
     subject.connect() // Tells observer when to start
 }
@@ -347,7 +347,7 @@ thread { // Connect is blocking, so we run in on another thread
 
 现在，我们将让发布者工作几毫秒，然后连接我们的第一个监听器：
 
-```kt
+```java
 Thread.sleep(10)
 println("S1 Subscribes")
 subject.subscribeOn(Schedulers.newThread()).subscribe {
@@ -359,7 +359,7 @@ subject.subscribeOn(Schedulers.newThread()).subscribe {
 
 经过一段时间后，我们连接第二个监听器，并允许它们完成：
 
-```kt
+```java
 Thread.sleep(20)
 
 println("S2 Subscribes")
@@ -372,7 +372,7 @@ Thread.sleep(2000)
 
 让我们看看现在的输出，因为它相当有趣：
 
-```kt
+```java
 P: 1 *<= Publisher starts publishing even before someone subscribes*
 *S1 Subscribes*
 P: 2
@@ -392,7 +392,7 @@ S2: 5 *<= Both subscribers receive same values*
 
 因此，我们有一个名为`refCount()`的方法，它将我们的`ConnectableObservable`转换回常规的`Observable`。它将保持订阅者的引用计数，并且只有在所有订阅者都这样做之后才会取消订阅：
 
-```kt
+```java
 // This is a connectable Observable
 val connectableSource = Observable.fromIterable((1..3)).publish()
 
@@ -407,7 +407,7 @@ regularSource.connect() // Doesn't compile
 
 如果调用`publish().refCount()`太繁琐，还有一个`share()`方法可以做到这一点：
 
-```kt
+```java
 val regularSource = Observable.fromIterable((1..3)).publish().refCount()
 
 val stillRegular = Observable.fromIterable((1..3)).share()
@@ -419,7 +419,7 @@ val stillRegular = Observable.fromIterable((1..3)).share()
 
 一方面，它允许其他人`subscribe()`订阅它。另一方面，它可以`subscribe`到其他`Observable`：
 
-```kt
+```java
 val dataSource = Observable.fromIterable((1..3))
 
 val multicast = PublishSubject.create<Int>()
@@ -439,7 +439,7 @@ Thread.sleep(1000)
 
 以下代码将打印六行，每个订阅者三行：
 
-```kt
+```java
 S1 1
 S2 1
 S1 2
@@ -454,7 +454,7 @@ S2 3
 
 如果我们使用热的`dataSource`，我们可以切换调用：
 
-```kt
+```java
 val dataSource = Observable.fromIterable((1..3)).publish()
 
 val multicast = PublishSubject.create<Int>()
@@ -482,7 +482,7 @@ Thread.sleep(1000)
 
 除了我们在上一节中讨论的`PublishSubject`之外，还有其他主题可用。为了理解`ReplaySubject`是如何工作的，让我们首先看看以下使用`PublishSubject`的例子：
 
-```kt
+```java
 val list = (8..23).toList() // Some non trivial numbers
 val iterator = list.iterator()
 val o = Observable.intervalRange(0, list.size.toLong(), 0, 10, TimeUnit.MILLISECONDS).map {
@@ -516,7 +516,7 @@ println("S1 subscribes")
 
 这将打印以下内容：
 
-```kt
+```java
 S1 11 <= Lost 8, 9, 10
 S1 12
 S2 12 <= Lost also 11
@@ -529,13 +529,13 @@ S2 13
 
 现在，让我们用`ReplaySubject`替换`PublishSubject`并检查输出：
 
-```kt
+```java
 val subject = ReplaySubject.create<Int>()
 ```
 
 以下输出将被打印：
 
-```kt
+```java
 S1 subscribes
 S1 8
 S1 9
@@ -559,13 +559,13 @@ S2 13
 
 这种方法的优点是显而易见的。我们将看似热的`Observable`转换成了相当冷的。但也有一些限制。通过使用`ReplaySubject.create`，我们产生了一个无界的主题。如果它尝试记录太多事件，我们可能会简单地耗尽内存。为了避免这种情况，我们可以使用`createWithSize()`方法：
 
-```kt
+```java
 val subject = ReplaySubject.createWithSize<Int>(2)
 ```
 
 它创建了以下输出：
 
-```kt
+```java
 S1 subscribes
 S1 9 <= lost 8
 S1 10
@@ -587,13 +587,13 @@ S2 13
 
 想象一下这种情况：你每分钟都会有一串更新。你想要显示你收到的最新值，然后在有新数据进来时继续更新它。你可以使用大小为 1 的`ReplaySubject`。但还有`BehaviorSubject`正好适用于这种情况：
 
-```kt
+```java
 val subject = BehaviorSubject.create<Int>()
 ```
 
 输出结果如下：
 
-```kt
+```java
 S1 subscribes
 S1 10 <= This was the most recent value, 8 and 9 are lost
 S1 subscribed
@@ -611,13 +611,13 @@ S2 12
 
 如果你想有一个非常基本的功能，只是更新屏幕上的最新值，并且直到屏幕关闭不再刷新：
 
-```kt
+```java
 val subject = AsyncSubject.create<Int>()
 ```
 
 这里是输出结果：
 
-```kt
+```java
 S1 subscribes
 S1 subscribed
 S2 subscribes
@@ -628,7 +628,7 @@ S2 23
 
 但是要小心。由于`AsyncSubject`等待序列完成，如果序列是无限的，它将永远不会调用其订阅者：
 
-```kt
+```java
 // Infinite sequence of 1
 val o = Observable.generate<Int> { 1 }.publish()
 ...
@@ -641,7 +641,7 @@ o.connect() // Hangs here forever
 
 这是一个某种形式的**代理**，围绕任何常规`subject`，它同步调用不安全的方法。你可以使用`toSerialized()`方法将任何`subject`包装在`SerializedSubject`中：
 
-```kt
+```java
 val subject = ReplaySubject.createWithSize<Int>(2).toSerialized()
 ```
 
@@ -653,7 +653,7 @@ val subject = ReplaySubject.createWithSize<Int>(2).toSerialized()
 
 让我们看看以下示例。我们将生成大量的唯一字符串：
 
-```kt
+```java
 val source = Observable.create<String> {
     var startProducing = System.currentTimeMillis()
     for (i in 1..10_000_000) {
@@ -672,7 +672,7 @@ val source = Observable.create<String> {
 
 在`subscribe()`方法中，我们将重复这些字符串 1,000 次：
 
-```kt
+```java
 val counter = AtomicInteger(0)
 source.observeOn(Schedulers.newThread())
         .subscribe( {
@@ -689,7 +689,7 @@ source.observeOn(Schedulers.newThread())
 
 我们显然消费的速度比生产慢：
 
-```kt
+```java
 Produced 100000 events in 1116ms
 Produced 200000 events in 595ms
 Produced 300000 events in 734ms
@@ -715,7 +715,7 @@ Produced 1500000 events in 52650ms
 
 这是我们开始耗尽内存的点。现在，让我们用`Flowable`替换我们的`Observable`：
 
-```kt
+```java
 val source = Flowable.create<String> ({
     var startProducing = System.currentTimeMillis()
     for (i in 1..10_000_000) {
@@ -735,7 +735,7 @@ val source = Flowable.create<String> ({
 
 现在，我们应该检查我们输出的最后部分：
 
-```kt
+```java
 ...
 Produced 9500000 events in 375ms
 Produced 9600000 events in 344ms
@@ -776,7 +776,7 @@ Produced 10000000 events in 340ms
 
 取而代之，现在我们将使用匿名类，并看看这种方法提供了哪些好处：
 
-```kt
+```java
 source.observeOn(Schedulers.newThread())
         .subscribe(object : Subscriber<String> {
     lateinit var subscription: Subscription
@@ -807,7 +807,7 @@ source.observeOn(Schedulers.newThread())
 
 现在，我们将丢弃我们在监听器之前使用的花哨代码，并简单地打印我们接收到的每个新字符串：
 
-```kt
+```java
 override fun onNext(t: String?) {
     println(t)
 }
@@ -817,7 +817,7 @@ override fun onNext(t: String?) {
 
 让我们进入我们的`onSubscribe`并稍作修改：
 
-```kt
+```java
 override fun onSubscribe(s: Subscription) {
     this.subscription = s
     this.subscription.request(100)
@@ -830,7 +830,7 @@ override fun onSubscribe(s: Subscription) {
 
 我们已经讨论了`BackpressureStrategy.DROP`和`BackpressureStrategy.BUFFER`策略。现在让我们专注于`BackpressureStrategy.MISSING`策略。这个名字有点令人困惑；*自定义*可能更好。我们很快就会看到原因：
 
-```kt
+```java
 val source = Flowable.create<String> ({
     ...
 }, BackpressureStrategy.MISSING)
@@ -838,7 +838,7 @@ val source = Flowable.create<String> ({
 
 然后，我们将回到`onNext()`，它实际上做了一些事情：
 
-```kt
+```java
 override fun onNext(t: String) {
     t.repeat(500) // Do something
 
@@ -859,7 +859,7 @@ override fun onNext(t: String) {
 
 为了解决这个问题，我们将使用`onBackpressureBuffer()`方法：
 
-```kt
+```java
 val source = Flowable.create<String> ({
     ...
 }, BackpressureStrategy.MISSING).onBackpressureBuffer(10_000)
@@ -869,7 +869,7 @@ val source = Flowable.create<String> ({
 
 在这种情况下，我们需要的不是*创建*一个`Flowable`，而是*生成*它：
 
-```kt
+```java
 val count = AtomicInteger(0)
 // This is not entirely correct, but simplifies our code
 val startTime = System.currentTimeMillis()
@@ -892,7 +892,7 @@ val source = Flowable.generate<String> {
 
 输出如下所示：
 
-```kt
+```java
 Produced 100000 events in 3650ms
 Produced 200000 events in 1942ms
 Produced 300000 events in 1583ms
@@ -906,7 +906,7 @@ Produced 400000 events in 1630ms
 
 在闭包中捕获这些值可能看起来有点丑陋。有一个更函数式的替代方案，但它很难掌握。`Generate`可以接收两个函数而不是一个：
 
-```kt
+```java
 <T, S> Flowable<T> generate(Callable<S> initialState, BiFunction<S, Emitter<T>, S> generator)
 ```
 
@@ -914,7 +914,7 @@ Produced 400000 events in 1630ms
 
 第一个初始状态是 `() -> State`。在我们的例子中，状态可以表示如下：
 
-```kt
+```java
 data class State(val count: Int, val startTime: Long)
 ```
 
@@ -924,7 +924,7 @@ data class State(val count: Int, val startTime: Long)
 
 由于这不仅仅对我们，也对 Kotlin 编译器来说有点混乱，我们明确指定了这些函数的类型，即 `Callable<State>` 和 `BiFunction<State, Emitter<String>, State>`：
 
-```kt
+```java
 val source = Flowable.generate<String, State>(
     Callable<State> { State(0, System.currentTimeMillis()) },
     BiFunction<State, Emitter<String>, State> { state, emitter ->
@@ -957,7 +957,7 @@ val source = Flowable.generate<String, State>(
 
 为了理解这个陈述，让我们以 `ReplaySubject` 为例，并使用 `ReplayProcessor` 重新编写它：
 
-```kt
+```java
 val list = (8..23).toList() // Some non trivial numbers
 val iterator = list.iterator()
 val o = Observable.intervalRange(0, list.size.toLong(), 0, 10, TimeUnit.MILLISECONDS).map {
@@ -969,13 +969,13 @@ val o = Observable.intervalRange(0, list.size.toLong(), 0, 10, TimeUnit.MILLISEC
 
 正如你所见，`Flowable` 支持与 `Observable` 相同的 `publish()` 方法：
 
-```kt
+```java
 val processor = ReplayProcessor.createWithSize<Int>(2)
 ```
 
 我们不是创建 `ReplaySubject`，而是创建 `ReplayProcessor`，它也支持大小限制：
 
-```kt
+```java
 o.subscribe(processor)
 
 o.connect() // Start publishing
@@ -1001,7 +1001,7 @@ Thread.sleep(1000)
 
 输出实际上是相同的：
 
-```kt
+```java
 S1 subscribes
 S1 9
 S1 10
@@ -1023,7 +1023,7 @@ S2 12
 
 缓冲区有三种类型。第一种是按大小批处理：
 
-```kt
+```java
 val latch = CountDownLatch(1)
 val o = Observable.intervalRange(8L, 15L, 0L, 100L, TimeUnit.MILLISECONDS)
 
@@ -1036,7 +1036,7 @@ latch.await()
 
 它输出以下内容：
 
-```kt
+```java
 [8, 9, 10]
 [11, 12, 13]
 [14, 15, 16]
@@ -1046,7 +1046,7 @@ latch.await()
 
 第二种是每时间间隔的批次。想象一下，我们有一个屏幕，上面显示最新的新闻，并且每几秒钟就会更新。但对我们来说，每五秒刷新一次视图就足够了：
 
-```kt
+```java
 val latch = CountDownLatch(1)
 val o = Observable.intervalRange(8L, 15L, 0L, 100L, TimeUnit.MILLISECONDS)
 
@@ -1059,7 +1059,7 @@ latch.await()
 
 它输出以下内容：
 
-```kt
+```java
 [8, 9, 10, 11]
 [12, 13, 14]
 [15, 16, 17]
@@ -1069,7 +1069,7 @@ latch.await()
 
 第三种类型允许我们依赖于另一个 `Observable`。我们将批量处理，直到它要求我们刷新数据：
 
-```kt
+```java
 val latch = CountDownLatch(1)
 val o = Observable.intervalRange(8L, 15L, 0L, 100L, TimeUnit.MILLISECONDS)
 
@@ -1082,7 +1082,7 @@ latch.await()
 
 它输出以下内容：
 
-```kt
+```java
 [8, 9, 10]
 [11, 12]
 [13, 14]
@@ -1099,7 +1099,7 @@ latch.await()
 
 你指定时间间隔，然后在该间隔内每次只获取一个元素，要么是第一个，要么是最后一个：
 
-```kt
+```java
 val o = PublishSubject.intervalRange(8L, 15L, 0L, 100L, TimeUnit.MILLISECONDS).publish()
 
 o.throttleFirst(280L, TimeUnit.MILLISECONDS).subscribe {
@@ -1119,7 +1119,7 @@ Thread.sleep(100 * 15)
 
 `throttleFirst()` 输出 `[8, 11, 15, 17, 21]`，因为它接收到了以下窗口：
 
-```kt
+```java
 8
 [8, 9, 10]
 11
@@ -1137,7 +1137,7 @@ Thread.sleep(100 * 15)
 
 现在，让我们看看当我们使用`throttleLast()`时会发生什么：
 
-```kt
+```java
 val o = Observable.intervalRange(8L, 15L, 5L, 100L, TimeUnit.MILLISECONDS)
 
 o.throttleLast(280L, TimeUnit.MILLISECONDS).subscribe {
@@ -1153,7 +1153,7 @@ Thread.sleep(100 * 30)
 
 `throttleLast()`输出`[10, 13, 16, 19, 22]`，因为它接收到了以下窗口：
 
-```kt
+```java
 10
 [8, 9, 10]
 13

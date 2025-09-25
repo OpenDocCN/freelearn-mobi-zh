@@ -40,7 +40,7 @@ Google 发布了一种名为 `ConstraintLayout` 的新布局。这个布局与 `
 
 1.  编辑`res/layout/activity_main.xml`文件，使其包含以下按钮定义：
 
-```kt
+```java
 <Button
     android:id="@+id/buttonLeft"
     android:layout_width="wrap_content"
@@ -58,7 +58,7 @@ Google 发布了一种名为 `ConstraintLayout` 的新布局。这个布局与 `
 
 1.  现在将`activity_main.xml`的副本复制并命名为`activity_main2.xml`。更改按钮以匹配以下内容：
 
-```kt
+```java
 <Button
     android:id="@+id/buttonLeft"
     android:layout_width="wrap_content"
@@ -76,7 +76,7 @@ Google 发布了一种名为 `ConstraintLayout` 的新布局。这个布局与 `
 
 1.  打开`MainActivity.java`并添加以下两个方法来处理按钮点击：
 
-```kt
+```java
 public void onClickLeft(View view) { 
     setContentView(R.layout.activity_main2); 
 } 
@@ -98,7 +98,7 @@ public void onClickRight(View view) {
 
 除了像我们这里一样使用资源 ID 标识布局之外，`setContentView()`还可以接受一个 View 作为参数，例如：
 
-```kt
+```java
 findViewById(R.id.myView) 
 setContentView(myView); 
 ```
@@ -119,7 +119,7 @@ setContentView(myView);
 
 1.  打开`res/layout/activity_main.xml`文件并按以下方式更改它：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -181,7 +181,7 @@ setContentView(myView);
 
 与我们之前看到的相反，这里是一个使用`LinearLayout`仅用于居中`TextView`的示例（产生与`RelativeLayout`的`layout_center`参数相同的效果）：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?> 
 <LinearLayout  
     android:orientation="horizontal" 
@@ -226,7 +226,7 @@ setContentView(myView);
 
 1.  打开`res/layout/activity_main.xml`文件，并按照以下方式替换：
 
-```kt
+```java
 <LinearLayout  
     android:orientation="vertical" 
     android:layout_width="match_parent" 
@@ -257,7 +257,7 @@ setContentView(myView);
 
 当使用`LinearLayout`的垂直方向时，子视图将创建在单列中（堆叠在彼此之上）。前两个视图使用`android:layout_height="wrap_content"`属性，每个视图只有一行。要指定高度，`editTextMessage`使用以下方式：
 
-```kt
+```java
 android:layout_height="0dp" 
 android:layout_weight="1" 
 ```
@@ -274,7 +274,7 @@ android:layout_weight="1"
 
 可以使用位运算符`OR`组合多个属性选项。（Java 使用管道字符(|)表示`OR`）。例如，我们可以组合两个重力选项，使它们既沿父视图顶部对齐，又在其可用空间内居中：
 
-```kt
+```java
 android:layout_gravity="top|center" 
 ```
 
@@ -300,7 +300,7 @@ android:layout_gravity="top|center"
 
 1.  向每个 `TableRow` 添加三个 `TextView` 对象的三个集合，以创建一个 3 x 3 矩阵。为了演示目的，列被标记为 A-C，行标记为 1-3，因此 `TextView` 对象的第一行将是 A1、B1 和 C1。最终结果将如下所示：
 
-```kt
+```java
 <TableLayout 
 
     android:layout_width="match_parent" 
@@ -369,7 +369,7 @@ android:layout_gravity="top|center"
 
 1.  现在，向 `GridLayout` 添加九个 `TextView` 对象。我们将使用与前面的 `TableLayout` 相同的文本，以便进行一致的比较。由于 `GridView` 不使用 `TableRow` 对象，前三个 `TextView` 对象位于第 1 行，接下来的三个位于第 2 行，以此类推。最终结果将如下所示：
 
-```kt
+```java
 <GridLayout 
 
     android:layout_width="match_parent" 
@@ -438,7 +438,7 @@ android:layout_gravity="top|center"
 
 首先，让我们看看布局之间的更多相似之处。两种布局都具有拉伸列以使用剩余屏幕空间的能力。对于 `TableLayout`，在 XML 声明中添加以下属性：
 
-```kt
+```java
 android:stretchColumns="1" 
 ```
 
@@ -446,7 +446,7 @@ android:stretchColumns="1"
 
 要使用 `GridLayout` 实现相同的效果，向 B 列中的所有视图（`textView2`、`textView5` 和 `textView8`）添加以下属性：
 
-```kt
+```java
 android:layout_columnWeight="1" 
 ```
 
@@ -458,7 +458,7 @@ android:layout_columnWeight="1"
 
 在前面的例子中，我们只是向 `GridLayout` 添加了 `TextView` 对象，并让系统自动定位它们。我们可以通过在定义视图时指定行和列位置来改变这种行为，如下所示：
 
-```kt
+```java
 android:layout_row="2" 
 android:layout_column="2" 
 ```
@@ -491,7 +491,7 @@ Android 在添加每个视图后自动增加单元格计数器，因此下一个
 
 1.  打开 `activity_main.xml` 并将现有的 `<TextView />` 块替换为以下 `RecyclerView` 小部件：
 
-```kt
+```java
 <android.support.v7.widget.RecyclerView
     android:id="@+id/recyclerView"
     android:layout_width="match_parent"
@@ -504,7 +504,7 @@ Android 在添加每个视图后自动增加单元格计数器，因此下一个
 
 1.  我们需要为适配器创建列表中的单个项的另一个布局。为此，在 `res\layout` 文件夹中创建一个名为 `item.xml` 的新文件，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -520,7 +520,7 @@ Android 在添加每个视图后自动增加单元格计数器，因此下一个
 
 1.  现在，来到 `RecyclerView` 的核心——适配器。创建一个名为 `MyAdapter.java` 的新 Java 文件。我们的新类将扩展 `RecyclerView.Adapter` 类，因此我们需要重写几个关键方法。我们将在稍后讨论这个类的细节，但完整的代码如下：
 
-```kt
+```java
 public class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
     private List<String> nameList;
@@ -565,7 +565,7 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
 1.  在所有组件设置完毕后，最后一步是将它们全部组合起来。打开 `MainActivity.java` 文件，并将以下代码添加到现有的 `onCreate()` 方法中：
 
-```kt
+```java
 List<String> list = new ArrayList<>();
 list.add("China");
 list.add("France");
@@ -600,7 +600,7 @@ recyclerView.setAdapter(myAdapter);
 
 要响应项目点击，请将以下代码添加到`MyAdapter`类中：
 
-```kt
+```java
 private void remove(int position) {
     nameList.remove(position);
     notifyItemRemoved(position);
@@ -609,7 +609,7 @@ private void remove(int position) {
 
 然后在步骤 4 中创建的`onBindViewHolder()`方法中添加以下代码：
 
-```kt
+```java
 holder.itemView.setOnClickListener(new View.OnClickListener() {
     @Override
     public void onClick(View v) {
@@ -636,7 +636,7 @@ holder.itemView.setOnClickListener(new View.OnClickListener() {
 
 1.  打开`activity_main.xml`文件，并按如下方式更改布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -647,7 +647,7 @@ holder.itemView.setOnClickListener(new View.OnClickListener() {
 
 1.  添加一个 ID 值为`textView`的`TextView`，如下所示：
 
-```kt
+```java
 <TextView
     android:id="@+id/textView"
     android:layout_width="wrap_content"
@@ -657,7 +657,7 @@ holder.itemView.setOnClickListener(new View.OnClickListener() {
 
 1.  添加一个 ID 值为`button`的`Button`，如下所示：
 
-```kt
+```java
 <Button
     android:id="@+id/button"
     android:layout_width="wrap_content"
@@ -667,7 +667,7 @@ holder.itemView.setOnClickListener(new View.OnClickListener() {
 
 1.  打开`MainActivity.java`文件，并在`onCreate()`方法中添加以下代码以响应用户点击：
 
-```kt
+```java
 Button button = (Button)findViewById(R.id.button);
 button.setOnClickListener(new View.OnClickListener() {
     @Override

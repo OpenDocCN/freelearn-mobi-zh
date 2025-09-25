@@ -128,7 +128,7 @@ Apache Tomcat 是一个 Web 服务器，而不是应用程序服务器。
 
 +   对于 Linux，请按照以下步骤操作：
 
-```kt
+```java
 // If you have an older version of Tomcat, then remove it before using the newer one
 sudo rm -rf /usr/local/Tomcat // To remove exist TomCat
 
@@ -137,7 +137,7 @@ sudo mv ~/Download/Tomcat /usr/local // To move TomCat from the download directo
 
 +   对于 macOS，请按照以下步骤操作：
 
-```kt
+```java
 // If you have an older version of Tomcat, then remove it before using the newer one
 sudo rm -rf /Library/Tomcat // To remove exist TomCat
 sudo mv Downloads/Tomcat /Library/     // To move TomCat from the download directory to your desire direction
@@ -183,14 +183,14 @@ sudo mv Downloads/Tomcat /Library/     // To move TomCat from the download direc
 
 +   **对于 macOS 系统：**
 
-```kt
+```java
 /Library/Tomcat/bin/startup.sh
 /Library/Tomcat/bin/shutdown.sh
 ```
 
 +   **对于 Linux：**
 
-```kt
+```java
 /usr/local/Tomcat/bin/startup.sh
 /usr/local/Tomcat/bin/shutdown.sh
 ```

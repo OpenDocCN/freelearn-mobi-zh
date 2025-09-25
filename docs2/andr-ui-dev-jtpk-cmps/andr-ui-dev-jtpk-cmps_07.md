@@ -28,7 +28,7 @@
 
 在本节中，我将向您展示有状态和无状态的可组合函数之间的区别。为了理解为什么这很重要，让我们首先关注一下 **状态** 这个词。在之前的章节中，我将状态描述为 *随时间变化的数据*。数据存储的位置（一个 SQLite 数据库、一个文件或一个对象内的值）并不重要。重要的是 UI 必须始终显示当前数据。因此，如果值发生变化，UI 必须得到通知。为了实现这一点，我们使用 **可观察** 类型。这不仅仅局限于 Jetpack Compose，而是许多框架、编程语言和平台中的常见模式。例如，Kotlin 通过属性委托支持可观察性：
 
-```kt
+```java
 var counter by observable(-1) { _, oldValue, newValue ->
   println("$oldValue -> $newValue")
 }
@@ -45,7 +45,7 @@ for (i in 0..3) counter = i
 
 被称为 `remember {}` 的可组合函数。让我们看一下：
 
-```kt
+```java
 @Composable
 @Preview
 fun SimpleStateDemo1() {
@@ -57,7 +57,7 @@ fun SimpleStateDemo1() {
 
 `SimpleStateDemo1()` 创建了一个包含随机整数的可变状态。通过调用 `remember {}`，我们保存了状态，并在使用 `=` 时将其分配给 `num`。我们通过 `num.value` 获取随机数。请注意，尽管我们使用 `val` 关键字定义了 `num`，但我们仍然可以通过 `num.value = …` 来更改其值，因为 `num` 持有可变值持有者的引用（其 `value` 属性是可写的）。把它想象成修改列表中的一个项目，而不是改变到另一个列表。我们可以稍微修改一下代码，如下面的代码片段所示。你能发现其中的区别吗？
 
-```kt
+```java
 @Composable
 @Preview
 fun SimpleStateDemo2() {
@@ -81,7 +81,7 @@ fun SimpleStateDemo2() {
 
 `calculation` 代表一个 lambda 表达式，它创建要记住的值。它只在组合期间评估一次。随后的 `remember {}` 调用（在重新组合期间）总是返回这个值。表达式不会被再次评估。但如果我们需要重新评估计算，即记住一个新的值呢？毕竟，状态数据是可以随时间变化的。下面是如何做到这一点的方法：
 
-```kt
+```java
 @Composable
 @Preview
 fun RememberWithKeyDemo() {
@@ -125,7 +125,7 @@ fun RememberWithKeyDemo() {
 
 `remember {}`使组合函数有状态。另一方面，无状态组合组件不持有任何状态。以下是一个例子：
 
-```kt
+```java
 @Composable
 @Preview
 fun SimpleStatelessComposable1() {
@@ -135,7 +135,7 @@ fun SimpleStatelessComposable1() {
 
 `SimpleStatelessComposable1()`不接收参数，并且总是以相同的参数调用`Text()`。显然，它不持有任何状态。但以下一个如何？
 
-```kt
+```java
 @Composable
 fun SimpleStatelessComposable2(text: State<String>) {
   Text(text = text.value)
@@ -154,7 +154,7 @@ fun SimpleStatelessComposable2(text: State<String>) {
 
 当开发可重用的组合组件时，你可能希望公开有状态和无状态的版本。让我们看看这看起来是什么样子：
 
-```kt
+```java
 @Composable
 fun TextFieldDemo(state: MutableState<TextFieldValue>) {
   TextField(
@@ -170,7 +170,7 @@ fun TextFieldDemo(state: MutableState<TextFieldValue>) {
 
 这个版本是无状态的，因为它接收状态但不记住任何东西。无状态版本对于需要控制状态或自己提升状态的调用者来说是必要的：
 
-```kt
+```java
 @Composable
 @Preview
 fun TextFieldDemo() {
@@ -197,7 +197,7 @@ fun TextFieldDemo() {
 
 UI 由 `Column()` 组成，包含四个子元素：一个文本输入字段、一组带文本的单选按钮、一个按钮和一些结果文本。让我们首先看看文本输入字段：
 
-```kt
+```java
 @Composable
 fun TemperatureTextField(
   temperature: MutableState<String>,
@@ -231,7 +231,7 @@ fun TemperatureTextField(
 
 该应用在摄氏度和华氏度之间进行转换。因此，用户必须选择目标刻度。此类选择可以很容易地在 Jetpack Compose 中使用 `androidx.compose.material.RadioButton()` 实现。这个组合函数不显示一些描述性文本，但很容易添加。下面是如何做的：
 
-```kt
+```java
 @Composable
 fun TemperatureRadioButton(
   selected: Boolean,
@@ -260,7 +260,7 @@ fun TemperatureRadioButton(
 
 `RadioButton()` 和 `Text()` 简单地添加到 `Row()` 中并垂直居中。`TemperatureRadioButton()` 接收一个带有 `onClick` 参数的 lambda 表达式。当单选按钮被点击时，将执行该代码。我的实现将 `resId` 参数传递给 lambda 表达式，该表达式将用于确定组中的按钮。下面是如何做的：
 
-```kt
+```java
 @Composable
 fun TemperatureScaleButtonGroup(
   selected: MutableState<Int>,
@@ -288,7 +288,7 @@ fun TemperatureScaleButtonGroup(
 
 接下来，让我们看看当用户点击 `FlowOfEventsDemo()` 时会发生什么。以下是这个组合函数的整体结构：
 
-```kt
+```java
 @Composable
 @Preview
 fun FlowOfEventsDemo() {
@@ -350,7 +350,7 @@ fun FlowOfEventsDemo() {
 
 相反，可组合项通常被实现为顶级函数。那么，如何在活动中设置或查询它们的状态呢？为了在 Compose 应用中临时保存状态，你可以使用 `rememberSaveable {}`。这个可组合函数会记住由工厂函数产生的值。它的行为类似于 `remember {}`。存储的值将存活于活动或进程的重创。内部，使用了 `savedInstanceState` 机制。示例 `ViewModelDemo` 应用展示了如何使用 `rememberSaveable {}`。以下是主活动的外观：
 
-```kt
+```java
 class ViewModelDemoActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -363,7 +363,7 @@ class ViewModelDemoActivity : ComponentActivity() {
 
 我们不需要重写 `onSaveInstanceState()` 来临时保存与可组合项一起使用的状态：
 
-```kt
+```java
 @Composable
 @Preview
 fun ViewModelDemo() {
@@ -389,7 +389,7 @@ fun ViewModelDemo() {
 
 `MyTextField` 是一个非常简单的可组合组件。它看起来像这样：
 
-```kt
+```java
 @Composable
 fun MyTextField(
   value: State<String?>,
@@ -413,7 +413,7 @@ fun MyTextField(
 
 首先，您需要将一些实现依赖项添加到模块级别的 `build.gradle` 文件中：
 
-```kt
+```java
 implementation "androidx.compose.runtime:runtime-
   livedata:$compose_version"
 implementation 'androidx.lifecycle:lifecycle-runtime-
@@ -424,7 +424,7 @@ implementation 'androidx.lifecycle:lifecycle-viewmodel-
 
 下一步是定义一个 `ViewModel` 类。它扩展了 `androidx.lifecycle.ViewModel`。`ViewModel` 类以生命周期感知的方式存储和管理与 UI 相关的数据。这意味着数据将生存配置更改，例如屏幕旋转。`MyViewModel` 公开一个名为 `text` 的属性和一个名为 `setText()` 的方法来设置它：
 
-```kt
+```java
 class MyViewModel : ViewModel() {
     private val _text: MutableLiveData<String> =
         MutableLiveData<String>("Hello #3")
@@ -440,13 +440,13 @@ class MyViewModel : ViewModel() {
 
 要从可组合函数内部访问 `ViewModel` 类，我们调用 `viewModel()` 可组合函数。它属于 `androidx.lifecycle.viewmodel.compose` 包：
 
-```kt
+```java
 val viewModel: MyViewModel = viewModel()
 ```
 
 `LiveData` 以如下状态提供：
 
-```kt
+```java
 val state3 = viewModel.text.observeAsState()
 ```
 
@@ -458,7 +458,7 @@ val state3 = viewModel.text.observeAsState()
 
 `observeAsState()` 是 `LiveData` 的一个扩展函数。它将 `LiveData` 实例的 `value` 属性传递给一个接受参数的 `observeAsState()` 变体。你注意到返回类型是 `State<T?>` 吗？这就是为什么我在上一节中定义了 `MyTextField()` 来接收 `State<String?>` 的原因。为了能够像使用 `remember {}` 和 `rememberSaveable {}` 一样使用 `State<String>`，我们需要像这样定义 `state3`：
 
-```kt
+```java
 val state3 =
    viewModel.text.observeAsState(viewModel.text.value) as
    State<String>
@@ -468,7 +468,7 @@ val state3 =
 
 要在 `ViewModel` 类中反映状态的变化，我们需要像这样的代码：
 
-```kt
+```java
 MyTextField(state3) {
   viewModel.setText(it)
 }

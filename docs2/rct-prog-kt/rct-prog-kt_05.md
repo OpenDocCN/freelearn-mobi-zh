@@ -60,7 +60,7 @@
 
 为了简化，我们在这里不会使用任何平台上的 UI/UX 代码（我们将在学习如何在 Android 中实现 RxKotlin 的后续章节中尝试）。相反，我们将尝试使用`Observable.create`方法来模拟这种情况（如果您对`Observable.create`方法有任何疑问，请在阅读本节之前快速翻到第三章，*Observables, Observers, and Subjects*）。请参考以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       createObservable()//(1) 
         .debounce(200, TimeUnit.MILLISECONDS)//(2) 
@@ -114,7 +114,7 @@
 
 这个操作符非常简单；它帮助您从上游过滤掉重复的发射。请看以下示例以更好地理解：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf(1,2,2,3,4,5,5,5,6,7,8,9,3,10)//(1) 
         .toObservable()//(2) 
@@ -133,7 +133,7 @@
 
 `distinctUntilChange` 操作符略有不同。它不会丢弃所有重复的输出，只会丢弃连续重复的输出，其余的保持原位。请参考以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf(1,2,2,3,4,5,5,5,6,7,8,9,3,10)//(1) 
         .toObservable()//(2) 
@@ -154,7 +154,7 @@
 
 看看以下代码片段：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = listOf(10,1,2,5,8,6,9) 
         .toObservable() 
@@ -181,7 +181,7 @@
 
 以下代码片段是 `filter` 操作符的最简单实现：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,20)//(1) 
         .filter{//(2) 
@@ -205,7 +205,7 @@
 
 查看以下示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,10) 
       observable.first(2)//(1) 
@@ -229,7 +229,7 @@
 
 有时候，你可能只需要监听生产者的 `onComplete`。`ignoreElements` 操作符可以帮助你做到这一点。请参考以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.range(1,10) 
       observable 
@@ -284,7 +284,7 @@
 
 因此，现在，让我们通过`map`操作符来看另一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = listOf(10,9,8,7,6,5,4,3,2,1).toObservable() 
       observable.map {//(1) 
@@ -303,7 +303,7 @@
 
 想象一个你想将 Observable 的输出转换为其他数据类型的情况。仅仅为了转换输出而传递一个 lambda 似乎不是一个好主意。`cast`操作符就是为了在这种情况下提供帮助。让我们看看：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val list = listOf<MyItemInherit>( 
          MyItemInherit(1), 
@@ -356,7 +356,7 @@
 
 因此，让我们看看这个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = listOf(10,9,8,7,6,5,4,3,2,1).toObservable() 
       observable.flatMap { 
@@ -373,7 +373,7 @@
 
 输出与上一个类似，但逻辑不同。我们不仅返回`String`，还返回具有所需`String`的`Observable`。尽管在这个例子中，你可能觉得使用它没有好处，但考虑一下你需要从单个发射中推导出多个项目的情况。考虑以下示例，我们将从每个发射中创建多个项目：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = listOf(10,9,8,7,6,5,4,3,2,1).toObservable() 
       observable.flatMap { 
@@ -413,7 +413,7 @@
 
 当使用过滤运算符和/或处理复杂需求时，可能会遇到空的生产者（见以下代码块）：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(0,10)//(1) 
        .filter{it>15}//(2) 
@@ -427,7 +427,7 @@
 
 `defaultIfEmpty`运算符帮助我们处理这种情况。带有`defaultIfEmpty`的前一个例子看起来像这样：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(0,10)//(1) 
        .filter{it>15}//(2) 
@@ -454,7 +454,7 @@
 
 下面是一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(0,10)//(1) 
         .filter{it>15}//(2) 
@@ -475,7 +475,7 @@
 
 让我们看看它是如何工作的：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(0,10)//(1) 
         .startWith(-1)//(2) 
@@ -504,7 +504,7 @@
 
 让我们看看这个例子，并尝试更好地理解这个操作符：
 
-```kt
+```java
      fun main(args: Array<String>) { 
        println("default with integer") 
        listOf(2,6,7,1,3,4,5,8,10,9) 
@@ -556,7 +556,7 @@
 
 在深入探讨之前，让我们先看看以下例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
       .scan { previousAccumulation, newEmission ->
@@ -618,7 +618,7 @@
 
 这里有一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       listOf(1,5,9,7,6,4,3,2,4,6,9).toObservable() 
       .count() 
@@ -638,7 +638,7 @@
 
 这里有一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,10) 
       .reduce { previousAccumulation, newEmission -> 
@@ -682,7 +682,7 @@
 
 我们已经学习了 Subscriber/Observer 中的`onError`事件。然而，`onError`事件的问题在于错误被发射到下游消费者链，并且订阅立即终止。例如，看看以下程序：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.just(1,2,3,5,6,7,"Errr",8,9,10) 
        .map { it.toIntOrError() } 

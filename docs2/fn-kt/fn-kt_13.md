@@ -20,7 +20,7 @@ Arrow 包含了许多传统函数类型的实现，如 `Option`、`Either` 和 `
 
 你是对的。但是 `Option` 提供的比可空类型更多的价值，让我们直接跳到例子：
 
-```kt
+```java
 fun divide(num: Int, den: Int): Int? {
     return if (num % den != 0) {
         null
@@ -48,7 +48,7 @@ fun division(a: Int, b: Int, den: Int): Pair<Int, Int>? {
 
 我们可以用 `Option` 表达相同的算法：
 
-```kt
+```java
 import arrow.core.*
 import arrow.syntax.option.toOption
 
@@ -73,7 +73,7 @@ fun optionDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
 
 与 `division` 相比，`optionDivision` 没有太大变化，它是以不同类型表达的同一种算法。如果我们在这里停止，那么 `Option<T>` 在可空类型之上并没有提供额外的价值。幸运的是，情况并非如此；有更多使用 `Option` 的方法：
 
-```kt
+```java
 fun flatMapDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
    return optionDivide(a, den).flatMap { aDiv: Int ->
       optionDivide(b, den).flatMap { bDiv: Int ->
@@ -99,7 +99,7 @@ fun flatMapDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
 
 最后的除法实现将使用列表推导式：
 
-```kt
+```java
 import arrow.typeclasses.binding
 
 fun comprehensionDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
@@ -117,7 +117,7 @@ fun comprehensionDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
 
 如果我们将之前示例中的延续进行概述，它将看起来像这样（这是一个有助于理解协程的有用心理模型）
 
-```kt
+```java
 fun comprehensionDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
    return Option.monad().binding {
       val aDiv: Int = optionDivide(a, den).bind()
@@ -141,7 +141,7 @@ fun comprehensionDivision(a: Int, b: Int, den: Int): Option<Pair<Int, Int>> {
 
 Kotlin 的类型系统存在一个限制——它不支持**高阶类型**（**HKT**）。不深入类型理论的话，HKT 是一种声明其他泛型值作为类型参数的类型：
 
-```kt
+```java
 class MyClass<T>() //Valid Kotlin code
 
 class MyHigherKindedClass<K<T>>() //Not valid kotlin code
@@ -155,7 +155,7 @@ Arrow 解决这个问题的方法是通过对称为基于证据的 HKTs 的技�
 
 让我们看看一个 `Option<T>` 的声明：
 
-```kt
+```java
 package arrow.core
 
 import arrow.higherkind
@@ -173,7 +173,7 @@ sealed class Option<out A> : OptionKind<A> {
 
 `Option<A>` 使用了 `@higherkind` 注解，这与我们上一章中提到的 `@lenses` 类似；这个注解用于生成支持基于证据的 HKTs 的代码。`Option<A>` 从 `OptionKind<A>` 扩展而来：
 
-```kt
+```java
 package arrow.core
 
 class OptionHK private constructor()
@@ -186,7 +186,7 @@ inline fun <A> OptionKind<A>.ev(): Option<A> =
 
 `OptionKind<A>` 是 `HK<OptionHK, A>` 的类型别名，所有这些代码都是使用 `@higherkind` 注解处理器生成的。`OptionHK` 是一个不可实例化的类，用作 `HK` 和 `OptionKind` 的唯一标签名称，而 `OptionKind` 是 HKT 的一种中间表示形式。`Option.monad().binding` 返回 `OptionKind<T>`，这就是为什么我们需要在最后调用 `ev()` 来返回一个合适的 `Option<T>`：
 
-```kt
+```java
 package arrow
 
 interface HK<out F, out A>
@@ -205,7 +205,7 @@ typealias HK5<F, A, B, C, D, E> = HK<HK4<F, A, B, C, D>, E>
 
 让我们看看 `Functor<F>`：
 
-```kt
+```java
 package arrow.typeclasses
 
 import arrow.*
@@ -223,7 +223,7 @@ interface Functor<F> : TC {
 
 让我们创建我们的基本数据类型 `Mappable`，它可以提供 `Functor` 类型类的实例：
 
-```kt
+```java
 import arrow.higherkind
 
 @higherkind
@@ -240,7 +240,7 @@ class Mappable<T>(val t: T) : MappableKind<T> {
 
 现在，我们需要创建我们的 `Functor<F>` 实现：
 
-```kt
+```java
 import arrow.instance
 import arrow.typeclasses.Functor
 
@@ -258,7 +258,7 @@ interface MappableFunctorInstance : Functor<MappableHK> {
 
 另一个替代方案是让 Arrow 衍生的实例自动提供，前提是你的数据类型具有正确的函数：
 
-```kt
+```java
 import arrow.deriving 
 
 @higherkind
@@ -276,7 +276,7 @@ class DerivedMappable<T>(val t: T) : DerivedMappableKind<T> {
 
 现在，我们可以创建一个泛型函数来使用我们的 `Mappable` 函子：
 
-```kt
+```java
 import arrow.typeclasses.functor
 
 inline fun <reified F> buildBicycle(mapper: HK<F, Int>,
@@ -288,7 +288,7 @@ inline fun <reified F> buildBicycle(mapper: HK<F, Int>,
 
 函数 `arrow.typeclass.functor` 在运行时解析，符合 `Functor<MappableHK>` 要求的实例：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    val mappable: Mappable<Bicycle> = buildBicycle(Mappable(3), ::Bicycle).ev()
@@ -307,7 +307,7 @@ fun main(args: Array<String>) {
 
 使用箭头方法处理 HKT 的问题之一是它必须在运行时解析其实例。这是因为 Kotlin 没有对隐式或编译时解决类型类实例的支持，这使得 Arrow 只能选择这个替代方案，直到 *KEEP-87* 被批准并包含在语言中：
 
-```kt
+```java
 @higherkind
 class NotAFunctor<T>(val t: T) : NotAFunctorKind<T> {
    fun <R> map(f: (T) -> R): NotAFunctor<R> = NotAFunctor(f(t))
@@ -318,7 +318,7 @@ class NotAFunctor<T>(val t: T) : NotAFunctorKind<T> {
 
 因此，你可以有一个具有 `map` 函数的 HKT，但没有 `Functor` 实例无法使用，但这并不是编译错误：
 
-```kt
+```java
 fun main(args: Array<String>) {
 
    val not: NotAFunctor<Bicycle> = buildBicycle(NotAFunctor(4), ::Bicycle).ev()
@@ -337,7 +337,7 @@ fun main(args: Array<String>) {
 
 让我们将我们的除法示例从 `Option` 转换为 `Either`：
 
-```kt
+```java
 import arrow.core.Either
 import arrow.core.Either.Right
 import arrow.core.Either.Left
@@ -353,7 +353,7 @@ fun eitherDivide(num: Int, den: Int): Either<String, Int> {
 
 现在而不是返回一个 `None` 值，我们正在向用户返回有价值的信息：
 
-```kt
+```java
 import arrow.core.Tuple2
 
 fun eitherDivision(a: Int, b: Int, den: Int): Either<String, Tuple2<Int, Int>> {
@@ -392,7 +392,7 @@ fun eitherDivision(a: Int, b: Int, den: Int): Either<String, Tuple2<Int, Int>> {
 
 `flatMap` 版本看起来符合预期：
 
-```kt
+```java
 fun flatMapEitherDivision(a: Int, b: Int, den: Int): Either<String, Tuple2<Int, Int>> {
    return eitherDivide(a, den).flatMap { aDiv ->
       eitherDivide(b, den).flatMap { bDiv ->
@@ -404,7 +404,7 @@ fun flatMapEitherDivision(a: Int, b: Int, den: Int): Either<String, Tuple2<Int, 
 
 `Either` 具有单子实现，因此我们可以调用绑定函数：
 
-```kt
+```java
 fun comprehensionEitherDivision(a: Int, b: Int, den: Int): Either<String, Tuple2<Int, Int>> {
    return Either.monad<String>().binding {
       val aDiv = eitherDivide(a, den).bind()
@@ -416,7 +416,7 @@ fun comprehensionEitherDivision(a: Int, b: Int, den: Int): Either<String, Tuple2
 
 注意 `Either.monad<L>()`；对于 `Either<L, R>`，它必须定义 `L` 类型：
 
-```kt
+```java
 fun main(args: Array<String>) {
    eitherDivision(3, 2, 4).fold(::println, ::println) //3 isn't divisible by 4
 }
@@ -429,7 +429,7 @@ fun main(args: Array<String>) {
 
 `Either`和`Option`使用简单，但如果我们将两者结合会发生什么呢？
 
-```kt
+```java
 object UserService {
 
    fun findAge(user: String): Either<String, Option<Int>> {
@@ -440,7 +440,7 @@ object UserService {
 
 `UserService.findAge`返回`Either<String, Option<Int>>`；`Left<String>`表示访问数据库或其他基础设施时出错，`Right<None>`表示数据库中没有找到值，`Right<Some<Int>>`表示找到了值：
 
-```kt
+```java
 import arrow.core.*
 import arrow.syntax.function.pipe
 
@@ -455,7 +455,7 @@ fun main(args: Array<String>) {
 
 要打印年龄，我们需要两个嵌套的折叠，没有什么太复杂的。问题出现在我们需要执行访问多个值的操作时：
 
-```kt
+```java
 import arrow.core.*
 import arrow.syntax.function.pipe
 import kotlin.math.absoluteValue
@@ -485,7 +485,7 @@ fun main(args: Array<String>) {
 
 摩纳哥不组合，这使得这些操作很快就会变得复杂。但是，我们总是可以依赖列表解析，不是吗？现在，让我们看看以下代码：
 
-```kt
+```java
 import arrow.core.*
 import arrow.syntax.function.pipe
 import arrow.typeclasses.binding
@@ -513,7 +513,7 @@ fun main(args: Array<String>) {
 
 这样更好，返回类型不那么长，`fold`也更易于管理。让我们看看以下代码片段中的嵌套列表解析：
 
-```kt
+```java
 fun main(args: Array<String>) {
    val anakinAge: Either<String, Option<Int>> = UserService.findAge("Anakin")
    val padmeAge:  Either<String, Option<Int>> = UserService.findAge("Padme")
@@ -538,7 +538,7 @@ fun main(args: Array<String>) {
 
 **摩纳哥转换器**是两个摩纳哥的组合，可以作为一个整体执行。在我们的例子中，我们将使用`OptionT`（**Option Transformer**的缩写），因为`Option`是嵌套在`Either`内部的摩纳哥类型：
 
-```kt
+```java
 import arrow.core.*
 import arrow.data.OptionT
 import arrow.data.monad
@@ -577,7 +577,7 @@ fun main(args: Array<String>) {
 
 让我们用`Try`来写我们的除法示例：
 
-```kt
+```java
 import arrow.data.Try
 
 fun tryDivide(num: Int, den: Int): Try<Int> = Try { divide(num, den)!! }
@@ -585,7 +585,7 @@ fun tryDivide(num: Int, den: Int): Try<Int> = Try { divide(num, den)!! }
 
 创建`Try`实例的最简单方法是使用`Try.invoke`操作符。如果块内部抛出异常，它将返回`Failure`；如果一切顺利，例如返回`Success<Int>`，则`!!`操作符将抛出`NPE`，如果除法返回 null：
 
-```kt
+```java
 fun tryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
    val aDiv = tryDivide(a, den)
    return when (aDiv) {
@@ -626,7 +626,7 @@ fun tryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
 
 `flatMap` 的实现与 `Either` 和 `Option` 非常相似，展示了拥有一个共同的命名和行为约定的价值：
 
-```kt
+```java
 fun flatMapTryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
    return tryDivide(a, den).flatMap { aDiv ->
       tryDivide(b, den).flatMap { bDiv ->
@@ -638,7 +638,7 @@ fun flatMapTryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
 
 Monadic 理解也适用于 `Try`：
 
-```kt
+```java
 fun comprehensionTryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
    return Try.monad().binding {
       val aDiv = tryDivide(a, den).bind()
@@ -650,7 +650,7 @@ fun comprehensionTryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
 
 另一种使用 `MonadError` 实例的 monadic 理解：
 
-```kt
+```java
 fun monadErrorTryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
    return Try.monadError().bindingCatch {
       val aDiv = divide(a, den)!!
@@ -668,7 +668,7 @@ fun monadErrorTryDivision(a: Int, b: Int, den: Int): Try<Tuple2<Int, Int>> {
 
 我们可以从一个简单的例子开始，一个返回两个东西的函数，一个价格和计算它的步骤。为了计算价格，我们需要加上 20% 的 `VAT`，如果 `price` 值超过某个阈值，则应用折扣：
 
-```kt
+```java
 import arrow.core.Tuple2
 import arrow.core.toT
 import arrow.data.State
@@ -687,7 +687,7 @@ fun addVat(): State<PriceLog, Unit> = State { log: PriceLog ->
 
 我们的第一个函数 `addVat(): State<PriceLog, Unit>` 表示第一步。我们使用 `State` 构建器编写这个函数，它接收 `PriceLog`，在应用任何步骤之前的初始状态，并必须返回一个 `Tuple2<PriceLog, Unit>`，我们使用 `Unit` 因为在这个点上我们不需要价格：
 
-```kt
+```java
 fun applyDiscount(threshold: Double, discount: Double): State<PriceLog, Unit> = State { log ->
     val (_, price) = log.last()
     if (price > threshold) {
@@ -701,7 +701,7 @@ fun applyDiscount(threshold: Double, discount: Double): State<PriceLog, Unit> = 
 
 `applyDiscount` 函数是我们的第二步。我们在这里引入的唯一新元素是两个参数，一个用于 `threshold`，另一个用于 `discount`：
 
-```kt
+```java
 fun finalPrice(): State<PriceLog, Double> = State { log ->
     val (_, price) = log.last()
     log.add("Final Price" toT price)
@@ -711,7 +711,7 @@ fun finalPrice(): State<PriceLog, Double> = State { log ->
 
 最后一步由函数 `finalPrice()` 表示，现在我们返回 `Double` 而不是 `Unit`：
 
-```kt
+```java
 import arrow.data.ev
 import arrow.instances.monad
 import arrow.typeclasses.binding
@@ -726,7 +726,7 @@ fun calculatePrice(threshold: Double, discount: Double) = State().monad<PriceLog
 
 为了表示步骤序列，我们使用 monadic 理解并按顺序使用 `State` 函数。从一个函数到下一个函数，`PriceLog` 状态隐式流动（只是某些协程连续性的魔法）。最后，我们产生最终价格。添加新步骤或切换现有步骤就像添加或移动行一样简单：
 
-```kt
+```java
 import arrow.data.run
 import arrow.data.runA
 
@@ -751,7 +751,7 @@ fun main(args: Array<String>) {
 
 `State` 在核心递归中很有用；我们可以用 `State` 重新编写我们的旧例子：
 
-```kt
+```java
 fun <T, S> unfold(s: S, f: (S) -> Pair<T, S>?): Sequence<T> {
    val result = f(s)
    return if (result != null) {
@@ -764,7 +764,7 @@ fun <T, S> unfold(s: S, f: (S) -> Pair<T, S>?): Sequence<T> {
 
 我们原始的 `unfold` 函数使用一个函数，`f: (S) -> Pair<T,S>?`，这与 `State<S, T>` 非常相似：
 
-```kt
+```java
 fun <T, S> unfold(s: S, state: State<S, Option<T>>): Sequence<T> {
     val (actualState: S, value: Option<T>) = state.run(s)
     return value.fold(
@@ -777,7 +777,7 @@ fun <T, S> unfold(s: S, state: State<S, Option<T>>): Sequence<T> {
 
 我们不再使用 lambda `(S) -> Pair<T, S>?`，而是使用 `State<S, Option<T>>`，并使用 `Option` 的 fold 函数，对于 `None` 使用空 `Sequence`，对于 `Some<T>` 使用递归调用：
 
-```kt
+```java
 fun factorial(size: Int): Sequence<Long> {
    return sequenceOf(1L) + unfold(1L to 1) { (acc, n) ->
       if (size > n) {
@@ -791,7 +791,7 @@ fun factorial(size: Int): Sequence<Long> {
 
 我们旧的阶乘函数使用 `unfold` 与 `Pair<Long, Int>` 和 lambda—`(Pair<Long, Int>) -> Pair<Long, Pair<Long, Int>>?`：
 
-```kt
+```java
 import arrow.syntax.option.some
 
 fun factorial(size: Int): Sequence<Long> {
@@ -808,7 +808,7 @@ fun factorial(size: Int): Sequence<Long> {
 
 重新编写的阶乘使用 `State<Tuple<Long, Int>, Option<Long>>`，但内部逻辑几乎相同，尽管我们新的阶乘没有使用 null，这是一个显著的改进：
 
-```kt
+```java
 fun fib(size: Int): Sequence<Long> {
    return sequenceOf(1L) + unfold(Triple(0L, 1L, 1)) { (cur, next, n) ->
       if (size > n) {
@@ -824,7 +824,7 @@ fun fib(size: Int): Sequence<Long> {
 
 同样，`fib` 使用 unfold 与 `Triple<Long, Long, Int>` 和 lambda `(Triple<Long, Long, Int>) -> Pair<Long, Triple<Long, Long, Int>>?`：
 
-```kt
+```java
 import arrow.syntax.tuples.plus
 
 fun fib(size: Int): Sequence<Long> {
@@ -841,7 +841,7 @@ fun fib(size: Int): Sequence<Long> {
 
 重新编写的 `fib` 使用 `State<Tuple3<Long, Long, Int>, Option<Long>>`。请注意，扩展操作符函数 `plus`，与 `Tuple2<A, B>` 和 `C` 一起使用将返回 `Tuple3<A, B, C>`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     factorial(10).forEach(::println)
     fib(10).forEach(::println)

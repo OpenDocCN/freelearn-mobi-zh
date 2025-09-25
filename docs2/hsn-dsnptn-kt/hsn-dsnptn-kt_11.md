@@ -50,7 +50,7 @@ Gradle 是一个构建工具，类似于 Maven 和 Ant。它有一个很好的�
 
 接下来，将以下依赖项添加到你的 `build.gradle` 文件中。
 
-```kt
+```java
 dependencies {
     def $vertx_version = '3.5.1'
     ...
@@ -77,7 +77,7 @@ dependencies {
 
 在 `src/main/kotlin` 文件夹中创建一个名为 `Main.kt` 的文件，内容如下：
 
-```kt
+```java
 fun main(vararg args: String) {
    val vertx = Vertx.vertx()
 
@@ -97,14 +97,14 @@ fun main(vararg args: String) {
 
 如果你使用的是 IntelliJ IDEA 等集成开发环境，你可以直接运行它。另一种选择是将以下行添加到你的 `build.gradle` 文件中：
 
-```kt
+```java
 apply plugin: 'application'
 mainClassName = "com.gett.MainKt"
 ```
 
 然后，你可以简单地使用以下命令启动它：
 
-```kt
+```java
 ./gradlew run
 ```
 
@@ -118,7 +118,7 @@ mainClassName = "com.gett.MainKt"
 
 为了做到这一点，我们将使用 `Router`：
 
-```kt
+```java
 val vertx = Vertx.vertx() // Was here before
 val router = Router.router(vertx)
 ...
@@ -128,7 +128,7 @@ val router = Router.router(vertx)
 
 但是，默认情况下，它不支持协程。让我们通过创建一个扩展函数来解决这个问题：
 
-```kt
+```java
 fun Route.asyncHandler(fn : suspend (RoutingContext) -> Unit) {
     handler { ctx ->
         launch(ctx.vertx().dispatcher()) {
@@ -146,7 +146,7 @@ fun Route.asyncHandler(fn : suspend (RoutingContext) -> Unit) {
 
 现在，我们可以使用这个新的扩展方法：
 
-```kt
+```java
 router.get("/alive").asyncHandler {
     // Some response comes here
     // We now can use any suspending function in this context
@@ -157,7 +157,7 @@ router.get("/alive").asyncHandler {
 
 将以下行添加到你的处理器中：
 
-```kt
+```java
 ...
 val json = json {
     obj (
@@ -170,7 +170,7 @@ it.respond(json.toString())
 
 我们声明的另一个扩展函数是 `respond()`。它看起来如下所示：
 
-```kt
+```java
 fun RoutingContext.respond(responseBody: String = "", status: Int = 200) {
     this.response()
             .setStatusCode(status)
@@ -182,7 +182,7 @@ fun RoutingContext.respond(responseBody: String = "", status: Int = 200) {
 
 你可以通过用以下行替换之前的服务器实例化来实现这一点：
 
-```kt
+```java
 vertx.createHttpServer().
    requestHandler(router::accept).listen(8080)
 ```
@@ -203,7 +203,7 @@ vertx.createHttpServer().
 
 我们首先需要做的是在我们初始化我们的路由器之后添加以下行：
 
-```kt
+```java
 router.route().handler(BodyHandler.create())
 ```
 
@@ -211,7 +211,7 @@ router.route().handler(BodyHandler.create())
 
 现在，让我们确定我们的 URL 应该是什么样子。良好的实践是将我们的 API URL 进行版本控制，所以我们希望它如下所示：
 
-```kt
+```java
 api/v1/cats
 ```
 
@@ -225,7 +225,7 @@ api/v1/cats
 
 理解了这一点后，我们可以继续如下操作：
 
-```kt
+```java
 router.post("/api/v1/cats").asyncHandler { ctx ->
     // Some code of adding a cat comes here
 }
@@ -237,7 +237,7 @@ router.get("/api/v1/cats").asyncHandler { ctx ->
 
 最后一个端点需要接收一个路径参数。我们使用分号符号来表示：
 
-```kt
+```java
 router.get("/api/v1/cats/:id").asyncHandler { ctx ->
     // Fetches specific cat
 }
@@ -249,7 +249,7 @@ router.get("/api/v1/cats/:id").asyncHandler { ctx ->
 
 你可以把 verticle 看作是一个轻量级 actor。让我们看看以下代码的例子：
 
-```kt
+```java
 class ServerVerticle: CoroutineVerticle() {
 
     override suspend fun start() {
@@ -268,7 +268,7 @@ class ServerVerticle: CoroutineVerticle() {
 
 现在我们需要启动这个 verticle。有几种不同的方法可以做到这一点，但最简单的方法是将这个类的实例传递给 `deployVerticle()` 方法：
 
-```kt
+```java
 vertx.deployVerticle(ServerVerticle())
 ```
 
@@ -280,7 +280,7 @@ vertx.deployVerticle(ServerVerticle())
 
 我们将保持 `/alive` 端点不变，但我们将所有其他端点提取到一个单独的函数中：
 
-```kt
+```java
 private fun apiRouter(): Router {
     val router = Router.router(vertx)
 
@@ -301,7 +301,7 @@ private fun apiRouter(): Router {
 
 就像我们向 Vert.x 服务器实例提供主路由器一样，我们现在将子路由器按如下方式提供给主路由器：
 
-```kt
+```java
 router.mountSubRouter("/api/v1", apiRouter())
 ```
 
@@ -315,7 +315,7 @@ router.mountSubRouter("/api/v1", apiRouter())
 
 首先，将以下行添加到你的 `build.gradle` 的 **dependencies** 部分：
 
-```kt
+```java
 testCompile group: 'org.testng', name: 'testng', version: '6.11'
 ```
 
@@ -323,7 +323,7 @@ testCompile group: 'org.testng', name: 'testng', version: '6.11'
 
 所有集成测试的基本结构看起来像这样：
 
-```kt
+```java
 class ServerVerticleTest {
     // Usually one instance of VertX is more than enough
     val vertx = Vertx.vertx()
@@ -354,7 +354,7 @@ class ServerVerticleTest {
 
 你可以像这样命名你的测试：
 
-```kt
+```java
 @Test
 fun testAlive() {
     ...
@@ -363,7 +363,7 @@ fun testAlive() {
 
 但更好的命名测试的方式是这样的：
 
-```kt
+```java
 @Test
 fun `Tests that alive works`() {
     ...
@@ -374,7 +374,7 @@ fun `Tests that alive works`() {
 
 将其添加到你的 `build.gradle` 依赖项部分：
 
-```kt
+```java
 compile group: 'io.vertx', name: 'vertx-web-client', version: $vertx_version
 ```
 
@@ -386,7 +386,7 @@ compile group: 'io.vertx', name: 'vertx-web-client', version: $vertx_version
 
 我们将从 `get()` 开始：
 
-```kt
+```java
 private fun get(path: String): HttpResponse<Buffer> {
     val d1 = CompletableDeferred<HttpResponse<Buffer>>()
 
@@ -403,7 +403,7 @@ private fun get(path: String): HttpResponse<Buffer> {
 
 第二种方法 `post()` 将非常相似，但它还将有一个请求体参数：
 
-```kt
+```java
 
 private fun post(path: String, body: String = ""): HttpResponse<Buffer> {
     val d1 = CompletableDeferred<HttpResponse<Buffer>>()
@@ -425,7 +425,7 @@ private fun post(path: String, body: String = ""): HttpResponse<Buffer> {
 
 我们还需要另一个辅助函数 `startServer()`，我们已经在 `@BeforeClass` 中提到过它。它应该看起来像这样：
 
-```kt
+```java
 private fun startServer() {
     val d1 = CompletableDeferred<String>()
     vertx.deployVerticle(ServerVerticle(), {
@@ -440,7 +440,7 @@ private fun startServer() {
 
 我们需要两个新的扩展函数来方便我们。这些函数将把服务器响应转换为 JSON：
 
-```kt
+```java
 private fun <T> HttpResponse<T>.asJson(): JsonNode {
     return this.bodyAsBuffer().asJson()
 }
@@ -452,7 +452,7 @@ private fun Buffer.asJson(): JsonNode {
 
 现在我们已经准备好编写我们的第一个测试：
 
-```kt
+```java
 @Test
 fun `Tests that alive works`() {
     val response = get("/alive")
@@ -469,7 +469,7 @@ fun `Tests that alive works`() {
 
 起初，它将失败：
 
-```kt
+```java
 @Test
 fun `Makes sure cat can be created`() {
    val response = post("/api/v1/cats",
@@ -501,7 +501,7 @@ fun `Makes sure cat can be created`() {
 
 将以下两行添加到你的 `build.gradle` 依赖部分：
 
-```kt
+```java
 compile group: 'org.postgresql', name: 'postgresql', version: '42.2.2'
 compile group: 'io.vertx', name: 'vertx-jdbc-client', version: $vertx_version
 ```
@@ -528,7 +528,7 @@ compile group: 'io.vertx', name: 'vertx-jdbc-client', version: $vertx_version
 
 **你会去，我不能来！XDSpringBoot** 做的，或者我们可以尝试从环境变量中读取它们。无论如何，我们需要一个封装这个逻辑的对象，如下面的代码所示：
 
-```kt
+```java
 object Config {
     object Db {
         val username = System.getenv("DATABASE_USERNAME") ?: "postgres"
@@ -556,7 +556,7 @@ object Config {
 
 现在，我们将使用此配置代码创建 `JDBCClient`：
 
-```kt
+```java
 fun CoroutineVerticle.getDbClient(): JDBCClient {
     val postgreSQLClientConfig = JsonObject(
             "url" to "jdbc:postgresql://${Config.Db.host}:5432/${Config.Db.database}",
@@ -570,7 +570,7 @@ fun CoroutineVerticle.getDbClient(): JDBCClient {
 
 为了简化与 `JDBCClient` 一起工作，我们将向其中添加一个名为 `query()` 的方法：
 
-```kt
+```java
 fun JDBCClient.query(q: String, vararg params: Any): Deferred<JsonObject> {
     val deferred = CompletableDeferred<JsonObject>()
     this.getConnection { conn ->
@@ -593,7 +593,7 @@ fun JDBCClient.query(q: String, vararg params: Any): Deferred<JsonObject> {
 
 我们还会添加 `toJsonArray()` 方法，因为这是我们 `JDBCClient` 使用的：
 
-```kt
+```java
 private fun <T> Array<T>.toJsonArray(): JsonArray {
     val json = JsonArray()
 
@@ -609,7 +609,7 @@ private fun <T> Array<T>.toJsonArray(): JsonArray {
 
 我们还会添加一个 `handle()` 函数，它将为我们提供一个简单的 API 来处理异步错误：
 
-```kt
+```java
 inline fun <T> AsyncResult<T>.handle(success: AsyncResult<T>.() -> Unit, failure: () -> Unit) {
     if (this.succeeded()) {
         success()
@@ -623,7 +623,7 @@ inline fun <T> AsyncResult<T>.handle(success: AsyncResult<T>.() -> Unit, failure
 
 为了确保一切正常工作，我们将在我们的`/alive`路由上添加一个检查：
 
-```kt
+```java
 val router = Router.router(vertx)
 val dbClient = getDbClient()
 ...
@@ -644,7 +644,7 @@ router.get("/alive").asyncHandler {
 
 在添加这些行并打开[`localhost:8080/alive`](http://localhost:8080/alive)之后，你应该得到以下 JSON 代码：
 
-```kt
+```java
 {"alive":true, "db":[{"alive":true}]}
 ```
 
@@ -652,7 +652,7 @@ router.get("/alive").asyncHandler {
 
 当然，我们的测试没有通过。这是因为我们还没有创建我们的数据库。确保你在命令行中运行以下行：
 
-```kt
+```java
 $ createdb cats_db
 ```
 
@@ -660,7 +660,7 @@ $ createdb cats_db
 
 我们将保持我们的 SQL 与实际代码的清晰分离。将以下内容添加到你的`ServerVerticle`中：
 
-```kt
+```java
 private val insert = """insert into cats (name, age)
             |values (?, ?::integer) RETURNING *""".trimMargin()
 ```
@@ -669,7 +669,7 @@ private val insert = """insert into cats (name, age)
 
 现在用以下代码调用这个查询：
 
-```kt
+```java
 ...
 val db = getDbClient()
 router.post("/cats").asyncHandler { ctx ->
@@ -688,7 +688,7 @@ router.post("/cats").asyncHandler { ctx ->
 
 我们还定义了自己的函数来解析请求体，将`JsonObject`转换为`JsonArray`，这是`JDBCClient`所期望的：
 
-```kt
+```java
 private fun JsonObject.toCat() = JsonArray().apply {
    add(this@toCat.getString("name"))
    add(this@toCat.getInteger("age"))
@@ -701,7 +701,7 @@ private fun JsonObject.toCat() = JsonArray().apply {
 
 当你再次运行我们的测试时，你会注意到它仍然失败，但现在有一个不同的错误代码。这是因为我们还没有创建我们的表。让我们现在就创建它。有几种方法可以做到这一点，但最方便的方法是简单地运行以下命令：
 
-```kt
+```java
 psql -c "create table cats (id bigserial primary key, name varchar(20), age integer)" cats_db
 ```
 
@@ -725,7 +725,7 @@ psql -c "create table cats (id bigserial primary key, name varchar(20), age inte
 
 无论使用哪种方法发送消息，你都可以使用 EventBus 上的`consumer()`方法来订阅它：
 
-```kt
+```java
 const val CATS = "cats:get"
 
 class CatVerticle : CoroutineVerticle() {
@@ -741,13 +741,13 @@ class CatVerticle : CoroutineVerticle() {
 
 类型指定了我们期望接收消息的对象。在这种情况下，它是`JsonObject`。常量`CATS`是我们订阅的键。它可以是任何字符串。通过使用命名空间，我们确保未来不会发生冲突。如果我们要在我们的收容所中添加狗，我们将使用另一个具有另一个命名空间的常量。例如：
 
-```kt
+```java
 const val DOGS  = "dogs:get" // Just an example, don't copy it
 ```
 
 现在我们添加以下两个查询，它们只是多行字符串常量：
 
-```kt
+```java
 private const val QUERY_ALL = """select * from cats"""
 class CatVerticle : CoroutineVerticle() {
 
@@ -763,7 +763,7 @@ class CatVerticle : CoroutineVerticle() {
 
 我们用以下代码填充我们的消费者：
 
-```kt
+```java
 ...
 try {
     val body = req.body()
@@ -791,7 +791,7 @@ catch (e: Exception) {
 
 剩下的就是从`ServerVerticle`调用猫。为此，我们将在我们的`CoroutineVerticle`中添加另一个方法：
 
-```kt
+```java
 fun <T> CoroutineVerticle.send(address: String,
                                message: T,
                                callback: (AsyncResult<Message<T>>) -> Unit) {
@@ -801,7 +801,7 @@ fun <T> CoroutineVerticle.send(address: String,
 
 然后我们可以这样处理我们的请求：
 
-```kt
+```java
 ...
 router.get("/cats").asyncHandler { ctx ->
     send(CATS, ctx.queryParams().toJson()) {
@@ -822,7 +822,7 @@ router.get("/cats").asyncHandler { ctx ->
 
 我们添加的另一个方法是`toJson()`在`MultiMap`上。`MultiMap`是一个包含我们的查询参数的对象：
 
-```kt
+```java
 private fun MultiMap.toJson(): JsonObject {
     val json = JsonObject()
 
@@ -838,7 +838,7 @@ private fun MultiMap.toJson(): JsonObject {
 
 只别忘了在你的`Main.kt`文件和测试中的`startServer()`函数中添加以下行：
 
-```kt
+```java
 ...
 vertx.deployVerticle(CatVerticle())
 ...
@@ -848,7 +848,7 @@ vertx.deployVerticle(CatVerticle())
 
 现在添加以下基本测试：
 
-```kt
+```java
 @Test
 fun `Make sure that all cats are returned`() {
     val response = get("/api/v1/cats")

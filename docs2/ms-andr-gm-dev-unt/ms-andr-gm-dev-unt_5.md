@@ -24,7 +24,7 @@
 
 为了做到这一点，打开`playerScript`并在类的顶部添加名为`health`和`damage`的变量。然后，将`health`变量的值设置为 100，将`damage`变量的值设置为 10。因此，玩家将以 100 的健康值开始，当他们击中敌人时，将对敌人造成 10 点的伤害：
 
-```kt
+```java
     using UnityEngine; 
     using System.Collections; 
     public class playerScript : MonoBehaviour { 
@@ -39,7 +39,7 @@
 
 类似地，将`playerScript`类的相同代码添加到`enemyScipt`类中。由于我们希望公平，我们将敌人的健康值也设置为 100，并将他们能造成的伤害设置为 10。请确保使用`public`访问修饰符，因为只有这样我们才能在其他类中访问健康变量：
 
-```kt
+```java
     public class enemyScript : MonoBehaviour { 
 
         public int health = 100; 
@@ -55,7 +55,7 @@
 
 在`enemyScript`类中，为了检查敌人是否被击中，更改代码如下：
 
-```kt
+```java
     GameObject player = GameObject.Find("theDude"); 
     Animator pAnim = player.GetComponent<Animator>(); 
 
@@ -78,7 +78,7 @@
 
 一旦我们获得对脚本的访问权限，我们就可以获取玩家能造成的伤害量，并通过伤害量减少敌人的当前健康值。现在，转到`playerScript`，因为当玩家被敌人击中时，我们同样需要在玩家脚本中实现这一点：
 
-```kt
+```java
     GameObject enemy = GameObject.Find("Enemy"); 
 
     Animator eAnim = enemy.GetComponent<Animator>(); 
@@ -107,7 +107,7 @@
 
 因此，我们将创建一个新的脚本，称为`gameScript`，并将以下代码行添加到脚本中：
 
-```kt
+```java
     using System.Collections; 
     using System.Collections.Generic; 
     using UnityEngine; 
@@ -166,7 +166,7 @@
 
 因此，在玩家和敌人脚本中，我们需要访问`gameScript`类，并确保一旦游戏结束，就没有任何更新。在玩家的类中，我们将在类的顶部创建一个新的`GameObject`，名为`mainCamera`，如下面的代码所示：
 
-```kt
+```java
     public class playerScript : MonoBehaviour { 
 
         public int health = 100; 
@@ -189,7 +189,7 @@
 
 如果游戏没有结束，那么`if`条件内的所有内容都将更新。否则，它将跳过并不会更新。以下是更新的`Update`函数（没有双关语的意思）：
 
-```kt
+```java
     void Update () { 
         gameScript gScript = mainCamera.GetComponent<gameScript>(); 
 
@@ -238,7 +238,7 @@
 
 现在，我们还需要对敌人脚本执行类似的操作。以下是敌人类的更新代码：
 
-```kt
+```java
     using UnityEngine; 
     using System.Collections; 
 
@@ -312,7 +312,7 @@
 
 根据从 1 到 3 的随机数，我们将选择 AI 是出拳、防御还是闲置：
 
-```kt
+```java
                 switch (choice) 
                 { 
                     //will punch 
@@ -358,7 +358,7 @@
 
 `Shuffle`函数重新排列初始数组，以便我们得到一组不同的随机数：
 
-```kt
+```java
     void Shuffle(int[] a) {  
         for (int i = a.Length - 1; i > 0; i--){ 
             int rnd = Random.Range(0, i); 
@@ -470,7 +470,7 @@ Rect Transform 由不同的属性组成。其中重要的是位置；
 
 在 gameScript 脚本中，添加三个类型为`Text`的公共变量，如下代码片段所示。这将保存从`Text` UI 元素创建的文本对象：
 
-```kt
+```java
     public Text enemyTextInstance; 
     public Text playerTextInstance; 
     public Text gameOverText;  
@@ -479,14 +479,14 @@ Rect Transform 由不同的属性组成。其中重要的是位置；
 
 你还需要在类的顶部添加 UI 命名空间，以便它能够正常工作，因此请在类的顶部添加以下行：
 
-```kt
+```java
     using UnityEngine.UI; 
 
 ```
 
 接下来，在`Update`函数中，在我们从敌人和玩家获取生命值之后，将值分配给新创建的文本变量，如下所示：
 
-```kt
+```java
     int playerHealth = pScript.health; 
     int enemyHealth = eScript.health; 
 
@@ -501,14 +501,14 @@ Rect Transform 由不同的属性组成。其中重要的是位置；
 
 最后，为了确保游戏结束文本仅在游戏结束时出现，在 gameScript 的 start 函数中禁用`gameOverText`，如下代码所示：
 
-```kt
+```java
     gameOverText.enabled = false; 
 
 ```
 
 在`Update`函数中，一旦将`bGameover`布尔变量设置为`true`，启用`gameOverText`，如下代码所示：
 
-```kt
+```java
     gameOverText.enabled = true; 
 
 ```
@@ -683,14 +683,14 @@ Unity 中的粒子系统也是一个游戏对象，因此要创建粒子系统�
 
 接下来在 gameScript 中，在顶部创建一个新的`GameObject`，命名为`particlePrefab`，并将变量设置为`public`，如下面的代码所示：
 
-```kt
+```java
     public GameObject particlePrefab; 
 
 ```
 
 在`Update`函数中，在将`gameover`布尔变量设置为实例化粒子预制件之后：
 
-```kt
+```java
     if (playerHealth<= 0 || enemyHealth<= 0) { 
         bGameover = true; 
         gameOverText.enabled = true; 

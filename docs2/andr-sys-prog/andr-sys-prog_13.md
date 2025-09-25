@@ -14,7 +14,7 @@
 
 让我们看看本章将要构建的 OTA 包的内容。OTA 包本身是一个 ZIP 文件。在我们解压 ZIP 文件后，我们可以列出 ZIP 文件的内容如下：
 
-```kt
+```java
 $ ls -F
 boot.img*  file_contexts*  META-INF/  recovery/  system/  
 
@@ -34,7 +34,7 @@ boot.img*  file_contexts*  META-INF/  recovery/  system/
 
 OTA 包通常用于更新`/boot`和`/system`分区。它不会更新自身。`/recovery`分区的更新在正常的启动过程中进行。在启动过程中，init 将通过以下`flash_recovery`服务在`init.rc`脚本中执行`install-recovery.sh`：
 
-```kt
+```java
 service flash_recovery /system/bin/install-recovery.sh 
     class main 
     oneshot 
@@ -43,7 +43,7 @@ service flash_recovery /system/bin/install-recovery.sh
 
 `install-recovery.sh`脚本使用`recovery-from-boot.p`补丁文件安装恢复，如下所示：
 
-```kt
+```java
 #!/system/bin/sh 
 if ! applypatch -c EMMC:/dev/block/sda7:7757824:853301871de495db2b8c93f7a37779b9eeccb169; then 
   applypatch -b /system/etc/recovery-resource.dat EMMC:/dev/block/sda8:6877184:2f58cc1a4035176c8fefc19be70c00e625acc16b EMMC:/dev/block/sda7 853301871de495db2b8c93f7a37779b9eeccb169 7757824 2f58cc1a4035176c8fefc19be70c00e625acc16b:/system/recovery-from-boot.p && log -t recovery "Installing new recovery image: succeeded" || log -t recovery "Installing new recovery image: failed" 
@@ -69,7 +69,7 @@ fi
 
 更新器是 AOSP 源树中针对目标设备的单个可执行文件。它可以在`$AOSP/bootable/recovery/updater`文件夹中找到。让我们看看`updater.cpp`文件中的主函数。由于`main`函数比较长，我们将分几个段落来看：
 
-```kt
+```java
 #include <stdio.h> 
 #include <unistd.h> 
 #include <stdlib.h> 
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
 在继续之前，它将检查更新器版本：
 
-```kt
+```java
 // Set up the pipe for sending commands back to the parent process. 
 
 int fd = atoi(argv[2]); 
@@ -166,7 +166,7 @@ script[script_entry->uncompLen] = '\0';
 
 下一步是打开管道以建立与恢复的通信通道。然后它从 OTA 包中提取`updater-script`以准备执行脚本：
 
-```kt
+```java
 // Configure edify's functions. 
 
 RegisterBuiltins(); 
@@ -311,7 +311,7 @@ edify 语言的主体功能以 edify 函数的形式实现，而 edify 函数则
 
 内置函数用于支持 edify 语言语法。内置函数通过 `RegisterBuiltins` 注册。我们可以查看以下源代码：
 
-```kt
+```java
 void RegisterBuiltins() { 
     RegisterFunction("ifelse", IfElseFn); 
     RegisterFunction("abort", AbortFn); 
@@ -351,7 +351,7 @@ void RegisterBuiltins() {
 
 与安装相关的函数通过 `RegisterInstallFunctions` 注册。以下是其源代码：
 
-```kt
+```java
 void RegisterInstallFunctions() { 
     RegisterFunction("mount", MountFn); 
     RegisterFunction("is_mounted", IsMountedFn); 
@@ -456,7 +456,7 @@ void RegisterInstallFunctions() {
 
 在 Android 5.0 或更高版本中，可以使用基于块的 OTA 包。基于块的 OTA 包将整个分区视为单个文件，并在块级别进行更新。基于块的 OTA 包的函数通过 `RegisterBlockImageFunctions` 函数注册：
 
-```kt
+```java
 void RegisterBlockImageFunctions() { 
     RegisterFunction("block_image_verify", BlockImageVerifyFn); 
     RegisterFunction("block_image_update", BlockImageUpdateFn); 
@@ -477,7 +477,7 @@ void RegisterBlockImageFunctions() {
 
 作为 Android 系统开发者，我们可以扩展 edify 语言以满足我们设备的特定需求。要使用我们自己的函数扩展 edify 语言，我们可以使用以下函数调用注册我们的函数：
 
-```kt
+```java
 RegisterDeviceExtensions();  
 
 ```
@@ -488,7 +488,7 @@ RegisterDeviceExtensions();
 
 到目前为止，我们已经了解了 OTA 包内的更新器和更新器脚本。现在我们可以为我们的 x86vbox 设备构建 OTA 包了。要构建 OTA 包，我们可以使用以下命令：
 
-```kt
+```java
 $ mkdir -p dist_output
 $ make dist DIST_DIR=dist_output  
 
@@ -498,7 +498,7 @@ Android 5 及以上版本默认构建的 OTA 包是构建基于块的 OTA 包，
 
 为了避免这个错误，我们需要将以下`build/core/Makefile`文件更改为移除`--block`选项：
 
-```kt
+```java
 $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(DISTTOOLS) 
         @echo "Package OTA: $@" 
         $(hide) PATH=$(foreach 
@@ -515,7 +515,7 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(DISTTOOLS)
 
 构建完成后，我们可以按照以下方式检查 OTA 包：
 
-```kt
+```java
 $ ls dist_output/**-ota-*.zip
 dist_output/x86vbox-ota-eng.sgye.zip  
 
@@ -523,7 +523,7 @@ dist_output/x86vbox-ota-eng.sgye.zip
 
 让我们看看我们刚刚构建的 OTA 包内的更新器脚本：
 
-```kt
+```java
 (!less_than_int(1482376066, getprop("ro.build.date.utc"))) || abort("Can't install this package (Thu Dec 22 11:07:46 CST 2016) over newer build (" + getprop("ro.build.date") + ")."); 
 getprop("ro.product.device") == "x86vbox" || abort("This package is for \"x86vbox\" devices; this is a \"" + getprop("ro.product.device") + "\"."); 
 ui_print("Target: Android-x86/x86vbox/x86vbox:7.1.1/MOB30Z/roger12221103:eng/test-keys"); 
@@ -580,7 +580,7 @@ unmount("/system");
 
 内核模块将根据内核动态找到的硬件加载到系统中。在我们的例子中，我们将移除动态加载过程，只保留恢复启动所必需的最小内核模块。让我们看看 x86vbox 的原始启动脚本：
 
-```kt
+```java
 on init 
     exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh 
 
@@ -592,7 +592,7 @@ on init
 
 我们将`init.recovery.x86vbox.rc`更改为以下内容以移除对`/system`的依赖：
 
-```kt
+```java
 on early-init 
     # for /bin/busybox 
     symlink /bin/ld-linux.so.2 /lib/ld-linux.so.2 
@@ -622,7 +622,7 @@ on property:ro.debuggable=1
 
 在`init.x86vbox.sh`脚本中，我们加载恢复所需的设备驱动程序如下：
 
-```kt
+```java
 #!/bin/busybox sh  
 
 echo -n "Initializing x86vbox hardware ..." 
@@ -651,7 +651,7 @@ insmod uvesafb.ko mode_option=${UVESA_MODE:-1024x768}-32
 
 在我们的情况下，我们需要在`ramdisk-recovery.img`中包含两套共享库。Android-x86 中的`initrd.img`中的`busybox`二进制文件是从 AOSP 树中预构建的，因此它们有自己的依赖关系。如果我们转到`newinstaller`文件夹`bootable/newinstaller/initrd`，我们可以看到可执行文件和共享库的列表：
 
-```kt
+```java
 $ ls -1 lib
 libcrypt.so.1
 libc.so.6
@@ -671,7 +671,7 @@ lndir
 
 除了`busybox`外，我们还有一些作为 AOSP 源树一部分构建的可执行文件。它们有一组不同的共享库，这些库也需要包含在`ramdisk-recovery.img`中。例如，显示`uvesafb`驱动程序需要一个用户空间守护进程`/sbin/v86d`，它是作为 AOSP 树的一部分构建的。如果没有一组共享库，它将无法正常工作。为了使我们能够运行这些可执行文件，我们需要在`ramdisk-recovery.img`中包含以下共享库：
 
-```kt
+```java
 $ ls -1 recovery/root/system/lib
 libc.so
 libc++.so
@@ -686,7 +686,7 @@ libselinux.so
 
 你可能想知道如何找到共享库的依赖关系。我们可以通过以下命令获取链接信息的一种方法：
 
-```kt
+```java
 $ readelf -d $OUT/recovery/root/sbin/v86d
 
 Dynamic section at offset 0x3e68 contains 29 entries:
@@ -735,7 +735,7 @@ Dynamic section at offset 0x3e68 contains 29 entries:
 
 如常，我们为每一章都准备了一个清单文件。我们根据第十二章，“介绍恢复”的源代码对这一章进行了修改。以下是我们在这一章中更改的项目：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -768,7 +768,7 @@ Dynamic section at offset 0x3e68 contains 29 entries:
 
 要从 GitHub 和 AOSP 直接获取源代码，可以使用以下命令：
 
-```kt
+```java
 $ repo init -u https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch13_aosp
 $ repo sync  
 
@@ -776,7 +776,7 @@ $ repo sync
 
 源代码准备就绪后，我们可以设置环境并按照以下步骤构建系统：
 
-```kt
+```java
 $ . build/envsetup.sh
 $ lunch x86vbox-eng
 $ make -j4  
@@ -785,14 +785,14 @@ $ make -j4
 
 要构建`initrd.img`，我们可以运行以下命令：
 
-```kt
+```java
 $ make initrd USE_SQUASHFS=0  
 
 ```
 
 要为 x86vbox 设备构建 OTA 包，我们可以运行以下命令：
 
-```kt
+```java
 $ mkdir -p dist_output
 $ make dist DIST_DIR=dist_output  
 
@@ -802,7 +802,7 @@ $ make dist DIST_DIR=dist_output
 
 构建完成后，我们可以在 PXE 引导配置文件`$HOME/.VirtualBox/TFTP/pxelinux.cfg/default`中添加一个条目，如下以测试恢复：
 
-```kt
+```java
 label 3\. Recovery - x86vbox
 menu x86vbox_ramdisk_recovery
 kernel x86vbox/kernel

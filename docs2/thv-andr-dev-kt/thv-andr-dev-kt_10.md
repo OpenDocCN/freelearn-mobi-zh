@@ -46,7 +46,7 @@
 
 现在，版本目录默认创建，因此我们将在项目中获得一个 `libs.versions.toml` 文件，其内容如下：
 
-```kt
+```java
 [versions]
 agp = "8.3.0-alpha18"
 kotlin = "1.9.0"
@@ -107,7 +107,7 @@ jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "k
 
 让我们从向我们的版本目录添加依赖项开始。打开我们的 `libs.versions.toml` 文件，并在 `versions`、`libraries` 和 `plugins` 块中添加 Hilt 依赖项，如下所示：
 
-```kt
+```java
 [versions]
 // ...
 hiltVersion = "2.50"
@@ -122,7 +122,7 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hiltVersion" }
 
 然后，我们将插件添加到项目级别的 `build.gradle.kts`：
 
-```kt
+```java
 plugins {
     ...
     alias(libs.plugins.hilt) apply false
@@ -131,7 +131,7 @@ plugins {
 
 接下来，在每一个模块的 `build.gradle.kts` 文件中，我们将必须应用插件并添加 Hilt 依赖项：
 
-```kt
+```java
 plugins {
 //...
     alias(libs.plugins.hilt)
@@ -145,7 +145,7 @@ dependencies {
 
 现在，在 `:app` 模块中，我们可以创建 `PacktflixApp` 类，它将是 Hilt 配置的入口点：
 
-```kt
+```java
 @HiltAndroidApp
 class PacktflixApp: Application() {
 }
@@ -155,7 +155,7 @@ class PacktflixApp: Application() {
 
 最后，我们应该在 `AndroidManifest.xml` 中包含 `PacktflixApp`，这样我们的应用程序就会使用它而不是默认的 `Application` 类：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android =
 "http://schemas.android.com/apk/res/android"
@@ -176,7 +176,7 @@ class PacktflixApp: Application() {
 
 这个登录界面将有四种状态（`Idle`、`Loading`、`Success` 和 `Error`），所以让我们开始建模整体的 `ViewState`：
 
-```kt
+```java
 sealed class LoginState {
     object Idle : LoginState()
     object Loading : LoginState()
@@ -187,7 +187,7 @@ sealed class LoginState {
 
 现在，让我们创建 `LoginScreen` 可组合组件：
 
-```kt
+```java
 @Composable
 fun LoginScreen() {
     val loginViewModel: LoginViewModel = hiltViewModel()
@@ -206,7 +206,7 @@ fun LoginScreen() {
 
 让我们继续下一部分的可组合组件，这将包括应用程序的名称、`email` 和 `password` 字段以及 **登录** 按钮：
 
-```kt
+```java
 Surface(color = Color.Black, modifier =
 Modifier.fillMaxSize()) {
         Column(
@@ -303,7 +303,7 @@ UI 会根据当前的登录状态动态调整。例如，如果登录状态是 `
 
 现在，让我们开始工作在`LoginViewModel`上：
 
-```kt
+```java
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: DoLoginUseCase
@@ -338,7 +338,7 @@ class LoginViewModel @Inject constructor(
 
 有了这个，我们的登录界面就准备好了。最后一步是设置 Hilt 模块并将`MainActivity`的内容设置为显示`LoginScreen`可组合界面：
 
-```kt
+```java
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -386,7 +386,7 @@ class MainActivity : ComponentActivity() {
 
 首先，我们将定义一个简单的用户模型，它将保存我们在成功身份验证后收到的用户信息：
 
-```kt
+```java
 data class User(
     val id: String,
     val name: String,
@@ -399,7 +399,7 @@ data class User(
 
 然后，为了构建我们将发送到后端以获取认证令牌的登录请求，我们需要另一个数据类来存储凭证：
 
-```kt
+```java
 data class LoginRequest(val email: String, val password:
 String)
 ```
@@ -408,7 +408,7 @@ String)
 
 一旦这个请求到达后端，如果凭证正确，后端将返回一个授权令牌，我们的应用程序将将其存储在安全的地方，并用于验证后续对后端的 API 调用。我们需要另一个模型来存储这个令牌信息：
 
-```kt
+```java
 data class AuthToken(val token: String)
 ```
 
@@ -418,7 +418,7 @@ data class AuthToken(val token: String)
 
 为了获取授权令牌，我们需要我们的应用程序在用户提供他们的凭证时请求它。为了将这个请求发送到后端，我们将使用 Retrofit。我们已经在*第四章*中使用了 Retrofit，所以让我们跳过介绍，直接从设置 Retrofit 将用于发送 HTTP 请求的接口开始：
 
-```kt
+```java
 interface AuthService {
     @POST("auth/login")
     suspend fun login(@Body loginRequest: LoginRequest):
@@ -430,7 +430,7 @@ interface AuthService {
 
 让我们构建这些模型。首先，我们将构建`LoginRequest`模型：
 
-```kt
+```java
 data class LoginRequest(val email: String, val password:
 String)
 ```
@@ -439,7 +439,7 @@ String)
 
 然后，如果登录成功，后端应该返回一个包含授权令牌的响应。我们将按照以下结构来构建这个响应：
 
-```kt
+```java
 data class AuthToken(val token: String)
 ```
 
@@ -447,7 +447,7 @@ data class AuthToken(val token: String)
 
 现在，让我们创建我们的远程数据源以检索授权令牌：
 
-```kt
+```java
 class LoginRemoteDataSource(
     private val authService: AuthService
 ) {
@@ -476,7 +476,7 @@ class LoginRemoteDataSource(
 
 到目前为止，让我们构建 `getError()` 函数：
 
-```kt
+```java
     private fun getError(response: Response<AuthToken>):
     Throwable {
         return when (response.code()) {
@@ -501,7 +501,7 @@ class LoginRemoteDataSource(
 
 让我们也定义那些错误，我们将它们定义为 `LoginException` 密封类的一部分，这是 Kotlin 中的一种特殊类型类，它将继承层次结构限制为特定的一组子类，提供详尽的 `when` 表达式，并确保处理了所有可能的错误类型：
 
-```kt
+```java
 sealed class LoginException(loginErrorMessage: String, val
 code: Int? = null) : Exception(loginErrorMessage) {
     class AuthenticationException(message: String) :
@@ -545,7 +545,7 @@ DataStore 提供了几个功能，使其成为 Android 应用程序中首选的�
 
 因此，要开始使用它，首先，我们需要在我们的版本目录中设置 DataStore 依赖项及其版本：
 
-```kt
+```java
 [versions]
 datastore = "1.0.0"
 [libraries]
@@ -555,7 +555,7 @@ preferences", version.ref = "datastore" }
 
 然后，需要将其添加到我们的模块的 `gradle.build.kts` 文件中：
 
-```kt
+```java
 dependencies {
  ...
     implementation(libs.datastore)
@@ -566,7 +566,7 @@ dependencies {
 
 现在，我们可以开始使用 DataStore 库了。我们将构建一个 `LoginLocalDataSource` 组件，该组件将负责在 DataStore 中存储和检索令牌：
 
-```kt
+```java
 val Context.dataStore by preferencesDataStore(name = "user_preferences")
 class LoginLocalDataSource(private val context: Context) {
     companion object {
@@ -601,7 +601,7 @@ found")
 
 现在，是时候实现`LoginRepository`了，它负责协调远程和本地数据源。我们将像往常一样，在领域层创建一个接口，在数据层创建实现。这是因为领域层不应该有任何来自数据层的显式依赖，以尊重整洁架构。因此，我们定义接口如下：
 
-```kt
+```java
 interface LoginRepository {
     suspend fun getToken(): Result<String>
     suspend fun loginWithCredentials(email: String,
@@ -613,7 +613,7 @@ interface LoginRepository {
 
 现在，让我们来实现仓库：
 
-```kt
+```java
 class LoginRepositoryImpl(
     private val localDataSource: LoginLocalDataSource,
     private val remoteDataSource: LoginRemoteDataSource
@@ -645,7 +645,7 @@ class LoginRepositoryImpl(
 
 现在，我们可以构建一个用例来执行登录，消耗这个 `LoginRepository` 组件：
 
-```kt
+```java
 interface DoLoginUseCase {
     suspend fun doLogin(email: String, password: String):
         Result<Unit>
@@ -681,7 +681,7 @@ Retrofit 的 **拦截器** 是 OkHttp（Retrofit 所使用的底层 HTTP 客户�
 
 因此，让我们编写我们的拦截器：
 
-```kt
+```java
 class AuthInterceptor(private val loginRepository:
 LoginRepository) : Interceptor {
     override fun intercept(chain: Interceptor.Chain):
@@ -712,7 +712,7 @@ LoginRepository) : Interceptor {
 
 现在，当我们构建 Retrofit 客户端时，应将 `AuthInterceptor` 作为拦截器包含在内：
 
-```kt
+```java
     @Provides
     @Singleton
     fun provideRetrofit(
@@ -752,7 +752,7 @@ LoginRepository) : Interceptor {
 
 首先，构建`Movie`模型：
 
-```kt
+```java
 data class Movie(
     val id: Int,
     val title: String,
@@ -764,7 +764,7 @@ data class Movie(
 
 通常，流媒体应用中的电影是按类型排列的，所以让我们也创建一个`Genre`模型：
 
-```kt
+```java
 data class Genre(
     val name: String,
     val movies: List<Movie>
@@ -775,7 +775,7 @@ data class Genre(
 
 最后，我们需要一个`MoviesViewState`类来表示电影列表屏幕状态：
 
-```kt
+```java
 data class MoviesViewState(
     val genres: List<Genre>
 )
@@ -789,7 +789,7 @@ data class MoviesViewState(
 
 要构建`MoviesScreen`可组合组件，请输入以下代码：
 
-```kt
+```java
 @Composable
 fun MoviesScreen(moviesViewState: MoviesViewState =
 sampleMoviesScreen()) {
@@ -814,7 +814,7 @@ sampleMoviesScreen()) {
 
 这里是如何创建`PacktflixTopBar`可组合组件的：
 
-```kt
+```java
 @Composable
 fun PacktflixTopBar() {
     TopAppBar(
@@ -849,7 +849,7 @@ fun PacktflixTopBar() {
 
 在`TopAppBar`内部，有一个显示屏幕上**PACKTFLIX**文本的标题 – 文本将以红色显示，具有大字体和一些填充以创建一些空间。
 
-```kt
+```java
 IconButton composable that contains an icon, and each icon gets its image from a resource file.
 ```
 
@@ -865,7 +865,7 @@ IconButton composable that contains an icon, and each icon gets its image from a
 
 现在，让我们构建`PacktflixBottomBar`可组合组件：
 
-```kt
+```java
 @Composable
 fun PacktflixBottomBar() {
     NavigationBar (
@@ -918,7 +918,7 @@ fun PacktflixBottomBar() {
 
 现在，让我们开始构建 `GenreList` 组合器。通常，流媒体应用程序中电影屏幕的内容由一系列类别组成，其中每个类别包含一系列电影。让我们使用我们之前定义的 `Genre` 模型，并创建这个列表的列表。我们将开始创建一个由行组成的垂直列表，其中每行将显示每个 `Genre` 实例的内容：
 
-```kt
+```java
 @Composable
 fun GenreList(genres: List<Genre>, modifier: Modifier =
 Modifier) {
@@ -938,7 +938,7 @@ Modifier) {
 
 现在，让我们构建我们刚才提到的 `GenreRow` 组合器：
 
-```kt
+```java
 @Composable
 fun GenreRow(genre: Genre) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -959,7 +959,7 @@ fun GenreRow(genre: Genre) {
 
 对于该类别的每部电影，我们将创建一个 `MovieCard` 组合器，它将显示电影的缩略图和名称：
 
-```kt
+```java
 @Composable
 fun MovieCard(movie: Movie) {
     Card(
@@ -987,7 +987,7 @@ fun MovieCard(movie: Movie) {
 
 使用这个组件，我们已经完成了我们的电影屏幕（或剧集屏幕——您只需更改标题和内容即可！）现在我们可以使用`@Preview`注解和提供流派列表来测试它。
 
-```kt
+```java
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
@@ -997,7 +997,7 @@ fun DefaultPreview() {
 
 在这里，我们使用 Jetpack Compose 的预览功能来查看我们的列表将呈现什么样子。我们需要创建一些示例内容，这正是`sampleMoviesScreen()`函数为我们所做的事情。例如，我们可以创建以下假的电影列表：
 
-```kt
+```java
 fun sampleMoviesScreen(): MoviesViewState {
     return MoviesViewState(
         genres = listOf(
@@ -1099,7 +1099,7 @@ fun sampleMoviesScreen(): MoviesViewState {
 
 为了定义模型，我们需要考虑在详细屏幕中想要展示的数据。由于我们希望为电影和剧集创建相同的模型，我们将构建一个`ItemDetail`模型，如下所示：
 
-```kt
+```java
 data class ItemDetail(
     val type: Type,
     val title: String,
@@ -1120,7 +1120,7 @@ data class ItemDetail(
 
 如果`ItemDetail`代表一个流媒体剧集项目，我们也应该定义`Episode`模型：
 
-```kt
+```java
 data class Episode(
     val title: String,
     val imageUrl: String,
@@ -1135,7 +1135,7 @@ data class Episode(
 
 正如我们在其他场合所做的那样，我们首先构建我们想要的屏幕结构：
 
-```kt
+```java
 @Composable
 fun ItemDetailScreen(item: ItemDetail =
 createFakeItemDetail()) {
@@ -1163,7 +1163,7 @@ createFakeItemDetail()) {
 
 现在，让我们开始构建所有这些可组合组件，从 `ItemBannerImage` 开始：
 
-```kt
+```java
 @Composable
 fun ItemBannerImage(imageUrl: String) {
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -1200,7 +1200,7 @@ fun ItemBannerImage(imageUrl: String) {
 
 现在，让我们构建 `ItemTitleAndMetadata` 可组合组件：
 
-```kt
+```java
 @Composable
 fun ItemTitleAndMetadata(
     title: String,
@@ -1263,7 +1263,7 @@ fun ItemTitleAndMetadata(
 
 下一步是创建 `ItemActions` 可组合组件：
 
-```kt
+```java
 @Composable
 fun ItemActions(
     itemUrl: String
@@ -1312,7 +1312,7 @@ fun ActionButton(icon: ImageVector, label: String, onClick:
 
 现在，让我们继续下一个可组合组件，`CastAndCreatorsList`：
 
-```kt
+```java
 @Composable
 fun CastAndCreatorsList(cast: List<String>, creators:
 List<String>) {
@@ -1388,7 +1388,7 @@ List<String>) {
 
 现在，是时候处理屏幕上的最后一个可组合组件，`AdditionalMovieDetails`：
 
-```kt
+```java
 @Composable
 fun AdditionalMovieDetails(item: ItemDetail) {
     Column(modifier = Modifier.fillMaxWidth()) {

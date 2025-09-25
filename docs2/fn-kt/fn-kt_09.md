@@ -76,7 +76,7 @@ Reactor-Kotlin 也是基于 FP 的；它被广泛接受，并得到 Spring 框�
 
 您可以从 GitHub 下载并构建 RxKotlin（[`github.com/ReactiveX/RxKotlin`](https://github.com/ReactiveX/RxKotlin)）。它不需要任何其他依赖项。GitHub 维基百科页面上的文档结构良好。以下是您如何从 GitHub 检出项目并运行构建的步骤：
 
-```kt
+```java
     $ git clone https://github.com/ReactiveX/RxKotlin.git
     $ cd RxKotlin/
     $ ./gradlew build
@@ -95,7 +95,7 @@ RxKotlin 围绕表示现实生活事件和数据系统的`Observable`类型，�
 
 如果我们从与数据列表一起工作的简单示例开始，这将更容易理解：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     var list:List<Any> = listOf(1, "Two", 3, "Four", "Five", 5.5f) // 1 
     var iterator = list.iterator() // 2 
@@ -121,7 +121,7 @@ ReactiveX 框架（无论是 RxKotlin 还是 RxJava）的构建块是可观察�
 
 因此，让我们再次使用相同的示例，这次使用`observable`：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     var list = listOf(1, "Two", 3, "Four", "Five", 5.5f) // 1 
     var observable = list.toObservable(); 
@@ -176,7 +176,7 @@ fun main(args: Array<String>) {
 
 下面是一个代码示例，以更好地理解它：
 
-```kt
+```java
 fun main(args: Array<String>) { 
 
     val observer = object :Observer<Any>{//1 
@@ -227,7 +227,7 @@ fun main(args: Array<String>) {
 
 在任何时候，你都可以使用 `Observable.create` 方法创建自己的自定义 `Observable` 实现。这个方法接受一个 `ObservableEmitter<T>` 接口的实例作为观察的来源。看看下面的代码示例：
 
-```kt
+```java
 fun main(args: Array<String>) { 
 
     val observer: Observer<String> = object : Observer<String> { 
@@ -286,7 +286,7 @@ fun main(args: Array<String>) {
 
 让我们看看以下代码：
 
-```kt
+```java
 fun main(args: Array<String>) { 
 
     val observer: Observer<String> = object : Observer<String> { 
@@ -349,7 +349,7 @@ fun main(args: Array<String>) {
 
 多亏了 Kotlin 的扩展函数，您可以将任何 `Iterable` 实例（如 `list`）轻松地转换为 `Observable`。我们已经在 第一章，*Kotlin – 数据类型、对象和类* 中使用了此方法，但再次看看这个：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val observer: Observer<String> = object : Observer<String> { 
         override fun onComplete() { 
@@ -383,7 +383,7 @@ fun main(args: Array<String>) {
 
 因此，您难道不好奇想看看 `toObservable` 方法吗？让我们来做这件事。您可以在 `RxKotlin` 包提供的 `observable.kt` 文件中找到此方法：
 
-```kt
+```java
 fun <T : Any> Iterator<T>.toObservable(): Observable<T> = toIterable().toObservable() 
 fun <T : Any> Iterable<T>.toObservable(): Observable<T> = Observable.fromIterable(this) 
 fun <T : Any> Sequence<T>.toObservable(): Observable<T> = asIterable().toObservable() 
@@ -416,7 +416,7 @@ fun <T : Any> Iterable<Observable<out T>>.mergeDelayError(): Observable<T> = Obs
 
 那么，现在让我们来看一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val observable = Observable.range(1,5)//1 
 
@@ -463,7 +463,7 @@ fun main(args: Array<String>) {
 
 你可以使用`Disposable`接口的实例在任何给定时间停止发射。让我们来看一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) { 
 
     val observale = Observable.interval(100, TimeUnit.MILLISECONDS)//1 
@@ -515,7 +515,7 @@ fun main(args: Array<String>) {
 
 如果你好奇想了解`Disposable`接口，那么以下是其定义：
 
-```kt
+```java
 interface Disposable { 
   /** 
  * Dispose the resource, the operation should be idempotent. 

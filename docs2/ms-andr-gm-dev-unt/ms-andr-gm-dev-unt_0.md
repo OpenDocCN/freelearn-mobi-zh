@@ -52,7 +52,7 @@ C# 或 JavaScript，以及如何使用 Unity3D 开发基本的 2D/3D 游戏。
 
 代码块以如下方式设置：
 
-```kt
+```java
     private Animator anim;
     // Use this for initialization
 
@@ -64,7 +64,7 @@ C# 或 JavaScript，以及如何使用 Unity3D 开发基本的 2D/3D 游戏。
 
 当我们希望将您的注意力引向代码块中的某个特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
     if (pAnim.GetBool("tIsPunching")){
         if (anim.GetBool("bEnemyIsDefending") == false) {
             Debug.Log("enemy got hit");
@@ -78,7 +78,7 @@ C# 或 JavaScript，以及如何使用 Unity3D 开发基本的 2D/3D 游戏。
 
 任何命令行输入或输出将以如下方式书写：
 
-```kt
+```java
 C:\Program Files\Unity\Editor\Unity.exe
 
 ```

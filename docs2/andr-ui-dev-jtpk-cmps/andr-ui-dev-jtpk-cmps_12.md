@@ -38,13 +38,13 @@
 
 我的示例持续扫描条形码和二维码。装饰过的条形码视图由库提供。如果扫描引擎提供了结果，相应的文本将使用`Text()`作为叠加显示。要使用*ZXing Android Embedded*，您需要将实现依赖项添加到您的模块级`build.gradle`文件中，如下所示：
 
-```kt
+```java
 implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 ```
 
 扫描器访问相机和（可选）设备振动器。应用必须在清单中请求至少`android.permission.WAKE_LOCK`和`android.permission.CAMERA`权限，并在运行时请求`android.permission.CAMERA`权限。我的实现基于`ActivityResultContracts.RequestPermission`，它取代了传统的覆盖`onRequestPermissionsResult()`的方法。此外，根据活动的生命周期，扫描器必须暂停和恢复。为了简化，我使用了一个名为`barcodeView`的`lateinit`变量，并在需要时调用`barcodeView.pause()`和`barcodeView.resume()`。请参阅项目的源代码以获取详细信息。接下来，我将向您展示如何初始化扫描库。这涉及到填充一个布局文件（命名为`layout.xml`），如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <com.journeyapps.barcodescanner.DecoratedBarcodeView
 
@@ -56,7 +56,7 @@ implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 
 布局仅包含一个元素，`DecoratedBarcodeView`。它被配置为填充所有可用空间。以下代码片段是`onCreate()`方法的一部分。请记住，`barcodeView`在`onPause()`等生命周期函数中被访问，因此是一个`lateinit`属性：
 
-```kt
+```java
 val root = layoutInflater.inflate(R.layout.layout, null)
 barcodeView = root.findViewById(R.id.barcode_scanner)
 val formats = listOf(BarcodeFormat.QR_CODE,
@@ -77,7 +77,7 @@ barcodeView.decodeContinuous(callback)
 
 首先，`layout.xml`被填充并分配给`root`。然后，`barcodeView`被初始化（`initializeFromIntent()`）并配置（通过设置解码器工厂）。最后，使用`decodeContinuous()`启动连续扫描过程。每当有新的扫描结果可用时，都会调用`callback` lambda 表达式。`text`变量定义如下：
 
-```kt
+```java
 private val text = MutableLiveData("")
 ```
 
@@ -91,7 +91,7 @@ private val text = MutableLiveData("")
 
 接下来，我将向您展示如何在组合函数内部访问从 ViewModel 获取的状态，如下所示：
 
-```kt
+```java
 setContent {
   val state = text.observeAsState()
   state.value?.let {
@@ -102,7 +102,7 @@ setContent {
 
 状态和`root`的值传递给`ZxingDemo()`可组合函数。我们使用`Text()`显示`value`。`root`参数用于在 Compose UI 中包含视图层次结构。代码在以下代码片段中说明：
 
-```kt
+```java
 @Composable
 fun ZxingDemo(root: View, value: String) {
   Box(
@@ -143,7 +143,7 @@ UI 由一个`Box()`可组合组件组成，包含两个子组件，`AndroidView(
 
 `InteropDemo`示例包含两个活动。一个（`ViewActivity`）在视图层次结构中集成一个可组合函数。我们将在*在视图层次结构中嵌入可组合函数*部分转向这一点。第二个，`ComposeActivity`做相反的事情：使用视图绑定膨胀一个视图层次结构，并在`Column()`可组合组件内显示组件树。让我们看看这里：
 
-```kt
+```java
 class ComposeActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -165,7 +165,7 @@ class ComposeActivity : ComponentActivity() {
 
 根组合器被称作 `ViewIntegrationDemo()`。它接收一个 ViewModel 和一个 lambda 表达式。ViewModel 用于在 Compose 和 `View` 层次结构之间共享数据，这将在 *在视图和组合函数之间共享数据* 部分进行讨论。lambda 表达式启动 `ViewActivity` 并传递从 ViewModel（`sliderValue`）中获取的值。代码在下面的代码片段中展示：
 
-```kt
+```java
 @Composable
 fun ViewIntegrationDemo(viewModel: MyViewModel,
                         onClick: () -> Unit) {
@@ -189,7 +189,7 @@ fun ViewIntegrationDemo(viewModel: MyViewModel,
 
 `AndroidViewBinding()` 与 `AndroidView()` 类似。一个 `factory` 块创建一个要组合的 View 层次结构。`CustomBinding::inflate` 从 `custom.xml` 文件中填充布局，并返回该类型的实例。该类在构建过程中创建和更新。它提供了反映名为 `custom.xml` 的布局文件内容的常量。以下是简化的版本：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
 
@@ -209,7 +209,7 @@ fun ViewIntegrationDemo(viewModel: MyViewModel,
 
 这个 `ConstraintLayout` 有两个子项，一个 `MaterialTextView` 和一个 `MaterialButton`。按钮点击会调用传递给 `ViewIntegrationDemo()` 的 lambda 表达式。文本字段接收当前的滑块值。这是在 `update` 块中完成的。以下代码属于 `ViewIntegrationDemo()` 中 `// Here Views will be updated` 之下：
 
-```kt
+```java
 textView.text = sliderValueState.value.toString()
 button.setOnClickListener {
     onClick()
@@ -242,7 +242,7 @@ button.setOnClickListener {
 
 现在，我们已经熟悉了与 ViewModels 相关的关键技术，让我们看看视图和 composable 函数之间的同步是如何工作的。*同步* 意味着 composable 函数和与视图相关的代码观察相同的 ViewModel 属性，并且可能触发该属性的变化。触发变化通常是通过调用设置器来完成的。对于一个 `Slider()` composable，它可能看起来像这样：
 
-```kt
+```java
 Slider(
   modifier = Modifier.fillMaxWidth(),
   onValueChange = {
@@ -254,7 +254,7 @@ Slider(
 
 此示例还展示了 composable 内部的读数（`sliderValueState.value`）。以下是 `sliderValueState` 的定义方式：
 
-```kt
+```java
 val sliderValueState = viewModel.sliderValue.observeAsState()
 ```
 
@@ -264,13 +264,13 @@ val sliderValueState = viewModel.sliderValue.observeAsState()
 
 利用 View Binding 的 Activity 通常有一个名为 `binding` 的 `lateinit` 属性，如下代码片段所示：
 
-```kt
+```java
 binding = LayoutBinding.inflate(layoutInflater)
 ```
 
 `LayoutBinding.inflate()` 返回一个 `LayoutBinding` 实例。`Binding.root` 代表组件树的根。它被传递给 `setContentView()`。以下是相应的布局文件（`layout.xml`）的简略版本：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
 
@@ -289,7 +289,7 @@ binding = LayoutBinding.inflate(layoutInflater)
 
 `ConstraintLayout` 包含一个 `com.google.android.material.slider.Slider` 和一个 `ComposeView`（将在下一节中详细讨论）。滑动条的 ID 是 `slider`，因此 `LayoutBinding` 包含一个同名的变量。因此，我们可以将滑动条链接到 ViewModel，如下所示：
 
-```kt
+```java
 viewModel.sliderValue.observe(this) {
   binding.slider.value = it
 }
@@ -297,7 +297,7 @@ viewModel.sliderValue.observe(this) {
 
 当 `sliderValue` 中存储的值发生变化时，传递给 `observe()` 的块会被调用。通过更新 `binding.slider.value`，我们改变滑动条手柄的位置，这意味着我们更新了滑动条。代码如下所示：
 
-```kt
+```java
 binding.slider.addOnChangeListener { _, value, _ ->
   viewModel.setSliderValue(value) }
 ```
@@ -312,7 +312,7 @@ binding.slider.addOnChangeListener { _, value, _ ->
 
 `Androidx.compose.ui.platform.ComposeView`使可组合函数在经典布局中可用。该类扩展了`AbstractComposeView`，其父类为`ViewGroup`。一旦包含 ComposeView 的布局被填充，以下是您如何配置它的方法：
 
-```kt
+```java
 binding.composeView.run {
   setViewCompositionStrategy(
       ViewCompositionStrategy.DisposeOnDetachedFromWindow)
@@ -337,13 +337,13 @@ binding.composeView.run {
 
 `setViewCompositionStrategy()`配置如何管理视图内部组合的释放。`ViewCompositionStrategy.DisposeOnDetachedFromWindow`（默认值）表示每当视图从窗口分离时，组合就会被释放。在像我示例中的简单场景中，这是首选的。如果您的视图在片段或具有已知`LifecycleOwner`的组件中显示，您应使用`DisposeOnViewTreeLifecycleDestroyed`或`DisposeOnLifecycleDestroyed`。然而，这些内容超出了本书的范围。以下行基于 ViewModel 的`sliderValue`属性创建状态，并将值传递给`ComposeDemo()`：
 
-```kt
+```java
 val sliderValue = viewModel.sliderValue.observeAsState()
 ```
 
 此可组合函数还接收一个启动`ComposeActivity`并传递当前滑块值的块，如下面的代码片段所示：
 
-```kt
+```java
 @Composable
 fun ComposeDemo(value: Float, onClick: () -> Unit) {
   Column(

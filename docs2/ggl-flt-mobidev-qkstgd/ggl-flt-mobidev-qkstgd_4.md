@@ -82,7 +82,7 @@ Flutter 支持多个滚动组件，例如 `Gridview`、`ListView` 和 `PageView`
 
 构建 `ListView` 最简单且最独立的方式是使用显式的 `List<Widget>` 子组件。这种方法适用于具有固定数量子组件的列表。看看下面的代码：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
@@ -143,7 +143,7 @@ class MyApp extends StatelessWidget {
 
 定义 `ListView.builder` 简单直接，如下面的代码块所示：
 
-```kt
+```java
 ListView.builder(
   itemCount: 100,
   itemBuilder: (context, index) {
@@ -156,7 +156,7 @@ ListView.builder(
 
 使用前面的代码，你会看到一个`ListView`构造函数，它显示每个项目的索引，并附有粘合的文本。完整的代码如下：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
@@ -194,7 +194,7 @@ class MyApp extends StatelessWidget {
 
 现在，我们可以添加一个数据源来工作。数据源可以是消息、搜索结果，或者你希望从中获取数据的互联网上的源。我们将使用`List<E>.generate`构造函数来生成值，如下定义：
 
-```kt
+```java
 List<L>.generate(int length,L generator(int index), {bool growable: true})
 ```
 
@@ -202,7 +202,7 @@ List<L>.generate(int length,L generator(int index), {bool growable: true})
 
 下面是使用数据源生成`ListView`的完整代码示例：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 
 void main() {
@@ -251,7 +251,7 @@ class MyApp extends StatelessWidget {
 
 在之前的代码执行案例中，我们看到尽管`ListTiles`被列出，但它们之间没有分隔。为了在`ListTiles`之间创建分隔符，它还提供了一个辅助构造函数来创建`ListView`。这个构造函数是`ListView.separated`。这个分隔符由**分隔类**调用，以构建一个一设备像素厚的水平线，两侧都有填充。分隔符可以在列表、抽屉或独立内容中使用，垂直或水平使用，具体取决于`Axis`枚举的值，如下所示`ListView.separated`构造函数：
 
-```kt
+```java
 ListView.separated({
 Key key,
 Axis scrollDirection: Axis.vertical,
@@ -273,7 +273,7 @@ double cacheExtent
 
 构造函数可以通过以下方式调用：
 
-```kt
+```java
 ListView.separated(   
 itemCount: 25,   
 separatorBuilder: (BuildContext context, int index) => Divider(),   
@@ -288,7 +288,7 @@ title: Text('item $index'),
 
 下面是使用`ListView.separated`的`ListView`构造函数的示例：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 
 void main() {
@@ -341,7 +341,7 @@ class MyApp extends StatelessWidget {
 
 `SliverChildListDelegate`接受直接的孩子列表，而另一方面，`SliverChildBuiderDelegate`接受`IndexedWidgetBuilder`。看看`ListView.custom`构造函数：
 
-```kt
+```java
 const ListView.custom({
 Key key,
 Axis scrollDirection: Axis.vertical,
@@ -363,7 +363,7 @@ int semanticChildCount
 
 一旦你熟悉了垂直列表，水平列表就很简单了。在这种情况下，我们调用`ListView`构造函数，传递一个水平`scrollDirection`。这仅仅覆盖了默认的垂直方向。在这种情况下，我们使用了一个`Container`小部件，这是一个易于使用的组合了常见的绘制、定位和尺寸小部件的小部件。看看下面的代码：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
@@ -424,7 +424,7 @@ class MyApp extends StatelessWidget {
 
 就像在水平列表的情况下，事件网格列表也很容易构建。它使用`GridView.count`构造函数，允许我们指定屏幕上需要多少行和列。在下面的例子中，我们构建了`100`个小部件，打印出它们的位置值：
 
-```kt
+```java
 import 'package:flutter/material.dart';
 
 void main() {

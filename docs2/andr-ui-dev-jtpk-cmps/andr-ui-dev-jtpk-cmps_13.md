@@ -40,7 +40,7 @@
 
 单位是小的、独立的代码片段——通常是函数、方法、子程序或属性，具体取决于编程语言。让我们看看以下代码片段中的简单 Kotlin 函数：
 
-```kt
+```java
 fun isEven(num: Int): Boolean {
   val div2 = num / 2
   return (div2 * 2) == num
@@ -57,7 +57,7 @@ fun isEven(num: Int): Boolean {
 
 要编写和执行单元测试，你应该将以下依赖项添加到你的模块级`build.gradle`属性文件中：
 
-```kt
+```java
 androidTestImplementation "androidx.test.ext:junit:1.1.3"
 androidTestImplementation "androidx.compose.ui:ui-test-
   junit4:$compose_version"
@@ -80,7 +80,7 @@ androidTestImplementation "androidx.test.espresso:espresso-
 
 让我们看看以下代码片段中的类：
 
-```kt
+```java
 Package
   eu.thomaskuenneth.composebook.testinganddebuggingdemo
 import org.junit.*
@@ -130,7 +130,7 @@ class SimpleUnitTest {
 
 尽管测试通过了，但我的`isEven()`实现可能仍然不完美。虽然测试检查了上下限，但它没有测试负数和正数之间的转换。让我们纠正这个问题并添加另一个测试，如下所示：
 
-```kt
+```java
 @Test
 fun testIsEvenZero() {
   assertEquals(true, isEven(0))
@@ -149,7 +149,7 @@ fun testIsEvenZero() {
 
 `SimpleButtonDemo()` 可组合组件（属于 `TestingAndDebuggingDemo` 示例）显示一个带有按钮的框，按钮居中。第一次点击按钮会将文本从 **A** 更改为 **B**。后续点击会在 **B** 和 **A** 之间切换。代码如下所示：
 
-```kt
+```java
 @Composable
 fun SimpleButtonDemo() {
   val a = stringResource(id = R.string.a)
@@ -178,7 +178,7 @@ fun SimpleButtonDemo() {
 
 下面是一个简单的测试类的样子：
 
-```kt
+```java
 @RunWith(AndroidJUnit4::class)
 class SimpleInstrumentedTest {
   @get:Rule
@@ -210,7 +210,7 @@ class SimpleInstrumentedTest {
 
 在你的测试类中，JUnit 的 `@Before` 和 `@After` 注解。有几个预定义的规则——例如，`TestName` 规则可以在测试方法内部提供当前测试名称，如下所示：
 
-```kt
+```java
 @get:Rule
 var name = TestName()
 ...
@@ -246,7 +246,7 @@ Compose 测试基于规则。`createComposeRule()` 返回 `ComposeContentTestRul
 
 在上一节中，我向您展示了一个简单的测试用例，用于检查按钮文本是否与给定的字符串匹配。这里还有一个测试用例。它点击按钮以查看按钮文本是否按预期更改：
 
-```kt
+```java
 @Test
 fun testLetterAfterButtonClickIsB() {
   rule.onNodeWithText("A")
@@ -269,7 +269,7 @@ fun testLetterAfterButtonClickIsB() {
 
 要查看上一节中用 `testLetterAfterButtonClickIsB()` 测试的语义节点的外观，您可以在 `.assert(…)` 之后添加以下表达式：
 
-```kt
+```java
 .printToLog("SimpleInstrumentedTest")
 ```
 
@@ -283,7 +283,7 @@ fun testLetterAfterButtonClickIsB() {
 
 让我们看看另一个查找函数，`onNodeWithContentDescription()`。我们将使用它来测试 `Image()` 是否是当前 UI 的一部分。代码如下所示：
 
-```kt
+```java
 @Composable
 fun ImageDemo() {
   Image(
@@ -301,7 +301,7 @@ fun ImageDemo() {
 
 如果您的应用 UI 包含图像，您通常应该为它们添加内容描述。内容描述用于，例如，由辅助软件向视觉障碍人士描述当前屏幕上显示的内容。因此，通过添加它们，您可以大大提高可用性。此外，内容描述有助于查找复合元素。您可以在以下代码片段中看到这些用法：
 
-```kt
+```java
 @RunWith(AndroidJUnit4::class)
 class AnotherInstrumentedTest {
   @get:Rule
@@ -328,7 +328,7 @@ class AnotherInstrumentedTest {
 
 使用 `onNodeWithText()` 和 `onNodeWithContentDescription()` 可以轻松找到包含文本和图像的可组合函数。但如果你需要找到其他内容的语义节点——例如，一个 `Box()`？以下示例 `BoxButtonDemo()` 展示了一个在内部居中的 `Button()` 的 `Box()`。点击按钮会切换框的背景颜色，从白色变为浅灰色，然后再变回白色：
 
-```kt
+```java
 val COLOR1 = Color.White
 val COLOR2 = Color.LightGray
 @Composable
@@ -354,7 +354,7 @@ fun BoxButtonDemo() {
 
 测试 `BoxButtonDemo()` 意味着找到框，检查其初始背景颜色，点击按钮，然后再次检查颜色。为了能够找到框，我们使用 `testTag()` 修饰符对其进行标记，如下面的代码片段所示。应用标签允许我们在测试中找到修改后的元素：
 
-```kt
+```java
 val TAG1 = "BoxButtonDemo"
 Box(
   modifier = ...
@@ -364,7 +364,7 @@ Box(
 
 我们可以检查框是否存在，如下所示：
 
-```kt
+```java
 @Test
 fun testBoxInitialBackgroundColorIsColor1() {
   rule.setContent {
@@ -392,7 +392,7 @@ Google 在 [`developer.android.com/jetpack/compose/testing-cheatsheet`](https://
 
 你可以在以下代码片段中看到这些用法：
 
-```kt
+```java
 val BackgroundColorKey =
         SemanticsPropertyKey<Color>("BackgroundColor")
 var SemanticsPropertyReceiver.backgroundColor by
@@ -411,7 +411,7 @@ fun BoxButtonDemo() {
 
 这是如何在测试用例中访问自定义语义属性的方法：
 
-```kt
+```java
 @Test
 fun testBoxInitialBackgroundColorIsColor1() {
   rule.setContent {
@@ -449,7 +449,7 @@ fun testBoxInitialBackgroundColorIsColor1() {
 
 正如我在 *第三章* 的“修改行为”部分中解释的，*探索 Compose 的关键原则*，修饰符是一个有序的不可变修饰符元素集合。修饰符可以改变 Compose UI 元素的看起来和行为。您通过实现 `Modifier` 的扩展函数来创建自定义修饰符。以下代码片段使用 `DrawScope` 接口打印可组合的大小：
 
-```kt
+```java
 fun Modifier.simpleDebug() = then(object : DrawModifier {
   override fun ContentDrawScope.draw() {
     println("width=${size.width}, height=${size.height}")
@@ -486,7 +486,7 @@ fun Modifier.simpleDebug() = then(object : DrawModifier {
 
 要启用调试检查器信息，您必须将 `androidx.compose.ui.platform` 包中的全局顶级变量 `isDebugInspectorInfoEnabled` 设置为 `true`。然后，您可以使用反射访问和打印调试检查器信息。以下是您需要的代码：
 
-```kt
+```java
 .semantics { backgroundColor = color }.also {
   (it as CombinedModifier).run {
     val inner = this.javaClass.getDeclaredField("inner")

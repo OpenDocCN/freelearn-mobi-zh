@@ -22,7 +22,7 @@
 
 `Observable` 的唯一问题是当 `Observer` 无法跟上 `Observable` 的节奏时。默认情况下，`Observable` 通过将项目同步推送到 `Observer`，一次一个，来链式工作。然而，如果 `observer` 必须执行一些耗时的计算，这可能会比 `Observable` 每个项目发射间隔更长。困惑吗？让我们考虑这个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.just(1,2,3,4,5,6,7,8,9)//(1) 
       val subject = BehaviorSubject.create<Int>() 
@@ -51,7 +51,7 @@
 
 仍然有疑问？让我们看看另一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.just(1,2,3,4,5,6,7,8,9)//(1) 
       observable 
@@ -101,7 +101,7 @@
 
 我们已经进行了长时间的讨论；现在让我们动手写代码。首先，我们将尝试使用 Observable 的代码，然后我们将使用 Flowables 来做同样的事情，以观察和理解它们之间的区别：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Observable.range(1,1000)//(1) 
         .map { MyItem3(it) }//(2) 
@@ -127,7 +127,7 @@
 
 如果你仔细观察输出（截图），你会注意到 Observable（生产者）继续发出项目，尽管观察者（消费者）根本跟不上它的节奏。直到观察者（生产者）完成所有项目的发出，观察者（消费者）才处理了第一个项目（项目 1）。如前所述，这可能导致很多问题，包括`OutOfMemory`错误。现在，让我们将代码中的`Observable`替换为`Flowable`：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Flowable.range(1,1000)//(1) 
         .map { MyItem4(it) }//(2) 
@@ -185,7 +185,7 @@
 
 因此，让我们尝试用`Subscriber`实例替换之前的程序：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Flowable.range(1, 1000)//(1) 
         .map { MyItem5(it) }//(2) 
@@ -224,7 +224,7 @@
 
 因此，让我们修改这个程序以更好地理解 `request` 方法：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       Flowable.range(1, 15) 
         .map { MyItem6(it) } 
@@ -277,7 +277,7 @@
 
 在上一章中，我们学习了 `Observable.create` 方法，但为了使事情更简单，让我们快速回顾一下，然后我们可以继续使用 `Flowable.create`。看看以下代码片段：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observer: Observer<Int> = object : Observer<Int> { 
         override fun onComplete() { 
@@ -315,7 +315,7 @@
 
 因此，正如预期的那样，它打印了从 `1` 到 `10` 的所有数字。现在，如前所述，让我们尝试使用 `Flowable`：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val subscriber: Subscriber<Int> = object : Subscriber<Int> { 
         override fun onComplete() { 
@@ -356,7 +356,7 @@
 
 `Flowable.create()`接受两个参数来创建一个`Flowable`实例。以下是`Flowable.create()`方法的定义：
 
-```kt
+```java
     fun <T> create(source:FlowableOnSubscribe<T>, 
     mode:BackpressureStrategy):Flowable<T> { 
       //... 
@@ -381,7 +381,7 @@
 
 `Observable.toFlowable()` 操作符为你提供了另一种将 `BackpressureStrategy` 实现到非背压源的方法。这个操作符将任何 `Observable` 转换为 `Flowable`，所以让我们动手实践，首先，让我们尝试将一个 `Observable` 转换为使用缓冲策略的 `Flowable`，然后我们将在同一个例子中尝试其他一些策略，以更好地理解它。请参考以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val source = Observable.range(1, 1000)//(1) 
       source.toFlowable(BackpressureStrategy.BUFFER)//(2) 
@@ -409,7 +409,7 @@
 
 因此，现在，让我们尝试使用 `BackpressureStrategy.ERROR` 并查看会发生什么：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val source = Observable.range(1, 1000) 
       source.toFlowable(BackpressureStrategy.ERROR) 
@@ -437,7 +437,7 @@
 
 如果我们使用 `BackpressureStrategy.DROP` 选项会发生什么？让我们检查：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val source = Observable.range(1, 1000) 
       source.toFlowable(BackpressureStrategy.DROP) 
@@ -483,7 +483,7 @@
 
 因此，让我们看看一些例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val source = Observable.range(1, 1000) 
       source.toFlowable(BackpressureStrategy.MISSING)//(1) 
@@ -518,7 +518,7 @@
 
 现在，让我们尝试一下：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val source = Observable.range(1, 1000) 
       source.toFlowable(BackpressureStrategy.MISSING)//(1) 
@@ -551,7 +551,7 @@
 
 让我们看看这个代码示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val source = Observable.range(1, 1000) 
       source.toFlowable(BackpressureStrategy.MISSING)//(1) 
@@ -587,7 +587,7 @@
 
 考虑以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = Flowable.generate<Int> { 
         it.onNext(GenerateFlowableItem.item) 
@@ -631,7 +631,7 @@
 
 与`Observable`类似，`ConnectableFlowable`类似于普通`Flowable`，不同之处在于它不是在订阅时开始发出项目，而是在其`connect()`方法被调用时才发出。这样，你可以在`Flowable`开始发出项目之前等待所有预期的`Subscribers`调用`Flowable.subscribe()`。请参考以下代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val connectableFlowable = listOf
       ("String 1","String 2","String   3","String 4",
@@ -669,7 +669,7 @@
 
 以下是一个`PublishProcessor`的示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = listOf("String 1","String 2","String 3",
       "String 4","String 5").toFlowable()//(1) 
@@ -718,7 +718,7 @@
 
 那么，让我们看看这个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = Flowable.range(1,111)//(1) 
       flowable.buffer(10)//(2) 
@@ -738,7 +738,7 @@
 
 感到困惑？让我们看看这个例子来澄清：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = Flowable.range(1,111) 
       flowable.buffer(10,15)//(1) 
@@ -757,7 +757,7 @@
 
 如果前面使用的 `buffer` 操作符不足以满足你的需求，那么让我告诉你，`buffer` 操作符还允许你进行基于时间的缓冲。简单来说，它可以收集来自源的发射并在时间间隔内发射。有趣吧？让我们来探索一下：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = Flowable.interval(100, TimeUnit.MILLISECONDS)//(1) 
       flowable.buffer(1,TimeUnit.SECONDS)//(2) 
@@ -779,7 +779,7 @@
 
 这里有一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val boundaryFlowable = Flowable.interval(350, TimeUnit.MILLISECONDS) 
 
@@ -804,7 +804,7 @@
 
 这里有一个例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = Flowable.range(1,111)//(1) 
       flowable.window(10) 
@@ -829,7 +829,7 @@
 
 `buffer()` 和 `window()` 操作符收集排放。`throttle` 操作符省略排放。我们将在后面的章节中更详细地讨论它，但现在我们先看看：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val flowable = Flowable.interval(100, TimeUnit.MILLISECONDS)//(1) 
       flowable.throttleFirst(200,TimeUnit.MILLISECONDS)//(2) 

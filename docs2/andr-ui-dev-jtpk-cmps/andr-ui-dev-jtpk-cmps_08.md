@@ -40,7 +40,7 @@
 
 材料主题化的主要入口点是`MaterialTheme()`。这个可组合函数可以接收自定义颜色、形状和文本样式。如果没有设置值，则使用相应的默认值（`MaterialTheme.colors`、`MaterialTheme.typography`或`MaterialTheme.shapes`）。以下主题设置了自定义颜色，但将文本样式和形状保留为默认值：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverterTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
@@ -60,7 +60,7 @@ fun ComposeUnitConverterTheme(
 
 `isSystemInDarkTheme()`可组合函数检测设备当前是否正在使用深色主题。你的应用应该使用适合这种配置的颜色。我的例子有两个调色板，`DarkColorPalette`和`LightColorPalette`。以下是后者的定义方式：
 
-```kt
+```java
 private val LightColorPalette = lightColors(
   primary = AndroidGreen,
   primaryVariant = AndroidGreenDark,
@@ -79,7 +79,7 @@ private val LightColorPalette = lightColors(
 
 你可能想知道我是如何定义例如`AndroidGreen`的。实现这一点的最简单方法是这样的：
 
-```kt
+```java
 val AndroidGreen = Color(0xFF3DDC84)
 ```
 
@@ -103,7 +103,7 @@ val AndroidGreen = Color(0xFF3DDC84)
 
 要实现这一点，只需在调用`MaterialTheme()`时添加以下行：
 
-```kt
+```java
 shapes = Shapes(small = CutCornerShape(8.dp)),
 ```
 
@@ -113,14 +113,14 @@ shapes = Shapes(small = CutCornerShape(8.dp)),
 
 以下代码块增加了按钮的文本大小：
 
-```kt
+```java
 typography = Typography(button = TextStyle(fontSize =
                                            24.sp)),
 ```
 
 如果你将此行添加到`MaterialTheme()`的调用中，使用你的主题的所有按钮的文本将高 24 个缩放无关像素。但如何设置主题？为了确保你的完整 Compose UI 使用它，你应该尽早调用你的主题：
 
-```kt
+```java
 class ComposeUnitConverterActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -134,7 +134,7 @@ class ComposeUnitConverterActivity : ComponentActivity() {
 
 在我的例子中，`ComposeUnitConverter()`是应用的可组合 UI 层次结构的根，因为它在`setContent {}`内部被调用：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverter(factory: ViewModelFactory) {
   …
@@ -146,7 +146,7 @@ fun ComposeUnitConverter(factory: ViewModelFactory) {
 
 如果你需要以不同的方式样式化应用的部分，你可以通过覆盖父主题（*图 6.3*）来嵌套主题。让我们看看这是如何工作的：
 
-```kt
+```java
 @Composable
 @Preview
 fun MaterialThemeDemo() {
@@ -202,7 +202,7 @@ fun MaterialThemeDemo() {
 
 当使用`Theme.AppCompat.DayNight`时，状态栏从`colorPrimaryDark`主题属性（或自 API 级别 21 以来的`android:statusBarColor`）接收其背景颜色。如果没有指定值，则使用默认值。因此，为了确保状态栏以适合剩余 UI 元素的颜色显示，您必须在`res/values`中添加一个名为`themes.xml`的文件：
 
-```kt
+```java
 <resources>
   <style name="Theme.ComposeUnitConverter"
          parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -215,7 +215,7 @@ fun MaterialThemeDemo() {
 
 在清单文件中，`android:theme`的值必须更改为`@style/Theme.ComposeUnitConverter`。`@color/android_green_dark`代表颜色。除了这个表达式，你也可以直接传递值；例如，`#FF20B261`。然而，将它们存储在`res/values`目录下的名为`colors.xml`的文件中是最佳实践：
 
-```kt
+```java
 <resources>
   <color name="android_green_dark">#FF20B261</color>
   <color name="orange_dark">#FFCC8400</color>
@@ -224,7 +224,7 @@ fun MaterialThemeDemo() {
 
 这样，你可以为深色主题分配不同的值。以下版本的`themes.xml`应该放在`res/values-night`中：
 
-```kt
+```java
 <resources>
   <style name="Theme.ComposeUnitConverter"
          parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -235,7 +235,7 @@ fun MaterialThemeDemo() {
 
 现在状态栏的背景颜色与剩余的 UI 元素相匹配。但是，我们需要在两个地方定义颜色：`colors.xml`和 Compose 主题。幸运的是，这很容易解决。通常，我们传递一个字面量，如下所示：
 
-```kt
+```java
 val AndroidGreenDark = Color(0xFF20B261)
 ```
 
@@ -243,7 +243,7 @@ val AndroidGreenDark = Color(0xFF20B261)
 
 以下调色板未指定一个`二级`颜色：
 
-```kt
+```java
 private val LightColorPalette = lightColors(
   primary = AndroidGreen,
   primaryVariant = AndroidGreenDark,
@@ -253,7 +253,7 @@ private val LightColorPalette = lightColors(
 
 使用`colorResource()`添加颜色的工作方式如下：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverterTheme(
   darkTheme: Boolean = isSystemInDarkTheme(),
@@ -288,7 +288,7 @@ fun ComposeUnitConverterTheme(
 
 Jetpack Compose 包含几个与 Material Design 或 Material You 规范紧密相关的应用栏实现。它们可以通过`Scaffold()`添加到 Compose UI 中，这是一个充当应用框架或骨骼的可组合函数。以下代码片段是`ComposeUnitConverter` UI 的根。它设置主题，然后委托给`Scaffold()`：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverter(factory: ViewModelFactory) {
   val navController = rememberNavController()
@@ -327,7 +327,7 @@ fun ComposeUnitConverter(factory: ViewModelFactory) {
 
 屏幕顶部的应用栏是通过`TopAppBar()`实现的。你可以在这里提供一个导航图标、标题和动作列表：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverterTopBar(menuItems: List<String>, 
                                onClick: (String) -> Unit) {
@@ -384,7 +384,7 @@ Material Design 下拉菜单 (`DropdownMenu()`) 允许您紧凑地显示多个�
 
 从概念上讲，主要目的地是 *屏幕*，在 Jetpack Compose 之前，这可能是显示在单独的活动中的。以下是 `ComposeUnitConverter` 中定义屏幕的方式：
 
-```kt
+```java
 sealed class ComposeUnitConverterScreen(
   val route: String,
   @StringRes val label: Int,
@@ -413,7 +413,7 @@ sealed class ComposeUnitConverterScreen(
 
 `ComposeUnitConverter` 由两个屏幕组成——`Temperature` 和 `Distances`。`route` 唯一标识一个屏幕。`label` 和 `icon` 将显示给用户。让我们看看这是如何实现的：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverterBottomBar(navController:
    NavHostController) {
@@ -449,7 +449,7 @@ fun ComposeUnitConverterBottomBar(navController:
 
 `BottomNavigation()` 的内容由 `BottomNavigationItem()` 项目组成。每个项目代表一个 *目的地*。我们可以通过简单的循环来添加它们：
 
-```kt
+```java
 ComposeUnitConverterScreen.screens.forEach { screen ->
 ```
 
@@ -461,7 +461,7 @@ ComposeUnitConverterScreen.screens.forEach { screen ->
 
 一个 `NavHostController` 的实例允许我们通过调用其 `navigate()` 函数来导航到不同的屏幕。我们可以在 `ComposeUnitConverter()` 内部通过调用 `rememberNavController()` 获取其引用，然后将其传递给 `ComposeUnitConverterBottomBar()`。路由与可组合函数之间的映射是通过 `NavHost()` 建立的。它属于 `androidx.navigation.compose` 包。以下是这个可组合函数的调用方式：
 
-```kt
+```java
 @Composable
 fun ComposeUnitConverterNavHost(
   navController: NavHostController,

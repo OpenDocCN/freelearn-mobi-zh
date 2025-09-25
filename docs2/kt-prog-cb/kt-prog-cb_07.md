@@ -34,7 +34,7 @@ Kotlin I/O 用于输入和输出处理。Kotlin 提供了`kotlin.io` API 来处�
 
 1.  首先，我们将尝试获取文件的`InputStream`，并使用读取器来读取内容：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -47,7 +47,7 @@ fun main(args: Array<String>) {
 
 1.  在前面的代码块中，`lorem.txt`只是一个我们想要读取的文件。该文件位于我们的代码源文件相同的文件夹中。如果我们需要读取位于不同文件夹中的文件，它看起来类似于以下内容：
 
-```kt
+```java
 File("/path/to/file/lorem.txt")
 ```
 
@@ -55,7 +55,7 @@ File("/path/to/file/lorem.txt")
 
 1.  读取文件内容的另一种方法是直接创建文件的读取器，就像我们在以下代码中所做的那样：
 
-```kt
+```java
 import java.io.File
 
 fun main(args: Array<String>) {
@@ -66,7 +66,7 @@ fun main(args: Array<String>) {
 
 1.  上述两个代码块输出的结果将简单地是文件中的文本，正如它本身那样。在我们的例子中，如下所示：
 
-```kt
+```java
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Nunc consequat eleifend mauris, eget congue ipsum consectetur id.
 Proin hendrerit felis metus, vitae suscipit mi tempus facilisis.
@@ -87,7 +87,7 @@ Proin luctus sapien ac ante tempor, eget mollis odio aliquet.
 
 1.  查看以下示例，其中我们从文件中获取输入流，并使用`useLines()`方法逐行读取：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -101,7 +101,7 @@ fun main(args: Array<String>) {
 
 1.  或者，如果我们希望直接在文件上使用读取器，我们这样做：
 
-```kt
+```java
 import java.io.File
 
 fun main(args: Array<String>) {
@@ -114,7 +114,7 @@ fun main(args: Array<String>) {
 
 在这种情况下，输出将是以下内容：
 
-```kt
+```java
 $ Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 $ Nunc consequat eleifend mauris, eget congue ipsum consectetur id.
 $ Proin hendrerit felis metus, vitae suscipit mi tempus facilisis.
@@ -153,7 +153,7 @@ $ Proin luctus sapien ac ante tempor, eget mollis odio aliquet.
 
 1.  读取文件有两种方式，其中一种是将输入流附加到文件上。让我们看看如何操作，并使用 `InputReader` 来读取其内容：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -166,7 +166,7 @@ fun main(args: Array<String>) {
 
 1.  另一种方式是不获取流，直接读取文件的内容，如下例所示：
 
-```kt
+```java
 import java.io.File
 fun main(args: Array<String>) {
     val inputString = File("example2.txt").reader().use { it.readText() }
@@ -176,7 +176,7 @@ fun main(args: Array<String>) {
 
 在这种情况下，输出仅仅是文件的内容，没有变化：
 
-```kt
+```java
 A panoramic view of Lower Manhattan as seen at dusk from Jersey City, New Jersey, in November 2014\. Manhattan is the most densely populated borough of New York City. It is the city's economic and administrative center, and a major global cultural, financial, media, and entertainment center.
 The second paragraph of this file is small.
 ```
@@ -203,7 +203,7 @@ The second paragraph of this file is small.
 
 1.  让我们从将`InputStream`附加到文件并逐行读取内容开始，如下所示：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -217,14 +217,14 @@ fun main(args: Array<String>) {
 
 1.  在这种情况下，每一行都附加了`*`。以下是输出结果：
 
-```kt
+```java
 * A panoramic view of Lower Manhattan as seen at dusk from Jersey City, New Jersey, in November 2014\. Manhattan is the most densely populated borough of New York City. It is the city's economic and administrative center, and a major global cultural, financial, media, and entertainment center.
 * The second paragraph of this file is small.
 ```
 
 1.  我们可以直接将读取器附加到文件上，并逐行读取。以下代码正是这样做的：
 
-```kt
+```java
 import java.io.File
 
 fun main(args: Array<String>) {
@@ -253,7 +253,7 @@ fun main(args: Array<String>) {
 
 1.  我们可以直接将`BufferedReader`附加到文件上，并读取整个文件的内容，如下面的代码所示：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -265,7 +265,7 @@ fun main(args: Array<String>) {
 
 1.  我们也可以逐行处理所需的内容，以便能够单独处理每一行。在以下代码中，我们逐行读取并添加一个字符到字符串的开始处和字符后的字符串长度：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -285,7 +285,7 @@ fun main(args: Array<String>) {
 
 1.  在以下代码中，我们尝试使用`BufferedReader`逐行从文件输入流中读取：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 
@@ -304,7 +304,7 @@ fun main(args: Array<String>) {
 
 1.  当我们尝试一次性读取文件的全部内容时，以下是输出结果：
 
-```kt
+```java
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Nunc consequat eleifend mauris, eget congue ipsum consectetur id.
 Proin hendrerit felis metus, vitae suscipit mi tempus facilisis.
@@ -323,13 +323,13 @@ Proin luctus sapien ac ante tempor, eget mollis odio aliquet.
 
 1.  输出类似于文件，忽略`charset`。如果需要，我们也可以指定所需的`charset`，如下面的代码所示：
 
-```kt
+```java
 bufferedReader(charset).use { it.readText() }
 ```
 
 1.  当我们使用上述任一示例逐行读取时，我们得到以下输出：
 
-```kt
+```java
 > (56) Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 > (65) Nunc consequat eleifend mauris, eget congue ipsum consectetur id.
 > (64) Proin hendrerit felis metus, vitae suscipit mi tempus facilisis.
@@ -366,7 +366,7 @@ bufferedReader(charset).use { it.readText() }
 
 1.  让我们从获取文件的 `InputStream` 开始，并使用 `BufferedReader` 来一次性读取文件内容：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -378,7 +378,7 @@ fun main(args: Array<String>) {
 
 1.  在这种情况下，输出将与文件完全相同，当然，这取决于字符集。这里有一个使用另一个字符集的例子：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -390,7 +390,7 @@ fun main(args: Array<String>) {
 
 1.  现在，让我们快速查看一个不获取此文件 `inputStream` 的代码示例：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -401,7 +401,7 @@ fun main(args: Array<String>) {
 
 1.  尽管您可能已经猜到了输出，但这里还是提供了输出：
 
-```kt
+```java
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Nunc consequat eleifend mauris, eget congue ipsum consectetur id.
 Proin hendrerit felis metus, vitae suscipit mi tempus facilisis.
@@ -438,7 +438,7 @@ Proin luctus sapien ac ante tempor, eget mollis odio aliquet.
 
 1.  让我们从获取文件的 `InputStream` 开始，并使用 `BufferedReader` 来逐行读取文件内容：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -456,7 +456,7 @@ fun main(args: Array<String>) {
 
 在这种情况下，输出如下：
 
-```kt
+```java
 # (56) Lorem ip
 # (65) Nunc con
 # (64) Proin he
@@ -475,7 +475,7 @@ fun main(args: Array<String>) {
 
 1.  如果我们使用字符集，输出将取决于我们使用的字符集。这是一个带有字符集的代码示例：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -493,7 +493,7 @@ fun main(args: Array<String>) {
 
 1.  现在，让我们通过一个直接从文件读取的代码示例来了解：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -514,7 +514,7 @@ fun main(args: Array<String>) {
 
 `useLines()` 的语法如下：
 
-```kt
+```java
 inline fun <T> File.useLines(
     charset: Charset = Charsets.UTF_8, 
     block: (Sequence<String>) -> T
@@ -525,7 +525,7 @@ inline fun <T> File.useLines(
 
 我们还可以使用其他方法，如 `readLine()` 来实现这个目的。以下是一个示例代码：
 
-```kt
+```java
 import java.io.File
 import java.io.InputStream
 fun main(args: Array<String>) {
@@ -560,13 +560,13 @@ Kotlin 提供的另一个返回行序列的方法是 `lineSequence()`，但它�
 
 1.  在 Kotlin 中使用简单的语法进行网络请求非常直接。以下是你在 Kotlin 中如何读取网络数据的方法：
 
-```kt
+```java
 val response = URL("<api_request>").readText()
 ```
 
 1.  就这样！记住，当进行网络请求时，这相当于 Java 代码：
 
-```kt
+```java
 // 1\. Declare a URL Connection
 URL url = new URL("http://www.google.com");
 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -585,7 +585,7 @@ while ((line = reader.readLine()) != null) {
 
 1.  然而，当然，如果你在主线程上尝试它，你会得到 `NetworkOnMainThreadException` 异常。为了避免这种情况，我们需要在后台进行网络调用。一种方法是通过使用 `Async` 任务。在 Java 中实现 `Async` 任务是一个痛苦的过程，但我们可以使用 Anko（一个 Kotlin 的库）轻松地做到这一点。这是你在 Kotlin 中使用 Anko 创建后台任务的方法：
 
-```kt
+```java
 doAsync{
     val response=URL("<network_url>").readText()
     uiThread{
@@ -601,7 +601,7 @@ doAsync{
 
 `doAsync`返回一个 Java `Future`。简单来说，`Future`是一个代理或包装器，它围绕着一个尚未存在的对象。当异步操作完成时，你可以从中提取它。如果你想要避免与`Future`一起工作，`doAsync`有一个不同的结构，它接受一个`ExecutorService`：
 
-```kt
+```java
 val executor = Executors.newScheduledThreadPool(5)
 
 doAsync(executorService = executor){

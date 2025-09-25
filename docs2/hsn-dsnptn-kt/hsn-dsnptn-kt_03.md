@@ -34,13 +34,13 @@
 
 那么，你不知道什么是`HappyMaps`吗？它们是目前最热门的东西。它们就像常规的`HashMap`一样，但是当你覆盖现有的值时，它们会打印出以下输出：
 
-```kt
+```java
 Yay! Very useful
 ```
 
 所以，你在编辑器中输入以下代码：
 
-```kt
+```java
 class HappyMap<K, V>: HashMap<K, V>() {
     override fun put(key: K, value: V): V? {
         return super.put(key, value).apply {
@@ -56,7 +56,7 @@ class HappyMap<K, V>: HashMap<K, V>() {
 
 我们可以使用以下代码来测试我们的解决方案：
 
-```kt
+```java
 fun main(args : Array<String>) {
     val happy = HappyMap<String, String>()
     happy["one"] = "one"
@@ -67,7 +67,7 @@ fun main(args : Array<String>) {
 
 前面的代码按预期打印以下输出：
 
-```kt
+```java
 Yay! two
 ```
 
@@ -81,7 +81,7 @@ Yay! two
 
 如果你曾经使用过 Java，你已经熟悉运算符重载了。想想加号运算符是如何工作的。让我们看看这里给出的例子：
 
-```kt
+```java
 System.out.println(1 + 1); // 2
 System.out.println("1" + "1") // 11
 ```
@@ -90,7 +90,7 @@ System.out.println("1" + "1") // 11
 
 但是，在 Java 的世界里，这只有语言本身才能做到。无论我们怎么尝试，以下代码都无法编译：
 
-```kt
+```java
 List<String> a = Arrays.asList("a");
 List<String> b = Collections.singletonList("b"); // Same for one argument
 List<String> c = a + b;
@@ -100,7 +100,7 @@ List<String> c = a + b;
 
 在 Kotlin 中，相同的代码打印出`[a, b]`：
 
-```kt
+```java
 val a = listOf("a")
 val b = listOf("b")
 println(a + b)
@@ -108,7 +108,7 @@ println(a + b)
 
 好吧，这很有道理，但也许它只是语言特性：
 
-```kt
+```java
 data class Json(val j: String)
 val j1 = Json("""{"a": "b"}""")
 val j2 = Json("""{"c": "d"}""")
@@ -119,7 +119,7 @@ println(j1 + j2) // Compilation error!
 
 但等等。如果我们为我们的`Json`类创建一个扩展函数`plus()`，如下所示：
 
-```kt
+```java
 operator fun Json.plus(j2: Json): Json {
    // Code comes here
 }
@@ -129,7 +129,7 @@ operator fun Json.plus(j2: Json): Json {
 
 我们实现函数体是这样的：
 
-```kt
+```java
 val jsonFields = this.j.split(":") + j2.j.split(":")
 val s = (jsonFields).joinToString(":")
 return Json ("""{$s}""")
@@ -139,13 +139,13 @@ return Json ("""{$s}""")
 
 现在看看这一行：
 
-```kt
+```java
 println(j1 + j2)
 ```
 
 上述代码会打印出以下输出：
 
-```kt
+```java
 {{"a": "b"}:{"c": "d"}}
 ```
 
@@ -173,7 +173,7 @@ println(j1 + j2)
 
 第二天，您的产品经理联系您。显然，他们现在想要一个`SadMap`，每次从其中删除一个键时，它都会变得**悲伤**。按照之前的模式，您再次扩展了映射：
 
-```kt
+```java
 class SadMap<K, V>: HashMap<K, V>() {
     override fun remove(key: K): V? {
         println("Okay...")
@@ -184,7 +184,7 @@ class SadMap<K, V>: HashMap<K, V>() {
 
 但然后首席架构师要求在某些情况下，一个映射可以同时感到高兴和悲伤。CTO 已经有一个关于`SuperSadMap`的伟大想法，它将打印出以下输出两次：
 
-```kt
+```java
 Okay...
 ```
 
@@ -194,7 +194,7 @@ Okay...
 
 这次我们将有所不同。我们不会逐个组合解决方案，而是先看完整的解决方案，然后分解它。这里的代码将帮助您理解原因：
 
-```kt
+```java
 class HappyMap<K, V>(private val map: MutableMap<K, V> =                                        mutableMapOf()) : 
       MutableMap<K, V> by map {
 
@@ -216,31 +216,31 @@ class HappyMap<K, V>(private val map: MutableMap<K, V> =                        
 
 由于我们需要实际做很多事情，这个声明相当复杂。毕竟，它在一行中做了很多事情，这应该相当令人印象深刻。让我们逐行分解：
 
-```kt
+```java
 class HappyMap<K, V>(...
 ```
 
 我们班级的名字是`HappyMap`，它有两个类型参数，`K`和`V`，分别代表**键**和**值**：
 
-```kt
+```java
 ... (private val map: MutableMap<K, V> ...
 ```
 
 在我们的构造函数中，我们接收带有类型`K`和`V`的`MutableMap`，与我们的相同：
 
-```kt
+```java
 ... = mutableMapOf()) ...
 ```
 
 如果没有传递映射，我们使用默认参数值初始化我们的属性，这个默认值是一个空的可变映射：
 
-```kt
+```java
 ... : MutableMap<K, V> ...
 ```
 
 我们的这个类扩展了`MutableMap`接口：
 
-```kt
+```java
 ... by map
 ```
 
@@ -250,14 +250,14 @@ class HappyMap<K, V>(...
 
 现在我们来组合我们的`SadHappyMap`，以取悦首席架构师：
 
-```kt
+```java
 val sadHappy = SadMap(HappyMap<String, String>())
 sadHappy["one"] = "one"
 sadHappy["two"] = "two"
 
 ```
 
-```kt
+```java
 sadHappy["two"] = "three"
 sadHappy["a"] = "b"
 sadHappy.remove("a")
@@ -265,14 +265,14 @@ sadHappy.remove("a")
 
 我们得到以下输出：
 
-```kt
+```java
 Yay! two // Because it delegates to HappyMap
 Okay...  // Because it is a SadMap
 ```
 
 同样地，我们现在可以创建`SuperSadMap`：
 
-```kt
+```java
 val superSad = SadMap(HappyMap<String, String>())
 ```
 
@@ -286,19 +286,19 @@ val superSad = SadMap(HappyMap<String, String>())
 
 首先，你无法看到装饰器的**内部**：
 
-```kt
+```java
 println(sadHappy is SadMap<*, *>) // True
 ```
 
 那是顶层包装器，所以没问题：
 
-```kt
+```java
 println(sadHappy is MutableMap<*, *>) // True
 ```
 
 那就是我们实现的接口，所以编译器知道它：
 
-```kt
+```java
 println(sadHappy is HappyMap<*, *>) // False
 ```
 
@@ -318,7 +318,7 @@ println(sadHappy is HappyMap<*, *>) // False
 
 让我们从接口开始：
 
-```kt
+```java
 interface UsbTypeC
 interface UsbMini
 
@@ -328,7 +328,7 @@ interface USPlug
 
 现在，我们可以声明一个手机和一个电源插座：
 
-```kt
+```java
 // Power outlet exposes USPlug interface
 fun powerOutlet() : USPlug {
     return object : USPlug {}
@@ -336,7 +336,7 @@ fun powerOutlet() : USPlug {
 
 ```
 
-```kt
+```java
 fun cellPhone(chargeCable: UsbTypeC) {
 
 }
@@ -344,7 +344,7 @@ fun cellPhone(chargeCable: UsbTypeC) {
 
 当然，我们的充电器在各个方面都是错误的：
 
-```kt
+```java
 // Charger accepts EUPlug interface and exposes UsbMini interface
 fun charger(plug: EUPlug) : UsbMini {
     return object : UsbMini {}
@@ -353,7 +353,7 @@ fun charger(plug: EUPlug) : UsbMini {
 
 这里我们遇到了以下错误：
 
-```kt
+```java
 Type mismatch: required EUPlug, found USPlug: charger(powerOutlet())
 
 Type mismatch: required UsbTypeC, found UsbMini: cellPhone(charger(powerOutlet()))
@@ -367,7 +367,7 @@ Type mismatch: required UsbTypeC, found UsbMini: cellPhone(charger(powerOutlet()
 
 我们可以通过以下扩展函数采用美国插头来与欧盟插头一起工作：
 
-```kt
+```java
 fun USPlug.toEUPlug() : EUPlug {
     return object : EUPlug {
         // Do something to convert 
@@ -377,7 +377,7 @@ fun USPlug.toEUPlug() : EUPlug {
 
 我们可以用类似的方式创建一个迷你 USB 和 type-C USB 之间的 USB 适配器：
 
-```kt
+```java
 fun UsbMini.toUsbTypeC() : UsbTypeC {
     return object : UsbTypeC {
         // Do something to convert
@@ -387,7 +387,7 @@ fun UsbMini.toUsbTypeC() : UsbTypeC {
 
 最后，通过将这些适配器组合在一起，我们重新上线：
 
-```kt
+```java
 cellPhone(
     charger(
         powerOutlet().toEUPlug()
@@ -401,7 +401,7 @@ cellPhone(
 
 你可能也遇到过这些适配器。大多数情况下，它们在*概念*和*实现*之间进行适配。例如，让我们以*集合*的概念与*流*的概念为例：
 
-```kt
+```java
 val l = listOf("a", "b", "c")
 
 fun <T> streamProcessing(stream: Stream<T>) { 
@@ -411,13 +411,13 @@ fun <T> streamProcessing(stream: Stream<T>) {
 
 即使这样做在逻辑上可能合理，你也不能简单地将一个集合传递给接收流的功能：
 
-```kt
+```java
 streamProcessing(l) // Doesn't compile
 ```
 
 幸运的是，集合为我们提供了`.stream()`方法：
 
-```kt
+```java
 streamProcessing(l.stream()) // Adapted successfully
 ```
 
@@ -427,7 +427,7 @@ streamProcessing(l.stream()) // Adapted successfully
 
 如果你不小心，这可能会发生在你的代码上。以下使用另一个适配器的示例可以编译：
 
-```kt
+```java
 fun <T> collectionProcessing(c: Collection<T>) {
     for (e in c) {
         println(e)
@@ -446,7 +446,7 @@ collectionProcessing(s.toList())
 
 让我们回到我们正在构建的策略游戏。我们为所有的步兵单位都有一个接口：
 
-```kt
+```java
 interface Infantry {
     fun move(x: Long, y: Long)
 
@@ -456,7 +456,7 @@ interface Infantry {
 
 我们有具体的实现：
 
-```kt
+```java
 open class Rifleman : Infantry {
     override fun attack(x: Long, y: Long) {
         // Shoot
@@ -482,7 +482,7 @@ open class Grenadier : Infantry {
 
 升级后的单位应该有双倍的伤害，但移动速度保持不变：
 
-```kt
+```java
 class UpgradedRifleman : Rifleman() {
     override fun attack(x: Long, y: Long) {
         // Shoot twice as much
@@ -498,7 +498,7 @@ class UpgradedGrenadier : Grenadier() {
 
 现在，我们的游戏设计师决定我们也需要这些单位的轻量版。也就是说，它们以与常规单位相同的方式攻击，但移动速度是它们的两倍：
 
-```kt
+```java
 class LightRifleman : Rifleman() {
     override fun move(x: Long, y: Long) {
         // Running with rifle
@@ -514,7 +514,7 @@ class LightGrenadier : Grenadier() {
 
 由于设计模式都是关于适应变化的，所以我们的设计师来了，并要求所有步兵单位都能够呼喊，也就是说，大声清晰地宣布他们的单位名称：
 
-```kt
+```java
 interface Infantry {
     // As before, move() and attack() functions
 
@@ -532,7 +532,7 @@ interface Infantry {
 
 桥接设计模式背后的想法是简化当前深度为三级的类层次结构：
 
-```kt
+```java
 Infantry --> Rifleman  --> Upgraded Rifleman                                                                           --> Light Rifleman             
          --> Grenadier --> Upgraded Grenadier       
                        --> Light Grenadier
@@ -544,7 +544,7 @@ Infantry --> Rifleman  --> Upgraded Rifleman                                    
 
 也就是说，如果我们把那些属性传递给一个实现我们一直使用的相同接口的类的构造函数：
 
-```kt
+```java
 class Soldier(private val weapon: Weapon,
               private val legs: Legs) : Infantry {
     override fun attack(x: Long, y: Long) {
@@ -563,7 +563,7 @@ class Soldier(private val weapon: Weapon,
 
 `Soldier`接收的属性应该是接口，这样我们就可以稍后选择它们的实现：
 
-```kt
+```java
 interface Weapon {
     fun causeDamage(): PointsOfDamage
 }
@@ -581,7 +581,7 @@ interface Legs {
 
 首先，我们将看看它们是如何声明的：
 
-```kt
+```java
 typealias PointsOfDamage = Long
 typealias Meters = Int
 ```
@@ -598,7 +598,7 @@ typealias Meters = Int
 
 我们完全忘记了实现这些部分！让我们从我们的武器开始：
 
-```kt
+```java
 class Grenade : Weapon {
     override fun causeDamage() = GRENADE_DAMAGE
 }
@@ -613,7 +613,7 @@ class Rifle : Weapon {
 
 ```
 
-```kt
+```java
 class MachineGun : Weapon {
     override fun causeDamage() = RIFLE_DAMAGE * 2
 }
@@ -621,7 +621,7 @@ class MachineGun : Weapon {
 
 现在，让我们看看我们如何移动：
 
-```kt
+```java
 class RegularLegs : Legs {
     override fun move() = REGULAR_SPEED
 }
@@ -635,7 +635,7 @@ class AthleticLegs : Legs {
 
 我们将所有参数定义为常量：
 
-```kt
+```java
 const val GRENADE_DAMAGE : PointsOfDamage = 5L
 const val RIFLE_DAMAGE = 3L
 const val REGULAR_SPEED : Meters = 1
@@ -653,7 +653,7 @@ const val REGULAR_SPEED : Meters = 1
 
 剩下的就是让我们看到，在新层次结构中，我们仍然可以做完全相同的事情：
 
-```kt
+```java
 val rifleman = Soldier(Rifle(), RegularLegs())
 val grenadier = Soldier(Grenade(), RegularLegs())
 val upgradedGrenadier = Soldier(GrenadePack(), RegularLegs())
@@ -664,7 +664,7 @@ val lightGrenadier = Soldier(Grenade(), AthleticLegs())
 
 现在，我们的层次结构看起来是这样的：
 
-```kt
+```java
 Infantry --> Soldier
 
 Weapon --> Rifle
@@ -692,7 +692,7 @@ Legs --> RegularLegs
 
 这里是我们拥有的接口和类：
 
-```kt
+```java
 interface InfantryUnit
 
 class Rifleman : InfantryUnit
@@ -706,7 +706,7 @@ class Sniper : InfantryUnit
 
 `Squad`，显然，必须是一组步兵单位。所以，这应该很简单：
 
-```kt
+```java
 class Squad(val infantryUnits: MutableList<InfantryUnit> =         mutableListOf())
 ```
 
@@ -714,7 +714,7 @@ class Squad(val infantryUnits: MutableList<InfantryUnit> =         mutableListOf
 
 为了确保它能够工作，我们将创建三个士兵并将他们放入其中：
 
-```kt
+```java
 val miller = Rifleman()
 val caparzo = Rifleman()
 val jackson = Sniper()
@@ -732,7 +732,7 @@ println(squad.infantryUnits.size) // Prints 3
 
 他希望像这样初始化排：
 
-```kt
+```java
 val squad = Squad(miller, caparzo, jackson)
 ```
 
@@ -744,7 +744,7 @@ val squad = Squad(miller, caparzo, jackson)
 
 实际上，并不是这样。我们可以使用`constructor`关键字为类定义次要构造函数：
 
-```kt
+```java
 class Squad(val infantryUnits: MutableList<InfantryUnit> = mutableListOf()) {
     constructor(first: InfantryUnit) : this(mutableListOf()) {
         this.infantryUnits.add(first)
@@ -766,7 +766,7 @@ class Squad(val infantryUnits: MutableList<InfantryUnit> = mutableListOf()) {
 
 注意我们如何将一个构造函数委托给另一个：
 
-```kt
+```java
     constructor(first: InfantryUnit) : this(mutableListOf()) {
     }                                     ⇑
                                           ⇑
@@ -779,7 +779,7 @@ class Squad(val infantryUnits: MutableList<InfantryUnit> = mutableListOf()) {
 
 Kotlin 为我们提供了`vararg`关键字来达到同样的目的。结合这两种方法，我们得到了以下这段不错的代码：
 
-```kt
+```java
 class Squad(val infantryUnits: MutableList<InfantryUnit> =     mutableListOf()) {
 
     constructor(vararg units: InfantryUnit) : this(mutableListOf()) {
@@ -794,7 +794,7 @@ class Squad(val infantryUnits: MutableList<InfantryUnit> =     mutableListOf()) 
 
 游戏设计师在傍晚时分抓住你，当然是在你准备回家的那一刻。他想为整个排添加弹药计数，这样每个排都能报告它还剩下多少弹药：
 
-```kt
+```java
 fun bulletsLeft(): Long {
     // Do your job
 }
@@ -804,13 +804,13 @@ fun bulletsLeft(): Long {
 
 好吧，你看，狙击手有单独的子弹作为弹药：
 
-```kt
+```java
 class Bullet
 ```
 
 步兵将子弹存放在弹匣中：
 
-```kt
+```java
 class Magazine(capacity: Int) {
     private val bullets = List(capacity) { Bullet() }
 }
@@ -826,7 +826,7 @@ class Magazine(capacity: Int) {
 
 我们的能力是计数子弹：
 
-```kt
+```java
 interface CanCountBullets {
     fun bulletsLeft(): Int
 }
@@ -834,7 +834,7 @@ interface CanCountBullets {
 
 `Squad`和`InfantryUnit`都应该实现此接口：
 
-```kt
+```java
 interface InfantryUnit : CanCountBullets
 
 class Squad(...) : CanCountBullets {
@@ -850,7 +850,7 @@ class Magazine(...): CanCountBullets {
 
 `Magazine`和`Sniper`简单地计数它们包含的子弹。以下示例展示了我们如何跟踪`Magazines`中的子弹数量：
 
-```kt
+```java
 class Magazine(...): CanCountBullets {
     ...
     override fun bulletsLeft() = bullets.size
@@ -859,7 +859,7 @@ class Magazine(...): CanCountBullets {
 
 以下示例展示了我们如何跟踪狙击手`Sniper`拥有的子弹数量：
 
-```kt
+```java
 class Sniper(initalBullets: Int = 50) : InfantryUnit {
     private val bullets = List(initalBullets) { Bullet () }
     override fun bulletsLeft() = bullets.size
@@ -868,7 +868,7 @@ class Sniper(initalBullets: Int = 50) : InfantryUnit {
 
 对于`Rifleman`，我们可以检查他们的`Magazines`并查看它们包含多少子弹：
 
-```kt
+```java
 class Rifleman(initialMagazines: Int = 3) : InfantryUnit {
     private val magazines = List<Magazine>(initialMagazines) {
         Magazine(5)
@@ -882,7 +882,7 @@ class Rifleman(initialMagazines: Int = 3) : InfantryUnit {
 
 最后，对于小队，我们计算小队包含的所有单位的计数总和：
 
-```kt
+```java
 override fun bulletsLeft(): Int {
     return infantryUnits.sumBy { it.bulletsLeft() }
 }
@@ -934,13 +934,13 @@ Dave 现在面临的主要问题是什么？
 
 他希望只有一个接口，类似于：
 
-```kt
+```java
 interface GameWorld
 ```
 
 那正好是他需要的所有方法：
 
-```kt
+```java
 fun loadGame(file: File) GameWorld
 ```
 
@@ -970,13 +970,13 @@ fun loadGame(file: File) GameWorld
 
 我们的角色有很多敌人，主要由食肉性的坦桑尼亚蜗牛组成：
 
-```kt
+```java
 class TansanianSnail
 ```
 
 由于它是一个 2D 游戏，每个蜗牛只有两个移动方向——向左和向右：
 
-```kt
+```java
 enum class Direction {
    LEFT,
    RIGHT
@@ -985,7 +985,7 @@ enum class Direction {
 
 每个蜗牛持有一对图像和一个方向：
 
-```kt
+```java
 class TansanianSnail() {
    val directionFacing = Direction.LEFT
 
@@ -996,7 +996,7 @@ class TansanianSnail() {
 
 我们可以获取当前显示蜗牛面向哪个方向的精灵：
 
-```kt
+```java
     fun TansanianSnail.getCurrentSprite() : java.io.File {
         return when (directionFacing) {
             Direction.LEFT -> sprites[0]
@@ -1007,7 +1007,7 @@ class TansanianSnail() {
 
 我们可以在屏幕上绘制它：
 
-```kt
+```java
       _____
   \|_\___  \
   /________/    <-- With a bit of imagination you'll see it's a snail
@@ -1015,7 +1015,7 @@ class TansanianSnail() {
 
 但当它移动时，它基本上只是向左或向右滑动。我们希望有三个动画精灵来重现蜗牛的动作：
 
-```kt
+```java
 ---------------------------------------------------------------------
      _____ |    _____ |    _____ |    _____ |    _____ |    _____        
  _|_/___∂ \|\|_/___∂ \|\/_/___∂ \|\|_/___∂ \|\|_/___∂ \|\|_/___∂ \
@@ -1026,7 +1026,7 @@ left-3      left-2     left-1     right-1    right-2    right-3
 
 要在我们的代码中实现它：
 
-```kt
+```java
     val sprites = List(8) { i ->
               java.io.File(when {
                         i == 0 -> "snail-left.jpg"
@@ -1057,7 +1057,7 @@ left-3      left-2     left-1     right-1    right-2    right-3
 
 如果我们提取那些精灵：
 
-```kt
+```java
 val sprites = List(8) { i ->
     java.io.File(when {
         i == 0 -> "snail-left.jpg"
@@ -1070,7 +1070,7 @@ val sprites = List(8) { i ->
 
 然后我们每次都把这个列表传递给`getCurrentSprite()`函数：
 
-```kt
+```java
 fun TansanianSnail.getCurrentSprite(sprites: List<java.io.File>) :     java.io.File { ... }
 ```
 
@@ -1078,13 +1078,13 @@ fun TansanianSnail.getCurrentSprite(sprites: List<java.io.File>) :     java.io.F
 
 当然，我们应该担心我们传递的数据的不可变性。这意味着在任何时候，我们都不能将`null`分配给我们的`sprites`变量，如下所示：
 
-```kt
+```java
 sprites = null
 ```
 
 这样会产生`NullPointerException`。而且，如果有人要`clear()`这个列表，那将会是灾难性的：
 
-```kt
+```java
 sprites.clear()
 ```
 
@@ -1092,7 +1092,7 @@ sprites.clear()
 
 所有的前述行甚至无法编译：
 
-```kt
+```java
 sprites.clear()
 sprites[0] = File("garbage")
 sprites[0] = null
@@ -1126,7 +1126,7 @@ sprites[0] = null
 
 这听起来像很多逻辑。但是，正如你可能猜到的，特别是在遇到装饰器设计模式之后，Kotlin 可以通过减少你需要编写的样板代码来达到你的目标，从而创造奇迹：
 
-```kt
+```java
 data class CatImage(private val thumbnailUrl: String, 
                     private val url: String) {
     val image: java.io.File by lazy {

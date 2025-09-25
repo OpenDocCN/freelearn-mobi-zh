@@ -36,7 +36,7 @@
 
 所有武器都会朝着我们英雄面对的方向发射弹丸（你不想靠近那些危险的蜗牛），：
 
-```kt
+```java
 enum class Direction {
     LEFT, RIGHT
 }
@@ -44,7 +44,7 @@ enum class Direction {
 
 所有弹丸都应该有一对坐标（记住，我们的游戏是 2D 的？）和一个方向：
 
-```kt
+```java
 abstract class Projectile(private val x: Int,
                           private val y: Int,
                           private val direction: Direction)
@@ -52,7 +52,7 @@ abstract class Projectile(private val x: Int,
 
 如果我们只发射一种类型的弹丸，那会很简单，因为我们已经在第二章中介绍了**工厂**模式，*使用创建型模式*：
 
-```kt
+```java
 class OurHero {
     private var direction = Direction.LEFT
     private var x: Int = 42
@@ -82,7 +82,7 @@ class OurHero {
 
 在 Java 中，我们会创建一个接口，来抽象变化。在我们的情况下，变化的是我们的英雄的武器：
 
-```kt
+```java
 interface Weapon {
     fun shoot(x: Int,
               y: Int,
@@ -92,7 +92,7 @@ interface Weapon {
 
 然后所有其他武器都会实现这个接口：
 
-```kt
+```java
 class Peashooter : Weapon {
     override fun shoot(x: Int,
                        y: Int,
@@ -123,19 +123,19 @@ class Banana : Weapon {
 
 然后，我们的英雄会持有一个武器的引用（最初是`Peashooter`）：
 
-```kt
+```java
 private var currentWeapon : Weapon = Peashooter()
 ```
 
 它会将实际的射击过程委托给它：
 
-```kt
+```java
 fun shoot(): Projectile = currentWeapon.shoot(x, y, direction)
 ```
 
 剩下的就是装备另一件武器的能力：
 
-```kt
+```java
 fun equip(weapon: Weapon) {
     currentWeapon = weapon
 }
@@ -153,19 +153,19 @@ fun equip(weapon: Weapon) {
 
 显然，你可以将一个原始值分配给你的变量：
 
-```kt
+```java
 val x = 7
 ```
 
 你可以将其分配给一个对象：
 
-```kt
+```java
 var myPet = Canary("Michael")
 ```
 
 那么，为什么你应该能够将一个函数分配给你的变量？如下所示：
 
-```kt
+```java
 val square = fun (x: Int): Long {
     return (x * x).toLong()
 }
@@ -179,7 +179,7 @@ val square = fun (x: Int): Long {
 
 首先，我们将为所有武器定义一个命名空间。这不是强制性的，但有助于保持一切井然有序：
 
-```kt
+```java
 object Weapons {
     // Functions we'll be there soon
 }
@@ -187,7 +187,7 @@ object Weapons {
 
 然后，而不是类，我们每件武器都将成为一个函数：
 
-```kt
+```java
 val peashooter = fun(x: Int, y: Int, direction: Direction):             Projectile {
         // Fly straight
 }
@@ -204,7 +204,7 @@ val pomegranate = fun(x: Int, y: Int, direction: Direction):             Project
 
 最有趣的部分是我们的英雄。它现在持有两个函数：
 
-```kt
+```java
 class OurHero {
     // As before
     var currentWeapon = Weapons.peashooter
@@ -219,7 +219,7 @@ class OurHero {
 
 为了测试我们的想法是否可行，我们可以先射击默认武器一次，然后切换到“香蕉”并再次射击：
 
-```kt
+```java
 val h = OurHero()
 h.shoot()
 h.currentWeapon = Weapons.banana
@@ -238,7 +238,7 @@ h.shoot()
 
 如你从上一章所记得的，`Squad` 由 `InfantryUnits` 组成：
 
-```kt
+```java
 interface InfantryUnit
 
 class Squad(val infantryUnits: MutableList<InfantryUnit> =         mutableListOf()) {   
@@ -249,7 +249,7 @@ class Squad(val infantryUnits: MutableList<InfantryUnit> =         mutableListOf
 
 叫做“军士”的小队指挥官也是一个 `InfantryUnit`：
 
-```kt
+```java
 class Squad(...) {
     val commander = Sergeant()
 }
@@ -261,7 +261,7 @@ class Sergeant: InfantryUnit
 
 班是由小队组成的，它也有一个指挥官，称为 `中尉`：
 
-```kt
+```java
 class Platoon(val squads: MutableList<Squad> = mutableListOf()) {
     val commander = Lieutenant()
 }
@@ -273,7 +273,7 @@ class Lieutenant: InfantryUnit
 
 因此，当我们在代码中有以下行时：
 
-```kt
+```java
 val rangers = Squad("Josh", "Ew    an", "Tom")
 val deltaForce = Squad("Sam", "Eric", "William")
 val blackHawk = Platoon(rangers, deltaForce)
@@ -285,7 +285,7 @@ for (u in blackHawk) {
 
 我们将按照资历顺序打印：
 
-```kt
+```java
 Lieutenant, Sergeant, Josh, Ewan, Tom, ...
 ```
 
@@ -293,7 +293,7 @@ Lieutenant, Sergeant, Josh, Ewan, Tom, ...
 
 在 Java 中遍历数组并不难：
 
-```kt
+```java
 int[] array = new int[] {1, 2, 3};
 
 for (int i = 0; i < array.length; i++) {
@@ -307,7 +307,7 @@ for (int i = 0; i < array.length; i++) {
 
 如果你使用像 IntelliJ 这样的 IDE，它将给出有关可能问题的提示：
 
-```kt
+```java
 for (u in blackHawk) { <== For-loop range must have an 'iterator()'                            method
     // Wanted to do something here
 }
@@ -315,13 +315,13 @@ for (u in blackHawk) { <== For-loop range must have an 'iterator()'             
 
 因此，我们的班需要有一个名为 `iterator()` 的函数。由于它是一个特殊函数，我们需要使用 `operator` 关键字。
 
-```kt
+```java
 operator fun iterator() = ...
 ```
 
 我们函数返回的是一个实现了 `Iterator<T>` 接口的匿名对象：
 
-```kt
+```java
 ... = object: Iterator<InfantryUnit> {
     override fun hasNext(): Boolean {
         // Are there more objects to iterate over?
@@ -349,7 +349,7 @@ operator fun iterator() = ...
 
 首先，我们需要为我们的迭代器提供一个状态。它将记住最后返回的元素：
 
-```kt
+```java
 operator fun iterator() = object: Iterator<InfantryUnit> {
     var i = 0
     // More code here
@@ -358,7 +358,7 @@ operator fun iterator() = object: Iterator<InfantryUnit> {
 
 接下来，我们需要告诉它何时停止。在我们的例子中，元素的总数是队伍的所有单位加上中士：
 
-```kt
+```java
 override fun hasNext(): Boolean {
     return i < infantryUnits.size + 1
 }
@@ -366,7 +366,7 @@ override fun hasNext(): Boolean {
 
 最后，我们需要知道返回哪个单位。如果是第一次调用，我们将返回中士。接下来的调用将返回队伍成员之一：
 
-```kt
+```java
 override fun next() =
     when (i) {
         0 -> commander
@@ -384,7 +384,7 @@ override fun next() =
 
 要使用它，我们需要通过名称调用它：
 
-```kt
+```java
 for (u in deltaForce.reverseIterator()) {
     println(u)
 }
@@ -392,7 +392,7 @@ for (u in deltaForce.reverseIterator()) {
 
 由于现在它只是一个返回迭代器的简单函数，我们不需要`operator`关键字：
 
-```kt
+```java
 fun reverseIterator() = object: Iterator<InfantryUnit> {
     // hasNext() is same as before
 }
@@ -400,7 +400,7 @@ fun reverseIterator() = object: Iterator<InfantryUnit> {
 
 唯一的变化发生在`next()`方法中：
 
-```kt
+```java
 override fun next() =
         when (i) {
             infantryUnits.size -> commander
@@ -410,7 +410,7 @@ override fun next() =
 
 有时候，将迭代器作为函数的参数也是有意义的：
 
-```kt
+```java
 fun <T> printAll(iter: Iterator<T>) {
     while (iter.hasNext()) {
         println(iter.next())
@@ -420,7 +420,7 @@ fun <T> printAll(iter: Iterator<T>) {
 
 这个函数将遍历任何提供迭代器的对象：
 
-```kt
+```java
 printAll(deltaForce.iterator())
 printAll(deltaForce.reverseIterator())
 ```
@@ -465,7 +465,7 @@ printAll(deltaForce.reverseIterator())
 
 首先，我们声明蜗牛生命中可能发生的事情：
 
-```kt
+```java
 interface WhatCanHappen {
     fun seeHero()
 
@@ -477,7 +477,7 @@ interface WhatCanHappen {
 
 我们的蜗牛实现了这个接口，因此它可以被通知任何可能发生的事情，并相应地采取行动：
 
-```kt
+```java
 class Snail : WhatCanHappen {
     private var healthPoints = 10
 
@@ -494,7 +494,7 @@ class Snail : WhatCanHappen {
 
 现在，我们声明`Mood`类，我们用`sealed`关键字标记它：
 
-```kt
+```java
 sealed class Mood {
    // Some abstract methods here, like draw(), for example
 }
@@ -502,7 +502,7 @@ sealed class Mood {
 
 密封类是抽象的，不能被实例化。我们将在稍后看到使用它们的优点。但在那之前，让我们声明其他状态：
 
-```kt
+```java
 class Still : Mood() 
 
 class Aggressive : Mood()
@@ -516,7 +516,7 @@ class Dead : Mood()
 
 在状态设计模式术语中，`Snail`是上下文。它持有状态。因此，我们为它声明一个成员：
 
-```kt
+```java
 class Snail : WhatCanHappen {
     private var mood: Mood = Still()
     // As before
@@ -525,7 +525,7 @@ class Snail : WhatCanHappen {
 
 现在让我们定义当`Snail`看到我们的英雄时应该做什么：
 
-```kt
+```java
 override fun seeHero() {
         mood = when(mood) {
             is Still -> Aggressive()
@@ -539,7 +539,7 @@ override fun seeHero() {
 
 让我们描述我们的状态：
 
-```kt
+```java
 override fun seeHero() {
     mood = when(mood) {
         is Still -> Aggressive()
@@ -552,7 +552,7 @@ override fun seeHero() {
 
 当然，`else`仍然有效：
 
-```kt
+```java
 override fun timePassed() {
     mood = when(mood) {
         is Retreating -> Aggressive()
@@ -563,7 +563,7 @@ override fun timePassed() {
 
 当蜗牛被击中时，我们需要决定它是死是活。为此，我们可以使用不带参数的`when`：
 
-```kt
+```java
 override fun getHit(pointsOfDamage: Int) {
     healthPoints -= pointsOfDamage
 
@@ -583,7 +583,7 @@ override fun getHit(pointsOfDamage: Int) {
 
 在这种方法中，`Snail`会变得非常瘦：
 
-```kt
+```java
 class Snail {
     internal var mood: Mood = Still(this)
 
@@ -596,13 +596,13 @@ class Snail {
 
 而不是让`Snail`实现`WhatCanHappen`，我们的`Mood`将：
 
-```kt
+```java
 sealed class Mood : WhatCanHappen
 ```
 
 现在逻辑位于我们的状态对象中：
 
-```kt
+```java
 class Still(private val snail: Snail) : Mood() {
     override fun seeHero() = snail.mood.run {
             Aggressive(snail)
@@ -617,7 +617,7 @@ class Still(private val snail: Snail) : Mood() {
 
 这是第一次遇到`run`扩展函数。它的等效函数将是：
 
-```kt
+```java
 override fun seeHero(): Mood {
     snail.mood = Aggressive(snail)
     return snail.mood
@@ -636,7 +636,7 @@ override fun seeHero(): Mood {
 
 这正是我们现在在**CatsCraft 2: 狗的复仇**游戏中需要做的。*Dave，我们最近雇佣的一位新开发者，整个周末都在努力工作，没有人敢打扰他。他为我们的毛茸茸的士兵实现了以下抽象方法*：
 
-```kt
+```java
 class Soldier(...)... {
     fun attack(x: Long, y: Long) {
         println("Attacking ($x, $y)")
@@ -654,7 +654,7 @@ class Soldier(...)... {
 
 我们现在需要解决的问题是士兵只能记住一个*命令*。就是这样。如果他从`(0, 0)`，屏幕的顶部开始，我们首先告诉他`move(20, 0)`，即向右移动 20 步，然后到`move(20, 20)`，所以他将会直线移动到`(20, 20)`，并且可能会被完全摧毁，因为必须不惜一切代价避开狗敌人：
 
-```kt
+```java
 cat ⇒  good direction  ⇒    (20, 0)
 
           [dog] [dog]                   ⇓
@@ -669,7 +669,7 @@ cat ⇒  good direction  ⇒    (20, 0)
 
 让我们为它画一个骨架。我们知道我们想要保持一个对象的列表，但我们还不知道它们应该是哪种类型。所以现在我们将使用`Any`：
 
-```kt
+```java
 class Soldier {
     private val orders = mutableListOf<Any>() 
 
@@ -682,7 +682,7 @@ class Soldier {
 
 然后，我们想要遍历列表并执行我们拥有的命令：
 
-```kt
+```java
 class Soldier {
     ...
     // This will be triggered from the outside once in a while
@@ -698,7 +698,7 @@ class Soldier {
 
 所以，即使你不熟悉命令设计模式，你也可以猜到我们可以定义一个只有一个方法的接口，`execute()`：
 
-```kt
+```java
 interface Command {
     fun execute()
 }
@@ -706,7 +706,7 @@ interface Command {
 
 然后在成员属性中保持相同时间的一个列表：
 
-```kt
+```java
 private val commands = mutableListOf<Command>()
 ```
 
@@ -714,7 +714,7 @@ private val commands = mutableListOf<Command>()
 
 让我们再次看看命令。它的`execute()`方法不接收任何东西，也不返回任何东西，但做了一些事情。它与以下代码相同：
 
-```kt
+```java
 fun command(): Unit {
   // Some code here
 }
@@ -722,25 +722,25 @@ fun command(): Unit {
 
 完全没有区别。我们可以进一步简化这个：
 
-```kt
+```java
 () -> Unit
 ```
 
 我们不再需要一个名为`Command`的接口，而将使用`typealias`：
 
-```kt
+```java
 typealias Command = ()->Unit
 ```
 
 现在，这一行再次停止编译：
 
-```kt
+```java
 command.execute() // Unresolved reference: execute 
 ```
 
 好吧，那是因为`execute()`只是我们发明的一个名字。在 Kotlin 中，函数使用`invoke()`：
 
-```kt
+```java
 command.invoke() // Compiles
 ```
 
@@ -748,7 +748,7 @@ command.invoke() // Compiles
 
 一个选项是改变我们的`Command`签名以接收两个参数：
 
-```kt
+```java
 (x: Int, y: Int)->Unit
 ```
 
@@ -758,7 +758,7 @@ command.invoke() // Compiles
 
 如果你曾经使用过 JavaScript 语言，使用闭包来限制作用域和*记住*东西是一种常见的做法。我们也会这样做：
 
-```kt
+```java
 val moveGenerator = fun(s: Soldier,
                         x: Int,
                         y: Int): Command {
@@ -778,7 +778,7 @@ val moveGenerator = fun(s: Soldier,
 
 现在，我们的`Soldier`可能有一个像这样的方法：
 
-```kt
+```java
 fun appendMove(x: Int, y: Int) = apply {
         commands.add(moveGenerator(this, x, y))
 }
@@ -786,7 +786,7 @@ fun appendMove(x: Int, y: Int) = apply {
 
 它为我们提供了一个流畅的语法：
 
-```kt
+```java
 val s = Soldier()
 s.appendMove(20, 0)
     .appendMove(20, 20)
@@ -796,7 +796,7 @@ s.appendMove(20, 0)
 
 这段代码将打印以下内容：
 
-```kt
+```java
 Moving to (20, 0)
 Moving to (20, 20)
 Moving to (5, 20)
@@ -816,13 +816,13 @@ Moving to (5, 20)
 
 在我们的情况下，命令*从(0,0)移动到(0,20)*的反面将是*从你现在所在的位置移动到(0,0)*。这可以通过存储一对命令来实现：
 
-```kt
+```java
 private val commands = mutableListOf<Pair<Command, Command>>()
 ```
 
 你也可以添加命令对：
 
-```kt
+```java
 fun appendMove(x: Int, y: Int) = apply {
     val oppositeMove = /* If it's the first command, generate move to current location. Otherwise, get the previous command */
     commands.add(moveGenerator(this, x, y) to oppositeMove)
@@ -845,7 +845,7 @@ fun appendMove(x: Int, y: Int) = apply {
 
 所以，我最初写的代码看起来像这样：
 
-```kt
+```java
 fun handleRequest(r: Request) {
     // Validate
     if (r.email.isEmpty() || r.question.isEmpty()) {
@@ -874,7 +874,7 @@ fun handleRequest(r: Request) {
 
 这次，我们不会学习新的 Kotlin 技巧，而是使用我们已经学过的。我们可以从一个这样的接口开始实现：
 
-```kt
+```java
 interface Handler {
     fun handle(request: Request): Response
 }
@@ -882,7 +882,7 @@ interface Handler {
 
 我们从未讨论过我对开发者的回应是什么样子。那是因为我保持我的责任链非常长且复杂，通常，他们倾向于自己解决问题。坦白说，我从未需要回答过他们中的任何一个。但至少我们知道他们的请求看起来是什么样子：
 
-```kt
+```java
 data class Request(val email: String, val question: String)
 
 data class Response(val answer: String)
@@ -890,7 +890,7 @@ data class Response(val answer: String)
 
 然后，我们可以用 Java 的方式来做，并在每个处理器内部实现每块逻辑：
 
-```kt
+```java
 class BasicValidationHandler(private val next: Handler) : Handler {
     override fun handle(request: Request): Response {
         if (request.email.isEmpty() || request.question.isEmpty()) {
@@ -904,7 +904,7 @@ class BasicValidationHandler(private val next: Handler) : Handler {
 
 其他过滤器看起来会非常类似这个。我们可以按任何顺序组合它们：
 
-```kt
+```java
 val req = Request("developer@company.com", 
         "Who broke my build?")
 
@@ -919,13 +919,13 @@ println(res)
 
 但这次我不会问你关于更好方法的修辞问题。当然有更好的方法，我们现在在 Kotlin 世界。我们已经在上一节中看到了函数的使用。所以，我们将为那个任务定义一个函数：
 
-```kt
+```java
 typealias Handler = (request: Request) -> Response
 ```
 
 为什么会有一个单独的类和接口来接收请求并返回响应，简而言之：
 
-```kt
+```java
 val authentication = fun(next: Handler) =
     fun(request: Request): Response {
         if (!request.email.isKnownEmail()) {
@@ -939,7 +939,7 @@ val authentication = fun(next: Handler) =
 
 再次，我们可以组合这些函数：
 
-```kt
+```java
 val req = Request("developer@company.com", 
     "Why do we need Software Architects?")
 
@@ -976,7 +976,7 @@ println(res)
 
 在本节中，我们将定义一个简单的 DSL-for-SQL 语言。我们不会定义其格式或语法，而只是提供一个示例，说明它应该看起来像什么：
 
-```kt
+```java
 val sql = select("name, age", {
               from("users", {
                   where("age > 25")
@@ -990,7 +990,7 @@ println(sql) // "SELECT name, age FROM users WHERE age > 25"
 
 我们将从最简单的一部分——`select`——开始：
 
-```kt
+```java
 fun select(columns: String, from: SelectClause.()->Unit): 
     SelectClause {
     return SelectClause(columns).apply(from)
@@ -1003,13 +1003,13 @@ fun select(columns: String, from: SelectClause.()->Unit):
 
 最有趣的部分是我们为我们的 lambda 指定了接收者：
 
-```kt
+```java
 SelectClause.()->Unit
 ```
 
 这是一个非常聪明的技巧，所以请确保跟得上：
 
-```kt
+```java
 SelectClause.()->Unit == (SelectClause)->Unit
 ```
 
@@ -1019,13 +1019,13 @@ SelectClause.()->Unit == (SelectClause)->Unit
 
 看看这个：
 
-```kt
+```java
 SelectClause(columns).apply(from)
 ```
 
 这翻译成这样：
 
-```kt
+```java
 val selectClause = SelectClause(columns)
 from(selectClause)
 return selectClause
@@ -1043,7 +1043,7 @@ return selectClause
 
 让我们再次看看我们的 DSL 示例：
 
-```kt
+```java
 select("name, age", {
  this@select.from("users", {
         where("age > 25")
@@ -1055,7 +1055,7 @@ select("name, age", {
 
 你可以开始猜测这个方法的样子。很明显，它接收一个 `String` 作为其第一个参数，并接收另一个 lambda 作为其第二个参数：
 
-```kt
+```java
 class SelectClause(private val columns: String) {
     private lateinit var from : FromClause
     fun from(table: String, where: FromClause.()->Unit): FromClause {
@@ -1081,7 +1081,7 @@ class SelectClause(private val columns: String) {
 
 希望你现在开始理解其精髓：
 
-```kt
+```java
 select("name, age", {
     this@select.from("users", {
  this@from.where("age > 25")
@@ -1091,7 +1091,7 @@ select("name, age", {
 
 这意味着什么？在理解了 `from()` 方法之后，这应该会简单得多。`FromClause` 必须有一个名为 `where()` 的方法，它接收一个 `String` 类型的参数：
 
-```kt
+```java
 class FromClause(private val table: String) {
     private lateinit var where: WhereClause
 
@@ -1105,7 +1105,7 @@ class FromClause(private val table: String) {
 
 我们使用接收到的字符串初始化了一个 `WhereClause` 的实例，并返回了它。就这么简单：
 
-```kt
+```java
 class WhereClause(private val conditions: String) {
     override fun toString(): String {
         return "WHERE $conditions"
@@ -1115,7 +1115,7 @@ class WhereClause(private val conditions: String) {
 
 `WhereClause` 只打印出单词 `WHERE` 和它接收到的条件：
 
-```kt
+```java
 class FromClause(private val table: String) {
     // More code here...
     override fun toString(): String {
@@ -1126,7 +1126,7 @@ class FromClause(private val table: String) {
 
 `FromClause` 打印出单词 `FROM` 以及它接收到的表名，以及 `WhereClause` 打印出的所有内容：
 
-```kt
+```java
 class SelectClause(private val columns: String) {
     // More code here...
     override fun toString(): String {
@@ -1147,7 +1147,7 @@ Kotlin 提供了创建可读性和类型安全的 DSL 的美丽功能。但解�
 
 看看这个 DSL：
 
-```kt
+```java
 val sql = select("name, age", {
               from("users", {
                   where("age > 25")
@@ -1157,7 +1157,7 @@ val sql = select("name, age", {
 
 它可以被重写为：
 
-```kt
+```java
 val sql = select("name, age") {
               from("users") {
                   where("age > 25")
@@ -1179,7 +1179,7 @@ val sql = select("name, age") {
 
 最近，迈克尔介绍我认识了一只名叫 `Kenny` 的鹦鹉，他恰好是质量保证人员：
 
-```kt
+```java
 interface QA {
     fun doesMyCodeWork(): Boolean
 }
@@ -1198,7 +1198,7 @@ object Kenny : QA, Parrot {
 
 鹦鹉质量保证人员非常有动力。他们随时准备测试我游戏的最新版本。但他们真的很不喜欢在睡觉或吃饭时被打扰：
 
-```kt
+```java
 class MyMind {
     val qa = Kenny
 
@@ -1212,7 +1212,7 @@ class MyMind {
 
 如果 `Kenny` 有任何问题，我会给他我的直接电话号码：
 
-```kt
+```java
 object Kenny : ... {
     val developer = Me
 }
@@ -1220,7 +1220,7 @@ object Kenny : ... {
 
 `Kenny` 是一只勤奋的鹦鹉。但我们有如此多的虫子，以至于我们不得不雇佣第二只鹦鹉质量保证人员，Brad。如果 `Kenny` 有空，我会把工作交给他，因为他更熟悉我们的项目。但如果他忙，我会检查 Brad 是否有空，然后把这项任务交给他：
 
-```kt
+```java
 class MyMind {
     ...
     val qa2 = Brad
@@ -1236,7 +1236,7 @@ class MyMind {
 
 `Brad` 作为初级成员，通常会先向 `Kenny` 汇报。而且 `Kenny` 也把我的电话号码给了他：
 
-```kt
+```java
 object Brad : QA, Parrot {
     val senior = Kenny
     val developer = Me
@@ -1246,7 +1246,7 @@ object Brad : QA, Parrot {
 
 然后 Brad 介绍我认识 `George`。`George` 是一只猫头鹰，所以他的睡眠时间与 `Kenny` 和 Brad 不同。这意味着他可以在夜间检查我的代码。问题是，`George` 是一名狂热的足球迷。所以在给他打电话之前，我们需要检查他是否正在看比赛：
 
-```kt
+```java
 class MyMind {
     ...
     val qa3 = George
@@ -1262,7 +1262,7 @@ class MyMind {
 
 `Kenny` 习惯性地也会向 `George` 汇报，因为 `George` 是一只非常博学的猫头鹰：
 
-```kt
+```java
 object Kenny : QA, Parrot {
     val peer = George
     ...
@@ -1271,7 +1271,7 @@ object Kenny : QA, Parrot {
 
 `George` 会检查 `Kenny`，因为 `Kenny` 似乎也对足球感兴趣：
 
-```kt
+```java
 
 object George : QA, Owl {
     val mate = Kenny
@@ -1281,7 +1281,7 @@ object George : QA, Owl {
 
 `George` 喜欢在夜间用他的问题打扰我：
 
-```kt
+```java
 object George : QA, Owl {
     val developer = Me
     ...
@@ -1290,7 +1290,7 @@ object George : QA, Owl {
 
 然后是 `Sandra`。她是一种不同类型的鸟，因为她不是质量保证人员，而是一名文案：
 
-```kt
+```java
 interface Copywriter {
     fun areAllTextsCorrect(): Boolean
 }
@@ -1306,7 +1306,7 @@ object Sandra : Copywriter, Kiwi {
 
 我尽量不去打扰她，除非是重大发布：
 
-```kt
+```java
 class MyMind {
     ...
     val translator = Sandra
@@ -1336,7 +1336,7 @@ class MyMind {
 
 因此，我决定迈克尔应该管理所有这些流程：
 
-```kt
+```java
 interface Manager {
     fun isAllGood(majorRelease: Boolean): Boolean
 }
@@ -1344,7 +1344,7 @@ interface Manager {
 
 只有他知道所有其他的*鸟儿*：
 
-```kt
+```java
 object Michael: Canary, Manager {
     private val kenny = Kenny(this)
     // And all the others
@@ -1362,7 +1362,7 @@ object Michael: Canary, Manager {
 
 我只会记住他，他会做剩下的：
 
-```kt
+```java
 class MyPeacefulMind(private val manager: Manager) {
     fun taskCompleted(isMajorRelease: Boolean) {
         println(manager.isAllGood(isMajorRelease))
@@ -1372,7 +1372,7 @@ class MyPeacefulMind(private val manager: Manager) {
 
 我也会更改我的电话号码，并确保每个人都只得到迈克尔的：
 
-```kt
+```java
 
 class Brad(private val manager: Manager) : ... {
    // No reference to Me here
@@ -1382,7 +1382,7 @@ class Brad(private val manager: Manager) : ... {
 
 现在，如果有人需要别人的意见，他们需要先通过迈克尔。
 
-```kt
+```java
 class Kenny(private val manager: Manager) : ... {
    // No reference to George, or anyone else
    ...
@@ -1411,7 +1411,7 @@ class Kenny(private val manager: Manager) : ... {
 
 首先总结我的问题——迈克尔的想法是他的，而且只有他的：
 
-```kt
+```java
 class Manager {
     private var lastThought = "Should get some coffee"
     private var repeatThat = 3
@@ -1423,7 +1423,7 @@ class Manager {
 
 此外，它们相当复杂且分散。我无法访问它们，只能访问它们的副产品：
 
-```kt
+```java
 class Manager {
     ...
     fun whatAreYouThinking() {
@@ -1444,7 +1444,7 @@ class Manager {
 
 解决方案可能看起来很明显。让我们使用一个内部类，`thought`，来捕捉这个最后的想法：
 
-```kt
+```java
 class Manager {
     ...
     class Thought {
@@ -1467,7 +1467,7 @@ class Manager {
 
 现在我们可以*记录*迈克尔此刻说的话：
 
-```kt
+```java
 val michael = Manager()
 
 val captured = michael.Thought().captureThought()
@@ -1475,7 +1475,7 @@ val captured = michael.Thought().captureThought()
 
 让我们假设迈克尔在某个时刻改变了主意。我们将添加另一个函数来处理这种情况：
 
-```kt
+```java
 class Manager {
     ...
     fun anotherThought() {
@@ -1490,13 +1490,13 @@ michael.anotherThought()
 
 我们可以反复思考我们捕捉到的想法：
 
-```kt
+```java
 michael.whatAreYouThinking()
 ```
 
 这将打印：
 
-```kt
+```java
 Tea would be better
 Tea would be better
 But coffee is also nice
@@ -1504,19 +1504,19 @@ But coffee is also nice
 
 让我们检查我们捕捉到了什么：
 
-```kt
+```java
 println(captured)
 ```
 
 这将打印：
 
-```kt
+```java
 CapturedThought(thought=Should get some coffee, repeat=3, hesitate=Or maybe tea?, secret=No, coffee it is)
 ```
 
 如果迈克尔允许，我们甚至可以倒带他的想法：
 
-```kt
+```java
 class Manager {
     ...
     inner class Thought {
@@ -1548,7 +1548,7 @@ class Manager {
 
 让我们看看以下结构，这与我们讨论 **Iterator** 设计模式时非常相似：
 
-```kt
+```java
 Page(Container(Image(),
                Link(),
                Image()),
@@ -1565,7 +1565,7 @@ Page(Container(Image(),
 
 我们首先创建一个函数，该函数将接收我们的对象树根，在这个例子中是一个 `Page`，并返回所有可用的链接列表：
 
-```kt
+```java
 fun collectLinks(page: Page): List<String> {
     // No need for intermediate variable there
     return LinksCrawler().run {
@@ -1579,7 +1579,7 @@ fun collectLinks(page: Page): List<String> {
 
 在 Java 中，实现 **Visitor** 设计模式的建议是为每个接受我们新功能的类添加一个方法。我们将这样做，但不是为所有类。相反，我们只为容器元素定义此方法：
 
-```kt
+```java
 private fun Container.accept(feature: LinksCrawler) {
     feature.visit(this)
 }
@@ -1590,7 +1590,7 @@ private fun Page.accept(feature: LinksCrawler) = feature.visit(this)
 
 我们的功能需要内部持有集合，并且仅暴露读取目的。在 Java 中，我们会为该成员指定只读的 getter 而没有 setter。在 Kotlin 中，我们可以指定值而不需要后端字段：
 
-```kt
+```java
 class LinksCrawler {
     private var _links = mutableListOf<String>()
 
@@ -1606,7 +1606,7 @@ class LinksCrawler {
 
 对于容器，我们只需将它们的元素传递下去：
 
-```kt
+```java
 class LinksCrawler {
     ...
     fun visit(page: Page) {
@@ -1620,7 +1620,7 @@ class LinksCrawler {
 
 将父类指定为 `sealed` 帮助编译器进一步优化：
 
-```kt
+```java
 sealed class HtmlElement
 
 class Container(...) : HtmlElement(){
@@ -1640,7 +1640,7 @@ class Table : HtmlElement()
 
 最有趣的逻辑在叶子节点：
 
-```kt
+```java
 class LinksCrawler {
     ...
     private fun visit(elements: List<HtmlElement>) {
@@ -1684,7 +1684,7 @@ class LinksCrawler {
 
 Java 在你该做什么方面非常明确。首先，你创建一个抽象类。所有你想自己实现的方法你标记为私有：
 
-```kt
+```java
 abstract class DayRoutine {
     private fun arriveToWork() {
         println("Hi boss! I appear in the office sometimes!")
@@ -1713,7 +1713,7 @@ abstract class DayRoutine {
 
 对于所有每天都会变化的方法，你定义一个抽象类：
 
-```kt
+```java
 abstract class DayRoutine {
     ...
     abstract fun doBeforeLunch()
@@ -1725,7 +1725,7 @@ abstract class DayRoutine {
 
 如果你允许方法的变化，但想提供一个默认实现，你可以将其设置为公开：
 
-```kt
+```java
 abstract class DayRoutine {
     ...
     open fun bossHook() {
@@ -1737,7 +1737,7 @@ abstract class DayRoutine {
 
 最后，你有一个执行你算法的方法。默认情况下它是最终的：
 
-```kt
+```java
 abstract class DayRoutine {
     ...
     fun runSchedule() {
@@ -1753,7 +1753,7 @@ abstract class DayRoutine {
 
 如果我们现在想有一个周一的日程表，我们只需实现缺失的部分：
 
-```kt
+```java
 class MondaySchedule : DayRoutine() {
     override fun doBeforeLunch() {
         println("Some pointless meeting")
@@ -1775,7 +1775,7 @@ Kotlin 在这个基础上添加了什么？它通常做的事情——简洁。�
 
 我们有三个“移动部件”——两个强制性活动（软件架构师必须在午餐前后做些事情）和一个可选的（老板可能在他在家之前或之后偷偷溜走之前阻止他）：
 
-```kt
+```java
 fun runSchedule(beforeLunch: ()->Unit,
                 afterLunch: ()->Unit,
                 bossHook: (()->Unit)? = fun() { println() }) {
@@ -1785,7 +1785,7 @@ fun runSchedule(beforeLunch: ()->Unit,
 
 我们将有一个函数，它接受最多三个其他函数作为其参数。前两个是强制性的，第三个可能根本不提供，或者用 `null` 分配，以明确表示我们不希望该函数发生：
 
-```kt
+```java
 fun runSchedule(...) {
     ...
     arriveToWork()
@@ -1802,7 +1802,7 @@ fun runSchedule(...) {
 
 但其他函数怎么办，那些我们希望总是自己实现的函数呢？Kotlin 有一个局部函数的概念。这些函数位于其他函数中：
 
-```kt
+```java
 fun runSchedule(...) {
     fun arriveToWork(){
         println("How are you all?")
@@ -1845,7 +1845,7 @@ fun runSchedule(...) {
 
 问题在于动物们逃离了 Java 世界，没有共同的接口。相反，每个动物都有自己的方法来发出声音：
 
-```kt
+```java
 class Bat {
     fun screech() {
         println("Eeeeeee")
@@ -1871,7 +1871,7 @@ class Dog {
 
 幸运的是，猫不仅因为嗓音不佳而被选为指挥，而且因为它足够聪明，能够一直读到这一章。所以它知道在 Kotlin 世界中，它可以接受函数：
 
-```kt
+```java
 class Cat {
     ...
     fun joinChoir(whatToCall: ()->Unit) {
@@ -1889,7 +1889,7 @@ class Cat {
 
 这就是成员引用操作符的作用——`::`：
 
-```kt
+```java
 val catTheConductor = Cat()
 
 val bat = Bat()
@@ -1904,7 +1904,7 @@ catTheConductor.joinChoir(turkey::gobble)
 
 现在，猫需要以某种方式保存所有这些订阅者。幸运的是，我们可以把它们放在一个映射中。那这个键会是什么？它可以是函数本身：
 
-```kt
+```java
 class Cat {
     private val participants = mutableMapOf<()->Unit, ()->Unit>()
 
@@ -1919,7 +1919,7 @@ class Cat {
 
 蝙蝠决定离开合唱团。毕竟，没有人能听到它那美妙的歌声：
 
-```kt
+```java
 class Cat {
     ...
     fun leaveChoir(whatNotToCall: ()->Unit) {
@@ -1931,13 +1931,13 @@ class Cat {
 
 所有`Bat`需要做的就是再次传递其订阅者函数：
 
-```kt
+```java
 catTheConductor.leaveChoir(bat::screech)
 ```
 
 这就是为什么我们最初使用映射的原因。现在`Cat`可以调用所有合唱团成员并告诉他们唱歌。好吧，发出声音：
 
-```kt
+```java
 typealias Times = Int
 
 class Cat {
@@ -1954,7 +1954,7 @@ class Cat {
 
 排练进行得很顺利。但`Cat`在做了所有这些循环之后感到非常累。它宁愿将工作委托给合唱团成员。这根本不是问题：
 
-```kt
+```java
 class Cat {
     private val participants = mutableMapOf<(Int)->Unit, (Int)->Unit>()
 
@@ -1976,7 +1976,7 @@ class Cat {
 
 我们的所有订阅者看起来都像火鸡：
 
-```kt
+```java
 class Turkey {
     fun gobble(repeat: Times) {
         for (i in 1..repeat) {
@@ -1990,7 +1990,7 @@ class Turkey {
 
 在设计你的发布者时，传递具有许多属性的单个数据类，而不是数据类的集合或其他类型。这样，如果添加了新的属性，你就不必重构你的订阅者：
 
-```kt
+```java
 enum class SoundPitch {HIGH, LOW}
 data class Message(val repeat: Times, val pitch: SoundPitch)
 
@@ -2009,7 +2009,7 @@ class Bat {
 
 使用智能转换：
 
-```kt
+```java
 interface Message {
     val repeat: Times
     val pitch: SoundPitch 

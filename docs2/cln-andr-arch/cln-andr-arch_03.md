@@ -40,7 +40,7 @@ Android 应用程序通常在用户的设备上以单个进程运行。当操作
 
 在 Java 中，可以使用`Thread`类创建线程；然而，为每个异步操作创建一个新的线程是一个非常资源密集的操作。Java 还提供了`ThreadPool`或`Executor`的概念。这些通常管理一组固定数量的线程，这些线程将被重用于不同的操作。由于 Android 对在主线程上更新 UI 的限制，引入了`Handler`和`Looper`类，通过这些类，你可以将后台线程上执行的操作的结果提交回主线程。这里提供了一个例子：
 
-```kt
+```java
 class MyClass {
     fun asyncSum(a: Int, b: Int, callback: (Int) -> Unit) {
         val handler = Handler(Looper.getMainLooper())
@@ -58,7 +58,7 @@ class MyClass {
 
 `Handler`和`Looper`的重复使用催生了`AsyncTask`，它提供了在后台线程上移动必要操作并在主线程上接收结果的可能性。`AsyncTask`与前面的例子工作原理相同，只是它不是为每个新操作创建一个新的线程，而是默认使用相同的线程（尽管这后来变得可配置），这意味着如果有两个`AsyncTask`实例同时执行，一个会在另一个之后等待。相同的求和操作的例子可能看起来像这样：
 
-```kt
+```java
     fun asyncSum(a: Int, b: Int, callback: (Int) -> Unit) {
         object : AsyncTask<Nothing, Nothing, Int>() {
             override fun doInBackground(vararg params: 
@@ -77,7 +77,7 @@ class MyClass {
 
 现在让我们想象一下，我们想要将这些求和操作串联起来并多次应用，如下所示：
 
-```kt
+```java
     fun asyncComplicatedSum(a: Int, b: Int, c: Int) {
         asyncSum(a, b) { tempSum ->
             asyncSum(tempSum, c) { finalSum ->
@@ -92,7 +92,7 @@ class MyClass {
 
 让我们想象一下，当需要处理从多个数据源加载数据、合并它们、处理错误以及如果用户离开当前活动或片段则停止异步执行时，一个应用程序可能看起来像什么。RxJava 库试图通过事件驱动的方法来解决所有这些问题。它引入了可以观察、转换、与其他数据流合并并在不同线程上执行的数据流和流的概念。在 RxJava 中，两个数字的和可能看起来像这样：
 
-```kt
+```java
 fun asyncSum(a: Int, b: Int): Single<Int> {
         return Single.create<Int> {
             it.onSuccess(a + b)
@@ -105,7 +105,7 @@ fun asyncSum(a: Int, b: Int): Single<Int> {
 
 如果我们想要链式多个求和，那么我们会有如下所示的内容：
 
-```kt
+```java
 fun asyncComplicatedSum(a: Int, b: Int, c: Int) {
         val disposable = asyncSum(a, b)
             .flatMap {
@@ -126,7 +126,7 @@ fun asyncComplicatedSum(a: Int, b: Int, c: Int) {
 
 到目前为止，我们已经分析了围绕 Java 和 Android 框架的技术。随着 Kotlin 的采用，出现了其他处理多线程且特定于 Kotlin 的技术。其中之一是协程的概念。协程简化了我们编写异步代码的方式。我们不需要处理回调，协程引入了作用域的概念，我们可以指定代码块将在哪个线程上执行。作用域还可以连接到生命周期感知组件，帮助我们在我们生命周期感知组件终止时取消订阅异步工作的结果。让我们看看以下关于相同求和的协程示例：
 
-```kt
+```java
    suspend fun asyncSum(a: Int, b: Int): Int {
         return withContext(Dispatchers.IO) {
             a + b
@@ -138,7 +138,7 @@ fun asyncComplicatedSum(a: Int, b: Int, c: Int) {
 
 现在，让我们看看当我们想要调用此方法时，事情会是什么样子。看一下以下代码片段：
 
-```kt
+```java
 class MyClass : CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + job
@@ -169,7 +169,7 @@ class MyClass : CoroutineScope {
 
 在 Android 中，我们已经有几个 `CoroutineScope` 对象已经定义并关联到我们的生命周期感知类。其中一个与我们相关的是为 `ViewModels` 定义的。这可以在 `org.jetbrains.kotlinx:kotlinx-coroutines-android` 库中找到，看起来可能如下所示：
 
-```kt
+```java
 class MyViewModel: ViewModel() {
     init {
         viewModelScope.launch {  }
@@ -193,7 +193,7 @@ class MyViewModel: ViewModel() {
 
 +   使用 Compose 的 UI 将使用以下函数：
 
-    ```kt
+    ```java
     @Composable
     fun Calculator(
         a: String,
@@ -232,7 +232,7 @@ class MyViewModel: ViewModel() {
 
 1.  在`build.gradle`文件的顶层，定义 Compose 库版本如下：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             compose_version = '1.0.5'
@@ -243,7 +243,7 @@ class MyViewModel: ViewModel() {
 
 1.  在`app/build.gradle`文件中，我们需要添加以下依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation 'androidx.core:core-ktx:1.7.0'
         implementation 'androidx.appcompat:appcompat:1.4.0'
@@ -267,7 +267,7 @@ class MyViewModel: ViewModel() {
 
 1.  首先，创建一个`NumberAdder`类，并定义一个`add`操作和一个延迟，如下所示：
 
-    ```kt
+    ```java
     private const val DELAY = 5000
     class NumberAdder(
         private val dispatcher: CoroutineDispatcher = 
@@ -287,7 +287,7 @@ class MyViewModel: ViewModel() {
 
 1.  接下来，我们需要对这个类进行单元测试。在我们编写测试之前，创建一个测试规则，以便我们可以为协程重用它，如下所示：
 
-    ```kt
+    ```java
     class DispatcherTestRule : TestRule {
         @ExperimentalCoroutinesApi
         val testDispatcher = TestCoroutineDispatcher()
@@ -311,7 +311,7 @@ class MyViewModel: ViewModel() {
 
 1.  现在，以`NumberAdderTest`的形式编写类的单元测试，如下所示：
 
-    ```kt
+    ```java
     class NumberAdderTest {
         @get:Rule
         val dispatcherTestRule = DispatcherTestRule()
@@ -329,7 +329,7 @@ class MyViewModel: ViewModel() {
 
 1.  接下来，继续创建一个`ViewModel`类，如下所示：
 
-    ```kt
+    ```java
     class MainViewModel(private val adder: NumberAdder = NumberAdder()) : ViewModel() {
         var resultState by mutableStateOf("0")
             private set
@@ -347,7 +347,7 @@ class MyViewModel: ViewModel() {
 
 1.  在创建完`ViewModel`类之后，继续创建一个活动类，如下所示：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -366,7 +366,7 @@ class MyViewModel: ViewModel() {
 
 1.  接下来，创建一个`Screen`函数，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun Screen(viewModel: MainViewModel = viewModel()) {
         var a by remember { mutableStateOf("") }
@@ -407,7 +407,7 @@ class MyViewModel: ViewModel() {
 
 让我们看看以下示例，如何使用 Kotlin 流来添加两个数字，以及它可能的样子：
 
-```kt
+```java
 fun asyncSum(a: Int, b: Int): Flow<Int> {
         return flow {
             this.emit(a + b)
@@ -417,7 +417,7 @@ fun asyncSum(a: Int, b: Int): Flow<Int> {
 
 在这里，我们创建了一个`Flow`对象，它将在流上发出`a + b`的结果。`flowOn`方法将上游的执行移动到 I/O 线程。在这里，我们注意到与 RxJava 在`Flows`工作概念上的相似性，但我们还注意到它因为使用了`Dispatchers`而是一个协程的扩展。现在让我们看看消费者侧的流是如何看的，如下所示：
 
-```kt
+```java
 class MyClass : CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + job
@@ -462,7 +462,7 @@ Flows 为特定用例提供了一些专门的类：`StateFlow`和`SharedFlow`。
 
 1.  将`NumberAdder`中的`add`函数修改为返回一个 Flow，如下所示：
 
-    ```kt
+    ```java
     private const val DELAY = 5000
     class NumberAdder(
         private val dispatcher: CoroutineDispatcher = 
@@ -483,7 +483,7 @@ Flows 为特定用例提供了一些专门的类：`StateFlow`和`SharedFlow`。
 
 1.  接下来，让我们修改求和的单元测试，如下所示：
 
-    ```kt
+    ```java
     class NumberAdderTest {
         @get:Rule
         val dispatcherTestRule = DispatcherTestRule()
@@ -502,7 +502,7 @@ Flows 为特定用例提供了一些专门的类：`StateFlow`和`SharedFlow`。
 
 1.  修改`MainViewModel`类以消费`add`操作，如下所示：
 
-    ```kt
+    ```java
     class MainViewModel(private val adder: NumberAdder = NumberAdder()) : ViewModel() {
         var resultState by mutableStateOf("0")
             private set
@@ -533,7 +533,7 @@ OkHttp 库将通过`OkHttpClient`类来解决这些问题，该类将处理各�
 
 为了将 Retrofit 和 OkHttp 添加到项目中，我们将向`build.gradle`文件中添加以下依赖项：
 
-```kt
+```java
 dependencies {
     …
     implementation "com.squareup.okhttp3:okhttp:4.9.0"
@@ -544,7 +544,7 @@ dependencies {
 
 接下来，我们需要确定需要使用哪些转换器来处理数据。由于 JSON 是一种常见的格式，我们将使用 JSON 转换器和 Moshi 库来完成此操作，因此我们需要添加这两个库的依赖项，如下所示：
 
-```kt
+```java
 dependencies {
     …
     implementation "com.squareup.okhttp3:okhttp:4.9.0"
@@ -559,7 +559,7 @@ dependencies {
 
 假设我们需要从服务器以 JSON 格式获取数据。我们可以使用[`jsonplaceholder.typicode.com/`](https://jsonplaceholder.typicode.com/)服务作为示例。如果我们想获取用户列表，我们可以使用[`jsonplaceholder.typicode.com/users`](https://jsonplaceholder.typicode.com/users) **统一资源定位符**（**URL**）。一个用户的 JSON 表示如下：
 
-```kt
+```java
 {
 "id": 1,
     "name": "Leanne Graham",
@@ -587,7 +587,7 @@ dependencies {
 
 我们可以在 JSON 表示中看到，用户有一个`id`，一个`username`，一个`email`值等等。在 Kotlin 中，我们可以创建一个表示，并且可以排除应用程序不需要的属性，例如`email`、`address`、`phone`、`website`和`company`，如下所示：
 
-```kt
+```java
     data class User(
         @Json(name = "id") val id: Long,
         @Json(name = "name") val name: String,
@@ -597,7 +597,7 @@ dependencies {
 
 在这里，我们使用 Moshi 将 JSON 属性映射到 Kotlin 类型，并且只保留了初始 JSON 中存在的三个字段。现在，让我们看看我们如何初始化我们的网络库。完成此操作的代码如下所示：
 
-```kt
+```java
   fun createOkHttpClient() =  OkHttpClient
         .Builder()
         .readTimeout(15, TimeUnit.SECONDS)
@@ -607,7 +607,7 @@ dependencies {
 
 对于 OkHttp，我们使用`Builder`方法创建一个新的`OkHttpClient`实例，并且我们可以为其提供某些配置。现在，我们将使用之前创建的`OkHttpClient`实例来创建一个`Retrofit`实例，如下所示：
 
-```kt
+```java
 fun createRetrofit(
         okHttpClient: OkHttpClient
     ): Retrofit {
@@ -620,13 +620,13 @@ fun createRetrofit(
 
 在这里，我们创建了一个新的`Retrofit`实例，其基本 URL 设置为[`jsonplaceholder.typicode.com/`](https://jsonplaceholder.typicode.com/)。在开发过程中更改基本 URL 非常有用。许多团队将有一个内部使用的开发 URL，用于测试功能和集成，并将有一个生产 URL，其中设置了实际的用户数据。现在，我们需要将 Moshi JSON 序列化连接到`Retrofit`实例，如下所示：
 
-```kt
+```java
 Fun createConverterFactory(): MoshiConverterFactory = MoshiConverterFactory.create()
 ```
 
 在这里，我们创建`MoshiConverterFactory`，这是一个 Retrofit 转换器，旨在将`Retrofit`连接到 Moshi 执行的 JSON 序列化。现在，我们需要将我们的`Retrofit`初始化更改为以下内容：
 
-```kt
+```java
 fun createRetrofit(
         okHttpClient: OkHttpClient,
         gsonConverterFactory: MoshiConverterFactory
@@ -641,7 +641,7 @@ fun createRetrofit(
 
 在这里，我们将`MoshiConverterFactory`转换器添加到 Retrofit 的`Builder`方法中，以允许这两个组件协同工作。最后，我们可以创建一个 Retrofit 接口，其中包含 HTTP 请求的模板，如下所示：
 
-```kt
+```java
 interface UserService {
         @GET("/users")
         fun getUsers(): Call<List<User>>
@@ -658,7 +658,7 @@ interface UserService {
 
 此接口包含在服务器上获取、创建、更新和删除数据的各种方法的示例。请注意，这些方法的返回类型是`Call`对象，它提供了执行 HTTP 请求同步或异步的能力。使 Retrofit 对开发者更具吸引力的事情之一是它可以与其他异步库（如 RxJava 和协程）集成。将前面的示例转换为协程将看起来像这样：
 
-```kt
+```java
 interface UserService {
         @GET("/users")
         suspend fun getUsers(): List<User>
@@ -675,7 +675,7 @@ interface UserService {
 
 在前面的示例中，我们为每个方法添加了 `suspend` 关键字，并移除了对 `Call` 类的依赖。这允许我们使用协程执行这些方法。要创建此类的实例，我们需要执行以下操作：
 
-```kt
+```java
 fun createUserService(retrofit: Retrofit) = retrofit.create(UserService::class.java)
 ```
 
@@ -699,7 +699,7 @@ fun createUserService(retrofit: Retrofit) = retrofit.create(UserService::class.j
 
 将使用以下方法创建一个 UI 列表：
 
-```kt
+```java
 @Composable
 fun UserList(users: List<User>) {
     LazyColumn(modifier = Modifier.padding(16.dp)) {
@@ -720,7 +720,7 @@ fun UserList(users: List<User>) {
 
 1.  在 `build.gradle` 文件的顶层，定义 Compose 库版本，如下所示：
 
-    ```kt
+    ```java
     buildscript {
         ext {
             compose_version = '1.0.5'
@@ -731,7 +731,7 @@ fun UserList(users: List<User>) {
 
 1.  在 `app/build.gradle` 文件中，添加以下依赖项：
 
-    ```kt
+    ```java
     dependencies {
         implementation 'androidx.core:core-ktx:1.7.0'
         implementation 'androidx.appcompat:appcompat:1.4.0'
@@ -760,13 +760,13 @@ fun UserList(users: List<User>) {
 
 1.  现在，将互联网访问权限添加到 `AndroidManifest.xml` 文件中，如下所示：
 
-    ```kt
+    ```java
     <uses-permission android:name="android.permission.INTERNET"/>
     ```
 
 1.  现在继续并创建一个将包含用户信息的类，如下所示：
 
-    ```kt
+    ```java
     @JsonClass(generateAdapter = true)
     data class User(
         @Json(name = "id") val id: Long,
@@ -780,7 +780,7 @@ fun UserList(users: List<User>) {
 
 1.  接下来，创建一个将获取用户数据的 `UserService` 类，如下所示：
 
-    ```kt
+    ```java
     interface UserService {
         @GET("/users")
         suspend fun getUsers(): List<User>
@@ -791,7 +791,7 @@ fun UserList(users: List<User>) {
 
 1.  现在，我们初始化网络对象。因为我们没有使用任何 `MainApplication` 类，如下所示：
 
-    ```kt
+    ```java
     class MyApplication : Application() {
         companion object {
             lateinit var userService: UserService
@@ -819,7 +819,7 @@ fun UserList(users: List<User>) {
 
 1.  在 `AndroidManifest.xml` 文件中，添加以下代码：
 
-    ```kt
+    ```java
       <application
             …
             android:name=".MyApplication"
@@ -830,7 +830,7 @@ fun UserList(users: List<User>) {
 
 1.  接下来，继续创建一个 `MainViewModel` 类，如下所示：
 
-    ```kt
+    ```java
     class MainViewModel(private val userService: 
         UserService) : ViewModel() {
         var resultState by mutableStateOf
@@ -854,7 +854,7 @@ fun UserList(users: List<User>) {
 
 1.  现在，我们继续创建一个 `MainActivity` 类，如下所示：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
@@ -873,7 +873,7 @@ fun UserList(users: List<User>) {
 
 1.  创建一个 `Screen` 方法，我们将从 `MainViewModel` 类中获取用户列表并绘制一个项目列表，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun Screen(viewModel: MainViewModel = viewModel
         (factory = MainViewModelFactory())) {
@@ -897,7 +897,7 @@ Android 提供了许多在 Android 设备上持久化数据的方法，大多数
 
 为了将 Room 添加到应用程序中，我们将在 `build.gradle` 中添加以下库：
 
-```kt
+```java
 dependencies {
     …
     implementation "androidx.room:room-runtime:2.4.0"
@@ -908,7 +908,7 @@ dependencies {
 
 使用 `kapt` 的原因是 Room 使用会生成与 SQLite 层交互所需代码的注解。为了使用 `kapt` 功能，我们需要将插件添加到 `build.gradle` 文件中，如下所示：
 
-```kt
+```java
 plugins {
     …
     id 'kotlin-kapt'
@@ -919,7 +919,7 @@ plugins {
 
 我们想要存储的数据被 `@Entity` 注解标记，如下面的代码片段所示：
 
-```kt
+```java
 @Entity(tableName = "user")class UserEntity(
     @PrimaryKey @ColumnInfo(name = "id") val id: Long,
     @ColumnInfo(name = "name") val name: String,
@@ -931,7 +931,7 @@ plugins {
 
 一组典型的 CRUD 操作可能看起来像这样：
 
-```kt
+```java
 @Dao
 interface UserDao {
     @Query("SELECT * FROM user")
@@ -951,7 +951,7 @@ interface UserDao {
 
 与 Retrofit 一样，Room 也提供了与协程的集成，如下面的代码片段所示：
 
-```kt
+```java
 @Dao
 interface UserDao {
     @Query("SELECT * FROM user")
@@ -972,7 +972,7 @@ interface UserDao {
 
 在协程之上，Room 库还可以与 Kotlin flows 集成。这对于每次特定表发生变化时都会发出事件的查询非常有用。这种集成看起来可能如下所示：
 
-```kt
+```java
 @Dao
 interface UserDao {
     @Query("SELECT * FROM user")
@@ -987,7 +987,7 @@ interface UserDao {
 
 我们现在需要设置数据库，如下所示：
 
-```kt
+```java
 @Database(entities = [UserEntity::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
@@ -998,7 +998,7 @@ abstract class AppDatabase : RoomDatabase() {
 
 为了初始化数据库，我们需要执行以下代码：
 
-```kt
+```java
 val db = Room.databaseBuilder(
             applicationContext,
             AppDatabase::class.java, "name"
@@ -1029,7 +1029,7 @@ val db = Room.databaseBuilder(
 
 1.  将`kapt`插件添加到`app/build.gradle`文件中，如下所示：
 
-    ```kt
+    ```java
     plugins {
         …
         id 'kotlin-kapt'
@@ -1038,7 +1038,7 @@ val db = Room.databaseBuilder(
 
 1.  将 Room 依赖项添加到`app/build.gradle`中，如下所示：
 
-    ```kt
+    ```java
     dependencies {
         … 
         implementation "androidx.room:room-runtime:2.4.0"
@@ -1050,7 +1050,7 @@ val db = Room.databaseBuilder(
 
 1.  创建一个`UserEntity`类，如下所示：
 
-    ```kt
+    ```java
     @Entity(tableName = "user")
     class UserEntity(
         @PrimaryKey @ColumnInfo(name = "id") val id: Long,
@@ -1065,7 +1065,7 @@ val db = Room.databaseBuilder(
 
 1.  接下来，创建一个`UserDao`类，如下所示：
 
-    ```kt
+    ```java
     @Dao
     interface UserDao {
         @Query("SELECT * FROM user")
@@ -1079,7 +1079,7 @@ val db = Room.databaseBuilder(
 
 1.  现在，继续创建一个`AppDatabase`类，如下所示：
 
-    ```kt
+    ```java
     @Database(entities = [UserEntity::class], version = 1)
     abstract class AppDatabase : RoomDatabase() {
         abstract fun userDao(): UserDao
@@ -1090,7 +1090,7 @@ val db = Room.databaseBuilder(
 
 1.  接下来，我们需要初始化`AppDatabase`对象，如下所示：
 
-    ```kt
+    ```java
     class MyApplication : Application() {
         companion object {
             …
@@ -1114,7 +1114,7 @@ val db = Room.databaseBuilder(
 
 1.  现在，让我们将 Room 集成到`MainViewModel`类中，如下所示：
 
-    ```kt
+    ```java
     class MainViewModel(
         private val userService: UserService,
         private val userDao: UserDao
@@ -1149,7 +1149,7 @@ val db = Room.databaseBuilder(
 
 1.  最后，更新`MainActivity`类中用户的类型，如下所示：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
     …
     @Composable
@@ -1171,7 +1171,7 @@ val db = Room.databaseBuilder(
 
 要将 DataStore 添加到项目中，我们需要以下依赖项：
 
-```kt
+```java
 dependencies {
     …
     implementation "androidx.datastore:datastore-preferences:1.0.0"
@@ -1181,7 +1181,7 @@ dependencies {
 
 使用 DataStore 的样子如下：
 
-```kt
+```java
 private val KEY_TEXT = stringPreferencesKey("key_text")
 class AppDataStore(private val dataStore: 
     DataStore<Preferences>) {
@@ -1201,7 +1201,7 @@ class AppDataStore(private val dataStore:
 
 要初始化 DataStore 库，我们需要将以下内容声明为顶级声明：
 
-```kt
+```java
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "my_preferences")
 ```
 
@@ -1209,7 +1209,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "my
 
 当我们想要初始化 `AppDataStore` 时，我们可以使用以下代码：
 
-```kt
+```java
 val appDataStore = AppDataStore(dataStore) 
 ```
 
@@ -1233,7 +1233,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  将以下依赖项添加到`app/build.gradle`文件中：
 
-    ```kt
+    ```java
     dependencies {
         …
         implementation "androidx.datastore:datastore-
@@ -1244,7 +1244,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  创建一个`AppDataStore`类，如下所示：
 
-    ```kt
+    ```java
     private val KEY_COUNT = intPreferencesKey("key_count")
     class AppDataStore(private val dataStore: 
         DataStore<Preferences>) {
@@ -1267,7 +1267,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  现在，设置`AppDataStore`依赖项，就像我们处理 Retrofit 和 Room 依赖项一样。代码如下所示：
 
-    ```kt
+    ```java
     val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "my_preferences")
     class MyApplication : Application() {
         companion object {
@@ -1286,7 +1286,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  接下来，按照以下方式修改`MainViewModel`类：
 
-    ```kt
+    ```java
     class MainViewModel(
         private val userService: UserService,
         private val userDao: UserDao,
@@ -1324,7 +1324,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  `UiState`类看起来可能如下所示：
 
-    ```kt
+    ```java
     data class UiState(
         val userList: List<UserEntity> = listOf(),
         val count: String = ""
@@ -1335,7 +1335,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  接下来，按照以下方式更改`MainViewModelFactory`：
 
-    ```kt
+    ```java
     class MainViewModelFactory : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: 
             Class<T>): T =
@@ -1351,7 +1351,7 @@ val appDataStore = AppDataStore(dataStore)
 
 1.  最后，按照以下方式修改`MainActivity`类：
 
-    ```kt
+    ```java
     @Composable
     fun UserList(uiState: UiState) {
         LazyColumn(modifier = Modifier.padding(16.dp)) {

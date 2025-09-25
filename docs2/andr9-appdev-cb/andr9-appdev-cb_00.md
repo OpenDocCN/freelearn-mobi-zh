@@ -90,7 +90,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 <activity
     android:name=".MainActivity"
     android:label="@string/app_name">

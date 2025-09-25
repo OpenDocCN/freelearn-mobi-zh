@@ -46,7 +46,7 @@
 
 1.  我们通常在我们的代码中有一个 `Utility` 类，它包含可以被任何类使用的方法，所以我们不是在每一个类中定义这些方法，而是在 `Utility` 类中定义它们。所以，让我们创建一个方法，`addTwoNumbers`，它将接受两个参数，`a` 和 `b`，并返回一个结果——`a+b`：
 
-```kt
+```java
 class Utility {
   companion object {
       fun addTwoNumbers(a:Int, b:Int):Int=a+b
@@ -72,7 +72,7 @@ class Utility {
 
 1.  现在，我们将添加几个 `assertEquals` 语句，这些语句将检查预期值与结果：
 
-```kt
+```java
 class UtilityTest {
   @Test
   fun addTwoNumbers() {
@@ -111,7 +111,7 @@ class UtilityTest {
 
 首先，你需要将 Mockito 依赖项添加到你的项目中。你可以在你的`build.gradle`文件中添加以下行来实现这一点，在 app 级别：
 
-```kt
+```java
 testImplementation 'org.mockito:mockito-core:2.8.47'
 
 ```
@@ -124,7 +124,7 @@ testImplementation 'org.mockito:mockito-core:2.8.47'
 
 1.  这里有一个小的测试，用于测试`Utility`类的`functionUnderTest`函数：
 
-```kt
+```java
 @Test
 fun test_functionUnderTest(){
     val classUnderTest= mock(Utility::class.java)
@@ -135,7 +135,7 @@ fun test_functionUnderTest(){
 
 1.  在前面的类中，我们调用`functionUnderTest`方法，然后验证该方法是否被调用过。（是的，这不是一个很好的测试用例，但让我们尝试运行这个测试）当你运行它时，你会看到一个错误，如下所示：
 
-```kt
+```java
 org.mockito.exceptions.base.MockitoException: 
 Cannot mock/spy class com.ankoexamples.app.Utility
 Mockito cannot mock/spy because :
@@ -144,7 +144,7 @@ Mockito cannot mock/spy because :
 
 1.  前面错误的原因是 Kotlin 中每个类默认都是 final 的。如果你想扩展或模拟它们，你需要将它们打开。然而，这意味着你需要为想要测试的每个类添加`open`修饰符吗？这听起来是个坏主意，确实如此。有一个解决这个问题的方法。这个方法是在`test/resources/mockito-extensions`文件夹中手动添加模拟 final 类的选项。你需要创建一个名为`org.mockito.plugins.MockMaker`的文件，并将以下代码放入该文件中：
 
-```kt
+```java
 mock-maker-inline
 ```
 
@@ -158,7 +158,7 @@ mock-maker-inline
 
 1.  让我们看看另一个 Mockito 测试，它模拟了`SharedPreferences`（一个 Android 组件）：
 
-```kt
+```java
 @Test
 fun testSharedPreference(){
     val sharedPreferences=mock(SharedPreferences::class.java)
@@ -167,11 +167,11 @@ fun testSharedPreference(){
 }
 ```
 
-`when(...).thenReturn(...)`结构会监视对象，当`when`结构内的方法被调用时，它返回`thenReturn`结构下的值。注意`when`周围的```kt `` ```；这是因为`when`是 Kotlin 中的保留关键字，所以我们用反引号来调用它。
+`when(...).thenReturn(...)`结构会监视对象，当`when`结构内的方法被调用时，它返回`thenReturn`结构下的值。注意`when`周围的```java `` ```；这是因为`when`是 Kotlin 中的保留关键字，所以我们用反引号来调用它。
 
 1.  你还可以返回多个值，这模拟了多次调用方法：
 
-```kt
+```java
 @Test
 fun testSharedPreference(){
     val sharedPreferences=mock(SharedPreferences::class.java)
@@ -191,7 +191,7 @@ fun testSharedPreference(){
 
 模拟框架还提供了一个 `spy` 方法，可以用来包装真实对象。对间谍对象的调用被委派给真实对象。你可能会想，这有什么用呢？它可以检查真实对象上的交互，如果对象没有被模拟，这是不可能的。让我们看看以下示例：
 
-```kt
+```java
 @Test
 fun testSpyObject(){
     val list = List(2,init = {-1})
@@ -237,7 +237,7 @@ Mockito 有某些限制——例如，你不能模拟 `static` 和 `private` 方
 
 这是一个咖啡测试：
 
-```kt
+```java
 class MainActivityTest {
     @Rule
     @JvmField var activityRule: ActivityTestRule<MainActivity> = ActivityTestRule(MainActivity::class.java)
@@ -287,7 +287,7 @@ class MainActivityTest {
 
 1.  让我们先创建一个会抛出异常的简单方法。然后我们将编写一个测试来测试这个方法：
 
-```kt
+```java
 fun methodThrowsException() {
     throw IllegalArgumentException("Age must be integer")
 }
@@ -295,7 +295,7 @@ fun methodThrowsException() {
 
 1.  现在，让我们为 `ExpectedException` 类创建一个新的规则并编写一个测试：
 
-```kt
+```java
 @Rule
 var thrown = ExpectedException.none()
 
@@ -309,7 +309,7 @@ fun testExceptionFlow() {
 
 1.  如果运行前面的代码，您将得到一个错误：
 
-```kt
+```java
 org.junit.internal.runners.rules.ValidationError: The @Rule 'thrown' must be public.
 ```
 
@@ -317,7 +317,7 @@ org.junit.internal.runners.rules.ValidationError: The @Rule 'thrown' must be pub
 
 1.  解决这个问题的最简单方法是通过添加 `@JvmField` 注解和 `@Rule`：
 
-```kt
+```java
 @Rule @JvmField
 var thrown = ExpectedException.none()
 ```
@@ -364,7 +364,7 @@ Espresso 是 Android 最受欢迎的 UI 测试框架。它于 2013 年由 Google
 
 1.  这里是一个文本匹配器（文本匹配器匹配文本；它是 `ViewMatchers` 的一部分）的示例：
 
-```kt
+```java
 onView(withId(R.id.textView)).check(matches(withText(not(containsString("Hello")))));
 ```
 
@@ -374,7 +374,7 @@ onView(withId(R.id.textView)).check(matches(withText(not(containsString("Hello")
 
 1.  以下是一个用于测试前面功能的 Espresso 测试示例：
 
-```kt
+```java
 class MainActivityTest {
     @Rule
     @JvmField var activityRule: ActivityTestRule<MainActivity> = ActivityTestRule(MainActivity::class.java)
@@ -398,13 +398,13 @@ class MainActivityTest {
 
 1.  您也可以使用 instrumentation API 获取“上帝”对象——即 `Context`：
 
-```kt
+```java
 var targetContext:Context = InstrumentationRegistry.getTargetContext()
 ```
 
 1.  如果您想从意图中启动活动，您只需在 `ActivityTestRule` 构造函数中将第三个参数提供为 `false` 即可；它可以像下面这样使用：
 
-```kt
+```java
 @Rule
 @JvmField var intentActivityRule: ActivityTestRule<MainActivity> = ActivityTestRule(MainActivity::class.java,true,false)
 
@@ -439,7 +439,7 @@ Espresso 的另一个酷特性是使用 **Record Espresso Test** 记录交互。
 
 使用原始类型与 `assertEquals` 一起使用很简单，但如果你想用它与自定义对象一起使用，你将不得不做更多的工作。例如，以下 `assertEquals` 将不会通过：
 
-```kt
+```java
 assertEquals(MyObj("abc"),MyObj("abc"))
 ```
 
@@ -455,7 +455,7 @@ assertEquals(MyObj("abc"),MyObj("abc"))
 
 1.  在以下代码中，如果您运行给定的 `assertEquals`，它将不会通过：
 
-```kt
+```java
 assertEquals(MyObj("abc"),MyObj("abc"))
 ```
 
@@ -471,7 +471,7 @@ assertEquals(MyObj("abc"),MyObj("abc"))
 
     +   两个对象的内容是否相同：
 
-```kt
+```java
 override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other?.javaClass != javaClass) return false

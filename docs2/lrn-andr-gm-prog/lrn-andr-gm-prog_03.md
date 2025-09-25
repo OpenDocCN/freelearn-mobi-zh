@@ -32,7 +32,7 @@
 
 仔细关注这段代码，你会发现如下内容：
 
-```kt
+```java
 <TextView
     android:text="Hello World!"
     android:layout_width="wrap_content"
@@ -55,7 +55,7 @@ strings.xml 文件包含所有字符串数据，位于 res/values/ 文件夹中
 
 当你打开这个文件时，你可以看到这个文件的代码。在这里，你可以观察到每个值都有多个值和一个以 `name` 形式的 ID。仔细观察第二行，如下所示：
 
-```kt
+```java
 <string name="app_name">First Game</string>
 
 ```
@@ -130,7 +130,7 @@ strings.xml 文件包含所有字符串数据，位于 res/values/ 文件夹中
 
 你可以看到类似这样的内容：
 
-```kt
+```java
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -162,7 +162,7 @@ strings.xml 文件包含所有字符串数据，位于 res/values/ 文件夹中
 
 现在，将其修改为看起来像这样；更改已用粗体标出：
 
-```kt
+```java
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -215,7 +215,7 @@ strings.xml 文件包含所有字符串数据，位于 res/values/ 文件夹中
 
 现在，让我们测试一下我们的硬件按钮，并使用 Toast 示例。阅读 Toast 时不要感到饿！它不是你将要吃的那个。Toast 是一个在屏幕上显示几秒钟后消失的消息。你将在几分钟内看到它是什么。所以，现在打开你编写的 `FullscreenActivity.java` 文件，并在 `onCreate` 方法之后，输入以下内容：
 
-```kt
+```java
     @Override
     public void onBackPressed() {
         // your code.
@@ -255,7 +255,7 @@ Android 中的坐标系
 
 现在，前往你的`FullscreenActivity.java`代码文件，并修改你的`onCreate`函数，使其看起来像这样：
 
-```kt
+```java
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -319,7 +319,7 @@ Android 中的坐标系
 
 现在，到这个时候，你必须已经注意到，拖放并正确对齐所有文本相当繁琐，对吧？这是因为我们正在使用 LinearLayout。有一种方法可以正确组织所有文本。那就是通过 RelativeLayout。让我们看看一个工作示例，帮助你更好地理解这一点。前往你的 XML 文件中的 TextView，就像我们在上一章中学到的那样，将你看到的 LinearLayout 更改为 RelativeLayout。以下是相应的参考代码：
 
-```kt
+```java
 <RelativeLayout
     android:orientation="horizontal"
     android:layout_width="match_parent"
@@ -368,7 +368,7 @@ Android 中的坐标系
 
 由于我们刚刚将我们的 LinearLayout 更改为 RelativeLayout，我们还需要在我们的 Java 代码文件中为我们的触摸功能引用相同的 RelativeLayout。打开你的 Java 代码文件，你将注意到它已经在 LinearLayout 上给出了错误提示。这是因为实际上在我们的项目中没有 ID 为 parent 的 LinearLayout，因为我们将其更改为 RelativeLayout。不过，不用担心这个问题；只需输入 RelativeLayout 而不是 LinearLayout，问题就解决了。以下是方法：
 
-```kt
+```java
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -435,7 +435,7 @@ Android 中的坐标系
 
 我们现在将查看 Android 上的加速度计组件。如果你不知道加速度计是什么，它是一种用于检测 Android 中运动的设备。用通俗易懂的话来说，我们可以称它为运动传感器。最好的例子是任何允许你根据手机运动来控制汽车的赛车游戏。这真的很有趣，你可以在后续章节中将运动应用到对象上，所以请确保你正确理解这一点。从`sensorManager`开始输入你看到的以下代码块：
 
-```kt
+```java
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -547,7 +547,7 @@ Android 中的坐标系
 
 在构建文件中，确保 `debug` 构建类型的 `debuggable` 属性设置为 true。构建类型属性会覆盖清单设置：
 
-```kt
+```java
 android {
     buildTypes {
         debug {

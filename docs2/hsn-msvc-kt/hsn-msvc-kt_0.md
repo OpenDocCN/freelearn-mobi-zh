@@ -24,7 +24,7 @@ Kotlin 提供了一套惯用法，使我们能够大幅减少样板代码的数�
 
 我们可能有一个返回值的函数，例如：
 
-```kt
+```java
 fun lower(name : String) : String {
   val lower : String = name.toLowerCase()
   return "$name in lower case is: $lower"
@@ -35,7 +35,7 @@ fun lower(name : String) : String {
 
 在 Kotlin 中，我们可以推断变量的类型：
 
-```kt
+```java
 fun lower(name : String): String {
   val lower = name.toLowerCase()
   return "$name in lower case is: $lower"
@@ -44,13 +44,13 @@ fun lower(name : String): String {
 
 甚至我们函数的返回类型也可以被推断出来：
 
-```kt
+```java
 fun lower(name : String) = "$name in lower case is: ${name.toLowerCase()}"
 ```
 
 这将非常有用，因为我们用推断类型创建的代码在改变其使用的类型时不需要更改。让我们用一个例子来澄清这一点：
 
-```kt
+```java
 fun foo() : String {
   return "14"
 }
@@ -63,7 +63,7 @@ fun bar() : String {
 
 如果我们将我们的`foo`方法改为：
 
-```kt
+```java
 fun foo() : Int {
   return 14
 }
@@ -71,7 +71,7 @@ fun foo() : Int {
 
 我们的`bar`方法需要更改：
 
-```kt
+```java
 fun bar() : Int {
   val value : Int = foo()
   return value
@@ -80,7 +80,7 @@ fun bar() : Int {
 
 然而，如果我们的方法声明如下：
 
-```kt
+```java
 fun foo() = "14"
 
 fun bar() = foo()
@@ -88,7 +88,7 @@ fun bar() = foo()
 
 然后，我们可以简单地更改`foo`的结果而不影响`bar`：
 
-```kt
+```java
 fun foo() = 14
 
 fun bar() = foo()
@@ -98,7 +98,7 @@ fun bar() = foo()
 
 考虑到我们有一个简单的函数用于返回某个值：
 
-```kt
+```java
 fun oddOrEven(number: Int): String {
   if(number % 2 == 0)
     return "odd"
@@ -109,7 +109,7 @@ fun oddOrEven(number: Int): String {
 
 它可以用作表达式：
 
-```kt
+```java
 fun oddOrEven(number: Int): String {
   return if(number % 2 == 0)
     "odd"
@@ -120,7 +120,7 @@ fun oddOrEven(number: Int): String {
 
 当然，我们也可以推断类型：
 
-```kt
+```java
 fun oddOrEven(number: Int) =
     if (number % 2 == 0)
       "odd"
@@ -130,7 +130,7 @@ fun oddOrEven(number: Int) =
 
 其他语句也可以用作表达式，例如，如果我们有这个函数：
 
-```kt
+```java
 fun fizzBuzz(number: Int): String {
   if (number % 15 == 0) {
     return "FizzBuzz"
@@ -146,7 +146,7 @@ fun fizzBuzz(number: Int): String {
 
 我们可以将其转换为表达式：
 
-```kt
+```java
 fun fizzBuzz(number: Int) =
     if (number % 15 == 0) {
       "FizzBuzz"
@@ -161,7 +161,7 @@ fun fizzBuzz(number: Int) =
 
 但 Kotlin 有`when`表达式，它可以像 Java 的`switch`/`case`一样使用：
 
-```kt
+```java
 fun fizzBuzz(number: Int) =
     when {
       number % 15 == 0 -> "FizzBuzz"
@@ -173,7 +173,7 @@ fun fizzBuzz(number: Int) =
 
 这可以应用于其他表达式，例如`try`/`catch`：
 
-```kt
+```java
 fun calculate(number1: Int, number2: Int) =
     try {
       number1 / number2
@@ -186,13 +186,13 @@ fun calculate(number1: Int, number2: Int) =
 
 Kotlin 允许我们在声明函数时指定默认参数：
 
-```kt
+```java
 fun compute(number1: Int, number2: Int = 2, number3: Int = 5) = number1 * number2 * number3
 ```
 
 这可以用来：
 
-```kt
+```java
 println(compute(7))
 println(compute(7, 2))
 println(compute(7, 2, 8))
@@ -203,7 +203,7 @@ println(compute(number1 = 8, number3 = 4))
 
 考虑到我们只是使用循环中循环的数字范围：
 
-```kt
+```java
 fun printNumbers(){
   val range = 1..10
   for(i in range){
@@ -214,7 +214,7 @@ fun printNumbers(){
 
 我们可以使用 lambda 来访问它们：
 
-```kt
+```java
 fun printNumbers(){
   val range = 1..10
   range.forEach { i -> println(i) }
@@ -223,7 +223,7 @@ fun printNumbers(){
 
 但 lambda 可以用推断的`it`对象轻松缩短：
 
-```kt
+```java
 fun printNumbers(){
   val range = 1..10
   range.forEach { println(it) }
@@ -232,7 +232,7 @@ fun printNumbers(){
 
 而我们实际上不需要`it`变量，所以我们可以简化它：
 
-```kt
+```java
 fun printNumbers() {
   (1..10).forEach { println(it) }
 }
@@ -240,7 +240,7 @@ fun printNumbers() {
 
 但由于我们只是打印`forEach`的元素，我们可以直接使用方法引用而不是 lambda：
 
-```kt
+```java
 fun printNumbers() {
   (1..10).forEach(::println)
 }
@@ -260,7 +260,7 @@ Spring 应用程序上下文是我们 bean 被引用以在应用程序中使用�
 
 考虑以下两个服务和使用它们的控制器的示例：
 
-```kt
+```java
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.*
@@ -296,14 +296,14 @@ class CustomerController {
 
 这些服务使用了一些我们为这个示例创建的数据类：
 
-```kt
+```java
 data class Account(val id : Int, val balance : Float)
 data class Customer(val id : Int, val name : String, val accounts: List<Account>)
 ```
 
 我们可以不用`@AutoWired`，而是将我们的服务作为类构造函数的一部分进行注入：
 
-```kt
+```java
 import org.springframework.stereotype.Service
 import org.springframework.web.bind.annotation.*
 
@@ -338,7 +338,7 @@ class CustomerController(val customerService: CustomerService) {
 
 到目前为止，我们使用`@Component`或`@Service`来声明我们的 bean，然后在 SpringBoot 应用程序启动时，通过组件扫描将它们添加到 Spring 上下文中。然而，我们可能希望显式地使用`Configuration`类来声明我们的 bean：
 
-```kt
+```java
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -357,7 +357,7 @@ class ContextConfiguration {
 
 由于我们现在有了构造函数注入，我们需要指定我们的 bean 声明以接收我们需要的 bean 作为参数，然后我们可以将其发送到方法的构造函数中。然后，我们可以从我们的服务中移除`@Service`，因为我们不需要创建时的组件扫描：
 
-```kt
+```java
 class AccountService {
   fun getAccountsByCustomer(customerId: Int): List<Account>
       = listOf(Account(1, 125F), Account(2, 500F))
@@ -387,7 +387,7 @@ class CustomerService(val accountService: AccountService) {
 
 首先，我们将重命名我们的`CustomerService`为`CustomerServiceImpl`，将`AccountService`重命名为`AccountServiceImpl`；然后，我们将创建我们的接口：
 
-```kt
+```java
 interface AccountService {
   fun getAccountsByCustomer(customerId: Int): List<Account>
 }
@@ -411,7 +411,7 @@ class CustomerServiceImpl(val accountService: AccountService) : CustomerService 
 
 现在，我们必须更改我们的`CustomerController`和`ContextConfiguration`以引用接口：
 
-```kt
+```java
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.bind.annotation.*
@@ -582,7 +582,7 @@ Google 测试博客建议采用 70/20/10 的分割：70% 单元测试，20% 集�
 
 这是一个此类规范的示例：
 
-```kt
+```java
 Story: Get a customer from the API
 
 As a user of the API

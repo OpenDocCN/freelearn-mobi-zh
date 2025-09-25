@@ -34,19 +34,19 @@ Kotlin 协程框架不仅是一个平台特定并发和异步框架的便捷替�
 
 在这个食谱中，我们将使用两个模拟长时间运行操作的功能。这是第一个：
 
-```kt
+```java
 private fun `5 sec long task`() = Thread.sleep(5000)
 ```
 
 这是第二个：
 
-```kt
+```java
 private fun `2 sec long task`() = Thread.sleep(2000)
 ```
 
 它们两者都只是分别阻塞当前线程五秒和两秒，以模拟长时间运行的任务。我们还将使用预定义的函数返回当前线程名称，用于调试目的：
 
-```kt
+```java
 private fun getCurrentThreadName(): String = Thread.currentThread().name
 ```
 
@@ -54,13 +54,13 @@ private fun getCurrentThreadName(): String = Thread.currentThread().name
 
 1.  让我们先记录当前线程名称到控制台：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 ```
 
 1.  在一个新的 `Thread` 中启动并调用 `5 sec long task()` 函数：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -72,7 +72,7 @@ thread {
 
 1.  在另一个 `Thread` 中启动另一个 `Thread` 并调用 `2 sec long task()`：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -92,7 +92,7 @@ thread {
 
 以下代码将打印以下文本到控制台：
 
-```kt
+```java
 Running on main
 Starting async operation on Thread-0
 Starting async operation on Thread-1
@@ -114,19 +114,19 @@ Ending async operation on Thread-0
 
 在这个菜谱中，我们将使用以下两个函数来模拟长时间运行的操作。`5 秒长任务()` 函数：
 
-```kt
+```java
 private fun `5 sec long task`() = Thread.sleep(5000)
 ```
 
 以及 `2 秒长任务()` 函数：
 
-```kt
+```java
 private fun `2 sec long task`() = Thread.sleep(2000)
 ```
 
 它们各自仅负责阻塞当前线程五秒和两秒，以模拟长时间运行的任务。我们还将使用预定义的函数返回当前线程名称，用于调试目的：
 
-```kt
+```java
 private fun getCurrentThreadName(): String = Thread.currentThread().name
 ```
 
@@ -134,13 +134,13 @@ private fun getCurrentThreadName(): String = Thread.currentThread().name
 
 1.  让我们先记录当前线程名称到控制台：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 ```
 
 1.  在其中启动一个新的 `Thread` 并调用 `5 秒长任务()` 函数：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -152,7 +152,7 @@ thread {
 
 1.  等待线程完成：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -164,7 +164,7 @@ thread {
 
 1.  在其中启动另一个 `Thread` 并调用 `2 秒长任务()` 函数：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -182,7 +182,7 @@ thread {
 
 1.  等待线程完成：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -200,7 +200,7 @@ thread {
 
 1.  在结束时测试主线程是否空闲：
 
-```kt
+```java
 println("Running on ${getCurrentThreadName()}")
 
 thread {
@@ -222,14 +222,14 @@ println("${getCurrentThreadName()} thread is free now")
 
 之前的代码将打印以下文本到控制台：
 
-```kt
+```java
 Running on main
 Starting async operation on Thread-0
 Ending async operation on Thread-0
 Starting async operation on Thread-1
 ```
 
-```kt
+```java
 Ending async operation on Thread-1
 main thread is free now
 ```
@@ -248,7 +248,7 @@ main thread is free now
 
 开始使用 Kotlin 协程的第一步是将核心框架依赖项添加到项目中：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3' 
 ```
 
@@ -266,7 +266,7 @@ implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3'
 
 这些步骤将由以下函数来模拟：
 
-```kt
+```java
 private fun `cook rice`() {
     println("Starting to cook rice on ${getCurrentThreadName()}")
     Thread.sleep(10000)
@@ -294,7 +294,7 @@ private fun `roll the sushi`() {
 
 我们还将使用以下函数来记录当前线程名称到控制台：
 
-```kt
+```java
 private fun `print current thread name`() {
     println("Running on ${getCurrentThreadName()}")
     println()
@@ -315,13 +315,13 @@ private fun getCurrentThreadName(): String = Thread.currentThread().name
 
 1.  让我们先记录当前线程名称到控制台：
 
-```kt
+```java
 `print current thread name`()
 ```
 
 1.  在后台线程池上启动一个新的协程：
 
-```kt
+```java
 `print current thread name`()
 var sushiCookingJob: Job
 sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
@@ -331,7 +331,7 @@ sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
 
 1.  在嵌套协程中异步执行`cook rice()`函数：
 
-```kt
+```java
 `print current thread name`()
 var sushiCookingJob: Job
 sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
@@ -344,7 +344,7 @@ sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
 
 1.  在后台运行`cook rice()`函数的同时，按顺序运行`prepare fish()`和`cut vegetable()`函数：
 
-```kt
+```java
 `print current thread name`()
 var sushiCookingJob: Job
 sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
@@ -361,7 +361,7 @@ sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
 
 1.  等待米饭烹饪的协程完成：
 
-```kt
+```java
 `print current thread name`()
 var sushiCookingJob: Job
 sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
@@ -379,7 +379,7 @@ sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
 
 1.  调用最终的`roll the sushi()`函数并等待主协程完成：
 
-```kt
+```java
 `print current thread name`()
 var sushiCookingJob: Job
 sushiCookingJob = launch(newSingleThreadContext("SushiThread")) {
@@ -401,7 +401,7 @@ runBlocking {
 
 1.  测量函数执行的总时间并将其记录到控制台：
 
-```kt
+```java
 `print current thread name`()
 var sushiCookingJob: Job
 val time = measureTimeMillis {
@@ -428,7 +428,7 @@ println("Total time: $time ms")
 
 以下代码将在控制台打印以下文本：
 
-```kt
+```java
 Running on main
 Running on SushiThread
 Current thread is not blocked while rice is being cooked
@@ -461,7 +461,7 @@ Total time: 12089 ms
 
 协程可以被视为轻量级的线程替代品。在资源消耗方面，协程是轻量级的。例如，我们可以轻松地同时启动一百万个协程，其中每个协程在两秒钟后都将当前线程名称记录到控制台：
 
-```kt
+```java
 runBlocking {
     (0..1000000).map {
         launch {
@@ -486,7 +486,7 @@ runBlocking {
 
 开始使用 Kotlin 协程的第一步是将核心框架依赖项添加到项目中：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3' 
 ```
 
@@ -494,7 +494,7 @@ implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3'
 
 在当前菜谱中，我们将使用以下两个函数：
 
-```kt
+```java
 private suspend fun `calculate the answer to life the universe and everything`(): Int {
     delay(5000)
     return 42
@@ -524,7 +524,7 @@ private suspend fun `show progress animation`() {
 
 我们还将使用以下函数将当前线程名称记录到控制台：
 
-```kt
+```java
 private fun `print current thread name`() {
     println("Running on ${getCurrentThreadName()}")
     println()
@@ -537,13 +537,13 @@ private fun getCurrentThreadName(): String = Thread.currentThread().name
 
 1.  首先记录当前线程名称到控制台：
 
-```kt
+```java
 `print current thread name`()
 ```
 
 1.  启动一个协程，负责从后台显示进度条动画：
 
-```kt
+```java
 `print current thread name`()
 
 launch {
@@ -554,7 +554,7 @@ launch {
 
 1.  启动一个协程，负责在后台运行 `calculate the answer to life the universe and everything()` 函数：
 
-```kt
+```java
 `print current thread name`()
 
 launch {
@@ -572,7 +572,7 @@ println("${getCurrentThreadName()} thread is not blocked while tasks are in prog
 
 1.  等待 `future` 协程返回的结果并将其打印到控制台：
 
-```kt
+```java
 `print current thread name`()
 
 launch {
@@ -597,7 +597,7 @@ runBlocking {
 
 我们将编写代码以显示进度条动画五秒钟，然后一旦模拟计算完成，将打印`calculate the answer to life the universe and everything()`函数的结果：
 
-```kt
+```java
 Running on main
 Starting progressbar animation on ForkJoinPool.commonPool-worker-1
 Starting calculation of the answer to life the universe and everything on ForkJoinPool.commonPool-worker-2
@@ -631,7 +631,7 @@ Running on main
 
 1.  为泛型 `Iterable<T>` 类实现一个扩展函数，用于处理其元素的并发映射操作：
 
-```kt
+```java
 suspend fun <T, R> Iterable<T>.mapConcurrent(transform: suspend (T) -> R) =
     this.map {
         async { transform(it) }
@@ -642,7 +642,7 @@ suspend fun <T, R> Iterable<T>.mapConcurrent(transform: suspend (T) -> R) =
 
 1.  模拟对样本 `Iterable` 范围元素应用耗时映射操作：
 
-```kt
+```java
 runBlocking {
  (0..10).mapConcurrent {
         delay(1000)
@@ -653,7 +653,7 @@ runBlocking {
 
 1.  将映射后的元素打印到控制台：
 
-```kt
+```java
 runBlocking {
         (0..10).mapConcurrent {
             delay(1000)
@@ -664,7 +664,7 @@ runBlocking {
 
 1.  测量并发映射操作执行的总时间并将其记录到控制台：
 
-```kt
+```java
 runBlocking {
  val totalTime = measureTimeMillis {        (0..10).mapConcurrent {
             delay(1000)
@@ -681,7 +681,7 @@ runBlocking {
 
 我们的代码将打印以下结果到控制台：
 
-```kt
+```java
 0
 1
 4
@@ -716,7 +716,7 @@ Total time: 1040 ms
 
 开始使用 Kotlin 协程的第一步是将核心框架依赖项添加到项目中：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3' 
 ```
 
@@ -726,7 +726,7 @@ implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3'
 
 1.  实现一个负责在控制台显示无限进度条动画的挂起函数：
 
-```kt
+```java
 private suspend fun `show progress animation`() {
     val progressBarLength = 30
     var currentPosition = 0
@@ -749,7 +749,7 @@ private suspend fun `show progress animation`() {
 
 1.  在一个新的协程中启动 `show progress animation()` 函数：
 
-```kt
+```java
 runBlocking {
     val job = launch { `show progress animation`() }
 }
@@ -757,7 +757,7 @@ runBlocking {
 
 1.  暂停父线程五秒钟：
 
-```kt
+```java
 runBlocking {
     val job = launch { `show progress animation`() }
     delay(5000)
@@ -766,7 +766,7 @@ runBlocking {
 
 1.  取消进度条动画任务：
 
-```kt
+```java
 runBlocking {
     val job = launch { `show progress animation`() }
     delay(5000)
@@ -777,7 +777,7 @@ runBlocking {
 
 1.  等待作业完成并将完成事件记录到控制台：
 
-```kt
+```java
 runBlocking {
     val job = launch {`show progress animation`()}
     delay(5000)
@@ -809,13 +809,13 @@ runBlocking {
 
 开始使用 Kotlin 协程的第一步是添加一个核心框架依赖项：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3' 
 ```
 
 为了使用 Retrofit 库与协程适配器插件，我们还需要将以下依赖项添加到我们的项目中：
 
-```kt
+```java
 implementation 'com.squareup.retrofit2:retrofit:2.4.0'
 implementation 'com.squareup.retrofit2:converter-gson:2.4.0'
 implementation 'com.jakewharton.retrofit:retrofit2-kotlin-coroutines-experimental-adapter:1.0.0'
@@ -831,7 +831,7 @@ implementation 'com.jakewharton.retrofit:retrofit2-kotlin-coroutines-experimenta
 
 1.  声明数据类来模拟服务器响应：
 
-```kt
+```java
 data class Response(@SerializedName("items")
                                       val list: Collection<Repository>)
 data class Repository(val id: Long?,
@@ -846,7 +846,7 @@ data class Repository(val id: Long?,
 
 1.  声明一个模拟 GitHub 端点使用的接口：
 
-```kt
+```java
 interface GithubApi {
     @GET("/search/repositories")
     fun searchRepositories(@Query("q") searchQuery: String):
@@ -857,7 +857,7 @@ interface GithubApi {
 
 1.  使用`Retrofit`类实例化`GithubApi`接口：
 
-```kt
+```java
 val api: GithubApi = Retrofit.Builder()
         .baseUrl("https://api.github.com/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -868,7 +868,7 @@ val api: GithubApi = Retrofit.Builder()
 
 1.  使用`GithubApi`实例调用端点，并传递搜索短语`"kotlin"`：
 
-```kt
+```java
 val api: GithubApi = Retrofit.Builder()
         .baseUrl("https://api.github.com/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -881,7 +881,7 @@ api.searchRepositories("Kotlin")
 
 1.  等待响应并获取到`Repository`类对象的列表引用：
 
-```kt
+```java
 val api: GithubApi = Retrofit.Builder()
         .baseUrl("https://api.github.com/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -894,7 +894,7 @@ val downloadedRepos = api.searchRepositories("Kotlin").await().list
 
 1.  按照仓库的星级数量降序排序仓库列表，并将它们打印到控制台：
 
-```kt
+```java
 val api: GithubApi = Retrofit.Builder()
         .baseUrl("https://api.github.com/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -916,7 +916,7 @@ downloadedRepos
 
 因此，我们的代码将向服务器发送请求，获取并处理响应，并将以下结果打印到控制台：
 
-```kt
+```java
 JetBrains/kotlin ![](img/f20aeb9f-ae96-4ab4-81ae-59a08f467e67.png)23051
 The Kotlin Programming Language
 https://github.com/JetBrains/kotlin
@@ -943,20 +943,20 @@ https://github.com/JetBrains/kotlin-native
 
 为了执行对服务器的实际调用，我们需要调用`GithubApi.searchRepositories()`函数：
 
-```kt
+```java
 api.searchRepositories("Kotlin")
 ```
 
 接下来，为了从响应中获取`Repository`对象列表，我们需要等待对服务器的异步调用完成以及响应解析：
 
-```kt
+```java
 val downloadedRepos = api.searchRepositories("Kotlin").await().list
 
 ```
 
 最后，我们对从响应中获取的存储库列表进行后处理。我们按星级数量降序排序，并使用以下代码将其打印到控制台：
 
-```kt
+```java
 val downloadedRepos = api.searchRepositories("Kotlin").await().list
 downloadedRepos
  .sortedByDescending { it.stars }
@@ -979,7 +979,7 @@ downloadedRepos
 
 开始使用 Kotlin 协程的第一步是将核心框架依赖项添加到项目中：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3' 
 ```
 
@@ -987,13 +987,13 @@ implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3'
 
 就食谱任务而言，让我们假设我们有一个名为`Result`的类，其定义如下：
 
-```kt
+```java
 data class Result(val displayName: String)
 ```
 
 这里是`getResultsAsync()`函数，它模拟第三方回调风格的 API：
 
-```kt
+```java
 fun getResultsAsync(callback: (List<Result>) -> Unit) =
     thread {
         val results = mutableListOf<Result>()
@@ -1015,7 +1015,7 @@ fun getResultsAsync(callback: (List<Result>) -> Unit) =
 
 1.  使用挂起函数包装`getResultsAsync()`函数，直接返回结果：
 
-```kt
+```java
 suspend fun getResults(): List<Result> =
     suspendCoroutine { continuation: Continuation<List<Result>> ->
         getResultsAsync { continuation.resume(it) }
@@ -1025,7 +1025,7 @@ suspend fun getResults(): List<Result> =
 
 1.  在协程中启动一个协程并调用其中的`getResults()`挂起函数：
 
-```kt
+```java
 val asyncResults = async {
     getResults()
 }
@@ -1033,7 +1033,7 @@ val asyncResults = async {
 
 1.  等待结果并打印到控制台：
 
-```kt
+```java
 val asyncResults = async {
     getResults()
 }
@@ -1047,7 +1047,7 @@ println("getResults() completed")
 
 最后，我们的代码将打印以下输出到控制台：
 
-```kt
+```java
 getResults() is running in bacground. Main thread is not blocked.
 a
 b
@@ -1062,7 +1062,7 @@ Total time elapsed: 1029 ms
 
 我们在传递给`suspendCoroutine()`函数的 lambda 中调用原始的`getResultsAcync()`函数，并在传递给`getResultsAsync()`函数作为参数的`callback` lambda 阻塞中调用`continuation.resume(it)`函数：
 
-```kt
+```java
 suspend fun getResults(): List<Result> =
     suspendCoroutine { continuation: Continuation<List<Result>> ->
         getResultsAsync { continuation.resume(it) }

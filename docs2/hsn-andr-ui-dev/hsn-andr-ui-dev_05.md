@@ -68,7 +68,7 @@ Android 中的数据绑定框架利用**观察者模式**来实现*响应式编�
 
 1.  打开此文件并定位到`android`块：
 
-```kt
+```java
 android {
   compileSdkVersion 26
   // ...
@@ -77,7 +77,7 @@ android {
 
 1.  在`android`块的末尾，添加以下片段以启用数据绑定：
 
-```kt
+```java
 android {
  compileSdkVersion 26
    // ...
@@ -125,7 +125,7 @@ android {
 
 1.  在类顶部，声明以下字段和构造函数，以及一个获取 `amountPerDay` 的 getter 方法，它代表用户希望获得的津贴：
 
-```kt
+```java
 private int amountPerDay;
 private final List<ClaimItem> items = new ArrayList<>();
 
@@ -143,7 +143,7 @@ public int getAmountPerDay() { return amountPerDay; }
 
 1.  现在是 Observable 实现的第一部分；当我们更改 `amountPerDay` 字段时，我们需要通知任何观察者 `Allowance` 对象已更改：
 
-```kt
+```java
 public void setAmountPerDay(final int amountPerDay) {
     this.amountPerDay = amountPerDay;
     notifyChange();
@@ -152,7 +152,7 @@ public void setAmountPerDay(final int amountPerDay) {
 
 1.  `Allowance` 类将始终确保所有 `ClaimItem` 对象按从新到旧的顺序排序；了解这一点后，我们可以添加一些便利方法来找到 `Allowance` 对象的 *起始* 和 *结束* 日期：
 
-```kt
+```java
 public Date getStartDate() {
   return items.get(items.size() - 1).getTimestamp();
 }
@@ -163,7 +163,7 @@ public Date getEndDate() {
 
 1.  现在，创建一个简单的计算方法来确定这个 `Allowance` 的总消费金额。这个方法简单地将所有 `ClaimItem` 对象中的金额加起来：
 
-```kt
+```java
 public double getTotalSpent() {
     double total = 0;
 
@@ -176,7 +176,7 @@ public double getTotalSpent() {
 
 1.  然后，添加另一个计算方法来计算两个日期之间的消费金额。这可以用来找出特定日期、周、月等的消费金额：
 
-```kt
+```java
 public double getAmountSpent(final Date from, final Date to) {
    double spent = 0;
     for (int i = 0; i < items.size(); i++) {
@@ -193,7 +193,7 @@ public double getAmountSpent(final Date from, final Date to) {
 
 1.  现在，您需要一个方法来向`Allowance`添加`ClaimItem`。`Allowance`始终维护从最新到最旧的`ClaimItem`对象列表，因此每次添加项目时，此方法只需对列表进行排序，然后通知观察者`Allowance`已更改：
 
-```kt
+```java
 public void addClaimItem(final ClaimItem item) {
    items.add(item);
    Collections.sort(
@@ -214,7 +214,7 @@ public void addClaimItem(final ClaimItem item) {
 
 1.  我们还需要能够从`Allowance`中删除`ClaimItem`对象。这也是一个可变操作，因此在完成后通知任何观察者：
 
-```kt
+```java
 public void removeClaimItem(final ClaimItem item) {
   items.remove(item);
   notifyChange()
@@ -223,7 +223,7 @@ public void removeClaimItem(final ClaimItem item) {
 
 1.  添加`ClaimItem`对象的访问器方法：
 
-```kt
+```java
 public int getClaimItemCount() {
   return items.size();
 }
@@ -237,7 +237,7 @@ public boolean isEmpty() {
 
 1.  通过编写其`Parcelable`实现来完成`Allowance`类的编写：
 
-```kt
+```java
 @Override
 public void writeToParcel(Parcel dest, int flags) {
   dest.writeInt(amountPerDay);
@@ -290,7 +290,7 @@ public static final Creator<Allowance> CREATOR = new Creator<Allowance>() {
 
 1.  `AllowanceOverviewPresenter` 需要的第一件事是一个内部类，用于存储将显示给用户的缓存支出统计信息。这将是一个不可变结构；当统计信息发生变化时，我们将同时刷新所有这些信息：
 
-```kt
+```java
 public static class SpendingStats {
    public final int total;
    public final int today;
@@ -310,7 +310,7 @@ public static class SpendingStats {
 
 1.  我们需要以某种方式将 `SpendingStats` 暴露在类外部，以便数据绑定可以监视其变化。Android 数据绑定再次有一个辅助类；当你有一个需要观察的字段时，你可以使用 `ObservableField` 类。当数据绑定布局文件中的表达式引用这些之一时，它将自动监听变化，并在字段更改时重新评估：
 
-```kt
+```java
 public final ObservableField<SpendingStats> spendingStats = new ObservableField<>();
 ```
 
@@ -318,7 +318,7 @@ public final ObservableField<SpendingStats> spendingStats = new ObservableField<
 
 1.  `AllowanceOverviewPresenter` 还需要一个 `Allowance` 对象，它将封装它，以及一个构造函数：
 
-```kt
+```java
 public final Allowance allowance;
 public AllowanceOverviewPresenter(final Allowance allowance) {
    this.allowance = allowance;
@@ -327,7 +327,7 @@ public AllowanceOverviewPresenter(final Allowance allowance) {
 
 1.  最后，`AllowanceOverviewPresenter` 需要一个方法，允许用户更新他们每天被允许花费的金额。在这种情况下，演示者充当助手，将一些逻辑从布局文件中排除；`EditText` 小部件将提供一个数字作为 `CharSequence`，因此 `AllowanceOverviewPresenter` 需要解析它并处理任何错误，如果它在某些方面无效：
 
-```kt
+```java
 public void updateAllowance(final CharSequence newAllowance) {
   try {
     allowance.setAmountPerDay(
@@ -355,7 +355,7 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  将根元素从`FrameLayout`更改为布局，并删除内容：
 
-```kt
+```java
 <layout 
 
    android:layout_width="match_parent"
@@ -366,7 +366,7 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  现在，在`layout`中声明一个数据部分，并为`AllowanceOverviewPresenter`类声明一个表示变量：
 
-```kt
+```java
 <layout 
 
     android:layout_width="match_parent"
@@ -384,7 +384,7 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  与`data`部分不同，小部件元素没有特殊的根，因此在`data`部分之后（并且仍然嵌套在`layout`元素中），声明此布局的根元素，它将是一个`ConstraintLayout`：
 
-```kt
+```java
 <android.support.constraint.ConstraintLayout
    android:layout_width="match_parent"
    android:layout_height="match_parent">
@@ -393,7 +393,7 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  在`ConstraintLayout`中创建一个`TextView`，它将作为包含单词`Total`的标签：
 
-```kt
+```java
 <TextView
    android:id="@+id/totalLabel"
    android:layout_width="0dp"
@@ -416,7 +416,7 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  在总标签小部件下方创建一个`TextView`，它将包含用户在`Allowance`中实际花费的金额：
 
-```kt
+```java
 <TextView
    android:id="@+id/total"
    android:layout_width="wrap_content"
@@ -432,7 +432,7 @@ public void updateAllowance(final CharSequence newAllowance) {
 
 1.  注意，在这里，您没有指定`android:text`属性。这将是布局文件中的第一个数据绑定属性，我们希望显示表示中的`SpendingStats`对象的总额字段。将此`android:text`属性写入上面的`TextView`，在`app:layout_constraintEnd_toEndOf`属性之前：
 
-```kt
+```java
 android:text='@{Integer.toString(presenter.spendingStats.total) ?? "0"}'
 ```
 
@@ -442,7 +442,7 @@ android:text='@{Integer.toString(presenter.spendingStats.total) ?? "0"}'
 
 1.  接下来，你需要为每周标签和金额显示声明非常相似的`TextView`元素。这些元素几乎与总`TextView`元素完全相同，只是它们的标签、ID 和约束不同。你还需要创建一个值为`Week`的`label_week`字符串资源：
 
-```kt
+```java
 <TextView
    android:id="@+id/weekLabel"
    android:layout_width="wrap_content"
@@ -473,7 +473,7 @@ android:text='@{Integer.toString(presenter.spendingStats.total) ?? "0"}'
 
 1.  你需要为今天的数字重复相同的操作。同样，你需要更改标签、ID 和约束，并创建一个值为`Today`的`label_today`字符串资源：
 
-```kt
+```java
 <TextView
    android:id="@+id/todayLabel"
    android:layout_width="wrap_content"
@@ -504,7 +504,7 @@ android:text='@{Integer.toString(presenter.spendingStats.total) ?? "0"}'
 
 1.  此卡片中的最后一个元素是每日限额输入区域，用户可以输入他们每天可以花费的金额。它由一个`TextInputLayout`和一个绑定到每天金额的`TextInputEditText`小部件组成。在这个元素中，你还将`TextInputEditText`小部件绑定到一个事件处理器，这看起来很像 Java lambda 表达式，但像所有绑定表达式一样，它并不是。然而，它被翻译成了 Java：
 
-```kt
+```java
 <android.support.design.widget.TextInputLayout
   android:id="@+id/textInputLayout"
   android:layout_width="0dp"
@@ -546,14 +546,14 @@ android:text='@{Integer.toString(presenter.spendingStats.total) ?? "0"}'
 
 1.  在`AllowanceOverviewPresenter`类的底部，开始一个新的`ActionCommand`内部类来更新`SpendingStats`，命名为`UpdateSpendingStatsCommand`：
 
-```kt
+```java
 private class UpdateSpendingStatsCommand
     extends ActionCommand<Allowance, SpendingStats> {
 ```
 
 1.  `UpdateSpendingStatsCommand`需要两个实用方法来计算*本周*和*今天*的日期范围。不幸的是，Android 不支持新的 Java 8 时间 API；你需要使用`Calendar`类。另一方面，Android 提供了一个非常有用的实用类`Pair`，非常适合定义日期范围：
 
-```kt
+```java
 Pair<Date, Date> getThisWeek() {
   final GregorianCalendar today = new GregorianCalendar();
   today.set(
@@ -614,7 +614,7 @@ Pair<Date, Date> getToday() {
 
 1.  然后，你需要实现`onBackground`方法，将`Allowance`对象中的数据处理到`SpendingStats`中：
 
-```kt
+```java
 public SpendingStats onBackground(final Allowance allowance)
       throws Exception {
   final Pair<Date, Date> today = getToday();
@@ -630,7 +630,7 @@ public SpendingStats onBackground(final Allowance allowance)
 
 1.  然后，`UpdateSpendingStatsCommand`需要其`onForeground`设置`AllowanceOverviewPresenter`上的`SpendingStats`字段，这将导致用户界面使用新数据更新：
 
-```kt
+```java
 public void onForeground(final SpendingStats newStats) {
    spendingStats.set(newStats);
 }
@@ -638,14 +638,14 @@ public void onForeground(final SpendingStats newStats) {
 
 1.  这完成了`UpdateSpendingStatsCommand`；现在，在`AllowanceOverviewPresenter`类中，你需要一个`UpdateSpendingStatsCommand`的实例，当`Allowance`对象发生变化时可以调用：
 
-```kt
+```java
 private final UpdateSpendingStatsCommand updateSpendStatsCommand
                                 = new UpdateSpendingStatsCommand();
 ```
 
 1.  然后，你需要`AllowanceOverviewPresenter`能够监视`Allowance`对象的变化。这将涉及一个观察者，Android 的数据绑定 API 调用`OnPropertyChangedCallback`。问题是`OnPropertyChangedCallback`是一个类而不是接口，所以对于`AllowanceOverviewPresenter`，使用匿名内部类作为`OnPropertyChangedCallback`：
 
-```kt
+```java
 private final Observable.OnPropertyChangedCallback
     allowanceObserver = new Observable.OnPropertyChangedCallback() {
 
@@ -659,7 +659,7 @@ private final Observable.OnPropertyChangedCallback
 
 1.  `AllowanceOverviewPresenter`需要在构造函数中将其观察者连接到`Allowance`对象：
 
-```kt
+```java
 public AllowanceOverviewPresenter(final Allowance allowance) {
    this.allowance = allowance;
    this.allowance.addOnPropertyChangedCallback(allowanceObserver);
@@ -668,7 +668,7 @@ public AllowanceOverviewPresenter(final Allowance allowance) {
 
 1.  `Observable`对象持有的对其观察者的引用是强引用，所以如果不注意，你可能会发现自己有内存泄漏。为了避免这种情况，当`AllowanceOverviewPresenter`不再需要时，一个好的做法是断开监听器；然而，这需要从外部完成：
 
-```kt
+```java
 public void detach() {
    allowance.removeOnPropertyChangedCallback(allowanceObserver);
 }
@@ -680,7 +680,7 @@ public void detach() {
 
 在使用数据绑定框架工作时，重要的是要考虑将用户界面的各个部分封装在哪里。由于你可以直接将逻辑钩入布局文件，因此通常更好的做法是使用类似于你在第三章，“采取行动”，中编写的`DatePickerWrapper`的类，使用`<include>`和`<merge>`标签，而不是将组件组包裹在类中。包含在其他布局中的数据绑定布局仍然有变量，并且外部布局有责任将这些变量向下传递到包含的布局文件中。例如，包含日期选择器的布局可能看起来像这样：
 
-```kt
+```java
 <include layout="@layout/merge_date_picker"
          app:date="@{user.dateOfBirth}"
          android:layout_width="match_parent"

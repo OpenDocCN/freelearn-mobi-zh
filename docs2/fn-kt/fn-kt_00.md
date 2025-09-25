@@ -92,7 +92,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 open class BakeryGood(val flavour: String) { 
   fun eat(): String { 
     return "nom, nom, nom... delicious $flavour bakery good" 
@@ -105,7 +105,7 @@ class Biscuit(flavour: String): BakeryGood(flavour)
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 fun main(args: Array<String>) { 
  val emptyList1 = listOf<Any>() val emptyList2 = emptyList<Any>() 
 
@@ -116,7 +116,7 @@ fun main(args: Array<String>) {
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 $ kotlin HelloKt
 ```
 

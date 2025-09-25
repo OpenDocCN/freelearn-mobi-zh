@@ -18,7 +18,7 @@
 
 在编程语言中，为了保证调用带有参数的函数总是返回相同的值，需要避免访问可变状态：
 
-```kt
+```java
 fun f(x: Long) : Long { 
    return x * x // no access to external state
 }
@@ -26,7 +26,7 @@ fun f(x: Long) : Long {
 
 `f` 函数不访问任何外部状态；因此，调用 *f(5)* 总是返回 *25*：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var i = 0
 
@@ -66,7 +66,7 @@ Kotlin 支持这两个概念。
 
 让我们尝试一个简单的函数（在 Kotlin 的文档中这种函数被称为 lambda）：
 
-```kt
+```java
 val capitalize = { str: String -> str.capitalize() }
 
 fun main(args: Array<String>) {
@@ -84,13 +84,13 @@ fun main(args: Array<String>) {
 
 Kotlin 的编译器可以在编译时将快捷语法转换为完整的函数对象（实际上，编译器还会应用更多的优化），如下所示：
 
-```kt
+```java
 val capitalize = { str: String -> str.capitalize() }
 ```
 
 它等同于以下代码：
 
-```kt
+```java
 val capitalize = object : Function1<String, String> {
    override fun invoke(p1: String): String {
       return p1.capitalize()
@@ -104,7 +104,7 @@ val capitalize = object : Function1<String, String> {
 
 让我们看看以下示例：
 
-```kt
+```java
 fun transform(str:String, fn: (String) -> String): String {
    return fn(str)
 }
@@ -114,7 +114,7 @@ fun transform(str:String, fn: (String) -> String): String {
 
 从所有目的来看，我们可以泛化`transform`：
 
-```kt
+```java
 fun <T> transform(t: T, fn: (T) -> T): T {
    return fn(t)
 }
@@ -122,7 +122,7 @@ fun <T> transform(t: T, fn: (T) -> T): T {
 
 使用`transform`非常简单。看看下面的代码片段：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(transform("kotlin", capitalize))
 }
@@ -132,7 +132,7 @@ fun main(args: Array<String>) {
 
 调用`transform`函数的方式有很多。让我们再试几个：
 
-```kt
+```java
 fun reverse(str: String): String {
    return str.reversed()
 }
@@ -144,7 +144,7 @@ fun main(args: Array<String>) {
 
 `reverse`是一个函数；我们可以使用双冒号（`::`）来传递它的引用，如下所示：
 
-```kt
+```java
 object MyUtils {
    fun doNothing(str: String): String {
       return str
@@ -158,7 +158,7 @@ fun main(args: Array<String>) {
 
 `doNothing`是一个对象方法，在这种情况下，我们在`MyUtils`对象名称后使用`::`：
 
-```kt
+```java
 class Transformer {
    fun upperCased(str: String): String {
       return str.toUpperCase()
@@ -182,7 +182,7 @@ fun main(args: Array<String>) {
 
 我们也可以传递实例或伴生对象的引用。但最常见的情况可能是直接传递一个 lambda 表达式：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(transform("kotlin", { str -> str.substring(0..1) }))
 }
@@ -190,7 +190,7 @@ fun main(args: Array<String>) {
 
 使用`it`隐式参数的简短版本如下：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(transform("kotlin", { it.substring(0..1) }))
 }
@@ -202,7 +202,7 @@ fun main(args: Array<String>) {
 
 如果一个函数将 lambda 作为最后一个参数接收，lambda 可以放在括号之外传递：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println(transform("kotlin") { str -> str.substring(0..1) })
 }
@@ -214,7 +214,7 @@ fun main(args: Array<String>) {
 
 让我们通过执行以下代码片段来为 Kotlin 创建一个版本：
 
-```kt
+```java
 fun unless(condition: Boolean, block: () -> Unit){
    if (!condition) block()
 }
@@ -233,7 +233,7 @@ fun main(args: Array<String>) {
 
 现在，类型别名可以与函数混合使用，以替换简单的接口。以下是一个例子，来自 第一章，*Kotlin – 数据类型、对象和类*：
 
-```kt
+```java
 interface Machine<T> {
    fun process(product: T)
 }
@@ -261,7 +261,7 @@ fun main(args: Array<String>) {
 
 它可以用类型别名替换，并使用所有函数的语法特性：
 
-```kt
+```java
 typealias Machine<T> = (T) -> Unit
 
 fun <T> useMachine(t: T, machine: Machine<T>) {
@@ -299,7 +299,7 @@ fun main(args: Array<String>) {
 
 首先，让我们看看一个典型的命令式实现，以下代码片段中的循环和状态变化：
 
-```kt
+```java
 fun factorial(n: Long): Long {
    var result = 1L
    for (i in 1..n) {
@@ -311,7 +311,7 @@ fun factorial(n: Long): Long {
 
 这没有什么特别之处，也不特别优雅。现在，让我们看看一个递归实现，没有循环，也没有状态变化：
 
-```kt
+```java
 fun functionalFactorial(n: Long): Long {
    fun go(n: Long, acc: Long): Long {
       return if (n <= 0) {
@@ -329,7 +329,7 @@ fun functionalFactorial(n: Long): Long {
 
 优化后的实现类似，但带有 `tailrec` 修饰符：
 
-```kt
+```java
 fun tailrecFactorial(n: Long): Long {
    tailrec fun go(n: Long, acc: Long): Long {
       return if (n <= 0) {
@@ -345,7 +345,7 @@ fun tailrecFactorial(n: Long): Long {
 
 要测试哪个实现更快，我们可以编写一个简陋的分析函数：
 
-```kt
+```java
 fun executionTime(body: () -> Unit): Long {
    val startTime = System.nanoTime()
    body()
@@ -356,7 +356,7 @@ fun executionTime(body: () -> Unit): Long {
 
 对于我们的目的，`executionTime` 函数是可行的，但任何严肃的生产代码都应该使用适当的分析工具进行性能分析，例如 **Java Microbenchmark Harness**（**JMH**）：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println("factorial :" + executionTime { factorial(20) })
     println("functionalFactorial :" + executionTime { functionalFactorial(20) })
@@ -372,7 +372,7 @@ fun main(args: Array<String>) {
 
 让我们探索一个斐波那契数列的实现，从一个命令式实现开始如下：
 
-```kt
+```java
 fun fib(n: Long): Long {
    return when (n) {
       0L -> 0
@@ -394,7 +394,7 @@ fun fib(n: Long): Long {
 
 现在，让我们看看一个函数式递归实现：
 
-```kt
+```java
 fun functionalFib(n: Long): Long {
    fun go(n: Long, prev: Long, cur: Long): Long {
       return if (n == 0L) {
@@ -410,7 +410,7 @@ fun functionalFib(n: Long): Long {
 
 现在，让我们检查其对应的 `tailrec` 版本，如下所示：
 
-```kt
+```java
 fun tailrecFib(n: Long): Long {
    tailrec fun go(n: Long, prev: Long, cur: Long): Long {
       return if (n == 0L) {
@@ -427,7 +427,7 @@ fun tailrecFib(n: Long): Long {
 
 然后，再次，让我们用 `executionTime` 来查看其分析：
 
-```kt
+```java
 fun main(args: Array<String>) {
     println("fib :" + executionTime { fib(93) })
     println("functionalFib :" + executionTime { functionalFib(93) })
@@ -447,7 +447,7 @@ fun main(args: Array<String>) {
 
 Kotlin 本身不提供对懒加载的原生支持，但作为 Kotlin 标准库的一部分，以及一个名为 **委托属性** 的语言特性（我们将在未来的章节中详细讨论）：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val i by lazy {
         println("Lazy evaluation")
@@ -467,7 +467,7 @@ fun main(args: Array<String>) {
 
 但也可以使用正常的 lambda 函数来处理一些懒加载用例：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val size = listOf(2 + 1, 3 * 2, 1 / 0, 5 - 4).size
 }
@@ -475,7 +475,7 @@ fun main(args: Array<String>) {
 
 如果我们尝试执行这个表达式，它将抛出一个 `ArithmeticException` 异常，因为我们正在除以零：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val size = listOf({ 2 + 1 }, { 3 * 2 }, { 1 / 0 }, { 5 - 4 }).size
 }
@@ -493,13 +493,13 @@ fun main(args: Array<String>) {
 
 Kotlin 随带一个优秀的函数式集合库。让我们看看它：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 ```
 
 我们的价值 `numbers` 是一个 `List<Int>` 类型的值。现在，让我们按照以下方式打印其成员：
 
-```kt
+```java
 fun main(args: Array<String>) {
     for(i in numbers) {
        println("i = $i")
@@ -511,7 +511,7 @@ fun main(args: Array<String>) {
 
 不必再担心；Kotlin 集合包括许多接收 lambda 来操作其成员的函数。我们可以用 lambda 替换这个循环，如下所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     numbers.forEach { i -> println("i = $i") }
 }
@@ -519,7 +519,7 @@ fun main(args: Array<String>) {
 
 现在，让我们在以下代码中转换我们的集合：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -533,7 +533,7 @@ fun main(args: Array<String>) {
 
 这段代码无法编译；`numberTwice` 没有提供 `add(T)` 方法。`List<T>` 是一个不可变列表；一旦初始化，它就可以被修改。要向列表中添加元素，它必须具有不同的类型——在我们的例子中是 `MutableList<T>`：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -551,7 +551,7 @@ Kotlin 的所有主要集合类型（`List<T>`, `Set<T>`, 和 `Map<K, V>`）都�
 
 但我们可以将这个转换替换为以下代码中的单行表达式：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -563,7 +563,7 @@ fun main(args: Array<String>) {
 
 让我们再举几个例子。我们可以使用循环来计算数字的所有元素之和：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -579,7 +579,7 @@ fun main(args: Array<String>) {
 
 这可以简化为只有一行，使用不可变的 `sum` 值如下：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -591,7 +591,7 @@ fun main(args: Array<String>) {
 
 很好，但不是很吸引人，所以让我们提高难度：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -603,7 +603,7 @@ fun main(args: Array<String>) {
 
 `fold` 方法遍历一个集合，保持一个累加器值。`fold` 接收一个 `T` 值作为初始值；在第一次迭代中，这个初始值将是累加器，后续迭代将使用 lambda 的返回值作为下一个累加器值：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -622,7 +622,7 @@ fun main(args: Array<String>) {
 
 与 `fold` 类似，`reduce` 遍历一个集合，有一个累加器但没有初始值：
 
-```kt
+```java
 val numbers: List<Int> = listOf(1, 2, 3, 4)
 
 fun main(args: Array<String>) {
@@ -645,7 +645,7 @@ fun main(args: Array<String>) {
 
 在前两章学到的所有知识的基础上，我们可以实现一个纯函数式列表：
 
-```kt
+```java
 sealed class FunList<out T> {
    object Nil : FunList<Nothing>()
 
@@ -663,7 +663,7 @@ sealed class FunList<out T> {
 
 让我们创建一个列表实例如下：
 
-```kt
+```java
 import com.packtpub.functionalkotlin.chapter02.FunList.Cons
 import com.packtpub.functionalkotlin.chapter02.FunList.Nil
 
@@ -674,7 +674,7 @@ fun main(args: Array<String>) {
 
 它是函数式的，但不是很易读。我们可以创建一个更好的初始化函数：
 
-```kt
+```java
 import com.packtpub.functionalkotlin.chapter02.FunList.Cons
 import com.packtpub.functionalkotlin.chapter02.FunList.Nil
 
@@ -691,7 +691,7 @@ fun intListOf(vararg numbers: Int): FunList<Int> {
 
 现在，我们可以创建我们的 `FunList<Int>` 值：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val numbers = intListOf(1, 2, 3, 4)    
 }
@@ -699,7 +699,7 @@ fun main(args: Array<String>) {
 
 让我们按照以下方式实现 `forEach`：
 
-```kt
+```java
 sealed class FunList<out T> {
    object Nil : FunList<Nothing>()
 
@@ -726,7 +726,7 @@ sealed class FunList<out T> {
 
 从技术上来说，`FunList` 是一个 **代数数据类型**（**ADT**）。`FunList` 可以是 `Nil` 或 `Cons`，除此之外没有其他可能。Kotlin 的编译器可以使用这些信息来检查当 `FunList` 类型用作 `when` 控制结构中的参数时，两个值是否都被评估：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val numbers = intListOf(1, 2, 3, 4)
 
@@ -736,7 +736,7 @@ fun main(args: Array<String>) {
 
 实现 `fold` 将类似于以下代码：
 
-```kt
+```java
 sealed class FunList<out T> {
 
   /*Previous code here*/
@@ -755,7 +755,7 @@ sealed class FunList<out T> {
 
 你注意到这些函数实现起来非常简单吗？让我们看看下面的代码：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val numbers = intListOf(1, 2, 3, 4)
 
@@ -765,7 +765,7 @@ fun main(args: Array<String>) {
 
 那么，Kotlin 的列表和我们的函数式列表之间来一场小比赛如何？
 
-```kt
+```java
 fun main(args: Array<String>) {
     val funList = intListOf(1, 2, 3, 4)
     val list = listOf(1, 2, 3, 4)
@@ -785,7 +785,7 @@ fun main(args: Array<String>) {
 
 `reverse` 是一个返回反转顺序列表的函数：
 
-```kt
+```java
 sealed class FunList<out T> {
 
     /*previous code*/
@@ -799,7 +799,7 @@ sealed class FunList<out T> {
 
 现在，我们可以实现 `foldRight`：
 
-```kt
+```java
 sealed class FunList<out T> {
 
     /*previous code*/
@@ -812,7 +812,7 @@ sealed class FunList<out T> {
 
 再次强调，我们正在重用现有函数。现在是时候实现我们的 `map` 函数了。在这个阶段，我们重用现有函数并不令人惊讶：
 
-```kt
+```java
 sealed class FunList<out T> {
 
  /*previous code*

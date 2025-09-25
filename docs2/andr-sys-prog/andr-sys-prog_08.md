@@ -90,7 +90,7 @@
 
 在 x86vbox 的清单中，我们将包括前面提到的项目，用于 x86 内核、HAL，并且修改了 `system/` 以及 `frameworks/`：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -230,7 +230,7 @@ GitHub 上的所有 Android-x86 项目都是从 Android-x86 镜像分叉的，�
 
 正如我们在第四章中所述，*自定义 Android 模拟器*，我们创建了一个`AndroidProducts.mk` Makefile 来包含 x86vbox 的产品定义 Makefile，如下所示：
 
-```kt
+```java
 PRODUCT_MAKEFILES := \ 
     $(LOCAL_DIR)/x86vbox.mk 
 
@@ -240,7 +240,7 @@ PRODUCT_MAKEFILES := \
 
 如我们所知，AOSP 构建系统会查找`AndroidProducts.mk`以找到特定设备的产品定义 Makefile。让我们回顾一下产品定义 Makefile `x86vbox.mk`，如下所示：
 
-```kt
+```java
 # includes the base of Android-x86 platform 
 $(call inherit-product,device/generic/common/x86.mk) 
 
@@ -282,7 +282,7 @@ PRODUCT_COPY_FILES += \
 
 我们将为 x86vbox 创建的另一个 Makefile 是板级配置 Makefile `BoardConfig.mk`，如下所示：
 
-```kt
+```java
 TARGET_NO_BOOTLOADER := true 
 
 TARGET_ARCH := x86 
@@ -320,7 +320,7 @@ include device/generic/common/BoardConfig.mk
 
 在`BoardConfig.mk`中，构建系统所需的变量定义如下：
 
-```kt
+```java
 TARGET_BOARD_PLATFORM := android-x86 
 
 # Some framework code requires this to enable BT 
@@ -360,7 +360,7 @@ BOARD_USES_ALSA_AUDIO ?= true
 
 现在，让我们看看`x86.mk`：
 
-```kt
+```java
 PRODUCT_PROPERTY_OVERRIDES := \ 
     ro.com.android.dateformat=MM-dd-yyyy \ 
 
@@ -379,7 +379,7 @@ $(call inherit-product,$(SRC_TARGET_DIR)/product/full.mk)
 
 `x86.mk`还导入了另外两个本地 Makefile，`device.mk`和`packages.mk`。在`packages.mk`中，HAL 模块包定义如下：
 
-```kt
+```java
 PRODUCT_PACKAGES := \ 
     camera.x86 \ 
     com.android.future.usb.accessory \ 
@@ -408,7 +408,7 @@ PRODUCT_PACKAGES += \
 
 这并不是包的完整列表。在`device.mk`中，还有更多组件被添加到`PRODUCT_PACKAGES`中，如下所示：
 
-```kt
+```java
 PRODUCT_DIR := $(dir $(lastword $(filter-out device/common/%,$(filter device/%,$(ALL_PRODUCTS))))) 
 
 PRODUCT_PROPERTY_OVERRIDES := \ 
@@ -466,7 +466,7 @@ $(call inherit-product-if-exists,$(LOCAL_PATH)/nativebridge/nativebridge.mk)
 
 要构建 x86vbox 设备，我们可以使用以下命令从 GitHub 和 AOSP 获取源代码：
 
-```kt
+```java
 $ repo init https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch08_aosp
 $ repo sync  
 
@@ -476,7 +476,7 @@ $ repo sync
 
 在我们获取本章的源代码后，我们可以设置环境和构建系统，如下所示：
 
-```kt
+```java
 $ source build/envsetup.sh
 $ lunch x86vbox-eng
 $ make -j4 
@@ -497,7 +497,7 @@ Android-x86 的内核与我们第六章，*使用自定义 ramdisk 调试启动�
 
 以下是我们进入第一个检查点之前想要查看的 init 脚本的一部分：
 
-```kt
+```java
 PATH=/sbin:/bin:/system/bin:/system/xbin; export PATH 
 ... 
 # early boot 
@@ -545,14 +545,14 @@ udev 和**mdev** **udev**是 Linux 内核的设备管理器。作为 devfsd 和 
 
 让我们继续前进，看看在达到下一个检查点之前的脚本中会发生什么。要退出第一个检查点，我们需要运行`exit`命令以继续执行脚本。
 
-```kt
+```java
 (debug-found)@android:/android # exit  
 
 ```
 
 在退出第一个检查点后，它将继续执行以下脚本：
 
-```kt
+```java
 ... 
 [ -n "$INSTALL" ] && do_install 
 
@@ -590,7 +590,7 @@ fi
 
 您可以自行学习任务 2 到 6 的脚本，因为它们非常直接且易于理解。我们在这里想更详细地看看第一个任务：
 
-```kt
+```java
 auto_detect() 
 { 
     tmp=/tmp/dev2mod 
@@ -625,7 +625,7 @@ load_modules()
 
 Android-x86 内核的所有内核模块都可以在`/lib/modules/4.x.x-android-x86/modules.alias`文件中找到。此文件被处理，以便在每行的末尾添加`modprobe`命令，以便可以使用模块别名作为参数加载内核模块。临时脚本文件位于`/tmp/dev2mod`，如下所示代码片段：
 
-```kt
+```java
 # cat /tmp/dev2mod
 dev2mod() { while read dev; do case $dev in 
 xts)busybox modprobe xts;; 
@@ -651,7 +651,7 @@ esac; done; }
 
 在将`/sys`文件系统中的设备传递给`dev2mod`函数之前，我们可以查看在我的系统上输出看起来如下：
 
-```kt
+```java
 # cat /sys/bus/*/devices/*/uevent | grep MODALIAS | sed 's/^MODALIAS=//' 
 | sort -u
 acpi:ACPI0003: 
@@ -720,7 +720,7 @@ virtio:d00000001v00001AF4
 
 从前述截图我们可以看到，现在系统中加载了许多内核模块。从内核模块名称中，我们可以看到音频、鼠标和键盘驱动程序已被加载。这就是 Android-x86 init 脚本在`initrd.img`中自动加载设备驱动程序的方式。在 init 脚本末尾，它将根据环境变量`DEBUG`的设置调用`chroot`或`switch_root`。在任一情况下，根文件系统将更改为 Android 的`ramdisk.img`，并启动 Android init 进程，如下所示：
 
-```kt
+```java
 ... 
 [ -n "$DEBUG" ] && SWITCH=${SWITCH:-chroot} 
 
@@ -741,7 +741,7 @@ Android init 进程将为这些内核无法自动检测到的设备执行硬件�
 
 如果我们回顾第六章 调试启动过程使用自定义的 ramdisk 中对 init 进程的分析，init 进程将执行 `init.rc` 脚本，这是适用于所有 Android 设备的通用脚本。在 `init.rc` 脚本中，它将导入特定设备的脚本 `init.${ro.hardware}.rc`。在我们的案例中，这个脚本是在目标设备上的 `init.x86vbox.rc`。`ro.hardware` 属性根据内核命令行参数 `androidboot.hardware` 设置，我们将其设置为 `x86vbox`。`init.x86vbox.rc` 的源代码可以在 `device/generic/common/init.x86.rc` 中找到。它通过 `device.mk` 中的以下行复制到目标输出。请注意，脚本名称在复制后已更改：
 
-```kt
+```java
 ... 
 PRODUCT_COPY_FILES := \ 
     $(if $(wildcard $(PRODUCT_DIR)init.rc),$(PRODUCT_DIR)init.rc:root/init.rc) \ 
@@ -757,7 +757,7 @@ PRODUCT_COPY_FILES := \
 
 在 `init.x86vbox.rc` 文件中，一个动作触发器被定义为如下：
 
-```kt
+```java
 on post-fs 
     exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh 
 
@@ -765,7 +765,7 @@ on post-fs
 
 在预定义的触发器 `post-fs` 中，`init.sh` 脚本将作为初始化过程的一部分执行。以下为 `init.sh` 的代码片段：
 
-```kt
+```java
 ... 
 PATH=/sbin:/system/bin:/system/xbin 
 
@@ -821,7 +821,7 @@ return 0
 
 如前述代码片段所示，`init.sh` 脚本首先处理内核命令行。之后，它遇到一个多选择语句。根据传递给它的第一个参数执行一个函数。这个参数用于让 `do_init` 函数初始化特定的 HAL 模块。在第一个参数的情况下，它是 `init` 或没有参数，将执行 `do_init` 函数。在这种情况下，所有 HAL 模块都将被初始化，这是我们目前想要调查的情况。我们可以如下查看 `do_init` 函数做了什么：
 
-```kt
+```java
 function do_init() 
 { 
     init_misc 
@@ -843,7 +843,7 @@ function do_init()
 
 `do_init` 函数将逐个调用各个 HAL 模块初始化函数。我们在这里不会查看所有这些函数。我们将看看在 `init_hal_gralloc` 函数中如何初始化帧缓冲区设备。这是我们将在第十章 *启用图形* 中更深入调查的内容，因为图形支持在移植过程中是最重要的任务之一：
 
-```kt
+```java
 function init_uvesafb() 
 { 
     case "$PRODUCT" in 

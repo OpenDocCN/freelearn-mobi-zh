@@ -42,7 +42,7 @@
 
 为了可视化这可能是什么样子，让我们看看一个 `ViewModel` 的例子：
 
-```kt
+```java
 class MyViewModel @Inject constructor(
     private val getMyDataUseCase: GetMyDataUseCase
 ) : ViewModel() {
@@ -65,7 +65,7 @@ class MyViewModel @Inject constructor(
 
 在前面的例子中，我们定义了一个名为 `MyViewModel` 的类，其中包含一个加载数据的使用案例和一个 `text` 变量，该变量将在用户更改它时由视图进行更改。我们可以看到，`text` 变量是一个可变的变量，可以从持有要加载数据的 `StateFlow` 变量中访问，并且我们有一个加载数据的方法。要将前面的代码过渡到 MVI，我们首先需要定义一个将持有要加载数据和文本的状态。这将代表我们的真相来源。对于前面的例子，这个状态将如下所示：
 
-```kt
+```java
 data class MyState(
         val myData: MyData = MyData(),
         val text: String = ""
@@ -74,7 +74,7 @@ data class MyState(
 
 在 `MyState` 类中，我们将要加载数据和要更改的文本移动。现在，我们需要识别动作；在这种情况下，我们有两个动作：加载数据和用用户引入的新值更新文本的值：
 
-```kt
+```java
     sealed class MyAction {
         object LoadAction : MyAction()
         data class UpdateAction(val text: String) : 
@@ -84,7 +84,7 @@ data class MyState(
 
 在前面的例子中，我们将动作表示为一个密封类，并定义了两个动作：加载数据和更新文本。接下来，我们需要创建适当的数据流来处理动作和管理状态：
 
-```kt
+```java
     private val _myStateFlow = MutableStateFlow<MyState>
         (MyState())
     val myStateFlow: StateFlow<MyState> = _myDataFlow
@@ -94,7 +94,7 @@ data class MyState(
 
 在前面的例子中，我们将 `StateFlow` 变量更改为持有之前定义的状态对象，并添加了一个类似的 `SharedFlow` 变量，该变量将负责管理用户插入的动作。我们现在需要订阅并处理这些动作：
 
-```kt
+```java
 class MyViewModel @Inject constructor(
     private val getMyDataUseCase: GetMyDataUseCase
 ) : ViewModel() {
@@ -143,7 +143,7 @@ class MyViewModel @Inject constructor(
 
 在前面的章节中，我们定义了一个使用`StateFlow`和`SharedFlow`的 MVI 方法，如下例所示：
 
-```kt
+```java
     private val _myStateFlow = MutableStateFlow<MyState>(MyState())
     val myStateFlow: StateFlow<MyState> = _myDataFlow
     private val actionFlow: MutableSharedFlow<MyAction> = MutableSharedFlow()
@@ -151,7 +151,7 @@ class MyViewModel @Inject constructor(
 
 在这里使用的不同类型的流服务于不同的目的。`MutableStateFlow`会发出它持有的最后一个值，这对于用户界面来说很好，因为我们希望它显示最后加载数据，就像`LiveData`的工作方式一样。`SharedFlow`没有这个特性，这对于动作来说很有用，因为我们不希望最后一个动作被发射两次。我们还需要考虑的另一个方面是单次事件，这些事件应该使用通道流来发射。这将在视图需要响应通道中的事件以显示吐司警报或处理导航到新屏幕时很有用。我们可以使用以下方式来实现：
 
-```kt
+```java
 class MyViewModel @Inject constructor(
     private val getMyDataUseCase: GetMyDataUseCase
 ) : ViewModel() {
@@ -169,7 +169,7 @@ class MyViewModel @Inject constructor(
 
 在前面的例子中，我们将`Channel`信息与`ViewModel`的其余部分集成在一起。因为一个应用程序最终会有多个`ViewModel`，我们可以创建一个将在整个应用程序中使用的模板。我们可以从为每个状态、动作和一次性事件定义抽象开始：
 
-```kt
+```java
 interface UiState
 interface UiAction
 interface UiSingleEvent
@@ -177,7 +177,7 @@ interface UiSingleEvent
 
 在这里，我们选择了一个简单的接口来表示`ViewModel`将使用的数据流中的每一个。接下来，我们可以定义`ViewModel`的模板，该模板可以被应用程序中使用的`ViewModel`继承：
 
-```kt
+```java
 abstract class MviViewModel<S : UiState, A : UiAction, E : UiSingleEvent> : ViewModel() {
     private val _uiStateFlow: MutableStateFlow<S> by lazy {
         MutableStateFlow(initState())
@@ -193,7 +193,7 @@ abstract class MviViewModel<S : UiState, A : UiAction, E : UiSingleEvent> : View
 
 在前面的例子中，我们为`ViewModel`将使用的每个流使用了泛型。这为`MutableStateFlow`创建了一个问题，因为它需要一个初始值。因为我们没有具体的值来初始化，我们需要创建一个提供初始值的抽象方法：
 
-```kt
+```java
 abstract class MviViewModel<S : UiState, A : UiAction, E : UiSingleEvent> : ViewModel() {
     …
     init {
@@ -210,7 +210,7 @@ abstract class MviViewModel<S : UiState, A : UiAction, E : UiSingleEvent> : View
 
 除了`initState`抽象之外，我们还添加了`handleAction`抽象。当因为用户操作或屏幕加载提交新动作时，将调用此方法。由于可变变量被设置为私有，我们需要公开方法来将这些事件发射到这些流中：
 
-```kt
+```java
 abstract class MviViewModel<S : UiState, A : UiAction, E : 
     UiSingleEvent> : ViewModel() {
     …
@@ -234,7 +234,7 @@ abstract class MviViewModel<S : UiState, A : UiAction, E :
 
 在前面的例子中，我们添加了在每个特定数据流上发射、发送或更改值的方法。为了实现特定场景的模板，我们需要为`UiState`创建具体实现：
 
-```kt
+```java
 sealed class MyUiState : UiState {
     data class Success(val myData: MyData) : MyUiState()
     object Error : MyUiState()
@@ -244,7 +244,7 @@ sealed class MyUiState : UiState {
 
 在前面的例子中，我们定义了屏幕可能具有的不同状态。现在，我们可以为`UiAction`创建具体实现：
 
-```kt
+```java
 sealed class MyUiAction : UiAction {
     object Load : MyUiAction()
     object Click : MyUiAction()
@@ -253,7 +253,7 @@ sealed class MyUiAction : UiAction {
 
 在这里，我们定义了一个当需要加载数据时的动作，以及当用户界面上点击时的另一个动作：
 
-```kt
+```java
 sealed class MyUiSingleEvent : UiSingleEvent {
     data class ShowToast(val text: String) : 
         MyUiSingleEvent()
@@ -262,7 +262,7 @@ sealed class MyUiSingleEvent : UiSingleEvent {
 
 对于单次触发的事件，我们定义了一个显示吐司警报的事件。最后，我们可以实现`ViewModel`的具体实现：
 
-```kt
+```java
 class MyViewModel : MviViewModel<MyUiState, MyUiAction, 
     MyUiSingleEvent>() {
     override fun initState(): MyUiState = MyUiState.Loading
@@ -288,7 +288,7 @@ class MyViewModel : MviViewModel<MyUiState, MyUiAction,
 
 如果我们想要将 `ViewModel` 与 Jetpack Compose 集成，我们将不得不使用如下示例：
 
-```kt
+```java
 @Composable
 fun MyScreen(
     viewModel: MyViewModel
@@ -314,7 +314,7 @@ fun MyScreen(
 
 我们可以看到，观察 `UiState` 将与 MVVM 相同；然而，如果我们希望通知 `ViewModel` 任何更改，我们将需要使用 `submitAction` 方法。对于 `UiSingleEvents` 对象，我们需要使用 `LaunchedEffect` 函数，因为我们不希望 Jetpack Compose 持续重新组合和重新执行相同的代码块；我们只想执行一次，因此我们需要使用如下所示的内容：
 
-```kt
+```java
 @Composable
 fun MyScreen(
     viewModel: MyViewModel
@@ -334,7 +334,7 @@ fun MyScreen(
 
 在此示例中，我们在 `LaunchedEffect` 方法内部从 `Channel` 收集数据，并在接收到 `ShowToast` 事件时显示一个 toast 提醒。`LaunchedEffect` 还可以用来确保我们不会因为 Jetpack Compose 的重新组合机制而触发多次数据加载：
 
-```kt
+```java
 @Composable
 fun MyScreen(
     viewModel: MyViewModel
@@ -367,19 +367,19 @@ fun MyScreen(
 
 1.  在 `presentation-common` 模块的 `状态` 包中，创建一个名为 `UiAction` 的接口：
 
-    ```kt
+    ```java
     interface UiAction
     ```
 
 1.  在同一包中，创建一个名为 `UiSingleEvent` 的接口：
 
-    ```kt
+    ```java
     interface UiSingleEvent
     ```
 
 1.  在同一包中，创建一个名为 `MviViewModel` 的抽象类：
 
-    ```kt
+    ```java
     abstract class MviViewModel<T : Any, S : UiState<T>, A : UiAction, E : UiSingleEvent> : ViewModel() {
     }
     ```
@@ -388,7 +388,7 @@ fun MyScreen(
 
 1.  在 `MviViewModel` 类中，添加必要的流程和通道，以保存状态、操作和事件：
 
-    ```kt
+    ```java
     abstract class MviViewModel<T : Any, S : UiState<T>, A : UiAction, E : UiSingleEvent> : ViewModel() {
         private val _uiStateFlow: MutableStateFlow<S> by 
             lazy {
@@ -407,7 +407,7 @@ fun MyScreen(
 
 1.  在 `MviViewModel` 中添加初始化状态和处理操作的抽象方法：
 
-    ```kt
+    ```java
     abstract class MviViewModel<T : Any, S : UiState<T>, A : UiAction, E : UiSingleEvent> : ViewModel() {
         …
         init {
@@ -426,7 +426,7 @@ fun MyScreen(
 
 1.  在 `MviViewModel` 中添加提交状态、事件和操作的必需方法：
 
-    ```kt
+    ```java
     abstract class MviViewModel<T : Any, S : UiState<T>, A : UiAction, E : UiSingleEvent> : ViewModel() {
         …
         fun submitAction(action: A) {
@@ -451,7 +451,7 @@ fun MyScreen(
 
 1.  在 `presentation-post` 模块的 `list` 包中创建 `PostListUiAction` 类及其子类：
 
-    ```kt
+    ```java
     sealed class PostListUiAction : UiAction {
         object Load : PostListUiAction()
         data class UserClick(val userId: Long, val 
@@ -465,7 +465,7 @@ fun MyScreen(
 
 1.  在相同的包中创建 `PostListUiAction` 类及其子类：
 
-    ```kt
+    ```java
     sealed class PostListUiSingleEvent : UiSingleEvent {
         data class OpenUserScreen(val navRoute: String) : 
             PostListUiSingleEvent()
@@ -478,7 +478,7 @@ fun MyScreen(
 
 1.  在相同的包中，修改 `PostListViewModel` 以扩展 `MviViewModel`：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         private val useCase: 
@@ -496,7 +496,7 @@ fun MyScreen(
 
 1.  在 `PostListViewModel` 类中实现 `initState` 方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         …
@@ -511,7 +511,7 @@ fun MyScreen(
 
 1.  在 `PostListViewModel` 类中实现 `handleAction` 方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         …
@@ -555,7 +555,7 @@ fun MyScreen(
 
 1.  在 `PostListViewModel` 类中实现 `loadPosts` 方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         …
@@ -582,7 +582,7 @@ fun MyScreen(
 
 1.  在 `PostListViewModel` 类中实现 `updateInteraction` 方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostListViewModel @Inject constructor(
         …
@@ -609,7 +609,7 @@ fun MyScreen(
 
 1.  修改`presentation-post`模块中`list`包下的`PostListScreen`文件中的`PostListScreen`方法，使其改用`submitAction`方法：
 
-    ```kt
+    ```java
     @Composable
     fun PostListScreen(
         viewModel: PostListViewModel,
@@ -639,7 +639,7 @@ fun MyScreen(
 
 1.  在同一方法中，订阅`singleEventFlow`，以便在接收到适当的事件时打开`PostScreen`和`UserScreen`：
 
-    ```kt
+    ```java
     @Composable
     fun PostListScreen(
         viewModel: PostListViewModel,
@@ -668,7 +668,7 @@ fun MyScreen(
 
 1.  在`presentation-post`模块的`single`包中，创建`PostUiAction`类及其子类：
 
-    ```kt
+    ```java
     sealed class PostUiAction : UiAction {
         data class Load(val postId: Long) : PostUiAction()
     }
@@ -676,7 +676,7 @@ fun MyScreen(
 
 1.  在同一包中，修改`PostViewModel`使其扩展`MviViewModel`：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostViewModel @Inject constructor(
         private val postUseCase: GetPostUseCase,
@@ -690,7 +690,7 @@ fun MyScreen(
 
 1.  在同一类中，实现`initState`和`handleAction`方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class PostViewModel @Inject constructor(
         …
@@ -724,7 +724,7 @@ fun MyScreen(
 
 1.  修改`presentation-post`模块中`single`包下的`PostScreen`文件中的`PostScreen`方法，使其改用`Load`操作：
 
-    ```kt
+    ```java
     @Composable
     fun PostScreen(
         viewModel: PostViewModel,
@@ -747,7 +747,7 @@ fun MyScreen(
 
 1.  在`presentation-user`模块的`single`包中，创建`UserUiAction`类及其子类：
 
-    ```kt
+    ```java
     sealed class UserUiAction : UiAction {
         data class Load(val userId: Long) : UserUiAction()
     }
@@ -755,7 +755,7 @@ fun MyScreen(
 
 1.  在同一包中，修改`UserViewModel`使其扩展`MviViewModel`类：
 
-    ```kt
+    ```java
     @HiltViewModel
     class UserViewModel @Inject constructor(
         private val userUseCase: GetUserUseCase,
@@ -769,7 +769,7 @@ fun MyScreen(
 
 1.  在同一类中，实现`initState`和`handleAction`方法：
 
-    ```kt
+    ```java
     @HiltViewModel
     class UserViewModel @Inject constructor(
         …
@@ -803,7 +803,7 @@ fun MyScreen(
 
 1.  修改`presentation-user`模块中`single`包下的`UserScreen`文件中的`UserScreen`方法，使其改用`Load`操作：
 
-    ```kt
+    ```java
     @Composable
     fun UserScreen(
         viewModel: UserViewModel,

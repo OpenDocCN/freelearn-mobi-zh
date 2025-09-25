@@ -36,7 +36,7 @@
 
 在这本书中，您将找到许多文本样式，用于区分不同类型的信息。以下是一些这些样式的示例及其含义的解释。文本中的代码单词、数据库表名、文件夹名、文件名、文件扩展名、路径名、虚拟 URL、用户输入和 Twitter 用户名如下所示：“例如，您可以将`www.google.com`视为一个网站的域名。”代码块设置如下：
 
-```kt
+```java
 <TextView
     android:text="Hello World!"
     android:layout_width="wrap_content"

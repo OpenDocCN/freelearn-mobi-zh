@@ -78,7 +78,7 @@
 
 看到一个像`BaseRequest.java`这样的类并不罕见，它会执行请求并依赖于`JsonMapper.java`这种形式的抽象来将数据从`String`转换为**普通 Java 对象**（**POJO**）。以下代码展示了如何实现获取数据的一个示例：
 
-```kt
+```java
 public class BaseRequest<O> {
     private final JsonMapper<O> mapper;
     protected BaseRequest(JsonMapper<O> mapper) {
@@ -116,7 +116,7 @@ public class BaseRequest<O> {
 
 `JsonMapper.java`接口可能看起来像这样：
 
-```kt
+```java
 interface JsonMapper<T> {
     T convert(JSONObject jsonObject) throws JSONException;
 }
@@ -126,7 +126,7 @@ interface JsonMapper<T> {
 
 泛型使用允许我们将这种逻辑应用于任何 POJO。在我们的案例中，POJO 应该看起来像`ConcreteData.java`：
 
-```kt
+```java
 public class ConcreteData {
     private final String field1;
     private final String field2;
@@ -147,7 +147,7 @@ public class ConcreteData {
 
 现在，我们需要创建一个具体的`JsonMapper.java`，它将负责将`JSONObject`转换为`ConcreteData`：
 
-```kt
+```java
 public class ConcreteMapper implements JsonMapper<ConcreteData> {
     @Override
     public ConcreteData convert(JSONObject jsonObject) {
@@ -161,7 +161,7 @@ public class ConcreteMapper implements JsonMapper<ConcreteData> {
 
 接下来，我们必须创建一个扩展`BaseRequest`并使用`ConcreteMapper`的`ConcreteRequest.java`：
 
-```kt
+```java
 public class ConcreteRequest extends BaseRequest<ConcreteData> {
     public ConcreteRequest() {
         super(new ConcreteMapper());
@@ -175,7 +175,7 @@ public class ConcreteRequest extends BaseRequest<ConcreteData> {
 
 现在，让我们看看我们的`MainActivity`的代码：
 
-```kt
+```java
 public class MainActivity extends Activity {
     private TextView textView;
     @Override
@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
 
 `LoadConcreteDataTask`必须是`MainActivity`的内部类：
 
-```kt
+```java
 public class MainActivity extends Activity {
     …
     private static class LoadConcreteDataTask extends 
@@ -368,7 +368,7 @@ SOLID 原则在**面向对象编程**（**OOP**）领域被广泛应用，以创
 
 初始时，Android 开发使用 Eclipse IDE 和 Ant 作为其构建系统。这为应用程序带来了一些限制。当时，如 flavors 这样的功能是不可用的。Android Studio 的发布，以及 Gradle 构建系统的引入，提供了新的机会和功能。这使我们能够编写额外的脚本，并轻松集成插件和工具，例如应用程序的性能监控、Google Play 服务、Firebase Crashlytics 等。这通常是通过`".gradle"`文件完成的。这些文件是用一种叫做 Groovy 的语言编写的。另一个添加的改进是使用`".gradle.kts"`扩展，其中我们可以使用 Kotlin 语言提供相同的配置。以下代码显示了模块的`build.gradle`文件看起来像什么：
 
-```kt
+```java
 plugins {
     id 'com.android.application'
 }
@@ -432,7 +432,7 @@ Room 的引入意味着开发者不再需要与 SQLite 框架进行交互，这�
 
 这允许开发者通过组合函数直接在 Kotlin 中构建 UI，而不需要使用 XML 文件。这减少了构建 UI 需要编写的代码量。提供了与其他 Android 架构组件库的兼容性，使得更容易集成到您的应用程序中。以下是一个 Compose 的示例：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -471,7 +471,7 @@ fun ExampleScreen() {
 
 `ConcreteData` 类将看起来像这样：
 
-```kt
+```java
 @JsonClass(generateAdapter = true)
 data class ConcreteData(
     @Json(name = "field1") val field1: String,
@@ -481,7 +481,7 @@ data class ConcreteData(
 
 `ConcreteData`类现在是一个 Kotlin 数据类，并使用 Moshi 库进行 JSON 转换。接下来，让我们看看当我们使用 Retrofit 等工具处理 HTTP 通信时，我们的 HTTP 请求将是什么样子：
 
-```kt
+```java
 interface ConcreteDataService {
 
     @GET("/path")
@@ -493,7 +493,7 @@ interface ConcreteDataService {
 
 现在，让我们定义一个负责在单独线程上调用此 HTTP 调用的存储库类：
 
-```kt
+```java
 class ConcreteDataRepository @Inject constructor(private val concreteDataService: ConcreteDataService) {
 
     fun getConcreteData(): Flow<ConcreteData> {
@@ -510,7 +510,7 @@ class ConcreteDataRepository @Inject constructor(private val concreteDataService
 
 现在，让我们创建一个`ViewModel`，它将依赖于存储库来加载适当的数据：
 
-```kt
+```java
 @HiltViewModel
 class MainViewModel @Inject constructor(private val concreteDataRepository: ConcreteDataRepository) :
     ViewModel() {
@@ -535,7 +535,7 @@ class MainViewModel @Inject constructor(private val concreteDataRepository: Conc
 
 现在，让我们创建`MainActivity`：
 
-```kt
+```java
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -570,7 +570,7 @@ fun MessageView(text: String) {
 
 由于我们使用 Hilt 进行依赖注入，因此我们需要在模块中定义我们的外部依赖项，如下所示：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 class ApplicationModule {
@@ -591,7 +591,7 @@ class ApplicationModule {
 
 接下来，我们需要提供 JSON 序列化：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 class ApplicationModule {
@@ -606,7 +606,7 @@ class ApplicationModule {
 
 接下来，我们需要提供一个 Retrofit 对象：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 class ApplicationModule {
@@ -630,7 +630,7 @@ Retrofit 对象需要一个基础 URL，它将作为我们后端服务的宿主�
 
 最后，我们需要提供之前定义的模板：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 class ApplicationModule {
@@ -647,7 +647,7 @@ class ApplicationModule {
 
 最后，我们需要在`Application`类中初始化 Hilt：
 
-```kt
+```java
 @HiltAndroidApp
 class MyApplication : Application()
 ```
@@ -694,7 +694,7 @@ Android 开发文档的建议是利用模块化。其中一个论点是它提高
 
 将我们之前的示例过渡到这种方法，我们会有如下内容。`ConcreteData` 类和 `ConcreteDataService` 将保持不变：
 
-```kt
+```java
 @JsonClass(generateAdapter = true)
 data class ConcreteData(
     @Json(name = "field1") val field1: String,
@@ -709,7 +709,7 @@ interface ConcreteDataService {
 
 现在，我们需要隔离 Retrofit 库并为它创建接口适配器。但要做到这一点，我们需要定义我们的实体：
 
-```kt
+```java
 data class ConcreteEntity(
     val field1: String,
     val field2: String
@@ -720,7 +720,7 @@ data class ConcreteEntity(
 
 为了隔离 Retrofit 调用，我们需要反转我们仓库的依赖。所以，让我们创建一个新的接口，它将返回 `ConcreteEntity`：
 
-```kt
+```java
 interface ConcreteDataSource {
 
     suspend fun getConcreteEntity(): ConcreteEntity
@@ -729,7 +729,7 @@ interface ConcreteDataSource {
 
 在我们的实现中，我们将调用 Retrofit 服务接口：
 
-```kt
+```java
 class ConcreteDataSourceImpl(private val concreteDataService: ConcreteDataService) :
     ConcreteDataSource {
 
@@ -747,7 +747,7 @@ class ConcreteDataSourceImpl(private val concreteDataService: ConcreteDataServic
 
 现在，我们的仓库将变成以下形式：
 
-```kt
+```java
 class ConcreteDataRepository @Inject constructor(private val concreteDataSource: ConcreteDataSource) {
 
     suspend fun getConcreteEntity(): ConcreteEntity {
@@ -759,7 +759,7 @@ class ConcreteDataRepository @Inject constructor(private val concreteDataSource:
 
 现在，我们需要构建用例来检索 `ConcreteEntity`：
 
-```kt
+```java
 class ConcreteDataUseCase @Inject constructor(private val concreteDataRepository: ConcreteDataRepository) {
 
     fun getConcreteEntity(): Flow<ConcreteEntity> {
@@ -776,7 +776,7 @@ class ConcreteDataUseCase @Inject constructor(private val concreteDataRepository
 
 现在，`MainViewModel` 需要被修改以调用用例。为此，它将使用 `ConcreteEntity` 中的 `field1` 对象：
 
-```kt
+```java
 @HiltViewModel
 class MainViewModel @Inject constructor(private val concreteDataUseCase: ConcreteDataUseCase) :
     ViewModel() {
@@ -799,7 +799,7 @@ class MainViewModel @Inject constructor(private val concreteDataUseCase: Concret
 
 `MainActivity` 将被更新以使用来自 `MainViewModel` 的 `textData` 对象：
 
-```kt
+```java
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -834,7 +834,7 @@ fun MessageView(text: String) {
 
 最后，Hilt 模块将被更新如下：
 
-```kt
+```java
 @Module
 @InstallIn(SingletonComponent::class)
 class ApplicationModule {

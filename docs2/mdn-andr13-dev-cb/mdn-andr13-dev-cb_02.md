@@ -48,19 +48,19 @@
 
 1.  创建一个名为`UIComponents.kt`的 Kotlin 文件；在`UIComponent`内部，继续创建一个可组合函数，命名为`EditTextExample()`，并调用`OutlinedTextField()`函数；这将提示你导入所需的导入，即`androidx.Compose.material.OutlinedTextField`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun EditTextExample() {
     ```
 
-    ```kt
+    ```java
         OutlinedTextField()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -76,141 +76,141 @@
 
 1.  我们还为我们的一些`OutlinedText`在聚焦和未聚焦时设置了边框颜色，以反映不同的状态。因此，如果你开始输入，框会变成蓝色，如代码中指定的：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun EditTextExample() {
     ```
 
-    ```kt
+    ```java
         OutlinedTextField(
     ```
 
-    ```kt
+    ```java
             value = "",
     ```
 
-    ```kt
+    ```java
             onValueChange = {},
     ```
 
-    ```kt
+    ```java
             label = { Text(stringResource(id =
     ```
 
-    ```kt
+    ```java
             R.string.sample)) },
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .padding(top = 16.dp),
     ```
 
-    ```kt
+    ```java
             colors =
     ```
 
-    ```kt
+    ```java
                 TextFieldDefaults.outlinedTextFieldColors(
     ```
 
-    ```kt
+    ```java
                     focusedBorderColor = Color.Blue,
     ```
 
-    ```kt
+    ```java
                     unfocusedBorderColor = Color.Black
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们还有一种类型的`TextField`，它不是轮廓式的，如果你比较`OutlinedTextField`接受的输入，你会注意到它们相当相似：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun NotOutlinedEditTextExample() {
     ```
 
-    ```kt
+    ```java
         TextField(
     ```
 
-    ```kt
+    ```java
             value = "",
     ```
 
-    ```kt
+    ```java
             onValueChange = {},
     ```
 
-    ```kt
+    ```java
             label = { Text(stringResource(id =
     ```
 
-    ```kt
+    ```java
             R.string.sample)) },
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .padding(top = 8.dp, bottom = 16.dp),
     ```
 
-    ```kt
+    ```java
             colors =
     ```
 
-    ```kt
+    ```java
                 TextFieldDefaults.outlinedTextFieldColors(
     ```
 
-    ```kt
+    ```java
                     focusedBorderColor = Color.Blue,
     ```
 
-    ```kt
+    ```java
                     unfocusedBorderColor = Color.Black
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -232,173 +232,173 @@
 
 1.  在其中，你需要导入一个带有 `painterResource` 输入的 `Icon()`，一个内容描述，`Modifier` 和 `tint`。我们还需要 `Text()`，这将给我们的按钮一个名字。在我们的例子中，我们不会使用 `tint`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun ButtonWithIcon() {
     ```
 
-    ```kt
+    ```java
         Button(onClick = {}) {
     ```
 
-    ```kt
+    ```java
             Icon(
     ```
 
-    ```kt
+    ```java
                 painterResource(id =
     ```
 
-    ```kt
+    ```java
                     R.drawable.ic_baseline_shopping_bag_24                ),
     ```
 
-    ```kt
+    ```java
                 contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                     id = R.string.shop),
     ```
 
-    ```kt
+    ```java
                 modifier = Modifier.size(20.dp)
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
             Text(text = stringResource(id = R.string.buy),
     ```
 
-    ```kt
+    ```java
                 Modifier.padding(start = 10.dp))
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  让我们继续创建一个新的组合函数，并将其命名为 `CornerCutShapeButton()`；在这个例子中，我们将尝试创建一个带有切角的按钮：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CornerCutShapeButton() {
     ```
 
-    ```kt
+    ```java
         Button(onClick = {}, shape = CutCornerShape(10)) {
     ```
 
-    ```kt
+    ```java
             Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                 id = R.string.cornerButton))  }}}}
     ```
 
 1.  让我们继续创建一个新的组合函数，并将其命名为 `RoundCornerShapeButton()`；在这个例子中，我们将尝试创建一个带有圆角的按钮：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun RoundCornerShapeButton() {
     ```
 
-    ```kt
+    ```java
         Button(onClick = {}, shape =
     ```
 
-    ```kt
+    ```java
         RoundedCornerShape(10.dp)) {
     ```
 
-    ```kt
+    ```java
             Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                 id = R.string.rounded))
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  让我们继续创建一个新的组合函数，并将其命名为 `ElevatedButtonExample()`；在这个例子中，我们将尝试创建一个带有凸起的按钮：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun ElevatedButtonExample() {
     ```
 
-    ```kt
+    ```java
         Button(
     ```
 
-    ```kt
+    ```java
             onClick = {},
     ```
 
-    ```kt
+    ```java
             elevation = ButtonDefaults.elevation(
     ```
 
-    ```kt
+    ```java
                 defaultElevation = 8.dp,
     ```
 
-    ```kt
+    ```java
                 pressedElevation = 10.dp,
     ```
 
-    ```kt
+    ```java
                 disabledElevation = 0.dp
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
             Text(text = stringResource(
     ```
 
-    ```kt
+    ```java
                 id = R.string.elevated))
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -416,39 +416,39 @@
 
 1.  在我们的例子中，`Image()` 将只有一个画家，它不是可空的，这意味着你需要为这个组合函数提供一个图像，一个用于辅助功能的文本描述和一个修改器：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun ImageViewExample() {
     ```
 
-    ```kt
+    ```java
         Image(
     ```
 
-    ```kt
+    ```java
             painterResource(id = R.drawable.android),
     ```
 
-    ```kt
+    ```java
             contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                 id = R.string.image),
     ```
 
-    ```kt
+    ```java
             modifier = Modifier.size(200.dp)
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -468,7 +468,7 @@
 
 我们可以通过添加`@Preview`注解并设置`showBackground = true`来预览我们构建的 UI 元素：
 
-```kt
+```java
 @Preview(showBackground = true)
 ```
 
@@ -494,239 +494,239 @@
 
 1.  让我们为我们的`City`数据类建模。确保您在添加注解值后添加必要的导入：
 
-    ```kt
+    ```java
     data class City(
     ```
 
-    ```kt
+    ```java
         val id: Int,
     ```
 
-    ```kt
+    ```java
         @StringRes val nameResourceId: Int,
     ```
 
-    ```kt
+    ```java
         @DrawableRes val imageResourceId: Int
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  现在，在我们的模拟数据中，我们需要创建一个 Kotlin 类，并将其命名为`CityDataSource`。在这个类中，我们将创建一个名为`loadCities()`的函数，它将返回我们的`List<City>`列表，我们将在可滚动列表中显示它。请查看*技术要求*部分，以获取所有必需的导入以获取所有代码和图像：
 
-    ```kt
+    ```java
     class CityDataSource {
     ```
 
-    ```kt
+    ```java
         fun loadCities(): List<City> {
     ```
 
-    ```kt
+    ```java
             return listOf<City>(
     ```
 
-    ```kt
+    ```java
                 City(1, R.string.spain, R.drawable.spain),
     ```
 
-    ```kt
+    ```java
                 City(2, R.string.new_york,
     ```
 
-    ```kt
+    ```java
                     R.drawable.newyork),
     ```
 
-    ```kt
+    ```java
                 City(3, R.string.tokyo, R.drawable.tokyo),
     ```
 
-    ```kt
+    ```java
                 City(4, R.string.switzerland,
     ```
 
-    ```kt
+    ```java
                     R.drawable.switzerland),
     ```
 
-    ```kt
+    ```java
                 City(5, R.string.singapore,
     ```
 
-    ```kt
+    ```java
                     R.drawable.singapore),
     ```
 
-    ```kt
+    ```java
                 City(6, R.string.paris, R.drawable.paris),
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，我们已经有了我们的模拟数据，是时候将其显示在我们的可滚动列表上了。让我们在我们的`components`包中创建一个新的 Kotlin 文件，并将其命名为`CityComponents`。在`CityComponents`中，我们将创建一个名为`@Preview`的函数：
 
-    ```kt
+    ```java
     @Preview(showBackground = true)
     ```
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     private fun CityCardPreview() {
     ```
 
-    ```kt
+    ```java
         CityApp()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在我们的`@Preview`函数内部，我们还有一个组合函数`CityApp()`；在这个函数内部，我们将调用我们的`CityList`组合函数，该函数有一个列表作为参数。此外，在这个组合函数中，我们将调用`LazyColumn`，`items`将是`CityCard(cities)`。请参阅*如何工作*部分以获取关于`LazyColumn`和`items`的进一步解释：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CityList(cityList: List<City>) {
     ```
 
-    ```kt
+    ```java
         LazyColumn {
     ```
 
-    ```kt
+    ```java
             items(cityList) { cities ->
     ```
 
-    ```kt
+    ```java
                 CityCard(cities)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，让我们构建我们的`CityCard(city)`组合函数：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CityCard(city: City) {
     ```
 
-    ```kt
+    ```java
         Card(modifier = Modifier.padding(10.dp),
     ```
 
-    ```kt
+    ```java
         elevation = 4.dp) {
     ```
 
-    ```kt
+    ```java
             Column {
     ```
 
-    ```kt
+    ```java
                 Image(
     ```
 
-    ```kt
+    ```java
                     painter = painterResource(
     ```
 
-    ```kt
+    ```java
                         city.imageResourceId),
     ```
 
-    ```kt
+    ```java
                     contentDescription = stringResource(
     ```
 
-    ```kt
+    ```java
                         city.nameResourceId),
     ```
 
-    ```kt
+    ```java
                     modifier = Modifier
     ```
 
-    ```kt
+    ```java
                         .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                         .height(154.dp),
     ```
 
-    ```kt
+    ```java
                     contentScale = ContentScale.Crop
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
                 Text(
     ```
 
-    ```kt
+    ```java
                     text = LocalContext.current.getString(
     ```
 
-    ```kt
+    ```java
                         city.nameResourceId),
     ```
 
-    ```kt
+    ```java
                     modifier = Modifier.padding(16.dp),
     ```
 
-    ```kt
+    ```java
                     style = MaterialTheme.typography.h5
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -748,7 +748,7 @@
 
 我们还创建了一个组合函数`CityCard`，其中我们导入了来自 Compose 的`Card()`元素。卡片包含关于单个对象的内容和操作；在我们的例子中，例如，我们的卡片有一个图像和城市的名称。Compose 中的`Card()`元素在其参数中有以下输入：
 
-```kt
+```java
 @Composable
 fun Card(
     modifier: Modifier = Modifier,
@@ -781,15 +781,15 @@ fun Card(
 
 1.  将以下分页器依赖项添加到 `build.gradle(Module:app)`：
 
-    ```kt
+    ```java
     implementation "com.google.accompanist:accompanist-pager:0.x.x"
     ```
 
-    ```kt
+    ```java
     implementation "com.google.accompanist:accompanist-pager-indicators:0.x.x"
     ```
 
-    ```kt
+    ```java
     implementation 'androidx.Compose.material:material:1.x.x'
     ```
 
@@ -797,227 +797,227 @@ Jetpack Compose 提供了 **Accompanist**，这是一组旨在通过开发者常
 
 1.  在之前菜谱的相同项目中，让我们创建一个包并命名为 `pagerexample`；在其内部，创建一个 Kotlin 文件并命名为 `CityTabExample`；在这个文件中，创建一个可组合函数并命名为 `CityTabCarousel`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CityTabCarousel(){}
     ```
 
 1.  现在，让我们继续构建我们的 `CityTabCarousel`；在我们的例子中，我们将创建一个包含来自先前项目的城市的模拟页面列表：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CityTabCarousel(
     ```
 
-    ```kt
+    ```java
         pages: MutableList<String> = arrayListOf(
     ```
 
-    ```kt
+    ```java
             "Spain",
     ```
 
-    ```kt
+    ```java
             "New York",
     ```
 
-    ```kt
+    ```java
             "Tokyo",
     ```
 
-    ```kt
+    ```java
             "Switzerland",
     ```
 
-    ```kt
+    ```java
             "Singapore",
     ```
 
-    ```kt
+    ```java
             "Paris" )) {. . .}
     ```
 
 1.  我们需要根据状态改变按钮的颜色，为此，我们需要使用 `LocalContext`，它提供了我们可以使用的上下文。我们还需要创建一个 `var pagerState = rememberPagerState()`，这将记住我们的分页器状态，最后，当点击时，我们需要将分页器移动到下一个城市，这将非常有帮助。因此，继续向 `CityTabCarousel` 可组合函数中添加以下内容：
 
-    ```kt
+    ```java
     val context = LocalContext.current
     ```
 
-    ```kt
+    ```java
     var pagerState = rememberPagerState()
     ```
 
-    ```kt
+    ```java
     val coroutineScope = rememberCoroutineScope()
     ```
 
 1.  现在，让我们创建 `Column` 元素并添加我们的 `ScrollableTabRow()` 可组合函数：
 
-    ```kt
+    ```java
     Column {
     ```
 
-    ```kt
+    ```java
         ScrollableTabRow(
     ```
 
-    ```kt
+    ```java
             selectedTabIndex = pagerState.currentPage,
     ```
 
-    ```kt
+    ```java
             indicator = { tabPositions ->
     ```
 
-    ```kt
+    ```java
                 TabRowDefaults.Indicator(...)
     ```
 
-    ```kt
+    ```java
             },
     ```
 
-    ```kt
+    ```java
             edgePadding = 0.dp,
     ```
 
-    ```kt
+    ```java
             backgroundColor = Color(
     ```
 
-    ```kt
+    ```java
                 context.resources.getColor(R.color.white,
     ```
 
-    ```kt
+    ```java
                     null)),
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
             pages.forEachIndexed { index, title ->
     ```
 
-    ```kt
+    ```java
                 val isSelected =
     ```
 
-    ```kt
+    ```java
                     pagerState.currentPage == index
     ```
 
-    ```kt
+    ```java
                 TabHeader(
     ```
 
-    ```kt
+    ```java
                     title,
     ```
 
-    ```kt
+    ```java
                     isSelected,
     ```
 
-    ```kt
+    ```java
                     onClick = { coroutineScope.launch {
     ```
 
-    ```kt
+    ```java
                     pagerState.animateScrollToPage(index)
     ```
 
-    ```kt
+    ```java
                     } },
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
 1.  为 `HorizontalPager` 添加 `Text()` 和 `TabHeader()`：
 
-    ```kt
+    ```java
         HorizontalPager(
     ```
 
-    ```kt
+    ```java
             count = pages.size,
     ```
 
-    ```kt
+    ```java
             state = pagerState,
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxWidth()
     ```
 
-    ```kt
+    ```java
                 .fillMaxHeight()
     ```
 
-    ```kt
+    ```java
                 .background(Color.White)
     ```
 
-    ```kt
+    ```java
         ) { page ->
     ```
 
-    ```kt
+    ```java
             Text(
     ```
 
-    ```kt
+    ```java
                 text = "Display City Name:
     ```
 
-    ```kt
+    ```java
                     ${pages[page]}",
     ```
 
-    ```kt
+    ```java
                 modifier = Modifier.fillMaxWidth(),
     ```
 
-    ```kt
+    ```java
                 style = TextStyle(
     ```
 
-    ```kt
+    ```java
                     textAlign = TextAlign.Center
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
@@ -1039,7 +1039,7 @@ Accompanist 包含一些重要的库 – 例如，系统 UI 控制器、AppCompa
 
 你也会注意到我们的 `MutableList<String>` 在每个位置都有索引，我们这样做是为了检查哪个被选中了。正是在这个 Lambda 中，我们调用 `TabHeader` 并展示选中的标签页。`forEachIndexed` 对每个元素执行给定的操作，并提供元素的顺序索引。我们还确保当用户点击特定的标签时，我们处于正确的页面：
 
-```kt
+```java
 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } }
 ```
 
@@ -1073,95 +1073,95 @@ Android 中的动画是将运动效果添加到视图的过程。这可以通过
 
 1.  在 Kotlin 文件中，继续创建一个新的可组合函数，`CollapsingTool``BarExample()`：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CollapsingToolbarExample() {...}
     ```
 
 1.  我们将需要的所有可组合函数都将放在一个框中；你可以参考之前的食谱来刷新你的记忆。我们还需要定义我们将开始折叠视图的高度，这可以基于个人喜好；在我们的例子中，我们可以将`height`设置为`260.dp`：
 
-    ```kt
+    ```java
     private val height = 260.dp
     ```
 
-    ```kt
+    ```java
     private val titleToolbar = 50.dp
     ```
 
 1.  让我们继续添加更多的可组合函数，并使用虚拟文本数据来显示，一旦我们滚动内容。我们可以假设这个应用程序用于阅读我们显示的城市的信息：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CollapsingToolbarExample() {
     ```
 
-    ```kt
+    ```java
         val scrollState: ScrollState =
     ```
 
-    ```kt
+    ```java
             rememberScrollState(0)
     ```
 
-    ```kt
+    ```java
         val headerHeight = with(LocalDensity.current) {
     ```
 
-    ```kt
+    ```java
             height.toPx() }
     ```
 
-    ```kt
+    ```java
         val toolbarHeight = with(LocalDensity.current) {
     ```
 
-    ```kt
+    ```java
             titleToolbar.toPx() }
     ```
 
-    ```kt
+    ```java
         Box(
     ```
 
-    ```kt
+    ```java
             modifier = Modifier.fillMaxSize()
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
             CollapsingHeader(scrollState, headerHeight)
     ```
 
-    ```kt
+    ```java
             FactsAboutNewYork(scrollState)
     ```
 
-    ```kt
+    ```java
             OurToolBar(scrollState, headerHeight,
     ```
 
-    ```kt
+    ```java
                 toolbarHeight)
     ```
 
-    ```kt
+    ```java
             City()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1169,77 +1169,77 @@ Android 中的动画是将运动效果添加到视图的过程。这可以通过
 
 1.  我们还确保添加了一个`Brush()`并设置了所需的颜色，并指定了它应该开始的位置：
 
-    ```kt
+    ```java
     Box(
     ```
 
-    ```kt
+    ```java
         Modifier
     ```
 
-    ```kt
+    ```java
             .fillMaxSize()
     ```
 
-    ```kt
+    ```java
             .background(
     ```
 
-    ```kt
+    ```java
                 brush = Brush.verticalGradient(
     ```
 
-    ```kt
+    ```java
                     colors = listOf(Color.Transparent,
     ```
 
-    ```kt
+    ```java
                     Color(0xFF6D38CA)),
     ```
 
-    ```kt
+    ```java
                     startY = 1 * headerHeight / 5
     ```
 
-    ```kt
+    ```java
                 )
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
 1.  `FactsAboutNewYork`不是一个复杂的可组合函数，只是虚拟文本；然后，最后，在`ToolBar`中，我们利用`AnimatedVisibility`并声明我们的`enter`和`exit`过渡：
 
-    ```kt
+    ```java
     AnimatedVisibility(
     ```
 
-    ```kt
+    ```java
         visible = showToolbar,
     ```
 
-    ```kt
+    ```java
         enter = fadeIn(animationSpec = tween(200)),
     ```
 
-    ```kt
+    ```java
         exit = fadeOut(animationSpec = tween(200))
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
@@ -1300,39 +1300,39 @@ Android 中的动画是将运动效果添加到视图的过程。这可以通过
 
 1.  默认情况下，当我们添加一个 `Image` 函数时，你可能会注意到它有两个参数，一个是用于图像的绘制器，另一个是用于视觉描述元素的文本描述：
 
-    ```kt
+    ```java
     Image(painter = , contentDescription = )
     ```
 
 1.  当你将内容描述设置为 `null` 时，你向 Android 框架表明此元素没有关联的动作或状态。所以，让我们继续更新我们所有的内容描述：
 
-    ```kt
+    ```java
     Image(
     ```
 
-    ```kt
+    ```java
         modifier = modifier
     ```
 
-    ```kt
+    ```java
         painter = painterResource(city.imageResourceId),
     ```
 
-    ```kt
+    ```java
         contentDescription =
     ```
 
-    ```kt
+    ```java
             stringResource(R.string.city_images))
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  确保将字符串添加到 `string` `res` 文件夹：
 
-    ```kt
+    ```java
     <string name="city_images">City Images</string>
     ```
 
@@ -1340,23 +1340,23 @@ Android 中的动画是将运动效果添加到视图的过程。这可以通过
 
 1.  在 Compose 中，你可以通过在修饰符中指定并使用语义来显示这是一个标题，轻松地指示一个文本是否是标题。让我们在我们的装饰文本中添加这个：
 
-    ```kt
+    ```java
     ...
     ```
 
-    ```kt
+    ```java
     modifier = Modifier
     ```
 
-    ```kt
+    ```java
         .padding(18.dp)
     ```
 
-    ```kt
+    ```java
         .semantics { heading() }
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
@@ -1370,7 +1370,7 @@ Jetpack Compose 是考虑到无障碍性构建的；也就是说，如 `RadioBut
 
 例如，`Switch` 的 `onCheckChanged` 参数被设置为非空值，包括至少 `48dp` 的宽度和高度；我们将有 `CheckableSwitch()` 和 `NonCheckableSwitch()`：
 
-```kt
+```java
 @Composable
 fun CheckableSwitch(){
     var checked by remember { mutableStateOf(false) }
@@ -1405,27 +1405,27 @@ fun NonCheckableSwitch(){
 
 1.  现在，让我们继续定义我们的可组合函数。由于在我们的例子中，我们想在圆中显示一个跟踪器，我们需要浮动以填充我们的圆。我们还将定义颜色，以帮助我们识别进度：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun CircleProgressIndicatorExample(tracker: Float, progress: Float) {
     ```
 
-    ```kt
+    ```java
         val circleColors = listOf(
     ```
 
-    ```kt
+    ```java
             colorResource(id = R.color.purple_700),
     ```
 
-    ```kt
+    ```java
             colorResource(id = R.color.teal_200)
     ```
 
-    ```kt
+    ```java
         )
     ```
 
@@ -1433,7 +1433,7 @@ fun NonCheckableSwitch(){
 
 零代表 3 点钟方向，你也可以调整你的起始角度来观察`-90`是如何转换的。`useCenter`布尔值表示是否将弧线闭合到边界中心。因此，在我们的例子中，我们将它设置为`false`。然后，最后，我们设置`style`，这可以根据我们的喜好设置为任何内容：
 
-```kt
+```java
 Canvas(
     modifier = Modifier
         .size(200.dp)
@@ -1455,69 +1455,69 @@ colorResource(id = R.color.teal_200)
 
 1.  我们刚刚画出了圆的第一部分；现在，我们需要用`Brush`绘制进度，它使用`linearGradient`：
 
-    ```kt
+    ```java
     drawArc(
     ```
 
-    ```kt
+    ```java
         brush = Brush.linearGradient(colors =
     ```
 
-    ```kt
+    ```java
             circleColors),
     ```
 
-    ```kt
+    ```java
         startAngle = -90f,
     ```
 
-    ```kt
+    ```java
         sweepAngle = progress(tracker, progress),
     ```
 
-    ```kt
+    ```java
         useCenter = false,
     ```
 
-    ```kt
+    ```java
         style = Stroke(width = 55f, cap =
     ```
 
-    ```kt
+    ```java
             StrokeCap.Round),
     ```
 
-    ```kt
+    ```java
         size = Size(size.width, size.height)
     ```
 
-    ```kt
+    ```java
     ) . . .
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 
 1.  最后，我们的`progress`函数告诉`sweepAngle`我们的进度应该基于我们的跟踪能力：
 
-    ```kt
+    ```java
     private fun progress(tracker: Float, progress: Float): Float {
     ```
 
-    ```kt
+    ```java
         val totalProgress = (progress * 100) / tracker
     ```
 
-    ```kt
+    ```java
         return ((360 * totalProgress) / 100)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     . . .
     ```
 

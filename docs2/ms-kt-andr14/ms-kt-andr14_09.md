@@ -28,19 +28,19 @@ Jetpack 导航库提供了一个易于处理 **复杂导航** 的 API，同时�
 
 首先，我们需要将 Jetpack 导航 Compose 依赖项添加到我们的项目中。让我们在 `libs.versions.toml` 文件的 `versions` 部分中添加以下库：
 
-```kt
+```java
 compose-navigation = "androidx.navigation:navigation-compose:2.7.2"
 ```
 
 接下来，我们需要将依赖项添加到我们的应用程序模块的 `build.gradle.kts` 文件中：
 
-```kt
+```java
 implementation(libs.compose.navigation)
 ```
 
 执行 Gradle 同步以将库添加到我们的项目中。下一步是创建 `NavController` 和 `NavHost`。`NavController` 是一个管理 `NavHost` 内应用程序导航的类。`NavHost` 是一个容器，它托管可组合元素并处理它们之间的导航。让我们创建一个名为 `navigation` 的新包，并创建一个名为 `Screens.kt` 的新密封类。在文件内部，让我们添加以下代码：
 
-```kt
+```java
 sealed class Screens(val route: String) {
     object PetsScreen : Screens("pets")
     object PetDetailsScreen : Screens("petDetails")
@@ -51,7 +51,7 @@ sealed class Screens(val route: String) {
 
 接下来，让我们在`navigation`包内部创建一个名为`AppNavigation.kt`的新文件。在文件内部，让我们添加以下代码：
 
-```kt
+```java
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -80,7 +80,7 @@ fun AppNavigation() {
 
 如前一个截图所示，`PetsScreen`可组合组件被红色突出显示，因为我们还没有创建这个可组合组件。我们将对我们的代码进行一些重构。让我们创建一个名为`PetsScreen.kt`的新文件。在文件内部，让我们添加以下代码：
 
-```kt
+```java
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetsScreen(onPetClicked: (Cat) -> Unit) {
@@ -111,7 +111,7 @@ fun PetsScreen(onPetClicked: (Cat) -> Unit) {
 
 这样，我们的导航图就准备好了。我们现在可以将`AppNavigation`可组合组件添加到我们的`MainActivity.kt`文件中。让我们用以下代码替换`ChapterSevenTheme`块内的所有代码：
 
-```kt
+```java
 ChapterSevenTheme {
     AppNavigation()
 }
@@ -129,7 +129,7 @@ ChapterSevenTheme {
 
 在本节中，我们将学习如何在我们点击列表中的宠物项目时导航到详细信息屏幕。首先，我们需要为`PetDetailsScreen`创建一个新的可组合组件。让我们创建一个名为`PetDetailsScreen.kt`的新文件，并按照以下方式创建`PetDetailsScreenContent`可组合组件：
 
-```kt
+```java
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PetDetailsScreenContent(modifier: Modifier) {
@@ -169,7 +169,7 @@ fun PetDetailsScreenContent(modifier: Modifier) {
 
 在这里，我们创建了一个以 `Column` 作为根元素的组合器。在 `Column` 元素内部，我们添加了一个 `AsyncImage` 组合器来显示猫的图片。我们还添加了一个 `FlowRow` 组合器，当空间不足时将项目流动到下一行，这是无法通过行实现的。`FlowRow` 显示了两个 `SuggestionChip` 组合器。我们将使用此组合器来显示宠物的详细信息。注意，我们现在正在使用硬编码的猫 ID 和标签。我们将在下一节中从 `PetList` 组合器传递这些数据。接下来，让我们创建 `PetDetailsScreen` 组合器，如下所示：
 
-```kt
+```java
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PetDetailsScreen(onBackPressed: () -> Unit) {
@@ -209,7 +209,7 @@ fun PetDetailsScreen(onBackPressed: () -> Unit) {
 
 我们的下一步是将 `PetDetailsScreen` 组合器添加到我们的 `AppNavigation.kt` 文件中。让我们在 `PetsScreen` 组合器下方添加以下代码到我们的 `NavHost` 中：
 
-```kt
+```java
 composable(Screens.PetDetailsScreen.route){
     PetDetailsScreen(
         onBackPressed = {
@@ -223,7 +223,7 @@ composable(Screens.PetDetailsScreen.route){
 
 现在，当我们在列表中点击宠物项时，我们需要实际导航到 `PetDetailsScreen`。让我们转到 `PetListItem` 组合器。我们将在 `PetListItem` 组合器中添加一个新的 `onPetClicked` 回调。修改后的组合器应如下所示：
 
-```kt
+```java
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PetListItem(cat: Cat, onPetClicked: (Cat) -> Unit) {
@@ -270,7 +270,7 @@ fun PetListItem(cat: Cat, onPetClicked: (Cat) -> Unit) {
 
 在前面的代码中，我们在组合器中添加了一个新的 `onPetClicked` 回调。我们向 `Column` 添加了 `clickable` 修饰符，并在修饰符内部调用了 `onPetClicked` 回调。我们将 `cat` 对象传递给回调。接下来，我们需要将 `onPetClicked` 回调添加到 `PetList` 组合器中，如下所示：
 
-```kt
+```java
 @Composable
 fun PetList(modifier: Modifier, onPetClicked: (Cat) -> Unit) {
     // other code
@@ -279,7 +279,7 @@ fun PetList(modifier: Modifier, onPetClicked: (Cat) -> Unit) {
 
 接下来，我们需要将此回调传递到我们使用 `PetListItem` 组合器的地方。在 items 块内部调用点的修改后的 `PetListItem` 组合器应如下所示：
 
-```kt
+```java
 PetListItem(
     cat = pet,
     onPetClicked = onPetClicked
@@ -288,7 +288,7 @@ PetListItem(
 
 最后，我们需要修改 `AppNavigation` 组合器，以便将 `onPetClicked` 回调传递给 `PetsScreen` 组合器。修改后的 `AppNavigation` 组合器应如下所示：
 
-```kt
+```java
 PetsScreen(
     onPetClicked = {
         navController.navigate(Screens.PetDetailsScreen.route)
@@ -314,7 +314,7 @@ PetsScreen(
 
 1.  让我们转到 **PetDetailsScreenContent** 可组合组件，位于 `PetDetailsScreen.kt` 文件中，并按以下方式修改它：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
     fun PetDetailsScreenContent(modifier: Modifier, cat: Cat) {
@@ -356,7 +356,7 @@ PetsScreen(
 
 1.  接下来，让我们转到 `PetDetailsScreen` 可组合组件，并按以下方式修改它：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun PetDetailsScreen(onBackPressed: () -> Unit, cat: Cat) {
@@ -397,7 +397,7 @@ PetsScreen(
 
 1.  接下来，让我们转到 **AppNavigation** 可组合组件，并添加将 **cat** 对象传递给 `PetDetailsScreen` 的逻辑。我们需要首先修改 `PetDetailsScreen` 的可组合组件，如下所示：
 
-    ```kt
+    ```java
     composable(
         route = "${Screens.PetDetailsScreen.route}/{cat}",
         arguments = listOf(
@@ -425,7 +425,7 @@ PetsScreen(
 
 1.  最后，我们需要修改 **AppNavigation** 可组合组件中的 **onPetClicked** 回调，如下所示：
 
-    ```kt
+    ```java
     composable(Screens.PetsScreen.route) {
         PetsScreen(
             onPetClicked = { cat ->
@@ -463,7 +463,7 @@ PetsScreen(
 
 1.  我们将首先创建一个名为**NavigationType**的**密封接口**，它代表我们将在应用中使用的不同类型的导航。让我们在**navigation**包内创建一个名为**NavigationType.kt**的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     sealed interface NavigationType {
         object BottomNavigation : NavigationType
         object NavigationDrawer : NavigationType
@@ -475,7 +475,7 @@ PetsScreen(
 
 1.  接下来，让我们创建另一个名为**ContentType**的密封接口。此接口将用于根据屏幕大小更改内容显示类型。让我们在**navigation**包内创建一个名为**ContentType.kt**的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     sealed interface ContentType {
         object List : ContentType
         object ListAndDetail : ContentType
@@ -486,7 +486,7 @@ PetsScreen(
 
 1.  接下来，在我们的 **Screens.kt** 文件中，我们必须添加一个名为 **FavoritesScreen** 的新目的地屏幕。文件的最终代码应如下所示：
 
-    ```kt
+    ```java
     sealed class Screens(val route: String) {
         object PetsScreen : Screens("pets")
         object PetDetailsScreen : Screens("petDetails")
@@ -498,14 +498,14 @@ PetsScreen(
 
 1.  接下来，让我们将 **WindowSize** 依赖项添加到 **libs.versions.toml** 文件中的库部分：
 
-    ```kt
+    ```java
     compose-window-size = "androidx.compose.material3:material3-window-size-class:1.2.0-alpha07"
     androidx-window = "androidx.window:window:1.1.0"
     ```
 
 1.  我们还需要将依赖项添加到我们的应用模块的 **build.gradle.kts** 文件中：
 
-    ```kt
+    ```java
     implementation(libs.compose.window.size)
     implementation(libs.androidx.window)
     ```
@@ -514,7 +514,7 @@ PetsScreen(
 
 1.  接下来，我们需要创建 **NavigationRail**、**NavigationDrawer** 和 **BottomNavigation** 的可组合组件。在 **view** 包内创建一个名为 **PetsNavigationRail.kt** 的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun PetsNavigationRail(
         onFavoriteClicked: () -> Unit,
@@ -571,7 +571,7 @@ PetsScreen(
 
 1.  接下来，让我们创建一个名为 **PetsBottomNavigationBar** 的可组合组件。在 **view** 包内创建一个名为 **PetsBottomNavigationBar.kt** 的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun PetsBottomNavigationBar(
         onFavoriteClicked: () -> Unit,
@@ -618,7 +618,7 @@ PetsScreen(
 
 1.  接下来，让我们创建一个名为 **PetsNavigationDrawer** 的可组合组件。在 **view** 包内创建一个名为 **PetsNavigationDrawer.kt** 的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun PetsNavigationDrawer(
         onFavoriteClicked: () -> Unit,
@@ -691,7 +691,7 @@ PetsScreen(
 
 1.  由于我们的`PetsNavigationDrawer`、`PetsNavigationRail`和`PetsBottomNavigationBar`可组合组件都有`FavoritesScreen`，让我们在视图包中创建一个名为`FavoritePetsScreen.kt`的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun FavoritePetsScreen() {
         Column(
@@ -707,7 +707,7 @@ PetsScreen(
 
     这是一个简单的可组合组件，显示文本`"Favorite Pets"`。我们将使用这个可组合组件作为`FavoritesScreen`的内容。我们还需要重构我们的`AppNavigation()`可组合组件，使其准备好处理不同的导航和内容类型。最终修改后的可组合组件应该看起来像这样：
 
-    ```kt
+    ```java
     @Composable
     fun AppNavigation(
         contentType: ContentType,
@@ -759,7 +759,7 @@ PetsScreen(
 
 1.  让我们看看新的更新`PetsScreen`可组合组件的样子。让我们转到`PetsScreen.kt`文件，并按如下方式修改可组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun PetsScreen(
         onPetClicked: (Cat) -> Unit,
@@ -781,7 +781,7 @@ PetsScreen(
 
 1.  接下来，创建一个名为`PetsScreenContent.kt`的新文件，并添加以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun PetsScreenContent(
         modifier: Modifier,
@@ -829,7 +829,7 @@ PetsScreen(
 
     +   `PetList`可组合组件应该看起来像这样：
 
-        ```kt
+        ```java
         @Composable
         fun PetList(
             onPetClicked: (Cat) -> Unit,
@@ -853,7 +853,7 @@ PetsScreen(
 
     +   让我们在视图包中创建一个名为`PetListAndDetails.kt`的新文件，并添加以下代码：
 
-        ```kt
+        ```java
         @Composable
         fun PetListAndDetails(pets: List<Cat>) {
             var currentPet by remember {
@@ -890,7 +890,7 @@ PetsScreen(
 
     +   让我们在 **navigation** 包内创建一个名为 **AppNavigationContent.kt** 的新文件，并添加以下代码：
 
-        ```kt
+        ```java
         @Composable
         fun AppNavigationContent(
             contentType: ContentType,
@@ -951,7 +951,7 @@ PetsScreen(
 
         1.  首先，我们需要观察设备的折叠状态。这将使我们能够更改内容类型和导航类型。让我们在 **navigation** 包内创建一个名为 **DeviceFoldPosture.kt** 的新文件，并添加以下代码：
 
-        ```kt
+        ```java
         sealed interface DeviceFoldPosture {
             data class BookPosture(val hingePosition: Rect) : DeviceFoldPosture
             data class SeparatingPosture(
@@ -977,7 +977,7 @@ PetsScreen(
 
         1.  让我们转到 **MainActivity.kt** 文件，并在 **setContent** 块之前添加以下代码：
 
-        ```kt
+        ```java
         val deviceFoldingPostureFlow = WindowInfoTracker.getOrCreate(this).windowLayoutInfo(this)
             .flowWithLifecycle(this.lifecycle)
             .map { layoutInfo ->
@@ -1007,7 +1007,7 @@ PetsScreen(
 
         1.  接下来，在我们的**setcontent**块内部，我们需要在主题块之前添加变量：
 
-        ```kt
+        ```java
         val devicePosture = deviceFoldingPostureFlow.collectAsStateWithLifecycle().value
         val windowSizeClass = calculateWindowSizeClass(activity = this)
         val scope = rememberCoroutineScope()
@@ -1019,7 +1019,7 @@ PetsScreen(
 
         1.  在我们的**ChapterSevenTheme**内部，我们需要添加以下代码：
 
-        ```kt
+        ```java
         val navigationType: NavigationType
         val contentType: ContentType
         when (windowSizeClass.widthSizeClass) {
@@ -1064,7 +1064,7 @@ PetsScreen(
 
         1.  在上述代码下方，添加以下**if**语句：
 
-        ```kt
+        ```java
         if (navigationType == NavigationType.NavigationDrawer) {
             PermanentNavigationDrawer(
                 drawerContent = {
@@ -1099,7 +1099,7 @@ PetsScreen(
 
         1.  接下来，让我们为我们的**if**语句添加**else**条件：
 
-        ```kt
+        ```java
         else {
           ModalNavigationDrawer(
               drawerContent = {

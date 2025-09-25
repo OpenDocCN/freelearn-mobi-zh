@@ -76,7 +76,7 @@ Android SDK 中的工具自 API 级别 25 以来已经发生了变化。你可�
 
 对于较旧的 SDK 版本，例如 `android-sdk_r24.4.1-linux.tgz`，它包含所有必要的组件，我们可以在解压缩后使用它。解压缩后，我们可以找到以下内容：
 
-```kt
+```java
 $ ls android-sdk-linux
 add-ons      platforms       SDK Readme.txt  temp
 build-tools  platform-tools  system-images   tools
@@ -89,7 +89,7 @@ build-tools  platform-tools  system-images   tools
 
 要创建虚拟设备，我们可以使用以下命令启动 **Android 虚拟设备**（**AVD**）管理器，如下面的截图所示：
 
-```kt
+```java
 $ android avd  
 
 ```
@@ -118,14 +118,14 @@ Android 虚拟设备 a25x86
 
 对于较新版本，只有 SDK 命令行工具可供下载。例如，如果你下载了 r25 的命令行工具，如 `tools_r25.2.3-linux.zip`，你只能找到 `tools` 文件夹。在这种情况下，你需要使用 Android SDK 管理器在 `tools/bin/sdkmanager` 中下载其余的 SDK 组件。要下载其余的 SDK 组件，你可以使用以下命令：
 
-```kt
+```java
 $ sdkmanager --update
 
 ```
 
 如果你使用的是最新版本的 Android SDK，如果你遵循前面的说明，你可能会得到以下错误消息：
 
-```kt
+```java
 $ android avd
 *********************************************************************
 The "android" command is deprecated.
@@ -148,7 +148,7 @@ android update sdk
 
 在这种情况下，你可以使用以下命令创建 AVD。
 
-```kt
+```java
 $ avdmanager create avd -n a25x86 --tag google_apis -k 'system-images;android-25;google_apis;x86'
 Auto-selecting single ABI x86
 Do you wish to create a custom hardware profile? [no]
@@ -159,7 +159,7 @@ Do you wish to create a custom hardware profile? [no]
 
 在 Android 7 中，ranchu 和 goldfish 模拟器都受到支持。让我们首先测试 goldfish 模拟器。我们可以使用以下命令在 goldfish 模拟器中运行此虚拟设备：
 
-```kt
+```java
 $ emulator @a25x86 -verbose -show-kernel -shell -engine classic
 emulator:Found AVD name 'a25x86'
 emulator:Found AVD target architecture: x86
@@ -187,7 +187,7 @@ ranchu 和 goldfish 模拟器都是在 QEMU 的基础上开发的，但它们使
 
 要验证 goldfish 使用的 QEMU 版本，我们可以运行以下命令：
 
-```kt
+```java
 $ emulator -engine classic -qemu -version
 QEMU PC emulator version 0.10.50 Android, Copyright (c) 2003-2008 Fabrice Bellard  
 
@@ -197,7 +197,7 @@ QEMU PC emulator version 0.10.50 Android, Copyright (c) 2003-2008 Fabrice Bellar
 
 对于最新的模拟器版本，似乎在处理经典引擎方面存在一个错误。当你执行前面的命令时，可能会得到以下错误信息：
 
-```kt
+```java
 $ emulator -engine classic -qemu -version
 emulator: ERROR: android_qemud_get_serial_line: can't create charpipe to serial port  
 
@@ -235,7 +235,7 @@ Android 系统构建包括两部分：AOSP 系统和一个兼容 Android 的 Lin
 
 我们也可以使用相同的虚拟设备测试 ranchu 模拟器。我们可以使用不带 `-engine` 选项或带有 `-engine qemu2` 选项的类似命令来启动 ranchu 模拟器：
 
-```kt
+```java
 $ emulator @a25x86 -verbose -show-kernel -shell
 emulator:Found AVD name 'a25x86'
 emulator:Found AVD target architecture: x86
@@ -252,7 +252,7 @@ emulator:Found target-specific 64-bit emulator binary: /home/roger/android-sdk-l
 
 我们还可以使用以下命令验证 ranchu 模拟器使用的 QEMU 版本：
 
-```kt
+```java
 $ emulator -qemu -version
 QEMU emulator version 2.2.0 , Copyright (c) 2003-2008 Fabrice Bellard  
 
@@ -282,7 +282,7 @@ ranchu 的 Android 内核版本
 
 我们使用 64 位的 Ubuntu 14.04 版本作为我们的宿主操作系统。在安装 Ubuntu 14.04 之后，您必须做的第一件事是按照以下方式安装所有必要的软件包。如果您使用的是不同的 Linux 发行版，您可以参考谷歌的网站或在网上搜索相关的设置程序。让我们执行以下命令来安装 Ubuntu 14.04 的所有必要软件包：
 
-```kt
+```java
 $ sudo apt-get install git-core gnupg flex bison gperf build-essential\ 
  zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386\ 
  lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z-dev ccache\ 
@@ -296,7 +296,7 @@ $ sudo apt-get install git-core gnupg flex bison gperf build-essential\
 
 要构建 Android API 级别 23，我们需要安装 OpenJDK 7。我们可以从 Linux 控制台执行以下命令来安装 OpenJDK 7：
 
-```kt
+```java
 $ sudo apt-get update
 $ sudo apt-get install openjdk-7-jdk  
 
@@ -306,7 +306,7 @@ $ sudo apt-get install openjdk-7-jdk
 
 从[archive.ubuntu.com](http://archive.ubuntu.com)下载 64 位架构的`.deb`软件包：
 
-```kt
+```java
 openjdk-8-jre-headless_8u45-b14-1_amd64.deb with SHA256 0f5aba8db39088283b51e00054813063173a4d8809f70033976f83e214ab56c0
 openjdk-8-jre_8u45-b14-1_amd64.deb with SHA256 9ef76c4562d39432b69baf6c18f199707c5c56a5b4566847df908b7d74e15849
 openjdk-8-jdk_8u45-b14-1_amd64.deb with SHA256 6e47215cf6205aa829e6a0a64985075bd29d1f428a4006a80c9db371c2fc3c4c
@@ -317,35 +317,35 @@ openjdk-8-jdk_8u45-b14-1_amd64.deb with SHA256 6e47215cf6205aa829e6a0a64985075bd
 
 例如，使用*sha256sum*工具：
 
-```kt
+```java
 $ sha256sum {downloaded.deb file}  
 
 ```
 
 安装软件包：
 
-```kt
+```java
 $ sudo apt-get update  
 
 ```
 
 对您下载的每个`.deb`文件运行`dpkg`。由于缺少依赖项，可能会产生错误：
 
-```kt
+```java
 $ sudo dpkg -i {downloaded.deb file}  
 
 ```
 
 为了修复缺少的依赖项：
 
-```kt
+```java
 $ sudo apt-get -f install  
 
 ```
 
 在安装了 OpenJDK 7 和 8 之后，我们可以通过运行以下命令来更新默认的 Java 版本：
 
-```kt
+```java
 $ sudo update-alternatives --config java
 $ sudo update-alternatives --config javac  
 
@@ -363,7 +363,7 @@ $ sudo update-alternatives --config javac
 
 AOSP 由大量的 Git 仓库组成，我们必须使用 repo 工具来管理这些 Git 仓库。要下载和安装 repo，我们可以使用以下命令：
 
-```kt
+```java
 $ mkdir ~/bin
 $ PATH=~/bin:$PATH
 $ curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
@@ -375,7 +375,7 @@ $ chmod a+x ~/bin/repo
 
 在我们有了 repo 工具之后，我们可以执行以下命令来初始化 repo 并下载 AOSP 源代码树：
 
-```kt
+```java
 $ repo init -u https://android.googlesource.com/platform/manifest -b android-7.1.1_r4
 $ repo sync  
 
@@ -385,7 +385,7 @@ $ repo sync
 
 获取 AOSP 源代码树需要相当长的时间。在获取源代码树后，让我们看看顶级文件夹：
 
-```kt
+```java
 $ ls -F
 abi/      cts/         docs/       libcore/         packages/  tools/
 art/      dalvik/      external/   libnativehelper/ pdk/
@@ -401,7 +401,7 @@ build     device       hardware    out              system
 
 在本书中，我们将使用基于 x86 的模拟器。基于 x86 的模拟器可以在主机上使用虚拟化技术，因此它比 ARM 模拟器快得多。我们首先想要构建的是包含 AOSP 源代码的那个。要从 AOSP 顶级文件夹执行以下命令来创建 Android 模拟器构建：
 
-```kt
+```java
 $ . build/envsetup.sh 
 including device/generic/mini-emulator-arm64/vendorsetup.sh
 including device/generic/mini-emulator-armv7-a-neon/vendorsetup.sh
@@ -459,7 +459,7 @@ OUT_DIR=out
 
 在执行以下`make`命令后，实际构建开始：
 
-```kt
+```java
 $ make -j4
 ============================================
 PLATFORM_VERSION_CODENAME=REL
@@ -521,7 +521,7 @@ AOSP 构建输出存储在`$AOSP/out`文件夹下。此文件夹包括目标和�
 
 要使用我们的 AOSP 镜像进行测试，我们可以创建以下脚本：
 
-```kt
+```java
 #!/bin/sh 
 
 emulator @a25x86 -verbose -show-kernel -system $OUT/system.img -ramdisk $OUT/ramdisk.img -initdata $OUT/userdata.img 
@@ -530,7 +530,7 @@ emulator @a25x86 -verbose -show-kernel -system $OUT/system.img -ramdisk $OUT/ram
 
 我们可以将这个脚本 `test_aosp.sh` 放在 `$HOME/bin` 文件夹中。通常，我们可以将 `$HOME/bin` 添加到可执行搜索 `path` 变量中，这样我们就可以在命令行中如下运行这个脚本 `test_aosp.sh`：
 
-```kt
+```java
 $ test_aosp.sh  
 
 ```
@@ -570,7 +570,7 @@ AOSP 图像的 Android 版本
 
 在我们像上一节那样运行 `repo init` 命令之后，当前文件夹下会创建一个 `.repo` 文件夹。如果我们查看 `.repo` 文件夹，我们可以看到以下内容：
 
-```kt
+```java
 $ ls -F .repo
 manifests/  manifests.git/  manifest.xml@  repo/  
 
@@ -588,7 +588,7 @@ manifests/  manifests.git/  manifest.xml@  repo/
 
 在我们运行 `repo init` 命令初始化 repo 数据结构之后，我们可以运行 `repo sync` 命令来检索工作副本。如果我们再次查看 `.repo` 文件夹，在 `repo sync` 命令之后，我们可以看到创建了两个与项目相关的文件夹：
 
-```kt
+```java
 $ ls -F .repo
 manifests/      manifest.xml@  project-objects/  repo/
 manifests.git/  project.list   projects/  
@@ -605,7 +605,7 @@ manifests.git/  project.list   projects/
 
 `.repo` 文件夹中最重要的文件是 `.repo/manifests/default.xml` 或其符号链接 `manifest.xml`。该文件的详细规范可以在 `.repo` 文件夹下的 `.repo/repo/docs/manifest-format.txt` 文档中找到。我们不会深入细节，但让我们看看最常用的元素。
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -640,7 +640,7 @@ manifests.git/  project.list   projects/
 
 如果你参考谷歌网站上的关于下载源的文章，你可以找到一个名为*使用本地镜像*的部分。它揭示，如果你需要两个不同的 AOSP 构建环境配置，两个客户端的下载大小将大于整个仓库镜像的大小。设置镜像非常简单，如下所示：
 
-```kt
+```java
 $ mkdir -p /usr/local/mirror/aosp
 $ cd /usr/local/mirror/aosp
 $ repo init -u https://android.googlesource.com/mirror/manifest --mirror
@@ -650,7 +650,7 @@ $ repo sync
 
 从前面的命令中，我们可以看到我们实际上使用不同的清单来创建镜像。如果我们查看镜像清单的内容，我们可以看到以下 XML 代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
   <remote  name="aosp" 
@@ -669,7 +669,7 @@ $ repo sync
 
 如果我们查看清单以检出工作副本，我们将看到以下内容：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -693,7 +693,7 @@ $ repo sync
 
 在我们有一个镜像之后，我们可以按照以下方式从该镜像检出 AOSP 源的一个副本：
 
-```kt
+```java
 $ mkdir -p $HOME/aosp/master
 $ cd $HOME/aosp/master
 $ repo init -u /usr/local/mirror/aosp/platform/manifest.git
@@ -711,7 +711,7 @@ $ repo sync
 
 要为 GitHub 创建自己的清单，你可以在 GitHub 中创建一个仓库，命名为`mirror`，然后添加一个名为`default.xml`的 XML 文件，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -764,7 +764,7 @@ $ repo sync
 
 要创建本地镜像，我们可以使用以下命令：
 
-```kt
+```java
 $ mkdir -p /media/aosp-mirror/github
 $ cd /media/aosp-mirror/github
 $ repo init -u https://github.com/shugaoye/mirror.git --mirror
@@ -792,7 +792,7 @@ $ repo sync
 
 前面的文档提到，我们可以使用以下命令初始化并同步来自 Android-x86 仓库的 repo：
 
-```kt
+```java
 $ mkdir android-x86
 $ cd android-x86
 $ repo init -u git://git.osdn.net/gitroot/android-x86/manifest -b $branch
@@ -802,7 +802,7 @@ $ repo sync
 
 我们可以将前面的 Android-x86 清单仓库克隆到一个文件夹中，并对其进行分析：
 
-```kt
+```java
 $ git clone git://git.osdn.net/gitroot/android-x86/manifest -b marshmallow-x86
 $ ls
 cm.xml  default.xml  
@@ -813,7 +813,7 @@ cm.xml  default.xml
 
 如果我们查看`default.xml`的内容，我们可以看到以下代码片段：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -851,7 +851,7 @@ cm.xml  default.xml
 
 在我们的 GitHub 镜像仓库的工作副本中，我们可以创建一个名为 `android-x86` 的分支。我们可以用 Android-x86 清单中的第一部分替换我们 GitHub 镜像中的 `default.xml`，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -880,7 +880,7 @@ cm.xml  default.xml
 
 如前所述的列表所示，我们移除了诸如 `path` 或 `groups` 等不必要的字段。有了这个 Android-x86 镜像的清单，我们现在可以创建一个 Android-x86 的本地镜像，如下所示：
 
-```kt
+```java
 $ mkdir -p /media/aosp-mirror/android-x86
 $ cd /media/aosp-mirror/android-x86
 $ repo init -u https://github.com/shugaoye/mirror.git -b android_x86 --mirror
@@ -898,7 +898,7 @@ android-x86 的本地镜像
 
 现在有了所有本地镜像，我们可以创建自己的清单来检出我们的源代码。我们可以在我们的 GitHub 上的一个名为 `manifests` 的新仓库中放置它。在这个仓库中，我们可以创建一个 XML 文件，`default.xml`，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -953,7 +953,7 @@ android-x86 的本地镜像
 
 要检出工作副本，我们可以使用以下命令：
 
-```kt
+```java
 $ mkdir -p $HOME/aosp/android
 $ cd $HOME/aosp/android
 $ repo init -u /usr/local/mirror/github/manifests.git
@@ -963,7 +963,7 @@ $ repo sync
 
 如果我们要检查 Android-x86 的构建版本，现在它将是一个不同的配置，而不是一个完全不同的仓库：
 
-```kt
+```java
 $ cd $HOME/aosp/android
 $ repo init -u /usr/local/mirror/github/manifests.git -b nougat-x86
 $ repo sync  

@@ -68,7 +68,7 @@
 
 让我们先创建一个 `com.packt.chapterfive` 包；然后，我们选择 `data`。在这个 `data` 包内，让我们创建一个 `Pet` 数据类，它将代表我们的宠物：
 
-```kt
+```java
 data class Pet(
     val id: Int,
     val name: String,
@@ -78,7 +78,7 @@ data class Pet(
 
 `Pet` 数据类包含了我们宠物所有的数据。接下来，我们将创建一个仓库接口及其实现，以便我们能够获取这些宠物。在 `data` 包内创建一个名为 `PetsRepository` 的新文件，并包含以下代码：
 
-```kt
+```java
 interface PetsRepository {
     fun getPets(): List<Pet>
 }
@@ -86,7 +86,7 @@ interface PetsRepository {
 
 这是一个包含一个方法返回 `List<Pet>` 的接口。接下来，让我们为我们的接口创建实现类。仍然在 `data` 包内，创建一个名为 `PetsRepositoryImpl` 的新文件，并包含以下代码：
 
-```kt
+```java
 class PetsRepositoryImpl: PetsRepository {
     override fun getPets(): List<Pet> {
         return listOf(
@@ -115,7 +115,7 @@ class PetsRepositoryImpl: PetsRepository {
 
 现在，让我们为我们的 `ViewModel` 层创建一个 `ViewModel` 类。首先，在 `com.packt.chapterfive` 包内创建一个 `ViewModel` 包。在这个 `ViewModel` 包内，创建一个名为 `PetsViewModel` 的新文件，并包含以下代码：
 
-```kt
+```java
 class PetsViewModel: ViewModel() {
     private val petsRepository: PetsRepository = PetsRepositoryImpl()
     fun getPets() = petsRepository.getPets()
@@ -168,7 +168,7 @@ class PetsViewModel: ViewModel() {
 
 1.  在这个 `views` 包内部，创建一个名为 `PetsList` 的新文件，并包含以下代码：
 
-    ```kt
+    ```java
     @Composable
     fun PetList(modifier: Modifier) {
         val petsViewModel: PetsViewModel = viewModel()
@@ -194,7 +194,7 @@ class PetsViewModel: ViewModel() {
 
 1.  要最终显示我们的宠物，我们需要在 `MainActivity` 类的 `setContent` 块内部调用我们的 `PetList` 可组合组件：
 
-    ```kt
+    ```java
     ChapterFiveTheme {
         Scaffold(
             topBar = {
@@ -264,7 +264,7 @@ Jetpack 库有很多。您可以在以下位置探索所有可用的 Jetpack 库
 
 我们的 `PetsViewModel` 类会自行创建 `PetsRepository` 类。这是一个适合依赖注入的候选者。我们将重构这部分代码以使用依赖注入。让我们首先将 Koin 依赖添加到我们的应用中。打开应用模块的 `build.gradle` 文件，并添加以下依赖项：
 
-```kt
+```java
 implementation 'io.insert-koin:koin-core:3.4.3'
 implementation 'io.insert-koin:koin-android:3.4.3'
 implementation 'io.insert-koin:koin-androidx-compose:3.4.6'
@@ -274,7 +274,7 @@ implementation 'io.insert-koin:koin-androidx-compose:3.4.6'
 
 在将此添加到我们的项目并同步项目后，我们需要创建 Koin 的 `PetsRepository` 类。在 `com.packt.chapterfive` 包内创建一个名为 `di` 的新包。在这个 `di` 包内，创建一个名为 `Modules` 的新文件，并添加以下代码：
 
-```kt
+```java
 val appModules = module {
     single<PetsRepository> { PetsRepositoryImpl() }
 }
@@ -284,7 +284,7 @@ val appModules = module {
 
 接下来，我们将重构 `PetsViewModel` 类以使用依赖注入。打开 `PetsViewModel` 类，并按照以下代码片段进行更新：
 
-```kt
+```java
 class PetsViewModel(
     private val petsRepository: PetsRepository
 ): ViewModel() {
@@ -294,13 +294,13 @@ class PetsViewModel(
 
 在前面的代码中，我们从 `PetsViewModel` 类中移除了 `PetsRepository` 类的实例化。相反，我们添加了一个接受 `PetsRepository` 参数的 `constructor`。我们还需要在 `appModules` 变量中 `PetsRepository` 依赖项下方创建一个新的 `ViewModel` 依赖。让我们添加以下代码：
 
-```kt
+```java
 single { PetsViewModel(get()) }
 ```
 
 在这里，我们创建 `PetsViewModel` 类的一个 `single` 实例。我们使用 `get()` 函数获取 `PetsRepository` 依赖项。我们将它传递给 `PetsViewModel` 类的构造函数。有了这个，我们的应用程序就准备好使用这些依赖项了。我们还将更改在 `PetList` 可组合组件中创建 `PetsViewModel` 实例的方式。打开 `PetList` 可组合组件，并按照以下方式更新 `PetsViewModel` 的初始化，如下所示：
 
-```kt
+```java
 val petsViewModel: PetsViewModel = koinViewModel()
 ```
 
@@ -308,7 +308,7 @@ val petsViewModel: PetsViewModel = koinViewModel()
 
 确保我们的应用已设置依赖注入的最后一步是在我们的应用中初始化 Koin。我们将创建一个扩展 `Application` 类的类，并在 `onCreate()` 方法中初始化 Koin。创建一个名为 `ChapterFiveApplication` 的新文件，并添加以下代码：
 
-```kt
+```java
 class ChapterFiveApplication: Application() {
     override fun onCreate() {
         super.onCreate()
@@ -321,7 +321,7 @@ class ChapterFiveApplication: Application() {
 
 我们的 `ChapterFiveApplication` 类扩展了 `Application` 类。我们正在重写 `onCreate()` 方法并调用 `startKoin()` 函数。我们使用 `modules` 参数传入我们之前创建的 `appModules` 变量。这初始化了我们的应用中的 Koin。我们还需要更新 `AndroidManifest.xml` 文件以使用我们的 `ChapterFiveApplication` 类。打开 `AndroidManifest.xml` 文件，并更新应用程序标签的名称属性，如下所示：
 
-```kt
+```java
 android:name=".ChapterFiveApplication"
 ```
 
@@ -359,7 +359,7 @@ android:name=".ChapterFiveApplication"
 
 1.  文件重命名后，我们必须更新它们的内容以使用 Kotlin Gradle DSL。让我们从 `settings.gradle.kts` 文件开始。打开 `settings.gradle.kts` 文件并更新它，如下面的代码所示：
 
-    ```kt
+    ```java
     pluginManagement {
         repositories {
             google()
@@ -380,7 +380,7 @@ android:name=".ChapterFiveApplication"
 
 1.  接下来，更新 `build.gradle.kts(Module: app)` 文件，如下面的代码所示：
 
-    ```kt
+    ```java
     plugins {
         id("com.android.application")
         id("org.jetbrains.kotlin.android")
@@ -456,7 +456,7 @@ android:name=".ChapterFiveApplication"
 
 1.  最后，更新 `build.gradle.kts(Project: chapterfive)` 文件，如下面的代码片段所示：
 
-    ```kt
+    ```java
     plugins {
         id("com.android.application") version "8.1.0" apply false
         id("com.android.library") version "8.1.0" apply false
@@ -504,7 +504,7 @@ android:name=".ChapterFiveApplication"
 
 我们将首先定义依赖项的版本，如下所示：
 
-```kt
+```java
 [versions]
 coreKtx = "1.10.1"
 lifecycle = "2.6.1"
@@ -519,7 +519,7 @@ espresso = "3.5.1"
 
 在这里，我们正在定义我们应用中所有库的所有版本。我们使用**versions**关键字来定义版本。然后我们为每个库定义版本。当我们编辑此文件时，您将注意到 IDE 会提示我们进行 Gradle 同步，以便将我们的更改添加到项目中。目前，我们可以忽略这一点并继续编辑文件。接下来，我们将定义依赖项的捆绑包：
 
-```kt
+```java
 [libraries]
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 lifecycle = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -544,7 +544,7 @@ test-compose-junit4 = { group = "androidx.compose.ui:ui-test-junit4", name = "ui
 
 接下来，让我们使用**bundles**关键字为 Koin 和 compose 依赖项创建一个捆绑包，如下所示：
 
-```kt
+```java
 [bundles]
 compose = ["compose.ui", "compose.ui.graphics", "compose.ui.tooling", "compose.material3", "compose.viewmodel"]
 koin = ["koin-core", "koin-android", "koin-android-compose"]
@@ -552,7 +552,7 @@ koin = ["koin-core", "koin-android", "koin-android-compose"]
 
 `bundles`关键字允许我们将依赖项分组并作为一个整体使用。现在，我们可以同步项目。最后一步是将我们的应用级`build.gradle.kts`文件更新为使用版本目录。打开应用级`build.gradle.kts`文件，并按以下方式更新依赖项块：
 
-```kt
+```java
 dependencies {
     implementation(libs.core.ktx)
     implementation(libs.lifecycle)

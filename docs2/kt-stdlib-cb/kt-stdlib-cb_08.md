@@ -32,7 +32,7 @@
 
 为了使用 Kotlin Android Extensions 插件，我们需要在 Android 项目模块级别的 `build.gradle` 脚本中启用它，通过添加以下声明：
 
-```kt
+```java
 apply plugin: 'kotlin-android-extensions'
 ```
 
@@ -42,13 +42,13 @@ apply plugin: 'kotlin-android-extensions'
 
 1.  在项目中创建一个新的 Activity：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {}
 ```
 
 1.  在 `src/main/res/layout/` 目录下的 `activity_main.xml` 文件中实现 UI 布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {}
 
 1.  在 `onCreate()` 钩子函数中设置 `MainActivity` 的布局：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  获取在 XML 布局中声明的 `TextView` 的引用并在其中显示示例文本：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,7 +107,7 @@ class MainActivity : AppCompatActivity() {
 
 默认情况下，Android 扩展插件支持 `Activity`、`Fragment` 和 `View` 类型容器，在这些容器中你可以直接使用自动视图绑定机制。然而，通过实现 `LayoutContainer` 接口，你可以使用任何类作为 Android 扩展容器。例如，它可以用在 `RecyclerView.ViewHolder` 的子类中：
 
-```kt
+```java
 class ViewHolder(override val containerView: View) : ViewHolder(containerView),
     LayoutContainer {  
     fun setupItemView(title: String) {  itemTitle.text = "Hello World!"  } 
@@ -124,7 +124,7 @@ class ViewHolder(override val containerView: View) : ViewHolder(containerView),
 
 开始使用 Kotlin 协程的第一步是将核心框架依赖项添加到项目中：
 
-```kt
+```java
 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3' 
 ```
 
@@ -136,13 +136,13 @@ implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.3'
 
 1.  添加一个新的 Activity 子类：
 
-```kt
+```java
 class MainActivity: AppCompatActivity() {}
 ```
 
 1.  在`src/main/res/layout/`目录下的`activity_main.xml`文件中实现 UI 布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -173,7 +173,7 @@ class MainActivity: AppCompatActivity() {}
 
 1.  在`onCreate()`钩子函数内设置`MainActivity`的布局：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -184,7 +184,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在后台启动一个新的协程，每秒增加计数器并在从 XML 布局中获得的`TextView`中显示：
 
-```kt
+```java
 class MainActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -205,7 +205,7 @@ class MainActivity: AppCompatActivity() {
 
 1.  通过点击**取消**按钮允许协程取消：
 
-```kt
+```java
 class MainActivity: AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -257,13 +257,13 @@ class MainActivity: AppCompatActivity() {
 
 我们将实现 Android 仪器化测试用例，以验证类序列化和反序列化在实际中的效果。为了使用 Android KTX 库，我们需要将其添加到项目依赖项中。在我们的例子中，我们将在 `android-test` 模块中使用它。我们可以通过以下声明添加它：
 
-```kt
+```java
 androidTestImplementation 'androidx.core:core-ktx:1.0.+'
 ```
 
 为了使用 Kotlin Android 扩展插件，我们需要在 Android 项目模块级别的 `build.gradle` 脚本中启用它，通过添加以下声明：
 
-```kt
+```java
 apply plugin: 'kotlin-android-extensions'
 ```
 
@@ -273,7 +273,7 @@ apply plugin: 'kotlin-android-extensions'
 
 1.  让我们从创建一个使用 `@Parcelize` 注解实现 `Parcelable` 接口的示例 `User` 类开始：
 
-```kt
+```java
 @Parcelize
 data class User(val name: String, val address: Address): Parcelable
 
@@ -285,7 +285,7 @@ data class Address(val street: String,
 
 1.  通过编写和读取 `Bundle` 实例来验证 `User` 类实例的序列化和反序列化：
 
-```kt
+```java
 @Test
 fun testUserParcelisation() {
     // given
@@ -326,7 +326,7 @@ fun testUserParcelisation() {
 
 我们将使用由 Google 提供的 Android 架构组件中的 `Lifecycle` 库模块。我们需要将其添加到模块级别的 `build.gradle` 脚本中的项目依赖项：
 
-```kt
+```java
 implementation "android.arch.lifecycle:runtime:1.1.1"
 
 ```
@@ -335,13 +335,13 @@ implementation "android.arch.lifecycle:runtime:1.1.1"
 
 1.  声明 `LifecycleAwareLazy` 类：
 
-```kt
+```java
 class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T):             Lazy<T>, GenericLifecycleObserver
 ```
 
 1.  在 `init` 块内注册观察者到给定的 `Lifecycle` 实例：
 
-```kt
+```java
 class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T):             Lazy<T>, GenericLifecycleObserver {
     init {
  lifecycle.addObserver(this)
@@ -351,7 +351,7 @@ class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T):    
 
 1.  实现一个表示代理当前存储值的内部字段：
 
-```kt
+```java
 class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T):             Lazy<T>, GenericLifecycleObserver {
 
     init {
@@ -364,7 +364,7 @@ class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T):    
 
 1.  实现 `Lazy` 接口所需的 `value` 属性和 `isInitialized()` 函数：
 
-```kt
+```java
 class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T): Lazy<T>, GenericLifecycleObserver {
 
     init {
@@ -389,7 +389,7 @@ class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T): Laz
 
 1.  实现 `GenericLifecycleObserver` 接口：
 
-```kt
+```java
 class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T): Lazy<T>, GenericLifecycleObserver {
 
     init {
@@ -445,7 +445,7 @@ class LifecycleAwareLazy<T>(lifecycle: Lifecycle, val initializer: () -> T): Laz
 
 为了使用 Android KTX 库，我们需要将其添加到项目的依赖项中。在我们的例子中，我们将在 `android-test` 模块中使用它。我们可以通过以下声明来添加它：
 
-```kt
+```java
 androidTestImplementation 'androidx.core:core-ktx:1.0.+'
 ```
 
@@ -455,13 +455,13 @@ androidTestImplementation 'androidx.core:core-ktx:1.0.+'
 
 1.  创建一个返回 `SharedPreferences` 实例的函数：
 
-```kt
+```java
 fun getDefaultSharedPreferences() =                                 PreferenceManager.getDefaultSharedPreferences(InstrumentationRegistry.getContext())
 ```
 
 1.  将一个示例字符串保存到 `SharedPreferences` 实例中：
 
-```kt
+```java
 @Test
 fun testUserParcelization() {
  val prefs = getDefaultSharedPreferences()
@@ -474,7 +474,7 @@ fun testUserParcelization() {
 
 1.  验证字符串是否已成功保存：
 
-```kt
+```java
 @Test
 fun testSharedPrefs() {
     val prefs = getDefaultSharedPreferences()
@@ -512,7 +512,7 @@ fun testSharedPrefs() {
 
 1.  实现一个扩展函数，允许我们从 `Cursor` 中获取请求的列名值：
 
-```kt
+```java
 fun Cursor.getString(columnName: String): String? {
     return getString(getColumnIndex(columnName))
 }
@@ -520,7 +520,7 @@ fun Cursor.getString(columnName: String): String? {
 
 1.  获取指向系统联系人表的 `Cursor` 实例：
 
-```kt
+```java
 val NOT_SPECIFIED = ""
 val content = getContext().contentResolver
 val projection = arrayOf(ContactsContract.Data.DISPLAY_NAME)
@@ -534,7 +534,7 @@ val cursor =
 
 1.  在 `cursor` 实例上调用 `use` 函数，并在其作用域内迭代数据：
 
-```kt
+```java
 val NOT_SPECIFIED = ""
 val content = getContext().contentResolver
 val projection = arrayOf(ContactsContract.Data.DISPLAY_NAME)
@@ -569,13 +569,13 @@ val contacts = cursor.use {
 
 我们将使用 JUnit 库，它为运行测试用例类提供核心框架。我们需要通过在 `gradle.build` 脚本中声明它来将其添加到我们项目的依赖项列表中：
 
-```kt
+```java
 implementation group: 'junit', name: 'junit', version: '4.12'
 ```
 
 为了使用 Kotlin Mockito 库，我们可以通过以下声明将其添加到项目的依赖项中：
 
-```kt
+```java
 implementation 'com.nhaarman:mockito-kotlin:1.5.0'
 ```
 
@@ -583,7 +583,7 @@ implementation 'com.nhaarman:mockito-kotlin:1.5.0'
 
 在这个食谱中，我们将为以下声明的`RegistrationFormController`类编写单元测试：
 
-```kt
+```java
 class RegistrationFormController(val api: RegistrationApi) {
     var currentEmailAddress: String = ""
 
@@ -596,7 +596,7 @@ class RegistrationFormController(val api: RegistrationApi) {
 
 `RegistrationApi`接口定义如下：
 
-```kt
+```java
 interface RegistrationApi {
     fun isEmailAddressAvailable(email: String): Boolean
 } 
@@ -608,14 +608,14 @@ interface RegistrationApi {
 
 1.  创建一个新的测试类：
 
-```kt
+```java
 class MyTest {
 }
 ```
 
 1.  创建一个`RegistrationApi`接口的模拟实例作为测试类的属性：
 
-```kt
+```java
 class MyTest {
  private val api = mock<RegistrationApi>()
 }
@@ -623,7 +623,7 @@ class MyTest {
 
 1.  添加一个`RegistrationFormController`类型的类属性：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
     private var registrationFormController = 
@@ -633,7 +633,7 @@ class MyTest {
 
 1.  创建一个测试方法来检查`checkIfEmailCanBeRegistered()`方法在无效电子邮件地址出现时是否表现正确：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
     private lateinit var registrationFormController: RegistrationFormController
@@ -673,13 +673,13 @@ class MyTest {
 
 我们将使用 JUnit 库来提供一个核心框架，用于运行测试用例类。我们需要通过在`gradle.build`脚本中声明它来将其添加到我们的项目依赖项列表中：
 
-```kt
+```java
 implementation group: 'junit', name: 'junit', version: '4.12'
 ```
 
 为了使用 Kotlin Mockito 库，我们可以通过以下声明将其添加到项目依赖项中：
 
-```kt
+```java
 implementation 'com.nhaarman:mockito-kotlin:1.5.0'
 ```
 
@@ -687,7 +687,7 @@ implementation 'com.nhaarman:mockito-kotlin:1.5.0'
 
 在这个菜谱中，我们将编写一个针对`RegistrationFormController`类的单元测试，该类声明如下：
 
-```kt
+```java
 class RegistrationForm(val api: RegistrationApi, val view: TextView) {
     var currentEmailAddress: String by 
         Delegates.observable("", ::onEmailAddressNewValue)
@@ -712,7 +712,7 @@ class RegistrationForm(val api: RegistrationApi, val view: TextView) {
 
 它包含一个`RegistrationApi`属性，该属性定义为以下接口：
 
-```kt
+```java
 interface RegistrationApi {
     fun isEmailAddressAvailable(email: String): Boolean
 } 
@@ -720,7 +720,7 @@ interface RegistrationApi {
 
 以及以下方式定义的`TextView`类型属性：
 
-```kt
+```java
 interface TextView {
     fun showSuccessMessage(message: String)
     fun showErrorMessage(message: String)
@@ -733,14 +733,14 @@ interface TextView {
 
 1.  创建一个新的测试类：
 
-```kt
+```java
 class MyTest {
 }
 ```
 
 1.  创建一个`RegistrationApi`接口的模拟实例作为测试类的属性：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
 }
@@ -748,7 +748,7 @@ class MyTest {
 
 1.  创建一个模拟的`TextView`实例：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
  private val view = mock<TextView>()
@@ -757,7 +757,7 @@ class MyTest {
 
 1.  将`RegistrationFormController`对象作为`MyTest`类的属性创建：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
     private val view = mock<TextView>()
@@ -767,7 +767,7 @@ class MyTest {
 
 1.  添加一个测试方法以验证如果地址可用，是否会显示成功消息：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
     private val view = mock<TextView>()
@@ -790,7 +790,7 @@ class MyTest {
 
 1.  添加一个测试方法以验证如果地址不可用，是否会显示错误消息：
 
-```kt
+```java
 class MyTest {
     private val api = mock<RegistrationApi>()
     private val view = mock<TextView>()
@@ -826,7 +826,7 @@ class MyTest {
 
 除了行为模拟之外，Mockito Kotlin 提供了一种可靠的方式来验证在执行测试方法期间与模拟依赖项的交互。在`should display success message when email address is available`和`should display error message when email address isn't available`函数中，我们只想检查`TextView`依赖项的期望功能是否被调用。为了做到这一点，我们调用`verify()`函数。例如，为了检查`showErrorMessage()`函数是否在模拟的`view: TextView`依赖项上被调用，我们调用以下代码：
 
-```kt
+```java
 verify(view).showErrorMessage(anyString())
 ```
 
@@ -840,13 +840,13 @@ verify(view).showErrorMessage(anyString())
 
 我们将使用 JUnit 库为运行测试用例类提供核心框架。我们需要通过在 `gradle.build` 脚本中声明它来将其添加到我们项目的项目依赖项列表中：
 
-```kt
+```java
 implementation group: 'junit', name: 'junit', version: '4.12'
 ```
 
 为了使用 Kotlin Mockito 库，我们可以通过以下声明将其添加到项目依赖项中：
 
-```kt
+```java
 implementation 'com.nhaarman:mockito-kotlin:1.5.0'
 ```
 
@@ -854,7 +854,7 @@ implementation 'com.nhaarman:mockito-kotlin:1.5.0'
 
 在这个食谱中，我们将为以下定义的 `Authenticator` 类编写一个单元测试：
 
-```kt
+```java
 class Authenticator(val api: Api) {
 
     fun tryToAuthorise(encodedUserNameAndPassword: ByteArray, 
@@ -876,7 +876,7 @@ class Authenticator(val api: Api) {
 
 `Api` 属性如下所示：
 
-```kt
+```java
 interface Api {
     // returns a non-empty auth token when the given credentials were authorised
     fun authorise(encodedUserNameAndPassword: ByteArray): String
@@ -887,14 +887,14 @@ interface Api {
 
 1.  创建一个新的测试类：
 
-```kt
+```java
 class MyTest {
 }
 ```
 
 1.  添加一个模拟的 `Api` 类型测试类属性：
 
-```kt
+```java
 class MyTest {
  val api: Api = mock()
 }
@@ -902,7 +902,7 @@ class MyTest {
 
 1.  将 `Authenticator` 类实例化为类属性：
 
-```kt
+```java
 class MyTest {
     val api: Api = mock()
  val authenticator = Authenticator(api)
@@ -911,7 +911,7 @@ class MyTest {
 
 1.  实现测试以验证在连续授权尝试失败的情况下，`Api.authorise()` 函数是否至少被调用 10 次：
 
-```kt
+```java
 class MyTest {
     val api: Api = mock()
     val authenticator = Authenticator(api)

@@ -60,7 +60,7 @@ Gradle 是一个构建系统，用于通过监控条件和提供自定义构建�
 
 实现这些依赖项的依赖命令如下所示：
 
-```kt
+```java
 dependencies {
     // https://mvnrepository.com/artifact/org.springframework.android/spring-android-rest-template
  implementation 'org.springframework.android:spring-android-rest-template:2.0.0.M3' // https://mvnrepository.com/artifact/org.springframework.android/spring-android-core
@@ -80,7 +80,7 @@ Android Maven 模块用于构建 Android OS 的应用程序和构建库。这些
 
 这里是一个如何在 `pom.xml` 中添加 Android 依赖项的代码示例：
 
-```kt
+```java
 <dependencies>
     <!-- https://mvnrepository.com/artifact/org.springframework.android/spring-android-rest-template -->
  <dependency>
@@ -110,7 +110,7 @@ Android Maven 模块用于构建 Android OS 的应用程序和构建库。这些
 
 以下代码列出了四个 `RestTemplate` 构造函数：
 
-```kt
+```java
 RestTemplate();
 RestTemplate(boolean includeDefaultConverters);
 RestTemplate(ClientHttpRequestFactory requestFactory);
@@ -129,7 +129,7 @@ HTTP 定义了一组请求函数，以展示针对给定资源的期望执行的
 
 这里是 HTTP `GET` 的常见函数：
 
-```kt
+```java
 @Throws(RestClientException::class)
 fun <T> getForObject(url: String, responseType: Class<T>, vararg urlVariables: Any): T
 
@@ -149,7 +149,7 @@ fun <T> getForEntity(url: URI, responseType: Class<T>): ResponseEntity<T>
 
 这里是一个如何调用这些函数的示例：
 
-```kt
+```java
 
 val restTemplate = RestTemplate()
 
@@ -166,7 +166,7 @@ HTTP `POST` 请求 URI 上的资产执行给定的操作。`POST` 通常用于�
 
 这里是 HTTP `POST` 的常见函数：
 
-```kt
+```java
 @Throws(RestClientException::class)
 fun postForLocation(url: String, request: Any, vararg urlVariables: Any): URI
 
@@ -193,7 +193,7 @@ fun <T> postForEntity(url: URI, request: Any, responseType: Class<T>): ResponseE
 
 这里是一个如何调用这些函数的示例：
 
-```kt
+```java
 /** POST **/
 
 val restTemplate = RestTemplate()
@@ -217,7 +217,7 @@ val responseExchangeURI = restTemplate.exchange(uri, HttpMethod.POST, request, S
 
 这里是 HTTP `PUT` 的常见函数：
 
-```kt
+```java
 Here are the common functions -
 @Throws(RestClientException::class)
 fun put(url: String, request: Any, vararg urlVariables: Any)
@@ -231,7 +231,7 @@ fun put(url: String, request: Any, urlVariables: Map<String, *>)
 
 这里是一个如何调用 HTTP `PUT` 函数的示例：
 
-```kt
+```java
 val baseUrl: String ?= "YOUR_URL"
 val restTemplate = RestTemplate()
 val uri = URI(baseUrl)
@@ -248,7 +248,7 @@ HTTP `DELETE` 是一个用于删除资源的请求函数。然而，资源不必
 
 这里是 HTTP `DELETE` 的常见函数：
 
-```kt
+```java
 @Throws(RestClientException::class)
 fun delete(url: String, vararg urlVariables: Any)
 
@@ -261,7 +261,7 @@ fun delete(url: URI)
 
 这里是一个如何调用这些函数的示例：
 
-```kt
+```java
 val baseUrl: String ?= "YOUR_URL"
 val restTemplate = RestTemplate()
 val uri = URI(baseUrl)
@@ -276,7 +276,7 @@ HTTP `OPTIONS` 函数用于描述目标资源的通信选项。客户端可以�
 
 这里是 HTTP `OPTIONS` 的常见功能：
 
-```kt
+```java
 @Throws(RestClientException::class)
 fun optionsForAllow(url: String, vararg urlVariables: Any): Set<HttpMethod>
 
@@ -289,7 +289,7 @@ fun optionsForAllow(url: URI): Set<HttpMethod>
 
 这里是如何调用函数的示例：
 
-```kt
+```java
 val baseUrl: String ?= "YOUR_URL"
 val restTemplate = RestTemplate()
 val allowHeaders = restTemplate.optionsForAllow(baseUrl)
@@ -306,7 +306,7 @@ val allowHeadersURI = restTemplate.optionsForAllow(uri)
 
 这里是 HTTP `HEAD` 的常见功能：
 
-```kt
+```java
 @Throws(RestClientException::class)
 fun headForHeaders(url: String, vararg urlVariables: Any): HttpHeaders
 
@@ -365,7 +365,7 @@ Retrofit 非常容易使用。它基本上给你一个机会将编程接口调�
 
 或者，您可以使用以下代码通过 Maven 注入依赖项：
 
-```kt
+```java
 <dependency>
     <groupId>com.squareup.retrofit2</groupId>
     <artifactId>retrofit</artifactId>
@@ -375,7 +375,7 @@ Retrofit 非常容易使用。它基本上给你一个机会将编程接口调�
 
 或者，您可以使用以下代码使用 Gradle：
 
-```kt
+```java
 implementation 'com.squareup.retrofit2:retrofit:2.4.0'
 implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
 compile 'com.jakewharton.picasso:picasso2-okhttp3-downloader:1.1.0'
@@ -392,13 +392,13 @@ compile 'com.jakewharton.picasso:picasso2-okhttp3-downloader:1.1.0'
 
 假设您想从您的 GitHub 账户获取详细信息响应。您需要使用以下端点以及 `@GET` 函数来获取用户信息：
 
-```kt
+```java
 @GET("group/{id}/users") Call<List<Users>> groupList(@Path("id") int id);
 ```
 
 假设您想在您的 GitHub 账户中创建一个新的仓库。在这里，您需要使用以下端点以及 `@POST` 函数：
 
-```kt
+```java
 @POST("user/repos")
 fun createRepo(@Body repo:Repository, 
                @Header("Authorization") accessToken: String,
@@ -410,7 +410,7 @@ fun createRepo(@Body repo:Repository,
 
 假设您想更新 GitHub `Gist` 对象。您需要使用以下端点以及 `@PUT` 函数：
 
-```kt
+```java
 @PUT("gists/{id}")
 fun updateGist(@Path("id") id: String, 
                @Body gist: Gist): Call<ResponseBody>
@@ -420,7 +420,7 @@ fun updateGist(@Path("id") id: String,
 
 假设您想从您的 GitHub 账户删除一个仓库。在这种情况下，您需要使用以下端点以及 `@DELETE` 函数：
 
-```kt
+```java
 @DELETE("repos/{owner}/{repo}")
     fun deleteRepo(@Header("Authorization") accessToken: String,
  @Header("Accept") apiVersionSpec: String,
@@ -432,7 +432,7 @@ fun updateGist(@Path("id") id: String,
 
 可以使用 `@Header` 注解逐步刷新请求头。如果值无效，则忽略该头：
 
-```kt
+```java
 // example one
 @GET("user")
 Call<User> getUser(@Header("Authorization") String authorization)
@@ -460,7 +460,7 @@ fun getUser(@Path("username") username: String): Call<Users>
 
 这里是我的 Android Studio 的 Gradle 文件详情：
 
-```kt
+```java
 buildscript {
  ext.kotlin_version = '1.3.10'    repositories {
         google()
@@ -491,7 +491,7 @@ task clean(type: Delete) {
 
 我们将使用 Retrofit 及其功能，因此需要实现所有依赖项，如下代码所示：
 
-```kt
+```java
     implementation 'com.squareup.retrofit2:retrofit:2.4.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.4.0'
 
@@ -513,7 +513,7 @@ task clean(type: Delete) {
 
 因此，根据 API，我们将为客户端创建一个用户模型。这里是一个名为`GitHubUserModel.kt`的模型类，我们将只显示所有仓库列表的名称：
 
-```kt
+```java
 class GitHubUserModel {
  val name: String? = null }
 ```
@@ -522,7 +522,7 @@ class GitHubUserModel {
 
 这里是`GithubService`接口的代码：
 
-```kt
+```java
 interface GithubService {
  @GET("/users/{user}/repos")
     fun reposOfUser(@Path("user") user: String): Call<List<GitHubUserModel>>
@@ -535,7 +535,7 @@ interface GithubService {
 
 这里是`**UserServiceImpl.kt**`的代码：
 
-```kt
+```java
 class GithubServiceImpl{
    fun getGithubServiceFactory(): GithubService {
         val retrofit = Retrofit.Builder()
@@ -555,7 +555,7 @@ class GithubServiceImpl{
 
 让我们检查`MainActivity.kt`代码：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -593,7 +593,7 @@ class MainActivity : AppCompatActivity() {
 
 这里是`acitivity_main.xml`文件的代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -618,7 +618,7 @@ class MainActivity : AppCompatActivity() {
 
 我们将获取列表并创建一个自定义适配器来显示用户列表，如下面的代码所示：
 
-```kt
+```java
 val listItems = arrayOfNulls<String>( response.body()!!.size)
 for (i in 0 until response.body()!!.size) {
     val recipe = response.body()!![i]

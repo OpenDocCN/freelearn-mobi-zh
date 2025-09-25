@@ -34,7 +34,7 @@ Linux 内核是支持各种硬件设备的关键元素之一。我们将在本�
 
 init 进程的实现可以在`$AOSP/system/core/init`目录中找到。如果我们查看`init.cpp`中的`main`函数，它包括`ueventd`和`watchdogd`的代码，如下面的代码片段所示：
 
-```kt
+```java
 int main(int argc, char** argv) { 
     if (!strcmp(basename(argv[0]), "ueventd")) { 
         return ueventd_main(argc, argv); 
@@ -79,7 +79,7 @@ init 脚本定义了两种类型的元素：**动作**和**服务**。init 进�
 
 动作语法如下：
 
-```kt
+```java
 on <trigger> 
     <command> 
     <command> 
@@ -92,7 +92,7 @@ on <trigger>
 
 例如，我们使用`fstab.goldfish`在触发`fs`时挂载所有模拟器的分区：
 
-```kt
+```java
 on fs 
         mount_all /fstab.goldfish 
 
@@ -104,7 +104,7 @@ on fs
 
 属性值触发器具有以下形式：
 
-```kt
+```java
 <name>=<value> 
 
 ```
@@ -113,7 +113,7 @@ on fs
 
 例如，当`sys.init_log_level`属性更改时，我们需要按照以下方式重置日志级别：
 
-```kt
+```java
 on property:sys.init_log_level=* 
     loglevel ${sys.init_log_level} 
 
@@ -125,7 +125,7 @@ on property:sys.init_log_level=*
 
 服务是 init 启动的程序，并在它们退出时（可选地）重新启动。服务的形式如下：
 
-```kt
+```java
 service <name> <pathname> [ <argument> ]* 
    <option> 
    <option> 
@@ -137,7 +137,7 @@ service <name> <pathname> [ <argument> ]*
 
 选项是服务的修饰符。它们影响 init 如何以及何时运行服务。我们可以使用以下 goldfish 特定的服务作为例子：
 
-```kt
+```java
 service goldfish-setup /system/etc/init.goldfish.sh 
     user root 
     group root 
@@ -157,7 +157,7 @@ service goldfish-setup /system/etc/init.goldfish.sh
 
 初始化进程首先解析`init.rc`脚本。所有其他脚本都由`init.rc`导入，然后由初始化进程解析。如果我们查看以下`init.rc`代码片段，我们可以看到有几个脚本是由`init.rc`导入的：
 
-```kt
+```java
 # Copyright (C) 2012 The Android Open Source Project 
 # 
 # IMPORTANT: Do not create world writable files or directories. 
@@ -180,7 +180,7 @@ on early-init
 
 如果我们具体查看 goldfish 或 ranchu 设备，它们分别有`init.goldfish.rc`和`init.ranchu.rc`脚本。这两个脚本都是 goldfish 设备的一部分，可以在`$AOSP/device/generic/goldfish`中找到，如下面的代码片段所示。它们在构建过程中被复制到`$OUT/root`。
 
-```kt
+```java
 $ ls device/generic/goldfish
 audio           fstab.ranchu      libqemu  qemu-props
 camera          gps               lights   sensors
@@ -192,7 +192,7 @@ fstab.goldfish  init.ranchu.rc    qemud    vibrator
 
 在`init.goldfish.rc`或`init.ranchu.rc`内部，定义了一个`goldfish-setup`服务，如下所示：
 
-```kt
+```java
 service goldfish-setup /system/etc/init.goldfish.sh 
     user root 
     group root 
@@ -204,7 +204,7 @@ service goldfish-setup /system/etc/init.goldfish.sh
 
 在 Android 模拟器中，硬件名称是通过内核命令行传递的。当你以`-verbose`和`-show-kernel`选项启动模拟器时，你将在控制台看到以下命令行参数：
 
-```kt
+```java
 ...
 emulator: argv[08] = "-append"
 emulator: argv[09] = "qemu=1 clocksource=pit androidboot.console=ttyGF2 android.checkjni=1 console=ttyS0,38400 **androidboot.hardware=ranchu** qemu.gles=1 android.qemud=1"
@@ -226,7 +226,7 @@ emulator: argv[09] = "qemu=1 clocksource=pit androidboot.console=ttyGF2 android.
 
 如果我们查看我们将用于本章的以下清单文件，我们可以看到我们只更改了 `kernel`、`x86emu` 设备和来自 Android-x86 项目的 `newinstaller`：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -269,7 +269,7 @@ emulator: argv[09] = "qemu=1 clocksource=pit androidboot.console=ttyGF2 android.
 
 Android-x86 的启动过程第一阶段使用特定的 ramdisk `initrd.img`。源代码可以在 `$AOSP/bootable/newinstaller` 找到。该项目是从 Android-x86 项目复制的。因为它托管在 GitHub 上，我可以对其进行自己的修改：
 
-```kt
+```java
 $ ls -1 -F
 Android.mk
 boot/
@@ -293,7 +293,7 @@ install/
 
 如果我们构建 `newinstaller`，它可以生成几种不同的镜像格式，如 ISO、USB 或 UEFI。在设置好环境并选择构建目标后，可以运行以下命令来构建指定的镜像：
 
-```kt
+```java
 $ make iso_img/usb_img/efi_img  
 
 ```
@@ -310,7 +310,7 @@ $ make iso_img/usb_img/efi_img
 
 如果我们查看 `initrd` 文件夹，我们可以看到以下内容：
 
-```kt
+```java
 $ cd bootable/newinstaller/initrd 
 $ ls -1F 
 bin/ 
@@ -341,7 +341,7 @@ scripts/
 
 让我们看看脚本中的一些重要代码片段，以真正了解其感觉：
 
-```kt
+```java
 #!/bin/busybox sh 
 # 
 # By Chih-Wei Huang <cwhuang@linux.org.tw> 
@@ -374,7 +374,7 @@ done
 
 在下面的 `check_root` 函数中，环境变量 `SRC` 从内核命令行传递，并指定文件系统根路径。它将检查在这个路径中是否可以找到 `ramdisk.img`。如果在这个路径中找到了 `ramdisk.img`，它将被提取到 `/android` 路径，即当前目录，否则；它将返回错误：
 
-```kt
+```java
 ... 
 check_root() 
 { 
@@ -391,7 +391,7 @@ check_root()
 
 在检测到根文件系统后，它将检查环境变量 `INSTALL`。这个 `INSTALL` 变量也是从内核命令行传递的。如果设置了 `INSTALL`，它将提取 `install.img` 到当前根目录。这将覆盖 `initrd.img` 中的某些文件，我们将在稍后详细讨论这一点：
 
-```kt
+```java
 ... 
 if [ -n "$INSTALL" ]; then 
  zcat /src/install.img | ( cd /; cpio -iud > /dev/null ) 
@@ -402,7 +402,7 @@ fi
 
 然后，它将从 `/scripts` 或 `/src/scripts` 文件夹加载所有其他 shell 脚本：
 
-```kt
+```java
 ... 
 # load scripts 
 for s in `ls /scripts/* /src/scripts/*`; do 
@@ -414,7 +414,7 @@ done
 
 一旦所有 shell 脚本都加载到内存中，它将再次检查 `INSTALL` 变量，以查看是否应该执行安装脚本：
 
-```kt
+```java
 ... 
 [ -n "$INSTALL" ] && do_install 
 
@@ -463,7 +463,7 @@ done
 
 如果我们查看`initrd/scripts`文件夹下的`1-install`，我们将看到以下 shell 脚本函数：
 
-```kt
+```java
 do_install() 
 { 
    error -e 'n  Android-x86 installer is not available.\n  
@@ -476,7 +476,7 @@ do_install()
 
 它实现了一个`do_install`函数，该函数将返回错误信息。如果此脚本没有被`install.img`中的脚本覆盖，这意味着安装程序不可用。如果提取了`install.img`，则将调用真正的`do_install`函数以启动安装：
 
-```kt
+```java
 do_install() 
 { 
   until install_hd; do 
@@ -518,7 +518,7 @@ ranchu 镜像模拟为 virtio 块设备
 
 在 ranchu 模拟器中，所有分区都使用 `fstab.ranchu` 文件挂载，如下面的代码片段所示：
 
-```kt
+```java
 ... 
 /dev/block/vda  /system  ext4      ro                 wait 
 /dev/block/vdb  /cache   ext4      noatime,nosuid,nodev,nomblk_io_submit,errors=panic    wait 
@@ -533,7 +533,7 @@ ranchu 镜像模拟为 virtio 块设备
 
 我们可以创建磁盘镜像的方法有很多。QEMU 支持许多磁盘镜像格式。如果您想查找 QEMU 可以支持哪些图像格式的详细信息，可以使用以下 Linux 命令进行查看：
 
-```kt
+```java
 $ man qemu-img  
 
 ```
@@ -558,7 +558,7 @@ $ man qemu-img
 
 我们将使用 qcow2 文件格式来测试 Android 模拟器的 `initrd.img`。为了创建 qcow2 格式的文件镜像，我们需要在 `bootable/newinstaller` 的 `Android.mk` Makefile 中添加以下代码：
 
-```kt
+```java
 ... 
 initrd:  $(BUILT_IMG) 
 
@@ -592,7 +592,7 @@ x86emu_x86.img 的目录布局
 
 一旦我们有了正确的目录结构，我们就可以使用 `make_ext4fs` 命令创建具有以下选项的原始文件系统镜像：
 
-```kt
+```java
 make_ext4fs -T {timestamp} -l {size of file system} {image file name} {source directory} {target out directory}  
 
 ```
@@ -603,7 +603,7 @@ make_ext4fs -T {timestamp} -l {size of file system} {image file name} {source di
 
 由于 qcow2 镜像支持快照功能，我们也可以根据 qcow2 镜像（`x86emu_x86-qcow2.img`）生成快照镜像（`x86emu_x86.img`）。如果我们使用快照镜像，我们可以在任何时候恢复到原始的 qcow2 镜像。可以使用以下命令创建快照镜像：
 
-```kt
+```java
 $ cd $OUT
 $ qemu-img create -f qcow2 -b ./x86emu_x86-qcow2.img ./x86emu_x86.img  
 
@@ -611,7 +611,7 @@ $ qemu-img create -f qcow2 -b ./x86emu_x86-qcow2.img ./x86emu_x86.img
 
 镜像生成后，我们可以使用以下 `qemu-img` 命令检查它：
 
-```kt
+```java
 $ qemu-img info x86emu_x86.img
 image: x86emu_x86.img
 file format: qcow2
@@ -635,7 +635,7 @@ Format specific information:
 
 在这本书中，我们将默认禁用 SELinux，以便我们可以专注于我们的主题。要禁用 SELinux，我们必须对内核配置文件进行一些更改。您可以使用以下 `git` 命令检查更改：
 
-```kt
+```java
 $ cd $AOSP/kernel
 $ git branch
 * android-x86emu-3.10
@@ -653,7 +653,7 @@ $ gitk
 
 一旦我们完成了所有更改，我们可以使用以下命令构建 qcow2 镜像：
 
-```kt
+```java
 $ make qcow2_img USE_SQUASHFS=0
 ...
 make_ext4fs -T -1 -S out/target/product/x86emu/root/file_contexts -L 
@@ -676,14 +676,14 @@ Install system fs image: out/target/product/x86emu/system.img
 
 如前述命令行输出所示，`system.img`将按常规构建。之后，将创建 ramdisk 镜像`initrd.img`，如下所示。请注意`VER`环境变量。我们将脚本更改为将其设置为`x86emu`。Android-x86 中的原始版本是当前日期，例如 2016-11-11：
 
-```kt
+```java
 VER ?= $(shell date +"%F") 
 
 ```
 
 此变量用作安装文件夹名称的一部分。让我们继续审查构建日志：
 
-```kt
+```java
 out/target/product/x86emu/system.img+ maxsize=1370278272 blocksize=2112 total=1342177280 reserve=13842048
 rm -rf out/target/product/x86emu/installer
 out/host/linux-x86/bin/acp -pr bootable/newinstaller/initrd out/target/product/x86emu/installer
@@ -696,7 +696,7 @@ out/host/linux-x86/bin/mkbootfs out/target/product/x86emu/installer | gzip -9 > 
 
 在创建 ramdisk `initrd.img`之后，将根据我们在`Android.mk`文件中为`bootable/newinstaller`添加的内容创建原始和 qcow2 文件镜像：
 
-```kt
+```java
 mkdir -p out/target/product/x86emu/x86emu_tmp/x86emu_x86
 cd out/target/product/x86emu/x86emu_tmp/x86emu_x86; mkdir data
 mv out/target/product/x86emu/initrd.img out/target/product/x86emu/x86emu_tmp/x86emu_x86
@@ -729,7 +729,7 @@ Formatting './x86emu_x86.img', fmt=qcow2 size=1442177024 backing_file='./x86emu_
 
 要运行此脚本，您应该首先设置您的 SDK 环境，这样我们就可以在`$PATH`环境变量中找到模拟器：
 
-```kt
+```java
 #!/bin/sh 
 
 if [ -z "$1" ]; then 
@@ -766,7 +766,7 @@ $EMULATOR1 @a23x86 -verbose -show-kernel -shell -system $IMG_ROOT/system.img -ra
 
 您可以从命令行启动脚本，您将看到以下屏幕输出：
 
-```kt
+```java
 $ test-initrd.sh
 ...
 (debug-found)@android:/android # mount

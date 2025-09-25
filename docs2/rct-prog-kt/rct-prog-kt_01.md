@@ -30,7 +30,7 @@
 
 如果还不够清楚？让我们看看一个编码示例，然后再尝试再次理解它。以下是一个用于确定数字是偶数还是奇数的正常 Kotlin 代码块：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       var number = 4 
       var isEven = isEven(number) 
@@ -134,7 +134,7 @@ RxKotlin 是针对 Kotlin 的反应式编程的具体实现，它受到函数式
 
 你可以从 GitHub 下载和构建 RxKotlin ([`github.com/ReactiveX/RxKotlin`](https://github.com/ReactiveX/RxKotlin))。我不需要任何其他依赖项。GitHub wiki 页面上的文档结构良好。以下是您如何从 GitHub 检出项目并运行构建的说明：
 
-```kt
+```java
 $ git clone https://github.com/ReactiveX/RxKotlin.git
 $ cd RxKotlin/
 $ ./gradlew build
@@ -144,13 +144,13 @@ $ ./gradlew build
 
 对于 Gradle，使用以下编译依赖项：
 
-```kt
+```java
 compile 'io.reactivex.rxjava2:rxkotlin:2.x.y' 
 ```
 
 对于 Maven，使用以下依赖项：
 
-```kt
+```java
     <dependency> 
       <groupId>io.reactivex.rxjava2</groupId> 
       <artifactId>rxkotlin</artifactId> 
@@ -170,7 +170,7 @@ RxKotlin 围绕表示用于推送机制（而不是传统程序中`iterator`模�
 
 如果我们从与数据列表一起工作的简单示例开始，我们会更容易理解。所以，这里是代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       var list:List<Any> = listOf("One", 2, "Three", "Four", 4.5,
       "Five", 6.0f) // 1 
@@ -197,7 +197,7 @@ ReactiveX 框架（无论是 RxKotlin 还是 RxJava）的构建块是可观察�
 
 那么，让我们再次以相同的例子为例，这次使用`observable`：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       var list:List<Any> = listOf("One", 2, "Three",
       "Four", 4.5, "Five", 6.0f) // 1 
@@ -228,7 +228,7 @@ ReactiveX 框架（无论是 RxKotlin 还是 RxJava）的构建块是可观察�
 
 现在，我们多少熟悉了`observables`，让我们以响应式的方式修改偶数奇数程序。以下是实现这一点的代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       var subject:Subject<Int> = PublishSubject.create() 
 
@@ -250,7 +250,7 @@ ReactiveX 框架（无论是 RxKotlin 还是 RxJava）的构建块是可观察�
 
 那么，让我们从一个用户输入的事件开始。通过以下示例进行操作：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       println("Initial Out put with a = 15, b = 10") 
       var calculator:ReactiveCalculator = ReactiveCalculator(15,10) 
@@ -270,7 +270,7 @@ ReactiveX 框架（无论是 RxKotlin 还是 RxJava）的构建块是可观察�
 
 在`main`方法中，我们并没有做很多操作，除了监听输入并将其传递给`ReactiveCalculator`类，所有其他操作都在类内部完成，因此它是模块化的。在后面的章节中，我们将为输入过程创建一个单独的`observable`，并将所有用户输入处理在那里。为了简化，我们遵循了用户输入的拉机制，你将在下一章学习如何移除它。现在，让我们看一下下面的`ReactiveCalculator`类：
 
-```kt
+```java
     class ReactiveCalculator(a:Int, b:Int) { 
       internal val subjectAdd: Subject<Pair<Int,Int>> = 
         PublishSubject.create() 

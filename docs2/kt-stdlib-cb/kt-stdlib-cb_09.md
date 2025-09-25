@@ -30,7 +30,7 @@
 
 1.  声明`ColoredText`类：
 
-```kt
+```java
 data class ColoredText
 @JvmOverloads
 constructor(
@@ -46,7 +46,7 @@ constructor(
 
 1.  在`companion`对象中实现一个静态 JVM 方法：
 
-```kt
+```java
 data class ColoredText
 @JvmOverloads
 constructor(
@@ -70,7 +70,7 @@ constructor(
 
 1.  添加一个成员函数，允许你将`text`属性打印到控制台：
 
-```kt
+```java
 data class ColoredText
 @JvmOverloads
 constructor(
@@ -94,7 +94,7 @@ constructor(
 
 1.  实现一个使用 Kotlin 类函数和属性的 Java 类：
 
-```kt
+```java
 public class JavaApp {
     public static void main(String... args) {
         String rawText = 
@@ -112,7 +112,7 @@ public class JavaApp {
 
 结果，`JavaApp` Java 类中的主函数将打印以下智慧到控制台：
 
-```kt
+```java
 One of the best programming skills you can have is knowing when to walk away for awhile.
 ```
 
@@ -124,7 +124,7 @@ One of the best programming skills you can have is knowing when to walk away for
 
 另一个常用的注解是 `@JvmStatic`。它的目的是告诉编译器需要为这个函数生成一个额外的静态方法，以便在 Java 中作为外部类的直接静态方法使用。例如，在我们的案例中，我们可以通过以下方式在 Java 中访问 `processText()` 函数，省略 `Companion` 元素：
 
-```kt
+```java
 ColoredText.processText("sample text")
 ```
 
@@ -136,13 +136,13 @@ ColoredText.processText("sample text")
 
 为了设置项目以将 Kotlin 文件编译成 JavaScript，我们需要在模块级别的 Gradle 构建脚本中添加以下属性。首先，我们需要应用 Kotlin2Js 插件。我们可以通过以下声明来完成：
 
-```kt
+```java
 apply plugin: "kotlin2js"
 ```
 
 到目前为止，每次我们执行 Gradle 的 `build` 任务时，Kotlin2JS 编译器都会生成来自 Kotlin 文件的相应函数和类，并将它们写入 `build/classes/kotlin/` 目录下的 JS 文件，该文件以项目名称命名。然而，我们可以通过指定输出文件参数来修改此默认行为：
 
-```kt
+```java
 compileKotlin2Js.kotlinOptions.outputFile = "${projectDir}/web/js/app.js"
 
 ```
@@ -151,7 +151,7 @@ compileKotlin2Js.kotlinOptions.outputFile = "${projectDir}/web/js/app.js"
 
 然而，为了执行转换后的 Kotlin 代码，我们还需要将其与 Kotlin JS 标准库链接起来。我们可以修改 Gradle 构建脚本，将所需的库包含在 `web/js` 输出目录中：
 
-```kt
+```java
 build.doLast {
     configurations.compile.each { File file ->
         copy {
@@ -174,13 +174,13 @@ build.doLast {
 
 1.  创建一个新的 Kotlin 文件，`AlertDialogApp.kt`，其中包含 `main()` 函数：
 
-```kt
+```java
 fun main(args : Array<String>) {}
 ```
 
 1.  声明对 JS `alert()` 函数的引用：
 
-```kt
+```java
 fun main(args : Array<String>) {}
 
 external fun alert(message: Any?): Unit
@@ -188,7 +188,7 @@ external fun alert(message: Any?): Unit
 
 1.  实现一个 `showAlert()` 函数并在 `main()` 函数中调用它：
 
-```kt
+```java
 fun main(args : Array<String>) {
     showAlert()
 }
@@ -209,7 +209,7 @@ external fun alert(message: Any?): Unit
 
 我们可以通过在网页浏览器中运行它来测试生成的 JS 代码。为了做到这一点，我们将在项目的主目录下创建一个名为 `test_app.html` 的示例 HTML 文件，该文件将链接 `kotlin.js` 标准库文件并运行包含从 `AlertDialogApp.kt` 文件生成的 `main()` 函数实现的 `app.js` 文件：
 
-```kt
+```java
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -245,7 +245,7 @@ external fun alert(message: Any?): Unit
 
 1.  声明两个具有相同名称的函数：
 
-```kt
+```java
 fun List<String>.join(): String {
     return joinToString()
 }
@@ -257,7 +257,7 @@ fun List<Int>.join(): String =
 
 1.  使用适当的注解标记函数：
 
-```kt
+```java
 @JvmName("joinStringList")
 fun List<String>.join(): String {
     return joinToString()
@@ -275,7 +275,7 @@ fun List<Int>.join(): String =
 
 你可以通过在整数列表和字符串列表上运行 `join()` 函数来测试这一点：
 
-```kt
+```java
 fun main(vararg args: String) {
     println(listOf(1, 2, 3).join())
     println(listOf("a", "b", "c").join())
@@ -284,7 +284,7 @@ fun main(vararg args: String) {
 
 结果，前面的代码将打印以下文本到控制台：
 
-```kt
+```java
 1, 2, 3
 a, b, c
 ```
@@ -307,7 +307,7 @@ a, b, c
 
 让我们创建一个新的 Kotlin 文件，命名为 `Recipe4.kt`，其中包含以下示例实现，以便查看其字节码转换：
 
-```kt
+```java
 data class A(val a: String = "a") {
     companion object {
         @JvmStatic
@@ -336,13 +336,13 @@ data class A(val a: String = "a") {
 
 1.  使用自定义别名导入 `StringBuilder` 类：
 
-```kt
+```java
 import java.lang.StringBuilder as builder
 ```
 
 1.  在示例代码中使用自定义的 `StringBuilder` 名称：
 
-```kt
+```java
 import java.lang.StringBuilder as builder
 
 fun main(vararg args: String) {
@@ -359,7 +359,7 @@ fun main(vararg args: String) {
 
 如你所见，我们能够使用替代名称而不是 `StringBuilder` 类。这是一个小功能，但有时可以用来使你的代码更容易阅读。我们的示例代码将打印以下文本到控制台：
 
-```kt
+```java
 Code is like humor. When you have to explain it, it’s bad.
 ```
 
@@ -371,7 +371,7 @@ Code is like humor. When you have to explain it, it’s bad.
 
 假设我们有两个预定义的类：
 
-```kt
+```java
 data class Song(val title: String)
 data class Artist(val name: String)
 ```
@@ -382,13 +382,13 @@ data class Artist(val name: String)
 
 1.  声明一个`Map<T, List<Song>>`类型的泛型类型别名：
 
-```kt
+```java
 typealias GrouppedSongs<T> = Map<T, List<Song>>
 ```
 
 1.  使用类型别名实现`getMostPopularArtist()`函数：
 
-```kt
+```java
 fun getMostPopularArtist(songs: GrouppedSongs<Artist>) =
     songs.toList().sortedByDescending {it.second.size }.first().first
 ```
@@ -397,7 +397,7 @@ fun getMostPopularArtist(songs: GrouppedSongs<Artist>) =
 
 使用类型别名，我们能够为类型提供一个自定义名称，并且可以在`getMostPopularArtist(songs: GrouppedSongs<Artist>)`中使用它，而不是使用`Map<Artist, List<Song>>`类型，这导致了一个更有意义的声明。我们可以通过用示例数据调用`getMostPopularArtist()`来测试我们的实现：
 
-```kt
+```java
 val songs: GrouppedSongs<Artist> =
         mapOf(
                 Artist("Bob Dylan") to
@@ -413,7 +413,7 @@ println("${getMostPopularArtist(songs)} is the most popular")
 
 因此，我们将得到以下文本打印到控制台：
 
-```kt
+```java
 Artist(name=Bob Dylan) is most popular
 ```
 
@@ -425,7 +425,7 @@ Kotlin 被宣传为一种极其表达性的语言。然而，这是语言的一�
 
 让我们考虑以下 Java 代码：
 
-```kt
+```java
 int value;
 try {
     result = parseInt(input);
@@ -441,7 +441,7 @@ try {
 
 1.  在`try…catch`声明中调用`parseInt()`函数：
 
-```kt
+```java
 try {
     parseInt("fdsaa")
 } catch (e: NumberFormatException) {
@@ -451,7 +451,7 @@ try {
 
 1.  将`try…catch`声明的结果赋值给`value`变量：
 
-```kt
+```java
 val result = try {
     parseInt("fdsaa")
 } catch (e: NumberFormatException) {
@@ -467,7 +467,7 @@ val result = try {
 
 类似地，我们可以将其他语言声明视为表达式。将控制流语句（如`if`和`when`）返回的值赋给变量是一种常见的做法。例如，我们可以以下这种方式使用`when`作为表达式：
 
-```kt
+```java
 val result = when(input) {
     is Int -> input
     is String -> parseInt(input)
@@ -483,13 +483,13 @@ val result = when(input) {
 
 1.  让我们先定义一个返回随机`Double`值的`Number`类型的函数：
 
-```kt
+```java
 fun getRandomNumber(): Number = Random().nextDouble() * 10
 ```
 
 1.  尝试使用安全转换操作符将函数的结果转换为不同的类型，并将转换后的值打印到控制台：
 
-```kt
+```java
 println(getRandomNumber() as? Int)
 println(getRandomNumber() as? Double)
 println(getRandomNumber() as? String)
@@ -499,7 +499,7 @@ println(getRandomNumber() as? String)
 
 上述代码不会失败也不会抛出任何异常。它只会返回 `null` 值。我们的转换测试代码将打印以下输出到控制台：
 
-```kt
+```java
 null
 8.802117014997226
 null

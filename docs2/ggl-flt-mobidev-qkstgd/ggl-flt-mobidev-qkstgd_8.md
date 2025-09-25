@@ -16,7 +16,7 @@
 
 此文件包含了一些在构建应用程序的生产版本时非常有用的主要全局设置。它位于 `<app dir>/android/app/src/main`。当您点击 `AndroidManifest.xml` 文件时，您将在 `Application` 标签中找到以下片段：
 
-```kt
+```java
 …..
 android:name="io.flutter.app.FlutterApplication"
 android:label="flutter_app_battery"
@@ -32,7 +32,7 @@ android:icon="@mipmap/ic_launcher">
 
 +   `android:icon`: 这个属性设置了应用程序的启动图标
 
-```kt
+```java
 ….
 <uses-permission android:name="android.permission.INTERNET"/>
 …..
@@ -46,7 +46,7 @@ android:icon="@mipmap/ic_launcher">
 
 +   在以下片段中设置 `VersionCode` 和 `VersionName`。请注意，`VersionCode` 的值对于每个上传的构建必须是唯一的，并且它是一个绝对值。Google Play 商店允许的 `versionCode` 的最大值是 `2100000000`。另一方面，`VersionName` 是一个字符串值。`VersionName` 没有在 Play 商店上显示值的用途。字符串值可以作为 `<major>.<minor>.<point>` 字符串级联——例如，1.2.2：
 
-```kt
+```java
 …….
 …….
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
@@ -63,7 +63,7 @@ if (flutterVersionName == null)
 
 +   `minSdkVersion` 和 `targetSdkVersion`: 这两个值指定了应用程序设计运行的最低 API 级别和目标 API 级别：
 
-```kt
+```java
 defaultConfig
 { // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
 applicationId "deviceinformation.flutterappbattery"
@@ -91,7 +91,7 @@ testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
 1.  **创建密钥库**：如果你已经有了 `keystore`，则跳到步骤 2。如果你希望构建新的 `keystore`，请使用 `KeyTool` 工具使用以下命令行代码生成一个：
 
-```kt
+```java
 keytool -genkey -v -keystore ~/appkey.jks -keyalg RSA -keysize 2048 -validity 10000 -alias appkey
 ```
 
@@ -101,7 +101,7 @@ keytool -genkey -v -keystore ~/appkey.jks -keyalg RSA -keysize 2048 -validity 10
 
     `<app dir>/android/key.properties` 包含对 keystore 的引用。请保持此文件私密。查看以下代码：
 
-```kt
+```java
 storePassword=<password used in the previous step>
 keyPassword=<password used in the previous step>
 keyAlias=appkey
@@ -110,7 +110,7 @@ storeFile=<location of the key store file, e.g. /Users/<user name>/appkey.jks>
 
 1.  **在 Gradle 中配置签名**：转到 `<app dir>/android/app/build.gradle` 文件并将 `**android {**` 替换为以下代码：
 
-```kt
+```java
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
@@ -121,7 +121,7 @@ android {
 
 1.  接下来，删除以下代码：
 
-```kt
+```java
 buildTypes {
     release {
         // TODO: Add your own signing config for the release build.
@@ -134,7 +134,7 @@ buildTypes {
 
 用以下代码替换它：
 
-```kt
+```java
 signingConfigs {
     release {
         keyAlias keystoreProperties['keyAlias']
@@ -158,7 +158,7 @@ buildTypes {
 
 1.  **配置 ProGuard**：创建一个名为 `**/**android/app/proguard-rules.pro` 的新文件并添加以下规则：
 
-```kt
+```java
 #Flutter Wrapper
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.**  { *; }
@@ -172,7 +172,7 @@ buildTypes {
 
 1.  **启用混淆和/或精简**：打开 `/android/app/build.gradle` 文件并定位到 `buildTypes` 定义：
 
-```kt
+```java
  …..
  …..
 buildTypes {
@@ -187,7 +187,7 @@ buildTypes {
 
 在内部，将配置集的 `minifyEnabled` 和 `useProguard` 标志设置为 true。注意也将 ProGuard 指向你在步骤 1 中创建的文件。刷新后的代码将如下所示：
 
-```kt
+```java
 …
 …
 buildTypes {

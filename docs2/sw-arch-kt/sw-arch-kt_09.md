@@ -70,7 +70,7 @@
 
 将系统的状态表示为不可变事件的序列的想法与函数式编程范式很好地一致。聚合和事件都是不可变的。每次更改都是通过通过无状态函数从事件创建聚合的新版本来执行的。这可以通过两个基本函数表达，这两个函数被写成 Kotlin lambda 表达式：
 
-```kt
+```java
 (CreatedEvent) -> Aggregate
 (UpdatedEvent, Aggregate) -> Aggregate
 ```
@@ -159,7 +159,7 @@
 
 让我们重新审视聚合合约作为数据类：
 
-```kt
+```java
 data class Contract(
     val id: UUID,
     val draftedAt: Instant,
@@ -179,7 +179,7 @@ data class Party(
 
 `ContractEvent`的基本结构应包含聚合的唯一标识符和事件发生的时间：
 
-```kt
+```java
 interface ContractEvent {
     val contractId: UUID
     val targetVersion: Int
@@ -191,7 +191,7 @@ interface ContractEvent {
 
 在这个例子中，我们使用一个简单的内存事件存储。它有两个基本功能。`append`函数通过聚合 ID 在序列末尾添加新事件，而`get`函数根据聚合 ID 返回事件的按时间顺序的序列：
 
-```kt
+```java
 class EventStore<KEY, AGGREGATE> {
     private val aggregatesByKey = mutableMapOf<KEY, List<AGGREGATE>>()
     fun append(id: KEY, payload: AGGREGATE) {
@@ -205,7 +205,7 @@ class EventStore<KEY, AGGREGATE> {
 
 聚合合约的创建始于起草了合同的家庭，并且它应包含创建聚合第一个版本所需的所有信息：
 
-```kt
+```java
 data class ContractDraftedEvent(
     override val contractId: UUID,
     override val targetVersion: Int = 0,
@@ -219,7 +219,7 @@ data class ContractDraftedEvent(
 
 `Contract Drafted Event`类应提供一个创建聚合的函数。这是一个简单的函数，将值放入适当的结构中：
 
-```kt
+```java
 fun ContractDraftedEvent.play(): Contract = Contract(
     id = contractId,
     draftedAt = time,
@@ -237,7 +237,7 @@ fun ContractDraftedEvent.play(): Contract = Contract(
 
 任何后续事件都必须使用聚合的当前版本作为参数来生成新版本。例如，一个捕捉家庭修改并同意起草合同的事件的示例可能如下所示：
 
-```kt
+```java
 data class ContractAmendedEvent(
     override val contractId: UUID,
     override val targetVersion: Int,
@@ -256,7 +256,7 @@ data class ContractAgreedEvent(
 
 注意，此事件不一定遵循聚合的数据结构。关键点是保持事件简洁简单。因此，此事件仅提及一个家庭，并依赖于相应的`play`函数来正确应用更改。注意，`play`函数接受当前聚合的参数：
 
-```kt
+```java
 fun ContractAmendedEvent.play(current: Contract): Contract {
     validate(current, amendedByHousehold)
     return if (amendedByHousehold == current.partyA.householdName) {
@@ -303,7 +303,7 @@ fun ContractAgreedEvent.play(current: Contract): Contract {
 
 你会注意到有一个`validate`函数，这对于确保数据完整性非常重要：
 
-```kt
+```java
 fun <T : ContractEvent> T.validate(current: Contract, expectedHouseholdName: String): T {
     require(contractId == current.id) {
         "Aggregate ID mismatch - expected: $contractId, was ${current.id}"
@@ -327,7 +327,7 @@ fun <T : ContractEvent> T.validate(current: Contract, expectedHouseholdName: Str
 
 应该有一个迭代函数，它接受一个`Contract Events`列表，并最终返回一个`Contract`对象：
 
-```kt
+```java
 fun List<ContractEvent>.play(): Contract? {
     if (isEmpty()) return null
     var current: Contract = (first() as ContractDraftedEvent).play()
@@ -346,7 +346,7 @@ fun List<ContractEvent>.play(): Contract? {
 
 该函数使用合同事件的`List`作为接收者。在空列表的情况下，返回类型是可空的。它假设第一个事件是`ContractCreatedEvent`，它设置了`Contract`的初始快照。它从第二个事件循环到最后一个事件，生成一个新的`Contract`版本，将其设置为`current`以传递给下一个事件，并在最后返回`Contract`对象。其用法示例如下。同一聚合的事件列表是有序的，并且是顺序播放的：
 
-```kt
+```java
     val contractId = UUID.randomUUID()
     val eventStore = EventStore<UUID, ContractEvent>()
     val createdEvent = ContractDraftedEvent(
@@ -389,7 +389,7 @@ fun List<ContractEvent>.play(): Contract? {
 
 代码不会直接更新聚合。相反，它创建了一些事件，并让它们通过。最终版本应该是`3`，因为第一个版本是`0`。当执行前面的代码时，以下内容应打印到控制台：
 
-```kt
+```java
 Aggregate is of version: 3
 ```
 
@@ -409,7 +409,7 @@ Aggregate is of version: 3
 
 如果事件处理包含利用事件处理时间的逻辑，那么它将根据处理时间生成不同的结果。例如，以下`expire`变量将根据系统时钟具有不同的布尔值：
 
-```kt
+```java
 val expire = If (event.time < System.currentMillis()) true else false
 ```
 
@@ -417,7 +417,7 @@ val expire = If (event.time < System.currentMillis()) true else false
 
 事件处理过程中的任何随机化都会在每次迭代中产生不同的结果。从随机化生成的值应该被捕获在事件有效负载中，事件处理过程中不涉及任何随机化。如果在处理过程中必须生成标识符，它们可以是事件范围内的唯一值。在外部，它们与事件标识符一起用作复合键。以下是一个例子：
 
-```kt
+```java
 val externalValueId = "${event.id}-${event.value.id}"
 ```
 
@@ -607,7 +607,7 @@ CQRS 和事件溯源是互补的模式，在构建健壮、可扩展和可维护
 
 从事件溯源的先例扩展，添加 CQRS 需要创建几个命令和查询类。我们需要一个类来捕获家庭之间合同当前状态的查询，以及一个类来捕获起草合同的命令。相应的代码如下：
 
-```kt
+```java
 data class CurrentContractQuery(
     val contractId: UUID
 )
@@ -635,7 +635,7 @@ data class AgreeContractCommand(
 
 在此示例中，每个命令的处理都有两种潜在的结果。成功的结果会创建一个事件，并且这个事件需要被持久化。失败的结果会通知调用者原因，并且不会创建事件。需要有一个类来封装失败结果的信息：
 
-```kt
+```java
 data class Failure<T>(
     val request: T,
     val message: String? = null,
@@ -647,7 +647,7 @@ data class Failure<T>(
 
 每个查询和命令都需要一个处理程序。利用事件源示例中的`EventStore`类，查询处理程序使用 Kotlin 扩展和事件存储作为参数，操作简单：
 
-```kt
+```java
 fun CurrentContractQuery.handle(
     eventStore: EventStore<UUID, ContractEvent>
 ): Contract? = eventStore.get(contractId)?.play()
@@ -657,7 +657,7 @@ fun CurrentContractQuery.handle(
 
 命令处理程序有两种主要风格：创建和更新。创建命令的处理程序生成一个随机的**通用唯一标识符**（**UUID**）和时间戳。这些字段被捕获在创建事件中：
 
-```kt
+```java
 fun DraftContractCommand.handle(
     eventStore: EventStore<UUID, ContractEvent>,
     onSuccess: (ContractDraftedEvent) -> Unit,
@@ -684,7 +684,7 @@ fun DraftContractCommand.handle(
 
 更新命令的处理程序需要验证聚合是否存在，以及是否保留了相同的聚合 ID。其余的实现是创建命令的处理程序：
 
-```kt
+```java
 fun AgreeContractCommand.handle(
     eventStore: EventStore<UUID, ContractEvent>,
     onSuccess: (ContractAgreedEvent) -> Unit,
@@ -709,7 +709,7 @@ fun AgreeContractCommand.handle(
 
 有一个名为`validate`的函数，旨在与其他更新命令处理程序共享：
 
-```kt
+```java
 fun <T> T.validate(
     eventStore: EventStore<UUID, ContractEvent>,
     contractId: UUID,
@@ -739,7 +739,7 @@ fun <T> T.validate(
 
 最后，当使用此 CQRS 和事件源示例时，客户端只需创建一个命令并将其传递到事件存储中即可开始。然后，调用扩展`handle`函数：
 
-```kt
+```java
     var contractId: UUID? = null
     val eventStore = EventStore<UUID, ContractEvent>()
     DraftContractCommand(
@@ -766,7 +766,7 @@ fun <T> T.validate(
 
 成功回调函数捕获`contractId`以供未来的更新使用。要更新聚合，需要创建一个更新命令并指定合同 ID。之后，调用`handle`扩展函数：
 
-```kt
+```java
     AgreeContractCommand(
         contractId = contractId!!,
         agreedByHousehold = "HouseholdA"
@@ -785,14 +785,14 @@ fun <T> T.validate(
 
 在所有这些更新之后，我们可以查询最新的 `Contract` 并查看所有这些更新是否已累积。通过捕获的合同 ID 创建了一个查询。调用 `handle` 扩展函数，并将事件存储传递进去：
 
-```kt
+```java
     val aggregate = CurrentContractQuery(contractId!!).handle(eventStore)
     println("Aggregate is of version: ${aggregate?.version}")
 ```
 
 因为事件存储在处理命令时持续捕获事件，它已经拥有了聚合的完整历史。这是执行所有命令和查询后得到的控制台输出：
 
-```kt
+```java
 Contract drafted: 3a25642c-fc9b-4024-b862-daf10fc645a6
 Contract amended: 3a25642c-fc9b-4024-b862-daf10fc645a6
 Contract agreed: 3a25642c-fc9b-4024-b862-daf10fc645a6

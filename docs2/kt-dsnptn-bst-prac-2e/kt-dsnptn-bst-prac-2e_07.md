@@ -46,31 +46,31 @@
 
 函数式编程的一个基本概念是**不可变性**。这意味着从函数接收输入的那一刻起，到函数返回输出的那一刻，对象不会改变。*但是它怎么能改变呢？*好吧，让我们看看一个简单的例子：
 
-```kt
+```java
 fun <T> printAndClear(list: MutableList<T>) {
 ```
 
-```kt
+```java
     for (e in list) {
 ```
 
-```kt
+```java
         println(e)
 ```
 
-```kt
+```java
         list.remove(e)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 printAndClear(mutableListOf("a", "b", "c"))
 ```
 
@@ -94,31 +94,31 @@ printAndClear(mutableListOf("a", "b", "c"))
 
 在这种情况下，我们的函数应该返回一个新的对象：
 
-```kt
+```java
 private fun <T> printAndClear(list: MutableList<T>): 
 ```
 
-```kt
+```java
   MutableList<T> {
 ```
 
-```kt
+```java
     for (e in list) {
 ```
 
-```kt
+```java
         println(e)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     return mutableListOf()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -126,7 +126,7 @@ private fun <T> printAndClear(list: MutableList<T>):
 
 然而，集合*类型*不可变还不够。集合的*内容*也应该不可变。为了更好地理解这一点，让我们看看以下简单的类：
 
-```kt
+```java
 data class Player(var score: Int)
 ```
 
@@ -134,7 +134,7 @@ data class Player(var score: Int)
 
 接下来，我们将创建一个`data` `class`的单个实例并将其放入不可变集合中：
 
-```kt
+```java
 val scores = listOf(Player(0))
 ```
 
@@ -148,31 +148,31 @@ val scores = listOf(Player(0))
 
 现在，让我们创建一个包含两个线程的列表：
 
-```kt
+```java
 val threads = List(2) {
 ```
 
-```kt
+```java
         thread {
 ```
 
-```kt
+```java
             for (i in 1..1000) {
 ```
 
-```kt
+```java
                 scores[0].score++
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
@@ -180,19 +180,19 @@ val threads = List(2) {
 
 我们通过使用`join()`等待线程完成，然后检查计数器的值：
 
-```kt
+```java
 for (t in threads) {
 ```
 
-```kt
+```java
     t.join()
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 println(scores[0].score) // Less than 2000 for sure
 ```
 
@@ -200,27 +200,27 @@ println(scores[0].score) // Less than 2000 for sure
 
 这是一个可变变量的经典*竞态条件*案例。每次运行此代码时，你得到的结果都会不同。如果你之前遇到过并发，这个原因可能对你来说很熟悉。顺便说一句，这与线程没有完成它们的工作无关。你可以在循环后添加一个打印消息来确保这一点：
 
-```kt
+```java
 thread { 
 ```
 
-```kt
+```java
     for (i in 1..1000) { 
 ```
 
-```kt
+```java
         scores[0].score = scores[0].score + 1 
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     println("Done")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -238,41 +238,41 @@ thread {
 
 在函数式编程中，一个`pair`：
 
-```kt
+```java
 val pair = "a" to 1
 ```
 
 `pair`包含两个属性，称为`first`和`second`，是不可变的：
 
-```kt
+```java
 pair.first = "b" // Doesn't work
 ```
 
-```kt
+```java
 pair.second = 2  // Still doesn't
 ```
 
 我们可以使用`解构声明`将`pair`解构为两个单独的值：
 
-```kt
+```java
 val (key, value) = pair
 ```
 
-```kt
+```java
 println("$key => $value")
 ```
 
 当迭代映射时，我们还会处理另一种类型的元组：`Map.Entry`：
 
-```kt
+```java
 for (p in mapOf(1 to "Sunday", 2 to "Monday")) {
 ```
 
-```kt
+```java
    println("${p.key} ${p.value}")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -280,7 +280,7 @@ for (p in mapOf(1 to "Sunday", 2 to "Monday")) {
 
 除了`pair`之外，还有一个包含`third`值的`Triple`元组：
 
-```kt
+```java
 val firstEdition = Triple("Design Patterns with Kotlin",   310, 2018)
 ```
 
@@ -298,23 +298,23 @@ val firstEdition = Triple("Design Patterns with Kotlin",   310, 2018)
 
 如我们之前讨论的，在 Kotlin 中，一个函数可以返回另一个函数。让我们看看以下简单的函数，以深入了解这个语法：
 
-```kt
+```java
 fun generateMultiply(): (Int) -> Int {
 ```
 
-```kt
+```java
     return fun(x: Int): Int {
 ```
 
-```kt
+```java
         return x * 2
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -322,23 +322,23 @@ fun generateMultiply(): (Int) -> Int {
 
 我们也可以使用更短的语法重写前面的代码：
 
-```kt
+```java
 fun generateMultiply(): (Int) -> Int {
 ```
 
-```kt
+```java
     return { x: Int ->
 ```
 
-```kt
+```java
         x * 2
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 } 
 ```
 
@@ -346,7 +346,7 @@ fun generateMultiply(): (Int) -> Int {
 
 接下来，让我们看看返回类型的签名：
 
-```kt
+```java
 (Int) -> Int
 ```
 
@@ -354,27 +354,27 @@ fun generateMultiply(): (Int) -> Int {
 
 如果一个函数不接受任何参数，我们使用空圆括号来表示：
 
-```kt
+```java
 () -> Int
 ```
 
 如果一个函数不返回任何内容，我们使用 `Unit` 类型来指定：
 
-```kt
+```java
 (Int) -> Unit
 ```
 
 Kotlin 中的函数可以被分配给变量或值，稍后调用：
 
-```kt
+```java
 val multiplyFunction = generateMultiply()
 ```
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 println(multiplyFunction(3, 4))
 ```
 
@@ -384,33 +384,33 @@ println(multiplyFunction(3, 4))
 
 也可以将函数指定为参数：
 
-```kt
+```java
 fun mathInvoker(x: Int, y: Int, mathFunction: (Int, Int) ->   Int) {
 ```
 
-```kt
+```java
     println(mathFunction(x, y))
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 mathInvoker(5, 6, multiplyFunction)
 ```
 
 如果函数是最后一个参数，它也可以以临时方式提供，在括号之外：
 
-```kt
+```java
 mathInvoker(7, 8) { x, y ->
 ```
 
-```kt
+```java
    x * y
 ```
 
-```kt
+```java
 }
 ```
 
@@ -424,39 +424,39 @@ mathInvoker(7, 8) { x, y ->
 
 例如，在前面的章节中，为了逐个打印集合中的元素，我们使用了无聊的 `for-each` 循环：
 
-```kt
+```java
 val dwarfs = listOf("Dwalin", "Balin", "Kili", "Fili",   "Dori", "Nori", "Ori", "Oin", "Gloin", "Bifur", "Bofur",   "Bombur", "Thorin")
 ```
 
-```kt
+```java
 for (d in dwarfs) {
 ```
 
-```kt
+```java
     println(d)
 ```
 
-```kt
+```java
 }
 ```
 
 很多人看到这个可能都会感到沮丧。但我希望你没有完全停止阅读这本书。当然，在许多编程语言中，还有另一种实现相同目标的方法：一个 `forEach` 函数：
 
-```kt
+```java
 dwarfs.forEach { d -> 
 ```
 
-```kt
+```java
     println(d)
 ```
 
-```kt
+```java
 }
 ```
 
 这个函数是高阶函数最基本的一个例子。让我们看看它是如何声明的：
 
-```kt
+```java
 fun <T> Iterable<T>.forEach(action: (T) -> Unit)
 ```
 
@@ -468,15 +468,15 @@ fun <T> Iterable<T>.forEach(action: (T) -> Unit)
 
 注意，在先前的例子中，我们没有指定`d`变量的类型。我们可以使用我们之前使用过的相同冒号符号来完成此操作：
 
-```kt
+```java
 dwarfs.forEach { d: String ->  
 ```
 
-```kt
+```java
     println(d) 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -484,21 +484,21 @@ dwarfs.forEach { d: String ->  
 
 当我们编写像这样简短的 lambda 表达式时，我们不需要省略的不仅仅是参数的类型。如果一个 lambda 只有一个参数，我们可以使用它的隐含名称，在这种情况下，是`it`：
 
-```kt
+```java
 dwarfs.forEach {
 ```
 
-```kt
+```java
     println(it)
 ```
 
-```kt
+```java
 }
 ```
 
 在我们需要将单个函数调用到单个参数的情况下，我们也可以使用*函数引用*。我们在*第四章*中看到了一个例子，*熟悉行为模式*，在讨论策略设计模式时：
 
-```kt
+```java
 dwarfs.forEach(::println)
 ```
 
@@ -508,19 +508,19 @@ dwarfs.forEach(::println)
 
 在面向对象范式中，状态始终存储在对象中。但在函数式编程中，这并不一定是这种情况。让我们以以下函数为例：
 
-```kt
+```java
 fun counter(): () -> Int {
 ```
 
-```kt
+```java
     var i = 0
 ```
 
-```kt
+```java
     return { i++ }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -528,19 +528,19 @@ fun counter(): () -> Int {
 
 让我们按照我们已经学到的这种方式将其存储在一个变量中，并多次调用它：
 
-```kt
+```java
 val next = counter()
 ```
 
-```kt
+```java
 println(next())
 ```
 
-```kt
+```java
 println(next())
 ```
 
-```kt
+```java
 println(next())
 ```
 
@@ -566,7 +566,7 @@ println(next())
 
 让我们看看以下简单的函数：
 
-```kt
+```java
 fun sayHello() = println("Hello")
 ```
 
@@ -574,21 +574,21 @@ fun sayHello() = println("Hello")
 
 我们将把它与以下函数进行比较：
 
-```kt
+```java
 fun hello() = "Hello"
 ```
 
 以下函数没有任何副作用。这使得测试它变得容易得多：
 
-```kt
+```java
 fun testHello(): Boolean {
 ```
 
-```kt
+```java
     return "Hello" == hello()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -596,57 +596,57 @@ fun testHello(): Boolean {
 
 如我们之前提到的，不是每个用 Kotlin 编写的函数都是纯函数：
 
-```kt
+```java
 fun <T> removeFirst(list: MutableList<T>): T {
 ```
 
-```kt
+```java
     return list.removeAt(0)
 ```
 
-```kt
+```java
 }
 ```
 
 如果我们在同一个列表上两次调用该函数，它将返回不同的结果：
 
-```kt
+```java
 val list = mutableListOf(1, 2, 3)
 ```
 
-```kt
+```java
 println(removeFirst(list)) // Prints 1
 ```
 
-```kt
+```java
 println(removeFirst(list)) // Prints 2
 ```
 
 将前面的函数与这个函数比较：
 
-```kt
+```java
 fun <T> withoutFirst(list: List<T>): T {
 ```
 
-```kt
+```java
     return ArrayList(list).removeAt(0)
 ```
 
-```kt
+```java
 }
 ```
 
 现在，我们的函数是完全可预测的，无论我们调用多少次：
 
-```kt
+```java
 val list = mutableListOf(1, 2, 3)
 ```
 
-```kt
+```java
 println(withoutFirst(list)) // It's 1
 ```
 
-```kt
+```java
 println(withoutFirst(list)) // Still 1
 ```
 
@@ -658,25 +658,25 @@ println(withoutFirst(list)) // Still 1
 
 **柯里化**是将接受多个参数的函数转换为一系列函数的方法，其中每个函数只接受一个参数。这听起来可能有些令人困惑，所以让我们看看一个简单的例子：
 
-```kt
+```java
 fun subtract(x: Int, y: Int): Int {
 ```
 
-```kt
+```java
     return x - y
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 println(subtract(50, 8))
 ```
 
 这是一个接受两个参数作为输入并返回它们之间差的函数。然而，一些语言允许我们使用以下语法调用此函数：
 
-```kt
+```java
 subtract(50)(8)
 ```
 
@@ -684,37 +684,37 @@ subtract(50)(8)
 
 让我们看看如何在 Kotlin 中实现这一点。我们已经看到如何从一个函数中返回另一个函数：
 
-```kt
+```java
 fun subtract(x: Int): (Int) -> Int {
 ```
 
-```kt
+```java
     return fun(y: Int): Int {
 ```
 
-```kt
+```java
         return x - y
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 这里是前面代码的简短形式：
 
-```kt
+```java
 fun subtract(x: Int) = fun(y: Int): Int {
 ```
 
-```kt
+```java
     return x - y
 ```
 
-```kt
+```java
 }
 ```
 
@@ -722,7 +722,7 @@ fun subtract(x: Int) = fun(y: Int): Int {
 
 这里是它的更简短形式：
 
-```kt
+```java
 fun subtract(x: Int) = {y: Int -> x - y}
 ```
 
@@ -732,33 +732,33 @@ fun subtract(x: Int) = {y: Int -> x - y}
 
 你可能会想要使用柯里化的一个真实世界场景是*日志记录*。一个`log`函数通常看起来像这样：
 
-```kt
+```java
 enum class LogLevel {
 ```
 
-```kt
+```java
     ERROR, WARNING, INFO
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 fun log(level: LogLevel, message: String) =     println("$level: $message")
 ```
 
 我们可以通过将函数存储在变量中来设置日志级别：
 
-```kt
+```java
 val errorLog = fun(message: String) {
 ```
 
-```kt
+```java
     log(LogLevel.ERROR, message)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -768,33 +768,33 @@ val errorLog = fun(message: String) {
 
 在这种情况下，我们可以使用柯里化。这个代码的*柯里化*版本将看起来像这样：
 
-```kt
+```java
 fun createLogger(level: LogLevel): (String) -> Unit {
 ```
 
-```kt
+```java
     return { message: String ->
 ```
 
-```kt
+```java
         log(level, message)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 现在，取决于谁使用我们的代码，他们可以创建他们想要的记录器：
 
-```kt
+```java
 val infoLogger = createLogger(LogLevel.INFO)
 ```
 
-```kt
+```java
 infoLogger("Log something")
 ```
 
@@ -808,27 +808,27 @@ infoLogger("Log something")
 
 在开发不同类型的系统或解决问题时，一个常见的任务是找到一种方法来避免多次重复相同的计算。假设我们收到多个整数列表，并且对于每个列表，我们希望打印其总和：
 
-```kt
+```java
 val input = listOf(
 ```
 
-```kt
+```java
     setOf(1, 2, 3),
 ```
 
-```kt
+```java
     setOf(3, 1, 2),
 ```
 
-```kt
+```java
     setOf(2, 3, 1),
 ```
 
-```kt
+```java
     setOf(4, 5, 6)
 ```
 
-```kt
+```java
 )
 ```
 
@@ -836,15 +836,15 @@ val input = listOf(
 
 求和计算可以很容易地描述为一个纯函数：
 
-```kt
+```java
 fun sum(numbers: Set<Int>): Double {
 ```
 
-```kt
+```java
     return numbers.sumByDouble { it.toDouble() }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -852,33 +852,33 @@ fun sum(numbers: Set<Int>): Double {
 
 我们可以在可变映射中存储相同集合的前一次计算结果：
 
-```kt
+```java
 val resultsCache = mutableMapOf<Set<Int>, Double>()
 ```
 
 为了避免创建过多的类，我们可以使用一个高阶函数，它会将结果包装在我们之前创建的缓存中：
 
-```kt
+```java
 fun summarizer(): (Set<Int>) -> Double {
 ```
 
-```kt
+```java
     val resultsCache = mutableMapOf<Set<Int>, Double>()
 ```
 
-```kt
+```java
     return { numbers: Set<Int> ->
 ```
 
-```kt
+```java
         resultsCache.computeIfAbsent(numbers, ::sum)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -888,19 +888,19 @@ fun summarizer(): (Set<Int>) -> Double {
 
 在前面的输入上运行以下代码将只调用求和函数两次：
 
-```kt
+```java
 val summarizer = summarizer()
 ```
 
-```kt
+```java
 input.forEach {
 ```
 
-```kt
+```java
     println(summarizer(it))
 ```
 
-```kt
+```java
 }
 ```
 
@@ -922,101 +922,101 @@ input.forEach {
 
 考虑以下代码，这通常用来演示语言中如何实现多态性：
 
-```kt
+```java
 class Cat : Animal {
 ```
 
-```kt
+```java
     fun purr(): String {
 ```
 
-```kt
+```java
         return "Purr-purr";
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class Dog : Animal {
 ```
 
-```kt
+```java
     fun bark(): String {
 ```
 
-```kt
+```java
         return "Bark-bark";
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 interface Animal
 ```
 
 如果我们要决定调用哪个函数，我们需要编写类似于以下代码：
 
-```kt
+```java
 fun getSound(animal: Animal): String {
 ```
 
-```kt
+```java
     var sound: String? = null;
 ```
 
-```kt
+```java
     if (animal is Cat) {
 ```
 
-```kt
+```java
         sound = (animal as Cat).purr();
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     else if (animal is Dog) {
 ```
 
-```kt
+```java
         sound = (animal as Dog).bark();
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     if (sound == null) {
 ```
 
-```kt
+```java
         throw RuntimeException();
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     return sound;
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1028,23 +1028,23 @@ fun getSound(animal: Animal): String {
 
 现在，让我们将前面的代码与以下 Kotlin 代码进行比较：
 
-```kt
+```java
 fun getSound(animal: Animal) = when(animal) {
 ```
 
-```kt
+```java
     is Cat -> animal.purr()
 ```
 
-```kt
+```java
     is Dog -> animal.bark()
 ```
 
-```kt
+```java
     else -> throw RuntimeException("Unknown animal")
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1058,45 +1058,45 @@ fun getSound(animal: Animal) = when(animal) {
 
 这里是一个使用递归计算给定列表中所有数字之和的非常低效的函数示例：
 
-```kt
+```java
 fun sumRec(i: Int, sum: Long, numbers: List<Int>): Long {
 ```
 
-```kt
+```java
     return if (i == numbers.size) {
 ```
 
-```kt
+```java
         return sum
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
         sumRec(i+1, numbers[i] + sum, numbers)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 我们经常试图避免递归，因为我们可能会收到栈溢出错误，如果我们的调用栈太深的话。你可以用一个包含一百万个数字的列表来调用这个函数，以演示这一点：
 
-```kt
+```java
 val numbers = List(1_000_000) {it}
 ```
 
-```kt
+```java
 println(sumRec(0,  numbers)) 
 ```
 
-```kt
+```java
 // Crashed pretty soon, around 7K
 ```
 
@@ -1104,35 +1104,35 @@ println(sumRec(0,  numbers))
 
 让我们使用一个新的关键字 `tailrec` 重写我们的递归函数，以避免这个问题：
 
-```kt
+```java
 tailrec fun sumRec(i: Int, sum: Long, numbers: List<Int>): 
 ```
 
-```kt
+```java
   Long {
 ```
 
-```kt
+```java
     return if (i == numbers.size) {
 ```
 
-```kt
+```java
         return sum
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
         sumRec(i+1, numbers[i] + sum, numbers)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1142,77 +1142,77 @@ tailrec fun sumRec(i: Int, sum: Long, numbers: List<Int>):
 
 让我们检查以下函数，这是归并排序算法的**排序**部分：
 
-```kt
+```java
 tailrec fun mergeSort(numbers: List<Int>): List<Int> {
 ```
 
-```kt
+```java
     return when {
 ```
 
-```kt
+```java
         numbers.size <= 1 -> numbers
 ```
 
-```kt
+```java
         numbers.size == 2 -> {
 ```
 
-```kt
+```java
             return if (numbers[0] < numbers[1]) {
 ```
 
-```kt
+```java
                 numbers
 ```
 
-```kt
+```java
             } else {
 ```
 
-```kt
+```java
                 listOf(numbers[1], numbers[0])
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         else -> {
 ```
 
-```kt
+```java
             val left = mergeSort(numbers.slice               (0..numbers.size / 2))
 ```
 
-```kt
+```java
             val right = mergeSort(numbers.slice               (numbers.size / 2 + 1 until numbers.size))
 ```
 
-```kt
+```java
             return merge(left, right)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 } 
 ```
 
 注意，这里有两个递归调用而不是一个。Kotlin 编译器随后将发出以下警告：
 
-```kt
+```java
 > "A function is marked as tail-recursive but no tail calls are found"
 ```
 

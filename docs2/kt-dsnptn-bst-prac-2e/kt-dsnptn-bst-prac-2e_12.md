@@ -48,65 +48,65 @@ Kotlin 有**作用域函数**的概念，这些函数在任何对象上都是可
 
 让我们以以下引言地图（我们在*第一章*，*Kotlin 入门*）为例：
 
-```kt
+```java
 val clintEastwoodQuotes = mapOf(
 ```
 
-```kt
+```java
     "The Good, The Bad, The Ugly" to "Every gun makes its       own tune.",
 ```
 
-```kt
+```java
     "A Fistful Of Dollars" to "My mistake: four coffins."
 ```
 
-```kt
+```java
 )
 ```
 
 现在，让我们从一个可能不在集合中的电影中获取一个引言并打印它，但前提是它不是 null：
 
-```kt
+```java
 val quote = clintEastwoodQuotes["Unforgiven"]
 ```
 
-```kt
+```java
 if (quote != null) {
 ```
 
-```kt
+```java
     println(quote)
 ```
 
-```kt
+```java
 } 
 ```
 
 同样的代码可以使用`let`作用域函数重写：
 
-```kt
+```java
 clintEastwoodQuotes["Unforgiven"]?.let {
 ```
 
-```kt
+```java
     println(it)
 ```
 
-```kt
+```java
 }
 ```
 
 一个常见的错误是忘记在`let`之前使用安全导航操作符，因为`let()`本身也可以在 null 上工作：
 
-```kt
+```java
 clintEastwoodQuotes["Unforgiven"].let {
 ```
 
-```kt
+```java
     println(it)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -118,77 +118,77 @@ clintEastwoodQuotes["Unforgiven"].let {
 
 想想你有多少次不得不创建一个具有空构造函数的类，然后依次调用很多设置器。以下是一个例子，这可能是一个来自库的类。例如：
 
-```kt
+```java
 class JamesBond { 
 ```
 
-```kt
+```java
     lateinit var name: String 
 ```
 
-```kt
+```java
     lateinit var movie: String 
 ```
 
-```kt
+```java
     lateinit var alsoStarring: String 
 ```
 
-```kt
+```java
 } 
 ```
 
 当我们需要创建此类的新实例时，我们可以以过程式的方式这样做：
 
-```kt
+```java
 val agent = JamesBond() 
 ```
 
-```kt
+```java
 agent.name = "Sean Connery" 
 ```
 
-```kt
+```java
 agent.movie = "Dr. No"
 ```
 
 或者，我们可以只设置 `name` 和 `movie`，并使用 `apply()` 函数将 `alsoStarring` 留空：
 
-```kt
+```java
 val `007` = JamesBond().apply { 
 ```
 
-```kt
+```java
     this.name = "Sean Connery" 
 ```
 
-```kt
+```java
     this.movie = "Dr. No" 
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 println(`007`.name)
 ```
 
 由于代码块的范围被设置为 `this`，我们可以进一步简化前面的代码：
 
-```kt
+```java
 val `007` = JamesBond().apply { 
 ```
 
-```kt
+```java
     name = "Sean Connery" 
 ```
 
-```kt
+```java
     movie = "Dr. No" 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -198,61 +198,61 @@ val `007` = JamesBond().apply {
 
 正如我们在本节介绍的引言中提到的，单表达式函数非常简洁。让我们看看以下简单的函数，它乘以两个数字：
 
-```kt
+```java
 fun multiply(a: Int, b: Int): Int = a * b
 ```
 
 但通常，你有一个单语句函数，还需要执行其他操作，例如写入日志或产生其他副作用。为了实现这一点，我们可以将我们的函数重写如下：
 
-```kt
+```java
 fun multiply(a: Int, b: Int): Int { 
 ```
 
-```kt
+```java
     val c = a * b 
 ```
 
-```kt
+```java
     println(c) 
 ```
 
-```kt
+```java
     return c 
 ```
 
-```kt
+```java
 }
 ```
 
 我们不得不在这里使我们的函数更加冗长，并引入另一个变量。让我们看看我们如何使用 `also()` 函数来替代：
 
-```kt
+```java
 fun multiply(a: Int, b: Int): Int = 
 ```
 
-```kt
+```java
     (a * b).also { println(it) }
 ```
 
 此函数将表达式的结果分配给 `it` 并返回表达式的结果。`also()` 函数在你想在一系列调用中产生副作用时也非常有用：
 
-```kt
+```java
 val l = (1..100).toList() 
 ```
 
-```kt
+```java
 l.filter{ it % 2 == 0 } 
 ```
 
-```kt
+```java
     // Prints, but doesn't mutate the collection
 ```
 
-```kt
+```java
     .also { println(it) }     
 ```
 
-```kt
+```java
     .map { it * it }
 ```
 
@@ -264,19 +264,19 @@ l.filter{ it % 2 == 0 }
 
 让我们通过一个例子来更好地理解这一点：
 
-```kt
+```java
 val justAString = "string" 
 ```
 
-```kt
+```java
 val n = justAString.run {  
 ```
 
-```kt
+```java
     this.length 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -284,47 +284,47 @@ val n = justAString.run {  
 
 通常，`this` 可以省略，所以代码将如下所示：
 
-```kt
+```java
 val n = justAString.run {  
 ```
 
-```kt
+```java
     length 
 ```
 
-```kt
+```java
 }
 ```
 
 `run()` 函数主要用于初始化对象，就像我们之前讨论的 `apply()` 函数一样。然而，与 `apply()` 不同，它返回对象本身，而不是返回某些计算的结果：
 
-```kt
+```java
 val lowerCaseName = JamesBond().run {
 ```
 
-```kt
+```java
     name = "ROGER MOORE"
 ```
 
-```kt
+```java
     movie = "THE MAN WITH THE GOLDEN GUN"
 ```
 
-```kt
+```java
     name.toLowerCase() // <= Not JamesBond type
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 println(lowerCaseName)
 ```
 
 上述代码打印以下输出：
 
-```kt
+```java
 > roger moore
 ```
 
@@ -334,35 +334,35 @@ println(lowerCaseName)
 
 与其他四个作用域函数不同，`with()` 不是一个扩展函数。这意味着你不能这样做：
 
-```kt
+```java
 "scope".with { ... }
 ```
 
 相反，`with()` 接收你想要作用域的对象作为参数：
 
-```kt
+```java
 with("scope") { 
 ```
 
-```kt
+```java
     println(this.length) // "this" set to the argument of                          // with() 
 ```
 
-```kt
+```java
 }
 ```
 
 并且，像往常一样，我们可以省略 `this`：
 
-```kt
+```java
 with("scope") { 
 ```
 
-```kt
+```java
     length 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -374,161 +374,161 @@ with("scope") {
 
 在编写代码时，你可能会倾向于检查你的对象类型，使用`is`，然后使用`as`进行转换。作为一个例子，让我们想象我们正在构建一个超级英雄系统。每个超级英雄都有自己的方法集：
 
-```kt
+```java
 interface Superhero 
 ```
 
-```kt
+```java
 class Batman : Superhero { 
 ```
 
-```kt
+```java
     fun callRobin() { 
 ```
 
-```kt
+```java
         println("To the Bat-pole, Robin!") 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 class Superman : Superhero { 
 ```
 
-```kt
+```java
     fun fly() { 
 ```
 
-```kt
+```java
         println("Up, up and away!") 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 } 
 ```
 
 此外，还有一个函数，超级英雄试图施展他们的超能力：
 
-```kt
+```java
 fun doCoolStuff(s: Superhero) { 
 ```
 
-```kt
+```java
     if (s is Superman) { 
 ```
 
-```kt
+```java
         (s as Superman).fly() 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
     else if (s is Batman) { 
 ```
 
-```kt
+```java
         (a as Batman).callRobin() 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 但正如你所知，Kotlin 有智能转换，所以在这种情况下，隐式转换不是必需的。让我们使用智能转换重写这个函数，看看它们如何改进我们的代码。我们只需要从我们的代码中移除显式转换：
 
-```kt
+```java
 fun doCoolStuff(s: Superhero) { 
 ```
 
-```kt
+```java
     if (s is Superman) { 
 ```
 
-```kt
+```java
         s.fly() 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
     else if (s is Batman) { 
 ```
 
-```kt
+```java
         s.callRobin() 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 此外，在大多数情况下，使用`when()`进行智能转换会产生更干净的代码：
 
-```kt
+```java
 fun doCoolStuff(s : Superhero) { 
 ```
 
-```kt
+```java
     when(s) { 
 ```
 
-```kt
+```java
         is Superman -> s.fly() 
 ```
 
-```kt
+```java
         is Batman -> s.callRobin() 
 ```
 
-```kt
+```java
         else -> println("Unknown superhero") 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 作为一条经验法则，你应该避免使用转换，并尽可能多地依赖智能转换：
 
-```kt
+```java
 // Superhero is clearly not a string 
 ```
 
-```kt
+```java
 val superheroAsString = (s as String)
 ```
 
 但如果你绝对必须，还有一个安全转换运算符：
 
-```kt
+```java
 val superheroAsString = (s as? String)
 ```
 
@@ -542,79 +542,79 @@ val superheroAsString = (s as? String)
 
 在 Java 7 之前，这完全是混乱的，如下面的代码所示：
 
-```kt
+```java
 BufferedReader br = null; // Nulls are bad, we know that 
 ```
 
-```kt
+```java
 try { 
 ```
 
-```kt
+```java
     br = new BufferedReader(new FileReader
 ```
 
-```kt
+```java
       ("./src/main/kotlin/7_TryWithResource.kt "));
 ```
 
-```kt
+```java
     System.out.println(br.readLine());
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 finally { 
 ```
 
-```kt
+```java
     if (br != null) { // Explicit check 
 ```
 
-```kt
+```java
         br.close(); // Boilerplate 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 在 Java 7 发布后，前面的代码可以写成以下形式：
 
-```kt
+```java
 try (BufferedReader br = new BufferedReader(new   FileReader("/some/path"))) { 
 ```
 
-```kt
+```java
     System.out.println(br.readLine()); 
 ```
 
-```kt
+```java
 }
 ```
 
 Kotlin 不支持这种语法。相反，try-with-resource 语句被`use()`函数所取代：
 
-```kt
+```java
 val br = BufferedReader(FileReader("./src/main   /kotlin/7_TryWithResource.kt"))
 ```
 
-```kt
+```java
 br.use {
 ```
 
-```kt
+```java
     println(it.readLines())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -630,63 +630,63 @@ br.use {
 
 首先，这是函数定义：
 
-```kt
+```java
 inline fun logBeforeAfter(block: () -> String) { 
 ```
 
-```kt
+```java
     println("Before") 
 ```
 
-```kt
+```java
     println(block()) 
 ```
 
-```kt
+```java
     println("After") 
 ```
 
-```kt
+```java
 }
 ```
 
 在这里，我们向函数传递一个 lambda，或一个`block`。这个`block`简单地返回单词`"Inlining"`作为一个`String`：
 
-```kt
+```java
 logBeforeAfter { 
 ```
 
-```kt
+```java
     "Inlining" 
 ```
 
-```kt
+```java
 }
 ```
 
 如果你查看反编译的字节码的 Java 等效版本，你会看到根本就没有调用我们的`makesSense`函数。相反，你会看到以下内容：
 
-```kt
+```java
 String var1 = "Before"; <- Inline function call 
 ```
 
-```kt
+```java
 System.out.println(var1); 
 ```
 
-```kt
+```java
 var1 = "Inlining"; 
 ```
 
-```kt
+```java
 System.out.println(var1); 
 ```
 
-```kt
+```java
 var1 = "After"; 
 ```
 
-```kt
+```java
 System.out.println(var1); 
 ```
 
@@ -700,7 +700,7 @@ System.out.println(var1);
 
 首先，让我们为我们的树声明一个接口。由于树数据结构可以包含任何类型的数据，我们可以用类型（`T`）来参数化它：
 
-```kt
+```java
 sealed interface Tree<out T>
 ```
 
@@ -714,15 +714,15 @@ sealed interface Tree<out T>
 
 接下来，让我们声明一个空树看起来像什么：
 
-```kt
+```java
 object Empty : Tree<Nothing> {
 ```
 
-```kt
+```java
     override fun toString() = "Empty"
 ```
 
-```kt
+```java
 }
 ```
 
@@ -734,23 +734,23 @@ object Empty : Tree<Nothing> {
 
 接下来，让我们定义一个非空树节点：
 
-```kt
+```java
 data class Node<T>(
 ```
 
-```kt
+```java
     val value: T,
 ```
 
-```kt
+```java
     val left: Tree<T> = Empty,
 ```
 
-```kt
+```java
     val right: Tree<T> = Empty
 ```
 
-```kt
+```java
 ) : Tree<T>
 ```
 
@@ -766,39 +766,39 @@ data class Node<T>(
 
 现在一切都已经设置好了，让我们学习如何创建我们刚刚定义的树的实例：
 
-```kt
+```java
 val tree = Node(
 ```
 
-```kt
+```java
     1,
 ```
 
-```kt
+```java
     Empty,
 ```
 
-```kt
+```java
     Node(
 ```
 
-```kt
+```java
         2,
 ```
 
-```kt
+```java
         Node(3)
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
 )
 ```
 
-```kt
+```java
 println(tree)
 ```
 
@@ -810,25 +810,25 @@ println(tree)
 
 上述代码输出以下内容：
 
-```kt
+```java
 > Node(value=1, left=Empty, right=Node(value=2, left=Node(value=3, left=Empty, right=Empty), right=Empty))
 ```
 
 然而，以这种形式打印树并不很有趣。所以，让我们实现一个函数，如果树是数值型的，它会总结树的所有节点：
 
-```kt
+```java
 fun Tree<Int>.sum(): Long = when (this) {
 ```
 
-```kt
+```java
     Empty -> 0
 ```
 
-```kt
+```java
     is Node -> value + left.sum() + right.sum()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -850,77 +850,77 @@ fun Tree<Int>.sum(): Long = when (this) {
 
 我们将从一种简单的实现开始，直接尝试在类型上执行实例检查：
 
-```kt
+```java
 fun <T> printIfSameType(a: Number) { 
 ```
 
-```kt
+```java
     if (a is T) { // <== Error 
 ```
 
-```kt
+```java
         println(a)    
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 然而，这段代码无法编译，我们会得到以下错误：
 
-```kt
+```java
 > Cannot check for instance of erased type: T
 ```
 
 在这种情况下，我们通常在 Java 中传递类作为参数。我们可以在 Kotlin 中尝试类似的方法。如果你之前使用过 Android，你会立即认出这个模式，因为它在标准库中用得很多：
 
-```kt
+```java
 fun <T : Number> printIfSameType(clazz: KClass<T>, a: 
 ```
 
-```kt
+```java
   Number) {
 ```
 
-```kt
+```java
     if (clazz.isInstance(a)) {
 ```
 
-```kt
+```java
         println("Yes")
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
         println("No")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 我们可以通过运行以下行来检查代码是否正确工作：
 
-```kt
+```java
 printIfSameType(Int::class, 1) // Prints yes, as 1 is Int
 ```
 
-```kt
+```java
 printIfSameType(Int::class, 2L) // Prints no, as 2 is Long
 ```
 
-```kt
+```java
 printIfSameType(Long::class, 3L) // Prints yes, as 3 is Long
 ```
 
@@ -932,31 +932,31 @@ printIfSameType(Long::class, 3L) // Prints yes, as 3 is Long
 
 这段代码可以通过使用`reified`类型来改进：
 
-```kt
+```java
 inline fun <reified T : Number> printIfSameReified(a:   Number) {
 ```
 
-```kt
+```java
     if (a is T) {
 ```
 
-```kt
+```java
         println("Yes")
 ```
 
-```kt
+```java
     } else {
 ```
 
-```kt
+```java
         println("No")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -964,15 +964,15 @@ inline fun <reified T : Number> printIfSameReified(a:   Number) {
 
 我们可以通过以下方式测试我们的代码是否仍然按预期工作：
 
-```kt
+```java
 printIfSameReified<Int>(1) // Prints yes, as 1 is Int
 ```
 
-```kt
+```java
 printIfSameReified<Int>(2L) // Prints no, as 2 is Long
 ```
 
-```kt
+```java
 printIfSameReified<Long>(3L) // Prints yes, as 3 is Long
 ```
 
@@ -988,35 +988,35 @@ printIfSameReified<Long>(3L) // Prints yes, as 3 is Long
 
 现在，让我们考虑 `reified` 类型的另一个用例——**函数重载**。我们将尝试定义两个具有相同名称但操作类型不同的函数：
 
-```kt
+```java
 fun printList(list: List<Int>) { 
 ```
 
-```kt
+```java
     println("This is a list of Ints") 
 ```
 
-```kt
+```java
     println(list) 
 ```
 
-```kt
+```java
 } 
 ```
 
-```kt
+```java
 fun printList(list: List<Long>) { 
 ```
 
-```kt
+```java
     println("This is a list of Longs") 
 ```
 
-```kt
+```java
     println(list) 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1024,35 +1024,35 @@ fun printList(list: List<Long>) {
 
 但使用 `reified`，我们可以轻松实现这一点：
 
-```kt
+```java
 inline fun <reified T : Any> printList(list: List<T>) {
 ```
 
-```kt
+```java
     when {
 ```
 
-```kt
+```java
         1 is T -> println("This is a list of Ints")
 ```
 
-```kt
+```java
         1L is T -> println("This is a list of Longs")
 ```
 
-```kt
+```java
         else -> println("This is a list of something else")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     println(list)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1064,23 +1064,23 @@ inline fun <reified T : Any> printList(list: List<T>) {
 
 由于 Kotlin 有 `companion` 对象，我们通常尝试将它们放在那里：
 
-```kt
+```java
 class Spock {
 ```
 
-```kt
+```java
     companion object {
 ```
 
-```kt
+```java
         val SENSE_OF_HUMOR = "None"
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1088,31 +1088,31 @@ class Spock {
 
 因此，这将大致转换为以下代码：
 
-```kt
+```java
 public class Spock {
 ```
 
-```kt
+```java
     private static final String SENSE_OF_HUMOR = "None";
 ```
 
-```kt
+```java
     public String getSENSE_OF_HUMOR() {
 ```
 
-```kt
+```java
         return Spock.SENSE_OF_HUMOR;
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1120,11 +1120,11 @@ public class Spock {
 
 如果我们查看使用常量的代码，我们会看到以下内容：
 
-```kt
+```java
 String var0 = Spock.Companion.getSENSE_OF_HUMOR();
 ```
 
-```kt
+```java
 System.out.println(var0);
 ```
 
@@ -1132,51 +1132,51 @@ System.out.println(var0);
 
 现在，让我们将此值标记为常量，看看编译器生成的代码如何变化：
 
-```kt
+```java
 class Spock { 
 ```
 
-```kt
+```java
     companion object { 
 ```
 
-```kt
+```java
         const val SENSE_OF_HUMOR = "None" 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 这里是字节码的变化：
 
-```kt
+```java
 public class Spock { 
 ```
 
-```kt
+```java
    public static final String SENSE_OF_HUMOR = "None"; 
 ```
 
-```kt
+```java
    ...
 ```
 
-```kt
+```java
 }
 ```
 
 下面是这个调用的示例：
 
-```kt
+```java
 String var1 = "None"; 
 ```
 
-```kt
+```java
 System.out.println(var1);
 ```
 
@@ -1184,21 +1184,21 @@ System.out.println(var1);
 
 如果你只需要一个常量，你也可以在类外部设置它：
 
-```kt
+```java
 const val SPOCK_SENSE_OF_HUMOR = "NONE"
 ```
 
 如果你需要命名空间，你可以将其包裹在一个对象中：
 
-```kt
+```java
 object SensesOfHumor { 
 ```
 
-```kt
+```java
     const val SPOCK = "None" 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1208,61 +1208,61 @@ object SensesOfHumor {
 
 在 Java 中，我们习惯于使用重载构造函数。例如，让我们看看以下需要 `a` 参数并将 `b` 的值默认设置为 `1` 的 Java 类：
 
-```kt
+```java
 class User { 
 ```
 
-```kt
+```java
     private final String name; 
 ```
 
-```kt
+```java
     private final boolean resetPassword; 
 ```
 
-```kt
+```java
     public User(String name) { 
 ```
 
-```kt
+```java
         this(name, true); 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
     public User(String name, boolean resetPassword) { 
 ```
 
-```kt
+```java
         this.name = name; 
 ```
 
-```kt
+```java
         this.resetPassword = resetPassword; 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 我们可以通过使用 `constructor` 关键字定义多个构造函数来在 Kotlin 中模拟相同的行为：
 
-```kt
+```java
 class User(val name: String, val resetPassword: Boolean) {
 ```
 
-```kt
+```java
     constructor(name: String) : this(name, true)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1270,45 +1270,45 @@ class User(val name: String, val resetPassword: Boolean) {
 
 然而，通常最好有默认参数值和命名参数：
 
-```kt
+```java
 class User(val name: String, val resetPassword: Boolean =   true)
 ```
 
 注意，所有次构造函数都必须使用 `this` 关键字委托给主构造函数。唯一的例外是当你有一个默认的主构造函数：
 
-```kt
+```java
 class User {
 ```
 
-```kt
+```java
     val resetPassword: Boolean
 ```
 
-```kt
+```java
     val name: String
 ```
 
-```kt
+```java
     constructor(name: String, resetPassword: Boolean = 
 ```
 
-```kt
+```java
       true) {
 ```
 
-```kt
+```java
         this.name = name
 ```
 
-```kt
+```java
         this.resetPassword = resetPassword
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1318,41 +1318,41 @@ class User {
 
 Kotlin 中的 `null`；例如：
 
-```kt
+```java
 // Will return "String" half of the time and null the other 
 ```
 
-```kt
+```java
 // half 
 ```
 
-```kt
+```java
 val stringOrNull: String? = if (Random.nextBoolean()) 
 ```
 
-```kt
+```java
   "String" else null  
 ```
 
-```kt
+```java
 // Java-way check 
 ```
 
-```kt
+```java
 if (stringOrNull != null) { 
 ```
 
-```kt
+```java
     println(stringOrNull.length) 
 ```
 
-```kt
+```java
 }
 ```
 
 我们可以使用 `Elvis` 操作符（`?:`）重写此代码：
 
-```kt
+```java
 val alwaysLength = stringOrNull?.length ?: 0 
 ```
 
@@ -1360,41 +1360,41 @@ val alwaysLength = stringOrNull?.length ?: 0
 
 如果你有一个嵌套对象，你可以链式调用这些检查。例如，让我们有一个包含 `Profile` 的 `Response` 对象，而 `Profile` 又包含名字和姓氏字段，这些字段可能是可空的：
 
-```kt
+```java
 data class Response(
 ```
 
-```kt
+```java
     val profile: UserProfile?
 ```
 
-```kt
+```java
 )
 ```
 
-```kt
+```java
 data class UserProfile(
 ```
 
-```kt
+```java
     val firstName: String?,
 ```
 
-```kt
+```java
     val lastName: String?
 ```
 
-```kt
+```java
 )
 ```
 
 这种链式调用将看起来像这样：
 
-```kt
+```java
 val response: Response? = Response(UserProfile(null, null))
 ```
 
-```kt
+```java
 println(response?.profile?.firstName?.length)
 ```
 
@@ -1402,51 +1402,51 @@ println(response?.profile?.firstName?.length)
 
 最后，你可以使用 `let()` 块来进行空检查，正如我们在 *使用作用域函数* 部分简要提到的。使用 `let()` 函数的相同代码将看起来像这样：
 
-```kt
+```java
 println(response?.let { 
 ```
 
-```kt
+```java
     it.profile?.let { 
 ```
 
-```kt
+```java
         it.firstName?.length 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 })
 ```
 
 如果你想要在所有地方去掉 `it`，你可以使用另一个作用域函数，`run()`：
 
-```kt
+```java
 println(response?.run { 
 ```
 
-```kt
+```java
     profile?.run { 
 ```
 
-```kt
+```java
         firstName?.length 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 })
 ```
 
 尽量避免在生产代码中使用不安全的 `!!` 空操作符：
 
-```kt
+```java
 println(json!!.User!!.firstName!!.length)
 ```
 
@@ -1456,19 +1456,19 @@ println(json!!.User!!.firstName!!.length)
 
 正如你在上一章中看到的，在 Kotlin 中创建异步函数非常简单。以下是一个示例：
 
-```kt
+```java
 fun CoroutineScope.getResult() = async { 
 ```
 
-```kt
+```java
    delay(100) 
 ```
 
-```kt
+```java
    "OK" 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1476,37 +1476,37 @@ fun CoroutineScope.getResult() = async {
 
 *你认为以下代码会打印什么？*
 
-```kt
+```java
 println("${getResult()}")
 ```
 
 对于用户来说，前面的代码有些意外地打印了以下内容而不是 `"OK"`：
 
-```kt
+```java
 > Name: DeferredCoroutine{Active}@...
 ```
 
 当然，如果你已经阅读了 *第六章*，*线程和协程*，你就会知道这里缺少的是 `await()` 函数：
 
-```kt
+```java
 println("${getResult().await()}")
 ```
 
 但如果我们给我们的函数添加一个 `async` 后缀，那么它就会更加明显：
 
-```kt
+```java
 fun CoroutineScope.getResultAsync() = async { 
 ```
 
-```kt
+```java
    delay(100) 
 ```
 
-```kt
+```java
    "OK" 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1518,107 +1518,107 @@ Kotlin 的约定是在函数名末尾添加 `Async` 来区分异步函数和常�
 
 输入验证是一项必要但非常繁琐的任务。*你有多少次不得不编写如下代码？*
 
-```kt
+```java
 fun setCapacity(cap: Int) { 
 ```
 
-```kt
+```java
     if (cap < 0) { 
 ```
 
-```kt
+```java
         throw IllegalArgumentException() 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
 }
 ```
 
 相反，你可以使用 `require()` 函数来检查参数：
 
-```kt
+```java
 fun setCapacity(cap: Int) { 
 ```
 
-```kt
+```java
     require(cap > 0) 
 ```
 
-```kt
+```java
 }
 ```
 
 这使得代码更加流畅。你可以使用 `require()` 来检查空值：
 
-```kt
+```java
 fun printNameLength(p: Profile) { 
 ```
 
-```kt
+```java
     require(p.firstName != null) 
 ```
 
-```kt
+```java
 }
 ```
 
 但也有 `requireNotNull()` 可以做到这一点：
 
-```kt
+```java
 fun printNameLength(p: Profile) { 
 ```
 
-```kt
+```java
     requireNotNull(p.firstName) 
 ```
 
-```kt
+```java
 }
 ```
 
 使用 `check()` 来验证你对象的状态。这在提供用户可能没有正确设置的对象时非常有用：
 
-```kt
+```java
 class HttpClient { 
 ```
 
-```kt
+```java
     var body: String? = null 
 ```
 
-```kt
+```java
     var url: String = "" 
 ```
 
-```kt
+```java
     fun postRequest() { 
 ```
 
-```kt
+```java
         check(body != null) { 
 ```
 
-```kt
+```java
             "Body must be set in POST requests" 
 ```
 
-```kt
+```java
         } 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1636,125 +1636,125 @@ class HttpClient {
 
 例如，假设你开发了一个允许用户订购披萨并跟踪其状态的程序。我们可以使用以下代码来完成这个任务：
 
-```kt
+```java
 // Java-like code that uses enum to represent State
 ```
 
-```kt
+```java
 enum class PizzaOrderStatus {
 ```
 
-```kt
+```java
     ORDER_RECEIVED, PIZZA_BEING_MADE, OUT_FOR_DELIVERY,      COMPLETED;
 ```
 
-```kt
+```java
     fun nextStatus(): PizzaOrderStatus {
 ```
 
-```kt
+```java
         return when (this) {
 ```
 
-```kt
+```java
             ORDER_RECEIVED -> PIZZA_BEING_MADE
 ```
 
-```kt
+```java
             PIZZA_BEING_MADE -> OUT_FOR_DELIVERY
 ```
 
-```kt
+```java
             OUT_FOR_DELIVERY -> COMPLETED
 ```
 
-```kt
+```java
             COMPLETED -> COMPLETED
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 或者，你可以使用 `sealed` 类：
 
-```kt
+```java
 sealed class PizzaOrderStatus(protected val orderId: Int) {
 ```
 
-```kt
+```java
     abstract fun nextStatus(): PizzaOrderStatus
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class OrderReceived(orderId: Int) : 
 ```
 
-```kt
+```java
   PizzaOrderStatus(orderId) {
 ```
 
-```kt
+```java
     override fun nextStatus() = PizzaBeingMade(orderId)
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class PizzaBeingMade(orderId: Int) : 
 ```
 
-```kt
+```java
   PizzaOrderStatus(orderId) {
 ```
 
-```kt
+```java
     override fun nextStatus() = OutForDelivery(orderId)
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class OutForDelivery(orderId: Int) : 
 ```
 
-```kt
+```java
   PizzaOrderStatus(orderId) {
 ```
 
-```kt
+```java
     override fun nextStatus() = Completed(orderId)
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class Completed(orderId: Int) : PizzaOrderStatus(orderId) {
 ```
 
-```kt
+```java
     override fun nextStatus() = this
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1762,39 +1762,39 @@ class Completed(orderId: Int) : PizzaOrderStatus(orderId) {
 
 这种方法的优点是，我们现在可以更容易地存储状态及其 `status`。在我们的例子中，我们可以存储订单的 ID：
 
-```kt
+```java
 var status: PizzaOrderStatus = OrderReceived(123) 
 ```
 
-```kt
+```java
 while (status !is Completed) { 
 ```
 
-```kt
+```java
     status = when (status) { 
 ```
 
-```kt
+```java
         is OrderReceived -> status.nextStatus() 
 ```
 
-```kt
+```java
         is PizzaBeingMade -> status.nextStatus() 
 ```
 
-```kt
+```java
         is OutForDelivery -> status.nextStatus() 
 ```
 
-```kt
+```java
         is Completed -> status 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 

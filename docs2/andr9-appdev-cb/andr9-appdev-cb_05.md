@@ -64,7 +64,7 @@ Android 并不总是支持 Fragment。Android 的早期版本是为手机设计�
 
 1.  使用以下 XML 创建一个新的布局文件 `fragment_one.xml`：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="match_parent"
@@ -81,7 +81,7 @@ Android 并不总是支持 Fragment。Android 的早期版本是为手机设计�
 
 1.  创建一个名为 `FragmentOne.java` 的新 Java 类，代码如下：
 
-```kt
+```java
 public class FragmentOne extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -93,7 +93,7 @@ public class FragmentOne extends Fragment {
 
 1.  打开 `activity_main.xml` 文件，并用以下 `<fragment>` 元素替换现有的 `<TextView>` 元素：
 
-```kt
+```java
 <fragment
     android:name="com.packtpub.createfragment.FragmentOne"
     android:id="@+id/fragment"
@@ -145,7 +145,7 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 1.  创建一个名为 `fragment_one.xml` 的新布局文件，并包含以下 XML：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="match_parent"
@@ -162,13 +162,13 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 1.  第二个布局文件 `fragment_two.xml` 几乎相同，唯一的区别是文本：
 
-```kt
+```java
 android:text="Fragment Two" 
 ```
 
 1.  创建一个名为 `FragmentOne.java` 的新 Java 类，并包含以下代码：
 
-```kt
+```java
 public class FragmentOne extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -181,13 +181,13 @@ public class FragmentOne extends Fragment {
 
 +   按照以下方式从支持库中导入：
 
-```kt
+```java
 import android.support.v4.app.Fragment;
 ```
 
 1.  创建第二个 Java 类 `FragmentTwo`，并包含以下代码：
 
-```kt
+```java
 public class FragmentTwo extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -200,13 +200,13 @@ public class FragmentTwo extends Fragment {
 
 +   如前所述，从支持库中导入：
 
-```kt
+```java
 import android.support.v4.app.Fragment;
 ```
 
 1.  现在我们需要在主活动布局中添加一个容器和一个按钮。按照以下方式更改 `activity_main.xml`：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -231,7 +231,7 @@ import android.support.v4.app.Fragment;
 
 1.  在创建了片段并将容器添加到布局中后，我们现在可以编写操作片段的代码。打开 `MainActivity.java` 并在类构造函数下方添加以下代码：
 
-```kt
+```java
 FragmentOne mFragmentOne;
 FragmentTwo mFragmentTwo;
 int showingFragment=0;
@@ -239,7 +239,7 @@ int showingFragment=0;
 
 1.  在现有的 `onCreate()` 方法中，在 `setContentView()` 下方添加以下代码：
 
-```kt
+```java
 mFragmentOne = new FragmentOne();
 mFragmentTwo = new FragmentTwo();
 FragmentManager fragmentManager = getSupportFragmentManager();
@@ -252,14 +252,14 @@ showingFragment=1;
 
 +   从支持库中导入：
 
-```kt
+```java
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 ```
 
 1.  最后需要添加的代码处理片段切换，由按钮调用：
 
-```kt
+```java
 public void switchFragment(View view) {
     FragmentManager fragmentManager = getSupportFragmentManager();
     FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
@@ -284,7 +284,7 @@ public void switchFragment(View view) {
 
 现在您已经了解了片段事务，以下是 `onCreate()` 的简洁版本：
 
-```kt
+```java
 getSupportFragmentManager().beginTransaction().add(R.id.frameLayout, mFragmentOne).commit();
 ```
 
@@ -336,19 +336,19 @@ getSupportFragmentManager().beginTransaction().add(R.id.frameLayout, mFragmentOn
 
 1.  创建一个名为 `MasterFragment` 的新 Java 类，并修改它使其扩展 `ListFragment`，如下所示：
 
-```kt
+```java
 public class MasterFragment extends ListFragment 
 ```
 
 +   从以下库中导入：
 
-```kt
+```java
 android.support.v4.app.ListFragment 
 ```
 
 1.  在 `MasterFragment` 类中创建以下接口：
 
-```kt
+```java
 public interface OnMasterSelectedListener {
     public void onItemSelected(String countryName);
 }
@@ -356,7 +356,7 @@ public interface OnMasterSelectedListener {
 
 1.  使用以下代码设置接口回调监听器：
 
-```kt
+```java
 private OnMasterSelectedListener mOnMasterSelectedListener=null;
 
 public void setOnMasterSelectedListener(OnMasterSelectedListener listener) {
@@ -366,7 +366,7 @@ public void setOnMasterSelectedListener(OnMasterSelectedListener listener) {
 
 1.  `MasterFragment` 的最后一步是创建 `ListAdapter` 以填充 `ListView`，我们在 `onViewCreated()` 方法中这样做。当选择国家名称时，我们将使用 `setOnItemClickListener()` 调用我们的 `OnMasterSelectedListener` 接口，如下所示：
 
-```kt
+```java
 public void onViewCreated(View view, Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
 
@@ -397,7 +397,7 @@ public void onViewCreated(View view, Bundle savedInstanceState) {
 
 1.  接下来，我们需要创建 `DetailFragment`，从布局开始。创建一个名为 `fragment_detail.xml` 的新布局文件，其 XML 如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -414,25 +414,25 @@ public void onViewCreated(View view, Bundle savedInstanceState) {
 
 1.  创建一个名为 `DetailFragment` 的新 Java 类，它扩展自 `Fragment`，如下所示：
 
-```kt
+```java
 public class DetailFragment extends Fragment 
 ```
 
 +   从以下库中导入：
 
-```kt
+```java
 android.support.v4.app.Fragment 
 ```
 
 1.  将以下常量添加到类中：
 
-```kt
+```java
 public static String KEY_COUNTRY_NAME="KEY_COUNTRY_NAME"; 
 ```
 
 1.  如下重写 `onCreateView()` 方法：
 
-```kt
+```java
 @Override
 public View onCreateView(LayoutInflater inflater, 
                          ViewGroup container, 
@@ -443,7 +443,7 @@ public View onCreateView(LayoutInflater inflater,
 
 1.  编写 `onViewCreated()` 如下：
 
-```kt
+```java
 @Override
 public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
@@ -458,7 +458,7 @@ public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceStat
 
 1.  对于此 Fragment 的最后一步，当接收到选中的国家名称时更新 `TextView`。向类中添加以下方法：
 
-```kt
+```java
 public void showSelectedCountry(String countryName) {
     ((TextView)getView().findViewById(R.id.textViewCountryName)).setText(countryName);
 }
@@ -466,7 +466,7 @@ public void showSelectedCountry(String countryName) {
 
 1.  现有的 `activity_main.xml` 布局将处理纵向模式布局。删除现有的 `<TextView>` 并替换为以下 `<FrameLayout>`：
 
-```kt
+```java
 <FrameLayout
     android:id="@+id/frameLayout"
     android:layout_width="match_parent"
@@ -484,7 +484,7 @@ public void showSelectedCountry(String countryName) {
 
 1.  在`res/layout-land`中创建一个新的`activity_main.xml`布局，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -506,13 +506,13 @@ public void showSelectedCountry(String countryName) {
 
 1.  最后的步骤是将`MainActivity`设置起来以处理 Fragment。打开`MainActivity.java`文件，并添加以下类变量以跟踪单/双面板：
 
-```kt
+```java
 boolean mDualPane;
 ```
 
 1.  接下来，按照以下方式修改`onCreate()`：
 
-```kt
+```java
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -564,7 +564,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 1.  最后要添加的代码是`sendCountryName()`方法，它处理将国家名称发送到`DetailFragment`：
 
-```kt
+```java
 private void sendCountryName(String countryName) {
     DetailFragment detailFragment;
     if (mDualPane) {
@@ -613,7 +613,7 @@ private void sendCountryName(String countryName) {
 
 在 `MasterFragment` 中，在发送 `onItemSelected()` 事件之前，我们使用以下代码检查监听器是否为空：
 
-```kt
+```java
 if (mOnMasterSelectedListener != null) 
 ```
 
@@ -643,7 +643,7 @@ if (mOnMasterSelectedListener != null)
 
 1.  创建一个新的布局文件 `fragment_one.xml`，其 XML 如下：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="match_parent"
@@ -660,13 +660,13 @@ if (mOnMasterSelectedListener != null)
 
 1.  创建第二个 Fragment 布局文件 `fragment_two.xml`，其 XML 与上面相同，但更改以下文本属性：
 
-```kt
+```java
 android:text="Fragment Two"
 ```
 
 1.  在创建布局文件后，是时候创建片段的类了。创建一个新的 Java 类 `FragmentOne.java`，代码如下：
 
-```kt
+```java
 public class FragmentOne extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -679,7 +679,7 @@ public class FragmentOne extends Fragment {
 
 1.  创建第二个名为 `FragmentTwo` 的 Java 类，代码如下：
 
-```kt
+```java
 public class FragmentTwo extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -692,7 +692,7 @@ public class FragmentTwo extends Fragment {
 
 1.  现在，我们需要将容器和按钮添加到 MainActivity 布局中。按如下方式更改 `activity_main.xml`：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -716,13 +716,13 @@ public class FragmentTwo extends Fragment {
 
 1.  在创建 Fragment 并将容器添加到布局后，我们现在可以编写操作 Fragment 的代码。打开 `MainActivity.java` 并在类构造函数下方添加以下代码：
 
-```kt
+```java
 Button mButtonNext;
 ```
 
 1.  将以下代码添加到现有的 `onCreate()` 方法中，在 `setContentView()` 下方：
 
-```kt
+```java
 mButtonNext = findViewById(R.id.buttonNext);
 mButtonNext.setOnClickListener(new View.OnClickListener() {
     @Override
@@ -747,7 +747,7 @@ fragmentTransaction.commit();
 
 1.  最后要实现的方法是 `onBackPressed()` 回调：
 
-```kt
+```java
 @Override
 public void onBackPressed() {
     if(getSupportFragmentManager().getBackStackEntryCount() == 2 ) {
@@ -769,7 +769,7 @@ public void onBackPressed() {
 
 在处理返回栈的基本知识覆盖后，现在是时候讨论另一个回调：`onBackStackChanged()`。这是您可以在栈发生变化时实现自定义行为的地方。一个常见的例子是将主页图标更改为返回箭头。当我们设置父属性（在 AndroidManifest 中）时，我们自动获得 Activity 的这种行为，但 Android 并不会为 Fragment 做这件事。如果我们想在 `FragmentTwo` 上有一个返回箭头，请将此行代码添加到 NextButton 的 `onClick()` 中：
 
-```kt
+```java
 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 ```
 
@@ -777,7 +777,7 @@ getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
 为了使返回箭头生效，将以下代码添加到`MainActivity`中：
 
-```kt
+```java
 @Override
 public boolean onOptionsItemSelected(MenuItem menuItem) {
     if (menuItem.getItemId() == android.R.id.home) {
@@ -793,20 +793,20 @@ public boolean onOptionsItemSelected(MenuItem menuItem) {
 
 要实现这个功能，我们需要在类定义中实现`OnBackStackChangedListener`接口。将`MainActivity`的声明修改如下：
 
-```kt
+```java
 public class MainActivity extends AppCompatActivity
         implements FragmentManager.OnBackStackChangedListener {
 ```
 
 然后将此行代码添加到`onCreate()`方法中（在`setContentView()`下方）以添加监听器：
 
-```kt
+```java
 getSupportFragmentManager().addOnBackStackChangedListener(this);
 ```
 
 现在，我们可以实现`onBackStackChanged()`回调函数：
 
-```kt
+```java
 @Override
 public void onBackStackChanged() {
     Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.frameLayout);

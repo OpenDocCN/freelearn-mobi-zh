@@ -86,7 +86,7 @@ Android 提供的标签组件实际上并不执行任何导航操作；相反，
 
 1.  一旦项目创建完成，Android Studio 将在 `AppBarLayout` 中构建一个新的 `Activity`，其中包含三个标签。打开 res/layout 目录，并打开 `activity_tob_tabs.xml` 布局文件以编辑标签的数量和外观：
 
-```kt
+```java
 <android.support.design.widget.TabLayout
     android:id="@+id/tabs"
     android:layout_width="match_parent"
@@ -120,7 +120,7 @@ Android 提供的标签组件实际上并不执行任何导航操作；相反，
 
 1.  在这个类中，你可以在 `getItem` 方法中创建一个 `switch` 语句来为每个标签创建 `Fragment` 实例。例如，之前使用的“航班搜索”图片可能有一个类似这样的 `getItem` 实现：
 
-```kt
+```java
 public Fragment getItem(final int position) {
   switch (position) {
     case 0:
@@ -140,7 +140,7 @@ public Fragment getItem(final int position) {
 
 在 `TopTabsActivity` 中，你会在 `onCreate` 方法中看到 Android Studio 使用 `TabLayout` 类的两个监听器类将 `TabLayout` 与 `AppBarLayout` 中的 `ViewPager` 绑定：
 
-```kt
+```java
 mViewPager.addOnPageChangeListener(
         new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
 tabLayout.addOnTabSelectedListener(
@@ -225,7 +225,7 @@ tabLayout.addOnTabSelectedListener(
 
 1.  删除对`TextView`的引用，并用对`ViewPager`和`BottomNavigationView`的引用替换它：
 
-```kt
+```java
 private TextView mTextMessage; // remove this line
 private ViewPager container;
 private BottomNavigationView navigation;
@@ -233,7 +233,7 @@ private BottomNavigationView navigation;
 
 1.  `BottomNavigationView`（与用于顶部标签的`TabLayout`不同）不包含监听器来自动映射选定的标签和`ViewPager`，因此您需要将`MenuItem` ID 值映射到应显示的页面索引。创建一个包含`MenuItem` ID 值的`int`数组，其顺序与页面相同：
 
-```kt
+```java
 private final int[] pageIds = new int[]{
         R.id.navigation_search,
         R.id.navigation_upcoming,
@@ -243,7 +243,7 @@ private final int[] pageIds = new int[]{
 
 1.  模板创建了一个`BottomNavigationView.OnNavigationItemSelectedListener`匿名内部类，用于在`TextView`中显示选定的标签名称。您希望`ViewPager`切换到选定的标签`Fragment`，您可以使用您刚才声明的 ID 值数组来完成此操作：
 
-```kt
+```java
 private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSelectedListener
         = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -262,7 +262,7 @@ private BottomNavigationView.OnNavigationItemSelectedListener onNavigationItemSe
 
 1.  您还需要一个监听器，用于当用户在`ViewPager`上的标签之间滑动时，以便`BottomNavigationView`也能突出显示正确的标签：
 
-```kt
+```java
 private ViewPager.OnPageChangeListener onPageChangeListener =
         new ViewPager.SimpleOnPageChangeListener() {
             public void onPageSelected(final int position) {
@@ -273,14 +273,14 @@ private ViewPager.OnPageChangeListener onPageChangeListener =
 
 1.  在`onCreate`方法中，删除对`TextView`的赋值，并分配新的`ViewPager`字段：
 
-```kt
+```java
 mTextMessage = findViewById(R.id.message); // remove this line
 container = findViewById(R.id.container);
 ```
 
 1.  将`BottomNavigationView`赋值和监听器分配给您的`Activity`中的字段，然后正确分配两个监听器：
 
-```kt
+```java
 navigation = findViewById(R.id.navigation);
 navigation.setOnNavigationItemSelectedListener(
     onNavigationItemSelectedListener);
@@ -289,7 +289,7 @@ container.addOnPageChangeListener(onPageChangeListener);
 
 1.  现在，您可以将一个`ViewPagerAdapter`分配给具有三个标签的`ViewPager`（例如在`TopTabsActivity`中生成的`SectionsPagerAdapter`）：
 
-```kt
+```java
 container.setAdapter(
     new SectionsPagerAdapter(getSupportFragmentManager()));
 ```
@@ -314,7 +314,7 @@ container.setAdapter(
 
 1.  将以下菜单结构复制到新文件中：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <menu
     >
@@ -348,7 +348,7 @@ container.setAdapter(
 
 1.  根元素当前应该是一个`ConstraintLayout`；你需要将其包裹在一个`DrawerLayout`小部件中，该小部件将管理导航抽屉的显示和隐藏。你还需要给`ConstraintLayout`一个与`ActionBar`相同大小的顶部边距；否则，它将被系统`ActionBar`（另一种解决方法是使用没有系统`ActionBar`的`AppBarLayout`和`CoordinatorLayout`）隐藏。
 
-```kt
+```java
 <android.support.v4.widget.DrawerLayout
 
  android:id="@+id/drawer_layout"
@@ -366,7 +366,7 @@ container.setAdapter(
 
 1.  在`ConstraintLayout`元素关闭后，你需要添加`NavigationView`，它将包含你刚刚编写的导航菜单：
 
-```kt
+```java
 </android.support.constraint.ConstraintLayout>
 
     <android.support.design.widget.NavigationView
@@ -383,7 +383,7 @@ container.setAdapter(
 
 1.  默认情况下，`NavigationView`不会对任何形式的菜单项点击做出响应，甚至在你选择一个菜单项时也不会关闭导航抽屉。你需要添加一个监听器并自己告诉它要做什么。在`onCreate`方法的底部，查找`NavigationView`并添加一个监听器以至少关闭导航抽屉：
 
-```kt
+```java
 final NavigationView navigationView = findViewById(R.id.nav_view);
 navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
   public boolean onNavigationItemSelected(final MenuItem item) {
@@ -397,7 +397,7 @@ navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigation
 
 1.  用户还期望能够使用返回按钮关闭导航抽屉。这需要你覆盖默认的返回按钮行为：
 
-```kt
+```java
 public void onBackPressed() {
   final DrawerLayout drawer = findViewById(R.id.drawer_layout);
   if (drawer.isDrawerOpen(GravityCompat.START)) {
@@ -422,7 +422,7 @@ public void onBackPressed() {
 
 如果你查看 `FragmentPagerAdapter` 类，你会发现它不会直接将 `Fragment` 视图实例添加和移除到 `ViewPager` 对象中。相反，它使用 `FragmentTransaction` 通过 `ViewPager` 的 ID 属性将 `Fragment` 添加和移除到 `ViewPager` 中：
 
-```kt
+```java
 mCurTransaction = mFragmentManager.beginTransaction();
 // …
 fragment = getItem(position);
@@ -464,13 +464,13 @@ mCurTransaction.add(container.getId(), fragment,
 
 1.  声明一个`static` `String`常量，以便`PlaceholderFragment`可以保留其占位文本参数：
 
-```kt
+```java
 private static final String ARG_TEXT = "text";
 ```
 
 1.  将`onCreateView`方法修改为将`TextView`的文本设置为占位文本：
 
-```kt
+```java
 public View onCreateView(
     final LayoutInflater inflater,
     final ViewGroup container,
@@ -491,7 +491,7 @@ public View onCreateView(
 
 1.  创建一个便利的工厂方法来创建具有指定为方法参数的占位文本的`PlaceholderFragment`：
 
-```kt
+```java
 public static PlaceholderFragment newInstance(final String text) {
   final PlaceholderFragment fragment = new PlaceholderFragment();
   final Bundle args = new Bundle();
@@ -507,7 +507,7 @@ public static PlaceholderFragment newInstance(final String text) {
 
 1.  将`ViewPager`修改为被一个 ID 为`host`的全尺寸`FrameLayout`包裹；这将用于包含用于在应用中导航用户的各种`Fragment`实例：
 
-```kt
+```java
 <FrameLayout
     android:id="@+id/host"
     android:layout_width="match_parent"
@@ -530,7 +530,7 @@ public static PlaceholderFragment newInstance(final String text) {
 
 1.  当用户点击底部导航项之一时，你想要确保清除他们所做的任何导航，这样返回按钮就不会将他们导航回之前的堆栈，并确保屏幕上没有残留的`Fragment`实例。在你的匿名类中的`OnNavigationItemSelectedListener.onNavigationItemSelected`方法中，你想要在告诉`ViewPager`切换标签之前弹出回退栈：
 
-```kt
+```java
 private BottomNavigationView.OnNavigationItemSelectedListener
     onNavigationItemSelectedListener
     = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -551,7 +551,7 @@ private BottomNavigationView.OnNavigationItemSelectedListener
 
 1.  在`onCreate`方法的底部，你需要向`NavigationView`添加一个新的监听器来监听菜单中的点击。这些点击将触发使用`FragmentManager`的导航，并关闭导航抽屉：
 
-```kt
+```java
 final NavigationView navigationView = findViewById(R.id.nav_view);
 navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
   @Override

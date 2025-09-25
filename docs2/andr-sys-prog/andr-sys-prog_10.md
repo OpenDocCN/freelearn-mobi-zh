@@ -58,7 +58,7 @@ Android 图形架构
 
 当应用程序开发者将图像绘制到屏幕上时，有两种方式可以实现。他们可以使用 Canvas 或 OpenGL。从 Android 4.0 开始，这两种方法默认都使用硬件加速。要使用硬件加速，我们需要使用 Open GL 库，最终 Gralloc 模块将作为图形系统初始化的一部分被加载。正如我们在第三章“发现内核、HAL 和虚拟硬件”中看到的，每个 HAL 模块都有一个引用 ID，该 ID 可以被 `hw_get_module` 函数用来将其加载到内存中。`hw_get_module` 函数定义在 `$AOSP/hardware/libhardware/hardware.c` 文件中：
 
-```kt
+```java
 int hw_get_module(const char *id, const struct hw_module_t **module) 
 { 
     return hw_get_module_by_class(id, NULL, module); 
@@ -68,7 +68,7 @@ int hw_get_module(const char *id, const struct hw_module_t **module)
 
 在 `hw_get_module` 中，它实际上调用另一个函数，`hw_get_module_by_class` 来完成工作：
 
-```kt
+```java
 int hw_get_module_by_class(const char *class_id, const char *inst, 
                            const struct hw_module_t **module) 
 { 
@@ -114,7 +114,7 @@ found:
 
 在前面的函数中，它试图在 `/system/lib/hw` 或 `/vendor/lib/hw` 中使用以下名称查找 Gralloc 模块的共享库：
 
-```kt
+```java
 gralloc.<ro.hardware>.so 
 gralloc.<ro.product.board>.so 
 gralloc.<ro.board.platform>.so 
@@ -124,14 +124,14 @@ gralloc.<ro.arch>.so
 
 如果上述文件中的任何一个存在，它们将调用 `load` 函数来加载共享库。如果它们都不存在，将使用默认的共享库 `gralloc.default.so`。Gralloc 的硬件模块 ID 在 `gralloc.h` 文件中定义如下：
 
-```kt
+```java
 #define GRALLOC_HARDWARE_MODULE_ID "gralloc" 
 
 ```
 
 `load` 函数将调用 `dlopen` 来加载库，并调用 `dlsym` 来获取数据结构 `hw_module_t` 的地址：
 
-```kt
+```java
 static int load(const char *id, 
         const char *path, 
         const struct hw_module_t **pHmi) 
@@ -189,7 +189,7 @@ static int load(const char *id,
 
 如我们在第三章“发现内核、HAL 和虚拟硬件”中讨论的，硬件供应商需要实现以下三个 HAL 数据结构：
 
-```kt
+```java
 struct hw_module_t; 
 struct hw_module_methods_t; 
 struct hw_device_t; 
@@ -198,7 +198,7 @@ struct hw_device_t;
 
 在 HAL 共享库加载后，数据结构 `hw_module_t` 被用来发现 HAL 模块，正如我们在前面的代码片段中看到的。每个 HAL 模块都应该在数据结构 `hw_module_methods_t` 中实现一个 `open` 方法，该方法负责硬件的初始化。我们可以看到，在以下代码片段中，`gralloc_device_open` 函数被定义为 Gralloc 模块的 `open` 方法：
 
-```kt
+```java
 static struct hw_module_methods_t gralloc_module_methods = { 
         .open = gralloc_device_open 
 }; 
@@ -241,7 +241,7 @@ struct private_module_t HAL_MODULE_INFO_SYM = {
 
 `$AOSP/hardware/libhardware/modules/gralloc/gralloc_priv.h`
 
-```kt
+```java
 struct private_module_t { 
     gralloc_module_t base; 
 
@@ -285,7 +285,7 @@ struct private_module_t {
 
 `$AOSP/hardware/libhardware/include/hardware/gralloc.h`
 
-```kt
+```java
 typedef struct gralloc_module_t { 
     struct hw_module_t common; 
     int (*registerBuffer)(struct gralloc_module_t const* module, 
@@ -321,7 +321,7 @@ Gralloc 数据结构之间的关系
 
 我们已经讨论了 Gralloc 模块的 HAL 数据结构 `hw_module_t` 和 `hw_module_methods_t`。最后一个，`hw_device_t`，在 Gralloc HAL 模块的 `open` 方法中初始化。现在我们可以查看 Gralloc 模块的 `open` 方法如下：
 
-```kt
+```java
 int gralloc_device_open(const hw_module_t* module, const char* name, 
         hw_device_t** device) 
 { 
@@ -358,7 +358,7 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
 
 如前图所示，`gralloc_context_t` 的第一个字段或成员变量是 `device`，其数据类型为 `alloc_device_t`：
 
-```kt
+```java
 struct gralloc_context_t { 
     alloc_device_t  device; 
     /* our private data here */ 
@@ -368,7 +368,7 @@ struct gralloc_context_t {
 
 以下是对 `alloc_device_t` 数据结构的定义。它在 `gralloc.h` 文件中定义：
 
-```kt
+```java
 typedef struct alloc_device_t { 
     struct hw_device_t common; 
 
@@ -394,14 +394,14 @@ Gralloc 设备的 `alloc` 和 `free` 方法在 `gralloc.cpp` 文件中的 `grall
 
 如果我们使用 `GRALLOC_HARDWARE_FB0` 作为 `name` 值调用 Gralloc 模块的 `open` 方法，它将初始化帧缓冲设备。调用 `fb_device_open` 函数来打开帧缓冲设备：
 
-```kt
+```java
 status = fb_device_open(module, name, device); 
 
 ```
 
 `fb_device_open` 函数在 `framebuffer.cpp` 文件中实现如下：
 
-```kt
+```java
 int fb_device_open(hw_module_t const* module, const char* name, 
         hw_device_t** device) 
 { 
@@ -467,7 +467,7 @@ int fb_device_open(hw_module_t const* module, const char* name,
 
 `fb_context_t` 数据结构将 `framebuffer_device_t` 作为第一个字段，如下所示：
 
-```kt
+```java
 struct fb_context_t { 
     framebuffer_device_t  device; 
 }; 
@@ -476,7 +476,7 @@ struct fb_context_t {
 
 相应地，`framebuffer_device_t` 数据结构将 `hw_device_t` 作为第一个字段，因此 `fb_context_t` 可以用作 `framebuffer_device_t` 或 `hw_device_t`：
 
-```kt
+```java
 typedef struct framebuffer_device_t { 
     struct hw_device_t common; 
 
@@ -541,7 +541,7 @@ typedef struct framebuffer_device_t {
 
 让我们看看 `mapFrameBuffer` 函数：
 
-```kt
+```java
 static int mapFrameBuffer(struct private_module_t* module) 
 { 
     pthread_mutex_lock(&module->lock); 
@@ -554,7 +554,7 @@ static int mapFrameBuffer(struct private_module_t* module)
 
 正如我们所见，`mapFrameBuffer` 首先获取一个互斥锁，然后调用另一个函数 `mapFrameBufferLocked` 来完成剩余的工作：
 
-```kt
+```java
 int mapFrameBufferLocked(struct private_module_t* module) 
 { 
     // already initialized... 
@@ -584,7 +584,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
 在 `mapFrameBufferLocked` 函数中，它检查是否存在 `/dev/graphics/fb0` 或 `/dev/fb0` 设备节点。如果设备节点存在，它将尝试打开它并将文件描述符存储在 `fd` 变量中：
 
-```kt
+```java
     ... 
     struct fb_fix_screeninfo finfo; 
     if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1) 
@@ -599,7 +599,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
 接下来，它将使用 `ioctl` 命令获取帧缓冲区信息。有两个帧缓冲区数据结构，`fb_fix_screeninfo` 和 `fb_var_screeninfo`，可以用来与帧缓冲区通信。`fb_fix_screeninfo` 数据结构存储固定的帧缓冲区信息，而 `fb_var_screeninfo` 数据结构存储可编程的帧缓冲区信息：
 
-```kt
+```java
     ... 
     info.reserved[0] = 0; 
     info.reserved[1] = 0; 
@@ -650,7 +650,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
 为了设置虚拟分辨率，它试图将虚拟垂直分辨率增加到`info.yres * NUM_BUFFERS`值。`NUM_BUFFERS`是用于帧缓冲设备中可以使用的缓冲区数量的宏。在我们的情况下，`NUM_BUFFERS`的值是`2`，因此我们可以使用双缓冲技术来显示。它使用`ioctl`命令`FBIOPUT_VSCREENINFO`来设置虚拟分辨率。如果它成功设置了虚拟分辨率，它将在`flags`中设置`PAGE_FLIP`位；否则，它将清除`PAGE_FLIP`位：
 
-```kt
+```java
     ... 
     if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1) 
         return -errno; 
@@ -680,7 +680,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
 在设置虚拟分辨率后，它将计算刷新率。要了解刷新率的计算，可以参考 Linux 内核源代码中的文档`Documentation/fb/framebuffer.txt`：
 
-```kt
+```java
     ... 
     if (int(info.width) <= 0 || int(info.height) <= 0) { 
         // the driver doesn't return that information 
@@ -705,7 +705,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
 最后，它将帧缓冲区映射到进程地址空间：
 
-```kt
+```java
     ... 
     while (info.yres_virtual > 0) { 
         size_t fbSize = roundUpToPageSize(finfo.line_length * 
@@ -761,7 +761,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
 让我们在本节中看看 Gralloc 模块如何分配和释放图形缓冲区。我们首先查看 `gralloc_alloc` 的源代码：
 
-```kt
+```java
 static int gralloc_alloc(alloc_device_t* dev, 
         int w, int h, int format, int usage, 
         buffer_handle_t* pHandle, int* pStride) 
@@ -843,7 +843,7 @@ private_handle_t 和 native_handle 之间的关系
 
 上述图表显示了 `private_handle_t` 和 `native_handle` 之间的关系。以下是对 `native_handle` 的定义：
 
-```kt
+```java
 typedef struct native_handle 
 { 
     int version;     /* sizeof(native_handle_t) */ 
@@ -856,7 +856,7 @@ typedef struct native_handle
 
 `version` 字段被设置为 `native_handle` 的大小。`numFds` 和 `numInts` 字段描述了 `data` 数组中的文件描述符和整数的数量。`data` 数组用于存储特定于硬件的信息，我们可以在以下 `private_handle_t` 的定义中看到：
 
-```kt
+```java
 #ifdef __cplusplus 
 struct private_handle_t : public native_handle { 
 #else 
@@ -926,7 +926,7 @@ struct private_handle_t {
 
 从 `gralloc_alloc` 函数中我们可以看到，当 `usage` 位设置为 `GRALLOC_USAGE_HW_FB` 时，调用 `gralloc_alloc_framebuffer` 函数。`gralloc_alloc_framebuffer` 函数将从帧缓冲区设备分配缓冲区：
 
-```kt
+```java
 static int gralloc_alloc_framebuffer_locked(alloc_device_t* dev, 
         size_t size, int usage, buffer_handle_t* pHandle) 
 { 
@@ -1007,7 +1007,7 @@ static int gralloc_alloc_framebuffer(alloc_device_t* dev,
 
 当 `usage` 位未设置为 `GRALLOC_USAGE_HW_FB` 或系统不支持双缓冲时，我们必须使用 `gralloc_alloc_buffer` 从系统内存分配缓冲区。让我们看看 `gralloc_alloc_buffer` 的实现：
 
-```kt
+```java
 static int gralloc_alloc_buffer(alloc_device_t* dev, 
         size_t size, int /*usage*/, buffer_handle_t* pHandle) 
 { 
@@ -1043,7 +1043,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev,
 
 这个共享内存区域被描述为一个文件描述符。要使用它，我们需要将其映射到当前进程的地址空间。这是通过 `mapBuffer` 函数完成的：
 
-```kt
+```java
 int mapBuffer(gralloc_module_t const* module, 
         private_handle_t* hnd) 
 { 
@@ -1055,7 +1055,7 @@ int mapBuffer(gralloc_module_t const* module,
 
 `mapBuffer` 调用另一个函数 `gralloc_map` 来进行内存映射：
 
-```kt
+```java
 static int gralloc_map(gralloc_module_t const* /*module*/, 
         buffer_handle_t handle, 
         void** vaddr) 
@@ -1089,7 +1089,7 @@ static int gralloc_map(gralloc_module_t const* /*module*/,
 
 要释放图形缓冲区，使用 `gralloc_free` 函数：
 
-```kt
+```java
 static int gralloc_free(alloc_device_t* dev, 
         buffer_handle_t handle) 
 { 
@@ -1124,7 +1124,7 @@ static int gralloc_free(alloc_device_t* dev,
 
 如果缓冲区是从系统内存分配的，它将调用 `terminateBuffer` 函数来释放内存：
 
-```kt
+```java
 int terminateBuffer(gralloc_module_t const* module, 
         private_handle_t* hnd) 
 { 
@@ -1140,7 +1140,7 @@ int terminateBuffer(gralloc_module_t const* module,
 
 `terminateBuffer` 函数调用另一个函数 `gralloc_unmap` 来释放内存：
 
-```kt
+```java
 static int gralloc_unmap(gralloc_module_t const* /*module*/, 
         buffer_handle_t handle) 
 { 
@@ -1166,7 +1166,7 @@ static int gralloc_unmap(gralloc_module_t const* /*module*/,
 
 正如我们在本章前面讨论的那样，Gralloc 模块可以支持两种类型的设备：Gralloc 设备和帧缓冲设备。在 Gralloc 设备的 `open` 方法中，它创建一个名为 `GRALLOC_HARDWARE_GPU0` 的设备，并支持两种方法，`alloc` 和 `free`，正如我们可以在下面的代码片段中看到的那样。我们已经在本章前面详细讨论了这两种方法：
 
-```kt
+```java
     ... 
     if (!strcmp(name, GRALLOC_HARDWARE_GPU0)) { 
         gralloc_context_t *dev; 
@@ -1191,7 +1191,7 @@ static int gralloc_unmap(gralloc_module_t const* /*module*/,
 
 在帧缓冲设备 `open` 方法中，它创建一个名为 `GRALLOC_HARDWARE_FB0` 的设备，并支持四种方法 `close`、`setSwapInterval`、`post` 和 `setUpdateRect`：
 
-```kt
+```java
     ... 
     if (!strcmp(name, GRALLOC_HARDWARE_FB0)) { 
         /* initialize our state here */ 
@@ -1218,7 +1218,7 @@ static int gralloc_unmap(gralloc_module_t const* /*module*/,
 
 让我们看看 `post` 方法，它在 `fb_post` 中实现：
 
-```kt
+```java
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer) 
 { 
     if (private_handle_t::validate(buffer) < 0) 
@@ -1273,7 +1273,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 
 在我们获得设备实例后，我们可以按照以下方式从其中获取 Gralloc 模块的实例：
 
-```kt
+```java
 private_module_t* m = reinterpret_cast<private_module_t*>( 
 dev->common.module); 
 
@@ -1283,7 +1283,7 @@ dev->common.module);
 
 如果它是帧缓冲区的一部分，我们需要将其激活为显示的缓冲区。这可以通过使用帧缓冲区的 `ioctl` 函数来完成。要调用 `ioctl` 函数，我们需要一个 `fb_var_screeninfo` 数据结构，这可以在 `m->info` 中找到。为了在双缓冲中交换缓冲区，我们只需设置垂直偏移并按照以下方式激活它：
 
-```kt
+```java
     ... 
         m->info.activate = FB_ACTIVATE_VBL; 
         m->info.yoffset = offset / m->finfo.line_length; 
@@ -1294,7 +1294,7 @@ dev->common.module);
 
 如果它是在系统内存中分配的缓冲区，我们需要将其复制到帧缓冲区。在这种情况下，它首先尝试锁定图形缓冲区和帧缓冲区，然后使用 `memcpy` 复制图形缓冲区：
 
-```kt
+```java
 memcpy(fb_vaddr, buffer_vaddr, m->finfo.line_length * m->info.yres); 
 
 ```
@@ -1323,7 +1323,7 @@ Android 模拟器上的 3D 图形支持以不同的方式实现，如下所示�
 
 在模拟器中选择图形模式，您可以通过命令行使用 `-gpu` 选项指定，或者在 `config.ini` 配置文件中定义，如下所示：
 
-```kt
+```java
 hw.gps=yes 
 hw.gpu.enabled=yes 
 hw.gpu.mode=swiftshader 
@@ -1346,7 +1346,7 @@ hw.gpu.mode=swiftshader
 
 或者，您可以使用以下命令获取整个仓库：
 
-```kt
+```java
 $ git clone https://android.googlesource.com/platform/external/qemu  
 
 ```
@@ -1355,7 +1355,7 @@ $ git clone https://android.googlesource.com/platform/external/qemu
 
 GLES 硬件仿真 Gralloc 模块与我们本章中讨论的默认 Gralloc 模块非常相似。它需要实现以下三个 HAL 数据结构：
 
-```kt
+```java
 struct hw_module_t; 
 struct hw_module_methods_t; 
 struct hw_device_t; 
@@ -1366,7 +1366,7 @@ struct hw_device_t;
 
 默认 Gralloc 模块中的`private_module_t`如下：
 
-```kt
+```java
 struct private_module_t { 
     gralloc_module_t base; 
 
@@ -1390,7 +1390,7 @@ struct private_module_t {
 
 GLES 仿真 Gralloc 模块中的`private_module_t`如下：
 
-```kt
+```java
 struct private_module_t { 
     gralloc_module_t base; 
 }; 
@@ -1406,7 +1406,7 @@ struct private_module_t {
 
 我们在*初始化 GPU*部分分析了`gralloc_context_t`和`fb_context_t`。我们可以在以下 GLES 仿真实现中查看`gralloc_device_t`和`fb_device_t`的定义：
 
-```kt
+```java
 struct gralloc_device_t { 
     alloc_device_t  device; 
 
@@ -1424,7 +1424,7 @@ struct fb_device_t {
 
 正如我们所知，设备初始化是在`hw_module_methods_t`数据结构中定义的`open`方法中完成的。让我们看看 GLES 仿真的`open`方法的实现。它是在`gralloc_device_open`函数中实现的，如下面的代码片段所示：
 
-```kt
+```java
 static int gralloc_device_open(const hw_module_t* module, 
                                const char* name, 
                                hw_device_t** device) 
@@ -1492,7 +1492,7 @@ static int gralloc_device_open(const hw_module_t* module,
 
 接下来，让我们看一下以下 `FB0` 的初始化：
 
-```kt
+```java
 static int gralloc_device_open(const hw_module_t* module, 
                                const char* name, 
                                hw_device_t** device) 
@@ -1589,7 +1589,7 @@ static int gralloc_device_open(const hw_module_t* module,
 
 现在让我们看一下 `gralloc_alloc` 的代码：
 
-```kt
+```java
 static int gralloc_alloc(alloc_device_t* dev, 
                          int w, int h, int format, int usage, 
                          buffer_handle_t* pHandle, int* pStride) 
@@ -1653,7 +1653,7 @@ static int gralloc_alloc(alloc_device_t* dev,
 
 在 `gralloc_alloc` 的前面代码中，它首先创建了一个 `gralloc_device_t` 数据结构的实例。之后，它检查 `usage` 和 `format` 参数以确定像素的大小以及相应的 GLES 颜色格式和像素类型，并将它们存储在 `bpp`、`glFormat` 和 `glType` 变量中。有了必要的信息，它可以计算出需要为图形缓冲区分配的共享内存的大小，并将其存储在 `ashmem_size` 变量中：
 
-```kt
+```java
     // 
     // Allocate space in ashmem if needed 
     // 
@@ -1715,7 +1715,7 @@ static int gralloc_alloc(alloc_device_t* dev,
 
 至于共享内存大小 `ashmem_size`，它使用 `ashmem_create_region` 函数分配一个共享内存区域，并获取共享内存区域作为一个 `fd` 文件描述符。为了存储共享内存区域和 GPU 缓冲区（我们将讨论的主机端缓冲区），它创建了一个 `cb_handle_t` 数据结构的实例。如果我们回想一下，我们在默认的 Gralloc 模块中使用了 `private_handle_t` 数据结构来表示分配的图形缓冲区。在这里，`cb_handle_t` 是 `private_handle_t` 的等价物：
 
-```kt
+```java
 struct cb_handle_t : public native_handle { 
 
     cb_handle_t(int p_fd, int p_ashmemSize, int p_usage, 
@@ -1756,7 +1756,7 @@ struct cb_handle_t : public native_handle {
 
 让我们看一下 `gralloc_alloc` 的最后一部分代码：
 
-```kt
+```java
     // 
     // alloc succeeded - insert the allocated handle to the allocated    
     // list 
@@ -1801,7 +1801,7 @@ struct cb_handle_t : public native_handle {
 
 对于`FB0`设备的实现，我们将像分析默认的 Gralloc 模块那样查看`post`方法。这是在`fb_post`函数中实现的，我们可以如下查看其实现：
 
-```kt
+```java
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer) 
 { 
     fb_device_t *fbdev = (fb_device_t *)dev; 

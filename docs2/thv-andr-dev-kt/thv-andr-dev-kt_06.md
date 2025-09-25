@@ -60,7 +60,7 @@
 
 使用此选项，Android Studio 将自动创建一个文件来指定版本。此文件称为`libs.versions.toml`，其默认内容如下所示：
 
-```kt
+```java
 [versions]
 agp = "8.1.0-beta01"
 org-jetbrains-kotlin-android = "1.8.10"
@@ -88,7 +88,7 @@ org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.re
 
 现在，如果我们打开应用模块的 `gradle.build.kts` 文件，我们将看到版本目录声明是如何使用的。例如，在这里，我们可以看到插件是如何现在被应用的：
 
-```kt
+```java
 plugins {
     alias(libs.plugins.com.android.application)
     alias(libs.plugins.org.jetbrains.kotlin.android)
@@ -99,7 +99,7 @@ plugins {
 
 在这里，我们可以看到依赖项是如何声明的：
 
-```kt
+```java
 dependencies {
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
@@ -189,7 +189,7 @@ Koin 在*第一章*中简要提到，但让我们在这里了解其主要特性�
 
 要开始设置 Koin，我们需要将必要的依赖项添加到我们的版本目录中。为此，您将必要的 Koin 依赖项添加到 `libs.versions.toml` 文件中。请确保使用 Koin 的最新版本，并将 `latest-version` 替换为实际版本号：
 
-```kt
+```java
 [versions]
 ...
 koin = "latest-version"
@@ -207,7 +207,7 @@ koin-test-junit4 = { group = "io.insert-koin", name = "koin-test-junit4", versio
 
 现在，我们需要将依赖项添加到我们的模块的 Gradle 文件中。为此，将以下行添加到依赖 Lambda：
 
-```kt
+```java
 dependencies {
    …
     implementation(libs.koin.core)
@@ -222,7 +222,7 @@ dependencies {
 
 接下来，我们需要创建我们的 `Application` 类。Koin 通常在您的 `Application` 类中初始化。由于我们还没有一个，我们将作为 `:app` 模块的一部分创建一个，并添加以下代码：
 
-```kt
+```java
 class PacktagramApplication : Application() {
     override fun onCreate() {
         super.onCreate()
@@ -243,7 +243,7 @@ class PacktagramApplication : Application() {
 
 下一条是 `modules(appModule)`。这个函数是您列出包含项目依赖项和提供它们指令的地方。一开始，我们只有 `appModule`，我们可以这样创建它：
 
-```kt
+```java
 import org.koin.dsl.module
 val appModule = module {
 ...
@@ -252,7 +252,7 @@ val appModule = module {
 
 在 `module` 块内部，一旦我们开始构建它们，我们应该定义我们的依赖项。以下是一个示例：
 
-```kt
+```java
 val exampleModule = module {
     single { MyDataSource(get()) }
     single { MyRepository(get()) }
@@ -273,7 +273,7 @@ Koin 中的`module`函数用于定义一个模块，在该模块中，你指定�
 
 +   **bind**: 这个函数与**single**、**factory**或**scoped**一起使用，为这个类提供额外的接口。例如，如果**MyImplementation**类实现了**MyInterface**，你可以输入以下内容：
 
-    ```kt
+    ```java
     single { MyImplementation() } bind MyInterface::class
     ```
 
@@ -289,7 +289,7 @@ Koin 中的`module`函数用于定义一个模块，在该模块中，你指定�
 
 让我们开始创建我们的`ViewModel`，如下所示：
 
-```kt
+```java
 class StoryEditorViewModel: ViewModel() {
     private val _isEditing = MutableStateFlow(true)
     val isEditing: StateFlow<Boolean> = _isEditing
@@ -300,7 +300,7 @@ class StoryEditorViewModel: ViewModel() {
 
 现在，我们需要注意这个 `ViewModel` 的依赖注入，因为它必须可以从我们即将创建的屏幕中访问。我们可以在 `:feature:story` 中创建 `storyModule` 以能够提供它，如下所示：
 
-```kt
+```java
 val storyModule = module {
     viewModel<StoryEditorViewModel>()
 }
@@ -310,7 +310,7 @@ val storyModule = module {
 
 我们还需要将这个新模块添加到 `PacktagramApplication` Koin 初始化中：
 
-```kt
+```java
 class PacktagramApplication : Application() {
     override fun onCreate() {
         super.onCreate()
@@ -327,7 +327,7 @@ class PacktagramApplication : Application() {
 
 现在，我们准备好开始使用 Jetpack Compose 的魔法并创建 `StoryEditorScreen`。这个屏幕将 `viewModel` 作为依赖项，并处理 `TopAppBar` 和一个新的组合器 `StoryContent`，它将包含故事创建和编辑的主要功能。我们可以如下创建 `StoryEditorScreen`：
 
-```kt
+```java
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -354,7 +354,7 @@ fun StoryEditorScreen(
 
 这个组合器应该有一个背景，这将是用戶想要包含在故事中的图片或视频，并将占据屏幕上的所有空间。通过这样做，屏幕上的选项将根据我们是在捕获媒体还是编辑媒体而有所不同。以下是这个组合器的代码：
 
-```kt
+```java
 @Composable
 fun StoryContent(
     isEditing: Boolean = false,
@@ -483,7 +483,7 @@ fun StoryContent(
 
 这个 `MainScreen` 组合组件将有一个 `Scaffold` 组合组件作为其主要组件。在这里，我们将定义标题栏和底部栏，以及不同的导航选项：
 
-```kt
+```java
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
@@ -497,7 +497,7 @@ fun MainScreen(
 
 现在，是时候添加 `Scaffold` 组合组件了。这是我们添加 `title` 和 `bottomBar` 的地方。让我们从 `title` 开始：
 
-```kt
+```java
     Scaffold(
         topBar = {
             TopAppBar(
@@ -523,7 +523,7 @@ fun MainScreen(
 
 下一步是添加 `BottomBar`：
 
-```kt
+```java
         bottomBar = {
             TabRow(selectedTabIndex = selectedIndex.value)
             {
@@ -546,7 +546,7 @@ fun MainScreen(
 
 现在，我们需要向 `Scaffold` 组合组件添加内容：
 
-```kt
+```java
         content = { innerPadding ->
             HorizontalPager(
                 modifier = Modifier.padding(innerPadding),
@@ -592,7 +592,7 @@ fun MainScreen(
 
 首先，我们需要创建我们将在 `NewsFeed` 组合器中使用的 `ViewModel` 类。我们将称之为 `NewsFeedViewModel` 并添加以下代码：
 
-```kt
+```java
 class NewsFeedViewModel : ViewModel() {
     private val _posts =
         MutableStateFlow<List<Post>>(emptyList())
@@ -604,7 +604,7 @@ class NewsFeedViewModel : ViewModel() {
 
 现在，是时候处理这个 `NewsFeedViewModel` 的依赖注入了。我们为每个应用模块创建一个依赖注入模块。所以在这种情况下，因为我们正在处理新闻源模块，我们将创建一个新的依赖注入模块来提供 `NewsFeedViewModel`：
 
-```kt
+```java
 val newsFeedModule = module {
     viewModel<NewsFeedViewModel>()
 }
@@ -612,7 +612,7 @@ val newsFeedModule = module {
 
 然后，我们将将其添加到 `PacktagramApplication` 中的模块列表中：
 
-```kt
+```java
 class PacktagramApplication : Application() {
     override fun onCreate() {
         super.onCreate()
@@ -632,7 +632,7 @@ class PacktagramApplication : Application() {
 
 现在，我们需要创建 `NewsFeed` 组合器，它将包括帖子列表：
 
-```kt
+```java
 @Composable
 fun NewsFeed(
     modifier: Modifier = Modifier,
@@ -666,7 +666,7 @@ fun NewsFeed(
 
 根据那些要求，我们的 `PostItem` 组合器将看起来像这样：
 
-```kt
+```java
 @Composable
 fun PostItem(
     post: Post
@@ -691,7 +691,7 @@ fun PostItem(
 
 现在，让我们创建我们需要的组合器。我们将按顺序开始，首先是 `TitleBar`：
 
-```kt
+```java
 @Composable
 fun TitleBar(
     modifier: Modifier = Modifier,
@@ -745,7 +745,7 @@ fun TitleBar(
 
 现在`TitleBar`已经准备好了，是时候考虑`MediaContent`可组合项了，它将显示用户发布的内 容：
 
-```kt
+```java
 @Composable
 fun MediaContent (
     modifier: Modifier = Modifier,
@@ -775,7 +775,7 @@ fun MediaContent (
 
 现在我们已经完成了`MediaContent`可组合项，我们将考虑`ActionBar`，它将提供渲染操作按钮的指令：
 
-```kt
+```java
 @Composable
 fun ActionsBar(
     modifier: Modifier = Modifier,
@@ -865,7 +865,7 @@ fun ActionsBar(
 
 在配置了 `ActionsBar` 组合器以提供具有一系列交互按钮的灵活 UI 布局后，我们的下一个重点是点赞数。实现起来非常简单：
 
-```kt
+```java
 @Composable
 fun LikesCount(
     modifier: Modifier = Modifier,
@@ -897,7 +897,7 @@ fun LikesCount(
 
 下一个组合器是标题，这是用户添加到帖子的文本：
 
-```kt
+```java
 @Composable
 fun Caption(
     modifier: Modifier = Modifier,
@@ -942,7 +942,7 @@ fun Caption(
 
 在完成 `Caption` 组合器后，让我们来处理 `CommentsCount` 组合器：
 
-```kt
+```java
 @Composable
 fun CommentsCount(
     modifier: Modifier = Modifier,
@@ -973,7 +973,7 @@ fun CommentsCount(
 
 现在我们已经完成了`CommentsCount`可组合组件的实现，我们将创建`TimeStamp`可组合组件：
 
-```kt
+```java
 fun TimeStamp(
     modifier: Modifier = Modifier,
     post: Post
@@ -1050,7 +1050,7 @@ Retrofit 是一个适用于 Android 和 Java（与 Kotlin 完全兼容）的类�
 
 要使用 Retrofit 和 Moshi 库，我们需要配置它们的依赖项。首先，我们将它们添加到版本目录文件中：
 
-```kt
+```java
 [versions]
 ...
 retrofit = "2.9.0"
@@ -1075,7 +1075,7 @@ kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "org-jetbrains-k
 
 然后，我们将这些依赖项包含在我们的模块的 `build.gradle.kts` 文件中，使它们在我们的模块中可用：
 
-```kt
+```java
 dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofitMoshiConverter)
@@ -1095,7 +1095,7 @@ dependencies {
 
 在这一点上，我们准备创建我们的数据源。我们将在 `:feature:newsfeed` 模块中完成这项工作。首先，我们需要创建一个接口来定义我们的 API 端点，使用 Retrofit。我们可以使用 `@GET`、`@POST` 等来定义我们想要进行的 HTTP 请求类型：
 
-```kt
+```java
 interface NewsFeedService {
     @GET("feed")
     suspend fun getNewsFeed(): List<PostApiData>
@@ -1116,7 +1116,7 @@ interface NewsFeedService {
 
 现在，我们需要从这个接口生成一个客户端。为此，我们将使用 Retrofit 构建器：
 
-```kt
+```java
 object RetrofitInstance {
     private const val BASE_URL = "https://packtagram.com/"
     fun getNewsFeedApi(): NewsFeedService = run {
@@ -1136,7 +1136,7 @@ object RetrofitInstance {
 
 现在，我们需要创建 `NewsFeedRemoteDataSource`：
 
-```kt
+```java
 class NewsFeedRemoteDataSource(private val api:
 NewsFeedService) {
     suspend fun getNewsFeed(): List<PostApiData> {
@@ -1155,7 +1155,7 @@ NewsFeedService) {
 
 首先，我们将定义其接口作为域层的一部分：
 
-```kt
+```java
 interface NewsFeedRepository {
     suspend fun getNewsFeed():List<Post>
 }
@@ -1163,7 +1163,7 @@ interface NewsFeedRepository {
 
 第二步，我们将实现其功能作为数据层的一部分：
 
-```kt
+```java
 class NewsFeedRepositoryImpl(
     private val remoteDataSource: NewsFeedRemoteDataSource
 ): NewsFeedRepository {
@@ -1183,7 +1183,7 @@ class NewsFeedRepositoryImpl(
 
 随着我们通过层，下一步将是创建所需的用例。在这种情况下，我们将创建一个用于获取新闻源的用例——即 `GetTheNewsFeedUseCase`：
 
-```kt
+```java
 class GetTheNewsFeedUseCase(
     private val repository: NewsFeedRepository
 ) {
@@ -1197,7 +1197,7 @@ class GetTheNewsFeedUseCase(
 
 在继续之前，我们需要创建我们将在数据和域层中使用的数据类。在域层的案例中，我们将创建 `Post` 数据类：
 
-```kt
+```java
 data class Post(
     val id: String,
     val user: UserData,
@@ -1219,7 +1219,7 @@ data class Post(
 
 在数据层的案例中，我们将创建所需的 `PostApiData` 数据类和映射函数，我们将将其映射到域对象：
 
-```kt
+```java
 data class PostApiData(
     @Json(name = "id")
     val id: String,
@@ -1270,7 +1270,7 @@ data class PostApiData(
 
 在跳转到 `ViewModel` 中的用例之前，我们必须整理我们刚刚创建的所有组件的依赖注入。我们将在 `newsFeedModule` 中这样做：
 
-```kt
+```java
 val newsFeedModule = module {
     single { RetrofitInstance.getNewsFeedApi() }
     single { NewsFeedRemoteDataSource(get()) }
@@ -1287,7 +1287,7 @@ val newsFeedModule = module {
 
 对于 ViewModel，我们需要创建一个新的函数来获取帖子。我们将称其为 `loadPosts()`：
 
-```kt
+```java
     init {
         loadPosts()
     }
@@ -1313,7 +1313,7 @@ val newsFeedModule = module {
 
 首先，让我们调整 `NewsFeedService`，使其包括我们刚才提到的两个参数：
 
-```kt
+```java
 interface NewsFeedService {
     @GET("/feed")
     suspend fun getNewsFeed(
@@ -1325,7 +1325,7 @@ interface NewsFeedService {
 
 现在，我们需要更改数据源函数的签名，使其包括这些字段。在数据源中，我们将更改以下函数：
 
-```kt
+```java
     suspend fun getNewsFeed(pageNumber: Int, pageSize:
     Int): List<PostApiData> {
         return api.getNewsFeed(pageNumber, pageSize)
@@ -1334,7 +1334,7 @@ interface NewsFeedService {
 
 在存储库中，我们将处理存储当前页和保持所需页面大小（这也可以是某个地方的一个常量）：
 
-```kt
+```java
 class NewsFeedRepositoryImpl(
     private val remoteDataSource:
     NewsFeedRemoteDataSource): NewsFeedRepository
@@ -1358,7 +1358,7 @@ class NewsFeedRepositoryImpl(
 
 接下来，当用户导航到顶部并想要获取出版物列表的第一页时，我们将使用 `resetPagination()` 在 `UseCase` 中：
 
-```kt
+```java
     suspend operator fun invoke(fromTheBeginning: Boolean):
     List<Post> {
         if (fromTheBeginning) {
@@ -1372,7 +1372,7 @@ class NewsFeedRepositoryImpl(
 
 首先，我们将实现 `NewsFeedViewModel` 部分：
 
-```kt
+```java
 init {
         loadInitialPosts()
     }
@@ -1402,7 +1402,7 @@ init {
 
 现在，我们需要对 `NewsFeed` 组合式进行一些修改，以便它在需要新页面时调用 ViewModel。为此，我们需要创建一个 `LazyListState` 扩展，我们将在用户到达列表末尾时调用它：
 
-```kt
+```java
 fun LazyListState.OnBottomReached(
     loadMore : () -> Unit
 ){
@@ -1428,7 +1428,7 @@ fun LazyListState.OnBottomReached(
 
 现在，我们需要在我们的 `LazyColumn` 布局中使用它。为此，我们需要在 `NewsFeed` 组合式中记住 `LazyListState`：
 
-```kt
+```java
 @Composable
 fun NewsFeed(
     modifier: Modifier = Modifier,

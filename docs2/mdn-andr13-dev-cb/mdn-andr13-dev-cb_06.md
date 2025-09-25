@@ -38,35 +38,35 @@ Room 最显著的优势是它易于与其他架构组件集成，并为开发者
 
 1.  现在，让我们继续添加 Room 所需的依赖并同步项目。我们将在*第十二章*中介绍如何使用`buildSrc`进行依赖管理，*Android Studio 技巧和窍门，帮助你开发过程中*。你可以在[`developer.android.com/jetpack/androidx/releases/room`](https://developer.android.com/jetpack/androidx/releases/room)找到 Room 的最新版本；我们将添加`kapt`，代表**Kotlin Annotation Processing Tool**，以使我们能够使用 Java 注解处理器与 Kotlin 代码一起使用：
 
-    ```kt
+    ```java
     dependencies {
     ```
 
-    ```kt
+    ```java
     implementation "androidx.Room:Room-runtime:2.x.x"
     ```
 
-    ```kt
+    ```java
     kapt "androidx.Room:Room-compiler:2.x.x"
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     //include kapt on your plugins
     ```
 
-    ```kt
+    ```java
     plugins {
     ```
 
-    ```kt
+    ```java
         id 'kotlin-kapt'
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -74,83 +74,83 @@ Room 最显著的优势是它易于与其他架构组件集成，并为开发者
 
 1.  通过使用 Room，我们使用`@Entity`注解给我们的模型一个表名；因此，在我们的新创建的`UserInformation`类中，让我们继续添加`@Entity`注解并称我们的表为用户信息：
 
-    ```kt
+    ```java
     @Entity(tableName = "user_information")
     ```
 
-    ```kt
+    ```java
     data class UserInformationModel(
     ```
 
-    ```kt
+    ```java
         val id: Int = 0,
     ```
 
-    ```kt
+    ```java
         val firstName: String,
     ```
 
-    ```kt
+    ```java
         val lastName: String,
     ```
 
-    ```kt
+    ```java
         val dateOfBirth: Int,
     ```
 
-    ```kt
+    ```java
         val gender: String,
     ```
 
-    ```kt
+    ```java
         val city: String,
     ```
 
-    ```kt
+    ```java
         val profession: String
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  接下来，就像所有数据库一样，我们需要为我们的数据库定义一个主键。因此，在我们的 ID 中，我们将添加`@PrimaryKey`注解来告诉 Room 这是我们主键，并且应该自动生成。如果你不希望自动生成，你可以将布尔值设置为`false`，但这可能不是一个好主意，因为可能会在数据库中引起冲突：
 
-    ```kt
+    ```java
     @PrimaryKey(autoGenerate = true)
     ```
 
 1.  现在，你应该有一个具有表名、主键和你的数据类型的实体：
 
-    ```kt
+    ```java
     import androidx.Room.Entity
     ```
 
-    ```kt
+    ```java
     import androidx.Room.PrimaryKey
     ```
 
-    ```kt
+    ```java
     @Entity(tableName = "user_information")
     ```
 
-    ```kt
+    ```java
     data class UserInformationModel(
     ```
 
-    ```kt
+    ```java
         @PrimaryKey(autoGenerate = true)
     ```
 
-    ```kt
+    ```java
         val id: Int = 0,
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
     )
     ```
 
@@ -158,7 +158,7 @@ Room 最显著的优势是它易于与其他架构组件集成，并为开发者
 
 我们还必须在我们的接口上使用`@Dao`注解来告诉 Room 这是我们自己的 DAO。我们在更新和插入函数上使用`OnConflictStrategy.REPLACE`来帮助我们处理可能在我们数据库中遇到的冲突情况。在这种情况下，`OnConflictStrategy`意味着如果`Insert`有相同的 ID，它将用特定的 ID 替换该数据：
 
-```kt
+```java
 private const val DEFAULT_USER_ID = 0
 @Dao
 interface UserInformationDao {
@@ -183,23 +183,23 @@ interface UserInformationDao {
 
 1.  现在我们有了实体和 DAO，我们最终将创建一个`Database`类，它扩展了`RoomDatabase()`。在这个类中，我们将使用`@Database`注解，传入我们创建的实体，即`UserInformation`实体，并给我们的数据库一个版本名称，目前是`one`。我们还将指定是否应该导出我们的数据库模式。所以，让我们继续创建`Database`抽象类：
 
-    ```kt
+    ```java
     @Database(entities = [UserInformation::class], version = 1, exportSchema = false)
     ```
 
-    ```kt
+    ```java
     abstract class UserInformationDatabase : RoomDatabase() {
     ```
 
-    ```kt
+    ```java
         abstract fun userInformationDao():
     ```
 
-    ```kt
+    ```java
             UserInformationDao
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -247,31 +247,31 @@ interface UserInformationDao {
 
 1.  接下来，让我们添加我们的 `@HiltAndroidApp` 类，并在 `Manifest` 文件夹中添加我们的 `HiltAndroidApp` 的名称，在我们的例子中，是 `UserInformation`：
 
-    ```kt
+    ```java
     @HiltAndroidApp
     ```
 
-    ```kt
+    ```java
     class UserInformation : Application()
     ```
 
-    ```kt
+    ```java
     <application
     ```
 
-    ```kt
+    ```java
         android:allowBackup="true"
     ```
 
-    ```kt
+    ```java
         android:name=".UserInformation"
     ```
 
-    ```kt
+    ```java
         tools:targetApi="33">
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
@@ -279,389 +279,389 @@ interface UserInformationDao {
 
 1.  在`DatabaseModule`中，让我们继续创建一个`provideDatabase()`函数，我们将返回`Room`对象，添加数据库名称，并确保我们构建了数据库：
 
-    ```kt
+    ```java
     @Module
     ```
 
-    ```kt
+    ```java
     @InstallIn(SingletonComponent::class)
     ```
 
-    ```kt
+    ```java
     class DataBaseModule {
     ```
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Provides
     ```
 
-    ```kt
+    ```java
         fun provideDatabase(@ApplicationContext context:
     ```
 
-    ```kt
+    ```java
         Context): UserInformationDatabase {
     ```
 
-    ```kt
+    ```java
             return Room.databaseBuilder(
     ```
 
-    ```kt
+    ```java
                 context,
     ```
 
-    ```kt
+    ```java
                 UserInformationDatabase::class.java,
     ```
 
-    ```kt
+    ```java
                 "user_information.db"
     ```
 
-    ```kt
+    ```java
             ).build()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Provides
     ```
 
-    ```kt
+    ```java
         fun provideUserInformationDao(
     ```
 
-    ```kt
+    ```java
         userInformationDatabase: UserInformationDatabase):
     ```
 
-    ```kt
+    ```java
         UserInformationDao {
     ```
 
-    ```kt
+    ```java
             return
     ```
 
-    ```kt
+    ```java
               userInformationDatabase.userInformationDao()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在我们已经设置了依赖注入数据库模块，我们现在可以开始添加服务，这些服务是帮助我们向数据库添加用户信息并从数据库获取用户信息的函数。因此，让我们继续创建一个新的包，名为`service`。在包内部，创建一个新的接口，`UserInfoService`，并添加上述两个函数：
 
-    ```kt
+    ```java
     interface UserInfoService {
     ```
 
-    ```kt
+    ```java
         fun getUserInformationFromDB():
     ```
 
-    ```kt
+    ```java
             Flow<UserInformation>
     ```
 
-    ```kt
+    ```java
         suspend fun addUserInformationInDB(
     ```
 
-    ```kt
+    ```java
             userInformation: UserInformation)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  由于`UserInfoService`是一个接口，我们需要在我们的`Impl`类中实现这些功能，因此现在让我们继续创建一个新的类，名为`UserInfoServiceImpl`，以及一个单例类，然后实现接口：
 
-    ```kt
+    ```java
     @Singleton
     ```
 
-    ```kt
+    ```java
     class UserInfoServiceImpl() : UserInfoService {
     ```
 
-    ```kt
+    ```java
         override fun getUserInformationFromDB():
     ```
 
-    ```kt
+    ```java
             Flow<UserInformation> {
     ```
 
-    ```kt
+    ```java
                 TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override suspend fun addUserInformationInDB(
     ```
 
-    ```kt
+    ```java
             userInformation: UserInformation) {
     ```
 
-    ```kt
+    ```java
                 TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们需要注入构造函数并传递`UserInformationDao()`，因为我们将会使用插入函数来插入用户数据：
 
-    ```kt
+    ```java
     class UserInfoServiceImpl @Inject constructor(
     ```
 
-    ```kt
+    ```java
     private val userInformationDao: UserInformationDao
     ```
 
-    ```kt
+    ```java
     ): UserInfoService
     ```
 
 1.  现在，我们需要在我们的函数中添加代码，这些函数中有 TODO。让我们先看看用户信息。使用`userInformationDao`，我们将调用插入函数来告诉 Room 我们想要插入这条用户信息：
 
-    ```kt
+    ```java
     override suspend fun addUserInformationInDB(
     ```
 
-    ```kt
+    ```java
     userInformation: UserInformation) {
     ```
 
-    ```kt
+    ```java
         userInformationDao.insertUserInformation(
     ```
 
-    ```kt
+    ```java
             UserInformation(
     ```
 
-    ```kt
+    ```java
                 firstName = userInformation.firstName,
     ```
 
-    ```kt
+    ```java
                 lastName = userInformation.lastName,
     ```
 
-    ```kt
+    ```java
                 dateOfBirth = userInformation.dateOfBirth,
     ```
 
-    ```kt
+    ```java
                 gender = userInformation.gender,
     ```
 
-    ```kt
+    ```java
                 city = userInformation.city,
     ```
 
-    ```kt
+    ```java
                 profession = userInformation.profession
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  然后，我们需要从数据库中获取用户信息；这将可视化用户数据在屏幕上：
 
-    ```kt
+    ```java
     override fun getUserInformationFromDB() =
     ```
 
-    ```kt
+    ```java
         userInformationDao.getUsersInformation().filter {
     ```
 
-    ```kt
+    ```java
             information -> information.isNotEmpty()
     ```
 
-    ```kt
+    ```java
         }.flatMapConcat {
     ```
 
-    ```kt
+    ```java
             userInformationDao.loadAllUserInformation()
     ```
 
-    ```kt
+    ```java
                 .map { userInfo ->
     ```
 
-    ```kt
+    ```java
                     UserInfo(
     ```
 
-    ```kt
+    ```java
                         id = userInfo.id,
     ```
 
-    ```kt
+    ```java
                         firstName = userInfo.firstName,
     ```
 
-    ```kt
+    ```java
                         lastName = userInfo.lastName,
     ```
 
-    ```kt
+    ```java
                         dateOfBirth =
     ```
 
-    ```kt
+    ```java
                             userInfo.dateOfBirth,
     ```
 
-    ```kt
+    ```java
                         gender = userInfo.gender,
     ```
 
-    ```kt
+    ```java
                         city = userInfo.city,
     ```
 
-    ```kt
+    ```java
                         profession = userInfo.profession
     ```
 
-    ```kt
+    ```java
                     )
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
 1.  最后，我们需要确保通过依赖注入提供实现，因此现在让我们继续添加前面的代码，然后清理项目，运行它，并确保一切按预期工作：
 
-    ```kt
+    ```java
     @Module
     ```
 
-    ```kt
+    ```java
     @InstallIn(SingletonComponent::class)
     ```
 
-    ```kt
+    ```java
     abstract class UserInfoServiceModule {
     ```
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Binds
     ```
 
-    ```kt
+    ```java
         abstract fun bindUserService(
     ```
 
-    ```kt
+    ```java
             userInfoServiceImpl: UserInfoServiceImpl):
     ```
 
-    ```kt
+    ```java
                 UserInfoService
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  一旦运行项目，你应该能够看到它无问题地启动。我们将继续在我们的`ViewModel`中添加一个函数来将数据插入我们的数据库；`ViewModel`将在我们创建的视图中使用：
 
-    ```kt
+    ```java
     @HiltViewModel
     ```
 
-    ```kt
+    ```java
     class UserInfoViewModel @Inject constructor(
     ```
 
-    ```kt
+    ```java
         private val userInfoService: UserInfoService
     ```
 
-    ```kt
+    ```java
     ) : ViewModel() {
     ```
 
-    ```kt
+    ```java
         fun saveUserInformationData(userInfo: UserInfo) {
     ```
 
-    ```kt
+    ```java
             viewModelScope.launch {
     ```
 
-    ```kt
+    ```java
                 userInfoService.addUserInformationInDB(
     ```
 
-    ```kt
+    ```java
                     userInfo)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -699,7 +699,7 @@ interface UserInformationDao {
 
 在我们的项目中，我们创建了 `DatabaseModule()` 和 `UserInfoServiceModule()`。在 `DatabaseModule()` 类中，我们有两个函数，`provideDatabase` 和 `provideUserInformationDao`。第一个函数 `provideDatabase` 返回 `UserInformationDatabase` Room 实例，在那里我们可以创建数据库并构建它：
 
-```kt
+```java
 fun provideDatabase(@ApplicationContext context: Context): UserInformationDatabase {
     return Room
         .databaseBuilder(context,
@@ -711,7 +711,7 @@ fun provideDatabase(@ApplicationContext context: Context): UserInformationDataba
 
 在 `provideUserInformationDao` 中，我们在构造函数中传递 `UserInformationDatabase` 并返回 `UserInformationDao` 抽象类：
 
-```kt
+```java
 fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase): UserInformationDao {
     return userInformationDatabase.userInformationDao()
 }
@@ -751,229 +751,229 @@ fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase):
 
 1.  在本例中，我们将使用我们在前一章中介绍的示例预算应用程序，并且由于我们正在处理实体，这将更容易理解。让我们创建一个新的实体，并将其命名为`BudgetData`；预算数据类可能包含多个字段，例如`budgetName`、`budgetAmount`、`expenses`、`startDate`、`endDate`、`notify`、`currency`和`totalExpenses`；因此，我们的`BudgetData`数据类将看起来像这样：
 
-    ```kt
+    ```java
     @Entity(tableName = "budgets")
     ```
 
-    ```kt
+    ```java
     data class BudgetData(
     ```
 
-    ```kt
+    ```java
         @PrimaryKey(autoGenerate = true)
     ```
 
-    ```kt
+    ```java
         var id: Int = 0,
     ```
 
-    ```kt
+    ```java
         var budgetName: String = "",
     ```
 
-    ```kt
+    ```java
         var budgetAmount: Double = 0.0,
     ```
 
-    ```kt
+    ```java
         var expenses: String = "",
     ```
 
-    ```kt
+    ```java
         var startDate: String = "",
     ```
 
-    ```kt
+    ```java
         var endDate: String = "",
     ```
 
-    ```kt
+    ```java
         var notify: Int = 0,
     ```
 
-    ```kt
+    ```java
         var currency: String = "",
     ```
 
-    ```kt
+    ```java
         var totalExpenses: Double
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  让我们继续添加两个更多实体。首先，我们将添加`ExpenseData`，它可能包含以下字段和类型：
 
-    ```kt
+    ```java
     @Entity(tableName = "expenses")
     ```
 
-    ```kt
+    ```java
     data class ExpenseData(
     ```
 
-    ```kt
+    ```java
         @PrimaryKey(autoGenerate = true)
     ```
 
-    ```kt
+    ```java
         var id: Int = 0,
     ```
 
-    ```kt
+    ```java
         var expenseName: String = "",
     ```
 
-    ```kt
+    ```java
         var expenseType: String = "",
     ```
 
-    ```kt
+    ```java
         var expenseAmount: Double = 0.0,
     ```
 
-    ```kt
+    ```java
         @ColumnInfo(name = "updated_at")
     ```
 
-    ```kt
+    ```java
         var expenseDate: String = "",
     ```
 
-    ```kt
+    ```java
         var note: String = "",
     ```
 
-    ```kt
+    ```java
         var currency: String = ""
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  然后，让我们添加`ExpenseItem`，它可能包含以下字段：
 
-    ```kt
+    ```java
     @Entity(tableName = "items")
     ```
 
-    ```kt
+    ```java
     Data class ExpenseItem(
     ```
 
-    ```kt
+    ```java
         @PrimaryKey(autoGenerate = true)
     ```
 
-    ```kt
+    ```java
         private var _id: Int
     ```
 
-    ```kt
+    ```java
         val name: String
     ```
 
-    ```kt
+    ```java
         var type: String?
     ```
 
-    ```kt
+    ```java
         val imageContentId: Int
     ```
 
-    ```kt
+    ```java
         val colorContentId: Int)
     ```
 
 1.  如你所见，我们有三个实体；基于这些实体，你应该为每个实体创建不同的 DAO：
 
-    ```kt
+    ```java
     abstract class AppDatabase : RoomDatabase() {
     ```
 
-    ```kt
+    ```java
         abstract fun budgetDao(): BudgetDao
     ```
 
-    ```kt
+    ```java
         abstract fun itemDao(): ItemDao
     ```
 
-    ```kt
+    ```java
         abstract fun expenseDao(): ExpenseDao
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在`AppDatabase`抽象类的顶部，我们将使用`@Database`注解并传递给所有我们的实体：
 
-    ```kt
+    ```java
     @Database(
     ```
 
-    ```kt
+    ```java
         entities = [ExpenseItem::class, BudgetData::class,
     ```
 
-    ```kt
+    ```java
             ExpenseData::class],
     ```
 
-    ```kt
+    ```java
         version = 1
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     @TypeConverters(DateConverter::class)
     ```
 
-    ```kt
+    ```java
     abstract class AppDatabase : RoomDatabase() {
     ```
 
-    ```kt
+    ```java
         abstract fun budgetDao(): BudgetDao
     ```
 
-    ```kt
+    ```java
         abstract fun itemDao(): ItemDao
     ```
 
-    ```kt
+    ```java
         abstract fun expenseDao(): ExpenseDao
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  你也可以使用嵌套对象；`@Embedded`注解包括实体内的嵌套或相关实体。它允许你通过在父实体中嵌入一个或多个相关实体来表示实体之间的关系：
 
-    ```kt
+    ```java
     data class ExpenseItem(
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
-    ```kt
+    ```java
         @Embedded val tasks: Tasks
     ```
 
-    ```kt
+    ```java
       )
     ```
 
-    ```kt
+    ```java
     data class Tasks(...)
     ```
 
@@ -981,31 +981,31 @@ fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase):
 
 1.  然后，`Tasks`数据类可以包含`description`、`priority`、`updatedAt`和 ID：
 
-    ```kt
+    ```java
     data class Tasks (
     ```
 
-    ```kt
+    ```java
         @PrimaryKey(autoGenerate = true)
     ```
 
-    ```kt
+    ```java
         var id = 0
     ```
 
-    ```kt
+    ```java
         var description: String
     ```
 
-    ```kt
+    ```java
         var priority: Int
     ```
 
-    ```kt
+    ```java
         @ColumnInfo(name = "updated_at")
     ```
 
-    ```kt
+    ```java
         var updatedAt: Date)
     ```
 
@@ -1049,119 +1049,119 @@ fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase):
 
 1.  您还必须为实体类添加 `@PrimaryKey` 和 `@ColumnInfo` 注解。以下是一个样本 SQLite 数据库：
 
-    ```kt
+    ```java
     fun onCreate(db: SQLiteDatabase) {
     ```
 
-    ```kt
+    ```java
         // Create a String that contains the SQL statement
     ```
 
-    ```kt
+    ```java
            to create the items table
     ```
 
-    ```kt
+    ```java
         val SQL_CREATE_ITEMS_TABLE =(
     ```
 
-    ```kt
+    ```java
                 "CREATE TABLE " + ItemsContract.ItemsEntry
     ```
 
-    ```kt
+    ```java
                          .TABLE_NAME.toString() + " ("
     ```
 
-    ```kt
+    ```java
                          + ItemsContract.ItemsEntry.
     ```
 
-    ```kt
+    ```java
                          _Id.toString()
     ```
 
-    ```kt
+    ```java
                          + " INTEGER PRIMARY KEY
     ```
 
-    ```kt
+    ```java
                          AUTOINCREMENT, "
     ```
 
-    ```kt
+    ```java
                          + ItemsContract.ItemsEntry
     ```
 
-    ```kt
+    ```java
                          .COLUMN_ITEM_NAME.toString()
     ```
 
-    ```kt
+    ```java
                          + " TEXT NOT NULL, "
     ```
 
-    ```kt
+    ```java
                          + ItemsContract.ItemsEntry
     ```
 
-    ```kt
+    ```java
                          .COLUMN_ITEM_TYPE.toString()
     ```
 
-    ```kt
+    ```java
                          + " TEXT NOT NULL, "
     ```
 
-    ```kt
+    ```java
                          + ItemsContract.ItemsEntry
     ```
 
-    ```kt
+    ```java
                          .COLUMN_ITEM_LOGO.toString()
     ```
 
-    ```kt
+    ```java
                          + " INTEGER NOT NULL DEFAULT 0, "
     ```
 
-    ```kt
+    ```java
                          + ItemsContract.ItemsEntry
     ```
 
-    ```kt
+    ```java
                          .COLUMN_ITEM_COLOR.toString()
     ```
 
-    ```kt
+    ```java
                          + " INTEGER NOT NULL DEFAULT 0, "
     ```
 
-    ```kt
+    ```java
                          + ItemsContract.ItemsEntry
     ```
 
-    ```kt
+    ```java
                          .COLUMN_ITEM_CREATED_DATE
     ```
 
-    ```kt
+    ```java
                          .toString() + " DATE NOT NULL
     ```
 
-    ```kt
+    ```java
                          DEFAULT CURRENT_TIMESTAMP);")
     ```
 
-    ```kt
+    ```java
         // Execute the SQL statement
     ```
 
-    ```kt
+    ```java
         db.execSQL(SQL_CREATE_ITEMS_TABLE)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1169,155 +1169,155 @@ fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase):
 
 1.  一旦我们创建了所有需要的实体和 DAO，我们就可以继续创建数据库。正如我们在 *在您的应用程序中实现 Room* 菜谱中看到的，我们可以在 `@Database` 注解中添加所有我们的实体，并且由于我们处于第一个 `(1)` 版本，我们可以将版本增加到 (`2`)：
 
-    ```kt
+    ```java
     val MIGRATION_1_2 = object : Migration(1, 2) {
     ```
 
-    ```kt
+    ```java
         override fun migrate(database:
     ```
 
-    ```kt
+    ```java
         SupportSQLiteDatabase) {
     ```
 
-    ```kt
+    ```java
             //alter items table
     ```
 
-    ```kt
+    ```java
             database.execSQL("CREATE TABLE new_items (_id
     ```
 
-    ```kt
+    ```java
                 INTEGER PRIMARY KEY AUTOINCREMENT NOT
     ```
 
-    ```kt
+    ```java
                 NULL, name TEXT NOT NULL, type TEXT,
     ```
 
-    ```kt
+    ```java
                 imageContentId INTEGER NOT NULL,
     ```
 
-    ```kt
+    ```java
                 colorContentId INTEGER NOT NULL)")
     ```
 
-    ```kt
+    ```java
             database.execSQL("INSERT INTO new_items
     ```
 
-    ```kt
+    ```java
                 (_id,name,type,imageContentId,
     ```
 
-    ```kt
+    ```java
                 colorContentId)Select_id,name,type,
     ```
 
-    ```kt
+    ```java
                 imageContentId, colorContentId FROM
     ```
 
-    ```kt
+    ```java
                 items")
     ```
 
-    ```kt
+    ```java
             database.execSQL("DROP TABLE items")
     ```
 
-    ```kt
+    ```java
             database.execSQL("ALTER TABLE new_items RENAME
     ```
 
-    ```kt
+    ```java
                 TO items")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
 1.  然后，重要的是确保我们调用 `build()` 方法到 Room 数据库：
 
-    ```kt
+    ```java
     Room.databaseBuilder(
     ```
 
-    ```kt
+    ```java
         androidContext(),
     ```
 
-    ```kt
+    ```java
         AppDatabase::class.java, "budget.db"
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
         .addCallback(object : RoomDatabase.Callback() {
     ```
 
-    ```kt
+    ```java
             override fun
     ```
 
-    ```kt
+    ```java
             onCreate(db:SupportSQLiteDatabase){
     ```
 
-    ```kt
+    ```java
                 super.onCreate(db)
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         })
     ```
 
-    ```kt
+    ```java
         .addMigrations(MIGRATION_1_2)
     ```
 
-    ```kt
+    ```java
         .build()
     ```
 
 1.  一旦你的数据层开始使用 Room，你可以正式用 DAO 调用替换所有的`Cursor`和`ContentValue`代码。在我们的`AppDatabase`类中，我们有我们的实体，并且我们的类扩展了`RoomDatabase()`：
 
-    ```kt
+    ```java
     @Database(
     ```
 
-    ```kt
+    ```java
         entities = [<List of entities>],
     ```
 
-    ```kt
+    ```java
         version = 2
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     abstract class AppDatabase : RoomDatabase() {
     ```
 
-    ```kt
+    ```java
         abstract fun itemDao(): ItemDao
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1349,319 +1349,319 @@ fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase):
 
 1.  你需要将以下内容添加到你的`build.gradle`中：
 
-    ```kt
+    ```java
     androidTestImplementation "com.google.truth:truth:1.1.3"
     ```
 
-    ```kt
+    ```java
     androidTestImplementation "android.arch.core:core-testing:1.1.1"
     ```
 
 1.  在你已经在 Android 测试中添加了所需的依赖项之后，继续创建一个新的类，命名为`UserInformationDBTest`：
 
-    ```kt
+    ```java
     class UserInformationDBTest {...}
     ```
 
 1.  在我们能够设置`@Before`函数之前，我们需要创建两个`lateinit var`实例，我们将在`@Before`函数中初始化它们：
 
-    ```kt
+    ```java
     private lateinit var database: UserInformationDatabase
     ```
 
-    ```kt
+    ```java
     private lateinit var userInformationDao: UserInformationDao
     ```
 
 1.  现在，让我们继续设置我们的 `@Before` 函数并创建我们的数据库，使用内存数据库进行测试目的：
 
-    ```kt
+    ```java
     @Before
     ```
 
-    ```kt
+    ```java
     fun databaseCreated() {
     ```
 
-    ```kt
+    ```java
         database = Room.inMemoryDatabaseBuilder(
     ```
 
-    ```kt
+    ```java
             ApplicationProvider.getApplicationContext(),
     ```
 
-    ```kt
+    ```java
                 UserInformationDatabase::class.java
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
             .allowMainThreadQueries()
     ```
 
-    ```kt
+    ```java
             .build()
     ```
 
-    ```kt
+    ```java
         userInformationDao = database.userInformationDao()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  由于我们是在内存中运行和创建数据库，所以在完成后我们需要关闭它；因此，在我们的 `@After` 调用中，我们需要在我们的数据库上调用 `close()`：
 
-    ```kt
+    ```java
     @After
     ```
 
-    ```kt
+    ```java
     fun closeDatabase() {
     ```
 
-    ```kt
+    ```java
         database.close()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在我们设置完成，我们将继续开始测试我们的 CRUD 操作——即插入、删除和更新。让我们先创建一个插入测试：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun insertUserInformationReturnsTrue() = runBlocking {
     ```
 
-    ```kt
+    ```java
         val userOne = UserInformationModel(
     ```
 
-    ```kt
+    ```java
             id = 1,
     ```
 
-    ```kt
+    ```java
             firstName = "Michelle",
     ```
 
-    ```kt
+    ```java
             lastName = "Smith",
     ```
 
-    ```kt
+    ```java
             dateOfBirth = 9121990,
     ```
 
-    ```kt
+    ```java
             gender = "Male",
     ```
 
-    ```kt
+    ```java
             city = "New york",
     ```
 
-    ```kt
+    ```java
             profession = "Software Engineer"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         userInformationDao.insertUserInformation(userOne)
     ```
 
-    ```kt
+    ```java
         val latch = CountDownLatch(1)
     ```
 
-    ```kt
+    ```java
         val job = async(Dispatchers.IO) {
     ```
 
-    ```kt
+    ```java
             userInformationDao.getUsersInformation()
     ```
 
-    ```kt
+    ```java
                 .collect {
     ```
 
-    ```kt
+    ```java
                     assertThat(it).contains(userOne)
     ```
 
-    ```kt
+    ```java
                     latch.countDown()
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         latch.await()
     ```
 
-    ```kt
+    ```java
         job.cancelAndJoin()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，让我们添加 `delete` 函数，这样就可以暂时完成我们的 Room 测试：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun deleteUserInformation() = runBlocking {
     ```
 
-    ```kt
+    ```java
         val userOne = UserInformationModel(
     ```
 
-    ```kt
+    ```java
             id = 1,
     ```
 
-    ```kt
+    ```java
             firstName = "Michelle",
     ```
 
-    ```kt
+    ```java
             lastName = "Smith",
     ```
 
-    ```kt
+    ```java
             dateOfBirth = 9121990,
     ```
 
-    ```kt
+    ```java
             gender = "Male",
     ```
 
-    ```kt
+    ```java
             city = "New york",
     ```
 
-    ```kt
+    ```java
             profession = "Software Engineer"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         val userTwo = UserInformationModel(
     ```
 
-    ```kt
+    ```java
             id = 2,
     ```
 
-    ```kt
+    ```java
             firstName = "Mary",
     ```
 
-    ```kt
+    ```java
             lastName = "Simba",
     ```
 
-    ```kt
+    ```java
             dateOfBirth = 9121989,
     ```
 
-    ```kt
+    ```java
             gender = "Female",
     ```
 
-    ```kt
+    ```java
             city = "New york",
     ```
 
-    ```kt
+    ```java
             profession = "Senior Android Engineer"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         userInformationDao.insertUserInformation(userOne)
     ```
 
-    ```kt
+    ```java
         userInformationDao.insertUserInformation(userTwo)
     ```
 
-    ```kt
+    ```java
         userInformationDao.deleteUserInformation(userTwo)
     ```
 
-    ```kt
+    ```java
         val latch = CountDownLatch(1)
     ```
 
-    ```kt
+    ```java
         val job = async(Dispatchers.IO) {
     ```
 
-    ```kt
+    ```java
             userInformationDao.loadAllUserInformation()
     ```
 
-    ```kt
+    ```java
                 .collect {
     ```
 
-    ```kt
+    ```java
                     assertThat(it).doesNotContain(userTwo)
     ```
 
-    ```kt
+    ```java
                     latch.countDown()
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         latch.await()
     ```
 
-    ```kt
+    ```java
         job.cancelAndJoin()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1679,7 +1679,7 @@ fun provideUserInformationDao(userInformationDatabase: UserInformationDatabase):
 
 `@Before` 注解确保我们的 `databaseCreated()` 函数在每个类之前执行。然后我们的函数使用 `Room.inMemoryDatabaseBuilder` 创建一个数据库，在 `@After` 调用中，我们将关闭数据库：
 
-```kt
+```java
 @After
 fun closeDatabase() {
     database.close()

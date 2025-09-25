@@ -172,7 +172,7 @@
 
 用于 `PUT` 和 `GET` 端点的消息负载需要定义。服务合同本身是资源，因此其模型是负载。`PATCH` 端点不需要返回负载。负载将使用 **OpenAPI 3.0** 模型定义，如下所示：
 
-```kt
+```java
     Party:
       type: object
       properties:
@@ -205,7 +205,7 @@
 
 因此，`GET` 端点有两个输入参数，如下所述的 OpenAPI 3.0 模型中：
 
-```kt
+```java
       parameters:
         - in: path
           name: id
@@ -223,7 +223,7 @@
 
 对于响应，我们需要考虑成功和失败的情况。可能的输出应该作为 HTTP 状态码在响应中捕获，并在以下所示的 OpenAPI 3.0 模型中记录：
 
-```kt
+```java
       responses:
         '200':
           description: Successful operation
@@ -243,7 +243,7 @@
 
 `PUT` 端点使用与 `GET` 端点相同的 URI 路径变量和头值，此外还有一个请求体，即服务合同本身：
 
-```kt
+```java
       requestBody:
         description: The service contract to be created or updated
         content:
@@ -257,7 +257,7 @@
 
 `PUT` 端点的响应与 `GET` 端点大不相同。所有不同的场景都通过响应中的 HTTP 状态码捕获：
 
-```kt
+```java
       responses:
         '200':
           description: Service contract updated
@@ -281,7 +281,7 @@
 
 最终端点，即 `PATCH` 端点，很简单。它使用与 `GET` 端点完全相同的输入参数集，因为没有必要请求体，请求只需识别现有的服务合同。所有响应都在此指定：
 
-```kt
+```java
       responses:
         '204':
           description: Agreed service contract
@@ -299,7 +299,7 @@
 
 现在我们有了 API 规范，我们准备开发服务器端点。相应的实体需要在 Kotlin 中定义：
 
-```kt
+```java
 data class ServiceContract(
     val id: Int,
     val partyA: Party,
@@ -316,7 +316,7 @@ data class Party(
 
 建议使用高度可用的存储系统来永久保存服务合同，例如，数据库。然而，在这个例子中，我们简化了存储库，将服务合同保存在内存中：
 
-```kt
+```java
 val contracts = ConcurrentHashMap<Int, ServiceContract>()
 ```
 
@@ -324,7 +324,7 @@ val contracts = ConcurrentHashMap<Int, ServiceContract>()
 
 在这个例子中，**http4k**因其代码体积小而被用作服务器框架。我们需要设置读取和写入不同值的方法。这是通过声明几个**http4k Lenses**来验证和将有效负载转换为类型安全结构来实现的：
 
-```kt
+```java
 val serviceContractLens = Body.auto<ServiceContract>().toLens()
 val householdHeader = Header.required("household")
 ```
@@ -333,7 +333,7 @@ val householdHeader = Header.required("household")
 
 http4k 通过简单地使用`route()`函数声明一个`HTTPHandler`来配置端点路由：
 
-```kt
+```java
 val app: HttpHandler =
     routes(
 ...
@@ -342,7 +342,7 @@ val app: HttpHandler =
 
 在`route()`函数内部，声明了一个端点列表，并定义了实现的细节。以下是对`GET`端点的实现细节：
 
-```kt
+```java
 "/contracts/{id}" bind GET to { request ->
     val household = householdHeader(request)
     val id = request.path("id")?.toInt()
@@ -363,7 +363,7 @@ val app: HttpHandler =
 
 `PUT`端点也是类似定义的：
 
-```kt
+```java
 "/contracts/{id}" bind PUT to { request ->
     val household = householdHeader(request)
     val lens = Body.auto<ServiceContract>().toLens()
@@ -393,7 +393,7 @@ val app: HttpHandler =
 
 最后一个端点`PATCH`与第一个半部分的`GET`端点实现非常相似。读取相同的输入参数，服务器尝试从内存映射中获取`ServiceContract`对象。实现的第一部分以必要的验证结束：
 
-```kt
+```java
 "/contracts/{id}/agreedAt" bind PATCH to { request ->
     val household = householdHeader(request)
     val id = request.path("id")?.toInt()
@@ -406,7 +406,7 @@ val app: HttpHandler =
 
 在验证请求后，找到同意合同的家庭。为合同的有关方设置`agreedAt`时间戳。此外，修订后的合同被放入之前声明的共享`ConcurrentHashMap`中：
 
-```kt
+```java
     } else {
         val now = Instant.now()
         val revisedContract =
@@ -425,7 +425,7 @@ val app: HttpHandler =
 
 最后，是`main`函数：
 
-```kt
+```java
 fun main() {
     val printingApp: HttpHandler = PrintRequest().then(app)
     val server = printingApp.asServer(Undertow(9000)).start()
@@ -438,14 +438,14 @@ fun main() {
 
 如前所述，客户端总是首先与服务器进行交互。因此，本例中的客户端实现反映了图 4**.3**中的顺序图中的客户端-服务器交互。出于简化原因，我们在这个例子中使用`main`函数来模拟两个家庭。我们首先创建一个使用**OKHTTP**的 HTTP 客户端：
 
-```kt
+```java
 val client: HttpHandler = OkHttp()
 val printingClient: HttpHandler = PrintResponse().then(client)
 ```
 
 然后，由*家庭 A*起草的初始服务合同被创建：
 
-```kt
+```java
 val initialContractDraftedByHouseholdA =
     ServiceContract(
         id = 1,
@@ -463,7 +463,7 @@ printingClient(
 
 然后，通过调用`PUT`端点将初始服务合同提交给服务器。随后，*家庭 B*通过调用`GET`端点接收初始服务合同：
 
-```kt
+```java
 val contractReceivedByB =
     serviceContractLens(
         printingClient(
@@ -485,7 +485,7 @@ printingClient(
 
 *家庭 B*通过调用`PUT`端点来修订合同，并将修订后的合同提交给服务器。然后，*家庭 A*通过调用`GET`端点接收修订后的合同：
 
-```kt
+```java
 val contractReceivedByA =
     serviceContractLens(
         printingClient(
@@ -497,7 +497,7 @@ printingClient(Request(PATCH, "http://localhost:9000/contracts/1/agreedAt").with
 
 *家庭 A*对修订后的合同感到满意。*家庭 A*通过调用`PATCH`端点通过服务器确认其对服务合同的同意。现在轮到*家庭 B*接收并确认服务合同：
 
-```kt
+```java
 val revisedContractReceivedByB =
     serviceContractLens(
         printingClient(
@@ -511,7 +511,7 @@ if (revisedContractReceivedByB.partyA.agreedAt != null) {
 
 *家庭 B*看到*家庭 A*同意了服务合同。然后，*家庭 B*也通过调用`PUT`端点通过服务器确认其对服务合同的同意。最后，它回到*家庭 A*接收双方同意的服务合同：
 
-```kt
+```java
 val contractAgreedByBoth =
     serviceContractLens(
         printingClient(
@@ -686,7 +686,7 @@ NATs 在各自的表中临时打上 *孔洞*，以便将内部和外部地址进
 
 从之前定义的通信中，唯一传递的消息就是服务合同本身。服务合同的模式保持不变：
 
-```kt
+```java
 data class ServiceContract(
     val id: Int,
     val partyA: Party,
@@ -705,7 +705,7 @@ data class Party(
 
 让我们从为节点使用 UDP 进行通信构建一些必要的传输函数开始。由于一个节点可以产生和消费消息，因此定义一个通用的 UDP 节点类如下似乎是合理的：
 
-```kt
+```java
 class UdpNode<T>(
     val address: SocketAddress,
     val convertor: DtoConvertor<T>,
@@ -732,7 +732,7 @@ class UdpNode<T>(
 
 `UdpNode` 类的 `start` 函数很简单。它将节点绑定到配置的地址，并使其准备好消费消息：
 
-```kt
+```java
     fun start() {
         channel =
             DatagramChannel.open()
@@ -742,7 +742,7 @@ class UdpNode<T>(
 
 `produce` 函数在调用 `DtoConvertor` 写入之前清除输出缓冲区。然后，将缓冲区发送到通道：
 
-```kt
+```java
     fun produce(
         payload: T,
         target: SocketAddress,
@@ -756,7 +756,7 @@ class UdpNode<T>(
 
 `consume` 函数首先清除输入缓冲区，然后通道接收字节数组并将其写入缓冲区。然后，调用 `DtoConvertor` 将字节数组转换为 `ServiceContract` 对象：
 
-```kt
+```java
     fun consume(): Int {
         return channel?.let { c ->
             inbound.clear()
@@ -775,7 +775,7 @@ class UdpNode<T>(
 
 在这个例子中，另一个重要的类是`DtoConvertor`。它被设计成通用的，用于封装泛型类型`E`到字节数组的序列化和反序列化。只有三个函数：
 
-```kt
+```java
 interface DtoConvertor<E> {
     fun allocate(): ByteBuffer
     fun toBuffer(dto: E, buffer: ByteBuffer)
@@ -787,7 +787,7 @@ interface DtoConvertor<E> {
 
 声明了一个 Kotlin 单例`ServiceContractConvertor`，以实现`DtoConvertor`接口，并具有`ServiceContract`类型：
 
-```kt
+```java
 object ServiceContractConvertor : DtoConvertor<ServiceContract> {
     override fun allocate(): ByteBuffer {
         return ByteBuffer.allocate(1024)
@@ -796,7 +796,7 @@ object ServiceContractConvertor : DtoConvertor<ServiceContract> {
 
 `toBuffer`函数按照一定的顺序将`ServiceContract`对象中的每个字段写入：
 
-```kt
+```java
     override fun toBuffer(dto: ServiceContract, buffer: ByteBuffer) { buffer.putInt(dto.id).putParty(dto.partyA).putParty(dto.partyB)
     }
     private fun ByteBuffer.putParty(dto: Party): ByteBuffer = putString(dto.householdName).putString(dto.service).putInstant(dto.agreedAt)
@@ -811,7 +811,7 @@ object ServiceContractConvertor : DtoConvertor<ServiceContract> {
 
 `fromBuffer`函数按照相同的顺序从`ByteBuffer`中读取`ServiceContract`对象的每个字段，并返回该对象：
 
-```kt
+```java
     override fun fromBuffer(buffer: ByteBuffer): ServiceContract = ServiceContract(buffer.getInt(), buffer.getParty(), buffer.getParty())
     private fun ByteBuffer.getParty(): Party = Party(getString(), getString(), getInstant())
     private fun ByteBuffer.getInstant(): Instant? =
@@ -831,7 +831,7 @@ object ServiceContractConvertor : DtoConvertor<ServiceContract> {
 
 *家庭 A*的行为定义在下面的代码块中，然后节点开始监听：
 
-```kt
+```java
 fun main() {
     val node =
         UdpNode(
@@ -851,7 +851,7 @@ fun main() {
 
 否则，*家庭 A*同意`ServiceContract`：
 
-```kt
+```java
     val contract =
         ServiceContract(
             id = 1,
@@ -879,7 +879,7 @@ private fun ServiceContract.receivedByHouseholdA() =
 
 另一方面，*家庭 B*的行为定义在另一个`main`函数中，然后它开始监听：
 
-```kt
+```java
 fun main() {
     val node =
         UdpNode(
@@ -922,7 +922,7 @@ fun ServiceContract.receivedByHouseholdB() =
 
 家庭 A：
 
-```kt
+```java
 Started on $localhost/127.0.0.1:7001
 Submitted service contract: 1
 Agreed to the service contract: 1
@@ -931,7 +931,7 @@ No response to service contract: ServiceContract
 
 家庭 B：
 
-```kt
+```java
 Submitted to revised service contract: 1
 Agreed to service contract: 1
 ```

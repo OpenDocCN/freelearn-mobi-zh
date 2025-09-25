@@ -28,7 +28,7 @@
 
 以下示例展示了一个简单的类，没有额外的线程安全保护措施：
 
-```kt
+```java
 class MutableObject { 
     var mutableProperty:Int = 1 
 } 
@@ -40,7 +40,7 @@ class MutableObject {
 
 然而，如果你认为不可变性就是创建一个类并使其所有变量为只读，那么这样的简化解释不仅错误，而且糟糕。实际上，不可变性不是关于禁止改变，而是关于处理改变。不是直接改变属性的底层值，而是创建一个新的属性，并应用更改后复制值。这适用于 Kotlin 和 Java（甚至 C）中的原始数据类型。例如，在以下示例中，当我们编写 `var y = x.capitalize()` 时，`x` 的值保持不变，而是将应用更改后的 `x` 值复制到 `y`：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     var x:String = "abc" 
     var y = x.capitalize() 
@@ -64,7 +64,7 @@ fun main(args: Array<String>) {
 
 让我们看看；以下程序将无法编译：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val x:String = "Kotlin" 
     x+="Immutable"//(1) 
@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
 
 所以，你现在可能想知道为什么我们不能用 `val` 保证不可变性？让我们通过以下示例来检查：
 
-```kt
+```java
 object MutableVal { 
     var count = 0 
     val myString:String = "Mutable" 
@@ -133,7 +133,7 @@ fun main(args: Array<String>) {
 
 **引用不可变性**强制规定，一旦分配了引用，就不能将其分配给其他对象。想想看，就像它是一个自定义类的`val`属性，甚至是`MutableList`或`MutableMap`；初始化属性后，您不能从该属性引用其他对象，除非是对象的基本值。例如，考虑以下程序：
 
-```kt
+```java
 class MutableObj { 
     var value = "" 
 
@@ -173,7 +173,7 @@ Kotlin 在可能的情况下会优先考虑不可变性，但将选择权留给�
 
 Kotlin 为集合对象提供了两个接口——`Collection<out E>` 和 `MutableCollection<out E>`；所有集合类（例如 `List`、`Set` 或 `Map`）都实现了这两个接口之一。正如其名所示，这两个接口是为不可变和可变集合分别设计的。让我们举一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) { 
     val immutableList = listOf(1,2,3,4,5,6,7)//(1) 
     println("Immutable List $immutableList") 
@@ -215,7 +215,7 @@ fun main(args: Array<String>) {
 
 感到困惑？让我们用一个关于线程和可变数据的例子来说明：
 
-```kt
+```java
 class MyData { 
     var someData:Int = 0 
 } 
@@ -253,7 +253,7 @@ fun main(args: Array<String>) {
 
 函数式编程通过不可变性提供了一个一站式解决方案来解决这个问题。让我们看看不可变性和局部变量如何在多线程中拯救你：
 
-```kt
+```java
 class MyDataImmutable { 
     val someData:Int = 0 
 } 
@@ -293,7 +293,7 @@ fun main(args: Array<String>) {
 
 线程之间的代码依赖性被称为耦合。我们应该尽量降低耦合度，以避免复杂性并使代码库易于阅读和维护。现在，这实际上意味着什么？请参考我们访问和修改`someData`值的程序，该程序使用了线程。这可以被称为**耦合**，因为两个线程都相互依赖。为了您的参考，我们复制了以下代码片段：
 
-```kt
+```java
 async(CommonPool) { 
         for(i in 11..20) { 
             myData.someData+=i 

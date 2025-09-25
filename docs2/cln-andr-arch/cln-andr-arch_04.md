@@ -52,7 +52,7 @@
 
 当我们在代码中使用活动时，处理生命周期将看起来像这样：
 
-```kt
+```java
 class MyActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +79,7 @@ class MyActivity : Activity() {
 
 应该在*销毁*状态和垃圾回收之间做出重要区分。一个*销毁*的活动并不意味着它将被垃圾回收。垃圾回收的简单定义是：垃圾回收是释放不再使用的内存的过程。每个创建的对象都会占用一定量的内存。当垃圾回收器想要释放内存时，它会查看那些不再被其他对象引用的对象。如果我们想确保对象将被垃圾回收，我们需要确保那些比它们存活时间长的其他对象不会引用我们想要回收的对象。在 Android 中，我们希望调用`onDestroy`方法。这是因为它们往往占用大量内存，如果我们调用`onDestroy`方法之后的任何方法，最终会导致崩溃或错误。防止上下文对象被回收的泄漏被称为**上下文泄漏**。让我们来看一个简单的例子：
 
-```kt
+```java
 interface MyListener {
     fun onChange(newText: String)
 }
@@ -98,7 +98,7 @@ object MyManager {
 
 在这里，我们有一个`MyManager`类，其中我们收集在调用`performLogic`时将被调用的`MyListener`列表。请注意，`MyManager`类是使用`object`关键字定义的。这将使`MyManager`类成为静态的，这意味着类的实例将与应用程序进程的生命周期一样长。如果我们想让活动在调用`performLogic`方法时进行监听，我们将有如下所示的内容：
 
-```kt
+```java
 class MyActivity : Activity(), MyListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,7 +112,7 @@ class MyActivity : Activity(), MyListener {
 
 在这里，`MyListener`在`MyActivity`中实现，当`onChange`被调用时，`myTextView`将被更新。当活动被销毁时，上下文泄露就发生在这里。由于`MyActivity`是一个`MyListener`，并且它的引用被保存在生命周期较长的`MyManager`中，垃圾收集器将不会从内存中移除`MyActivity`实例。如果在`MyActivity`被销毁后调用`performLogic`，我们将得到`NullPointerException`，因为`myTextView`将被设置为 null；或者，如果多个`MyActivity`实例泄露，这可能会消耗整个应用程序的内存。对此的一个简单修复是在销毁时移除对`MyActivity`的引用：
 
-```kt
+```java
 object MyManager {
     …
     fun removeListener(listener: MyListener){
@@ -160,21 +160,21 @@ Figure 3.2 – Fragment 生命周期
 
 要使用 `ViewModel` 和 `LiveData`，您需要在 `build.gradle` 中添加以下库：
 
-```kt
+```java
 implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"
 implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.4.0"
 ```
 
 为了与 Jetpack Compose 集成，我们需要以下内容：
 
-```kt
+```java
 implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.4.0"
 implementation "androidx.compose.runtime:runtime-livedata:2.4.0 "
 ```
 
 一个 `ViewModel` 和 `LiveData` 实现的例子看起来可能像这样：
 
-```kt
+```java
 class MyViewModel : ViewModel() {
     private val _myLiveData = MutableLiveData("")
     val myLiveData: LiveData<String> = _myLiveData
@@ -188,7 +188,7 @@ class MyViewModel : ViewModel() {
 
 要在活动或片段中获取 ViewModel 的实例，我们可以使用以下方法：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity() {
 
 在这里，`viewModels` 方法将检索 `MyViewModel` 的实例。此方法提供了传递 `ViewModelProvider.Factory` 对象的能力。这在我们需要在 ViewModel 中注入各种对象的情况下很有用。这看起来可能像这样：
 
-```kt
+```java
         val myViewModel : MyViewModel by viewModels {
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> 
@@ -214,7 +214,7 @@ class MainActivity : AppCompatActivity() {
 
 如果我们想观察 `LiveData` 的变化，我们需要做类似以下的事情：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         …
@@ -232,7 +232,7 @@ class MainActivity : ComponentActivity() {
 
 如果我们想在 Jetpack Compose 中使用 `ViewModel` 和 `LiveData`，我们必须做以下事情：
 
-```kt
+```java
 @Composable
 fun MyScreen(viewModel: MyViewModel = viewModel()) {
     viewModel.myLiveData.observeAsState().value?.let {
@@ -269,19 +269,19 @@ fun MyComposable(text: String){
 
 1.  将 Jetpack Compose 的 `LiveData` 扩展库添加到 `app/build.gradle`：
 
-    ```kt
+    ```java
         implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
     ```
 
 1.  在 `strings.xml` 中添加 `"Total request count"` 文本：
 
-    ```kt
+    ```java
         <string name="total_request_count">Total request count: %d</string>
     ```
 
 1.  按照以下方式创建 `MainTextFormatter` 类：
 
-    ```kt
+    ```java
     class MainTextFormatter(private val 
         applicationContext: Context) {
         fun getCounterText(count: Int) =
@@ -294,7 +294,7 @@ fun MyComposable(text: String){
 
 1.  在 `MainViewModel` 中注入 `MainTextFormatter` 并使用格式化文本作为 `UiState.count` 对象的值：
 
-    ```kt
+    ```java
     class MainViewModel(
         …
         private val mainTextFormatter: MainTextFormatter
@@ -320,7 +320,7 @@ fun MyComposable(text: String){
 
 1.  接下来，在 `MyApplication` 类中创建 `MainTextFormatter` 类的实例：
 
-    ```kt
+    ```java
     class MyApplication : Application() {
         companion object {
             …
@@ -337,7 +337,7 @@ fun MyComposable(text: String){
 
 1.  现在，更新 `MainViewModelFactory` 以使用刚刚创建的 `MainTextFormatter`，并将其传递给 `MainViewModel`：
 
-    ```kt
+    ```java
     class MainViewModelFactory : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: 
             Class<T>): T =
@@ -352,7 +352,7 @@ fun MyComposable(text: String){
 
 1.  接下来，将 `LiveData` 添加到 `MainViewModel`：
 
-    ```kt
+    ```java
     class MainViewModel(
         …
     ) : ViewModel() {
@@ -375,7 +375,7 @@ fun MyComposable(text: String){
 
 1.  在 `MainActivity` 中，更新 `@Composable` 函数以使用 `LiveData`：
 
-    ```kt
+    ```java
     …
     @Composable
     fun Screen(viewModel: MainViewModel = viewModel(factory = MainViewModelFactory())) {
@@ -410,7 +410,7 @@ Android 处理 UI 的方式是通过 `View` 层次结构。`View` 的子类处�
 
 为了向用户显示这些视图，我们需要使用活动和片段。对于活动，这需要在 `onCreate` 方法中调用 `setContentView` 方法，而在片段中，我们需要在 `onCreateView` 方法中返回一个 `View` 对象。我们可以在 Java 或 Kotlin 中创建活动或片段的整个布局，但这会导致编写大量代码。此外，我们可以为不同的屏幕尺寸或设备旋转使用不同的布局，这导致了使用 `res/layout` 文件夹，在其中我们可以指定布局可能的外观。以下是一个示例：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -429,7 +429,7 @@ Android 处理 UI 的方式是通过 `View` 层次结构。`View` 的子类处�
 
 在前面的示例中，我们定义了 `ConstraintLayout`，它只包含显示 `"Hello World"` 文本的 `TextView`。为了获取 `TextView` 的引用，以便我们可以在动作或数据加载时更改文本，我们需要使用来自 `Activity` 类或 `View` 类的 `findViewById` 方法。这看起来可能如下所示：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -445,7 +445,7 @@ class MainActivity : ComponentActivity() {
 
 另一种方法是使用`View`层次结构，而不是使用`@Composable`函数，在`@Composable`函数中，我们指定我们想在屏幕上显示的内容，而不需要考虑如何显示它，我们还可以使用 Kotlin 以比通常更少的代码创建 UI。在 Compose 中，`Hello World`示例可能如下所示：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -464,7 +464,7 @@ fun HelloWorld() {
 
 如果我们想因为数据的变化而更新文本，我们需要使用`Compose`库中的`State`对象。Compose 会观察这些状态，当值发生变化时，Compose 会重新绘制与该状态关联的 UI。以下是一个例子：
 
-```kt
+```java
 @Composable
 fun HelloWorld() {
     val text = remember { mutableStateOf("Hello World") }
@@ -486,7 +486,7 @@ fun ShowText(text: String, onClick: () -> Unit) {
 
 当涉及到渲染项目列表时，Compose 提供了一个简单的方法以`Column`（当列表长度已知且较短时）和`LazyColumn`（当项目列表未知且可能很长时）的形式渲染它们。以下是一个来自*练习 3.1*的例子：
 
-```kt
+```java
 LazyColumn(modifier = Modifier.padding(16.dp)) {
         item(uiState.count) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -507,7 +507,7 @@ LazyColumn(modifier = Modifier.padding(16.dp)) {
 
 如果我们要显示输入字段和按钮，我们可以查看我们在*练习 2.1*中如何实现 UI，见*第二章*，*深入数据源*：
 
-```kt
+```java
 @Composable
 fun Calculator(
     a: String, onAChanged: (String) -> Unit,
@@ -542,7 +542,7 @@ fun Calculator(
 
 Compose 还与其他库集成，例如`ViewModel`和`LiveData`：
 
-```kt
+```java
 @Composable
 fun Screen(viewModel: MainViewModel = viewModel(factory = MainViewModelFactory())) {
     viewModel.uiStateLiveData.observeAsState().value?.let {
@@ -555,7 +555,7 @@ fun Screen(viewModel: MainViewModel = viewModel(factory = MainViewModelFactory()
 
 Compose 的另一个重要特性是它如何处理不同屏幕之间的导航。Compose 导航建立在`androidx.navigation`库之上。这使得 Compose 可以使用`NavHost`和`NavController`组件在屏幕之间导航。屏幕是用 Compose 构建的，这意味着仅使用 Compose 的应用程序理想情况下只有一个活动。这消除了与活动和片段生命周期相关的任何潜在问题。要将导航引入项目，需要以下库：
 
-```kt
+```java
 dependencies {
     … 
     implementation "androidx.navigation:navigation-compose:2.4.0-rc01"
@@ -565,7 +565,7 @@ dependencies {
 
 如果我们要从一个屏幕导航到另一个屏幕，我们需要获取`NavHostController`并将其传递给一个表示应用程序结构的`@Composable`方法：
 
-```kt
+```java
 Surface {
     val navController = rememberNavController()
     AppNavigation(navController = navController)
@@ -574,7 +574,7 @@ Surface {
 
 `AppNavigation` `@Composable`方法看起来可能如下所示：
 
-```kt
+```java
 @Composable
 fun AppNavigation(navController: NavHostController) {
     NavHost(navController, startDestination = "screen1") {
@@ -595,7 +595,7 @@ fun AppNavigation(navController: NavHostController) {
 
 在`AppNavigation`中，我们调用`NavHost` `@Composable`函数，在其中我们将放置应用程序的屏幕以及每个屏幕的路径。在这种情况下，`Screen1`将有一个简单的路径用于导航，而`Screen2`在导航到时会需要一个参数，通过`{param}`表示法来指示。对于参数，我们需要指定参数的类型。在这种情况下，它将是`String`，`NavType.StringType`表示这一点。如果我们希望传递更复杂的参数，那么我们需要提供我们自己的自定义类型，并指示它们应该如何序列化和反序列化。当我们想要从`Screen1`导航到`Screen2`时，我们需要做以下操作：
 
-```kt
+```java
 @Composable
 fun Screen1(navController: NavController) {
     Column(modifier = Modifier.clickable {
@@ -608,7 +608,7 @@ fun Screen1(navController: NavController) {
 
 当在`Screen1`中点击`Column`时，它将调用`NavController`导航到`Screen2`并传递`test`参数。`Screen2`看起来如下所示：
 
-```kt
+```java
 @Composable
 fun Screen2(navController: NavController, text: String) {
     Column {
@@ -639,7 +639,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  在 `app/build.gradle` 中添加 Compose 的 `navigation` 库：
 
-    ```kt
+    ```java
     dependencies {
         … 
         implementation "androidx.navigation:navigation-compose:2.4.0-rc01"
@@ -649,7 +649,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  创建 `AppNavigation` 类，它将保存每个屏幕的路由和参数信息：
 
-    ```kt
+    ```java
     private const val ROUTE_USERS = "users"
     private const val ROUTE_USER = "users/%s"
     private const val ARG_USER_NAME = "name"
@@ -669,7 +669,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  将 `MainActivity` 中的屏幕 `@Composable` 函数重命名为 `Users` 并添加 `NavController` 作为参数：
 
-    ```kt
+    ```java
     @Composable
     fun Users(
         navController: NavController,
@@ -684,7 +684,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  接下来，将 `NavController` 参数传递给 `UserList` 并实现用户行的事件监听器：
 
-    ```kt
+    ```java
     @Composable
     fun UserList(uiState: UiState, navController: NavController) {
         LazyColumn(modifier = Modifier.padding(16.dp)) {
@@ -712,7 +712,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  在 `MainActivity` 中创建 `User` `@Composable` 函数：
 
-    ```kt
+    ```java
     @Composable
     fun User(text: String) {
         Column {
@@ -723,7 +723,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  现在，创建一个使用 `NavHost` 在 `MainActivity` 中设置两个屏幕之间导航的 `App` `@Composable` 函数：
 
-    ```kt
+    ```java
     @Composable
     fun App(navController: NavHostController) {
         NavHost(navController, startDestination = 
@@ -746,7 +746,7 @@ fun Screen2(navController: NavController, text: String) {
 
 1.  最后，当在 `MainActivity` 中设置 `Activity` 内容时，调用 `App` 函数：
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)

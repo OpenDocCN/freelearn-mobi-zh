@@ -64,79 +64,79 @@
 
 代码块如下设置：
 
-```kt
+```java
 val chan = produce(capacity = 10) { 
 ```
 
-```kt
+```java
     (1..10).forEach { 
 ```
 
-```kt
+```java
         send(it) 
 ```
 
-```kt
+```java
     } 
 ```
 
-```kt
+```java
 }
 ```
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 flow {
 ```
 
-```kt
+```java
     (1..10).forEach {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
         if (it == 9) {
 ```
 
-```kt
+```java
             throw RuntimeException()
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 ...
 ```
 
-```kt
+```java
 4 seconds -> received 30
 ```
 
-```kt
+```java
 5 seconds -> received 40
 ```
 
-```kt
+```java
 6 seconds -> received 49
 ```
 
-```kt
+```java
 ...
 ```
 

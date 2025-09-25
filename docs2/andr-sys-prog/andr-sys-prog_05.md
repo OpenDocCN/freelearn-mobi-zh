@@ -26,7 +26,7 @@
 
 Native Bridge 作为 Android 系统库的一部分构建为一个`libnativebridge.so`共享库，如图所示。实现可以在`$AOSP/system/core/libnativebridge`中找到。在 Native Bridge 实现中，它在`native_bridge.cc`中定义了五个状态，如下所示：
 
-```kt
+```java
 enum class NativeBridgeState { 
   kNotSetup,               // Initial state. 
   kOpened,                 // After successful dlopen. 
@@ -53,7 +53,7 @@ enum class NativeBridgeState {
 
 当系统初始化 ART 时，会调用`Runtime::Init`函数。在`Runtime::Init`内部，会调用`LoadNativeBridge`函数来加载 Native Bridge 共享库。我们可以在下面的代码片段中看到这一点：
 
-```kt
+```java
 bool Runtime::Init(const RuntimeOptions& raw_options, bool ignore_unrecognized) { 
   ATRACE_BEGIN("Runtime::Init"); 
   CHECK_EQ(sysconf(_SC_PAGE_SIZE), kPageSize); 
@@ -69,7 +69,7 @@ bool Runtime::Init(const RuntimeOptions& raw_options, bool ignore_unrecognized) 
 
 这个`LoadNativeBridge`函数是 ART 的一部分，它在`native_bridge_art_interface.cc`文件中实现，如图所示。这个函数简单地调用在`android`命名空间中的另一个函数`android::LoadNativeBridge`，而它本身在`art`命名空间中。`android`命名空间中的函数是 Native Bridge 实现的一部分，如图所示，我们将在本章后面看到更多关于这一点。我们可以在下面的代码片段中看到`LoadNativeBridge`的实现：
 
-```kt
+```java
 static android::NativeBridgeRuntimeCallbacks native_bridge_art_callbacks_ { 
   GetMethodShorty, GetNativeMethodCount, GetNativeMethods 
 }; 
@@ -86,7 +86,7 @@ bool LoadNativeBridge(std::string& native_bridge_library_filename) {
 
 `android`命名空间中的`android::LoadNativeBridge`函数与`art`命名空间中的`art:LoadNativeBridge`函数相比，有一个额外的`native_bridge_art_callbacks`参数。这个参数的类型是`struct NativeBridgeRuntimeCallbacks`的指针，它在`native_bridge.h`中定义。在`struct NativeBridgeRuntimeCallbacks`中，它定义了以下三个回调方法：
 
-```kt
+```java
 // Runtime interfaces to native bridge. 
 struct NativeBridgeRuntimeCallbacks { 
   // Get shorty of a Java method. The shorty is supposed to be   
@@ -141,7 +141,7 @@ ART、Native Bridge 和 Houdini
 
 现在我们来看看`android::LoadNativeBridge`的实现：
 
-```kt
+```java
 bool LoadNativeBridge(const char* nb_library_filename, 
           const NativeBridgeRuntimeCallbacks* runtime_cbs) { 
 
@@ -210,14 +210,14 @@ bool LoadNativeBridge(const char* nb_library_filename,
 
 那么`nb_library_filename`文件名的内容是什么呢？从`Runtime::Init`函数中我们可以看到，`LoadNativeBridge`的第一个参数使用`Opt::NativeBridge`属性初始化：
 
-```kt
+```java
 std::string native_bridge_file_name = runtime_options.ReleaseOrDefault(Opt::NativeBridge); 
 
 ```
 
 这个属性是从默认属性`ro.dalvik.vm.native.bridge`初始化的，该属性定义在 Android 系统的`default.prop`文件中。这是在`AndroidRuntime::startVm`函数中完成的，如以下片段所示。此函数定义在`$AOSP/frameworks/base/core/jni/AndroidRuntime.cpp`文件中：
 
-```kt
+```java
 int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote) 
 { 
 ... 
@@ -238,7 +238,7 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv, bool zygote)
 
 当启用原生桥接时，`ro.dalvik.vm.native.bridge` 属性通常包含一个共享库文件名。在我们的例子中，对于英特尔设备是 `libhoudini.so`，对于 Android-x86 是 `libnb.so`。如果禁用原生桥接，其值是 0。一旦库加载成功，它将使用 `kNativeBridgeInterfaceSymbol` 符号来获取内存位置，并将位置转换为 `NativeBridgeCallbacks` 的指针。这意味着 Houdini 库提供了一个 `NativeBridgeCallbacks` 的实现。让我们看看 `NativeBridgeCallbacks` 中都有什么：
 
-```kt
+```java
 struct NativeBridgeCallbacks { 
   uint32_t version; 
   bool (*initialize)(const NativeBridgeRuntimeCallbacks*   
@@ -286,7 +286,7 @@ Native Bridge 的预初始化
 
 在创建应用程序的过程中，会调用 `ForkAndSpecializeCommon` 函数。Native Bridge 的预初始化就在这个函数中完成。这个函数定义在 `$AOSP/frameworks/base/core/jni/com_android_internal_os_Zygote.cpp` 文件中：
 
-```kt
+```java
 static pid_t ForkAndSpecializeCommon(JNIEnv* env, uid_t uid, gid_t 
     gid, jintArray javaGids, jint debug_flags, jobjectArray 
     javaRlimits, jlong permittedCapabilities, jlong 
@@ -369,7 +369,7 @@ static pid_t ForkAndSpecializeCommon(JNIEnv* env, uid_t uid, gid_t
 
 在这个 `ForkAndSpecializeCommon` 函数中，它检查当前进程是否不是 SystemServer 进程，以及 Native Bridge 是否准备好使用。之后，它调用 `NeedsNativeBridge` 函数来检查当前进程是否需要使用 Native Bridge：
 
-```kt
+```java
 bool NeedsNativeBridge(const char* instruction_set) { 
   if (instruction_set == nullptr) { 
     ALOGE("Null instruction set in NeedsNativeBridge."); 
@@ -385,7 +385,7 @@ bool NeedsNativeBridge(const char* instruction_set) {
 
 如果应用程序需要 Native Bridge，那么 `PreInitializeNativeBridge` 函数将被调用，该函数也实现于 `native_bridge.cc`，并带有两个参数，`app_data_dir_in` 和 `instruction_set`：
 
-```kt
+```java
 bool PreInitializeNativeBridge(const char* app_data_dir_in,  
      const char* instruction_set) { 
   if (state != NativeBridgeState::kOpened) { 
@@ -475,7 +475,7 @@ Native Bridge 的初始化
 
 让我们看看 `postForkChild` 的 JNI 实现：
 
-```kt
+```java
 static void ZygoteHooks_nativePostForkChild(JNIEnv* env,  
     jclass, jlong token, jint debug_flags,  
     jstring instruction_set) { 
@@ -501,7 +501,7 @@ static void ZygoteHooks_nativePostForkChild(JNIEnv* env,
 
 在这里，它再次检查指令集以决定我们是否需要为应用程序使用 Native Bridge。然后它调用 `Runtime::DidForkFromZygote` 函数以在新进程中初始化 Native Bridge：
 
-```kt
+```java
 void Runtime::DidForkFromZygote(JNIEnv* env,  
     NativeBridgeAction action, const char* isa) { 
   is_zygote_ = false; 
@@ -525,7 +525,7 @@ void Runtime::DidForkFromZygote(JNIEnv* env,
 
 正如我们所见，`Runtime::DidForkFromZygote` 根据操作调用 `InitializeNativeBridge`。现在让我们深入了解 `InitializeNativeBridge` 函数，该函数在 `native_bridge.cc` 中实现：
 
-```kt
+```java
 bool InitializeNativeBridge(JNIEnv* env,  
     const char* instruction_set) { 
 
@@ -600,7 +600,7 @@ bool InitializeNativeBridge(JNIEnv* env,
 
 当 Android 应用程序加载本地库时，会调用此函数。通常，我们在这里指的是相同处理器架构下的本地库。通过 Native Bridge，我们也可以使用此函数加载支持的不同处理器架构的本地库：
 
-```kt
+```java
 bool JavaVMExt::LoadNativeLibrary(JNIEnv* env,  
     const std::string& path, jobject class_loader,  
     std::string* error_msg) { 
@@ -636,7 +636,7 @@ bool JavaVMExt::LoadNativeLibrary(JNIEnv* env,
 
 要使用 Native Bridge，它首先调用`NativeBridgeIsSupported`函数来检查 Native Bridge 是否受支持。`NativeBridgeIsSupported`函数调用 Houdini 回调函数`isSupported`来检查给定的共享库是否可以通过 Native Bridge 支持：
 
-```kt
+```java
 bool NativeBridgeIsSupported(const char* libpath) { 
   if (NativeBridgeInitialized()) { 
     return callbacks->isSupported(libpath); 
@@ -648,7 +648,7 @@ bool NativeBridgeIsSupported(const char* libpath) {
 
 如果库可以通过 Native Bridge 支持，`LoadNativeLibrary`将调用另一个 Native Bridge 函数，`android::NativeBridgeLoadLibrary`来加载库：
 
-```kt
+```java
 void* NativeBridgeLoadLibrary(const char* libpath, int flag) { 
   if (NativeBridgeInitialized()) { 
     return callbacks->loadLibrary(libpath, flag); 
@@ -660,7 +660,7 @@ void* NativeBridgeLoadLibrary(const char* libpath, int flag) {
 
 Native Bridge 的`NativeBridgeLoadLibrary`函数将调用 Houdini 回调函数`loadLibrary`来加载库。本地库加载成功后，库中的`JNI_OnLoad`入口点将被找到，系统将调用它来注册本地库注册的本地方法。对于正常的本地库，系统函数`dlsym`用于获取`JNI_OnLoad`方法，但`FindSymbolWithNativeBridge`函数用于从 Houdini 库中获取`JNI_OnLoad`：
 
-```kt
+```java
 void* FindSymbolWithNativeBridge(const std::string& symbol_name, 
 const char* shorty) { 
     CHECK(NeedsNativeBridge()); 
@@ -674,7 +674,7 @@ const char* shorty) {
 
 `FindSymbolWithNativeBridge`调用`NativeBridgeGetTrampoline` Native Bridge 函数，而`NativeBridgeGetTrampoline`调用`getTrampoline` Houdini 回调函数来完成实际工作：
 
-```kt
+```java
 void* NativeBridgeGetTrampoline(void* handle, const char* name, 
 const char* shorty, uint32_t len) { 
   if (NativeBridgeInitialized()) { 
@@ -707,7 +707,7 @@ const char* shorty, uint32_t len) {
 
 既然我们已经有了一份 x86emu 的 AOSP 源代码的工作副本，我们可以在一个新分支中为本章进行修改：
 
-```kt
+```java
 $ cd device/generic/x86emu
 $ git checkout android-7.1.1_r4_x86emu_ch04_r1
 $ git branch android-7.1.1_r4_ch05
@@ -719,7 +719,7 @@ $ git checkout android-7.1.1_r4_ch05
 
 在我们完成所有修改后，我们还需要更新清单文件，以便我们可以有一个清单来下载本章的代码。我不用标签，而是用分支来管理清单。本章清单的分支是 `android-7.1.1_r4_ch05_aosp`。我们可以使用以下命令下载以下内容的源代码：
 
-```kt
+```java
 $ repo init -u https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch05_aosp
 $ repo sync
 
@@ -727,7 +727,7 @@ $ repo sync
 
 如果你已按照我们在 第二章，*设置开发环境* 中讨论的方式设置了本地镜像，你可以按照以下方式检出源代码：
 
-```kt
+```java
 $ repo init -u {your local mirror}/github/manifests.git -b android-7.1.1_r4_ch05
 $ repo sync  
 
@@ -737,7 +737,7 @@ $ repo sync
 
 使用前面的清单创建源代码的工作副本后，我们可以查看 `.repo/manifest.xml` 文件：
 
-```kt
+```java
 <?xml version="1.0" encoding="UTF-8"?> 
 <manifest> 
 
@@ -788,7 +788,7 @@ $ repo sync
 
 在板配置文件中，我们需要将 ARM 指令集添加到 CPU ABI 列表中，以便程序可以检测对 ARM 指令集的支持，如下所示：
 
-```kt
+```java
 ... 
 # houdini 
 # Native Bridge ABI List 
@@ -808,7 +808,7 @@ BUILD_ARM_FOR_X86 := $(WITH_NATIVE_BRIDGE)
 
 在产品定义的 Makefile 中，`x86emu_x86.mk`，我们将 `persist.sys.nativebridge` 属性设置为 `1`。然后我们将 `$AOSP/device/generic/x86emu/system` 文件夹下的所有文件复制到 `$OUT/system` 映像中。`$AOSP/device/generic/x86emu/system/lib/arm` 文件夹下的所有文件都是 Houdini 库的副本：
 
-```kt
+```java
 ... 
 PRODUCT_PROPERTY_OVERRIDES := \ 
     persist.sys.nativebridge=1 \ 
@@ -831,7 +831,7 @@ PRODUCT_COPY_FILES += $(foreach NB, $(filter-out libbinder_legacy.so, $(notdir $
 
 在设备 Makefile `device.mk` 中，我们只添加了一行来包含另一个 Makefile，`nativebridge.mk`，在 `device/generic/common/nativebridge` 目录下。正如我们在源配置章节中讨论的那样，我们使用 Android-x86 的版本来支持 Houdini 集成。我们将在下一节分析 `nativebridge.mk` Makefile：
 
-```kt
+```java
 ... 
 # Get native bridge settings 
 $(call inherit-product-if-exists,device/generic/common/nativebridge/nativebridge.mk) 
@@ -845,7 +845,7 @@ $(call inherit-product-if-exists,device/generic/common/nativebridge/nativebridge
 
 现在让我们看看 Android-x86 中的 `nativebridge.mk`：
 
-```kt
+```java
 # Enable native bridge 
 WITH_NATIVE_BRIDGE := true 
 
@@ -881,7 +881,7 @@ $(call inherit-product-if-exists,vendor/intel/houdini/houdini.mk)
 
 由于 `libnb.so` 库是 Android-x86 中 Native Bridge 支持的关键起点，我们现在将深入探讨其细节。构建 `libnb.so` 的 Makefile 可以在 `device/generic/common/nativebridge/Android.mk` 中找到。`libnb.so` 的源代码仅包含一个文件，即 `libnb.cpp`，如下所示：
 
-```kt
+```java
 #define LOG_TAG "libnb" 
 
 #include <dlfcn.h> 
@@ -1014,14 +1014,14 @@ NativeBridgeCallbacks NativeBridgeItf = {
 
 要使用此方法，首先我们必须挂载 `binfmt_misc`：
 
-```kt
+```java
 $ mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc  
 
 ```
 
 要注册新的二进制类型，我们必须设置一个看起来如下所示的字符串：
 
-```kt
+```java
 :name:type:offset:magic:mask:interpreter:flags  
 
 ```
@@ -1052,7 +1052,7 @@ $ mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc
 
 我们不会直接使用 `enable_nativebridge` 脚本，但希望在系统启动时运行 `enable_nativebridge` 的第二部分。通过第二部分，Houdini 在 Android 模拟器中默认启用。这可以通过将 `enable_nativebridge` 的第二部分添加到 `device/generic/goldfish/init.goldfish.sh` 来完成。以下是我们添加到 `init.goldfish.sh` 结尾的代码片段。这是在系统启动时用于设置 Android 模拟器环境的脚本：
 
-```kt
+```java
 ... 
 # 
 # Houdini integration (Native Bridge) 
@@ -1100,7 +1100,7 @@ fi
 
 在我们重新构建镜像并启动模拟器后，我们可以使用以下命令验证更改：
 
-```kt
+```java
 $ adb shell
 root@x86emu:/ # ls /proc/sys/fs/binfmt_misc/ 
 arm_dyn
@@ -1112,7 +1112,7 @@ status
 
 我们可以看到我们注册了两个 `binfmt_misc` 类型：`arm_dyn` 和 `arm_exe`。`/proc` 文件 `arm_dyn` 用于加载共享库，而 `arm_exe` 用于加载 ARM 可执行文件：
 
-```kt
+```java
 root@x86emu:/ # cat /proc/sys/fs/binfmt_misc/arm_exe 
 enabled
 interpreter /system/lib/arm/houdini
@@ -1128,7 +1128,7 @@ magic 7f454c46010101000000000000000000020028
 
 我们已经对代码进行了所有更改，以启用 Houdini。我们可以使用以下命令构建系统镜像：
 
-```kt
+```java
 $ source build/envsetup.sh
 $ lunch x86emu_x86-eng
 $ m -j4  
@@ -1145,7 +1145,7 @@ $ m -j4
 
 在您克隆了测试应用程序的先前 Git 仓库之后，您可以构建和测试它们。让我们首先测试命令行应用程序。这是一个非常简单的“hello world”应用程序，它将一行消息打印到标准输出，如下所示：
 
-```kt
+```java
 #include <stdio.h> 
 
 void main() 
@@ -1157,7 +1157,7 @@ void main()
 
 您可以在模拟器中按照以下方式构建和测试它：
 
-```kt
+```java
 $ cd ch05/test1
 $ ./build.sh 
 [armeabi-v7a] Install : ch05_test => libs/armeabi-v7a/ch05_test
@@ -1180,7 +1180,7 @@ This is built using NDK r12.
 
 JNI 库位于 `ch05/test2/jni`。支持的处理器架构在 `Application.mk` 中定义如下：
 
-```kt
+```java
 # Build both ARMv5TE and ARMv7-A and x86 machine code. 
 # armeabi armeabi-v7a  
 APP_ABI := armeabi armeabi-v7a 
@@ -1190,7 +1190,7 @@ APP_PLATFORM := android-23
 
 我们可以看到我们为 `armeabi` 和 `armeabi-v7a` 构建了 JNI 库。让我们首先使用 NDK 构建 JNI 库：
 
-```kt
+```java
 $ cd ch05/test2/jni
 $ ./build.sh
 [armeabi] Install : libHelloJNI.so => libs/armeabi/libHelloJNI.so
@@ -1200,7 +1200,7 @@ $ ./build.sh
 
 在我们构建 JNI 库之后，我们可以将 Android 源代码导入到 Eclipse 或 Android Studio 中来构建应用程序本身。我们不会解释导入和构建 Android 应用程序的详细步骤。您可以通过阅读关于如何开发 Android 应用程序和如何开发 JNI 库的书籍来了解更多信息。我们在这里想要调查的是测试结果。在我们获得 APK 文件后，我们可以在模拟器中安装并运行它。同时，我们可以使用 logcat 捕获调试日志。以下是我环境的日志：
 
-```kt
+```java
 ... 
 10-02 00:44:57.871: I/ActivityManager(1527): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=fr.myrddin.hellojni/.HelloJNIActivity (has extras)} from uid 10008 on display 0 
 10-02 00:44:57.900: I/ActivityManager(1527): Start proc 2652:fr.myrddin.hellojni/u0a53 for activity fr.myrddin.hellojni/.HelloJNIActivity 

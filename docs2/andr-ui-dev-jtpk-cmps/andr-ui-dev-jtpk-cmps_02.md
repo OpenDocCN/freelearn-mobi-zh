@@ -52,7 +52,7 @@
 
 让我们从欢迎文本开始，这是我们的第一个可组合函数：
 
-```kt
+```java
 @Composable
 fun Welcome() {
   Text(
@@ -68,7 +68,7 @@ fun Welcome() {
 
 要仅通过其名称调用 `Text()`，您需要导入它：
 
-```kt
+```java
 import androidx.compose.material.Text
 ```
 
@@ -84,7 +84,7 @@ import androidx.compose.material.Text
 
 下一个可组合函数看起来相当相似。你能找到它们之间的区别吗？
 
-```kt
+```java
 @Composable
 fun Greeting(name: String) {
   Text(
@@ -97,7 +97,7 @@ fun Greeting(name: String) {
 
 在这里，`stringResource()` 接收一个额外的参数。这对于用实际文本替换占位符非常方便。字符串在 `strings.xml` 中定义，如下所示：
 
-```kt
+```java
 <string name="hello">Hello, %1$s.\nNice to meet you.</string>
 ```
 
@@ -107,7 +107,7 @@ fun Greeting(name: String) {
 
 接下来，让我们转向文本输入字段（`Row()`，它属于 `androidx.compose.foundation.layout` 包。就像所有可组合函数一样，`Row()` 可以在括号内接收一个逗号分隔的参数列表，其子项放在花括号内：
 
-```kt
+```java
 @Composable
 fun TextAndButton(name: MutableState<String>, 
                   nameEntered: MutableState<Boolean>) {
@@ -125,7 +125,7 @@ fun TextAndButton(name: MutableState<String>,
 
 现在，我们将查看文本输入字段，它允许用户输入一个名字：
 
-```kt
+```java
 TextField(
   value = name.value,
   onValueChange = {
@@ -160,7 +160,7 @@ TextField(
 
 然而，我们首先需要看看 `Button()` 可组合组件。它也属于 `androidx.compose.material` 包：
 
-```kt
+```java
 Button(modifier = Modifier
   .alignByBaseline()
   .padding(8.dp),
@@ -177,7 +177,7 @@ Button(modifier = Modifier
 
 `Hello()` 发射 `Box()`，它（根据 `nameEntered.value`）包含 `Greeting()` 或一个包含 `Welcome()` 和 `TextAndButton()` 的 `Column()` 可组合组件。`Column()` 可组合组件与 `Row()` 很相似，但垂直排列其兄弟组件。像后者和 `Box()` 一样，它属于 `androidx.compose.foundation.layout` 包。`Box()` 可以包含一个或多个子组件。它们根据 `contentAlignment` 参数在盒内定位。我们将在 *第四章* 的 *组合基本构建块* 部分更详细地探讨这一点，*布局 UI 元素*：
 
-```kt
+```java
 @Composable
 fun Hello() {
   val name = remember { mutableStateOf("") }
@@ -203,7 +203,7 @@ fun Hello() {
 
 你注意到 `remember` 和 `mutableStateOf` 吗？它们对于创建和维护状态都非常重要。一般来说，应用中的状态指的是随时间可能发生变化的值。虽然这也适用于领域数据（例如，网络服务调用的结果），但状态通常指的是由 UI 元素显示或使用的某些内容。如果一个可组合函数（或依赖于）状态，当该状态发生变化时，它将重新组合（目前，重新绘制或重新绘制）。为了理解这意味着什么，请回忆这个可组合组件：
 
-```kt
+```java
 @Composable
 fun Welcome() {
     Text(
@@ -239,7 +239,7 @@ Android Studio 代码编辑器的右上角有三个按钮，**代码**、**分�
 
 不幸的是，如果你尝试将 `@Preview` 添加到 `Greeting()` 中，你会看到一个类似这样的错误信息：
 
-```kt
+```java
 Composable functions with non-default parameters are not supported in Preview unless they are annotated with @PreviewParameter.
 ```
 
@@ -249,7 +249,7 @@ Composable functions with non-default parameters are not supported in Preview un
 
 最明显的解决方案是一个包装可组合组件：
 
-```kt
+```java
 @Composable
 @Preview
 fun GreetingWrapper() {
@@ -261,7 +261,7 @@ fun GreetingWrapper() {
 
 幸运的是，还有其他选项。例如，您可以为您的复合函数添加默认值：
 
-```kt
+```java
 @Composable
 fun AltGreeting(name: String = "Jetpack Compose") {
 ```
@@ -270,7 +270,7 @@ fun AltGreeting(name: String = "Jetpack Compose") {
 
 使用 `@PreviewParameter`，您可以传递仅影响预览的值。不幸的是，这有点冗长，因为您需要编写一个新的类：
 
-```kt
+```java
 class HelloProvider : PreviewParameterProvider<String> {
   override val values: Sequence<String>
     get() = listOf("PreviewParameterProvider").asSequence()
@@ -279,7 +279,7 @@ class HelloProvider : PreviewParameterProvider<String> {
 
 该类必须扩展 `androidx.compose.ui.tooling.preview.PreviewParameterProvider`，因为它将为预览提供参数。现在，您可以使用 `@PreviewParameter` 注解复合函数的参数并传递您的新类：
 
-```kt
+```java
 @Composable
 @Preview
 fun AltGreeting2(@PreviewParameter(HelloProvider::class)
@@ -292,14 +292,14 @@ fun AltGreeting2(@PreviewParameter(HelloProvider::class)
 
 您可以使用 `backgroundColor =` 为预览设置背景颜色。该值是 `Long` 类型，表示 ARGB 颜色。请确保也将 `showBackground` 设置为 `true`。以下代码片段将生成纯红色背景：
 
-```kt
+```java
 @Preview(showBackground = true, backgroundColor =
          0xffff0000)
 ```
 
 默认情况下，预览维度是自动选择的。如果您想显式设置它们，可以传递 `heightDp` 和 `widthDp`：
 
-```kt
+```java
 @Composable
 @Preview(widthDp = 100, heightDp = 100)
 fun Welcome() {
@@ -318,7 +318,7 @@ fun Welcome() {
 
 要测试不同的用户区域设置，您可以添加 `locale` 参数。例如，如果您的应用在 `values-de-rDE` 中包含德语字符串，您可以通过添加以下内容来使用它们：
 
-```kt
+```java
 @Preview(locale = "de-rDE")
 ```
 
@@ -326,7 +326,7 @@ fun Welcome() {
 
 如果您想显示状态栏和操作栏，您可以使用 `showSystemUi` 来实现这一点：
 
-```kt
+```java
 @Preview(showSystemUi = true)
 ```
 
@@ -344,7 +344,7 @@ Android Studio 以源代码中出现的顺序显示带有 `@Preview` 注解的�
 
 根据您的可组合函数数量，预览窗格可能会在某些时候显得拥挤。如果是这种情况，只需通过添加 `group` 参数将您的可组合函数放入不同的组中：
 
-```kt
+```java
 @Preview(group = "my-group-1")
 ```
 
@@ -392,7 +392,7 @@ Android Studio 以源代码中出现的顺序显示带有 `@Preview` 注解的�
 
 **活动** 自从第一个平台版本以来一直是 Android 应用的基本构建块之一。几乎每个应用至少有一个活动。它们在清单文件中配置。要从主屏幕启动活动，相应的条目看起来像这样：
 
-```kt
+```java
 ...
 <activity
   android:name=".MainActivity"
@@ -409,7 +409,7 @@ Android Studio 以源代码中出现的顺序显示带有 `@Preview` 注解的�
 
 这对 Compose 应用仍然成立。一个希望显示组合函数的活动设置起来就像一个填充传统布局文件的活动一样。但它的源代码是什么样的呢？`Hello` 应用程序的主活动被命名为 `MainActivity`，如下一个代码块所示：
 
-```kt
+```java
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -426,7 +426,7 @@ class MainActivity : ComponentActivity() {
 
 这是一个重要的区别；虽然 Compose 应用调用 `setContent()`，基于视图的应用调用 `setContentView()` 并传递布局的 ID（例如 `R.layout.activity_main`）或根视图本身（这通常是通过某种绑定机制获得的）。让我们看看旧机制是如何工作的。以下代码片段取自我的一个开源应用（你可以在 GitHub 上找到它 [`github.com/MATHEMA-GmbH/TKWeek`](https://github.com/MATHEMA-GmbH/TKWeek)，但本书将不再进一步讨论）：
 
-```kt
+```java
 class TKWeekActivity : TKWeekBaseActivity() {
   private var backing: TkweekBinding? = null
   private val binding get() = backing!!
@@ -454,7 +454,7 @@ Jetpack Compose 严重依赖于 Kotlin。这意味着您的应用程序项目必
 
 首先，请确保在项目级别的 build.gradle 文件中配置与您的 Android Studio 版本相对应的 Android Gradle 插件：
 
-```kt
+```java
 buildscript {
   ...
   dependencies {
@@ -467,7 +467,7 @@ buildscript {
 
 以下代码片段属于模块级别的 build.gradle 文件：
 
-```kt
+```java
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
@@ -476,7 +476,7 @@ plugins {
 
 接下来，请确保您的应用程序的最小 API 级别设置为 21 或更高，并且已启用 Jetpack Compose。以下代码片段还设置了 Kotlin 编译器插件的版本：
 
-```kt
+```java
 android {
   defaultConfig {
     ...
@@ -501,7 +501,7 @@ android {
 
 最后，声明依赖项。以下代码片段是一个很好的起点。根据您的应用程序使用的包，您可能需要额外的依赖项：
 
-```kt
+```java
 dependencies {
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.0'

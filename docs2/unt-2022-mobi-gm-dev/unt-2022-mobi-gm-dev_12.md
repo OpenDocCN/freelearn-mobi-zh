@@ -94,7 +94,7 @@ LeanTween 允许我们以仅一行代码的方式对对象进行旋转、震动�
 
 1.  我们将添加以下新函数，我们将使用它来使对象从屏幕左侧移动到中心：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will move an object from the left side of the screen
     /// to the center
@@ -124,7 +124,7 @@ LeanTween 允许我们以仅一行代码的方式对对象进行旋转、震动�
 
 1.  现在我们有了这个函数，让我们实际调用它。更改`MainMenuBehaviour`脚本的`Start`函数，使其看起来如下：
 
-    ```kt
+    ```java
     protected virtual void Start()
     {
         /* Initialize the showAds variable */
@@ -149,7 +149,7 @@ LeanTween 允许我们以仅一行代码的方式对对象进行旋转、震动�
 
 1.  将以下高亮代码添加到`SlideMenuIn`函数中：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will move an object from the left side of the screen
     /// to the center
@@ -176,7 +176,7 @@ LeanTween 允许我们以仅一行代码的方式对对象进行旋转、震动�
 
 这里发生的情况是，`LeanTween.moveX`函数返回一个`LTDescr`类型的对象，这实际上是创建的缓动的引用。我们可以通过在缓动上调用额外的函数来添加额外的参数。实际上，编写这个的另一种方式如下：
 
-```kt
+```java
 // Move the object to the center of the screen (x of 0 is 
 // centered) 
 var tween = LeanTween.moveX(rt, 0, 1.5f); 
@@ -191,7 +191,7 @@ tween.setEase(LeanTweenType.easeInOutExpo);
 
 1.  最后，我们将添加当前菜单在选中按钮跳转到另一个菜单时能够滑出屏幕的功能：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will move an object to the right offscreen
     /// </summary>
@@ -221,7 +221,7 @@ tween.setEase(LeanTweenType.easeInOutExpo);
 
 1.  然后，我们需要更新`ShowMainMenu`函数以实际显示菜单：
 
-    ```kt
+    ```java
     public void ShowMainMenu()
     {
         if (facebookLogin != null && mainMenu != null)
@@ -262,7 +262,7 @@ tween.setEase(LeanTweenType.easeInOutExpo);
 
 1.  继续打开我们的`PauseScreenBehaviour`脚本，以实现以下`SetPauseMenu`的实现：
 
-    ```kt
+    ```java
     /// <summary>
         /// Will turn our pause menu on or off
         /// </summary>
@@ -299,7 +299,7 @@ tween.setEase(LeanTweenType.easeInOutExpo);
 
 现在，如果我们运行游戏，当我们点击暂停菜单时，看起来没有任何事情发生。这是因为——正如我之前提到的——补间动画是由`Time.timeScale`缩放的，我们刚刚改变了它。为了解决这个问题，我们可以使用另一个 LeanTween 函数，称为`setIgnoreTimeScale`，我们将它设置为`true`在我们在`MainMenuBehaviour`脚本中编写的两个函数中。回到`MainMenuBehaviour`脚本，并将以下高亮代码添加到`SlideMenuIn`方法中：
 
-```kt
+```java
 /// <summary>
 /// Will move an object from the left side of the screen
 /// to the center
@@ -327,7 +327,7 @@ public void SlideMenuIn(GameObject obj)
 
 1.  将高亮代码添加到`SlideMenuOut`方法中：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will move an object to the right offscreen
     /// </summary>

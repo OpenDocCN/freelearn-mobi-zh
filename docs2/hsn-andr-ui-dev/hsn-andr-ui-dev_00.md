@@ -50,7 +50,7 @@
 
 在本书中，您将找到许多文本样式，用于区分不同类型的信息。以下是一些这些样式的示例及其含义的解释。文本中的代码单词、数据库表名、文件夹名、文件名、文件扩展名、路径名、虚拟 URL、用户输入和 Twitter 昵称如下所示：“接下来的代码行读取链接并将其分配给`constantSize`属性。”代码块设置如下：
 
-```kt
+```java
 <selector
 
     android:constantSize="true"
@@ -60,7 +60,7 @@
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 <selector
 
     android:constantSize="true"

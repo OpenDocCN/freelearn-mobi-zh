@@ -120,13 +120,13 @@ Firebase REST API 为我们处理此类情况。如果我们想获取餐厅 JSON
 
 为了练习，在您的浏览器地址栏中放置您到目前为止用于获取餐厅的 Firebase URL，并附加以下两个查询参数：
 
-```kt
+```java
 https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_id"&equalTo=2
 ```
 
 如果您访问您的链接，不幸的是，响应将如下所示：
 
-```kt
+```java
 { "error" : "Index not defined, add \".indexOn\": \"r_id\", for path \"/restaurants\", to the rules" }
 ```
 
@@ -142,7 +142,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  我们需要允许 Firebase 根据其`r_id`字段索引餐厅，因此更新写入规则如下：
 
-    ```kt
+    ```java
     {
         "rules": {
             ".read": "true",
@@ -172,7 +172,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  首先，在`RestaurantsApiService`接口内部，定义一个名为`getRestaurant()`的`suspend`函数，它将作为另一个`@GET` HTTP 方法，用于获取一个餐厅的详细信息：
 
-    ```kt
+    ```java
     interface RestaurantsApiService {
         […]
         @GET("restaurants.json?orderBy=\"r_id\"")
@@ -201,7 +201,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  为了解决这个问题，在`RestaurantsApiService`接口内部，更新`getRestaurant()`方法以返回一个包含未知`String`键和`Restaurant`数据类型值的`Map`对象：
 
-    ```kt
+    ```java
     interface RestaurantsApiService {
         …
         @GET("restaurants.json?orderBy=\"r_id\"")
@@ -220,7 +220,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  通过左键单击应用程序包，将`RestaurantDetailsViewModel`作为名称，并选择**文件**作为类型来创建一个新文件。在新建的文件中，添加以下代码：
 
-    ```kt
+    ```java
     class RestaurantDetailsViewModel(): ViewModel() {
         private var restInterface: RestaurantsApiService
         init {
@@ -245,7 +245,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在新建的`ViewModel`中，创建一个`getRemoteRestaurant()`方法，该方法接收一个`id`参数，并负责执行网络请求以获取特定餐厅的详细信息：
 
-    ```kt
+    ```java
     class RestaurantDetailsViewModel() : ViewModel() {
         private var restInterface: RestaurantsApiService
          init { […] }
@@ -278,7 +278,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  由于 `RestaurantDetailsViewModel` 将持有餐厅详情屏幕的状态，添加一个 `MutableState` 对象来持有 `Restaurant` 对象，并用 `null` 值初始化它，直到我们完成检索它的网络请求：
 
-    ```kt
+    ```java
     class RestaurantDetailsViewModel(): ViewModel() {
         private var restInterface: RestaurantsApiService
         val state = mutableStateOf<Restaurant?>(null)
@@ -288,7 +288,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在 `RestaurantDetailsViewModel` 的 `init` 块中，在 Retrofit 客户端实例化之后，使用 `viewModelScope` 构建器启动一个协程：
 
-    ```kt
+    ```java
     init {
         […]
     restInterface = retrofit.create(…)
@@ -313,7 +313,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在应用程序包内创建一个名为 `RestaurantDetailsScreen` 的新文件，并创建一个 `RestaurantDetailsScreen` 可组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantDetailsScreen() {
         val viewModel: RestaurantDetailsViewModel =         viewModel()
@@ -330,7 +330,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  向`RestaurantDetails`可组合组件添加一个名为`horizontalAlignment`的新参数，并将其传递给列的`horizontalAlignment`参数：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantDetails(
         … ,
@@ -349,7 +349,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在`RestaurantDetailsScreen`可组合组件内，添加一个包含`RestaurantIcon`、`RestaurantDetails`和`Text`可组合组件的`Column`实例，所有这些组件都垂直排列并水平居中：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantDetailsScreen() {
         val viewModel: RestaurantDetailsViewModel = 
@@ -384,7 +384,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  为了测试一切是否正常工作，并且我们的新屏幕能够渲染具有`id`值为`2`的硬编码餐厅的详细信息，导航回`MainActivity`并在`setContent`方法内，将`RestaurantsScreen`可组合组件替换为`RestaurantDetailsScreen`：
 
-    ```kt
+    ```java
     setContent {
     RestaurantsAppTheme {
             //RestaurantsScreen()
@@ -421,7 +421,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在应用模块中的`build.gradle`文件内，在依赖项块内添加对包含 Compose 的导航组件的依赖项：
 
-    ```kt
+    ```java
     implementation "androidx.navigation:navigation-compose:2.4.2"
     ```
 
@@ -429,7 +429,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在 `MainActivity` 类中，创建一个新的空组合函数，名为 `RestaurantsApp()`：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantsApp() {
     }
@@ -439,7 +439,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在 `onCreate()` 方法中，将传递给 `setContent` 方法的 `RestaurantsDetailsScreen()` 组合可替换为 `RestaurantsApp()` 组合可：
 
-    ```kt
+    ```java
     setContent {
         RestaurantsAppTheme {
             RestaurantsApp()
@@ -449,7 +449,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 1.  在 `RestaurantsApp()` 组合函数内部，通过 `rememberNavController()` 方法实例化 `NavController`：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantsApp() {
         val navController = rememberNavController()
@@ -462,7 +462,7 @@ https://restaurants-db-default-rtdb.firebaseio.com/restaurants.json?orderBy="r_i
 
 添加一个 `NavHost` 组合可，并将之前创建的 `NavController` 实例以及一个空的 `String` 传递给 `startDestination` 参数：
 
-```kt
+```java
 import androidx.navigation.compose.NavHost
 […]
 @Composable
@@ -485,7 +485,7 @@ private fun RestaurantsApp() {
 
 要做到这一点，请使用名为 `composable()` 的 DSL 函数，您可以为 `route` 参数提供一个路由字符串，并将对应于所需目的地的可组合函数传递给尾随的 lambda `content` 参数：
 
-```kt
+```java
 @Composable
 private fun RestaurantsApp() {
     val navController = rememberNavController()
@@ -506,7 +506,7 @@ private fun RestaurantsApp() {
 
 1.  通过在导航图构建器内部再次调用 `composable()` DSL 函数，添加另一个指向 `RestaurantDetailsScreen()` 目标的路由，并且通过附加 `{restaurant_id}` 参数占位符从 `"restaurants"` 路由派生：
 
-    ```kt
+    ```java
     NavHost(navController, startDestination = "...") {
     composable(route = "restaurants") { … }
     composable(route = "restaurants/{restaurant_id}") { 
@@ -523,7 +523,7 @@ private fun RestaurantsApp() {
 
 在 `RestaurantsScreen.kt` 文件内部，修改 `RestaurantItem` 可组合组件以公开一个提供被点击餐厅 `id` 的 `onItemClick` 回调函数，并在整个餐厅的 `Card` 被按下时调用它：
 
-```kt
+```java
 @Composable
 fun RestaurantItem(item: Restaurant,
                    onClick: (id: Int) -> Unit, 
@@ -538,7 +538,7 @@ fun RestaurantItem(item: Restaurant,
 
 1.  为了避免混淆，通过将旧的 `onClick` 参数重命名为更具说明性的名称，如 `onFavoriteClick` 来重构 `RestaurantItem` 可组合组件：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem(item: Restaurant,
                        onFavoriteClick: (id: Int) -> Unit, 
@@ -558,7 +558,7 @@ fun RestaurantItem(item: Restaurant,
 
 1.  在 `RestaurantsScreen()` 可组合组件内部，添加一个类似的 `onItemClick` 回调函数作为参数，并在 `onItemClick` 回调来自 `RestaurantItem` 可组合组件时调用它：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit = { }) {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -580,7 +580,7 @@ fun RestaurantItem(item: Restaurant,
 
 1.  在 `NavHost` 内部，更新 `RestaurantsScreen()` 可组合目标以监听导航回调，然后在回调内部，通过调用 `navigate()` 方法来触发可组合组件之间的导航，该方法期望 `route` 作为参数：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantsApp() {
         val navController = rememberNavController()
@@ -631,7 +631,7 @@ fun RestaurantItem(item: Restaurant,
 
 1.  对于`RestaurantDetailsScreen()`目标，除了`route`之外，还需要添加一个期望接收`NamedNavArgument`对象列表的`arguments`参数，并使用`navArgument`函数传递这样的参数：
 
-    ```kt
+    ```java
     NavHost(navController, startDestination = "..."){
         composable(route = "restaurants") { … }
         composable(
@@ -648,7 +648,7 @@ fun RestaurantItem(item: Restaurant,
 
 要在`RestaurantDetailsScreen()`目标内部获取参数的值，`composable()` DSL 函数暴露了一个`NavBackStackEntry`对象，允许我们按以下方式获取值：
 
-```kt
+```java
 composable(…) { navStackEntry ->
     val id =
         navStackEntry.arguments?.getInt("restaurant_id")
@@ -662,7 +662,7 @@ composable(…) { navStackEntry ->
 
 首先，将 `SavedStateHandle` 参数添加到 `RestaurantDetailsViewModel` 构造函数中，就像我们在 `RestaurantsViewModel` 中做的那样：
 
-```kt
+```java
 class RestaurantDetailsViewModel(
     private val stateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -676,7 +676,7 @@ class RestaurantDetailsViewModel(
 
 1.  在 `ViewModel` 的 `init { }` 块中，在实例化 Retrofit 客户端下方，将餐厅的 ID 存储在一个新的 `id` 变量中，同时从 `SavedStateHandle` 对象中动态获取它，然后将它传递给 `getRemoteRestaurant()` 方法调用：
 
-    ```kt
+    ```java
     class RestaurantDetailsViewModel(private val stateHandle: SavedStateHandle): ViewModel() {
         …
         init {
@@ -739,7 +739,7 @@ class RestaurantDetailsViewModel(
 
 1.  在`RestaurantDetailsScreen()` DSL `composable()`函数内部，除了`route`和`arguments`之外，添加另一个名为`deepLinks`的参数，它期望一个`NavDeepLink`对象的列表，并使用`navDeepLink`函数传递这样的参数：
 
-    ```kt
+    ```java
     NavHost(navController, startDestination = "restaurants")
     {
       composable(route = "restaurants") {…}
@@ -762,7 +762,7 @@ class RestaurantDetailsViewModel(
 
 1.  要使我们的深度链接对外可用，在 `AndroidManifest.xml` 文件中，在 `MainActivity` 的 `<activity>` 元素内添加以下 `<intent-filter>` 元素：
 
-    ```kt
+    ```java
     <application … >
         <activity
             android:name=".MainActivity"
@@ -815,7 +815,7 @@ class RestaurantDetailsViewModel(
 
 1.  打开 Android Studio 中的终端，粘贴以下命令并输入：
 
-    ```kt
+    ```java
     $ adb shell am start -W -a android.intent.action.VIEW -d "https://www.restaurantsapp.details.com/2"
     ```
 

@@ -40,35 +40,35 @@ Flows 可以被取消，也可能失败或遇到异常。开发者必须能够�
 
 例如，我们可以使用 `flow{}` 构建器创建一个可取消的 Flow，如下所示：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchMovies(): Flow<Movie> = flow {
 ```
 
-```kt
+```java
         movieRepository.fetchMovies().forEach {
 ```
 
-```kt
+```java
             emit(it)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -78,27 +78,27 @@ class MovieViewModel : ViewModel() {
 
 以下示例展示了我们如何使用`cancellable` Flow 操作符使 Flow 可取消：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchMovies(): Flow<Movie> {
 ```
 
-```kt
+```java
         return movieRepository.fetchMovies().cancellable()
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -116,27 +116,27 @@ class MovieViewModel : ViewModel() {
 
 以下示例展示了我们如何使用`retry` Flow 操作符来重试我们的 Flow 中的任务：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun favoriteMovie(id: Int) =
 ```
 
-```kt
+```java
         movieRepository.favoriteMovie(id)
 ```
 
-```kt
+```java
             .retry(3) { cause -> cause is IOException }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -146,31 +146,31 @@ class MovieViewModel : ViewModel() {
 
 `retryWhen`操作符类似于`retry`操作符。我们需要指定`predicate`，这是条件，只有当`true`时才会执行重试。`predicate`有`true`，将重试 Flow。以下代码展示了使用`retryWhen`在 Flow 中重试任务的示例：
 
-```kt
+```java
 class MovieViewModel : ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun favoriteMovie(id: Int) =
 ```
 
-```kt
+```java
         movieRepository.favoriteMovie(id)
 ```
 
-```kt
+```java
             .retryWhen { cause, attempt -> attempt <3 &&
 ```
 
-```kt
+```java
                 cause is IOException }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -178,43 +178,43 @@ class MovieViewModel : ViewModel() {
 
 使用`retryWhen`操作符，我们还可以向 Flow（使用`emit`函数）发出一个值，我们可以使用它来表示重试尝试或一个值。然后我们可以显示这个值或在屏幕上处理它。以下示例展示了我们如何使用`emit`与`retryWhen`操作符：
 
-```kt
+```java
 class MovieViewModel : ViewModel() { 
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
     fun getTopMovieTitle(): Flow<String> { 
 ```
 
-```kt
+```java
         return movieRepository.getTopMovieTitle(id) 
 ```
 
-```kt
+```java
             .retryWhen { cause, attempt -> 
 ```
 
-```kt
+```java
                 emit("Fetching title again...")
 ```
 
-```kt
+```java
                 attempt <3 && cause is IOException 
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -228,71 +228,71 @@ class MovieViewModel : ViewModel() {
 
 在收集值或使用 Flow 上的任何操作符时，Flows 可能会发生异常。我们可以通过在代码中将 Flow 的收集用`try-catch`块包围来处理 Flows 中的异常。例如，在以下代码中，`try-catch`块被用来添加异常处理：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
  ...
 ```
 
-```kt
+```java
  override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
      ...
 ```
 
-```kt
+```java
      lifecycleScope.launch {
 ```
 
-```kt
+```java
          repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
              try {
 ```
 
-```kt
+```java
                  viewModel.fetchMovies().collect { movie ->
 ```
 
-```kt
+```java
                      processMovie(movie)
 ```
 
-```kt
+```java
                  }
 ```
 
-```kt
+```java
              } catch (exception: Exception) {
 ```
 
-```kt
+```java
                  Log.e("Error", exception.message)
 ```
 
-```kt
+```java
              }  
 ```
 
-```kt
+```java
          }
 ```
 
-```kt
+```java
      }
 ```
 
-```kt
+```java
  }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -302,59 +302,59 @@ class MainActivity : AppCompatActivity() {
 
 在以下示例中，`catch`操作符被用来捕获`viewModel.fetchMovies`返回的 Flow 中的异常：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
   override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
       ...
 ```
 
-```kt
+```java
       lifecycleScope.launch {
 ```
 
-```kt
+```java
           repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
               viewModel.fetchMovies()
 ```
 
-```kt
+```java
                   .catch { exception ->
 ```
 
-```kt
+```java
                       handleException(exception) }
 ```
 
-```kt
+```java
                   .collect { movie -> processMovie(movie) }
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -362,55 +362,55 @@ class MainActivity : AppCompatActivity() {
 
 我们还可以使用`catch`操作符来发出一个新值来表示错误或用作备用值，例如一个空列表。在以下示例中，当 Flow 返回顶级电影标题时发生异常，将使用默认字符串值`No Movie Fetched`：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
   override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
       ...
 ```
 
-```kt
+```java
       lifecycleScope.launch {
 ```
 
-```kt
+```java
           repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
               viewModel.getTopMovieTitle()
 ```
 
-```kt
+```java
                   .catch { emit("No Movie Fetched") }
 ```
 
-```kt
+```java
                   .collect { title -> displayTitle(title) }
 ```
 
-```kt
+```java
           }
 ```
 
-```kt
+```java
       }
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -420,63 +420,63 @@ class MainActivity : AppCompatActivity() {
 
 以下示例显示了当使用`onEach`操作符进行值收集和`catch`操作符处理异常时，你的代码可能看起来像什么：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
   override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
       ...
 ```
 
-```kt
+```java
       lifecycleScope.launch {
 ```
 
-```kt
+```java
           repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
               viewModel.fetchMovies()
 ```
 
-```kt
+```java
                   .onEach { movie -> processMovie(movie) }
 ```
 
-```kt
+```java
                   .catch { exception ->
 ```
 
-```kt
+```java
                       handleError(exception) }
 ```
 
-```kt
+```java
                   .collect()
 ```
 
-```kt
+```java
           }
 ```
 
-```kt
+```java
       }
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -492,75 +492,75 @@ class MainActivity : AppCompatActivity() {
 
 要在 Flow 完成时在你的 Flow 中添加监听器，你可以使用 `onCompletion` 操作符并添加当 Flow 完成时将运行的代码块。`onCompletion` 的一个常见用法是在 Flow 完成时隐藏你的 UI 中的 **ProgressBar**，如下面的代码所示：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
   override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
       ...
 ```
 
-```kt
+```java
       lifecycleScope.launch {
 ```
 
-```kt
+```java
           repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
               viewModel.fetchMovies()
 ```
 
-```kt
+```java
                   .onStart { progressBar.isVisible = true }
 ```
 
-```kt
+```java
                   .onEach { movie -> processMovie(movie) }
 ```
 
-```kt
+```java
                   .onCompletion { progressBar.isVisible =
 ```
 
-```kt
+```java
                       false }
 ```
 
-```kt
+```java
                   .catch { exception ->
 ```
 
-```kt
+```java
                       handleError(exception) }
 ```
 
-```kt
+```java
                   .collect()
 ```
 
-```kt
+```java
           }
 ```
 
-```kt
+```java
       }
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -570,59 +570,59 @@ class MainActivity : AppCompatActivity() {
 
 在你添加到 `onStart` 和 `onCompletion`（如果 Flow 成功完成且没有异常）的代码块中，你也可以发出值，例如初始值和最终值。在以下示例中，使用了 `onStart` 操作符来发出一个初始值，该值将在屏幕上显示：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
   ...
 ```
 
-```kt
+```java
   override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
       ...
 ```
 
-```kt
+```java
       lifecycleScope.launch {
 ```
 
-```kt
+```java
           repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
               viewModel.getTopMovieTitle()
 ```
 
-```kt
+```java
                   .onStart { emit("Loading...") }
 ```
 
-```kt
+```java
                   .catch { emit("No Movie Fetched") }
 ```
 
-```kt
+```java
                   .collect { title -> displayTitle(title) }
 ```
 
-```kt
+```java
           }
 ```
 
-```kt
+```java
       }
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -632,71 +632,71 @@ class MainActivity : AppCompatActivity() {
 
 以下示例显示了我们可以如何使用这个可空的 `onCompletion` 调用：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 ```
 
-```kt
+```java
  ...
 ```
 
-```kt
+```java
  override fun onCreate(savedInstanceState: Bundle?) {
 ```
 
-```kt
+```java
      ...
 ```
 
-```kt
+```java
      lifecycleScope.launch {
 ```
 
-```kt
+```java
          repeatOnLifecycle(Lifecycle.State.STARTED) {
 ```
 
-```kt
+```java
              viewModel.getTopMovieTitle()
 ```
 
-```kt
+```java
                  .onCompletion { cause ->
 ```
 
-```kt
+```java
                      progressBar.isVisible = false
 ```
 
-```kt
+```java
                      if (cause != null) displayError(cause)
 ```
 
-```kt
+```java
                  }
 ```
 
-```kt
+```java
                  .catch { emit("No Movie Fetched") }
 ```
 
-```kt
+```java
                  .collect { title -> displayTitle(title) }
 ```
 
-```kt
+```java
          }
 ```
 
-```kt
+```java
      }
 ```
 
-```kt
+```java
  }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -714,7 +714,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  前往 `MovieViewModel` 类。在 `fetchMovies` 函数中，删除设置 `_loading` 值为 `true` 的行。你的函数将看起来像以下这样：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         viewModelScope.launch (dispatcher) {
             MovieRepository.fetchMoviesFlow()
@@ -730,7 +730,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在 `collect` 调用之前添加一个 `onStart` 操作符，当 Flow 开始时，它将 `_loading` 的值设置为 `true`，如下所示：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         viewModelScope.launch (dispatcher) {
             MovieRepository.fetchMoviesFlow()
@@ -747,7 +747,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  接下来，从 `collect` 调用内部的代码块中移除设置 `_loading` 为 `false` 的行。您的函数将如下所示：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         viewModelScope.launch (dispatcher) {
             MovieRepository.fetchMoviesFlow()
@@ -763,7 +763,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在 `collect` 调用之前添加一个 `onCompletion` 操作符，当 Flow 完成时，它将 `_loading` 的值设置为 `false`，如下所示：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         viewModelScope.launch (dispatcher) {
             MovieRepository.fetchMoviesFlow()
@@ -780,7 +780,7 @@ class MainActivity : AppCompatActivity() {
 
 1.  在 `collect` 函数之前添加一个 `catch` 操作符，以处理 Flow 遇到异常的情况：
 
-    ```kt
+    ```java
     fun fetchMovies() {
         viewModelScope.launch (dispatcher) {
             MovieRepository.fetchMoviesFlow()

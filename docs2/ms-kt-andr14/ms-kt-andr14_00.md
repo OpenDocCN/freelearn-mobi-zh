@@ -60,7 +60,7 @@ Kotlin 是由 JetBrains 创建的编程语言，它在**Java 虚拟机**（**JVM
 
 代码块设置如下：
 
-```kt
+```java
 class PetsViewModel: ViewModel() {
     private val petsRepository: PetsRepository = PetsRepositoryImpl()
     fun getPets() = petsRepository.getPets()
@@ -69,7 +69,7 @@ class PetsViewModel: ViewModel() {
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 [default]
 exten => s,1,Dial(Zap/1|30)
 exten => s,2,Voicemail(u100)
@@ -79,7 +79,7 @@ exten => i,1,Voicemail(s0)
 
 任何命令行输入或输出都写作如下：
 
-```kt
+```java
 FATAL EXCEPTION: main
 Process: com.packt.chapterten, PID: 7168
 java.lang.RuntimeException: Unable to start activity ComponentInfo{com.packt.chapterten/com.packt.chapterten.MainActivity}: java.lang.RuntimeException: This is a crash

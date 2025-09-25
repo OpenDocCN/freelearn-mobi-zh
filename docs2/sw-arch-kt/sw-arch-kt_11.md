@@ -232,7 +232,7 @@
 
 一个**非结构化日志**消息是一个带有一些格式的普通字符串，如下所示：
 
-```kt
+```java
 09:50:22.261 [main] INFO  o.e.household.HouseholdRepository - Created a new household 'Whittington'
 ```
 
@@ -240,7 +240,7 @@
 
 然而，**结构化日志**提倡定义良好的字段和结构，以便数据可以轻松提取。之前的普通非结构化文本日志消息可以表示为一个 JSON 对象：
 
-```kt
+```java
 {
   "@timestamp": "2024-08-20T09:50:22.261878+01:00",
   "@version": "1",
@@ -258,7 +258,7 @@
 
 上述日志消息由 `build.gradle.kts` 支持：
 
-```kt
+```java
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.0")
     implementation("org.slf4j:slf4j-api:2.0.16")
     implementation("ch.qos.logback:logback-classic:1.5.7")
@@ -267,7 +267,7 @@
 
 在 Logback 配置文件 `logback.xml` 中，使用 Logstash 编码器将日志消息格式化为 JSON 字符串：
 
-```kt
+```java
     <appender name="structuredAppender" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
         </encoder>
@@ -279,7 +279,7 @@
 
 然后，`structuredAppender` 被附加到根节点作为日志追加器。记录结构化消息的代码如下：
 
-```kt
+```java
         log.atInfo {
             message = "Created a new household '$householdName'"
             payload = mapOf(
@@ -306,7 +306,7 @@
 
 从提供的结构化日志示例扩展，Kotlin Logging 提供了一个 `withLoggingContext` 函数来简化 MDC 的使用：
 
-```kt
+```java
         withLoggingContext("session" to sessionId) {
             log.atInfo {
                 message = "Created a new household '$householdName'"
@@ -321,7 +321,7 @@
 
 可选地，可以通过在日志格式中添加上下文字段来在日志消息的内容中展示上下文数据：
 
-```kt
+```java
     <appender name="plainTextWithMdc" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} MDC=%X{session} - %msg%n</pattern>
@@ -331,7 +331,7 @@
 
 因此，JSON 字符串日志消息通过添加上下文字段得到了增强：
 
-```kt
+```java
 {
   "@timestamp": "2024-08-20T09:50:22.261878+01:00",
   "@version": "1",
@@ -403,7 +403,7 @@
 
 结合我们之前讨论的审计跟踪的关键方面，我们可以给出一个审计跟踪作为 Kotlin 数据类的示例。审计跟踪最重要的元素是参与事件的参与者：
 
-```kt
+```java
 data class Actor(
     val id: UUID,
     val type: String,
@@ -423,7 +423,7 @@ data class Actor(
 
 另一个重要元素是涉及的资源：
 
-```kt
+```java
 data class Resource (
     val id: UUID,
     val type: String,
@@ -436,7 +436,7 @@ data class Resource (
 
 从这两个数据类中，可以定义事件信封数据类如下：
 
-```kt
+```java
 data class EventEnvelope<E>(
     val id: UUID,
     val sessionId: UUID? = null,
@@ -461,7 +461,7 @@ data class EventEnvelope<E>(
 
 最后，有一个事件前后主要资源差异的通用列表。Kotlin 数据类可以表示为 JSON 对象，并且有开源库可以根据两个 JSON 对象生成 JSON Patch 格式的列表。然后，差异列表可以通过数据类表示——即 `Difference`：
 
-```kt
+```java
 data class Difference(
     val op: String,
     val path: String,
@@ -494,7 +494,7 @@ data class Difference(
 
 +   `measureTimeMillis`）和一个用于纳秒精度（`measureNanoTime`）的另一个：
 
-    ```kt
+    ```java
     val elapsedInMillis = measureTimeMillis { someProcess() }
     val elapsedInNanos = measureNanoTime { someProcess() }
     ```
@@ -519,7 +519,7 @@ data class Difference(
 
 设置 OTel 从使用其库开始。以下代码展示了这一点，它使用了 Gradle Kotlin DSL：
 
-```kt
+```java
     implementation("io.opentelemetry:opentelemetry-api:1.43.0")
     implementation("io.opentelemetry:opentelemetry-sdk:1.43.0")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.43.0")
@@ -528,7 +528,7 @@ data class Difference(
 
 下一步是配置`tracer`和`span`处理器：
 
-```kt
+```java
 val tracer: Tracer = run {
     val oltpEndpont = "http://localhost:8123"
     val otlpExporter = OtlpGrpcSpanExporter.builder()
@@ -547,7 +547,7 @@ val tracer: Tracer = run {
 
 上述代码定义了一个端点，用于将遥测数据导出到`Tracer`对象，该对象被创建用于在可追踪过程中使用。让我们看看这个对象是如何在开始和结束 span 时使用的：
 
-```kt
+```java
 fun main() {
     val span: Span = tracer
         .spanBuilder("process data")

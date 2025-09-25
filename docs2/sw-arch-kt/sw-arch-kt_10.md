@@ -58,14 +58,14 @@
 
 考虑 Flyway，这是一个开源的数据库迁移工具。增量更改由 SQL 脚本指定：
 
-```kt
+```java
 V1_create_new_tables.sql
 V2_add_new_columns.sql
 ```
 
 为了简化起见，让我们假设 `V1` 脚本只包含以下创建表的语句：
 
-```kt
+```java
 CREATE TABLE HOUSEHOLD (
 id UUID primary key,
 name text not null
@@ -74,7 +74,7 @@ name text not null
 
 如果 `CREATE` SQL 语句中不存在名为 `HOUSEHOLD` 的新表，它将创建该表。否则，将报告错误，并且 `V1` 脚本将失败。换句话说，它不是幂等的，重复执行不会产生相同的结果。以下是脚本的幂等版本：
 
-```kt
+```java
 CREATE TABLE IF NOT EXISTS HOUSEHOLD (
 id UUID primary key,
 name text not null
@@ -85,7 +85,7 @@ name text not null
 
 执行 `V2` 脚本将向该表添加一个新列作为非空列。一些数据库供应商支持创建非空列并在同一语句中填充值的巧妙 SQL 语句。为了这个论点，让我们假设这不被支持。我们求助于经典的添加可空列、填充值然后设置列为非空的方法。就像修改后的 `V1` 脚本一样，我们可以使其幂等：
 
-```kt
+```java
 ALTER TABLE IF EXISTS HOUSEHOLD ADD COLUMN deleted boolean;
 UPDATE HOUSEHOLD SET deleted = false;
 ALTER TABLE IF EXISTS HOUSEHOLD ALTER COLUMN IF EXISTS deleted SET NOT NULL;
@@ -114,7 +114,7 @@ COMMIT;
 
 这里是一个 SQL 语句中家庭上插操作（upsert operation）的示例。它实现了乐观方法：
 
-```kt
+```java
 INSERT INTO HOUSEHOLD (id, name, email) VALUES ('d0275532-1a0a-4787-a079-b1292ad4aadf', 'Whittington', 'info@ whittington'.com') ON DUPLICATE KEY UPDATE name = 'Whittington', email = 'info@ whittington'.com';
 ```
 
@@ -148,7 +148,7 @@ HTTP 定义了几种方法来对请求进行分类，以便在资源上执行操
 
 这里是一个事件监听器的示例实现，该监听器防止处理较旧的事件：
 
-```kt
+```java
 class HouseholdEventListener {
     var lastProcessedTime: Instant? = null
     @KafkaListener(
@@ -410,7 +410,7 @@ CAP 定理是一个帮助开发者理解在设计分布式系统时需要做出�
 
 我们可以用以下数据类来模拟这种情况：
 
-```kt
+```java
 data class Household(
     val version: Int,
     val name: String,
@@ -420,7 +420,7 @@ data class Household(
 
 在这里，`Household` 类有一个整型的 `version` 字段。这将在更新操作期间用于比较。还有一个用于处理更新请求的 `Household` 存储库类。以下是代码中模拟的场景：
 
-```kt
+```java
 fun main() {
     val repo = HouseholdRepository()
     val name = "Whittington"
@@ -432,7 +432,7 @@ fun main() {
 
 首先，创建一个作为版本的 `household` 记录，之后基于它有两个更新：
 
-```kt
+```java
     repo.create(name) { household1 }
     repo.update(name) { household1.copy(version = 1, email = email2a)}
     repo.update(name) { household1.copy(version = 1, email = email2b)}
@@ -446,14 +446,14 @@ fun main() {
 
 存储库中应实施版本检查，以防止丢失更新问题。以下是一个示例实现：
 
-```kt
+```java
 class HouseholdRepository {
     private val values: ConcurrentMap<String, Household> = ConcurrentHashMap()
 ```
 
 `HouseholdRepository` 类持有 `ConcurrentMap` 接口，使用家庭名称作为键。`create` 函数利用原子的 `putIfAbsent` 函数来确保值不会被错误地覆盖：
 
-```kt
+```java
     fun create(
         key: String,
         callback: () -> Household
@@ -466,7 +466,7 @@ class HouseholdRepository {
 
 `update`函数通过使用原子的`computeIfPresent`函数检查更新的值必须比现有值高一个版本：
 
-```kt
+```java
     fun update(
         key: String,
         callback: (Household) -> Household
@@ -483,14 +483,14 @@ class HouseholdRepository {
 
 为了完整性，还有一个`get`函数，这样我们可以在运行后获取存储在映射中的内容：
 
-```kt
+```java
     fun get(key: String): Household? = values[key]
 }
 ```
 
 程序的输出如下：
 
-```kt
+```java
 1, query@whittington.com
 ```
 

@@ -60,7 +60,7 @@
 
 1.  现在，打开 `MainActivity.java` 文件来编辑代码。将以下代码添加到 `onCreate()` 方法中以设置 `onClickListener()`：
 
-```kt
+```java
 Button button = (Button)findViewById(R.id.button); 
 button.setOnClickListener(new View.OnClickListener() { 
     @Override 
@@ -79,7 +79,7 @@ button.setOnClickListener(new View.OnClickListener() {
 
 我们在这里所做的是 Android 开发中非常常见的事情——在 XML 中创建 UI，然后在 Java 代码中连接 UI 组件（视图）。要从代码中引用视图，它必须与一个资源标识符相关联。这是通过使用 `id` 参数来完成的：
 
-```kt
+```java
 android:id="@+id/button" 
 ```
 
@@ -111,7 +111,7 @@ android:id="@+id/button"
 
 要定义状态选择器，创建一个包含`<selector>`元素的 XML 文件，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?> 
 <selector  > 
 </selector> 
@@ -119,7 +119,7 @@ android:id="@+id/button"
 
 在`<selector>`元素内，我们定义一个`<item>`元素来识别基于指定状态的可绘制资源。以下是一个使用多个状态的`<item>`元素的示例：
 
-```kt
+```java
  <item 
     android:drawable="@android:color/darker_gray" 
     android:state_checked="true" 
@@ -140,7 +140,7 @@ android:id="@+id/button"
 
 1.  在`res/drawable`文件夹中创建一个新的 Drawable 资源文件，并将其命名为：`state_selector.xml`。该文件应包含以下代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item
@@ -154,7 +154,7 @@ android:id="@+id/button"
 
 1.  现在打开`activity_main.xml`文件，并按照以下方式添加`ToggleButton`：
 
-```kt
+```java
 <ToggleButton 
     android:layout_width="wrap_content" 
     android:layout_height="wrap_content" 
@@ -175,7 +175,7 @@ Android 支持除已检查之外的其他许多状态条件。当在`android:sta
 
 一旦我们创建了可绘制资源（步骤 1 中的 XML），我们只需告诉视图使用它即可。由于我们希望背景颜色根据状态改变，我们使用 `android:background` 属性。`state_selector.xml` 是一个可绘制资源，可以传递给任何接受可绘制资源的属性。例如，我们可以用以下 XML 替换复选框的勾选图像：
 
-```kt
+```java
 <CheckBox
     android:id="@+id/checkBox"
     android:layout_width="wrap_content"
@@ -190,7 +190,7 @@ Android 支持除已检查之外的其他许多状态条件。当在`android:sta
 
 一旦您有了所需的图像，请将它们放置在 `res/drawable` 文件夹中。然后，将 XML 中的状态项行更改为引用您的图像。以下是一个示例：
 
-```kt
+```java
 <item 
     android:drawable="@drawable/checked_on" 
     android:state_checked="true"/> 
@@ -226,7 +226,7 @@ Android 支持除已检查之外的其他许多状态条件。当在`android:sta
 
 1.  打开 `res/layout/activity_main.xml` 并向根 `ConstraintLayout` 添加一个 ID 属性，如下所示：
 
-```kt
+```java
 android:id="@+id/layout" 
 ```
 
@@ -234,13 +234,13 @@ android:id="@+id/layout"
 
 1.  打开 `MainActivity.java` 文件，以便我们可以向 `onCreate()` 方法中添加代码。在 `setContentView()` 之后添加以下代码以获取对 `ConstraintLayout` 的引用：
 
-```kt
+```java
 ConstraintLayout layout = findViewById(R.id.layout);
 ```
 
 1.  创建 `DatePicker` 并使用以下代码将其添加到布局中：
 
-```kt
+```java
 DatePicker datePicker = new DatePicker(this); 
 layout.addView(datePicker); 
 ```
@@ -255,7 +255,7 @@ layout.addView(datePicker);
 
 如果我们想从代码中创建整个布局呢？虽然这可能不被认为是最佳实践，但在某些情况下，从代码中创建整个布局确实更容易（且更简单）。让我们看看如果我们没有使用 `activity_main.xml` 中的布局，这个例子会是什么样子。以下是 `onCreate()` 的样子：
 
-```kt
+```java
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -300,19 +300,19 @@ protected void onCreate(Bundle savedInstanceState) {
 
 1.  将类构造函数更改为扩展`View`。它应如下所示：
 
-```kt
+```java
 public class CustomView extends View {
 ```
 
 1.  为类定义一个`Paint`对象，它将在`onDraw()`中使用：
 
-```kt
+```java
 final Paint mPaint = new Paint();
 ```
 
 1.  创建一个默认构造函数，它需要一个活动`Context`，这样我们就可以填充视图。我们还将在这里设置画笔属性。构造函数应如下所示：
 
-```kt
+```java
 public CustomView(Context context) { 
     super(context); 
     mPaint.setColor(Color.BLACK); 
@@ -322,7 +322,7 @@ public CustomView(Context context) {
 
 1.  按如下方式重写`onDraw()`方法：
 
-```kt
+```java
 @Override 
 protected void onDraw(Canvas canvas) { 
     super.onDraw(canvas); 
@@ -334,7 +334,7 @@ protected void onDraw(Canvas canvas) {
 
 1.  最后，在`MainActivity.java`中通过将`onCreate()`方法中的`setContentView()`替换为我们的视图来填充我们的自定义视图，如下所示：
 
-```kt
+```java
 setContentView(new CustomView(this)); 
 ```
 
@@ -344,7 +344,7 @@ setContentView(new CustomView(this));
 
 我们首先扩展`View`类，就像内置组件一样。接下来，我们创建默认构造函数。这很重要，因为我们需要将上下文传递给`super`类，我们通过以下调用来实现：
 
-```kt
+```java
 super(context);
 ```
 
@@ -388,7 +388,7 @@ super(context);
 
 1.  我们将通过在现有 `AppTheme` 样式下方添加以下 XML 创建一个名为 `MyStyle` 的新样式：
 
-```kt
+```java
 <style name="MyStyle"> 
     <item name="android:layout_width">match_parent</item> 
     <item name="android:layout_height">wrap_content</item> 
@@ -402,7 +402,7 @@ super(context);
 
 1.  现在告诉视图使用这个样式。打开 `activity_main.xml` 文件，并将以下属性添加到现有的 `<TextView>` 元素中：
 
-```kt
+```java
 style="@style/MyStyle" 
 ```
 
@@ -420,7 +420,7 @@ style="@style/MyStyle"
 
 样式的另一个特性是 **继承**。在定义样式时指定父样式，我们可以让样式相互构建，创建一个样式层次结构。如果你查看 `styles.xml` 中的默认样式 `AppTheme`，你会看到以下这一行：
 
-```kt
+```java
 <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar"> 
 ```
 
@@ -434,7 +434,7 @@ style="@style/MyStyle"
 
 要为所有 `TextView` 对象设置样式，请将以下行添加到 `AppTheme` 样式中：
 
-```kt
+```java
 <item name="android:textViewStyle">@style/MyStyle</item>
 ```
 
@@ -466,7 +466,7 @@ Android 设计支持库位于 [`www.google.com/design/spec/material-design/intro
 
 1.  由于主题和样式定义在相同的资源中，请打开位于`res/values`的`styles.xml`文件，并创建一个新的样式。我们将基于已提供的`AppTheme`创建一个新的样式，并设置`windowIsFloating`。XML 将如下所示：
 
-```kt
+```java
 <style name="AppTheme.MyDialog"> 
     <item name="android:windowIsFloating">true</item> 
 </style> 
@@ -474,7 +474,7 @@ Android 设计支持库位于 [`www.google.com/design/spec/material-design/intro
 
 1.  接下来，设置活动使用这个新的对话框主题。打开`AndroidManifest.xml`文件，并将`theme`属性添加到活动元素中，如下所示：
 
-```kt
+```java
 <activity android:name=".MainActivity" 
     android:theme="@style/AppTheme.MyDialog"> 
 ```
@@ -515,7 +515,7 @@ Android 设计支持库位于 [`www.google.com/design/spec/material-design/intro
 
 1.  我们需要确保`MainActivity`继承自`Activity`而不是`AppCompatActivity`。打开`ActivityMain.java`文件，如果需要，将其修改为如下所示：
 
-```kt
+```java
 public class MainActivity extends Activity { 
 ```
 
@@ -523,7 +523,7 @@ public class MainActivity extends Activity {
 
 1.  打开`styles.xml`文件，移除`AppTheme`，因为它将不会被使用。添加我们新的主题，使文件内容如下所示：
 
-```kt
+```java
 <resources> 
     <style name="AutomaticTheme" parent="android:Theme.Light"> 
     </style> 
@@ -544,7 +544,7 @@ public class MainActivity extends Activity {
 
 1.  现在在每个新目录中创建一个`styles.xml`文件。（在`values-v11`目录上右键单击并选择新建 | 文件选项。）对于`values-v11`，使用以下样式定义 Holo 主题：
 
-```kt
+```java
 <resources> <style name="AutomaticTheme"
  parent="android:Theme.Holo.Light"> </style>
 </resources>
@@ -552,7 +552,7 @@ public class MainActivity extends Activity {
 
 对于`values-v21`，使用以下代码定义 Material 主题：
 
-```kt
+```java
 <resources> <style name="AutomaticTheme"
     parent="android:Theme.Material.Light"> </style>
 </resources>
@@ -560,7 +560,7 @@ public class MainActivity extends Activity {
 
 1.  最后一步是告诉应用程序使用我们新的主题。为此，打开`AndroidManifest.xml`文件，将应用程序的`android:theme`属性更改为`AutomaticTheme`。它应该如下所示：
 
-```kt
+```java
 android:theme="@style/AutomaticTheme"
 ```
 

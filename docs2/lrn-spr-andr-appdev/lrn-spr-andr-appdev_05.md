@@ -24,7 +24,7 @@ Spring Security 是庞大的 Spring 框架系列的一个子任务。它已被�
 
 您需要添加以下依赖项以启用和使用 Spring Security 的功能。以下是需要添加到 Spring 项目的`pom.xml`文件中的依赖项：
 
-```kt
+```java
 <dependency>
    <groupId>org.springframework.security</groupId>
    <artifactId>Spring_Security_SUB_Module_Name</artifactId>
@@ -50,7 +50,7 @@ Spring Security 是基于 J2EE 的企业生产的安全服务解决方案。它�
 
 以下代码片段是`AuthenticationManager`接口的一个示例：
 
-```kt
+```java
 interface AuthenticationManager {
  @Throws(AuthenticationException::class)
  fun authenticate(authentication: Authentication): Authentication
@@ -73,7 +73,7 @@ interface AuthenticationManager {
 
 这里是`AuthenticationProvider`接口的一些代码：
 
-```kt
+```java
 interface AuthenticationProvider {
  @Throws(AuthenticationException::class)
     fun authenticate(authentication:Authentication):Authentication
@@ -95,7 +95,7 @@ Spring Security 提供了一些配置助手来设置应用中的认证管理器�
 
 这里是一个如何在`ApplicationSecurity.kt`类中实现`AuthenticationManagerBuilder`的示例：
 
-```kt
+```java
 class ApplicationSecurity: WebSecurityConfigurerAdapter() {
     @Autowired
  fun initialize(builder: AuthenticationManagerBuilder, dataSource: DataSource){
@@ -122,13 +122,13 @@ Spring 安全性的 servlet 通道提供 Web 安全性。使用`@WebSecurityConf
 
 以下注解用于启用此功能：
 
-```kt
+```java
  @EnableGlobalMethodSecurity(securedEnabled = true)
 ```
 
 下面是一个如何在`SpringSecurityApplication.kt`类中启用方法安全的示例，这是我们的演示项目的主体应用程序类：
 
-```kt
+```java
 @SpringBootApplication
 @EnableGlobalMethodSecurity(securedEnabled = true)
 class SpringSecurityApplication{
@@ -142,7 +142,7 @@ class SpringSecurityApplication{
 
 现在，您可以创建方法资源，如下面的代码所示：
 
-```kt
+```java
 @Secured class CustomService{
     @Secured
     fun secure(): String{
@@ -247,7 +247,7 @@ Spring Security Core 子模块是其他 Security 子模块（如`web`、`config`
 
 要实现安全依赖项，您需要在`pom.xml`中实现`spring-security-core`：
 
-```kt
+```java
 <dependency>
  <groupId>org.springframework.security</groupId>
  <artifactId>Spring_Security_SUB_Module_Name</artifactId>
@@ -267,7 +267,7 @@ Spring Security Core 子模块是其他 Security 子模块（如`web`、`config`
 
 要实现依赖项，您需要在`build.gradle`中放入以下代码：
 
-```kt
+```java
 dependencies {
     implementation 'org.springframework.security:[Spring_Security_SUB_Module_Name]:CURRENT_RELEASE_VERSION'
 }
@@ -315,7 +315,7 @@ Base64 可以轻松解码。这既不是加密也不是散列。如果你想使�
 
 在这个`pom.xml`中，你将获得有关项目的所有信息。在这里，你可以插入新的依赖项，更新版本等。以下是示例`pom.xml`（完整代码在 GitHub 上，[`github.com/PacktPublishing/Learn-Spring-for-Android-Application-Development/tree/master/Chapter05`](https://github.com/PacktPublishing/Learn-Spring-for-Android-Application-Development/tree/master/Chapter05)）：
 
-```kt
+```java
 <groupId>com.packtpub.sunnat629</groupId> <artifactId>ssbasicauth</artifactId>
 <version>0.0.1-SNAPSHOT</version>
 <packaging>jar</packaging>
@@ -377,7 +377,7 @@ Base64 可以轻松解码。这既不是加密也不是散列。如果你想使�
 
 这是应用程序文件（`SSBasicAuthApplication.kt`）的简单代码：
 
-```kt
+```java
 @ComponentScan(basePackages = ["com.packtpub.sunnat629.ssbasicauth"])
 @SpringBootApplication
 class SSBasicAuthApplication: SpringBootServletInitializer()
@@ -397,7 +397,7 @@ fun main(args: Array<String>) {
 
 要为我们的项目添加 Spring Security 配置，请在应用程序包中使用以下代码创建一个名为**`SSConfig.kt`**的文件：
 
-```kt
+```java
 @Configuration @EnableWebSecurity
 class SSConfig: WebSecurityConfigurerAdapter() {
 
@@ -438,7 +438,7 @@ class SSConfig: WebSecurityConfigurerAdapter() {
 
 下面是名为**`AuthenticationEntryPoint.kt`**的认证入口点类的代码：
 
-```kt
+```java
 @Component
 class AuthenticationEntryPoint : BasicAuthenticationEntryPoint() {
 
@@ -470,7 +470,7 @@ Spring `WebApplicationInitializer`使用 Servlet 3.0+实现来程序化配置`Se
 
 下面是`WebApplicationInitializer`类的示例代码，称为**`MyApplicationInitializer.kt`**：
 
-```kt
+```java
 class MyApplicationInitializer: WebApplicationInitializer {
 
     @Throws(ServletException::class)
@@ -496,7 +496,7 @@ class MyApplicationInitializer: WebApplicationInitializer {
 
 下面是`Users.kt`的代码：
 
-```kt
+```java
 class Users(val id: String,
             val name: String,
             val email: String,
@@ -509,7 +509,7 @@ class Users(val id: String,
 
 控制器类将映射项目的 URL 路径。在这里，我们将使用`GET`或`POST` `HTTP`请求函数来创建 REST API。以下是项目控制器的一个示例代码，命名为**`UserController.kt`**：
 
-```kt
+```java
 @RestController
 class UserController {
 
@@ -580,7 +580,7 @@ class UserController {
 
 在 Gradle 文件中，提及 Kotlin 依赖项和应用程序 Gradle 版本。以下是我的 Android Studio 的 Gradle 文件详情：
 
-```kt
+```java
 buildscript {
  ext.kotlin_version = '1.3.10'    repositories {
         google()
@@ -613,7 +613,7 @@ task clean(type: Delete) {
 
 在这个 Gradle 文件中，我们将实现 Retrofit 的依赖项，这将帮助我们从前一个项目中获取 JSON 类型的 REST API。以下是所有依赖项：
 
-```kt
+```java
 implementation 'com.android.support:appcompat-v7:27.1.1'
 implementation 'com.android.support.constraint:constraint-layout:1.1.3'
 
@@ -636,7 +636,7 @@ implementation 'com.squareup.okhttp3:logging-interceptor:3.12.0'
 
 根据 API，我们将为客户端创建一个用户模型。这是名为 **`UserModel`** 的模型类：**
 
-```kt
+```java
 class UserModel (val id: String
                  val name: String,
                  val contactNumber: String,
@@ -648,7 +648,7 @@ class UserModel (val id: String
 
 这是 `UserService` 接口的代码：
 
-```kt
+```java
 interface UserService {
  @GET("/user")
     fun getUserList(): Call<List<UserModel>>
@@ -665,7 +665,7 @@ Retrofit 客户端调用 Gerrit API 并通过将调用结果打印到控制台�
 
 这是 `UserServiceImpl.kt` 的代码：
 
-```kt
+```java
 class UserServiceImpl{
    fun getGithubServiceImpl(username:String, password:String): UserService {
         val retrofit = Retrofit.Builder()
@@ -692,7 +692,7 @@ class UserServiceImpl{
 
 在这里，我们在 `OkHttpClient.Builder()` 中调用了 `BasicAuthInterceptor` 类：
 
-```kt
+```java
  private fun getOkhttpClient(username:String, password:String): OkHttpClient{
         return OkHttpClient.Builder()
                 .addInterceptor(BasicAuthInterceptor(username, password))
@@ -702,7 +702,7 @@ class UserServiceImpl{
 
 这是 `BasicAuthInterceptor.kt` 的类：
 
-```kt
+```java
 class BasicAuthInterceptor(user: String, password: String) : Interceptor {
 
     private val credentials: String = Credentials.basic(user, password)
@@ -725,7 +725,7 @@ class BasicAuthInterceptor(user: String, password: String) : Interceptor {
 
 检查`MainActivity.kt`代码以使用`CallBack`函数并处理结果：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     var username: String = "sunnat629"
@@ -768,7 +768,7 @@ class MainActivity : AppCompatActivity() {
 
 这是`MainActivity`类的`mainActivity`布局的代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -812,7 +812,7 @@ class MainActivity : AppCompatActivity() {
 
 我们将获取列表并创建一个自定义适配器来显示用户列表，如下所示：
 
-```kt
+```java
 val adapter = UserListAdapter(this@MainActivity, 
 response.body()//this is a arraylist 
 )
@@ -824,7 +824,7 @@ response.body()//this is a arraylist
 
 为了显示 REST API 的输出，我们需要创建一个自定义列表适配器，因此我们需要设计一个自定义列表适配器的 XML 文件。以下是列表中每一行的 XML 代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -879,7 +879,7 @@ response.body()//this is a arraylist
 
 然后，我们将创建适配器，命名为`UserListAdapter.kt`，如下所示：
 
-```kt
+```java
 class UserListAdapter(context: Context,
                       private val userList: List<UserModel>?) : BaseAdapter() {
     private val inflater: LayoutInflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)
@@ -921,7 +921,7 @@ class UserListAdapter(context: Context,
 
 现在，在`getView()`中，你将添加布局元素，如下所示：
 
-```kt
+```java
  val name = rowView.findViewById(R.id.name) as TextView
         val email = rowView.findViewById(R.id.email) as TextView
         val contactNumber = rowView.findViewById(R.id.contactNumber) as TextView
@@ -1009,7 +1009,7 @@ OAuth2 有四个角色：
 
 下面是 `pom.xml` 中提到的 Maven 依赖项：
 
-```kt
+```java
 ----
 ----
   <dependencies>
@@ -1059,7 +1059,7 @@ OAuth2 有四个角色：
 
 下面是我们的 **`ResourceServerConfig.kt`** 代码：
 
-```kt
+```java
 @Configuration
 @EnableResourceServer
 class ResourceServerConfig: ResourceServerConfigurerAdapter(){
@@ -1092,7 +1092,7 @@ class ResourceServerConfig: ResourceServerConfigurerAdapter(){
 
 这是 `AuthorizationServerConfig.kt` 的代码：
 
-```kt
+```java
 @Configuration @EnableAuthorizationServer
 class AuthorizationServerConfig: AuthorizationServerConfigurerAdapter() {
 
@@ -1162,7 +1162,7 @@ class AuthorizationServerConfig: AuthorizationServerConfigurerAdapter() {
 
 这是一个用于 Spring Security 的 Java 配置类，它允许用户在不使用 XML 的情况下轻松配置 Spring Security。创建一个名为 `SecurityConfiguration.kt` 的安全配置文件。以下是类的代码：
 
-```kt
+```java
 @Configuration
 @EnableWebSecurity
 class SecurityConfiguration: WebSecurityConfigurerAdapter() {
@@ -1240,7 +1240,7 @@ class SecurityConfiguration: WebSecurityConfigurerAdapter() {
 
 创建一个名为 `UserController.kt` 的控制器类，如下所示：
 
-```kt
+```java
 @RestController
 @RequestMapping("/")
 class UserController{
@@ -1267,7 +1267,7 @@ class UserController{
 
 最后，创建一个名为 `SpringSecurityOAuth2Application.kt` 的应用程序类，这将把你的应用程序转换为 SpringBoot 应用程序：
 
-```kt
+```java
 @SpringBootApplication
 class SpringSecurityOAuth2Application
 
@@ -1280,7 +1280,7 @@ fun main(args: Array<String>) {
 
 此步骤是可选的，尤其是在这个项目中。在这里，我们只是更改了这个项目的端口号。要更改它，请修改 `resources` 文件夹下的 `application.properties`：
 
-```kt
+```java
 #this project server port
 server.port=8081
 ```

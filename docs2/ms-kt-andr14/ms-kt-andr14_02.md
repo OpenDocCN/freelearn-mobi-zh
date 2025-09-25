@@ -86,7 +86,7 @@ Kotlin 在这些年来已经发展，以支持以下不同的平台：
 
 +   **数组**：支持基本数组和对象数组。要声明一个基本数组，你指定类型和大小，如下所示：
 
-    ```kt
+    ```java
     val shortArray = ShortArray(10)
     val recipes = arrayOf("Chicken Soup", "Beef Stew", "Tuna Casserole")
     ```
@@ -147,7 +147,7 @@ IDE 创建的项目结构如*图 1*.2 所示。我们主要对`src/main/kotlin`�
 
 在你的`Main.kt`文件中创建`main()`函数，如下所示：
 
-```kt
+```java
 fun main() {
     println("Hello World!")
 }
@@ -163,7 +163,7 @@ fun main() {
 
 要在 Kotlin 中声明一个类，我们有`class`关键字。我们将创建一个`Recipe`类，如下所示：
 
-```kt
+```java
 class Recipe {
     private val ingredients = mutableListOf<String>()
     fun addIngredient(name: String) {
@@ -187,7 +187,7 @@ class Recipe {
 
 要使用该类，我们必须按照以下方式修改我们的主函数：
 
-```kt
+```java
 fun main() {
     val recipe = Recipe()
     recipe.addIngredient("Rice")

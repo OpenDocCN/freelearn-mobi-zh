@@ -24,7 +24,7 @@
 
 在 Android 用户界面中，你总是将单个小部件（如`Button`、`TextView`、`ImageView`等）放在底层，而`Activity`位于顶层，但当你查看那个屏幕原型时，你可以立即看到屏幕可以被分成在`Activity`和小部件之间的其他层。当然，你可以从这个屏幕中取出每个`CardView`布局，并将它们放置在自己的布局 XML 文件中，然后导入：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <!-- card_claim_capture_info.xml -->
 <android.support.v7.widget.CardView
@@ -48,7 +48,7 @@
 
 你可以使用`<include>`元素将一个布局文件包含到另一个文件中，如下所示：
 
-```kt
+```java
 <!-- content_capture_claim.xml -->
 <include layout="@layout/card_claim_capture_info"/>
 ```
@@ -89,7 +89,7 @@
 
 1.  将以下两个 `TextView` 小部件写入 `merge` 元素中：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <merge >
    <TextView
@@ -122,14 +122,14 @@
 
 1.  在 `DatePickerLayout` 中声明字段以引用 `TextView` 标签和 `DatePickerWrapper` :
 
-```kt
+```java
 private TextView label;
 private DatePickerWrapper wrapper;
 ```
 
 1.  任何可以从布局 XML 访问的类都需要几个构造函数重载，因此最好创建一个可以重用于所有这些的单一 `initialize` 方法：
 
-```kt
+```java
 void initialize(final Context context) {
    setOrientation(VERTICAL);
 }
@@ -137,7 +137,7 @@ void initialize(final Context context) {
 
 1.  仍然在 `initialize` 方法中，使用 `LayoutInflator` 加载您编写的布局 XML 文件，将其内容作为元素添加到 `DatePickerLayout` 对象中：
 
-```kt
+```java
 LayoutInflater.from(context).inflate(
   R.layout.widget_date_picker, this, true);
 ```
@@ -146,14 +146,14 @@ LayoutInflater.from(context).inflate(
 
 1.  使用 `getChildAt` 来检索由 `LayoutInflator` 加载的新 `TextView` 元素，并将 `DatePickerLayout` 的字段赋值：
 
-```kt
+```java
 label = (TextView) getChildAt(0);
 wrapper = new DatePickerWrapper((TextView) getChildAt(1));
 ```
 
 1.  重载构造函数并在每个构造函数中调用 `initialize` 方法：
 
-```kt
+```java
 public DatePickerLayout(Context context) {
   super(context);
   initialize(context);
@@ -173,7 +173,7 @@ public DatePickerLayout(
 
 1.  创建获取器和设置器，以便从 `Activity` 类中使用 `DatePickerLayout`：
 
-```kt
+```java
 public void setDate(final Date date) {
    wrapper.setDate(date);
 }
@@ -197,7 +197,7 @@ public CharSequence getLabel() {
 
 1.  由于 `DatePickerLayout` 包含一些用户界面状态（当前选定的日期），因此它需要通过可能的 `Activity` 重新启动来跟踪这些状态，如果需要的话（每次用户在横屏和竖屏之间切换时，都会重新创建 `Activity`，因为这些被认为是 *配置* 变化）。这将涉及将其状态保存到 `Parcel` 中，并在请求时从 `Parcel` 中恢复（`Parcel` 类似于 `Serialized` 对象的 `byte[]`，但所有序列化工作都需要实现）。您需要一个内部类来保存 `DatePickerLayout` 的状态（及其父类--`LinearLayout`）。为了方便，`View` 类提供了一个 `BaseSavedState` 抽象类来为您处理一些实现，因此在一个名为 `SavedState` 的静态内部类中扩展 `BaseSavedState`：
 
-```kt
+```java
 private static class SavedState extends BaseSavedState {
    final long timestamp;
    final CharSequence label;
@@ -218,7 +218,7 @@ private static class SavedState extends BaseSavedState {
 
 1.  `SavedState` 也需要一个构造函数来从 `Parcel` 对象中加载其字段；`CharSequence` 不能直接从 `Parcel` 中读取，但幸运的是，`TextUtils` 为您提供了一个读取 `Parcel` 对象中的 `CharSequence` 对象的便捷助手：
 
-```kt
+```java
 SavedState(final Parcel in) {
   super(in);
   this.timestamp = in.readLong();
@@ -229,7 +229,7 @@ SavedState(final Parcel in) {
 
 1.  然后，`SavedState` 需要实现 `writeToParcel` 方法，以便实际上将这些字段写入 `Parcel`；其中一部分委托给了 `BaseSavedState` 类：
 
-```kt
+```java
 @Override
 public void writeToParcel(final Parcel out, final int flags) {
    super.writeToParcel(out, flags);
@@ -240,7 +240,7 @@ public void writeToParcel(final Parcel out, final int flags) {
 
 1.  每个 `Parcelable` 实现都需要一个特殊的 `public static final` 字段，称为 `CREATOR`，它将被 `Parcel` 系统用于创建 `Parcelable` 对象的实例和数组。这也适用于每个子类，因此将以下静态最终字段写入 `SavedState` 类：
 
-```kt
+```java
 public static final Parcelable.Creator<SavedState> CREATOR =
       new Parcelable.Creator<SavedState>() {
   @Override
@@ -259,7 +259,7 @@ public static final Parcelable.Creator<SavedState> CREATOR =
 
 1.  在 `DatePickerLayout` 类中，你需要重写 `onSaveInstanceState` 方法并创建将被记录的 `SavedState` 对象：
 
-```kt
+```java
 @Override
 protected Parcelable onSaveInstanceState() {
   return new SavedState(
@@ -270,7 +270,7 @@ protected Parcelable onSaveInstanceState() {
 
 1.  你还需要从 `SavedState` 对象中恢复状态，这需要重写 `onRestoreInstanceState`：
 
-```kt
+```java
 @Override
 protected void onRestoreInstanceState(final Parcelable state) {
    final SavedState savedState = (SavedState) state;
@@ -286,7 +286,7 @@ protected void onRestoreInstanceState(final Parcelable state) {
 
 1.  找到描述日期选择器的两个 `TextView` 元素，并用以下代码片段替换它们：
 
-```kt
+```java
 <com.packtpub.claim.widget.DatePickerLayout
    android:id="@+id/date"
    android:layout_width="0dp"
@@ -301,7 +301,7 @@ protected void onRestoreInstanceState(final Parcelable state) {
 
 1.  将对 `DatePickerWrapper` 的引用替换为 `DatePickerLayout`：
 
-```kt
+```java
 private DatePickerLayout selectedDate;
 
 @Override
@@ -336,7 +336,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 1.  附件有不同的类型，这可能会影响它们的预览方式；目前，你将只有图像和未知类型。在新的 `Attachment` 类中，创建一个 `enum` 来表示这些类型：
 
-```kt
+```java
 public enum Type {
   IMAGE,
   UNKNOWN;
@@ -350,7 +350,7 @@ public enum Type {
 
 1.  在 `Attachment` 类中，声明其字段、构造函数以及获取器和设置器：
 
-```kt
+```java
 File file;
 Type type;
 
@@ -372,7 +372,7 @@ public void setType(final Type type) {
 
 1.  现在，为 `Attachment` 类创建 `Parcelable` 实现。在这种情况下，最好手动完成，因为 `File` 和 `Type` `enum` 都不会被 Android Studio 的 `Parcelable` 生成器理解：
 
-```kt
+```java
 protected Attachment(final Parcel in) {
   file = new File(in.readString());
   type = Type.values()[in.readInt()];
@@ -390,7 +390,7 @@ public int describeContents() { return 0; }
 
 1.  最后，在 `Attachment` 类的顶部，添加其 `Parcelable.Creator` 实例：
 
-```kt
+```java
 public static final Creator<Attachment> CREATOR = new Creator<Attachment>() {
   @Override
   public Attachment createFromParcel(final Parcel in) {
@@ -426,7 +426,7 @@ public static final Creator<Attachment> CREATOR = new Creator<Attachment>() {
 
 1.  声明枚举常量，并将它们映射到相应的 Android 资源 ID：
 
-```kt
+```java
 ACCOMMODATION(R.id.accommodation),
 FOOD(R.id.food),
 TRANSPORT(R.id.transport),
@@ -437,7 +437,7 @@ OTHER(R.id.other);
 
 1.  声明 ID 整数、私有构造函数和 ID 获取器方法。注意使用 `@IdRes` 注解，它指示应使用哪些特定整数；在此处尝试传递除 ID 资源以外的任何内容都将导致 Android Studio 中出现 lint 错误：
 
-```kt
+```java
 @IdRes
 private final int idResource;
 
@@ -455,7 +455,7 @@ public int getIdResource() {
 
 1.  最后，创建一个方法来从其 Android ID 资源查找 `Category` 枚举常量：
 
-```kt
+```java
 public static Category forIdResource(@IdRes final int id) {
   for (final Category c : values()) {
     if (c.idResource == id) {
@@ -479,7 +479,7 @@ public static Category forIdResource(@IdRes final int id) {
 
 1.  声明 `ClaimItem` 类型的字段，以及一个 `public` 默认构造函数：
 
-```kt
+```java
 String description;
 double amount;
 Date timestamp;
@@ -491,7 +491,7 @@ public ClaimItem() {}
 
 1.  使用 Android Studio 为所有字段生成 getter 和 setter 方法，除了附件字段：
 
-```kt
+```java
 public String getDescription() { return description; }
 public void setDescription(final String description) {
   this.description = description;
@@ -512,7 +512,7 @@ public void setCategory(final Category category) {
 
 1.  为 `ClaimItem` 创建添加、删除和列出 `Attachment` 对象的方法：
 
-```kt
+```java
 public void addAttachment(final Attachment attachment) {
   if ((attachment != null) && !attachments.contains(attachment)) {
    attachments.add(attachment);
@@ -530,7 +530,7 @@ public List<Attachment> getAttachments() {
 
 1.  实现 `ClaimItem` 类的 `Parcelable` 方法；这比 Android Studio 生成器通常能处理的情况要复杂：
 
-```kt
+```java
 protected ClaimItem(final Parcel in) {
   description = in.readString();
   amount = in.readDouble();
@@ -593,7 +593,7 @@ public static final Creator<ClaimItem> CREATOR = new Creator<ClaimItem>() {
 
 1.  将布局的根节点从 `FrameLayout` 更改为 `LinearLayout`，并使其为 `vertical` 方向：
 
-```kt
+```java
 <LinearLayout
 
    android:layout_width="match_parent"
@@ -610,7 +610,7 @@ public static final Creator<ClaimItem> CREATOR = new Creator<ClaimItem>() {
 
 1.  将以下内容粘贴到`fragment_category_picker.xml`文件中的`LinearLayout`内容：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout 
   android:layout_width="match_parent"
@@ -645,7 +645,7 @@ public static final Creator<ClaimItem> CREATOR = new Creator<ClaimItem>() {
 
 1.  在`content_capture_claim.xml`布局文件中，你现在可以删除类别选择器的`LinearLayout`，并用对`Fragment`类的引用替换它：
 
-```kt
+```java
 <android.support.v7.widget.CardView
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
@@ -663,14 +663,14 @@ public static final Creator<ClaimItem> CREATOR = new Creator<ClaimItem>() {
 
 1.  现在，在 Android Studio 中打开`CategoryPickerFragment`类，并在类的顶部声明你将用于跟踪和更新用户选择的`RadioGroup`和`TextView`字段：
 
-```kt
+```java
 private RadioGroup categories;
 private TextView categoryLabel;
 ```
 
 1.  现在，在`onCreateView`中，你需要更改`View`的填充方式，因为你需要捕获字段并设置事件监听器。注意使用`IconPickerWrapper`作为事件监听器：
 
-```kt
+```java
 public View onCreateView(
       final LayoutInflater inflater,
       final @Nullable ViewGroup container,
@@ -694,7 +694,7 @@ public View onCreateView(
 
 1.  现在，创建一个简单的 getter 和 setter 方法来使用`Category`枚举检索和修改状态：
 
-```kt
+```java
 public Category getSelectedCategory() {
   return Category.forIdResource(
       categories.getCheckedRadioButtonId());
@@ -709,13 +709,13 @@ public void setSelectedCategory(final Category category){
 
 1.  将类别字段更改为使用`CategoryPickerFragment`，而不是`RadioGroup`：
 
-```kt
+```java
 private CategoryPickerFragment categories;
 ```
 
 1.  在`onCreate`方法中，删除初始化类别选择器的代码：
 
-```kt
+```java
 categories = (RadioGroup) findViewById(R.id.categories);
 categories.setOnCheckedChangeListener(
     new IconPickerWrapper(
@@ -727,7 +727,7 @@ categories.check(R.id.other);
 
 1.  使用`FragmentManager`从布局中检索新的`CategoryPickerFragment`：
 
-```kt
+```java
 final FragmentManager fragmentManager = getSupportFragmentManager();
 categories = (CategoryPickerFragment)
     fragmentManager.findFragmentById(R.id.categories);
@@ -763,7 +763,7 @@ categories = (CategoryPickerFragment)
 
 1.  在`merge`元素内部，创建一个`ImageView`，它可以携带附件文件的预览。`ImageView`需要一个边距来自动调整图像大小以适应屏幕（同时保持图像比例）：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <merge 
   android:layout_width="match_parent"
@@ -798,14 +798,14 @@ categories = (CategoryPickerFragment)
 
 1.  创建字段以引用`Attachment`对象和将预览渲染到屏幕上的`ImageView`：
 
-```kt
+```java
 private Attachment attachment;
 private ImageView preview;
 ```
 
 1.  创建标准的`View`子类构造函数和一个`initialize`方法，该方法填充布局 XML 并捕获`ImageView`：
 
-```kt
+```java
 public AttachmentPreview(Context context) {
   super(context);
   initialize(context);
@@ -833,13 +833,13 @@ void initialize(final Context context) {
 
 1.  为`Attachment`字段创建一个简单的 getter 方法：
 
-```kt
+```java
 public Attachment getAttachment() { return attachment; }
 ```
 
 1.  创建一个 setter 来更新`Attachment`字段，并启动屏幕上预览的更新。你还会创建一个使用你在第三章，“执行操作”中编写的`ActionCommand`类编写的内部类，该类将尝试在更新屏幕上的小部件之前在后台线程中加载实际图像：
 
-```kt
+```java
 public void setAttachment(final Attachment attachment) {
   this.attachment = attachment;
   preview.setImageDrawable(null);
@@ -908,7 +908,7 @@ private class UpdatePreviewCommand
 
 1.  这个类需要一个 `List` 来存储它预期将其转换为预览小部件的 `Attachment` 对象，并且需要一个设置器来更改将要显示的内容：
 
-```kt
+```java
 private List<Attachment> attachments = Collections.emptyList();
 
 public int getCount() {
@@ -927,7 +927,7 @@ public void setAttachments(final List<Attachment> attachments) {
 
 1.  `ViewPager` 维护着用于在屏幕上显示数据的 widgets 和正在显示的对象模型之间的单独列表。`ViewPager` 通过在 `PagerAdapter` 对象上调用 `instantiateItem` 来创建 widgets，预期它会将 widget 添加到 `ViewPager` 并返回它所显示的数据模型对象：
 
-```kt
+```java
 public Object instantiateItem(final ViewGroup container, final int position) {
   final AttachmentPreview preview =
       new AttachmentPreview(container.getContext());
@@ -939,7 +939,7 @@ public Object instantiateItem(final ViewGroup container, final int position) {
 
 1.  `ViewPager` 也可能要求 `PagerAdapter` 移除用户看不到的小部件。这通常发生在视图不可见时，用户无法直接将其滚动到视图中（也就是说，它不是直接在当前视图的左侧或右侧）。传递给 `destroyItem` 的位置参数是数据模型中的位置，而不是小部件在 `ViewPager` 中的索引，因此你需要一种方法来确定 `ViewPager` 中哪个小部件实际上需要被移除。在这里，我们通过简单地遍历 `ViewPager` 中的所有子小部件来实现，因为它们永远不会很多：
 
-```kt
+```java
 public void destroyItem(
     final ViewGroup container,
     final int position,
@@ -957,7 +957,7 @@ public void destroyItem(
 
 1.  最后，`ViewPager` 需要一种方式来知道其哪个小部件子类与数据模型的哪个部分相关联；在这个类中，这对你来说非常简单，因为 `AttachmentPreview` 类直接引用了 `Attachment` 对象：
 
-```kt
+```java
 public boolean isViewFromObject(final View view, final Object o) {
   return (view instanceof AttachmentPreview)
       && (((AttachmentPreview) view).getAttachment() == o);
@@ -982,14 +982,14 @@ public boolean isViewFromObject(final View view, final Object o) {
 
 1.  将类声明改为扩展 `ActionCommand<Uri, Attachment>`：
 
-```kt
+```java
 public abstract class CreateAttachmentCommand
     extends ActionCommand<Uri, Attachment> {
 ```
 
 1.  声明一个目录用于写入本地文件，以及一个可以用于读取用户选择的文件的 `ContentResolver`：
 
-```kt
+```java
 private final File dir;
 private final ContentResolver resolver;
 
@@ -1006,7 +1006,7 @@ public CreateAttachmentCommand(
 
 1.  创建一个简单的实用方法，将文件从 `Uri` 复制到一个新命名的文件中。文件是随机命名的，这样就不太可能有两个文件在名称上发生冲突：
 
-```kt
+```java
 File makeFile(final Uri value) throws IOException {
   final File outputFile =
       new File(dir, UUID.randomUUID().toString());
@@ -1029,14 +1029,14 @@ File makeFile(final Uri value) throws IOException {
 
 1.  覆盖 `onBackground` 方法，使用前面的实用方法来复制文件：
 
-```kt
+```java
 public Attachment onBackground(final Uri value) throws Exception {
    final File file = makeFile(value);
 ```
 
 1.  最后，检查您刚刚创建的文件类型，如果它看起来像一张图片，确保在返回之前您能够读取它。这避免了应用程序每次想要预览附件时都需要进行相同的检查。我们通过尝试使用 `BitmapFactory` 类读取图片来检查图片是否可读：
 
-```kt
+```java
   final String type = resolver.getType(value);
   if (type != null
       && type.startsWith("image/")
@@ -1061,7 +1061,7 @@ public Attachment onBackground(final Uri value) throws Exception {
 
 1.  将`content_capture_claim.xml`文件底部的`ViewPager`剪切并粘贴到`fragment_attachment_pager`布局文件中，覆盖文件中的所有内容。您需要在`ViewPager`元素上定义 XML 命名空间（`xmlns`属性），以便`fragment_attachment_pager.xml`文件看起来像这样：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.v4.view.ViewPager
 
@@ -1084,27 +1084,27 @@ public Attachment onBackground(final Uri value) throws Exception {
 
 1.  从`CaptureClaimActivity`中剪切`REQUEST_ATTACH_FILE`和`REQUEST_ATTACH_PERMISSION`常量，并将它们粘贴到`AttachmentPagerFragment`中：
 
-```kt
+```java
 private static final int REQUEST_ATTACH_FILE = 1;
 private static final int REQUEST_ATTACH_PERMISSION = 1001;
 ```
 
 1.  创建一个`AttachmentPagerAdapter`的实例，以帮助渲染附件预览。由于`AttachmentPagerAdapter`可以完全处理其`Attachment`对象列表的变化，因此每个`AttachmentPagerFragment`中只需要一个：
 
-```kt
+```java
 private final AttachmentPreviewAdapter adapter = new AttachmentPreviewAdapter();
 ```
 
 1.  为您将要用来附加文件的`ActionCommand`创建字段，并另一个用于持有`ViewPager`对象的引用：
 
-```kt
+```java
 private ActionCommand<Uri, Attachment> attachFileCommand;
 private ViewPager pager;
 ```
 
 1.  您的`AttachmentPagerFragment`需要对其预览的`Attachment`的`ClaimItem`的引用。这将允许它在不需要调用其`Activity`的情况下向索赔添加新的`Attachment`对象。`Fragment`还将公开一个可以被调用的方法，以通知它`ClaimItem`上的附件列表已更改。这可以通过`ClaimItem`本身稍后调用，或通过事件总线进行调用。
 
-```kt
+```java
 private ClaimItem claimItem;
 
 public void setClaimItem(final ClaimItem claimItem) {
@@ -1124,7 +1124,7 @@ public void onAttachmentsChanged() {
 
 1.  重写`Fragment`的`onCreate`方法。这看起来就像`Activity`的`onCreate`方法一样，在您的`Fragment`被附加到其上下文（在这种情况下，是`Activity`对象）之后被调用。`AttachmentPagerFragment`将使用`onCreate`来实例化用于后续使用的`attachFileCommand`，它将使用一个匿名内部类来实现，该类继承自您刚刚编写的`CreateAttachmentCommand`类：
 
-```kt
+```java
 public void onCreate(final @Nullable Bundle savedInstanceState) {
    super.onCreate(savedInstanceState);
    final File attachmentsDir =
@@ -1147,7 +1147,7 @@ public void onCreate(final @Nullable Bundle savedInstanceState) {
 
 1.  当`Fragment`完全释放（没有后续重启的机会）时，其`onDestroy`方法会被调用。使用此方法来释放`claimItem`，防止后台任务在它们返回前台时修改它：
 
-```kt
+```java
 public void onDestroy() {
    super.onDestroy();
    claimItem = null;
@@ -1156,7 +1156,7 @@ public void onDestroy() {
 
 1.  就像您之前编写的`CategoryPickerFragment`一样，`AttachmentPagerFragment`需要一个在将其填充到布局 XML 时将显示的`View`。在这种情况下，您还需要稍微调整`ViewPager`，因为页面边距不是作为 XML 属性公开的：
 
-```kt
+```java
 public View onCreateView(
        final LayoutInflater inflater,
        final @Nullable ViewGroup container,
@@ -1174,7 +1174,7 @@ public View onCreateView(
 
 1.  现在，将 `CaptureClaimActivity` 中的 `onAttachClick` 方法复制并粘贴到 `AttachmentPagerFragment` 中。这将立即引发错误，因为 `onAttachClick` 使用了 `Activity` 也是一个 `Context` 的事实；因此，`ContextCompat.checkSelfPermission` 可以使用 `CaptureClaimAcitvity` 作为 `Context` 来检查。`Fragment` 不继承自 `Context`，但它确实暴露了 `getContext()` 和 `getActivity()` 方法来检索它附加的环境：
 
-```kt
+```java
 public void onAttachClick() {
   final int permissionStatus = ContextCompat.checkSelfPermission(
       getContext(),
@@ -1200,14 +1200,14 @@ public void onAttachClick() {
 
 1.  在 `onAttachFileResult` 方法中，你现在可以移除作为占位符添加的 `Toast`。相反，使用所选文件调用 `attachFileCommand`；这将自动更新预览：
 
-```kt
+```java
 Toast.makeText(this, data.getDataString(), Toast.LENGTH_SHORT).show();
 attachFileCommand.exec(data.getData());
 ```
 
 1.  在 `content_capture_claim.xml` 布局文件中，包括新的 `AttachmentPagerFragment`，它原本是 `ViewPager` 的位置：
 
-```kt
+```java
 <fragment
    android:id="@+id/attachments"
    class="com.packtpub.claim.ui.attachments.AttachmentPagerFragment"
@@ -1219,7 +1219,7 @@ attachFileCommand.exec(data.getData());
 
 1.  在 `CaptureClaimActivity` 中，为 `AttachmentPagerFragment` 创建一个新的字段，并在 `onCreate` 中从 `FragmentManager` 捕获该字段：
 
-```kt
+```java
 private AttachmentPagerFragment attachments;
 // ...
 protected void onCreate(Bundle savedInstanceState) {
@@ -1234,7 +1234,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
 1.  最后，将 `CaptureClaimActivity` 中的 `onClick` 方法更改为在 `AttachmentPagerFragment` 上调用 `onAttachClick`：
 
-```kt
+```java
 @Override
 public void onClick(View v) {
   switch (v.getId()) {
@@ -1257,19 +1257,19 @@ public void onClick(View v) {
 
 1.  首先，你需要一种方法可以将 `ClaimItem` 传递到 `CaptureClaimActivity` 以进行编辑。为了保持简单和灵活，你将允许它们作为 "extra" 字段在 `Intent` 中传递。当你在 `Intent` 中使用 `extras` 时，将名称公开为公共常量是个好主意，这样它们就可以在外部类创建 `Intent` 对象时访问：
 
-```kt
+```java
 public static final String EXTRA_CLAIM_ITEM = "com.packtpub.claim.extras.CLAIM_ITEM";
 ```
 
 1.  在编辑 `ClaimItem` 的过程中，你还需要保存和恢复 `ClaimItem`，为此，你还需要一个 `Bundle` 的键：
 
-```kt
+```java
 private static final String KEY_CLAIM_ITEM = "com.packtpub.claim.ClaimItem";
 ```
 
 1.  然后，创建一个 `private` 字段来引用正在编辑的 `ClaimItem`，你还需要引用屏幕上的所有输入和 `Fragment` 对象；`CaptureClaimActivity` 应该有类似这样的 `private` 字段：
 
-```kt
+```java
 private EditText description;
 private EditText amount;
 
@@ -1282,7 +1282,7 @@ private ClaimItem claimItem;
 
 1.  在 `onCreate` 方法中，确保在调用 `setContentView` 之后捕获所有前面的字段：
 
-```kt
+```java
 description = (EditText) findViewById(R.id.description);
 amount = (EditText) findViewById(R.id.amount);
 selectedDate = (DatePickerLayout) findViewById(R.id.date);
@@ -1294,7 +1294,7 @@ categories = (CategoryPickerFragment) fragmentManager.findFragmentById(R.id.cate
 
 1.  然后，你需要检查是否有一个 `ClaimItem` 被传递进来，无论是通过 `savedInstanceState` `Bundle`（如果 `Activity` 由于配置更改而重新启动，它将被填充），还是作为 `Intent` 上的一个额外参数传递（有点像构造函数参数）：
 
-```kt
+```java
 if (savedInstanceState != null) {
    claimItem = savedInstanceState.getParcelable(KEY_CLAIM_ITEM);
 } else if (getIntent().hasExtra(EXTRA_CLAIM_ITEM)) {
@@ -1304,7 +1304,7 @@ if (savedInstanceState != null) {
 
 1.  如果通过这些机制中的任何一个都没有传递 `ClaimItem`，你将想要创建一个新的、空的 `ClaimItem` 以供用户编辑。另一方面，如果已经传递了一个，你需要用其数据填充用户界面：
 
-```kt
+```java
 if (claimItem == null) {
   claimItem = new ClaimItem();
 } else {
@@ -1318,7 +1318,7 @@ attachments.setClaimItem(claimItem);
 
 1.  现在，编写一个 `utility` 方法，将用户界面小部件中的数据复制回 `ClaimItem` 对象：
 
-```kt
+```java
 void captureClaimItem() {
   claimItem.setDescription(description.getText().toString());
   if (!TextUtils.isEmpty(amount.getText())) {
@@ -1332,7 +1332,7 @@ void captureClaimItem() {
 
 1.  当 `Activity` 以可能导致稍后重新启动的方式关闭时（作为一个新实例），`onSaveInstanceState` 方法会调用一个 `Bundle`，其中你的 `Activity` 可以保存任何需要稍后恢复的状态（在这种情况下，它将是正在编辑的 `ClaimItem`）。这会在你的 `Activity` 处于后台且操作系统需要回收内存时发生，或者如果 `Activity` 由于配置更改（如用户在纵向和横向模式之间切换）而重新启动。这就是你设置传递到 `onCreate` 的 `Bundle` 内容的地方：
 
-```kt
+```java
 protected void onSaveInstanceState(final Bundle outState) {
   super.onSaveInstanceState(outState);
   captureClaimItem(); // make sure the ClaimItem is up-to-date
@@ -1342,7 +1342,7 @@ protected void onSaveInstanceState(final Bundle outState) {
 
 1.  我们还希望确保当 `CaptureClaimActivity` 关闭时，它将编辑后的 `ClaimItem` 返回到启动它的 `Activity`。这可以通过重载 `finish()` 方法来实现，该方法被调用以关闭 `Activity`：
 
-```kt
+```java
 public void finish() {
   captureClaimItem();
   setResult(
@@ -1357,7 +1357,7 @@ public void finish() {
 
 1.  最后，我们还需要确保用户有一个视觉方法可以退出屏幕，而不用按 Android 返回按钮。我们将通过在 `Toolbar` 上放置一个 *返回* 导航箭头来做到这一点。首先，编写一个处理程序，监听 *主页* 按钮被选中：
 
-```kt
+```java
 @Override
 public boolean onOptionsItemSelected(final MenuItem item) {
   switch (item.getItemId()) {
@@ -1384,7 +1384,7 @@ public boolean onOptionsItemSelected(final MenuItem item) {
 
 1.  将路径`android:fillColor`属性更改为白色：
 
-```kt
+```java
 <path
    android:fillColor="#FFFFFFFF"
 ```

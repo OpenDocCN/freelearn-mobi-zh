@@ -116,7 +116,7 @@
 
 这是一个要测量的操作的基本示例：
 
-```kt
+```java
 fun sampleOperation() {
     Thread.sleep(1)
 }
@@ -130,7 +130,7 @@ fun sampleOperation() {
 
 必须定义一个小的函数`measureTotalTimeElapsed`来测量操作所有迭代的总时间消耗：
 
-```kt
+```java
 fun measureTotalTimeElapsed(
     iterations: Int,
     operation: (Int) -> Unit,
@@ -144,7 +144,7 @@ fun measureTotalTimeElapsed(
 
 最后，这是启动测试的`main`函数：
 
-```kt
+```java
 fun main() {
     val iterations = 1_000
     val operationTime = measureTotalTimeElapsed(iterations) { sampleOperation() }
@@ -158,7 +158,7 @@ fun main() {
 
 这是运行测试的样本输出：
 
-```kt
+```java
 Total time elapsed: 1.264 second
 Throughput: 791.1392405063291 operations per second
 Latency (average): 1 ms
@@ -326,7 +326,7 @@ Kotlin 标准库提供了一些时间测量的函数：
 
 使用 Gradle Kotlin DSL 脚本设置基准测试很简单。例如，对于 JVM，我们需要以下插件：
 
-```kt
+```java
 plugins {
     id("org.jetbrains.kotlinx.benchmark") version "0.4.11"
     kotlin("plugin.allopen") version "2.0.20"
@@ -335,7 +335,7 @@ plugins {
 
 第一个插件用于 Kotlin 微基准测试，而第二个插件用于打开最终的 Kotlin 类以进行测试。现在，我们需要确保可以从存储库中查找插件和依赖项：
 
-```kt
+```java
 repositories {
     mavenCentral()
     gradlePluginPortal()
@@ -344,13 +344,13 @@ repositories {
 
 接下来，需要声明对 Kotlin 微基准测试的代码依赖项：
 
-```kt
+```java
     implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.11")
 ```
 
 然后，我们需要配置`allOpen`插件，使其仅打开带有`State`注解的 Kotlin 类：
 
-```kt
+```java
 allOpen {
     annotation("org.openjdk.jmh.annotations.State")
 }
@@ -358,7 +358,7 @@ allOpen {
 
 设置的最后部分是设置微基准测试本身：
 
-```kt
+```java
 benchmark {
     targets {
         register("main")
@@ -376,7 +376,7 @@ benchmark {
 
 实际的基准测试运行器代码被注释，以便运行器可以按照特定配置执行它。请注意，此测试应放置在`main`源文件夹（而不是`test`源文件夹）中，以便插件可以捕获：
 
-```kt
+```java
 @State(Scope.Benchmark)
 @Fork(1)
 @Warmup(iterations = 10)
@@ -405,13 +405,13 @@ class MicrobenchmarkingTest {
 
 要运行微基准测试，我们可以使用以下 Gradle 命令：
 
-```kt
+```java
 ./gradlew benchmark
 ```
 
 结果摘要打印到控制台，而详细报告生成在`/``build/reports/benchmarks/main`文件夹下：
 
-```kt
+```java
 Success: 109349297.194 ±(99.9%) 15493649.408 ops/s [Average]
   (min, avg, max) = (55205844.260, 109349297.194, 132224154.121), stdev = 17842509.699
   CI (99.9%): [93855647.787, 124842946.602] (assumes normal distribution)
@@ -483,13 +483,13 @@ Success: 109349297.194 ±(99.9%) 15493649.408 ops/s [Average]
 
 我们知道以下函数并不昂贵，但为了讨论的目的，让我们假装它是昂贵的：
 
-```kt
+```java
 fun someExpensiveOp(n: Int): Int = n
 ```
 
 在这个函数之上，我们希望运行一些过滤、映射和选择：
 
-```kt
+```java
     val result = listOf(1, 7, 3, 23, 63).filter {
         println("filter:$it"); it > 3
     }.map {
@@ -502,7 +502,7 @@ fun someExpensiveOp(n: Int): Int = n
 
 执行此段代码会产生以下控制台输出：
 
-```kt
+```java
 filter:1
 filter:7
 filter:3
@@ -520,7 +520,7 @@ expensive:63
 
 使用 Kotlin 标准库中的`asSequence`函数优化后，代码如下所示：
 
-```kt
+```java
     val result = listOf(1, 7, 3, 23, 63)
         .asSequence().filter {
             println("filter:$it"); it > 3
@@ -532,19 +532,19 @@ expensive:63
 
 然而，执行前面的代码会在控制台打印以下内容：
 
-```kt
+```java
 kotlin.sequences.TakeSequence@246b179d
 ```
 
 没有过滤，没有昂贵的操作或选择被运行。这是因为`asSequence`函数直到有终端函数才会构建列表。让我们更新代码：
 
-```kt
+```java
     println(result.toList())
 ```
 
 现在，执行会在控制台打印以下内容：
 
-```kt
+```java
 filter:1
 filter:7
 expensive:7
@@ -620,7 +620,7 @@ expensive:23
 
 将一个家庭解析到桶中可以像模函数一样简单，即一个哈希数除以桶数的余数：
 
-```kt
+```java
 Bucket number = (hash number of household name) mod (number of buckets)
 ```
 
@@ -676,7 +676,7 @@ Kotlin 有一些旨在减少开销并因此提高性能的功能。然而，这�
 
 内联函数可以通过在函数级别添加修饰符来声明，如下所示：
 
-```kt
+```java
 inline fun <T> measureTime(block: () -> T): T {
     val start = System.nanoTime()
     val result = block()
@@ -697,7 +697,7 @@ Kotlin 的协程库使程序能够调用异步操作，这样线程就不会被�
 
 例如，想象有两个耗时的函数：
 
-```kt
+```java
 suspend fun task1(): Int {
     delay(1000)
     println("Task 1 completed")
@@ -712,7 +712,7 @@ suspend fun task2(): Int {
 
 这两个函数具有`suspend`修饰符，表示它们可以在不阻塞线程的情况下暂停和恢复。使用这两个挂起函数的`main`函数如下所示：
 
-```kt
+```java
 fun main() =
     runBlocking {
         val result1 = async { task1() }

@@ -42,7 +42,7 @@
 
 让我们通过以下代码示例来更好地理解它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       val observer:Observer<Any> = object :Observer<Any>{//1 
@@ -95,7 +95,7 @@
 
 您可以在任何时间使用 `Observable.create` 方法创建自己的 `Observable`。此方法接受 `ObservableEmitter<T>` 接口的一个实例作为观察的源。因此，让我们考虑以下示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       val observer: Observer<String> = object : Observer<String> { 
@@ -160,7 +160,7 @@
 
 因此，让我们看看这段代码：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       val observer: Observer<String> = object : Observer<String> { 
@@ -225,7 +225,7 @@
 
 多亏了 Kotlin 的扩展函数，你可以轻松地将任何`Iterable`实例，如`List`，转换为`Observable`；我们已经在第一章，《反应式编程简介》中使用了这个方法，然而，看看这个：
 
-```kt
+```java
     fun main(args: Array<String>) { 
 
       val observer: Observer<String> = object : Observer<String> { 
@@ -261,7 +261,7 @@
 
 那么，你难道不好奇想看看`toObservable`方法吗？让我们来看看。你可以在`RxKotlin`包提供的`observable.kt`文件中找到这个方法：
 
-```kt
+```java
     fun <T : Any> Iterator<T>.toObservable(): Observable<T> = 
     toIterable().toObservable() 
     fun <T : Any> Iterable<T>.toObservable(): Observable<T> = 
@@ -293,7 +293,7 @@
 
 让我们通过这个代码示例来更好地理解它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observer: Observer<Any> = object : Observer<Any> { 
         override fun onComplete() { 
@@ -338,7 +338,7 @@
 
 因此，让我们首先看看这段代码，然后我们将逐行尝试学习它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observer: Observer<Any> = object : Observer<Any> { 
         override fun onComplete() { 
@@ -405,7 +405,7 @@
 
 现在，让我们看看以下示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable:Observable<Int> = Observable.range(1,5)//1 
 
@@ -454,7 +454,7 @@
 
 你可以使用`Disposable`接口的实例在任何给定时间停止发射。让我们看看这个示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       runBlocking { 
         val observale:Observable<Long> = 
@@ -500,7 +500,7 @@
 
 这里是输出结果：
 
-```kt
+```java
 Received 0
 Received 1
 Received 2
@@ -519,7 +519,7 @@ Disposed
 
 如果你好奇想了解`Disposable`接口，那么以下是其定义：
 
-```kt
+```java
     interface Disposable { 
       /** 
       * Dispose the resource, the operation should be idempotent. 
@@ -543,7 +543,7 @@ Disposed
 
 仔细查看所有之前的示例。在所有示例中，如果你多次订阅相同的`Observable`，你将获得所有订阅的开始处的发射。不相信？看看下面的示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable: Observable<String> = listOf
       ("String 1","String 2","String 3","String 4").toObservable()//1 
@@ -588,7 +588,7 @@ Disposed
 
 让我们考虑以下代码片段：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val connectableObservable = listOf
       ("String 1","String 2","String 3","String 4","String
@@ -626,7 +626,7 @@ Disposed
 
 以下代码片段是另一个例子，以使你更好地理解它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val connectableObservable =  
       Observable.interval(100,TimeUnit.MILLISECONDS) 
@@ -674,7 +674,7 @@ Disposed
 
 因此，`Subject`是`Observable`和`Observer`的组合。您已经在之前的章节中看到了`Subject`的使用，但为了使事情更清晰，让我们举一个新的例子：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.interval(100, 
       TimeUnit.MILLISECONDS)//1 
@@ -707,7 +707,7 @@ Disposed
 
 你可能想知道这有什么好处？当我可以直接将`subscribe`和`Observer`订阅到`Observable`上时，为什么要在中间使用`PublishSubject`？为了找到答案，让我们稍微修改一下这段代码，以便更好地理解它：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.interval(100,
       TimeUnit.MILLISECONDS)//1 
@@ -730,7 +730,7 @@ Disposed
 
 让我们看看输出：
 
-```kt
+```java
 Subscription 1 Received 0
 Subscription 1 Received 1
 Subscription 1 Received 2
@@ -789,7 +789,7 @@ Subscription 2 Received 21
 
 让我们考虑以下代码示例：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val observable = Observable.just(1,2,3,4)//1 
       val subject = AsyncSubject.create<Int>()//2 
@@ -810,7 +810,7 @@ Subscription 2 Received 21
 
 这里是输出：
 
-```kt
+```java
 Received 4
 Complete
 ```
@@ -825,7 +825,7 @@ Complete
 
 有疑问吗？让我们稍微调整一下代码。我们不会订阅`Observable`，而只会调用`onNext`来传递值，并将有另一个订阅。以下是代码，以这样做：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val subject = AsyncSubject.create<Int>() 
       subject.onNext(1) 
@@ -883,7 +883,7 @@ Complete
 
 让我们用`BehaviorSubject`修改最后一个例子，看看会发生什么：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val subject = BehaviorSubject.create<Int>() 
       subject.onNext(1) 
@@ -917,7 +917,7 @@ Complete
 
 在这里，我选取了上一个例子，其中我们使用了`AsyncSubject`，并用`BehaviorSubject`进行了修改。那么，让我们看看输出并理解`BehaviorSubject`：
 
-```kt
+```java
 S1 Received 4
 S1 Received 5
 S2 Received 5
@@ -939,7 +939,7 @@ S2 Complete
 
 让我们用`ReplaySubject`修改之前的程序：
 
-```kt
+```java
     fun main(args: Array<String>) { 
       val subject = ReplaySubject.create<Int>() 
       subject.onNext(1) 
@@ -973,7 +973,7 @@ S2 Complete
 
 此外，这里是输出：
 
-```kt
+```java
 S1 Received 1
 S1 Received 2
 S1 Received 3

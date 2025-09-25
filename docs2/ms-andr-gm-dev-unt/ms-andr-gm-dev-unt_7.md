@@ -184,7 +184,7 @@ Android SDK 的位置在`C:/ AndroidSDK`，而对于 JDK，它位于`C:/Program 
 
 因此，在项目菜单中打开`MainMenu`场景。在`Project`/`Scripts`文件夹中创建一个名为`MainMenuScript`的新脚本。在脚本中，添加以下代码：
 
-```kt
+```java
     using System.Collections; 
     using System.Collections.Generic; 
     using UnityEngine; 
@@ -241,7 +241,7 @@ Android SDK 的位置在`C:/ AndroidSDK`，而对于 JDK，它位于`C:/Program 
 
 现在为了在游戏结束条件下存储实际达成的成就信息，添加以下内容：
 
-```kt
+```java
 if (playerHealth <= 0 || enemyHealth <= 0) { 
     bGameover = true; 
 
@@ -280,7 +280,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 在`buttonClick`类中，创建一个名为`openAchievements`的新函数。它创建如下：
 
-```kt
+```java
     public void openAchievements() { 
         Social.localUser.Authenticate((bool success) => { 
             if (success){ 
@@ -310,7 +310,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 所以在你的`gameScript`中，当你增加`gameplayCount`变量的值并在其后添加以下代码时：
 
-```kt
+```java
     PlayerPrefs.SetInt("GameplayCount", gameplayCount); 
 
 ```
@@ -319,7 +319,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 要检索信息，你将使用`PlayerPrefs`的`GetInt`函数来获取存储在键中的值。因此，在你增加`gameplayCount`变量之前，添加以下代码：
 
-```kt
+```java
     int gameplayCount = PlayerPrefs.GetInt("GameplayCount"); 
 
 ```
@@ -356,14 +356,14 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 选择 Android 作为目标平台，并勾选启用测试模式选项，这样我们可以在发布游戏之前测试它。现在，在`gamescript`类中，在类顶部添加以下代码：
 
-```kt
+```java
     using UnityEngine.Advertisements;   
 
 ```
 
 我们所需要做的就是在我们想要显示广告时调用`ShowAd`函数。我们不希望在玩家有成就时显示广告，因为我们也不希望在显示成就时每次调用`ShowAd`函数的`else`语句中显示广告：
 
-```kt
+```java
     if (gameplayCount == 1) { 
         Social.ReportProgress (PunchyPunchAchievements. 
         achievement_played_first_time, 100, (bool sucsess) => { }); 
@@ -395,7 +395,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 创建`ShowAd`函数如下：
 
-```kt
+```java
     public void ShowAd() 
     { 
         if (Advertisement.IsReady()) 
@@ -413,7 +413,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 因此添加一个名为`adViewResult`的新函数，如下所示：
 
-```kt
+```java
     public void adViewResult(ShowResult result) { 
         switch (result) { 
             case ShowResult.Finished: 
@@ -455,7 +455,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 代码已被修改以符合我们的目的。由于这是一段较长的代码，我添加了带编号的注释，稍后我会解释：
 
-```kt
+```java
     using System; 
     using System.Collections.Generic; 
     using UnityEngine; 
@@ -589,14 +589,14 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 构建器会将产品添加到商店中。在这里指定产品名称和产品类型：
 
-```kt
+```java
     builder.AddProduct(kRemoveAds, ProductType.Consumable); 
 
 ```
 
 我们将创建自己的函数，当我们要购买产品时将被调用：
 
-```kt
+```java
     public void BuyRemoveAds() { 
         BuyProductID(kRemoveAds); 
     }  
@@ -607,7 +607,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 最后，在初始化函数中，我们检查产品是否已购买。我们设置一个键，如果产品已购买，则不再显示无广告按钮：
 
-```kt
+```java
     if (String.Equals(args.purchasedProduct.definition.id, kRemoveAds, 
                       StringComparison.Ordinal)) { 
         Debug.Log(string.Format("ProcessPurchase: PASS. Product: 
@@ -621,7 +621,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 现在在 MainMenu 场景中，在右上角创建一个新按钮，并在 `buttonClick` 脚本中添加一个函数，该函数将调用 `IAPManager` 类中的 `BuyRemoveAds` 函数：
 
-```kt
+```java
     public void noAdsButton() { 
         IAPManager.instance.BuyRemoveAds(); 
     } 
@@ -632,7 +632,7 @@ if (playerHealth <= 0 || enemyHealth <= 0) {
 
 `mainMenu` 脚本应如下所示：
 
-```kt
+```java
     using System.Collections; 
     using System.Collections.Generic; 
     using UnityEngine; 
@@ -740,7 +740,7 @@ SDK 下载完成后，请确保你的当前 Unity 项目已打开，并导入该
 
 接下来，创建一个名为`fbManager`的新类。在类中添加以下代码：
 
-```kt
+```java
     using System.Collections; 
     using System.Collections.Generic; 
     using UnityEngine; 
@@ -823,7 +823,7 @@ SDK 下载完成后，请确保你的当前 Unity 项目已打开，并导入该
 
 接下来我们将查看 Twitter 分享。Twitter 分享非常简单。在`MainMenu`上再创建一个按钮来调用 Twitter 分享，并附加一个在按钮被点击时将被调用的函数。我在`buttonClick`类中创建了一个名为`openTwitter`的函数，如下所示：
 
-```kt
+```java
     public void openTwitter() {
         string appStoreLink = 
         "https://play.google.com/store/apps/details? 

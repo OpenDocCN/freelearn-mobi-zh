@@ -54,7 +54,7 @@ Node.js 是一个基于 Chrome 的 JavaScript 运行时之上的轻量级、非�
 
 1.  打开命令提示符或 shell，并输入以下内容：
 
-```kt
+```java
 npm
 ```
 
@@ -66,7 +66,7 @@ npm
 
 1.  从您的设备打开命令提示符或 shell，并输入以下内容：
 
-```kt
+```java
 npm install http-server -g
 ```
 
@@ -74,14 +74,14 @@ npm install http-server -g
 
 1.  使用您的命令提示符或 shell，将文件夹更改为 `Android`，如下所示：
 
-```kt
+```java
 //WINDOWS
 cd c:\Android
 ```
 
 1.  在 `Android` 文件夹中运行 `http-server`，输入以下内容：
 
-```kt
+```java
 http-server -p 9999
 ```
 
@@ -109,7 +109,7 @@ http-server -p 9999
 
 1.  打开命令提示符或 shell 到`Android`文件夹，并输入以下内容：
 
-```kt
+```java
 git clone https://github.com/google-ar/three.ar.js.git
 ```
 
@@ -147,7 +147,7 @@ git clone https://github.com/google-ar/three.ar.js.git
 
 1.  通过输入以下内容来验证您的连接：
 
-```kt
+```java
 adb devices
 ```
 
@@ -221,7 +221,7 @@ adb devices
 
 1.  在代码中向下滚动，直到看到以下部分：
 
-```kt
+```java
 var geometry = new THREE.BoxGeometry( 0.05, 0.05, 0.05 );
 var faceIndices = ['a', 'b', 'c'];
 for (var i = 0; i < geometry.faces.length; i++) 
@@ -241,7 +241,7 @@ var material = new THREE.MeshBasicMaterial({ vertexColors:
 
 1.  在高亮行之前输入新代码：
 
-```kt
+```java
 var geometry = new THREE.TorusGeometry( 10, 3, 16, 100 );
 var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
 cube = new THREE.Mesh(geometry, material);
@@ -289,7 +289,7 @@ cube = new THREE.Mesh(geometry, material);
 
 1.  滚动到高亮显示的代码，并在其后输入以下行：
 
-```kt
+```java
 scene.add(clone); //near the bottom of the file
 clone.scale.copy(new THREE.Vector3(.15,.15,.15));
 clone.position.copy(new THREE.Vector3(0,0,10));
@@ -297,7 +297,7 @@ clone.position.copy(new THREE.Vector3(0,0,10));
 
 1.  将下面那行代码注释掉，就像这样：
 
-```kt
+```java
 //clone.position.copy(pos);
 ```
 
@@ -305,7 +305,7 @@ clone.position.copy(new THREE.Vector3(0,0,10));
 
 至于将颜色从那刺眼的黄色改为更吸引人的颜色，我们留给读者作为他们的家庭作业。以下是需要更改的代码行：
 
-```kt
+```java
 var material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
 ```
 

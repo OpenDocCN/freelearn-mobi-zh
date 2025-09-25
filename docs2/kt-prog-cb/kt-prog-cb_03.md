@@ -26,13 +26,13 @@
 
 在本章中，你将了解与 Kotlin 面向对象编程相关的食谱。使用面向对象的方法，你可以通过创建对象将复杂问题分解为更小的问题。与 Java 相比，Kotlin 的 OOP 风格有一些不同——例如，在 Kotlin 中，所有类默认都是封闭的（final），如果你想使它们可扩展，你需要使用`open`关键字。不仅对于类——默认情况下，方法也是 final 的，你需要使用`open`关键字。使用 Kotlin，处理类和对象所需的代码更少。哦！顺便说一句，我告诉你我们甚至不需要使用`new`关键字来创建对象了吗？所以，在 Kotlin 中创建新对象就像这样：
 
-```kt
+```java
 var person=Person()
 ```
 
 上述代码将创建一个可变类型的`Person`对象，因为我们使用了`var`作为修饰符。可变对象意味着它可以改变其值。如果你想创建一个不可变对象，你可以使用`val`关键字。所以同样的例子将如下所示：
 
-```kt
+```java
 val person=Person()
 ```
 
@@ -42,7 +42,7 @@ val person=Person()
 
 在 Java 世界中，我们通常在构造函数中初始化类的字段，如下面的代码所示：
 
-```kt
+```java
 class Student{
  int roll_number;
  String name;
@@ -65,37 +65,37 @@ class Student{
 
 1.  Kotlin 提供了一种语法，可以用更少的代码初始化属性。以下是 Kotlin 中类初始化的示例：
 
-```kt
+```java
 class Student(var roll_number:Int, var name:String)
 ```
 
 1.  你甚至不需要定义类的主体，属性的初始化仅在主构造函数中发生（主构造函数是类头的一部分）。显然，你可以根据是否需要保持属性可变来选择`var`或`val`。现在，如果你尝试创建一个对象，你可以用以下方式做到：
 
-```kt
+```java
 var student_A=Student(1,"Rashi Karanpuria")
 ```
 
 1.  为了确认，让我们尝试打印其属性以查看我们是否能够初始化它：
 
-```kt
+```java
 println("Roll number: ${student_A.roll_number} Name: ${student_A.name}")
 ```
 
 这是输出：
 
-```kt
+```java
  Roll number: 1 Name: Rashi Karanpuria
 ```
 
 1.  然而，如果你想的话，你还可以在构造函数中放置默认值：
 
-```kt
+```java
 class Student constructor(var roll_number:Int, var name:String="Sheldon")
 ```
 
 1.  然后，你可以创建如下对象：
 
-```kt
+```java
 var student_sheldon= Student(25)   // Object with name Sheldon and age 25
 
 var student_amy=Student(25, "Amy")     // Object with name Amy and age 25
@@ -105,7 +105,7 @@ var student_amy=Student(25, "Amy")     // Object with name Amy and age 25
 
 1.  我们使用此关键字来委托给同一类的另一个构造函数：
 
-```kt
+```java
 class Person(val name: String) {
      constructor(name: String, lastName: String) : this(name) {
          // Do something maybe
@@ -115,7 +115,7 @@ class Person(val name: String) {
 
 1.  我们也可能遇到需要在类中初始化其他事情的情况，而不仅仅是类的属性。这种情况可能是打开数据库连接，例如。在 Java 中，这是在构造函数中完成的，但在 Kotlin 中，我们有`init`块。初始化代码可以放入`init`块中：
 
-```kt
+```java
 class Student(var roll_number:Int,var name: String) {
  init {
          logger.info("Student initialized")
@@ -125,7 +125,7 @@ class Student(var roll_number:Int,var name: String) {
 
 1.  有时，我们也会通过依赖注入来初始化类的属性。如果你使用过 Dagger2，你一定熟悉对象被直接注入到类的构造函数中。为此，我们在构造函数关键字之前添加`@Inject`注解。每当构造函数有一个注解或可见性修饰符时，我们都需要有`constructor`关键字。下面是一个`constructor`关键字的示例：
 
-```kt
+```java
 class Student @Inject constructor(compositeDisposable: CompositeDisposable) { ... }
 ```
 
@@ -133,13 +133,13 @@ class Student @Inject constructor(compositeDisposable: CompositeDisposable) { ..
 
 1.  当你扩展一个类时，你需要初始化超类。在 Kotlin 中，这也非常简单。如果你的类有一个主构造函数，基类型必须在那里使用主构造函数的参数进行初始化。以下是一个相同的示例：
 
-```kt
+```java
 class Student constructor(var roll_number:Int, var name:String):Person(name)
 ```
 
 1.  然而，有时一个类可能没有主构造函数。在这种情况下，每个次级构造函数必须使用`super`关键字初始化基类型，或者可以委托给另一个执行此操作的构造函数。此外，不同的次级构造函数可以调用基类型的不同构造函数：
 
-```kt
+```java
 class Student: Person {
  constructor(name: String) : super(name)
 constructor(name: String, roll_number: Inte) :super(name)
@@ -150,7 +150,7 @@ constructor(name: String, roll_number: Inte) :super(name)
 
 在 Java 中，我们通常通过在变量前添加所需类型来进行类型转换，如下所示：
 
-```kt
+```java
 String a = Integer.toString(10)
 ```
 
@@ -166,7 +166,7 @@ String a = Integer.toString(10)
 
 1.  让我们尝试一个非常基础的例子——尝试将`Int`转换为`Long`和`Float`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a = 1
     var b: Float = a.toFloat()
@@ -177,7 +177,7 @@ fun main(args: Array<String>) {
 
 1.  类似地，`Long`可以转换为`Float`和`Int`，如下所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a = 1000000000000000000L
     var b: Float = a.toFloat()
@@ -188,13 +188,13 @@ fun main(args: Array<String>) {
 
 上述代码的输出如下所示：
 
-```kt
+```java
 1000000000000000000 is Long while 9.9999998E17 is Float and -1486618624 is Integer
 ```
 
 1.  让我们尝试一个更有趣的转换，使用`Byte`、`Int`和`Strings`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a = 15623
     var b: Byte = a.toByte()
@@ -239,7 +239,7 @@ fun main(args: Array<String>) {
 
 1.  让我们尝试一个非常基础的例子，尝试使用 `is` 与字符串和整数。在这个例子中，我们将检查一个字符串和一个整数的类型：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a : Any = 1
     var b : Any = "1"
@@ -261,7 +261,7 @@ fun main(args: Array<String>) {
 
 1.  同样，我们可以使用 `!is` 来检查对象是否不是 `String` 类型，如下所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var b : Any = 1
     if (b !is String) {
@@ -285,7 +285,7 @@ Kotlin 编译器跟踪不可变值，并在需要时安全地进行转换。这�
 
 让我们尝试一个使用 `as` 操作符的例子，它是 Kotlin 中的类型转换操作符。这是一个不安全的转换操作符。以下代码示例会抛出 `ClassCastException`，因为我们不能将整数转换为字符串：
 
-```kt
+```java
 fun main(args: Array<String>) {
    var a : Any = 1
    var b = a as String
@@ -294,7 +294,7 @@ fun main(args: Array<String>) {
 
 另一方面，以下代码由于变量 `a` 是 `Any` 类型，可以成功运行，因此可以被转换为 `String`：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a : Any = "1"
     var b = a as String
@@ -316,7 +316,7 @@ fun main(args: Array<String>) {
 
 1.  `abstract` 关键字用于声明一个 `abstract` 类。让我们创建一个抽象类并尝试从它继承：
 
-```kt
+```java
 abstract class Mammal {
     abstract fun move(direction: String)
 }
@@ -324,7 +324,7 @@ abstract class Mammal {
 
 1.  要使一个类成为 `Mammal` 类的子类，我们使用 `:` 操作符，如下例所示。请注意在超类方法实现之前使用的 `override` 关键字：
 
-```kt
+```java
 class Dog : Mammal() {
     override fun move(direction: String) {
         println(direction)
@@ -334,7 +334,7 @@ class Dog : Mammal() {
 
 1.  如果我们不希望子类实现某个方法，我们不应将其声明为 `abstract` 或 `open`，如下例所示：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var x = Dog()
     x.move("North")
@@ -355,7 +355,7 @@ abstract class Mammal {
 
 1.  如果我们在每个类中声明 `init` 块，如下所示，我们将得到一个输出，其中超类的 `init` 块首先被调用：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var x = Dog()
     x.move("North")
@@ -382,7 +382,7 @@ abstract class Mammal {
 
 最终程序的输出如下：
 
-```kt
+```java
 Hey from Mammal
 Hey from Dog
 North
@@ -413,13 +413,13 @@ Kotlin 中的反射允许我们在运行时对程序的结构进行自省。这�
 
 1.  这里是我们的 `Student` 类，具有 `roll_number` 和 `full_name` 属性：
 
-```kt
+```java
 class Student constructor(var roll_number:Int, var full_name:String)
 ```
 
 1.  现在，我们将使用 `for` 语句，因为我们想遍历一个类可以拥有的多个属性：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var student=Student(2013001,"Aanand Shekhar Roy")
     for (property in Student::class.memberProperties) {
@@ -430,7 +430,7 @@ fun main(args: Array<String>) {
 
 这是输出结果：
 
-```kt
+```java
 full_name = Aanand Shekhar Roy
 roll_number = 2013001
 ```
@@ -441,7 +441,7 @@ roll_number = 2013001
 
 需要注意的一点是，`memberProperties` 返回此类及其所有超类中声明的所有非扩展属性。假设我们有一个 `Person` 类，如下所示：
 
-```kt
+```java
 open class Person{
      val isHuman:Boolean=true
 }
@@ -449,7 +449,7 @@ open class Person{
 
 此外，我们通过 `Person` 类扩展我们的 `Student` 类，然后使用 `memberProperties` 方法之前相同的代码将产生如下输出：
 
-```kt
+```java
 full_name = Aanand Shekhar Roy
 roll_number = 2013001
 isHuman = true
@@ -457,7 +457,7 @@ isHuman = true
 
 因此，如果您只想遍历 `Student` 类中声明的字段，您将需要使用 `declaredMemberProperties` 方法。以下是一个使用 `declaredMemberProperties` 的示例：
 
-```kt
+```java
 for (property in Student::class.declaredMemberProperties) {
     println("${property.name} = ${property.get(student)}")
 }
@@ -465,7 +465,7 @@ for (property in Student::class.declaredMemberProperties) {
 
 这是输出结果：
 
-```kt
+```java
 full_name = Aanand Shekhar Roy
 roll_number = 2013001
 ```
@@ -492,14 +492,14 @@ Kotlin 的一个优点是高阶函数，它允许我们将函数作为其他函�
 
 1.  让我们尝试一个例子，在 Kotlin 中内联一个属性的访问器：
 
-```kt
+```java
 var x.valueIsMaxedOut: Boolean
 inline get() = x.value == CONST_MAX
 ```
 
 1.  在这个例子中，我们只是使用了`inline`关键字与`get`访问器。我们也可以通过使整个属性内联来声明`get`和`set`访问器为内联，如这个代码片段所示：
 
-```kt
+```java
 inline var x.valueIsMaxedOut: Boolean
 get() = x.value == CONST_MAX
 set(value) {
@@ -512,7 +512,7 @@ set(value) {
 
 1.  然而，需要注意的是，如果属性有一个后置字段或访问器不引用后置字段，内联就不会与属性或访问器一起工作。这里的代码是一个我们无法使用`inline`的场景的例子：
 
-```kt
+```java
 var x.valueIsMaxedOut: Boolean = true
 get() = x.value == CONST_MAX
 set(value) {
@@ -541,7 +541,7 @@ set(value) {
 
 1.  让我们尝试一个 Kotlin 嵌套类的例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a1 = outCl()
     a1.printAB()
@@ -566,14 +566,14 @@ class inCl {
 
 这是输出：
 
-```kt
+```java
 a = 6 and b = 9 from inside outCl
 b = 9 from inside inCl
 ```
 
 1.  现在，让我们尝试一个 `inner` 类的例子。要将嵌套类声明为 `inner`，我们使用 `inner` 关键字。`inner` 类可以访问外部类的成员，因为它们携带指向外部类的引用：
 
-```kt
+```java
 fun main(args: Array<String>) {
     var a = outCl()
     a.printAB()
@@ -596,7 +596,7 @@ class outCl {
 
 上述代码的输出如下：
 
-```kt
+```java
 a = 6 and b = 9 from inside outCl
 a = 6 and b = 9 from inside inCl
 ```
@@ -607,7 +607,7 @@ a = 6 and b = 9 from inside inCl
 
 另一方面，`inner` 类是通过在嵌套类中添加 `inner` 关键字创建的。在这种情况下，我们像访问外部类的成员一样访问内部类，即使用外部类的对象，如下所示：
 
-```kt
+```java
 var outerClassObject = outerClass()
 outerClassObject.innerClass().memberVar
 ```
@@ -618,7 +618,7 @@ outerClassObject.innerClass().memberVar
 
 我们也可以在 Kotlin 中使用 `object` 关键字创建匿名内部类，如下所示：
 
-```kt
+```java
 val customTextTemplateListener = object:ValueEventListener{
     override fun onCancelled(p0: DatabaseError?) {
     }
@@ -639,7 +639,7 @@ val customTextTemplateListener = object:ValueEventListener{
 
     注意，KClass 与 Java 的 `Class` 对象不同。如果您想从 Kotlin 的 `KClass` 获取 Java 的 `Class` 对象，请使用 `.java` 扩展属性：
 
-```kt
+```java
 val somethingKClass: KClass<Something> = Something::class
 val a: Class<Something> = somethingKClass.java
 val b: Class<Something> = Something::class.java
@@ -689,7 +689,7 @@ Kotlin 1.1 带来了许多更新；其中之一是代理属性。有三种类型
 
 1.  首先，我们将处理懒加载代理属性。简单来说，这个代理可以延迟对象的创建，直到我们第一次访问它。当你处理重量级对象时，这非常重要；它们需要很长时间才能创建——例如，创建数据库实例或可能是 dagger 组件。不仅如此，结果会被记住，并且对于此类代理属性的后续 `getValue()` 调用，将返回相同的值。让我们看一个例子：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
      val button by lazy { findViewById<Button>(R.id.submit_button) }                                              setContentView(R.layout.activity_main)
@@ -699,7 +699,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  上述是活动的标准 `onCreate` 方法。如果你仔细观察，我们在 `setContentView(..)` 方法之前设置了 `button` 变量。当你运行它时，它运行得很好。如果你没有使用懒加载，它将给出一个 `NullPointerException`，类似于这样：
 
-```kt
+```java
 Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'void android.widget.Button.setText(java.lang.CharSequence)' on a null object reference
 ```
 
@@ -717,7 +717,7 @@ Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'voi
 
 另一个有用的委托是可观察的委托。这个委托帮助我们观察属性的任何更改。例如，让我们看看 `observable` 委托的一个非常基本的实现：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val paris=Travel()
      paris.placeName="Paris"
@@ -733,7 +733,7 @@ class Travel {
 
 这是输出：
 
-```kt
+```java
 oldValue = <>, newValue = Paris
 oldValue = Paris, newValue = Italy
 ```
@@ -742,7 +742,7 @@ oldValue = Paris, newValue = Italy
 
 让我们现在处理 `vetoable` 委托。它与 `observable` 委托非常相似，但使用它可以“否决”修改。让我们看看一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val paris=Travel()
     paris.placeName="Paris"
@@ -762,7 +762,7 @@ class Travel {
 
 这是输出：
 
-```kt
+```java
 Paris
 ```
 
@@ -770,7 +770,7 @@ Paris
 
 有时，您会根据动态值创建一个对象，例如，在解析 JSON 的情况下。对于这些应用程序，我们可以使用 `map` 实例本身作为委托属性的委托。让我们在这里看看一个例子：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val paris=Travel(mapOf(
         "placeName" to "Paris"
@@ -784,13 +784,13 @@ class Travel(val map:Map<String,Any?>) {
 
 这是输出：
 
-```kt
+```java
 Paris
 ```
 
 要使其适用于 `var` 属性，您需要使用 `MutableMap`，因此前面的示例可能看起来像这样：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val paris=Travel(mutableMapOf(
         "placeName" to "Paris"
@@ -824,7 +824,7 @@ class Travel(val map:MutableMap<String,Any?>) {
 
 1.  在这个例子中，我们将创建一个方向枚举。我们将假设只有四个方向：
 
-```kt
+```java
 enum class Direction {
     NORTH,SOUTH,EAST,WEST
 }
@@ -842,7 +842,7 @@ fun main(args: Array<String>) {
 
 1.  我们还可以使用默认值来初始化枚举：
 
-```kt
+```java
 enum class Direction(var value:Int) {
     NORTH(1),SOUTH(2),EAST(3),WEST(4)
 }

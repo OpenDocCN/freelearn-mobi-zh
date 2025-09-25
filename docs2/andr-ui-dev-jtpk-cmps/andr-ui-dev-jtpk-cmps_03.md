@@ -26,7 +26,7 @@ Jetpack Compose 标志着 Android UI 开发的根本性转变。虽然传统的�
 
 传统构建 Android UI 的方法是定义组件树并在运行时修改它们。虽然这可以完全通过编程实现，但首选的方法是创建布局文件。它们使用 XML 标签和属性来定义哪些 UI 元素应该显示在屏幕上。让我们看一下：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
 
@@ -62,7 +62,7 @@ Jetpack Compose 标志着 Android UI 开发的根本性转变。虽然传统的�
 
 通常，`onCreate()` 方法用于准备应用并通过调用 `setContentView()` 来显示 UI。此方法可以接收一个表示布局文件的 ID，例如，`R.layout.main`。因此，你必须定义指向你希望访问的 UI 元素的变量。这看起来可能如下所示：
 
-```kt
+```java
 private lateinit var doneButton: Button
 ...
 val doneButton = findViewById(R.id.done)
@@ -76,7 +76,7 @@ val doneButton = findViewById(R.id.done)
 
 有时，你可以通过使用局部变量来防止第一个问题，如下所示：
 
-```kt
+```java
 val doneButton = findViewById<Button>(R.id.done)
 ```
 
@@ -84,7 +84,7 @@ val doneButton = findViewById<Button>(R.id.done)
 
 为了解决第二个问题——即，让开发者免于保持组件引用的任务——谷歌引入了视图绑定。它属于 Jetpack，并在 Android Studio 3.6 中首次亮相。让我们看看它是如何使用的：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
   private lateinit var binding: MainBinding
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
 
 无论一个活动的 UI 多么复杂，我们只需要保留一个引用。这个变量通常被称为 `binding`，它通过调用 `...Binding` 实例的 `inflate()` 方法进行初始化。在我的示例中，`MainBinding` 类在修改 `main.xml` 时会自动生成和更新。每个布局文件都会对应一个 `...Binding` 类。为了启用此机制，必须在模块级别的 `build.gradle` 文件中将 `viewBinding` 构建选项设置为 `true`：
 
-```kt
+```java
 android {
   ...
   buildFeatures {
@@ -121,7 +121,7 @@ android {
 
 在本节中，我们将了解如何更改基于视图的 UI。让我们首先查看在 `onCreate()` 中调用的 `enableOrDisableButton()` 函数，其名称为您提供了关于其目的的线索——启用或禁用按钮。但我们为什么需要这样做呢？*Hello View* 是 *Hello* 应用（在 *第一章*，*构建您的第一个 Compose 应用*）的重新实现，但它有一个额外的功能。只要用户没有输入至少一个非空白字符，**完成** 就不能点击：
 
-```kt
+```java
 private fun enableOrDisableButton() {
   binding.done.isEnabled = binding.name.text.isNotBlank()
 }
@@ -131,7 +131,7 @@ private fun enableOrDisableButton() {
 
 在我向您展示的代码中，`enableOrDisableButton()` 只在 `onCreate()` 的末尾被调用。但我们还需要在用户输入内容时调用该函数。让我们看看如何做到这一点（请注意，以下代码片段属于 `onCreate()` 内部，以便在活动创建时执行）：
 
-```kt
+```java
 binding.name.run {
   setOnEditorActionListener { _, _, _ ->
     binding.done.performClick()
@@ -152,7 +152,7 @@ binding.name.run {
 
 现在，让我们转向与 **完成** 按钮相关的代码：
 
-```kt
+```java
 binding.done.run {
   setOnClickListener {
     val name = binding.name.text
@@ -235,7 +235,7 @@ Android 的某些 UI 元素非常具体。例如，`RatingBar` 允许用户通�
 
 为了理解 Android 的 UI 元素是如何相互关联的，让我们更详细地看看在 *Hello View* 中使用的那些。我们将从 `ConstraintLayout` 开始：
 
-```kt
+```java
 java.lang.Object
   ↳  android.view.View
      ↳  android.view.ViewGroup
@@ -246,7 +246,7 @@ Java 中所有类的根是 `java.lang.Object`。Android 框架的许多重要部
 
 现在，让我们看看 `android.widget.Button`。
 
-```kt
+```java
 java.lang.Object
   ↳  android.view.View
      ↳  android.widget.TextView
@@ -255,7 +255,7 @@ java.lang.Object
 
 它的直接祖先是 `android.widget.TextView`，它扩展了 `android.view.View`。这里我们是否看到了一个模式？`android.view.View` 似乎是一切 Android UI 元素的根源。让我们通过检查另一个组件来验证我们的假设：
 
-```kt
+```java
 java.lang.Object
   ↳  android.view.View
      ↳  android.widget.TextView
@@ -274,7 +274,7 @@ java.lang.Object
 
 按钮通常显示文本。因此，扩展一个更通用的文本组件似乎是自然的。正如我们在上一节中看到的，Android 正是这样做的。如果你的应用程序需要一个没有文本且显示图像的按钮，在这种情况下，你可以使用 `ImageButton`：
 
-```kt
+```java
 java.lang.Object
   ↳  android.view.View
      ↳  android.widget.ImageView
@@ -307,7 +307,7 @@ java.lang.Object
 
 这里是一个创建输出文本的简单函数：
 
-```kt
+```java
 fun factorialAsString(n: Int): String {
   var result = 1L
   for (i in 1..n) {
@@ -321,7 +321,7 @@ fun factorialAsString(n: Int): String {
 
 接下来，我将向您展示如何组合 UI：
 
-```kt
+```java
 @Composable
 fun Factorial() {
   var expanded by remember { mutableStateOf(false) }
@@ -408,7 +408,7 @@ Android 的`View`类包含一个名为`setOnClickListener()`的方法。它接�
 
 Jetpack Compose 可以通过两种方式提供点击处理。首先，需要它的可组合函数（因为它是它们的核心功能）有一个专门的`onClick`参数。其次，通常不需要点击处理的组合函数可以通过修饰符进行修改。让我们从第一个开始。
 
-```kt
+```java
 @Composable
 @Preview
 fun ButtonDemo() {
@@ -426,7 +426,7 @@ fun ButtonDemo() {
 
 如果你想要显示按钮，但用户不应能够点击它，代码看起来是这样的：
 
-```kt
+```java
 Button(
   onClick = {
     println("clicked")
@@ -447,7 +447,7 @@ Button(
 
 `Text()`没有`onClick`属性。如果你想使其可点击（就像我在*阶乘*应用中做的那样），你将`clickable { ... }`传递给`modifier`参数：
 
-```kt
+```java
 modifier = Modifier.clickable { ...
 ```
 
@@ -459,7 +459,7 @@ modifier = Modifier.clickable { ...
 
 Jetpack Compose 有一个非常类似的概念。你已经学习了`Row()`和`Column()`，它们分别水平或垂直排列其内容。`Box()`类似于`FrameLayout`。它按照代码中出现的顺序组织其内容。盒子内的位置由`contentAlignment`控制：
 
-```kt
+```java
 @Composable
 @Preview
 fun BoxDemo() {

@@ -150,7 +150,7 @@
 
 假设我们需要将有关用户的某些详细信息保存到本地数据库中。这个操作需要时间，因此我们需要显示一个动画直到它完成：
 
-```kt
+```java
 fun saveDetails(user: User) {
     startAnimation()
     database.storeUser(user)
@@ -168,7 +168,7 @@ fun saveDetails(user: User) {
 
 挂起函数是一个带有`suspend`关键字的常规函数：
 
-```kt
+```java
 suspend fun storeUser(user: User) {
     // blocking action
 }
@@ -188,7 +188,7 @@ suspend fun storeUser(user: User) {
 
 要执行一个暂停函数，首先，我们需要创建并启动一个协程。为此，我们需要在协程作用域上调用协程构建器：
 
-```kt
+```java
 fun saveDetails(user: User) {
     GlobalScope.launch(Dispatchers.IO) {
 startAnimation()
@@ -214,7 +214,7 @@ startAnimation()
 
 为了更好地理解正常同步世界与暂停世界的融合，让我们在我们的代码片段中添加一些日志：
 
-```kt
+```java
 fun saveDetails(user: User) {
     Log.d("TAG", "Preparing to launch coroutine")
     GlobalScope.launch(Dispatchers.IO) {
@@ -268,7 +268,7 @@ fun saveDetails(user: User) {
 
 协程作用域包含一个 `CoroutineContext` 对象，它定义了协程运行的环境。在上一个示例中，我们使用了预定义的作用域 `GlobalScope`，但你也可以通过构造一个 `CoroutineContext` 对象并将其传递给 `CoroutineScope()` 函数来定义一个自定义作用域，如下所示：
 
-```kt
+```java
 val job = Job()
 val myScope = CoroutineScope(context = job + Dispatchers.IO)
 ```
@@ -279,7 +279,7 @@ val myScope = CoroutineScope(context = job + Dispatchers.IO)
 
 +   一个 `Job` 对象：这代表一个可取消的组件，它控制特定作用域中启动的协程的生命周期。当一个作业被取消时，该作业将取消它所管理的协程。例如，如果我们在一个 `Activity` 类中定义了一个 `job` 对象和一个自定义的 `myScope` 对象，那么在 `onDestroy()` 回调中调用 `job` 对象的 `cancel()` 方法是一个取消协程的好地方：
 
-    ```kt
+    ```java
     override fun onDestroy() {
         super.onDestroy()
         job.cancel()
@@ -298,7 +298,7 @@ val myScope = CoroutineScope(context = job + Dispatchers.IO)
 
 +   `lifecycleScope`: 这个作用域将协程与`LifecycleOwner`实例的生命周期相关联，例如`Activity`组件或`Fragment`组件。我们可以使用 Jetpack KTX 扩展包中定义的`lifecycleScope`作用域：
 
-    ```kt
+    ```java
     class UserFragment : Fragment() {
         ...
         fun saveDetails(user: User) {
@@ -315,7 +315,7 @@ val myScope = CoroutineScope(context = job + Dispatchers.IO)
 
 +   `viewModelScope`: 为了让我们的协程与`ViewModel`组件的生命周期保持一致，我们可以使用预定义的`viewModelScope`作用域：
 
-    ```kt
+    ```java
     class UserViewModel: ViewModel() {
         fun saveDetails(user: User) {
             // do some work
@@ -331,7 +331,7 @@ val myScope = CoroutineScope(context = job + Dispatchers.IO)
 
 +   `rememberCoroutineScope`: 为了将协程作用域与可组合函数的组合周期相关联，我们可以使用预定义的`rememberCoroutineScope`作用域：
 
-    ```kt
+    ```java
     @Composable
     fun UserComposable() {
         val scope = rememberCoroutineScope()
@@ -357,7 +357,7 @@ val myScope = CoroutineScope(context = job + Dispatchers.IO)
 
 当创建自定义作用域时，我们可以在实例化作用域时指定默认的分发器，就像我们之前做的那样：
 
-```kt
+```java
 val myScope = CoroutineScope(context = job + Dispatchers.IO)
 ```
 
@@ -365,7 +365,7 @@ val myScope = CoroutineScope(context = job + Dispatchers.IO)
 
 对于预定义的协程作用域，例如使用 `lifecycleScope`、`viewModelScope` 或 `rememberCoroutineScope`，我们可以在启动协程时指定所需的默认调度器：
 
-```kt
+```java
 scope.launch(Dispatchers.IO) {
     viewModel.saveUser()
 }
@@ -387,7 +387,7 @@ scope.launch(Dispatchers.IO) {
 
 但我们犯了一个关键的错误！让我们再次查看代码：
 
-```kt
+```java
 class UserFragment : Fragment() {
     ...
     fun saveDetails(user: User) {
@@ -410,7 +410,7 @@ class UserFragment : Fragment() {
 
 让我们使用 `Dispatchers.Main` 的默认调度器启动我们的协程，然后使用 `withContext` 块包装必须运行在后台线程（即 `database.storeUser(user)` 挂起函数）上的工作：
 
-```kt
+```java
 fun saveDetails(user: User) {
     lifecycleScope.launch(Dispatchers.Main) {
         startAnimation()
@@ -438,7 +438,7 @@ fun saveDetails(user: User) {
 
 +   `launch`: 这将启动一个与代码其余部分并发运行的协程。使用 `launch` 启动的协程不会将结果返回给调用者 - 相反，所有挂起函数都会在 `launch` 暴露的块内部顺序执行。我们的任务是获取挂起函数的结果，然后与该结果进行交互：
 
-    ```kt
+    ```java
     fun getUser() {
         lifecycleScope.launch(Dispatchers.IO) {
             val user = database.getUser()
@@ -455,7 +455,7 @@ fun saveDetails(user: User) {
 
 +   `async`: 这将启动一个新的协程，并允许你将结果作为 `Deferred<T>` 对象返回，其中 `T` 是你期望的数据类型。延迟对象是对你的结果 `T` 将在未来返回的承诺。要启动协程并获取结果，你需要调用挂起函数 `await`，这将阻塞调用线程：
 
-    ```kt
+    ```java
     lifecycleScope.launch(Dispatchers.IO) {
         val deferredAudio: Deferred<Audio> =
             async { convertTextToSpeech(title) }
@@ -470,7 +470,7 @@ fun saveDetails(user: User) {
 
 假设我们需要同时将两段文本转换为语音，然后同时播放这两个结果：
 
-```kt
+```java
 lifecycleScope.launch(Dispatchers.IO) {
     val deferredTitleAudio: Deferred<Audio> =
         async { convertTextToSpeech(title) }
@@ -499,7 +499,7 @@ lifecycleScope.launch(Dispatchers.IO) {
 
 如果我们查看 `RestaurantsViewModel` 类，我们可以确定 `getRestaurants()` 方法是我们应用中发生重型阻塞工作的唯一地方：
 
-```kt
+```java
 private fun getRestaurants() {
     restaurantsCall = restInterface.getRestaurants()
     restaurantsCall.enqueue(object : Callback
@@ -538,7 +538,7 @@ private fun getRestaurants() {
 
 1.  在 `RestaurantsApiService` 接口内部，将 `suspend` 关键字添加到 `getRestaurants()` 方法中，并将方法的 `Call<List<Restaurant>>` 返回类型替换为 `List<Restaurant>`：
 
-    ```kt
+    ```java
     interface RestaurantsApiService {
         @GET("restaurants.json")
         suspend fun getRestaurants(): List<Restaurant>
@@ -559,7 +559,7 @@ Retrofit 默认支持协程用于网络请求。这意味着我们可以在 Retr
 
 1.  在 `getRestaurants()` 方法内部，调用 `restInterface.getRestaurants()` 挂起函数并将结果存储在 `restaurants` 变量中：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         val restaurants = restInterface.getRestaurants()
     }
@@ -571,7 +571,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  在创建协程之前，我们需要创建一个 `CoroutineScope` 对象。在 `ViewModel` 组件内部，定义一个类型为 `Job` 的成员变量和另一个类型为 `CoroutineScope` 的成员变量，就像我们之前学过的那样：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(…): ViewModel() {
         private var restInterface: RestaurantsApiService
         val state = mutableStateOf(…)
@@ -588,7 +588,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  在 `onCleared()` 回调方法内部，调用新创建的 `job` 变量中的 `cancel()` 方法：
 
-    ```kt
+    ```java
     override fun onCleared() {
         super.onCleared()
         job.cancel()
@@ -599,7 +599,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  在我们的 `ViewModel` 组件中的 `getRestaurants()` 方法内部，通过在先前定义的 `scope` 对象上调用 `launch` 来创建一个协程，并在协程暴露的体内添加我们获取餐厅的现有代码：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         scope.launch {
             val restaurants = restInterface.getRestaurants()
@@ -611,7 +611,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  接下来，添加初始代码来更新我们的 `State` 对象，以便 Compose UI 显示新收到的餐厅：
 
-    ```kt
+    ```java
     scope.launch {
         val restaurants = restInterface.getRestaurants()
         state.value = restaurants.restoreSelections()
@@ -624,7 +624,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  在 `getRestaurants()` 方法中，将更新 Compose `State` 对象的代码行用 `withContext` 块包装，该块指定了 `Dispatchers.Main` 分发器：
 
-    ```kt
+    ```java
     scope.launch {
         val restaurants = restInterface.getRestaurants()
         withContext(Dispatchers.Main) {
@@ -671,7 +671,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  在 `RestaurantsViewModel` 类的 `getRestaurants()` 方法中，将 `scope` 替换为 `viewModelScope`：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch {
             val restaurants = …
@@ -682,7 +682,7 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 1.  由于我们不再使用我们的 `scope` 对象，我们需要确保我们的协程将在后台运行挂起工作，就像它使用之前的范围一样。将 `Dispatchers.IO` 分发器传递给 `launch` 方法：
 
-    ```kt
+    ```java
     viewModelScope.launch(Dispatchers.IO) {
         val restaurants = restInterface.getRestaurants()
         withContext(Dispatchers.Main) {
@@ -709,13 +709,13 @@ IDE 将抛出一个错误，告诉我们不能在 `ViewModel` 组件的常规 `g
 
 事实上，我们并没有处理可能抛出的任何错误。例如，如果你现在尝试在没有互联网的情况下启动应用程序，Retrofit 将会抛出一个 `Throwable` 对象，这反过来会导致我们的应用程序崩溃，并出现如下类似的错误：
 
-```kt
+```java
 E/AndroidRuntime: FATAL EXCEPTION: DefaultDispatcher-worker-1
 ```
 
 为了处理错误，我们可以在挂起函数调用中简单地使用 `try catch` 块：
 
-```kt
+```java
 viewModelScope.launch(Dispatchers.IO) {
     try {
         val restaurants = restInterface.getRestaurants()
@@ -740,7 +740,7 @@ viewModelScope.launch(Dispatchers.IO) {
 
 1.  定义一个类型为`CoroutineExceptionHandler`的`errorHandler`成员变量，并打印`exception: Throwable`参数的堆栈跟踪：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         ...
     private val errorHandler = 
@@ -755,7 +755,7 @@ viewModelScope.launch(Dispatchers.IO) {
 
 1.  在`getRestaurants()`方法内部，使用`+`运算符将`errorHandler`变量传递给`launch`块：
 
-    ```kt
+    ```java
     private fun getRestaurants() { 
            viewModelScope.launch(Dispatchers.IO +
                                  errorHandler) { 
@@ -782,7 +782,7 @@ viewModelScope.launch(Dispatchers.IO) {
 
 让我们用协程分析我们的代码：
 
-```kt
+```java
 private fun getRestaurants() {
     viewModelScope.launch(Dispatchers.IO + errorHandler) {
         val restaurants = restInterface.getRestaurants()
@@ -803,7 +803,7 @@ private fun getRestaurants() {
 
 1.  在`RestaurantsViewModel`类内部，创建一个单独的挂起方法，称为`getRemoteRestaurants()`，并在其中用`withContext()`块包裹`restinterface.getRestaurants()`调用：
 
-    ```kt
+    ```java
     private suspend fun getRemoteRestaurants(): List<Restaurant> {
         return withContext(Dispatchers.IO) {
             restInterface.getRestaurants()
@@ -819,7 +819,7 @@ private fun getRestaurants() {
 
 1.  在`ViewModel`组件的`getRestaurants()`方法中，将`restInterface.getRestaurants()`方法调用替换为`getRemoteRestaurants()`：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(Dispatchers.IO + errorHandler) 
         {
@@ -833,7 +833,7 @@ private fun getRestaurants() {
 
 1.  由于`getRemoteRestaurants()`方法的内容将在其适当的调度器上调用，我们不再需要将`Dispatchers.IO`传递给启动块。从协程的`launch`块中移除`Dispatchers.IO`调度器：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(errorHandler) {
             val restaurants = getRemoteRestaurants()
@@ -849,7 +849,7 @@ private fun getRestaurants() {
 
 1.  由于协程现在将在`Dispatchers.Main`线程上运行，我们可以从`getRestaurants()`方法中移除多余的`withContext(Dispatchers.Main)`块。`getRestaurants()`方法现在应该看起来像这样：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(errorHandler) {
             val restaurants = getRemoteRestaurants()
@@ -860,7 +860,7 @@ private fun getRestaurants() {
 
 现在，我们启动协程的`getRestaurants()`方法更容易阅读和理解。例如，我们的挂起函数调用`getRemoteRestaurants()`是在`Dispatchers.Main`调度器上的这个协程内部进行的。然而，与此同时，我们的挂起函数有自己的`withContext()`块，并设置了相应的`Dispatcher`对象：
 
-```kt
+```java
 private suspend fun getRemoteRestaurants()
         : List<Restaurant> {
     return withContext(Dispatchers.IO) {

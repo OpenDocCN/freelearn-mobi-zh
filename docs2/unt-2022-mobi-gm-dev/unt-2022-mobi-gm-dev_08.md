@@ -58,13 +58,13 @@
 
 1.  接下来，打开`PlayerBehaviour`脚本，并在文件顶部添加以下行：
 
-    ```kt
+    ```java
     using TMPro; //TextMeshProUGUI
     ```
 
 1.  接下来，在类内部添加以下代码：
 
-    ```kt
+    ```java
     [Header("Object References")]
     public TextMeshProUGUI scoreText;
     private float score = 0;
@@ -111,7 +111,7 @@
 
 1.  然后，更新`PlayerBehaviour`类，使其具有以下突出显示的更改：
 
-    ```kt
+    ```java
     // Start is called before the first frame update
     public void Start()
     {
@@ -164,7 +164,7 @@ Twitter 是一个很好的起点，因为我们可以通过简单地打开一个
 
 1.  打开`PauseScreenBehaviour`脚本。一旦进入，我们将在`PlayerScreenBehaviour`类中添加以下代码：
 
-    ```kt
+    ```java
     #region Share Score via Twitter
     /// <summary>
     /// Web address in order to create a tweet
@@ -400,7 +400,7 @@ Twitter 是一个很好的起点，因为我们可以通过简单地打开一个
 
 1.  因此，为了做到这一点，我们首先将在`MainMenuBehaviour`脚本顶部添加以下内容：
 
-    ```kt
+    ```java
     using UnityEngine;
     using UnityEngine.SceneManagement; // LoadScene
     using System.Collections.Generic; // List using Facebook.Unity; // FB
@@ -408,7 +408,7 @@ Twitter 是一个很好的起点，因为我们可以通过简单地打开一个
 
 1.  然后，将以下变量添加到`MainMenuBehaviour`类中：
 
-    ```kt
+    ```java
     [Header("Object References")] 
     public GameObject mainMenu; 
     public GameObject facebookLogin;
@@ -416,14 +416,14 @@ Twitter 是一个很好的起点，因为我们可以通过简单地打开一个
 
 1.  现在，在`MainMenuBehaviour`类中添加以下代码：
 
-    ```kt
+    ```java
     #region Facebook
     #endregion
     ```
 
 在这个区域内，我们将添加几个不同的方法，首先是处理初始化 Facebook API 的一些方法：
 
-```kt
+```java
     public void Awake()
     {
         /* We only call FB Init once, so check if it
@@ -437,7 +437,7 @@ Twitter 是一个很好的起点，因为我们可以通过简单地打开一个
 
 在这种情况下，`Awake`方法调用`FB.Init`函数，它接受两个参数，这两个参数都是委托，或者是在初始化完成以及应用隐藏或不再当前焦点时调用的函数。这两个函数的定义如下：
 
-```kt
+```java
 /// <summary>
 /// Once initialized, will inform if logged in on Facebook
 /// </summary>
@@ -476,7 +476,7 @@ private void OnInitComplete()
 
 我们还需要添加一些其他最终函数来完成我们的最终实现，我们将在下面添加：
 
-```kt
+```java
 /// <summary>
 /// Attempts to log in on Facebook
 /// </summary>
@@ -581,14 +581,14 @@ public void ShowMainMenu()
 
 1.  再次前往`MainMenuBehaviour`脚本。从那里，我们需要添加一个新的`using`语句来显示图像，并更改我们需要更改的文本，以便使用 Unity 的 UI 系统和 TextMeshPro：
 
-    ```kt
+    ```java
     using UnityEngine.UI; // Image
     using TMPro; //TextMeshProUGUI
     ```
 
 1.  然后，我们需要添加两个新的变量：
 
-    ```kt
+    ```java
     [Tooltip("Will display the user's Facebook profile pic")] 
     public Image profilePic;
     [Tooltip("The text object used to display the greeting")] 
@@ -599,7 +599,7 @@ public void ShowMainMenu()
 
 1.  之后，我们将更新`ShowMainMenu`函数并添加一些新函数来使用：
 
-    ```kt
+    ```java
     public void ShowMainMenu()
     {
         if (facebookLogin != null && mainMenu != null)
@@ -627,7 +627,7 @@ public void ShowMainMenu()
 
 1.  在脚本的`Facebook`区域添加以下附加代码：
 
-    ```kt
+    ```java
     private void SetName(IResult result)
     {
         if (result.Error != null)

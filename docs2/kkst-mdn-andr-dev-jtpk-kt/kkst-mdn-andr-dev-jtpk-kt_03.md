@@ -132,7 +132,7 @@
 
 要了解`ViewModel`组件是如何针对特定的`Lifecycle`进行范围划分的，让我们看看获取`ViewModel`实例的传统方法：
 
-```kt
+```java
 val vm = ViewModelProvider(this)[MyViewModel::class.java]
 ```
 
@@ -160,7 +160,7 @@ val vm = ViewModelProvider(this)[MyViewModel::class.java]
 
 1.  首先，通过左键单击应用程序包，选择 `RestaurantsViewModel` 作为名称，并选择 **文件** 作为类型来创建一个新文件。在新建的文件中，添加以下代码：
 
-    ```kt
+    ```java
     import androidx.lifecycle.ViewModel
     class RestaurantsViewModel(): ViewModel() {
        fun getRestaurants() = dummyRestaurants
@@ -175,7 +175,7 @@ val vm = ViewModelProvider(this)[MyViewModel::class.java]
 
 1.  要获取此特殊语法，请转到应用程序模块中的 `build.gradle` 文件，并在 `dependencies` 块内添加 ViewModel-Compose 依赖项：
 
-    ```kt
+    ```java
     dependencies {
           […]
         debugImplementation "androidx.compose.ui:ui-
@@ -189,7 +189,7 @@ val vm = ViewModelProvider(this)[MyViewModel::class.java]
 
 1.  回到 `RestaurantsScreen` 文件，我们希望在 `RestaurantsScreen` 可组合函数内部实例化 `RestaurantsViewModel`。我们可以通过使用 `viewModel()` 内联函数语法并指定我们期望的 `ViewModel` 类型来实现这一点；即 `RestaurantsViewModel`：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen() {
        val viewModel: RestaurantsViewModel = viewModel()
@@ -245,7 +245,7 @@ val vm = ViewModelProvider(this)[MyViewModel::class.java]
 
 要使这样的 `TextField` 显示我们正在输入的文本，请记住我们添加了一个 `textState` 变量。我们的 `TextField` 需要这样一个包含 `String` 值的状态对象。这个值代表我们输入的文本，它可以随着我们继续输入而改变：
 
-```kt
+```java
 @Composable
 fun NameInput() {
    val textState: MutableState<String> =
@@ -266,7 +266,7 @@ fun NameInput() {
 
 现在我们已经涵盖了如何定义状态对象，一些问题仍然存在：我们如何更改状态以重新触发重新组合，以及我们如何确保我们的 `TextField` 访问来自 `textState` 的更新值？让我们添加这些缺失的部分：
 
-```kt
+```java
 @Composable
 fun NameInput() {
    val textState = remember { mutableStateOf("")}
@@ -293,7 +293,7 @@ fun NameInput() {
 
 1.  在 `RestaurantsScreen.kt` 文件中，在 `RestaurantItem` 内部添加另一个可组合组件，称为 `FavoriteIcon`。然后传递一个权重 `0.15f` 以使其占用父 `Row` 的 15%。
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem(item: Restaurant) {
        Card(...) {
@@ -310,7 +310,7 @@ fun NameInput() {
 
 1.  仍然在 `RestaurantsScreen.kt` 文件中，定义缺失的 `FavoriteIcon` 组合组件，该组件接收一个 `imageVector` 作为预定义图标 `Icons.Filled.FavoriteBorder`。同时，让它接收一个具有 `8.dp` 填充的 `Modifier` 对象：
 
-    ```kt
+    ```java
     @Composable
     private fun FavoriteIcon(modifier: Modifier) {
        Image(
@@ -330,7 +330,7 @@ fun NameInput() {
 
 1.  通过添加以下代码向 `FavoriteIcon` 组合组件添加状态：
 
-    ```kt
+    ```java
     @Composable
     private fun FavoriteIcon(modifier: Modifier) {
        val favoriteState = remember { 
@@ -403,7 +403,7 @@ fun NameInput() {
 
 1.  首先，通过从函数体顶部移除现有的`favoriteState`和`icon`变量及其实例化逻辑，将状态从`FavoriteIcon`可组合组件提升出来。同时，更新`FavoriteIcon`可组合组件以接受一个`icon`参数来接收输入数据，以及一个`onClick`事件回调来向上转发事件：
 
-    ```kt
+    ```java
     @Composable
     private fun FavoriteIcon(icon: ImageVector, 
                              modifier: Modifier,
@@ -420,7 +420,7 @@ fun NameInput() {
 
 1.  现在，将`favoriteState`变量移动到`FavoriteIcon`的父可组合组件`RestaurantItem`中。`RestaurantItem`可组合组件为`FavoriteIcon`提供状态，并负责随时间更新其状态：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem(item: Restaurant) {
        val favoriteState = remember { 
@@ -447,7 +447,7 @@ fun NameInput() {
 
 1.  在`RestaurantIcon`内部，添加一个类似的`onClick`函数参数（就像`FavoriteIcon`有的一样）并将其绑定到`clickable`修饰符的回调：
 
-    ```kt
+    ```java
     @Composable
     private fun RestaurantIcon(icon: ImageVector, modifier: Modifier, onClick: () -> Unit = { }) {
        Image([...],
@@ -464,7 +464,7 @@ fun NameInput() {
 
 1.  在`RestaurantItem`组合组件内部，将`FavoriteIcon`替换为`RestaurantIcon`：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem(item: Restaurant) {
        val favoriteState = ...
@@ -486,7 +486,7 @@ fun NameInput() {
 
 1.  在`Restaurant.kt`文件内部，为`Restaurant`添加另一个属性`isFavorite`。它应该有一个默认值`false`，因为默认情况下，当应用程序启动时，餐厅不会被标记为收藏：
 
-    ```kt
+    ```java
     data class Restaurant(val id: Int,
                           val title: String,
                           val description: String,
@@ -496,7 +496,7 @@ fun NameInput() {
 
 1.  返回到`RestaurantsScreen.kt`文件内部，再次提升状态，这次是从`RestaurantItem`开始的，通过添加一个在`RestaurantIcon`的回调函数参数内部被触发的`onClick`函数参数。由于我们已经有类型为`Restaurant`的`item`参数，因此我们不需要为输入数据添加新的参数，并且可以安全地移除`favoriteState`变量，因为我们不再需要它了：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantItem(item: Restaurant, 
                        onClick: (id: Int) -> Unit) {
@@ -523,7 +523,7 @@ fun NameInput() {
 
 1.  在`RestaurantsScreen`内部，添加一个`state`变量，它将保存我们的餐厅列表。其类型将是`MutableState<List<Restaurant>>`，我们将从`viewModel`设置餐厅作为其初始值，最后将状态对象的`value`传递给`LazyColumn`的`items`构造函数：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen() {
       val viewModel: RestaurantsViewModel = viewModel()
@@ -577,7 +577,7 @@ fun NameInput() {
 
 1.  要将状态提升到`ViewModel`，我们必须将`State`对象从`RestaurantsScreen`可组合组件移动到`RestaurantsViewModel`，并且我们必须创建一个新的方法`toggleFavorite`，该方法将允许`RestaurantsViewModel`在尝试切换餐厅的收藏状态时每次都修改`state`变量的值：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
        val state = mutableStateOf(dummyRestaurants)
         fun toggleFavorite(id: Int) {
@@ -602,7 +602,7 @@ fun NameInput() {
 
 1.  在`RestaurantsScreen`可组合组件内部，移除`state`变量，并通过访问`.value`访问器使用`viewModel.state.value`从`RestaurantsViewModel`传递餐厅：
 
-    ```kt
+    ```java
     fun RestaurantsScreen() {
        val viewModel: RestaurantsViewModel = viewModel()
        LazyColumn(...) {
@@ -675,7 +675,7 @@ fun NameInput() {
 
 1.  将 `SavedStateHandle` 参数添加到你的 `RestaurantsViewModel`：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(
         private val stateHandle: SavedStateHandle) : 
     ViewModel() {
@@ -685,7 +685,7 @@ fun NameInput() {
 
 1.  在 `toggleFavorite` 方法中切换餐厅的收藏状态时，调用 `storeSelection` 方法，并传递相应的餐厅：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(…) {
        fun toggleFavorite(id: Int) {
            …
@@ -702,7 +702,7 @@ fun NameInput() {
 
 1.  在 `RestaurantsViewModel` 中，创建一个新的 `storeSelection` 方法，该方法接收一个 `Restaurant` 对象，其 `isFavorite` 属性刚刚被更改，并将该选择保存到 `RestaurantsViewModel` 类提供的 `SavedStateHandle` 对象中：
 
-    ```kt
+    ```java
     private fun storeSelection(item: Restaurant) {
        val savedToggled = stateHandle
          .get<List<Int>?>(FAVORITES)
@@ -730,7 +730,7 @@ fun NameInput() {
 
 1.  在我们传递给`state`对象的初始值`dummyRestaurants`列表上调用`restoreSelections()`扩展方法。这个调用应该恢复 UI 选择：
 
-    ```kt
+    ```java
     class RestaurantsViewModel(
        private val stateHandle: SavedStateHandle):
           ViewModel() {
@@ -745,7 +745,7 @@ fun NameInput() {
 
 1.  在`RestaurantsViewModel`内部，定义一个`restoreSelections`扩展函数，这将允许我们在进程死亡时检索被收藏的餐厅：
 
-    ```kt
+    ```java
     private fun List<Restaurant>.restoreSelections():
             List<Restaurant> {
         stateHandle.get<List<Int>?>(FAVORITES)?.let {

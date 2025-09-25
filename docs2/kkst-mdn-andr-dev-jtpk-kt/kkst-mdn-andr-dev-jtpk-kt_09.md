@@ -242,7 +242,7 @@ Android 项目中 MVVM 的一种常见实现定义其层如下：
 
 1.  首先，在`RestaurantsScreen()`可组合组件内部，将状态中的餐厅列表（从`RestaurantsViewModel`检索）保存到`restaurants`变量中，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -259,7 +259,7 @@ Android 项目中 MVVM 的一种常见实现定义其层如下：
 
 1.  我们需要定义一个条件，让我们知道何时显示加载指示器。作为一个初步尝试，我们可以说当 `restaurants` 变量包含一个空的 `List<Restaurant>` 作为值时，这意味着餐厅尚未到达，内容仍在加载。添加一个 `isLoading` 变量来考虑这一点，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -273,7 +273,7 @@ Android 项目中 MVVM 的一种常见实现定义其层如下：
 
 1.  我们希望在 `isLoading` 变量为 `true` 时显示加载指示器。要做到这一点，将 `LazyColumn` 可组合组件包裹在一个 `Box` 可组合组件中，并在 `LazyColumn` 代码下方检查 `isLoading` 变量是否为 `true`，并传递一个 `CircularProgressIndicator` 可组合组件。代码如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         …
@@ -294,7 +294,7 @@ Android 项目中 MVVM 的一种常见实现定义其层如下：
 
 1.  要使 `CircularProgressIndicator` 可组合组件居中，请将 `Alignment.Center` 对齐方式添加到 `Box` 可组合组件的 `contentAlignment` 参数中，同时传递一个 `Modifier.fillMaxSize()` 修饰符。代码如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         …
@@ -343,7 +343,7 @@ Android 项目中 MVVM 的一种常见实现定义其层如下：
 
 +   视图层（由 `RestaurantsScreen()` 可组合组件表示）执行 UI 逻辑和展示逻辑。虽然这个可组合组件应该只包含 UI 逻辑（消费状态内容的无状态可组合组件），但当计算 `isLoading` 变量时，一些展示逻辑隐藏在其中，如下面的代码片段所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         …
@@ -356,7 +356,7 @@ Android 项目中 MVVM 的一种常见实现定义其层如下：
 
 +   `RestaurantsViewModel` 类包含展示逻辑（例如，持有和更新 UI 的状态）和数据逻辑（因为它在获取和缓存餐厅时与 Retrofit 服务 Room **数据访问对象**（**DAO**）一起工作），如下面的代码片段所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         private var restInterface: RestaurantsApiService
         private var restaurantsDao = ...
@@ -403,7 +403,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  创建一个将模拟 `RestaurantsScreen()` 可组合的 UI 状态的类。通过点击应用程序包，将 `RestaurantsScreenState` 作为名称，并选择 `restaurants` 列表和 `isLoading` 标志。以下代码片段展示了这一过程：
 
-    ```kt
+    ```java
     data class RestaurantsScreenState(
         val restaurants: List<Restaurant>,
         val isLoading: Boolean)
@@ -413,7 +413,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  在`RestaurantsViewModel`类中，更新`state`变量的初始状态值并传递一个`RestaurantsScreenState`对象，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         …
         val state = mutableStateOf(
@@ -429,7 +429,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  仍然在`RestaurantsViewModel`类中，找到`getRestaurants()`方法并更新我们更新`state`变量的方式，如下所示：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(errorHandler) {
             val restaurants = getAllRestaurants()
@@ -444,7 +444,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  仍然在`RestaurantsViewModel`类中，确保`toggleFavorite()`方法正确地使用`copy()`函数更新`state`变量对象，如下所示：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int, oldValue: Boolean) {
         viewModelScope.launch(errorHandler) {
             val updatedRestaurants = […]
@@ -458,7 +458,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  重构`RestaurantsScreen()` composable 以消费新的 UI 状态内容，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -491,7 +491,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  在`RestaurantsScreenState`类中，添加一个`error: String`参数，用于存储可能发生的错误信息，如下所示：
 
-    ```kt
+    ```java
     data class RestaurantsScreenState(
         val restaurants: List<Restaurant>,
         val isLoading: Boolean,
@@ -503,7 +503,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  在`RestaurantsViewModel`类中，找到我们用来捕获可能由我们的协程抛出的任何异常的`errorHandler`变量，并通过传递`exception.message`错误消息到`error`字段来更新`state`对象。代码如下所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         …
         private val errorHandler =
@@ -524,7 +524,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 1.  在`RestaurantsScreen()`可组合函数中，在`Box`可组合函数内添加另一个`if`语句。此语句检查`state`对象是否包含要显示的错误消息，如果是`true`，则添加一个`Text`可组合函数来显示错误消息。代码如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         …
@@ -568,7 +568,7 @@ UI 逻辑（渲染可组合项）已经在 UI 层（Compose UI）中，因此我
 
 在我们的应用中，`RestaurantsViewModel`类必须决定是否从`restInterface`（远程）源或从`restaurantsDao`（本地）源获取数据，同时确保刷新缓存。以下代码片段显示了执行的相关代码：
 
-```kt
+```java
 class RestaurantsViewModel() : ViewModel() {
     private var restInterface: RestaurantsApiService
     private var restaurantsDao = [...]
@@ -591,7 +591,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  通过点击应用程序包，将名称设置为`RestaurantsRepository`并选择**类**作为类型来创建一个`Repository`类：
 
-    ```kt
+    ```java
     class RestaurantsRepository { }
     ```
 
@@ -599,7 +599,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  在`RestaurantsViewModel`类内部，从`init`块中剪切`restInterface`变量及其初始化逻辑，并将其粘贴到`RestaurantsRepository`中，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsRepository {
         private var restInterface: RestaurantsApiService =
             Retrofit.Builder()
@@ -612,7 +612,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  对于`restaurantsDao`变量，也执行相同的操作，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsRepository {
         private var restInterface: RestaurantsApiService = …
         private var restaurantsDao = RestaurantsDb
@@ -623,7 +623,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  在`RestaurantsViewModel`类内部，添加一个`repository`变量，并使用`RestaurantsRepository()`构造函数对其进行实例化，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         private val repository = RestaurantsRepository()
         val state = mutableStateOf(…)
@@ -639,7 +639,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  将`RestaurantsViewModel`类的`toggleFavoriteRestaurant()`、`getAllRestaurants()`和`refreshCache()`方法移动到`RestaurantsRepository`类，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsRepository {
         private var restInterface: RestaurantsApiService = …
         private var restaurantsDao = […]
@@ -651,7 +651,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  确保除了`init { }`块之外，`RestaurantsViewModel`类只包含`toggleFavorite()`和`getRestaurants()`方法，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         […]
         init { getRestaurants() }
@@ -662,7 +662,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  在 `RestaurantsRepository` 类中，移除 `getAllRestaurants()` 和 `toggleFavoriteRestaurant()` 方法的 `private` 修饰符，因为 `RestaurantsViewModel` 需要调用它们，所以它们必须是公开的。代码如下所示：
 
-    ```kt
+    ```java
     class RestaurantsRepository {
         […]
         suspend fun toggleFavoriteRestaurant(…) = […]
@@ -673,7 +673,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  返回到 `RestaurantsViewModel` 类内部，更新 `getRestaurants()` 方法，现在调用 `repository.getAllRestaurants()`，如下所示：
 
-    ```kt
+    ```java
     private fun getRestaurants() {
         viewModelScope.launch(errorHandler) {
             val restaurants = repository.getAllRestaurants()
@@ -684,7 +684,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 1.  仍然在 `RestaurantsViewModel` 类中，更新 `toggleFavorite()` 方法，现在调用 `repository.toggleFavoriteRestaurant()`，如下所示：
 
-    ```kt
+    ```java
     fun toggleFavorite(id: Int, oldValue: Boolean) {
         viewModelScope.launch(errorHandler) {
             val updatedRestaurants = repository
@@ -706,7 +706,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 让我们看看 `RestaurantsViewModel` 类中 UI 状态的定义，如下所示：
 
-```kt
+```java
 class RestaurantsViewModel() : ViewModel() {
     …
     val state = mutableStateOf(RestaurantsScreenState(
@@ -718,7 +718,7 @@ class RestaurantsViewModel() : ViewModel() {
 
 在 `RestaurantsViewModel` 中，我们使用 `MutableState<RestaurantsScreenState>` 推断类型在 `state` 变量中持有状态。这个变量是公开的，因此在内层 UI 中，从 `RestaurantsScreen()` 组合函数内部，我们可以通过访问 `viewModel` 变量并直接获取 `state` 对象来消费它，如下所示：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
     val viewModel: RestaurantsViewModel = viewModel()
@@ -731,7 +731,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 这里的危险在于，我们（或我们开发团队中的其他同事）可能会错误地从 UI 层更新 UI 状态，如下所示：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
     val viewModel: RestaurantsViewModel = viewModel()
@@ -756,7 +756,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  首先，在`RestaurantsViewModel`类中，让我们防止我们的`state`变量被访问，因为它属于`MutableState`类型，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         …
         private val state = mutableStateOf(…)
@@ -766,7 +766,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  然后，仍然在`RestaurantsViewModel`类中，将`state`变量重命名为`_state`。你可以通过选择`state`变量，然后按*Shift* + *F6*来实现这一点。确保所有之前的`state`使用现在都称为`_state`。代码在以下片段中展示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         …
         private val _state = mutableStateOf(…)
@@ -797,7 +797,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  仍然在`RestaurantsViewModel`中，创建另一个类型为`State<RestaurantsScreenState>`的`state`变量，并通过`get()`语法定义其自定义获取器，如下所示：
 
-    ```kt
+    ```java
     class RestaurantsViewModel() : ViewModel() {
         …
         private val _state = mutableStateOf(...)
@@ -815,7 +815,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 1.  最后，在`RestaurantsScreen()`可组合函数中，确保`state`变量被消费，如下所示：
 
-    ```kt
+    ```java
     @Composable
     fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
         val viewModel: RestaurantsViewModel = viewModel()
@@ -826,7 +826,7 @@ fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
 
 如果你现在尝试更改`state`变量的值，就像我们在本节开头所做的那样，那么`val`变量，如下面的代码片段所示：
 
-```kt
+```java
 @Composable
 fun RestaurantsScreen(onItemClick: (id: Int) -> Unit) {
     val viewModel: RestaurantsViewModel = viewModel()

@@ -22,7 +22,7 @@
 
 让我们先看看如何在 Java 中创建两个线程：
 
-```kt
+```java
 new Thread(() -> {
    for (int i = 0; i < 100; i++) {
       System.out.println("T1: " + i);
@@ -38,7 +38,7 @@ new Thread(() -> {
 
 输出将类似于以下内容：
 
-```kt
+```java
 ...
 T2: 12
 T2: 13
@@ -54,7 +54,7 @@ T2: 16
 
 Kotlin 中的相同代码如下所示：
 
-```kt
+```java
 val t1 = thread {
     for (i in 1..100) {
         println("T1: $i")
@@ -70,7 +70,7 @@ val t2 = thread {
 
 在 Kotlin 中，由于有一个帮助我们创建新线程的函数，所以代码更简洁。请注意，与 Java 不同，我们不需要调用`start()`来启动线程。它默认启动。如果我们想稍后启动它，我们可以将`start`参数设置为`false`：
 
-```kt
+```java
 val t2 = thread(start = false) {
     for (i in 1..100) {
         println("T2: $i")
@@ -85,7 +85,7 @@ Java 中另一个有用的概念是*守护线程*。这些线程不会阻止 JVM
 
 在 Java 中，API 不是流畅的，所以我们必须将我们的线程分配给一个变量，将其设置为守护线程，然后启动它：
 
-```kt
+```java
 Thread t1 = new Thread(() -> {
     for (int i = 0; i < 100; i++) {
         System.out.println("T1: " + i);
@@ -97,7 +97,7 @@ t1.start();
 
 在 Kotlin 中，这要简单得多：
 
-```kt
+```java
 val t3 = thread(isDaemon = true) {
     for (i in 1..1_000_000) {
         println("T3: $i")
@@ -113,7 +113,7 @@ val t3 = thread(isDaemon = true) {
 
 我们将从以下示例开始，该示例创建 100,000 个线程来增加计数器：
 
-```kt
+```java
 var counter = 0
 val latch = CountDownLatch(100_000)
 for (i in 1..100_000) {
@@ -131,7 +131,7 @@ println("Counter $counter")
 
 但是，与 Java 不同，Kotlin 中没有`synchronized`关键字。原因是 Kotlin 的设计者认为一种语言不应该针对特定的并发模型进行定制。相反，有一个`synchronized()`函数：
 
-```kt
+```java
 var counter = 0
 val latch = CountDownLatch(100_000)
 for (i in 1..100_000) {
@@ -159,7 +159,7 @@ println("Counter $counter")
 
 在以下代码片段中，我们将尝试创建 10,000 个线程，每个线程休眠相对较短的时间：
 
-```kt
+```java
 val counter = AtomicInteger()
 try {
     for (i in 0..10_000) {
@@ -178,14 +178,14 @@ try {
 
 我们创建一个指定大小的新的线程池：
 
-```kt
+```java
 // Try setting this to 1, number of cores, 100, 2000, 3000 and see what happens
 val pool = Executors.newFixedThreadPool(100)
 ```
 
 现在我们想提交一个新任务。我们通过调用`pool.submit()`来完成这个任务：
 
-```kt
+```java
 
 val counter = AtomicInteger(0)
 
@@ -206,7 +206,7 @@ for (i in 1..10_000) {
 
 然后我们需要确保池终止，通过以下几行代码：
 
-```kt
+```java
 pool.awaitTermination(20, TimeUnit.SECONDS)
 pool.shutdown()
 
@@ -225,7 +225,7 @@ println("Took me ${System.currentTimeMillis() - start} millis to complete ${coun
 
 你需要知道的第一件事是，协程不是语言的一部分。它们只是 JetBrains 提供的另一个库。因此，如果我们想使用它们，我们需要在我们的 Gradle 配置文件`build.gradle`中指定：
 
-```kt
+```java
 dependencies {
     ...
     compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.21"
@@ -241,13 +241,13 @@ dependencies {
 
 因此，在你添加这个依赖项并开始使用它们之后，你可能会在编译或你的 IDE 中收到警告：
 
-```kt
+```java
 The feature "coroutines" is experimental
 ```
 
 你可以使用以下 Gradle 配置来隐藏这些警告：
 
-```kt
+```java
 kotlin {
     experimental {
         coroutines 'enable'
@@ -263,7 +263,7 @@ kotlin {
 
 我们将创建一个几乎与线程相同的示例。每个协程将增加某个计数器，暂停一段时间来模拟某种 I/O，然后再次增加：
 
-```kt
+```java
 val latch = CountDownLatch(10_000)
 val c = AtomicInteger()
 
@@ -296,7 +296,7 @@ println("Executed ${c.get() / 2} coroutines in ${System.currentTimeMillis() - st
 
 当然，它们并不是神奇的。让我们为我们的协程创建一个**工厂**，它将能够生成短运行或长运行的协程：
 
-```kt
+```java
 object CoroutineFactory {
     fun greedyLongCoroutine(index: Int) = async {
         var uuid = UUID.randomUUID()
@@ -351,7 +351,7 @@ object CoroutineFactory {
 
 我们将分别调用`greedyLongCoroutine()`和`shortCoroutine()`方法 10 次，并等待它们完成：
 
-```kt
+```java
 val latch = CountDownLatch(10 * 2)
 fun main(args: Array<String>) {
 
@@ -369,7 +369,7 @@ fun main(args: Array<String>) {
 
 显然，由于协程是异步的，我们首先会看到短协程的前 10 行，然后是长协程的前 10 行：
 
-```kt
+```java
 Done greedyLongCoroutine 2
 Done greedyLongCoroutine 4
 Done greedyLongCoroutine 3
@@ -410,7 +410,7 @@ Done greedyLongCoroutine 10
 
 让我们看看一个抽象的例子。我们该如何构建一个用户资料？
 
-```kt
+```java
 fun profile(id: String): Profile {
     val bio = fetchBioOverHttp(id) // takes 1s
     val picture = fetchPictureFromDB(id) // takes 100ms
@@ -423,7 +423,7 @@ fun profile(id: String): Profile {
 
 但我们已经了解了线程。让我们重构这个函数，使用它们来代替！
 
-```kt
+```java
 fun profile(id: String): Profile {
     val bio = fetchBioOverHttpThread(id) // still takes 1s
     val picture = fetchPictureFromDBThread(id) // still takes 100ms
@@ -436,7 +436,7 @@ fun profile(id: String): Profile {
 
 因此，让我们使用线程池来限制内存占用：
 
-```kt
+```java
 fun profile(id: String): Profile {
     val bio = fetchBioOverHttpThreadPool()
     val picture = fetchPictureFromDBThreadPool()
@@ -451,7 +451,7 @@ fun profile(id: String): Profile {
 
 让我们深入了解其中一个函数，了解它是如何完成的：
 
-```kt
+```java
 fun fetchBioOverHttp(id: String): Bio {
     doSomething() // 50ms
     val result = httpCall() // 900ms
@@ -463,7 +463,7 @@ fun fetchBioOverHttp(id: String): Bio {
 
 尽管如此，我们可以用`suspend`关键字标记`httpCall()`：
 
-```kt
+```java
 suspend fun httpCall(): Result { 
     ...
 }
@@ -471,7 +471,7 @@ suspend fun httpCall(): Result {
 
 当 Kotlin 编译器看到这个关键字时，它知道它可以像这样拆分并重写函数：
 
-```kt
+```java
 fun fetchBioOverHttp(id: String): Bio {
    doSomething() // 50ms
    httpCall() { // It was marked as suspend, so I can rewrite it!
@@ -495,7 +495,7 @@ fun callback(httpResult: Result) {
 
 让我们在我们的工厂中使用扩展方法添加另一个方法：
 
-```kt
+```java
 fun CoroutineFactory.longCoroutine(index: Int) = launch {
     var uuid = UUID.randomUUID()
     for (i in 1..100_000) {
@@ -517,7 +517,7 @@ fun CoroutineFactory.longCoroutine(index: Int) = launch {
 
 我们在第一个循环中调用这个方法：
 
-```kt
+```java
 ...
 for (i in 1..10) {
     CoroutineFactory.longCoroutine(i)
@@ -527,7 +527,7 @@ for (i in 1..10) {
 
 现在我们运行它，我们得到了最初预期的输出：
 
-```kt
+```java
 Done shortCoroutine 0!
 Done shortCoroutine 1!
 Done shortCoroutine 2!
@@ -560,7 +560,7 @@ Done longCoroutine 8
 
 看看下面的代码：
 
-```kt
+```java
 val j = launch(CommonPool) {
     for (i in 1..10_000) {
         if (i % 1000 == 0) {
@@ -575,7 +575,7 @@ val j = launch(CommonPool) {
 
 通过添加以下行，我们的示例将打印预期的结果：
 
-```kt
+```java
 runBlocking {
     j.join()
 }
@@ -595,7 +595,7 @@ runBlocking {
 
 为了演示这一点，我们将创建一个偶尔产生输出的*良好*协程：
 
-```kt
+```java
 val cancellable = launch {
     try {
         for (i in 1..1000) {
@@ -612,7 +612,7 @@ val cancellable = launch {
 
 另一个不产生输出的协程：
 
-```kt
+```java
 val notCancellable = launch {
     for (i in 1..1000) {
         println("Not cancellable $i")
@@ -623,7 +623,7 @@ val notCancellable = launch {
 
 我们将尝试取消两者：
 
-```kt
+```java
 println("Canceling cancellable")
 cancellable.cancel()
 println("Canceling not cancellable")
@@ -632,7 +632,7 @@ notCancellable.cancel()
 
 等待结果：
 
-```kt
+```java
 runBlocking {
     cancellable.join()
     notCancellable.join()
@@ -655,7 +655,7 @@ runBlocking {
 
 我们运行一个协程，它将返回用户的配置文件字符串，在我们的例子中：
 
-```kt
+```java
 val userProfile = async {
     delay(Random().nextInt(100))
     "Profile"
@@ -664,7 +664,7 @@ val userProfile = async {
 
 我们将运行另一个来返回历史记录。为了简单起见，我们只返回一个整数列表：
 
-```kt
+```java
 val userHistory = async {
     delay(Random().nextInt(200))
     listOf(1, 2, 3)
@@ -673,7 +673,7 @@ val userHistory = async {
 
 为了等待结果，我们使用`await()`函数：
 
-```kt
+```java
 runBlocking {
     println("User profile is ${userProfile.await()} and his history is ${userHistory.await()}")
 }
@@ -686,7 +686,7 @@ runBlocking {
 
 这可以通过使用`withTimeout()`函数来实现：
 
-```kt
+```java
  val coroutine = async {
     withTimeout(500, TimeUnit.MILLISECONDS) {
         try {
@@ -710,7 +710,7 @@ runBlocking {
 
 我们将从协程中等待结果并看看会发生什么：
 
-```kt
+```java
 val result = try {
     coroutine.await()
 }
@@ -735,7 +735,7 @@ println(result)
 
 我们将从一个工作一段时间的中断函数开始：
 
-```kt
+```java
 suspend fun produceBeautifulUuid(): String {
     try {
         val uuids = List(1000) {
@@ -757,7 +757,7 @@ suspend fun produceBeautifulUuid(): String {
 
 为了做到这一点，我们将使用一个父任务：
 
-```kt
+```java
 val parentJob = Job()
 
 List(10) {
@@ -773,7 +773,7 @@ delay(1000) // Wait some more time
 
 如你所见，父任务只是一个任务。我们将其传递给 `async()` 函数。我们可以使用 `+` 号，因为 `CoroutineContext` 覆盖了 `plus()` 函数。你也可以使用命名参数来指定它：
 
-```kt
+```java
 async(CommonPool, parent= parentJob)
 ```
 
@@ -789,7 +789,7 @@ async(CommonPool, parent= parentJob)
 
 为了更好地理解通道，让我们创建一个简单的两人游戏，他们将会互相投掷随机数。如果你的数字更大，你就赢了。否则，你将输掉这一轮：
 
-```kt
+```java
 fun player(name: String,
            input: Channel<Int>,
            output: Channel<Int>) = launch {
@@ -811,7 +811,7 @@ fun player(name: String,
 
 现在让我们玩一秒钟这个游戏：
 
-```kt
+```java
 fun main(vararg args: String) {
     val p1p2 = Channel<Int>()
     val p2p1 = Channel<Int>()
@@ -828,7 +828,7 @@ fun main(vararg args: String) {
 
 我们的结果可能看起来像这样：
 
-```kt
+```java
 ...
 Player 1 got 62, won
 Player 2 got 65, lost
@@ -848,7 +848,7 @@ Player 1 got 81, lost
 
 此函数创建的协程由 `ReceiveChannel<T>` 支持，其中 `T` 是协程产生的类型：
 
-```kt
+```java
 val publisher: ReceiveChannel<Int> = produce {
         for (i in 2018 downTo 1970) { // Years back to Unix
             send(i)
@@ -863,7 +863,7 @@ val publisher: ReceiveChannel<Int> = produce {
 
 与提供了 `subscribe()` 方法的 Rx `Observable` 类似，这个通道有 `consumeEach()` 函数：
 
-```kt
+```java
 publisher.consumeEach {
     println("Got $it")
 }
@@ -871,7 +871,7 @@ publisher.consumeEach {
 
 它将打印以下内容：
 
-```kt
+```java
 Got 35
 Got 34
 Got 33
@@ -885,7 +885,7 @@ Got 29
 
 如果我们有多个生产者，我们可以 `subscribe` 到它们的通道，并获取第一个可用的结果：
 
-```kt
+```java
 val firstProducer = produce<String> {
     delay(Random().nextInt(100))
     send("First")
@@ -912,7 +912,7 @@ println(winner)
 
 注意，`select()` 只发生一次。一个常见的错误是将 `select()` 应用在两个生成数据流的协程上，而没有将其包含在循环中：
 
-```kt
+```java
 // Producer 1
 val firstProducer = produce {
     for (c in 'a'..'z') {
@@ -945,7 +945,7 @@ println(select<String> {
 
 这将打印它接收到的第一个 10 个字符：
 
-```kt
+```java
 // Receiver
 for (i in 1..10) {
     println(select<String> {
@@ -961,7 +961,7 @@ for (i in 1..10) {
 
 另一个选项是使用 `close()` 函数来发送信号：
 
-```kt
+```java
 // Producer 2
 val secondProducer = produce {
     for (c in 'A'..'Z') {
@@ -974,7 +974,7 @@ val secondProducer = produce {
 
 在接收器内部使用 `onReceiveOrNull()`：
 
-```kt
+```java
 // Receiver
 while(true) {
     val result = select<String?> {
@@ -992,7 +992,7 @@ while(true) {
     else {
 ```
 
-```kt
+```java
         println(result)
     }
 }
@@ -1010,7 +1010,7 @@ while(true) {
 
 要创建一个新的演员，我们使用 `actor()` 函数：
 
-```kt
+```java
 data class Task (val description: String)
 val me = actor<Task> {
     while (!isClosedForReceive) {
@@ -1023,7 +1023,7 @@ val me = actor<Task> {
 
 你使用 `send()` 与演员进行通信：
 
-```kt
+```java
 // Imagine this is Michael the PM
 fun michael(actor: SendChannel<Task>) {
 
@@ -1045,7 +1045,7 @@ michael(me)
 
 对于演员来说，另一种模式是使用 `receiveOrNull()` 函数：
 
-```kt
+```java
 val meAgain = actor<Task> {
     var next = receiveOrNull()
 
@@ -1064,7 +1064,7 @@ michael(meAgain)
 
 第三种选项，通常是首选，是遍历通道：
 
-```kt
+```java
 val meWithRange = actor<Task> {
     for (t in channel) {
         println(t.description)
@@ -1073,7 +1073,7 @@ val meWithRange = actor<Task> {
     println("Done everything")
 ```
 
-```kt
+```java
 }
 
 michael(meWithRange)
@@ -1083,7 +1083,7 @@ michael(meWithRange)
 
 演员对于需要维护某种状态的后台任务非常有用。例如，你可以创建一个生成报告的演员。它将接收要生成哪种类型的报告，并确保同一时间只生成一个报告：
 
-```kt
+```java
 data class ReportRequest(val name: String,
                                  val from: LocalDate,
                                  val to: LocalDate)
@@ -1098,7 +1098,7 @@ val reportsActor = actor<ReportRequest>(capacity=100) {
 
 然后，我们可以发送给这个演员要生成哪种类型的报告：
 
-```kt
+```java
 reportsActor.send(ReportRequest("Monthly Report",
         LocalDate.of(2018, 1, 1),
         LocalDate.of(2018, 1, 31)))

@@ -22,19 +22,19 @@
 
 要将 Reactor 库集成到你的项目中，请在 `build.gradle` 文件的仓库部分添加以下行：
 
-```kt
+```java
 maven { url 'https://repo.spring.io/libs-milestone' }
 ```
 
 请在依赖项部分添加以下行：
 
-```kt
+```java
 implementation "io.projectreactor:reactor-core:3.2.2.RELEASE"
 ```
 
 Reactor 库与 Java 开发工具包（**JDK**）的 8 或更高版本兼容。因此，我们应该在 Android 部分添加以下行：
 
-```kt
+```java
 compileOptions {
     sourceCompatibility JavaVersion.VERSION_1_8
     targetCompatibility JavaVersion.VERSION_1_8
@@ -43,19 +43,19 @@ compileOptions {
 
 要集成 RxJava 库，请在依赖项部分添加以下行：
 
-```kt
+```java
 implementation "io.reactivex.rxjava2:rxjava:2.2.3"
 ```
 
 要集成 RxAndroid 库，请在依赖项部分添加以下行：
 
-```kt
+```java
 implementation 'io.reactivex.rxjava2:rxandroid:2.1.0'
 ```
 
 要集成 RxBinding 库，你应该在依赖项部分添加以下行：
 
-```kt
+```java
 implementation 'com.jakewharton.rxbinding3:rxbinding:3.0.0-alpha1'
 ```
 
@@ -83,7 +83,7 @@ implementation 'com.jakewharton.rxbinding3:rxbinding:3.0.0-alpha1'
 
 `ObserverActivity`包含一个`Button`类的实例并调用`setOnClickListener`方法：
 
-```kt
+```java
 class ObserverActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,7 +98,7 @@ class ObserverActivity : AppCompatActivity() {
 
 `setOnClickListener`方法如下所示：
 
-```kt
+```java
 public void setOnClickListener(@Nullable OnClickListener l) {
     if (!isClickable()) {
         setClickable(true);
@@ -109,7 +109,7 @@ public void setOnClickListener(@Nullable OnClickListener l) {
 
 `performClick`方法调用`onClick`函数，如下所示：
 
-```kt
+```java
 public boolean performClick() {
     ////......
     final boolean result;
@@ -138,7 +138,7 @@ public boolean performClick() {
 
 以下示例代码展示了这是如何工作的：
 
-```kt
+```java
 fun fluxTest() {
     Flux.fromArray(arrayOf(1, 2, 3))
             .map { it * it }
@@ -150,7 +150,7 @@ fun fluxTest() {
 
 此示例的输出如下所示：
 
-```kt
+```java
  1
  4
  9
@@ -158,7 +158,7 @@ fun fluxTest() {
 
 `Flux`提供了许多可以用来处理发出值的操作符。以下示例代码演示了这一点：
 
-```kt
+```java
 Flux.fromArray(arrayOf(1, 2, 3))
         .filter { it % 2 == 1 }
         .map { it * it }
@@ -176,7 +176,7 @@ Flux.fromArray(arrayOf(1, 2, 3))
 
 前一个示例的结果如下所示：
 
-```kt
+```java
 1
 9
 ```
@@ -209,7 +209,7 @@ Flux.fromArray(arrayOf(1, 2, 3))
 
 `flatMap`操作符与`map`类似，但它是**异步**的。这意味着它应该返回一个可以在未来返回值的实例，例如`Flux`或`Mono`。以下示例代码展示了如何使用它：
 
-```kt
+```java
 Flux.fromArray(arrayOf(1, 2, 3))
         .flatMap { Mono.just(it).delayElement(Duration.ofSeconds(1)) }
         .subscribe { println(it) }
@@ -217,7 +217,7 @@ Flux.fromArray(arrayOf(1, 2, 3))
 
 此示例的输出如下所示：
 
-```kt
+```java
  1
  2
  3
@@ -245,7 +245,7 @@ Flux.fromArray(arrayOf(1, 2, 3))
 
 我们可以按如下方式实现这个案例：
 
-```kt
+```java
 Flux.from<Unit> { subscriber ->
     findViewById<Button>(R.id.button).setOnClickListener {
         subscriber.onNext(Unit)
@@ -269,7 +269,7 @@ Flux.from<Unit> { subscriber ->
 
 `subscribe`方法返回一个`Disposable`类型的实例，如下所示：
 
-```kt
+```java
 public final Disposable subscribe(Consumer<? super T> consumer) {
    Objects.requireNonNull(consumer, "consumer");
    return subscribe(consumer, null, null);
@@ -284,7 +284,7 @@ public final Disposable subscribe(Consumer<? super T> consumer) {
 
 以下示例代码展示了在调用 `onDestroy` 方法时如何取消发布者：
 
-```kt
+```java
 class ObserverActivity : AppCompatActivity() {
 
     private var disposable: Disposable? = null
@@ -317,7 +317,7 @@ class ObserverActivity : AppCompatActivity() {
 
 以下示例代码发起请求并接收 `Comic` 类的实例，加载 `Bitmap` 类的实例并显示检索到的图像：
 
-```kt
+```java
 Mono.fromDirect<Comic> { subscriber -> subscriber.onNext(loadComic()) }
         .map { comic -> comic.img }
         .flatMap { path -> Mono.fromDirect<Bitmap> { subscriber -> subscriber.onNext(loadBitmap(path)) } }
@@ -343,14 +343,14 @@ Mono.fromDirect<Comic> { subscriber -> subscriber.onNext(loadComic()) }
 
 调度器是对线程池的抽象。以下示例代码创建了一个使用主线程的自己的调度器：
 
-```kt
+```java
 val UIScheduler = Schedulers.fromExecutor { runnable ->     Handler(Looper.getMainLooper()).post(runnable) 
 }
 ```
 
 现在，我们可以以以下方式重写 Mono 发布者部分的一个示例：
 
-```kt
+```java
 Mono.fromDirect<Comic> { subscriber -> subscriber.onNext(loadComic()) }
         .map { comic -> comic.img }
         .flatMap { path -> Mono.fromDirect<Bitmap> { subscriber -> subscriber.onNext(loadBitmap(path)) } }
@@ -391,7 +391,7 @@ Mono.fromDirect<Comic> { subscriber -> subscriber.onNext(loadComic()) }
 
 当您从文件、数据库或网络读取数据时，应考虑使用 `Flowable`。以下示例代码展示了如何创建和使用 `Flowable`：
 
-```kt
+```java
 Flowable.fromIterable(listOf(1, 2, 3))
         .subscribe { println(it) }
 
@@ -407,7 +407,7 @@ Flowable.fromIterable(listOf(1, 2, 3))
 
 一个示例用例如下：
 
-```kt
+```java
 Observable.fromIterable(listOf(1, 2, 3))
         .subscribe { println(it) }
 ```
@@ -446,7 +446,7 @@ Observable.fromIterable(listOf(1, 2, 3))
 
 以下示例代码展示了如何使用 `Single`：
 
-```kt
+```java
 Single.just(1).subscribe(Consumer<Int> { println(it) })
 ```
 
@@ -456,7 +456,7 @@ Single.just(1).subscribe(Consumer<Int> { println(it) })
 
 `Maybe` 类型的实例可以不发出值，或者发出单个值。以下示例代码展示了如何使用 `Maybe` 和 `test` 方法：
 
-```kt
+```java
 Maybe.just(1)
         .map { item -> item + 1 }
         .filter { item -> item == 1 }
@@ -473,7 +473,7 @@ Maybe.just(1)
 
 以下示例代码展示了从数据库中删除项的情况：
 
-```kt
+```java
 Completable.fromAction { Database.delete() }
         .test()
         .assertComplete()
@@ -495,7 +495,7 @@ RxJava 是 Android 开发中非常流行的库，还有许多基于 RxJava 的�
 
 RxAndroid 库提供了一个使用主线程的调度器。以下示例代码展示了如何使用此调度器：
 
-```kt
+```java
 Flowable.fromIterable(listOf(1, 2, 3))
         .subscribeOn(Schedulers.computation())
         .observeOn(AndroidSchedulers.mainThread())
@@ -510,7 +510,7 @@ RxBinding 库提供了一个响应式应用程序编程接口。让我们想象�
 
 RxBinding 库为用户界面组件提供了扩展函数，例如 `textChanges`：
 
-```kt
+```java
 fun TextView.textChanges(): InitialValueObservable<CharSequence> {
     return TextViewTextChangesObservable(this)
 }
@@ -518,7 +518,7 @@ fun TextView.textChanges(): InitialValueObservable<CharSequence> {
 
 我们可以通过使用 `textChanges` 函数来实现我们的示例，如下所示：
 
-```kt
+```java
 class RxActivity : AppCompatActivity() {
 
     private val editText by lazy(LazyThreadSafetyMode.NONE) {
@@ -548,7 +548,7 @@ class RxActivity : AppCompatActivity() {
 
 RxBinding 库还包含 `clicks` 扩展函数，如下所示：
 
-```kt
+```java
 fun View.clicks(): Observable<Unit> {
     return ViewClickObservable(this)
 }
@@ -558,7 +558,7 @@ fun View.clicks(): Observable<Unit> {
 
 此外，`ViewClickObservable` 看起来如下：
 
-```kt
+```java
 private class ViewClickObservable(
         private val view: View
 ) : Observable<Unit>() {
@@ -580,7 +580,7 @@ private class ViewClickObservable(
 
 最后，`Observer` 类看起来如下：
 
-```kt
+```java
  private class Observer(
             private val view: View,
             private val observer: Observer<in Unit>

@@ -62,7 +62,7 @@ Anko 由几个部分组成：
 
 1.  使用 Gradle 设置 Anko 的最简单方法是，在你的 `build.gradle` 文件中添加以下行：
 
-```kt
+```java
     compile "org.jetbrains.anko:anko:$anko_version"
 ```
 
@@ -72,27 +72,27 @@ Anko 由几个部分组成：
 
 +   `anko-commons`：这个库包含了许多 Android SDK 的辅助工具，用于处理意图、对话框、Toast、日志记录以及资源和尺寸：
 
-```kt
+```java
     compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
 +   **Anko Layouts**：Anko Layouts 是一个用于编写动态 Android 布局的 DSL：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-sdk25:$anko_version" // sdk15,19,21,23 are also available
 compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
 ```
 
 +   `anko-sqlite`：这为使用 SQLite 数据库提供了辅助工具：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-sqlite:$anko_version"
 
 ```
 
 +   `anko-coroutines`：这个库使得使用 Kotlin 协程变得更加容易：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-coroutines:$anko_version"
 
 ```
@@ -111,7 +111,7 @@ compile "org.jetbrains.anko:anko-coroutines:$anko_version"
 
 1.  我们将创建一个非常简单的类`Student`，并为它创建一个扩展函数：
 
-```kt
+```java
 class Student(val age:Int)
 ```
 
@@ -127,7 +127,7 @@ class Student(val age:Int)
 
 1.  由于我们要为`Student`类创建函数，我们将从下拉菜单中选择`Student`选项。选择它后，IDE 将自动生成方法体。我已经将返回类型修改为返回布尔值：
 
-```kt
+```java
 private fun Student.isAgeGreaterThan20(): Boolean {
 
 }
@@ -135,7 +135,7 @@ private fun Student.isAgeGreaterThan20(): Boolean {
 
 1.  然后，我们可以在方法块内执行操作。我们的方法看起来是这样的：
 
-```kt
+```java
 private fun Student.isAgeGreaterThan20(): Boolean {
     return this.age>20
 }
@@ -145,7 +145,7 @@ private fun Student.isAgeGreaterThan20(): Boolean {
 
 1.  现在，我们可以像调用普通方法一样调用它：
 
-```kt
+```java
 fun main(args: Array<String>) {
     val studentA=Student(25)
     println(studentA.isAgeGreaterThan20())
@@ -156,13 +156,13 @@ fun main(args: Array<String>) {
 
 1.  现在，让我们看看一个与 Android 相关的示例。如果你使用过任何第三方库，如`Picasso`或`Glide`，你可能记得像这样在`ImageView`中设置图片：
 
-```kt
+```java
 Picasso.with(context).from(url).into(imageView);
 ```
 
 1.  你可以创建一个名为`loadImage`的`ImageView`扩展函数，然后在你的应用程序中调用该函数。当然，`loadImage`不是`ImageView`类提供的函数，所以你需要创建一个扩展函数来达到这个目的。我们将在这个`imageView`对象上调用该方法，并传递一个`url`：
 
-```kt
+```java
 imageView.loadImage(url)
 private fun ImageView.loadImage(url: String) {
     Picasso.with(this.context).load(url).into(this)
@@ -177,7 +177,7 @@ private fun ImageView.loadImage(url: String) {
 
 如果你反编译 Kotlin 的字节码，你会看到代码被转换为 Java：
 
-```kt
+```java
 private static final boolean isAgeGreaterThan20(@NotNull Student $receiver) {
    return $receiver.getAge() > 20;
 }
@@ -203,13 +203,13 @@ private static final boolean isAgeGreaterThan20(@NotNull Student $receiver) {
 
 1.  我们将使用共享首选项的例子。你可能习惯于这样做来获取共享首选项：
 
-```kt
+```java
 PreferenceManager.getDefaultSharedPreferences(this)
 ```
 
 1.  你可以在`Context`类上创建一个名为偏好的扩展属性，并按以下方式访问它：
 
-```kt
+```java
 val Context.preferences: SharedPreferences
        get() = PreferenceManager
        .getDefaultSharedPreferences(this)
@@ -224,7 +224,7 @@ context.preferences.getInt("...")
 
 与扩展属性类似，我们可以有伴随对象扩展，这意味着我们可以向类的伴随对象添加方法，帮助我们以静态方式访问它。让我们看一个例子。假设我们有一个`Student`类：
 
-```kt
+```java
 class Student(val age:Int){
     companion object{
 
@@ -234,7 +234,7 @@ class Student(val age:Int){
 
 现在让我们给伴随对象添加一个扩展方法：
 
-```kt
+```java
 fun Student.Companion.sayHi(){
     println("Hi")
 }
@@ -242,7 +242,7 @@ fun Student.Companion.sayHi(){
 
 现在，你可以在不创建类实例的情况下访问它：
 
-```kt
+```java
 Student.sayHi()
 ```
 
@@ -250,7 +250,7 @@ Student.sayHi()
 
 **意图**是 Android 应用中最常用的组件之一。它们可以被看作是用于在不同 Android 组件之间传递消息的信使。例如，当你需要启动一个活动时，你会发送一个意图；当你需要启动一个服务时，你会发送一个意图。要在 Android 中启动一个活动，你首先需要创建一个意图，然后将其传递给`startActivity`方法。在下面的例子中，我们将尝试使用一些数据和标志启动一个活动：
 
-```kt
+```java
 val intent = Intent(this, SomeActivity::class.java)
 intent.putExtra("data", 5)
 intent.setFlag(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -265,7 +265,7 @@ Anko 有一种更好的方法来实现类似的结果。在本食谱中，我们
 
 我将使用 Android Studio 进行编码目的。您需要在您的 `build.gradle` 文件中在 app 级别包含 Anko 库。只需添加这些行，然后您就可以开始了：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
@@ -275,19 +275,19 @@ compile "org.jetbrains.anko:anko-commons:$anko_version"
 
 1.  我们前面编写的代码所实现的功能，使用 Anko 只需几行代码就可以实现：
 
-```kt
+```java
 startActivity(intentFor<SomeActivity>("data" to 5).singleTop())
 ```
 
 1.  如果您不想添加标志，这要简单得多：
 
-```kt
+```java
 startActivity<SomeActivity>("data" to 5)
 ```
 
 1.  添加额外数据不需要额外的行：
 
-```kt
+```java
 startActivity<SomeActivity>("data" to 5, "another_data" to 10)
 ```
 
@@ -295,13 +295,13 @@ startActivity<SomeActivity>("data" to 5, "another_data" to 10)
 
 让我们看看前面方法的源代码实现：
 
-```kt
+```java
 inline fun <reified T: Any> Context.intentFor(vararg params: Pair<String, Any?>)
 ```
 
 `intentFor` 方法接受 `vararg` 作为参数，因此我们可以向其提供多个数据。此方法调用 `createIntent`，它实际上创建了一个包含提供数据的意图，其外观如下：
 
-```kt
+```java
 fun <T> createIntent(ctx: Context, clazz: Class<out T>, params: Array<out Pair<String, Any?>>): Intent {
     val intent = Intent(ctx, clazz)
     if (params.isNotEmpty()) fillIntentArguments(intent, params)
@@ -354,7 +354,7 @@ private fun fillIntentArguments(intent: Intent, params: Array<out Pair<String, A
 
 我将使用 Android Studio 进行编码。您需要在您的 `build.gradle` 文件中包含 Anko 库。只需将以下行添加到您的 `build.gradle` 文件中，然后您就可以开始了：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
@@ -366,13 +366,13 @@ compile "org.jetbrains.anko:anko-commons:$anko_version"
 
 1.  Anko 提供了围绕使用意图可以执行的最常见操作的包装器；其中之一是拨打电话。为此，Anko 提供了 `makeCall` 函数，该函数接受您想要拨打的电话号码：
 
-```kt
+```java
 makeCall("+9195XXXXXXXX")
 ```
 
 1.  `makeCall` 函数在操作成功时返回 true，如果操作未成功则返回 false。需要注意的是，您需要在您的清单文件中添加 `CALL_PHONE` 权限：
 
-```kt
+```java
 <uses-permission android:name="android.permission.CALL_PHONE"/>
 ```
 
@@ -380,7 +380,7 @@ makeCall("+9195XXXXXXXX")
 
 让我们看看 `makeCall 函数` 的源代码：
 
-```kt
+```java
 fun Context.makeCall(number: String): Boolean {
     try {
         val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number"))
@@ -403,7 +403,7 @@ Anko 提供了围绕意图操作的包装器，这使得调用操作变得非常
 
 我将使用 Android Studio 进行编码。您需要在您的 `build.gradle` 文件中包含 Anko 库。只需添加给定的行，然后您就可以开始了：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
@@ -415,13 +415,13 @@ compile "org.jetbrains.anko:anko-commons:$anko_version"
 
 1.  Anko 提供了 `sendSMS` 方法，它接受两个参数——其中一个参数是电话号码，另一个是消息：
 
-```kt
+```java
 sendSMS("+9195XXXXXX","Hi")
 ```
 
 1.  调用此方法将启动消息应用，或者如果您有多个此类应用，它将询问您要启动哪个消息应用，并将预先填充消息正文。调用此函数需要您添加以下权限，否则它将抛出安全异常：
 
-```kt
+```java
 <uses-permission android:name="android.permission.SEND_SMS"/>
 ```
 
@@ -429,7 +429,7 @@ sendSMS("+9195XXXXXX","Hi")
 
 要了解其工作原理，让我们深入了解其实现：
 
-```kt
+```java
 fun Context.sendSMS(number: String, text: String = ""): Boolean {
     try {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("sms:$number"))
@@ -453,7 +453,7 @@ fun Context.sendSMS(number: String, text: String = ""): Boolean {
 
 我将使用 Android Studio 进行编码。您需要在您的 `build.gradle` 文件中包含 Anko 库。只需添加以下代码行，您就可以开始了：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
@@ -465,7 +465,7 @@ compile "org.jetbrains.anko:anko-commons:$anko_version"
 
 Anko 提供了一个 `browse` 函数，它接受网页地址并在您的设备上启动浏览器。如果您有多个浏览器，它将显示一些选项供您选择。以下是一个示例：
 
-```kt
+```java
 browse("http://www.google.com")
 ```
 
@@ -475,7 +475,7 @@ browse("http://www.google.com")
 
 Anko 提供的 `browse` 函数只是一个语法糖，其下是我们之前使用的相同代码：
 
-```kt
+```java
 fun Context.browse(url: String, newTask: Boolean = false): Boolean {
     try {
         val intent = Intent(Intent.ACTION_VIEW)
@@ -502,7 +502,7 @@ fun Context.browse(url: String, newTask: Boolean = false): Boolean {
 
 我将使用 Android Studio 进行编码目的。您需要在您的 `build.gradle` 文件中包含 Anko 库。只需添加给定的代码行，您就可以开始了：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
@@ -514,13 +514,13 @@ compile "org.jetbrains.anko:anko-commons:$anko_version"
 
 1.  Anko 提供了一个 `share` 方法，该方法接受一个字符串参数，即要分享的文本和一个可选的参数 subject。主题参数在通过电子邮件应用分享文本时特别有用。毕竟，谁会给 WhatsApp 消息加上主题呢？让我们看看它的实现：
 
-```kt
+```java
 share("Hey","Some subject")
 ```
 
 1.  没有主题——这不会填写邮件的主题行：
 
-```kt
+```java
 share("Hey")
 ```
 
@@ -530,7 +530,7 @@ share("Hey")
 
 如果你查看实现，你会发现 Anko 只提供了语法糖，这大大减少了你的代码行数，以实现类似的功能：
 
-```kt
+```java
 fun Context.share(text: String, subject: String = ""): Boolean {
     try {
         val intent = Intent(android.content.Intent.ACTION_SEND)
@@ -556,7 +556,7 @@ fun Context.share(text: String, subject: String = ""): Boolean {
 
 我将使用 Android Studio 进行编码。你需要在你的 `build.gradle` 文件中包含 Anko 库。只需添加以下行即可：
 
-```kt
+```java
 compile "org.jetbrains.anko:anko-commons:$anko_version"
 ```
 
@@ -566,7 +566,7 @@ compile "org.jetbrains.anko:anko-commons:$anko_version"
 
 我们将使用 Anko 库提供的 `email` 函数，该函数接受三个参数，其中只有一个参数是必需的：
 
-```kt
+```java
 email("support@XXXXXX.com","Subject","Text")
 ```
 
@@ -576,7 +576,7 @@ email("support@XXXXXX.com","Subject","Text")
 
 让我们看看它的实现：
 
-```kt
+```java
 fun Context.email(email: String, subject: String = "", text: String = ""): Boolean {
     val intent = Intent(Intent.ACTION_SENDTO)
     intent.data = Uri.parse("mailto:")
@@ -606,7 +606,7 @@ Anko 库的一个真正出色的功能是它可以帮助你轻松且代码量更
 
 我将使用 Android Studio 来编写代码。你还需要通过在你的 `build.gradle` 文件中添加以下行来包含 Anko 库：
 
-```kt
+```java
  compile "org.jetbrains.anko:anko:$anko_version"
 
 ```
@@ -619,7 +619,7 @@ Anko 库的一个真正出色的功能是它可以帮助你轻松且代码量更
 
 1.  在第一个示例中，我们将尝试创建一个简单的警报框。要创建它，你只需要遵循以下语法：
 
-```kt
+```java
 alert("A simple alert","Alert") {
 
         }.show()
@@ -631,7 +631,7 @@ alert("A simple alert","Alert") {
 
 1.  有一些情况下，你希望用户执行某些操作，因此 Anko 为此提供了方法。查看以下示例：
 
-```kt
+```java
 alert("Would you like some action?","Alert") {
     yesButton {
          toast("Clicked on Yes")
@@ -651,7 +651,7 @@ alert("Would you like some action?","Alert") {
 
 1.  你还可以通过将它们替换为 `positiveButton` 和 `negativeButton` 来自定义 `yesButton` 和 `noButton` 的文本。以下是一个示例：
 
-```kt
+```java
 alert("Would you like some action?","Alert") {
     positiveButton("Hell Yeah!") {
         toast("Clicked on Yes")
@@ -675,7 +675,7 @@ alert("Would you like some action?","Alert") {
 
 1.  这种进度对话框非常适合显示用户已完成的进度。它还提供了诸如 `incrementProgressBy` 这样的功能，通过它可以增加进度条。要创建这样的进度对话框，你需要像以下示例那样使用它：
 
-```kt
+```java
 val dialog = progressDialog(message = "Please wait a bit…", title = "Fetching data")
 dialog.show()
 ```
@@ -686,7 +686,7 @@ dialog.show()
 
 要创建一个不确定的进度对话框，就像前面的截图所示，只需将以下行添加到之前的代码中：
 
-```kt
+```java
 indeterminateProgressDialog("This is an indeterminate progress dialog").show()
 ```
 
@@ -700,7 +700,7 @@ indeterminateProgressDialog("This is an indeterminate progress dialog").show()
 
 我将使用 Android Studio 编写代码。你还需要通过在 `build.gradle` 文件中添加以下行来包含 Anko 库：
 
-```kt
+```java
  compile "org.jetbrains.anko:anko:$anko_version"
 ```
 
@@ -710,7 +710,7 @@ indeterminateProgressDialog("This is an indeterminate progress dialog").show()
 
 Anko 提供了用于创建包含项目列表的对话框的选择器。选择器非常易于使用。你只需要提供警告对话框的标题、列表以及当选项被选中时将执行的 lambda 表达式。以下是其实施示例：
 
-```kt
+```java
 val companies = listOf("Google", "Microsoft", "HP", "Apple")
 selector("Where do you work?", companies, { dialogInterface, i ->
     toast("So you work at ${companies[i]}, right?")
@@ -723,7 +723,7 @@ selector("Where do you work?", companies, { dialogInterface, i ->
 
 Anko 隐藏了所有复杂性，并为你提供了一个易于使用的函数来实现复杂的事情。让我们来看看选择器函数的实现：
 
-```kt
+```java
 fun Context.selector(
         title: CharSequence? = null,
         items: List<CharSequence>,
@@ -749,7 +749,7 @@ Anko 使处理视图和创建布局变得极其快速和简单。使用 Anko，�
 
 我将使用 Android Studio 3 来编写代码。你可以通过在 Android Studio 3+中创建一个新的项目并添加一个空白活动来开始，因为我们不会使用其他菜谱中的任何代码。你还需要对 Android 开发有一个中级理解。确保你已经通过在你的 app 级别的`build.gradle`文件中添加以下行并将项目同步来添加 Anko 依赖项：
 
-```kt
+```java
  compile "org.jetbrains.anko:anko:$anko_version"
 ```
 
@@ -763,7 +763,7 @@ Anko 使一些常见的 Android 开发任务变得极其简单，例如 toast、
 
 +   要显示一个警告，我们使用以下语法（DSL 语法）：
 
-```kt
+```java
 alert("Hi, I'm Moss", "This, Jen, is the internet") {
     yesButton { toast("Oh…") }
     noButton {toast("Well...") }
@@ -772,13 +772,13 @@ alert("Hi, I'm Moss", "This, Jen, is the internet") {
 
 +   假设我们使用`Appcompat`对话框工厂中的对话框：
 
-```kt
+```java
 alert(Appcompat, "Hello, Jen.").show()
 ```
 
 +   我们还可以显示进度对话框和不定进度对话框：
 
-```kt
+```java
 val dialog = progressDialog(message = "Please stand by", title = "Fetching data")
 
 indeterminateProgressDialog("You just have to wait indefinitely Jen.").show()
@@ -788,7 +788,7 @@ indeterminateProgressDialog("You just have to wait indefinitely Jen.").show()
 
 +   根据具体情况，我们可以使用以下语法之一来显示 toast：
 
-```kt
+```java
 toast("Hi! I'm Roy")
 toast(R.string.meet_roy)
 longToast("We have been together for a long time.")
@@ -798,7 +798,7 @@ longToast("We have been together for a long time.")
 
 +   根据你是否使用字符串或字符串资源以及 snackbar 的超时时间长度以及是否需要操作按钮，有不同方式来显示 snackbar。为了显示 snackbar，你需要一个指向你希望显示 snackbar 的父视图的引用。在 XML 的情况下，你可以通过 Anko 找到一个方法来通过 ID 获取视图，在 DSL 的情况下，你可以直接使用存储父视图的变量。以下是我们可以使用的一些语法：
 
-```kt
+```java
 snackbar(rootView, "Hi! I'm Jen")
 snackbar(rootView, R.string.go_away_jen)
 longSnackbar(rootView, "I'm going to be here for a long time")
@@ -811,7 +811,7 @@ Anko 使定义布局和处理已创建的布局（在 XML 中）变得更加容�
 
 +   在 DSL 中创建布局非常简单，我们可以直接将其放在活动的`onCreate()`方法中，如下面的代码所示：
 
-```kt
+```java
 lateinit var rootView: View
 lateinit var btn: Button
 lateinit var editText1: EditText
@@ -842,7 +842,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 +   或者，我们也可以将其放在一个实现`AnkoComponent`接口的外部类中：
 
-```kt
+```java
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -883,7 +883,7 @@ class MainActivity : AppCompatActivity() {
 
 +   假设我们有一个来自我们旧项目的以下 XML 布局：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -942,7 +942,7 @@ class MainActivity : AppCompatActivity() {
 
 +   我们可以使用 Anko 从这个 XML 布局中访问视图，也可以设置/获取这些视图的属性。查看以下代码：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_hello_world)
@@ -972,7 +972,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 我将使用 Android Studio 来编写代码。你需要在你的 `build.gradle` 文件中添加 `anko-commons`。Anko 日志记录器包含在 `anko-commons` 库中：
 
-```kt
+```java
 dependencies {
     compile "org.jetbrains.anko:anko-commons:$anko_version"
 }
@@ -984,13 +984,13 @@ dependencies {
 
 1.  在 Anko 中进行日志记录非常简单。你只需要实现 `AnkoLogger`，如下所示：
 
-```kt
+```java
 class MainActivity : AppCompatActivity(),AnkoLogger {
 ```
 
 1.  然后，你可以按照以下方式记录消息：
 
-```kt
+```java
 info(“info message”)
 ```
 
@@ -1007,14 +1007,14 @@ info(“info message”)
 
 1.  默认的标签名称是类名。如果你想覆盖 `log` 标签，你需要覆盖 `loggertag` 属性：
 
-```kt
+```java
 class MainActivity : AppCompatActivity(),AnkoLogger {
   override val loggerTag="CustomTag"
 ```
 
 1.  你还可以将记录器用作普通对象。以下是从文档中提供的示例，它使用记录器作为普通对象：
 
-```kt
+```java
 class SomeActivity : Activity() {
    private val log = AnkoLogger<SomeActivity>(this)
    private val logWithASpecificTag = AnkoLogger("my_tag")
@@ -1027,7 +1027,7 @@ class SomeActivity : Activity() {
 
 1.  每个方法都有两个版本：普通和懒加载（内联）：
 
-```kt
+```java
 info(“info message”)
 info{“info message”}
 ```
@@ -1042,7 +1042,7 @@ info{“info message”}
 
 我将使用 Android Studio 3 来编写代码。你可以在 Android Studio 3+ 中创建一个新的项目，并添加一个空白活动来开始，因为我们不会使用其他食谱中的任何代码。你还需要对 Android 开发有一个中级理解。确保你已经通过在你的 app-level `build.gradle` 文件中添加以下行并将项目同步来添加 Anko 依赖项：
 
-```kt
+```java
  compile "org.jetbrains.anko:anko:$anko_version"
 ```
 
@@ -1054,14 +1054,14 @@ info{“info message”}
 
 1.  让我们创建一个包含 120 `dip` 宽度和 `wrapContent` 高度的按钮以及一个 24 `sp` 文字大小的文本视图的布局。我建议你自己尝试，使用以下语法：
 
-```kt
+```java
 dip(dipValue)
 sp(spValue)
 ```
 
 1.  以下是通过使用 `dip()` 和 `sp()` 方法创建布局的一种方式。`sp` 通常用于文本，但为了演示，我在下一个示例中使用了它来设置视图的高度。Anko 默认将 `textSize` 属性的值转换为 `sp`，而您必须提供浮点数：
 
-```kt
+```java
 verticalLayout {
     padding = dip(20)
 
@@ -1089,7 +1089,7 @@ verticalLayout {
 
 Android 版本发布非常频繁。随着每个最新版本的 Android，您都会获得新的功能和改进。尽管谷歌非常努力地提供向后兼容性，但他们并不总是能够做到。例如，Material 设计组件没有向后兼容性；您需要针对 API 级别大于 21 才能使用它们。这要求开发者事先检查该 API 级别是否支持该组件，以确保您的应用程序在所有级别上都能平稳运行。我们通常这样做：
 
-```kt
+```java
 if(Build.VERSION.SDK_INT>Build.VERSION_CODES.JELLY_BEAN){
 
 }
@@ -1101,7 +1101,7 @@ Anko 提供了辅助函数，帮助我们以更简单的语法实现类似的功
 
 我将使用 Android Studio 来编写代码。您还需要通过在 `build.gradle` 文件中添加以下行来包含 Anko 库：
 
-```kt
+```java
  compile "org.jetbrains.anko:anko:$anko_version"
 ```
 
@@ -1111,7 +1111,7 @@ Anko 提供了辅助函数，帮助我们以更简单的语法实现类似的功
 
 +   `doIfSdk`：这个函数接受版本代码作为参数，以及一个函数。如果设备的 API 级别等于提供的版本代码，则执行该函数。以下是这个函数的一个示例：
 
-```kt
+```java
 doIfSdk(Build.VERSION_CODES.LOLLIPOP){
     // Do something specific to version 21
 }
@@ -1119,7 +1119,7 @@ doIfSdk(Build.VERSION_CODES.LOLLIPOP){
 
 +   `doFromSdk`：这个函数也接受版本代码作为参数，以及一个函数，如果设备的 SDK 级别大于或等于提供的版本代码，则执行该函数。以下是这个函数的一个示例：
 
-```kt
+```java
 doFromSdk(Build.VERSION_CODES.LOLLIPOP){
     // Execute this method on API >=21
 }
@@ -1131,7 +1131,7 @@ doFromSdk(Build.VERSION_CODES.LOLLIPOP){
 
 +   对于 `doIfSdk`:
 
-```kt
+```java
 inline fun doIfSdk(version: Int, f: () -> Unit) {
     if (Build.VERSION.SDK_INT == version) f()
 }
@@ -1139,7 +1139,7 @@ inline fun doIfSdk(version: Int, f: () -> Unit) {
 
 +   对于 `doFromSdk`:
 
-```kt
+```java
 inline fun doFromSdk(version: Int, f: () -> Unit) {
     if (Build.VERSION.SDK_INT >= version) f()
 }

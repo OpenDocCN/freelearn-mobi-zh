@@ -70,7 +70,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 fun test() {
     Bar.NAME
     Bar.printName()
@@ -79,7 +79,7 @@ fun test() {
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 <!-- A bean example with singleton scope -->
 <bean id = "..." class = "..." scope = "singleton"/>
 <!-- You can remove the scope for the singleton -->
@@ -88,7 +88,7 @@ fun test() {
 
 任何命令行输入或输出都应如下所示：
 
-```kt
+```java
 $ mkdir css
 $ cd css
 ```

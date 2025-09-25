@@ -36,19 +36,19 @@
 
 如果你的 Android 项目还没有 JUnit 4，你可以通过在 `app/build.gradle` 依赖中包含以下内容来添加它：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     testImplementation ‘junit:junit:4.13.2’
 ```
 
-```kt
+```java
 }
 ```
 
@@ -56,19 +56,19 @@ dependencies {
 
 为了创建测试的模拟对象，你也可以使用模拟库。Mockito 是最受欢迎的 Java 模拟库，你可以在 Android 上使用它。要将 Mockito 添加到你的测试中，请将以下内容添加到 `app/build.gradle` 文件中的依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     testImplementation ‘org.mockito:mockito-core:4.0.0’
 ```
 
-```kt
+```java
 }
 ```
 
@@ -78,23 +78,23 @@ dependencies {
 
 要在您的 Android 单元测试中使用 Mockito-Kotlin，您可以在您的 `app/build.gradle` 文件依赖项中添加以下依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     testImplementation ‘org.mockito.kotlin:mockito-
 ```
 
-```kt
+```java
       kotlin:4.0.0’
 ```
 
-```kt
+```java
 }
 ```
 
@@ -104,23 +104,23 @@ dependencies {
 
 要测试 `LiveData` 等 Jetpack 组件，请添加 `androidx.arch.core:core-testing` 依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
     testImplementation ‘androidx.arch.core:core-
 ```
 
-```kt
+```java
       testing:2.1.0’
 ```
 
-```kt
+```java
 }
 ```
 
@@ -130,23 +130,23 @@ dependencies {
 
 为了帮助您测试协程，您可以使用来自 `kotlinx-coroutines-test` 包的协程测试库。它包含一些实用类，使测试协程更容易、更高效。要在您的 Android 项目中使用它，您必须在您的 `app/build.gradle` 文件依赖项中添加以下内容：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     testImplementation ‘org.jetbrains.kotlinx:kotlinx-
 ```
 
-```kt
+```java
       coroutines-test:1.6.0’
 ```
 
-```kt
+```java
 }
 ```
 
@@ -154,23 +154,23 @@ dependencies {
 
 如果您想在将在模拟器或物理设备上运行的 Android 仪器测试中使用 `kotlinx-coroutines-test`，您应该在您的 `app/build.gradle` 文件中添加以下依赖项：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     androidTestImplementation
 ```
 
-```kt
+```java
       ‘org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0’
 ```
 
-```kt
+```java
 }
 ```
 
@@ -178,19 +178,19 @@ dependencies {
 
 截至 1.6.0 版本，协程测试库仍然被标记为实验性。您可能需要使用 `@ExperimentalCoroutinesApi` 注解来注释测试类，如下面的示例所示：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 ```
 
-```kt
+```java
 class MovieRepositoryUnitTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -202,47 +202,47 @@ class MovieRepositoryUnitTest {
 
 为挂起函数创建单元测试比编写挂起函数本身更困难，因为挂起函数只能从协程或另一个协程中调用。您可以做的事情是使用 `runBlocking` 协程构建器，并从那里调用挂起函数。例如，假设您有一个类似于以下 `MovieRepository` 类：
 
-```kt
+```java
 class MovieRepository (private val movieService:
 ```
 
-```kt
+```java
   MovieService) {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     private val movieLiveData =
 ```
 
-```kt
+```java
       MutableLiveData<List<Movie>>()
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val movies = movieService.getMovies()
 ```
 
-```kt
+```java
         movieLiveData.postValue(movies.results)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -250,55 +250,55 @@ class MovieRepository (private val movieService:
 
 要为`fetchMovies`函数创建测试，你可以使用`runBlocking`来调用挂起函数，如下所示：
 
-```kt
+```java
 class MovieRepositoryTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         runBlocking {
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             val movieLiveData =
 ```
 
-```kt
+```java
               movieRepository.fetchMovies()
 ```
 
-```kt
+```java
             assertEquals(movieLiveData.value, movies)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -308,59 +308,59 @@ class MovieRepositoryTest {
 
 在上一个示例中将`runBlocking`替换为`runTest`会使你的测试看起来像以下这样：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 ```
 
-```kt
+```java
 class MovieRepositoryTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             val movieLiveData =
 ```
 
-```kt
+```java
               movieRepository.fetchMovies()
 ```
 
-```kt
+```java
             assertEquals(movieLiveData.value, movies)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -374,25 +374,25 @@ class MovieRepositoryTest {
 
 对于使用`Dispatchers.Main`启动的协程，你的单元测试将失败，并显示以下错误消息：
 
-```kt
+```java
 java.lang.IllegalStateException: Module with the Main dispatcher had failed to initialize. For tests Dispatchers.setMain from kotlinx-coroutines-test module can be used
 ```
 
 这个异常发生是因为`Dispatchers.Main`使用`Looper.getMainLooper()`，这是应用程序的主线程。在 Android 中，对于本地单元测试，这个主循环器是不可用的。为了使你的测试工作，你必须使用`Dispatchers.setMain`扩展函数来更改`Main`分发器。例如，你可以在你的测试类中创建一个在测试之前运行的函数：
 
-```kt
+```java
 @Before
 ```
 
-```kt
+```java
 fun setUp() {
 ```
 
-```kt
+```java
     Dispatchers.setMain(UnconfinedTestDispatcher())
 ```
 
-```kt
+```java
 }
 ```
 
@@ -400,19 +400,19 @@ fun setUp() {
 
 `Dispatchers.setMain`将更改所有后续的`Dispatchers.Main`使用。在测试之后，你必须通过调用`Dispatchers.resetMain()`来将`Main`分发器改回。你可以做如下操作：
 
-```kt
+```java
 @After
 ```
 
-```kt
+```java
 fun tearDown() {
 ```
 
-```kt
+```java
     Dispatchers.resetMain()
 ```
 
-```kt
+```java
 }
 ```
 
@@ -428,55 +428,55 @@ fun tearDown() {
 
 你可以编写的自定义 JUnit 规则示例，用于自动设置`Dispatchers.setMain`和`Dispatchers.resetMain`，是这个`TestCoroutineRule`：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 ```
 
-```kt
+```java
 class TestCoroutineRule(val dispatcher: TestDispatcher =
 ```
 
-```kt
+```java
   UnconfinedTestDispatcher()):
 ```
 
-```kt
+```java
    TestWatcher() {
 ```
 
-```kt
+```java
    override fun starting(description: Description?) {
 ```
 
-```kt
+```java
        super.starting(description)
 ```
 
-```kt
+```java
        Dispatchers.setMain(dispatcher)
 ```
 
-```kt
+```java
    }
 ```
 
-```kt
+```java
    override fun finished(description: Description?) {
 ```
 
-```kt
+```java
        super.finished(description)
 ```
 
-```kt
+```java
        Dispatchers.resetMain()
 ```
 
-```kt
+```java
    }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -484,27 +484,27 @@ class TestCoroutineRule(val dispatcher: TestDispatcher =
 
 你可以通过添加`@get:Rule`注解在你的测试类中使用这个`TestCoroutineRule`：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 ```
 
-```kt
+```java
 class MovieRepositoryTest {
 ```
 
-```kt
+```java
     @get:Rule
 ```
 
-```kt
+```java
     var coroutineRule = TestCoroutineRule()
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -512,39 +512,39 @@ class MovieRepositoryTest {
 
 在测试你的协程时，你必须用`TestDispatcher`替换你的协程调度器。为了能够替换调度器，你的代码应该有一种方法来更改将用于协程的调度器。例如，这个`MovieViewModel`类有一个用于设置调度器的属性：
 
-```kt
+```java
 class MovieViewModel(private val dispatcher:
 ```
 
-```kt
+```java
   CoroutineDispatcher = Dispatchers.IO): ViewModel() {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         viewModelScope.launch(dispatcher) {
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -552,63 +552,63 @@ class MovieViewModel(private val dispatcher:
 
 在你的测试中，你可以为测试目的设置不同的`Dispatcher`。对于前面的`ViewModel`，你的测试可以像以下示例那样使用不同的调度器初始化`ViewModel`：
 
-```kt
+```java
 @ExperimentalCoroutinesApi
 ```
 
-```kt
+```java
 class MovieViewModelTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             val viewModel =
 ```
 
-```kt
+```java
               MovieViewModel(UnconfinedTestDispatcher())
 ```
 
-```kt
+```java
             viewModel.fetchMovies()
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -638,43 +638,43 @@ class MovieViewModelTest {
 
 使用 `runTest` 和 `TestDispatcher` 可以测试协程中存在时间延迟的情况，您想在执行下一行代码之前测试一行代码。例如，如果您的 `ViewModel` 有一个在网络操作之前设置为 `true` 的 `loading` 布尔变量，然后操作完成后重置为 `false`，您的 `loading` 变量的测试可能看起来像这样：
 
-```kt
+```java
 @Test
 ```
 
-```kt
+```java
 fun loading() {
 ```
 
-```kt
+```java
     val dispatcher = StandardTestDispatcher()
 ```
 
-```kt
+```java
     runTest() {
 ```
 
-```kt
+```java
         val viewModel = MovieViewModel(dispatcher)
 ```
 
-```kt
+```java
         viewModel.fetchMovies()
 ```
 
-```kt
+```java
         dispatcher.scheduler.advanceUntilIdle()
 ```
 
-```kt
+```java
         assertEquals(false, viewModel.loading.value)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -690,7 +690,7 @@ fun loading() {
 
 1.  前往 `app/build.gradle` 文件，添加以下依赖项，这些依赖项将用于单元测试：
 
-    ```kt
+    ```java
     testImplementation ‘org.mockito.kotlin:mockito-
       kotlin:4.0.0’
     testImplementation ‘androidx.arch.core:core-
@@ -711,19 +711,19 @@ fun loading() {
 
 1.  在 `app/src/test/mockito-extensions/org.mockito.plugins.MockMaker` 文件中，添加以下内容：
 
-    ```kt
+    ```java
     mock-maker-inline
     ```
 
 这将允许您使用 Mockito 为代码中的最终类创建模拟对象。如果没有这个，您的测试将失败，并显示以下错误消息：
 
-```kt
+```java
 Mockito cannot mock/spy because : final class
 ```
 
 1.  您首先将为 `MovieRepository` 类添加一个单元测试。在 `app/src/test` 中创建一个名为 `MovieRepositoryTest` 的测试类，并为此类添加 `@OptIn(ExperimentalCoroutinesApi::class)` 注解：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalCoroutinesApi::class)
     class MovieRepositoryTest {
         ...
@@ -734,7 +734,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieRepositoryTest`类内部，添加一个`InstantTaskExecutorRule`的 JUnit 测试规则：
 
-    ```kt
+    ```java
     @get:Rule
     val rule = InstantTaskExecutorRule()
     ```
@@ -743,7 +743,7 @@ Mockito cannot mock/spy because : final class
 
 1.  创建一个名为`fetchMovies`的测试函数，以测试`MovieRepository`中的`fetchMovies`挂起函数成功检索电影列表：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         ...
@@ -754,7 +754,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieRepositoryTest`类的`fetchMovies`函数中，添加以下代码以模拟`MovieRepository`和`MovieService`：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         val movies = listOf(Movie(id = 3), Movie(id = 4))
@@ -773,7 +773,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieRepositoryTest`的`fetchMovies`函数末尾添加以下代码，以测试从`MovieRepository`类调用`fetchMovies`返回我们期望返回的电影列表：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         ...
@@ -792,7 +792,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieRepositoryTest`类中创建另一个名为`fetchMoviesWithError`的测试函数，以测试`MovieRepository`中的`fetchMovies`挂起函数在检索电影列表时失败：
 
-    ```kt
+    ```java
     @Test
     fun fetchMoviesWithError() {
         ...
@@ -803,7 +803,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieRepositoryTest`类的`fetchMoviesWithError`函数中，添加以下代码：
 
-    ```kt
+    ```java
     @Test
     fun fetchMoviesWithError() {
         val exception = “Test Exception” 
@@ -820,7 +820,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieRepositoryTest`的`fetchMoviesWithError`函数末尾添加以下代码，以测试从`MovieRepository`类调用`fetchMovies`返回我们期望返回的电影列表：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         ...
@@ -847,7 +847,7 @@ Mockito cannot mock/spy because : final class
 
 1.  然后，我们将为`MovieViewModel`创建一个测试。首先，我们需要更新`MovieViewModel`，以便我们可以更改协程运行的调度器。打开`MovieViewModel`类，并通过添加一个用于设置协程调度器的`dispatcher`属性来更新其构造函数：
 
-    ```kt
+    ```java
     class MovieViewModel(private val movieRepository:
       MovieRepository, private val dispatcher:
       CoroutineDispatcher = Dispatchers.IO) : ViewModel() 
@@ -860,7 +860,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`fetchMovies`函数中，将`launch`协程构建器更改为使用构造函数中的`dispatcher`而不是硬编码的`dispatcher`：
 
-    ```kt
+    ```java
     viewModelScope.launch(dispatcher) {
         ...
     }
@@ -870,7 +870,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`app/src/test`目录中，为`MovieViewModel`创建一个名为`MovieViewModelTest`的测试类，并将`@OptIn(ExperimentalCoroutinesApi::class)`注解添加到类中：
 
-    ```kt
+    ```java
     @OptIn(ExperimentalCoroutinesApi::class)
     class MovieViewModelTest {
         ...
@@ -881,7 +881,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieViewModelTest`类内部，添加一个针对`InstantTaskExecutorRule`的 JUnit 测试规则：
 
-    ```kt
+    ```java
     @get:Rule
     val rule = InstantTaskExecutorRule()
     ```
@@ -890,7 +890,7 @@ Mockito cannot mock/spy because : final class
 
 1.  创建一个名为`fetchMovies`的测试函数，以测试`MovieViewModel`中的`fetchMovies`挂起函数：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         val expectedMovies =
@@ -908,7 +908,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieViewModelTest`的`fetchMovies`测试结束时，添加以下内容以测试`MovieViewModel`的`movies`将等于`expectedMovies`：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         ...
@@ -926,7 +926,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`MovieViewModelTest`中创建另一个名为`loading`的测试函数，以测试`MovieViewModel`中的`loading` `LiveData`：
 
-    ```kt
+    ```java
     @Test
     fun loading() {
         ...
@@ -937,7 +937,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`loading`测试函数中，添加以下内容以模拟`MovieRepository`并初始化一个将用于`MovieViewModel`的`dispatcher`：
 
-    ```kt
+    ```java
     @Test
     fun loading() {
         val movieRepository: MovieRepository = mock()
@@ -951,7 +951,7 @@ Mockito cannot mock/spy because : final class
 
 1.  在`loading`测试函数的末尾，添加以下内容以测试加载`MovieViewModel`的`loading`属性：
 
-    ```kt
+    ```java
     @Test
     fun loading() {
         ...

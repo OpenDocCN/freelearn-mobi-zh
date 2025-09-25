@@ -76,7 +76,7 @@ Google Play 需要使用更新的版本其计费库，因此我们需要更新 U
 
 1.  从 Unity 编辑器，转到 `Assets` 文件夹，右键单击，选择 `Packages` 文件夹，并在您选择的文本编辑器中打开 `manifest.json` 文件。接下来，找到以下行：
 
-    ```kt
+    ```java
     "com.unity.purchasing": "4.1.5",
     ```
 
@@ -84,7 +84,7 @@ Google Play 需要使用更新的版本其计费库，因此我们需要更新 U
 
 1.  保存文件并返回到 Unity 编辑器，它应该会更新包。然而，这也会引入一个到我们之前代码的漏洞，导致广告在我们的设备上无法正确显示。因此，考虑到这一点，打开 `UnityAdController` 脚本并向类中添加以下代码：
 
-    ```kt
+    ```java
      public bool rewardCalled = false;
     // To account for a bug in Unity Advertisements 4.0.1
     // with Google
@@ -112,7 +112,7 @@ Google Play 需要使用更新的版本其计费库，因此我们需要更新 U
 
 1.  然后，将 `ShowAd` 函数更新为以下内容：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will load and display an ad on the screen
     /// </summary>
@@ -127,7 +127,7 @@ Google Play 需要使用更新的版本其计费库，因此我们需要更新 U
 
 1.  我们现在还必须提前加载我们的广告，因此更新 `Start` 函数为以下内容：
 
-    ```kt
+    ```java
     /// <summary>
     /// Unity Ads must be initialized, or else ads will
     /// not work properly
@@ -150,7 +150,7 @@ Google Play 需要使用更新的版本其计费库，因此我们需要更新 U
 
 1.  按照同样的思路，`OnUnityAdsShowComplete` 现在需要只发生一次，因此我们添加了一个检查以查看奖励是否已经发放。广告完成后，我们加载一个新的广告：
 
-    ```kt
+    ```java
     /// <summary>
     /// This callback method handles logic for the ad
     /// finishing.
@@ -184,7 +184,7 @@ Google Play 需要使用更新的版本其计费库，因此我们需要更新 U
 
 Google Play 还规定，广告不能在关卡开始时播放，因此我们需要调整我们的脚本以适应这一点。打开 `PauseScreenBehaviour.cs` 文件并调整 `Start` 函数：
 
-```kt
+```java
 protected override void Start()
 {
     /* Initialize Ads if needed */
@@ -202,7 +202,7 @@ protected override void Start()
 
 1.  接着，转到 `MainMenuBehaviour` 并更新 `LoadLevel` 脚本：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will load a new scene upon being called
     /// </summary>

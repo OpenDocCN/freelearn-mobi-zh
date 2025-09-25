@@ -38,15 +38,15 @@ DataStore 是 Android 应用程序的数据存储解决方案，它允许您使�
 
 1.  现在，让我们继续添加 DataStore 和同步项目的所需依赖项。注意，DataStore 库有针对 RxJava 2 和 3 的特定版本：
 
-    ```kt
+    ```java
     dependencies {
     ```
 
-    ```kt
+    ```java
     implementation "androidx.DataStore:DataStore-preferences:1.x.x"
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -54,37 +54,37 @@ DataStore 是 Android 应用程序的数据存储解决方案，它允许您使�
 
 1.  让我们现在继续构建我们的数据类，并包含预期的输入字段：
 
-    ```kt
+    ```java
     data class Tasks(
     ```
 
-    ```kt
+    ```java
         val firstTask: String,
     ```
 
-    ```kt
+    ```java
         val secondTask: String,
     ```
 
-    ```kt
+    ```java
         val thirdTask: String
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  在同一个包内，让我们添加一个 `TaskDataSource` 枚举，因为我们将会重用这个项目来展示使用 Android Proto DataStore 的 *Using Android Proto DataStore versus* *DataStore* 菜单：
 
-    ```kt
+    ```java
     enum class TaskDataSource {
     ```
 
-    ```kt
+    ```java
         PREFERENCES_DATA_STORE
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -92,7 +92,7 @@ DataStore 是 Android 应用程序的数据存储解决方案，它允许您使�
 
 此外，挂起函数可以执行长时间运行的操作并等待完成，而不会阻塞：
 
-```kt
+```java
 interface DataStoreManager {
     suspend fun saveTasks(tasks: Tasks)
     fun getTasks(): Flow<Tasks>
@@ -101,171 +101,171 @@ interface DataStoreManager {
 
 1.  接下来，我们需要实现我们的接口，所以让我们继续创建一个 `DataStoreManagerImpl` 类并实现 `DataStoreManager`。为了刷新你对 Flows 的了解，请参考 *第三章*，*在 Jetpack Compose 中处理 UI 状态以及使用 Hilt*：
 
-    ```kt
+    ```java
     class DataStoreManagerImpl(): DataStoreManager {
     ```
 
-    ```kt
+    ```java
         override suspend fun saveTasks(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun getTasks(): Flow<Tasks> {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  你会注意到，一旦我们实现了接口，我们将一个视图带到了函数中，但它显示 `TODO`，并且还没有实现任何内容。为了继续这一步，让我们继续添加 DataStore 并在我们的构造函数中传递 `Preference`。我们还需要为每个任务创建字符串偏好键：
 
-    ```kt
+    ```java
     class DataStoreManagerImpl(
     ```
 
-    ```kt
+    ```java
         private val tasksPreferenceStore:
     ```
 
-    ```kt
+    ```java
             DataStore<Preferences>
     ```
 
-    ```kt
+    ```java
     ) : DataStoreManager {
     ```
 
-    ```kt
+    ```java
         private val FIRST_TASK =
     ```
 
-    ```kt
+    ```java
             stringPreferencesKey("first_task")
     ```
 
-    ```kt
+    ```java
         private val SECOND_TASK =
     ```
 
-    ```kt
+    ```java
             stringPreferencesKey("second_task")
     ```
 
-    ```kt
+    ```java
         private val THIRD_TASK =
     ```
 
-    ```kt
+    ```java
             stringPreferencesKey("third_task")
     ```
 
-    ```kt
+    ```java
         override suspend fun saveTasks(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
             tasksPreferenceStore.edit {
     ```
 
-    ```kt
+    ```java
             taskPreferenceStore ->
     ```
 
-    ```kt
+    ```java
                 taskPreferenceStore[FIRST_TASK] =
     ```
 
-    ```kt
+    ```java
                     tasks.firstTask
     ```
 
-    ```kt
+    ```java
                 taskPreferenceStore[SECOND_TASK] =
     ```
 
-    ```kt
+    ```java
                     tasks.secondTask
     ```
 
-    ```kt
+    ```java
                 taskPreferenceStore[THIRD_TASK] =
     ```
 
-    ```kt
+    ```java
                     tasks.thirdTask
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun getTasks(): Flow<Tasks> {
     ```
 
-    ```kt
+    ```java
             TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，让我们通过向 `getTasks` 函数添加功能来完成 `DataStore` 部分的实现：
 
-    ```kt
+    ```java
     override fun getTasks(): Flow<Tasks> = tasksPreferenceStore.data.map { taskPreference ->
     ```
 
-    ```kt
+    ```java
         Tasks(
     ```
 
-    ```kt
+    ```java
             firstTask = taskPreference[FIRST_TASK] ?: "",
     ```
 
-    ```kt
+    ```java
             secondTask = taskPreference[SECOND_TASK] ?:
     ```
 
-    ```kt
+    ```java
             "",
     ```
 
-    ```kt
+    ```java
             thirdTask = taskPreference[THIRD_TASK] ?: ""
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -281,7 +281,7 @@ interface DataStoreManager {
 
 新的 Modern Android Development Jetpack 库 Preferences DataStore 的主要目标是替换 `SharedPreferences`。为了实现 Preferences DataStore，正如你在菜谱中看到的，我们使用一个接受 `Preference` 抽象类的 DataStore 接口，我们可以使用它来编辑和映射条目数据。此外，我们为键值对的关键部分创建键：
 
-```kt
+```java
 private val FIRST_TASK = stringPreferencesKey("first_task")
 private val SECOND_TASK = stringPreferencesKey("second_task")
 private val THIRD_TASK = stringPreferencesKey("third_task")
@@ -317,281 +317,281 @@ private val THIRD_TASK = stringPreferencesKey("third_task")
 
 1.  接下来，让我们继续添加我们的 `@HiltAndroidApp` 类，并在我们的 `Manifest` 文件夹中添加 `.name =` `TaskApp: android:name=".TaskApp"`:
 
-    ```kt
+    ```java
     @HiltAndroidApp
     ```
 
-    ```kt
+    ```java
     class TaskApp : Application()
     ```
 
-    ```kt
+    ```java
     <application
     ```
 
-    ```kt
+    ```java
         android:allowBackup="true"
     ```
 
-    ```kt
+    ```java
         android:name=".TaskApp"
     ```
 
-    ```kt
+    ```java
         tools:targetApi="31">
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
 1.  现在我们已经实现了依赖注入，让我们继续将 `@AndroidEntryPoint` 添加到 `MainActivity` 类中，并在 `DataStoreManagerImpl` 中添加 `@Inject constructor`。我们应该有类似以下代码片段的内容：
 
-    ```kt
+    ```java
     class DataStoreManagerImpl @Inject constructor(
     ```
 
-    ```kt
+    ```java
         private val tasksPreferenceStore:
     ```
 
-    ```kt
+    ```java
         DataStore<Preferences>
     ```
 
-    ```kt
+    ```java
     ) : DataStoreManager {
     ```
 
 1.  现在，我们需要创建一个新的文件夹，并将其命名为`di`；这是我们放置`DataStoreModule`类的地方。我们创建一个名为`store_tasks`的文件来存储偏好值：
 
-    ```kt
+    ```java
     @Module
     ```
 
-    ```kt
+    ```java
     @InstallIn(SingletonComponent::class)
     ```
 
-    ```kt
+    ```java
     class DataStoreModule {
     ```
 
-    ```kt
+    ```java
         private val Context.tasksPreferenceStore :
     ```
 
-    ```kt
+    ```java
         DataStore<Preferences> by
     ```
 
-    ```kt
+    ```java
         preferencesDataStore(name = "store_tasks")
     ```
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Provides
     ```
 
-    ```kt
+    ```java
         fun provideTasksPreferenceDataStore(
     ```
 
-    ```kt
+    ```java
             @ApplicationContext context: Context
     ```
 
-    ```kt
+    ```java
         ): DataStore<Preferences> =
     ```
 
-    ```kt
+    ```java
            context.tasksPreferenceStore
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们还需要在`di`包内部为`DataStoreManagerModule`创建一个`abstract`类。为了减少使用手动依赖注入的样板代码，我们的应用程序也为需要它们的类提供了所需的依赖。你可以在*第三章*中了解更多信息，*处理 Jetpack Compose 中的 UI 状态*和*使用 Hilt*：
 
-    ```kt
+    ```java
     @Module
     ```
 
-    ```kt
+    ```java
     @InstallIn(SingletonComponent::class)
     ```
 
-    ```kt
+    ```java
     abstract class DataStoreManagerModule {
     ```
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Binds
     ```
 
-    ```kt
+    ```java
         abstract fun
     ```
 
-    ```kt
+    ```java
             bindDataStoreRepository(DataStoreManagerImpl:
     ```
 
-    ```kt
+    ```java
                 DataStoreManagerImpl): DataStoreManager
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在让我们继续创建一个新的包，并将其命名为`service`：
 
-    ```kt
+    ```java
     interface TaskService {
     ```
 
-    ```kt
+    ```java
         fun getTasksFromPrefDataStore(): Flow<Tasks>
     ```
 
-    ```kt
+    ```java
         suspend fun addTasks(tasks: Tasks)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     class TaskServiceImpl @Inject constructor(
     ```
 
-    ```kt
+    ```java
         private val DataStoreManager: DataStoreManager
     ```
 
-    ```kt
+    ```java
     ) : TaskService {
     ```
 
-    ```kt
+    ```java
         override fun getTasksFromPrefDataStore() =
     ```
 
-    ```kt
+    ```java
                  DataStoreManager.getTasks()
     ```
 
-    ```kt
+    ```java
         override suspend fun addTasks(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
             DataStoreManager.saveTasks(tasks)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  让我们也确保我们有为新创建的服务所需的依赖：
 
-    ```kt
+    ```java
         @Singleton
     ```
 
-    ```kt
+    ```java
         @Binds
     ```
 
-    ```kt
+    ```java
         abstract fun bindTaskService(taskServiceImpl:
     ```
 
-    ```kt
+    ```java
         TaskServiceImpl): TaskService
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在我们已经完成了依赖注入和添加 DataStore 所需的所有功能，我们将继续添加一个`ViewModel`类，并在用户点击保存按钮时实现保存数据的函数：
 
-    ```kt
+    ```java
     fun saveTaskData(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
         viewModelScope.launch {
     ```
 
-    ```kt
+    ```java
             Log.d("Task", "asdf Data was inserted
     ```
 
-    ```kt
+    ```java
                    correctly")
     ```
 
-    ```kt
+    ```java
             taskService.addTasks(tasks)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在 Compose 视图中，在 Compose 保存按钮内部调用`saveTaskData`函数来保存我们的数据：
 
-    ```kt
+    ```java
     TaskButton(onClick = {
     ```
 
-    ```kt
+    ```java
         val tasks = Tasks(
     ```
 
-    ```kt
+    ```java
             firstTask = firstText.value,
     ```
 
-    ```kt
+    ```java
             secondTask = secondText.value,
     ```
 
-    ```kt
+    ```java
             thirdTask = thirdText.value
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         taskViewModel.saveTaskData(tasks)},
     ```
 
-    ```kt
+    ```java
         text = stringResource(id = R.string.save))
     ```
 
@@ -619,7 +619,7 @@ private val THIRD_TASK = stringPreferencesKey("third_task")
 
 在我们的项目中，我们创建了`DataStoreManagerModule`和`DataStoreModule`，我们所做的一切只是提供所需的依赖。我们创建了一个名为`store_tasks`的文件，它帮助我们存储偏好值：
 
-```kt
+```java
 private val Context.tasksPreferenceStore : DataStore<Preferences> by preferencesDataStore(name = "store_tasks")
 ```
 
@@ -653,125 +653,125 @@ Proto DataStore 与 Preferences DataStore 类似，但与 Preferences DataStore 
 
 1.  我们需要首先设置所需的依赖项，所以让我们继续在我们的 Gradle 应用级别文件中添加以下内容：
 
-    ```kt
+    ```java
     implementation "androidx.DataStore:DataStore:1.x.x
     ```
 
-    ```kt
+    ```java
     implementation "com.google.protobuf:protobuf-javalite:3.x.x"
     ```
 
 1.  接下来，我们需要在 `build.gradle` 文件中的 `plugins` 添加 `protobuf`：
 
-    ```kt
+    ```java
     plugins {
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
-    ```kt
+    ```java
         id "com.google.protobuf" version "0.8.12"
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  我们需要在 `build.gradle` 文件中添加 `protobuf` 配置来完成设置：
 
-    ```kt
+    ```java
     protobuf {
     ```
 
-    ```kt
+    ```java
         protoc {
     ```
 
-    ```kt
+    ```java
             artifact = "com.google.protobuf:protoc:3.11.0"
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         generateProtoTasks {
     ```
 
-    ```kt
+    ```java
             all().each { task ->
     ```
 
-    ```kt
+    ```java
                 task.builtins {
     ```
 
-    ```kt
+    ```java
                      java {
     ```
 
-    ```kt
+    ```java
                          option 'lite'
     ```
 
-    ```kt
+    ```java
                      }
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，在我们的 `package` 文件夹内，我们需要在 `app/src/main/` 下添加我们的 `proto` 文件，然后创建一个新的目录并命名为 `proto`。你现在应该在 `app/src/main/proto` 文件目录中看到以下内容：
 
-    ```kt
+    ```java
     syntax = "proto3";
     ```
 
-    ```kt
+    ```java
     option java_package =
     ```
 
-    ```kt
+    ```java
         "com.madonasyombua.DataStoreexample";
     ```
 
-    ```kt
+    ```java
     option java_multiple_files = true;
     ```
 
-    ```kt
+    ```java
     message TaskPreference {
     ```
 
-    ```kt
+    ```java
         string first_task = 1;
     ```
 
-    ```kt
+    ```java
         string second_task = 2;
     ```
 
-    ```kt
+    ```java
         string third_task = 3;
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -779,137 +779,137 @@ Proto DataStore 与 Preferences DataStore 类似，但与 Preferences DataStore 
 
 1.  让我们修改可能需要 `ProtoDataStore` 的类。首先，让我们将 `PROTO_DATA_STORE` 添加到 `TaskDataSource` 枚举类中：
 
-    ```kt
+    ```java
     enum class TaskDataSource {
     ```
 
-    ```kt
+    ```java
         PREFERENCES_DATA_STORE,
     ```
 
-    ```kt
+    ```java
         PROTO_DATA_STORE
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在 `DataStoreManager` 中，让我们添加 `saveTaskToProtoStore()` 和 `getUserFromProtoStore()`，我们新的接口将看起来像这样：
 
-    ```kt
+    ```java
     interface DataStoreManager {
     ```
 
-    ```kt
+    ```java
         suspend fun saveTasks(tasks: Tasks)
     ```
 
-    ```kt
+    ```java
         fun getTasks(): Flow<Tasks>
     ```
 
-    ```kt
+    ```java
         suspend fun saveTasksToProtoStore(tasks: Tasks)
     ```
 
-    ```kt
+    ```java
         fun getTasksFromProtoStore(): Flow<Tasks>
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  由于我们刚刚修改了我们的接口，我们还需要继续添加实现类的新功能。你也会注意到，一旦添加了函数，项目会抱怨：
 
-    ```kt
+    ```java
     override suspend fun saveTasksToProtoStore(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
         TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     override fun getTasksFromProtoStore(): Flow<Tasks> {
     ```
 
-    ```kt
+    ```java
         TODO("Not yet implemented")
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  如推荐，我们需要定义一个实现 `Serializer<Type>` 的类，其中类型在 Proto 文件中定义。这个序列化类的目的是告诉 DataStore 如何读取和写入我们的数据类型。所以，让我们创建一个新的对象并命名为 `TaskSerializer()`：
 
-    ```kt
+    ```java
     object TaskSerializer : Serializer<TaskPreference> {
     ```
 
-    ```kt
+    ```java
         override val defaultValue: TaskPreference =
     ```
 
-    ```kt
+    ```java
             TaskPreference.getDefaultInstance()
     ```
 
-    ```kt
+    ```java
         override suspend fun readFrom(input: InputStream):
     ```
 
-    ```kt
+    ```java
             TaskPreference{
     ```
 
-    ```kt
+    ```java
                 try {
     ```
 
-    ```kt
+    ```java
                     return TaskPreference.parseFrom(input)
     ```
 
-    ```kt
+    ```java
                 } catch (exception:
     ```
 
-    ```kt
+    ```java
                 InvalidProtocolBufferException) {
     ```
 
-    ```kt
+    ```java
                   throw CorruptionException("Cannot read
     ```
 
-    ```kt
+    ```java
                   proto.", exception)
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override suspend fun writeTo(t: TaskPreference,
     ```
 
-    ```kt
+    ```java
             output: OutputStream) = t.writeTo(output)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -921,193 +921,193 @@ Proto DataStore 与 Preferences DataStore 类似，但与 Preferences DataStore 
 
 1.  现在我们已经创建了我们的数据类型类，我们需要使用与 DataStore 一起使用的上下文创建一个 `taskProtoDataStore: DataStore<TaskPreference>`。因此，在 `DataStoreModule` 中，让我们继续添加以下代码：
 
-    ```kt
+    ```java
     private val Context.taskProtoDataStore: DataStore<TaskPreference> by DataStore(
     ```
 
-    ```kt
+    ```java
         fileName = "task.pd",
     ```
 
-    ```kt
+    ```java
         serializer = TaskSerializer
     ```
 
-    ```kt
+    ```java
     )
     ```
 
-    ```kt
+    ```java
     @Singleton
     ```
 
-    ```kt
+    ```java
     @Provides
     ```
 
-    ```kt
+    ```java
     fun provideTasksProtoDataStore(
     ```
 
-    ```kt
+    ```java
         @ApplicationContext context: Context
     ```
 
-    ```kt
+    ```java
     ):DataStore<TaskPreference> = context.taskProtoDataStore
     ```
 
 1.  现在，让我们回到 `DataStoreManagerImpl` 并着手实现我们尚未实现的函数：
 
-    ```kt
+    ```java
     override suspend fun saveTasksToProtoStore(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
         taskProtoDataStore.updateData { taskData ->
     ```
 
-    ```kt
+    ```java
             taskData.toBuilder()
     ```
 
-    ```kt
+    ```java
                 .setFirstTask(tasks.firstTask)
     ```
 
-    ```kt
+    ```java
                 .setSecondTask(tasks.secondTask)
     ```
 
-    ```kt
+    ```java
                 .setThirdTask(tasks.thirdTask)
     ```
 
-    ```kt
+    ```java
                 .build()
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     override fun getTasksFromProtoStore(): Flow<Tasks> =
     ```
 
-    ```kt
+    ```java
         taskProtoDataStore.data.map { tasks ->
     ```
 
-    ```kt
+    ```java
             Tasks(
     ```
 
-    ```kt
+    ```java
                 tasks.firstTask,
     ```
 
-    ```kt
+    ```java
                 tasks.secondTask,
     ```
 
-    ```kt
+    ```java
                 tasks.thirdTask
     ```
 
-    ```kt
+    ```java
             )
     ```
 
 1.  在 `TaskService` 中，我们还将继续添加 `getTasksFromProto` 和 `getTasks()`：
 
-    ```kt
+    ```java
     interface TaskService {
     ```
 
-    ```kt
+    ```java
         fun getTasksFromPrefDataStore() : Flow<Tasks>
     ```
 
-    ```kt
+    ```java
         suspend fun addTasks(tasks: Tasks)
     ```
 
-    ```kt
+    ```java
         fun getTasks(): Flow<Tasks>
     ```
 
-    ```kt
+    ```java
         fun getTasksFromProtoDataStore(): Flow<Tasks>
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  当你实现一个接口时，首先被实现的类可能会显示编译错误，这会提示你将接口功能覆盖到类中。因此，在 `TaskServiceImpl` 类中，添加以下代码：
 
-    ```kt
+    ```java
     class TaskServiceImpl @Inject constructor(
     ```
 
-    ```kt
+    ```java
         private val DataStoreManager: DataStoreManager
     ```
 
-    ```kt
+    ```java
     ) : TaskService {
     ```
 
-    ```kt
+    ```java
         override fun getTasksFromPrefDataStore() =
     ```
 
-    ```kt
+    ```java
             DataStoreManager.getTasks()
     ```
 
-    ```kt
+    ```java
         override suspend fun addTasks(tasks: Tasks) {
     ```
 
-    ```kt
+    ```java
             DataStoreManager.saveTasks(tasks)
     ```
 
-    ```kt
+    ```java
             DataStoreManager.saveTasksToProtoStore(tasks)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
         override fun getTasks(): Flow<Tasks> =
     ```
 
-    ```kt
+    ```java
             getTasksFromProtoDataStore()
     ```
 
-    ```kt
+    ```java
         override fun getTasksFromProtoDataStore():
     ```
 
-    ```kt
+    ```java
             Flow<Tasks> =
     ```
 
-    ```kt
+    ```java
             DataStoreManager.getTasksFromProtoStore()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1151,193 +1151,193 @@ Android 中的协议缓冲区是一种语言和平台无关的可扩展机制，
 
 1.  让我们先看看帮助迁移的接口。以下代码部分展示了 `DataMigration` 接口，该接口由 `SharedPreferencesMigration` 实现：
 
-    ```kt
+    ```java
     /* Copyright 2022 Google LLC.
     ```
 
-    ```kt
+    ```java
        SPDX-License-Identifier: Apache-2.0 */
     ```
 
-    ```kt
+    ```java
     public interface DataMigration<T> {
     ```
 
-    ```kt
+    ```java
         public suspend fun shouldMigrate(currentData: T): Boolean
     ```
 
-    ```kt
+    ```java
         public suspend fun migrate(currentData: T): T
     ```
 
-    ```kt
+    ```java
             public suspend fun cleanUp()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在 `Tasks` 数据中，我们可能想要将条目更改为 `Int`；这意味着更改我们的数据类型之一。我们将想象这个场景，并尝试基于此创建一个迁移。我们可以从创建一个新的 `migrateOnePreferencesDataStore` 开始：
 
-    ```kt
+    ```java
     private val Context.migrateOnePreferencesDataStore : DataStore<Preferences> by preferencesDataStore(
     ```
 
-    ```kt
+    ```java
         name = "store_tasks"
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  现在，让我们继续实现 `DataMigration` 并覆盖其函数。您需要指定迁移是否应该发生的条件。迁移数据显示了如何将旧数据精确地转换为新数据。然后，一旦迁移完成，清理旧存储：
 
-    ```kt
+    ```java
     private val Context.migrationTwoPreferencesDataStore by preferencesDataStore(
     ```
 
-    ```kt
+    ```java
         name = NEW_DataStore,
     ```
 
-    ```kt
+    ```java
         produceMigrations = { context ->
     ```
 
-    ```kt
+    ```java
             listOf(object : DataMigration<Preferences> {
     ```
 
-    ```kt
+    ```java
                 override suspend fun
     ```
 
-    ```kt
+    ```java
                     shouldMigrate(currentData:
     ```
 
-    ```kt
+    ```java
                         Preferences) = true
     ```
 
-    ```kt
+    ```java
                 override suspend fun migrate(currentData:
     ```
 
-    ```kt
+    ```java
                 Preferences): Preferences {
     ```
 
-    ```kt
+    ```java
                     val oldData = context
     ```
 
-    ```kt
+    ```java
                         .migrateOnePreferencesDataStore
     ```
 
-    ```kt
+    ```java
                             .data.first().asMap()
     ```
 
-    ```kt
+    ```java
                     val currentMutablePrefs =
     ```
 
-    ```kt
+    ```java
                         currentData.toMutablePreferences()
     ```
 
-    ```kt
+    ```java
                     oldToNew(oldData, currentMutablePrefs)
     ```
 
-    ```kt
+    ```java
                     return
     ```
 
-    ```kt
+    ```java
                        currentMutablePrefs.toPreferences()
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
                 override suspend fun cleanUp() {
     ```
 
-    ```kt
+    ```java
                     context.migrateOnePreferencesDataStore
     ```
 
-    ```kt
+    ```java
                         .edit { it.clear() }
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             })
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  最后，让我们创建 `oldToNew()` 函数，这是我们添加要迁移的数据的地方：
 
-    ```kt
+    ```java
     private fun oldToNew(
     ```
 
-    ```kt
+    ```java
         oldData: Map<Preferences.Key<*>, Any>,
     ```
 
-    ```kt
+    ```java
         currentMutablePrefs: MutablePreferences
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         oldData.forEach { (key, value) ->
     ```
 
-    ```kt
+    ```java
             when (value) {
     ```
 
-    ```kt
+    ```java
                 //migrate data types you wish to migrate
     ```
 
-    ```kt
+    ```java
                 ...
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1345,7 +1345,7 @@ Android 中的协议缓冲区是一种语言和平台无关的可扩展机制，
 
 为了更好地理解 `DataMigration` 的工作原理，我们需要查看 `DataMigration` 接口中的函数。在我们的接口中，我们有三个函数，如下面的代码块所示：
 
-```kt
+```java
     public suspend fun shouldMigrate(currentData: T):
         Boolean
     public suspend fun migrate(currentData: T): T
@@ -1366,131 +1366,131 @@ Android 中的协议缓冲区是一种语言和平台无关的可扩展机制，
 
 1.  在我们的单元测试文件夹中，创建一个新的文件夹，命名为`test`，并在其中创建一个新的类，命名为`TaskViewModelTest`：
 
-    ```kt
+    ```java
       class TaskViewModelTest {}
     ```
 
 1.  接下来，我们需要添加一些测试依赖项：
 
-    ```kt
+    ```java
     testImplementation "io.mockk:mockk:1.13.3"
     ```
 
-    ```kt
+    ```java
     androidTestImplementation "io.mockk:mockk-android:1.13.3"
     ```
 
-    ```kt
+    ```java
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2"
     ```
 
 1.  现在我们已经添加了所需的依赖项，让我们继续创建我们的模拟任务服务类，然后对其进行模拟，并在设置中初始化它：
 
-    ```kt
+    ```java
     private lateinit var classToTest: TaskViewModel
     ```
 
-    ```kt
+    ```java
     private val mockTaskService = mockk<TaskService>()
     ```
 
-    ```kt
+    ```java
     private val dispatcher = TestCoroutineDispatcher()
     ```
 
-    ```kt
+    ```java
     @Before
     ```
 
-    ```kt
+    ```java
     fun setUp(){
     ```
 
-    ```kt
+    ```java
         classToTest = TaskViewModel(mockTaskService)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  由于我们使用协程，我们将在`@Before`注解中设置我们的分发器，并在`@After`注解中使用`Dispatchers.resetMain()`清除任何存储的数据。如果你在没有设置协程的情况下运行测试，它们将因错误而失败。使用`Main`分发器的模块初始化失败。对于测试，可以使用`kotlinx-coroutines-test`模块中的`Dispatchers.setMain`：
 
-    ```kt
+    ```java
     @Before
     ```
 
-    ```kt
+    ```java
     fun setUp(){
     ```
 
-    ```kt
+    ```java
         classToTest = TaskViewModel(mockTaskService)
     ```
 
-    ```kt
+    ```java
         Dispatchers.setMain(dispatcher)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
-    ```kt
+    ```java
     @After
     ```
 
-    ```kt
+    ```java
     fun tearDown() {
     ```
 
-    ```kt
+    ```java
         Dispatchers.resetMain()
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  完成那之后，我们继续创建一个新的测试，命名为`Verify add tasks function adds tasks as needed`。在这个测试中，我们将创建一个`fakeTask`，将这些任务添加到`saveTaskData`中，并通过检查我们没有存储`null`来确保数据按预期插入：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun  `Verify add tasks function adds tasks as needed`() = runBlocking {
     ```
 
-    ```kt
+    ```java
         val fakeTasks = Tasks(
     ```
 
-    ```kt
+    ```java
             firstTask = "finish school work",
     ```
 
-    ```kt
+    ```java
             secondTask = "buy gifts for the holiday",
     ```
 
-    ```kt
+    ```java
             thirdTask = "finish work"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         val expected = classToTest.saveTaskData(fakeTasks)
     ```
 
-    ```kt
+    ```java
         Assert.assertNotNull(expected)
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1506,7 +1506,7 @@ Android 中的协议缓冲区是一种语言和平台无关的可扩展机制，
 
 要测试 UI，我们需要遵循一个模式，创建一个包含默认值的测试 DataStore 实例。然后，我们创建测试主题，并验证从我们的函数中来的测试 DataStore 值是否与预期结果匹配。我们还需要使用`TestCoroutineDispatcher`：
 
-```kt
+```java
 private val coroutineDispatcher: TestCoroutineDispatcher =
     TestCoroutineDispatcher()
 ```

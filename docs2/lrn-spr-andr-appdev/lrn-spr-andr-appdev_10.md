@@ -28,7 +28,7 @@
 
 要实现测试的依赖，你需要在 `pom.xml` 文件中添加测试依赖：
 
-```kt
+```java
 <!-- This is to implement the testing functions for the spring project -->
 <dependency>
    <groupId>org.springframework.boot</groupId>
@@ -41,7 +41,7 @@
 
 为了测试 Android 项目，我们需要在 `gradle` 文件中实现测试依赖。要添加依赖，我们需要在 `build.gradle` (app 模块) 文件的 `dependencies {...}` 中实现。以下是这个 `build.gradle` 文件的代码片段：
 
-```kt
+```java
 // Dependencies for local unit tests
 dependencies{
 testImplementation "junit:junit:$rootProject.ext.junitVersion"
@@ -123,7 +123,7 @@ JUnit 有一些基本且重要的注解，如下所示：
 
 1.  现在创建一个名为 `JUnitTestClass.kt` 的类，我们将使用注解创建一些测试用例。以下是一个示例代码：
 
-```kt
+```java
 class JUnitTestClass {
 
     companion object {
@@ -178,7 +178,7 @@ class JUnitTestClass {
 
 1.  现在修改我们的 `runTest1` 函数并编写逻辑：
 
-```kt
+```java
 @Test
 fun runTest1(){
     println("============ @TEST One Start ============")
@@ -221,7 +221,7 @@ private fun doSum(num1: Int, num2: Int): Int{
 
 这里是`ProfileRepositoryTest.kt`的代码：
 
-```kt
+```java
 @RunWith(SpringRunner::class)
 @DataJpaTest
 class ProfileRepositoryTest {
@@ -267,7 +267,7 @@ class ProfileRepositoryTest {
 
 在此之后，我们将此配置文件保存为一个新的变量，例如这样：
 
-```kt
+```java
 val saveProfile = entityManager.merge(newProfile)
 ```
 
@@ -275,13 +275,13 @@ val saveProfile = entityManager.merge(newProfile)
 
 我们还自动装配了`profileRepository`，现在使用此行通过 ID 获取插入的配置文件：
 
-```kt
+```java
 val foundProfile = profileRepository.getOne(saveProfile.id!!)
 ```
 
 现在我们使用了`assertThat()`来检查给定的逻辑是否正确。在这个函数中，我们检查了创建的配置文件和获取的配置文件：
 
-```kt
+```java
  assertThat(foundProfile.username).isEqualTo(saveProfile.username)
 ```
 
@@ -323,7 +323,7 @@ Espresso 是一个开源框架，也是一个基于工具的 API，由 Google �
 
 此项目主要是为了测试 UI 应用程序，因此我们需要实现 Espresso。在`build.gradle`（模块—app）的`dependencies{}`块中写下以下行以实现 Espresso：
 
-```kt
+```java
 testImplementation 'junit:junit:4.12'
 androidTestImplementation 'com.android.support.test:runner:1.0.2'
 
@@ -335,7 +335,7 @@ androidTestImplementation "com.android.support.test.espresso:espresso-intents:3.
 
 然后在同一文件中，在`android{}`块中添加代码以实现针对 Android 包的 JUnit3 和 JUnit4 测试：
 
-```kt
+```java
 testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 ```
 
@@ -351,7 +351,7 @@ testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
 在这个项目中，你可以找到`MainActivity.kt`，在那里你可以找到一个列表视图。这里是这个类中的一段代码：
 
-```kt
+```java
 ----
 ----
  userLists.adapter = UserItemAdapter(this, userList)
@@ -361,7 +361,7 @@ testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
 这里，`userLists`是 RecyclerView，我们有一个`UserItemAdapter`自定义适配器，它是`UserModel`的适配器。在这里，`UserModel`代码是我们获取用户 ID 和名称的地方：
 
-```kt
+```java
 data class User(var userID: Int, var username: String)
 ```
 
@@ -383,7 +383,7 @@ data class User(var userID: Int, var username: String)
 
 这个`getCountUser()`函数是用来检查你的列表中用户数量的：
 
-```kt
+```java
 // User count Matching
 @Test
 fun getCountUser(){
@@ -404,7 +404,7 @@ fun getCountUser(){
 
 我们需要手动创建`itemCount()`。为此，创建一个名为`CustomUserMatchers.kt`的类。在这里，是这个类的代码：
 
-```kt
+```java
 class CustomUserMatchers {
     companion object {
         fun itemCount(count: Int): Matcher<View>{
@@ -438,7 +438,7 @@ class CustomUserMatchers {
 
 现在创建一个名为`getUserPosition()`的测试用例来获取特定位置并点击它：
 
-```kt
+```java
 // User Click with a position number
 @Test
 fun getUserPosition(){
@@ -462,7 +462,7 @@ fun getUserPosition(){
 
 +   `check(matches(isDisplayed()))` 检查列表是否在设备上显示：
 
-```kt
+```java
 // User list display test
 @Test
 fun getIsDisplayed(){
@@ -473,7 +473,7 @@ fun getIsDisplayed(){
 
 创建一个 `getIsClickable()` 函数来测试给定的列表是否正在显示。`withId(R.id.userRoot)` 将获取 `ConstraintLayout`，而 `check(matches(isClickable()))` 将匹配列表的点击状态：
 
-```kt
+```java
 // User list display test
 @Test
 fun getIsClickable(){
@@ -484,7 +484,7 @@ fun getIsClickable(){
 
 创建一个 `getScrollToBottom()` 函数来检查如何滚动到特定位置。`withId(R.id.userLists)` 将获取列表视图，`perform(scrollToPosition<RecyclerView.ViewHolder>(activityTestRule.activity.userLists.adapter!!.itemCount - 1))` 将滚动到列表底部。使用这个测试用例，你可以看到列表是否滚动顺畅：
 
-```kt
+```java
 // User list scroll to bottom
 @Test
 fun getScrollToBottom(){

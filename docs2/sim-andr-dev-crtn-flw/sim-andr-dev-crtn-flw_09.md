@@ -34,19 +34,19 @@
 
 要在 Android 中创建单元测试，您的项目必须具有 JUnit 4 测试库，这是 Java 的单元测试框架。在 Android Studio 中创建的新项目应该已经将此添加到 `app/build` 依赖项中。如果您的项目还没有 JUnit，您可以通过在 `app/build.gradle` 依赖项中添加以下内容来添加它：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     …
 ```
 
-```kt
+```java
     testImplementation 'junit:junit:4.13.2'
 ```
 
-```kt
+```java
 }
 ```
 
@@ -54,71 +54,71 @@ dependencies {
 
 使用模拟对象进行测试也是一个好主意。Mockito 是一个流行的 Java 模拟库，您可以在 Android 上使用它。您还可以使用 Mockito-Kotlin 来使用 Mockito 与惯用的 Kotlin 代码一起使用。要将 Mockito 和 Mockito-Kotlin 添加到您的 Android 测试中，您可以在 `app/build.gradle` 依赖项中添加以下内容：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     …
 ```
 
-```kt
+```java
     testImplementation 'org.mockito:mockito-core:4.0.0'
 ```
 
-```kt
+```java
     testImplementation 'org.mockito.kotlin:mockito-
 ```
 
-```kt
+```java
       kotlin:4.0.0'
 ```
 
-```kt
+```java
 }
 ```
 
 这将允许你使用 Mockito 通过 Kotlin 代码创建用于 Android 测试的模拟对象。Mockito-Kotlin 依赖于 `mockito-core` 和 `mockito-kotlin`：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     …
 ```
 
-```kt
+```java
     testImplementation 'org.mockito.kotlin:mockito-
 ```
 
-```kt
+```java
       kotlin:4.0.0'
 ```
 
-```kt
+```java
 }
 ```
 
 由于 Kotlin Flow 是建立在协程之上的，你可以使用 `kotlinx-coroutines-test` 库来帮助你添加对协程和 Flows 的测试。这个库包含了一些实用类，可以让你更容易地编写测试。要将它添加到你的项目中，你可以在 `app/build.gradle` 的依赖项中添加以下内容：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     …
 ```
 
-```kt
+```java
     testImplementation 'org.jetbrains.kotlinx:kotlinx-
 ```
 
-```kt
+```java
       coroutines-test:1.6.0'
 ```
 
-```kt
+```java
 }
 ```
 
@@ -134,137 +134,137 @@ dependencies {
 
 例如，假设你有一个 `MovieViewModel` 类，如下所示，它有一个返回 Flow 的 `fetchMovies` 函数：
 
-```kt
+```java
 class MovieViewModel(private val movieRepository:
 ```
 
-```kt
+```java
   MovieRepository) {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     suspend fun fetchMovies() {
 ```
 
-```kt
+```java
         movieRepository.fetchMovies().collect {
 ```
 
-```kt
+```java
             _movies.value = it
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 在这里，`fetchMovies` 函数从 `movieRepository.fetchMovies()` 收集一个 Flow。你可以通过创建 `MovieRepository` 并返回一组特定的值来为这个 `MovieViewModel` 编写测试，然后检查这些值是否与 `MovieViewModel` 中的 `movies` `LiveData` 设置的值相同。这个实现的示例如下：
 
-```kt
+```java
 class MovieViewModelTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val list = listOf(movie1, movie2)
 ```
 
-```kt
+```java
         val expected = MutableLiveData<List<Movie>>()
 ```
 
-```kt
+```java
         expectedMovies.value = list
 ```
 
-```kt
+```java
         val movieRepository: MovieRepository = mock {
 ```
 
-```kt
+```java
             onBlocking { fetchMoviesFlow() } doReturn
 ```
 
-```kt
+```java
               flowOf(movies)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         val dispatcher = StandardTestDispatcher()
 ```
 
-```kt
+```java
         val movieViewModel =
 ```
 
-```kt
+```java
           MovieViewModel(movieRepository, dispatcher)
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             movieViewModel.fetchMovies()
 ```
 
-```kt
+```java
             dispatcher.scheduler.advanceUntilIdle()
 ```
 
-```kt
+```java
             assertEquals(expectedMovies.value,
 ```
 
-```kt
+```java
               movieViewModel.movies.value)
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -274,109 +274,109 @@ class MovieViewModelTest {
 
 例如，假设你有一个 `MovieViewModel`，它有一个返回 Flow 的函数，如下面的类所示：
 
-```kt
+```java
 class MovieViewModel(private val movieRepository:
 ```
 
-```kt
+```java
   MovieRepository) {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     fun fetchFavoriteMovies(): Flow<List<Movie>> {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 在这里，`fetchFavoriteMovies` 函数返回一个 `List<Movie>` 的 Flow。你可以通过将 `Flow<List<Movie>>` 转换为列表来为这个函数编写测试，如下面的示例所示：
 
-```kt
+```java
 class MovieViewModelTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchFavoriteMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val expectedList = listOf(movie1, movie2)
 ```
 
-```kt
+```java
         val movieRepository: MovieRepository = mock {
 ```
 
-```kt
+```java
             onBlocking { fetchFavoriteMovies() } doReturn
 ```
 
-```kt
+```java
               flowOf(expectedList)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         val movieViewModel =
 ```
 
-```kt
+```java
           MovieViewModel(movieRepository)
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             ...
 ```
 
-```kt
+```java
             assertEquals(expectedList,
 ```
 
-```kt
+```java
              movieViewModel.fetchFavoriteMovies().toList())
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -384,67 +384,67 @@ class MovieViewModelTest {
 
 要测试 Flow 中的错误处理，你可以模拟你的测试对象以抛出异常。然后你可以检查抛出的异常或处理它的代码。以下示例展示了如何为 Flow 的失败情况编写测试：
 
-```kt
+```java
 class MovieRepositoryTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMoviesFlowWithError() {
 ```
 
-```kt
+```java
         val movieService: MovieService = mock {
 ```
 
-```kt
+```java
             onBlocking { getMovies(anyString()) } doThrow
 ```
 
-```kt
+```java
               IOException(exception)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         val movieRepository = MovieRepository(movieService)
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             movieRepository.fetchMoviesFlow().catch {
 ```
 
-```kt
+```java
                 assertEquals(exception, it.message)
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -454,79 +454,79 @@ class MovieRepositoryTest {
 
 以下示例展示了如何测试一个具有对 `IOException` 重试和任意次数尝试的 Flow：
 
-```kt
+```java
 class MovieViewModelTest { 
 ```
 
-```kt
+```java
     ... 
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMoviesWithError() { 
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val movies = listOf(Movie(title = "Movie"))
 ```
 
-```kt
+```java
         val exception = "Exception"
 ```
 
-```kt
+```java
         val hasRetried = false
 ```
 
-```kt
+```java
         val movieRepository: MovieRepository = mock { 
 ```
 
-```kt
+```java
             onBlocking { fetchMoviesFlow() } doAnswer {
 ```
 
-```kt
+```java
                 flow {
 ```
 
-```kt
+```java
                     if (hasRetried) emit(movies) else throw
 ```
 
-```kt
+```java
                       IOException (exception)
 ```
 
-```kt
+```java
                 }
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -544,19 +544,19 @@ class MovieViewModelTest {
 
 你可以通过在你的 `app/build.gradle` 依赖项中添加以下内容来在你的 Android 项目中使用 Turbine 测试库：
 
-```kt
+```java
 dependencies {
 ```
 
-```kt
+```java
     …
 ```
 
-```kt
+```java
     testImplementation 'app.cash.turbine:turbine:0.8.0'
 ```
 
-```kt
+```java
 }
 ```
 
@@ -566,87 +566,87 @@ Turbine 在 Flow 上有一个 `test` 扩展函数。它有一个挂起验证块�
 
 以下代码块展示了如何使用 Turbine 和 `test` 扩展函数测试 Flows 的示例：
 
-```kt
+```java
 class MovieViewModelTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val expectedList = listOf(movie1, movie2)
 ```
 
-```kt
+```java
         val movieRepository: MovieRepository = mock {
 ```
 
-```kt
+```java
             onBlocking { fetchMovies() } doReturn
 ```
 
-```kt
+```java
               flowOf(expectedList)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         val movieViewModel =
 ```
 
-```kt
+```java
           MovieViewModel(movieRepository)
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             movieViewModel.fetchMovies().test {
 ```
 
-```kt
+```java
                assertEquals(movie1, awaitItem())
 ```
 
-```kt
+```java
                assertEquals(movie2, awaitItem())
 ```
 
-```kt
+```java
                awaitComplete()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -654,95 +654,95 @@ class MovieViewModelTest {
 
 要测试 Flow 抛出的异常，你可以使用返回 `Throwable` 的 `awaitError()` 函数。然后你可以将这个 `Throwable` 与你期望抛出的异常进行比较。以下是如何使用此方法测试你的 Flow 的示例：
 
-```kt
+```java
 class MovieViewModelTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMoviesError() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val exception = "Test Exception"
 ```
 
-```kt
+```java
         val movieRepository: MovieRepository = mock {
 ```
 
-```kt
+```java
             onBlocking { fetchMovies() } doAnswer
 ```
 
-```kt
+```java
                 flow {
 ```
 
-```kt
+```java
                     throw RuntimeException(exception)
 ```
 
-```kt
+```java
                 }
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }//mock
 ```
 
-```kt
+```java
         val movieViewModel =
 ```
 
-```kt
+```java
           MovieViewModel(movieRepository)
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             movieViewModel.fetchMovies().test {
 ```
 
-```kt
+```java
                 assertEquals(exception,
 ```
 
-```kt
+```java
                   awaitError().message)
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -752,83 +752,83 @@ class MovieViewModelTest {
 
 以下是一个使用 `cancelAndIgnoreRemainingEvents()` 函数的示例，在检查 Flow 的第一个项目之后：
 
-```kt
+```java
 class MovieViewModelTest {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
     @Test
 ```
 
-```kt
+```java
     fun fetchMovies() {
 ```
 
-```kt
+```java
         ...
 ```
 
-```kt
+```java
         val expectedList = listOf(movie1, movie2)
 ```
 
-```kt
+```java
         val movieRepository: MovieRepository = mock {
 ```
 
-```kt
+```java
             onBlocking { fetchMovies() } doReturn
 ```
 
-```kt
+```java
               flowOf(expectedList)
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         val movieViewModel =
 ```
 
-```kt
+```java
           MovieViewModel(movieRepository)
 ```
 
-```kt
+```java
         runTest {
 ```
 
-```kt
+```java
             movieViewModel.fetchMovies().test {
 ```
 
-```kt
+```java
                assertEquals(movie1, awaitItem())
 ```
 
-```kt
+```java
                cancelAndIgnoreRemainingEvents()
 ```
 
-```kt
+```java
             }
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -846,7 +846,7 @@ class MovieViewModelTest {
 
 1.  移除 `fetchMovies()` 测试函数的内容，并替换为以下内容：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         val dispatcher = StandardTestDispatcher()
@@ -870,7 +870,7 @@ class MovieViewModelTest {
 
 1.  在 `fetchMovies()` 函数的末尾，添加以下代码来测试 `MovieViewModel` 的 `fetchMovies()` 函数：
 
-    ```kt
+    ```java
     @Test
     fun fetchMovies() {
         ...
@@ -888,7 +888,7 @@ class MovieViewModelTest {
 
 1.  在 `loading()` 测试函数中，将断言替换为以下内容：
 
-    ```kt
+    ```java
     assertTrue(movieViewModel.loading.value)
     dispatcher.scheduler.advanceUntilIdle()
     assertFalse(movieViewModel.loading.value)
@@ -900,7 +900,7 @@ class MovieViewModelTest {
 
 1.  打开 `MovieRepositoryTest` 类。我们将为 `MovieRepository` 的 `fetchMoviesFlow()` 函数添加测试。首先，添加以下函数来测试函数的成功情况：
 
-    ```kt
+    ```java
     @Test
     fun fetchMoviesFlow() {
         val movies = listOf(Movie(id = 3), Movie(id = 4))
@@ -925,7 +925,7 @@ class MovieViewModelTest {
 
 1.  添加以下函数以添加对`fetchMoviesFlow()`函数抛出异常情况的测试：
 
-    ```kt
+    ```java
     @Test
     fun fetchMoviesFlowWithError() {
         val exception = "Test Exception"
@@ -951,7 +951,7 @@ class MovieViewModelTest {
 
 1.  现在，我们将使用 Turbine 测试库来测试`MovieRepository`的`fetchMoviesFlow()`函数生成的 Flow。在`app/build.gradle`依赖中添加以下内容：
 
-    ```kt
+    ```java
     testImplementation 'app.cash.turbine:turbine:0.8.0'
     ```
 
@@ -959,7 +959,7 @@ class MovieViewModelTest {
 
 1.  添加以下新测试函数以测试`fetchMoviesFlow()`函数的成功情况：
 
-    ```kt
+    ```java
     @Test
     fun fetchMoviesFlowTurbine() {
         val movies = listOf(Movie(id = 3), Movie(id = 4))
@@ -985,7 +985,7 @@ class MovieViewModelTest {
 
 1.  在`fetchMoviesFlow`抛出异常的情况下，添加以下函数来测试使用 Turbine：
 
-    ```kt
+    ```java
     @Test
     fun fetchMoviesFlowWithErrorTurbine() {
         val exception = "Test Exception"

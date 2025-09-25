@@ -196,7 +196,7 @@
 
 将以下代码添加到脚本中：
 
-```kt
+```java
     using UnityEngine; 
     using System.Collections; 
 
@@ -278,7 +278,7 @@
 
 首先，我们初始化我们的变量：
 
-```kt
+```java
     using UnityEngine; 
     using System.Collections; 
 
@@ -301,7 +301,7 @@
 
 在 `Start` 函数中，我们获取 `Animator` 组件并设置模式，稍后我们将对其进行随机化：
 
-```kt
+```java
     void Start () { 
 
     anim = GetComponent<Animator>(); 
@@ -318,7 +318,7 @@
 
 在 `Update` 函数中，我们更新我们最初设置的值：
 
-```kt
+```java
     // Update is called once per frame 
     void Update () { 
 
@@ -360,7 +360,7 @@
 
 `Shuffle` 函数随机化我们创建的初始模式：
 
-```kt
+```java
     void Shuffle(int[] a){ 
 
         for (inti = a.Length - 1; i> 0; i--){ 
@@ -409,21 +409,21 @@
 
 让我们让玩家通过改变玩家的行为来对敌人的攻击做出反应。在`playerScript`中添加以下代码行。在类顶部创建一个新的`public`变量，类型为`GameObject`，并将其命名为`enemy`：
 
-```kt
+```java
     public GameObject enemy; 
 
 ```
 
 接下来，在`Update`函数的开始处，获取敌人的`Animator`组件：
 
-```kt
+```java
     Animator eAnim = enemy.GetComponent<Animator>(); 
 
 ```
 
 接下来，在更新函数中的攻击函数之后，添加以下内容：
 
-```kt
+```java
     // Getting Hit 
     if (eAnim.GetBool("tIsPunching")){ 
         if (anim.GetBool("bIsDefending") == false){ 
@@ -442,14 +442,14 @@
 
 类似地，在敌人脚本中添加一个名为`player`的公共`GameObject`变量。
 
-```kt
+```java
     public GameObject player; 
 
 ```
 
 在`Update`函数结束之前，添加以下内容。
 
-```kt
+```java
     Animator pAnim = player.GetComponent<Animator>(); 
 
     // Getting Hit 
@@ -472,7 +472,7 @@
 
 在顶部添加以下内容：
 
-```kt
+```java
     float totalTime = 0.0f; 
     float timeSinceLastHit = 0.0f; 
     float hitTimeInterval = 30.0f * .016f; 
@@ -481,14 +481,14 @@
 
 在`Update`函数的开始处，增加时间：
 
-```kt
+```java
     totalTime += Time.deltaTime; 
 
 ```
 
 攻击代码需要更改为：
 
-```kt
+```java
     // Attacking 
     if (totalTime>= timeSinceLastHit + hitTimeInterval){ 
         if (Input.GetButtonDown("Fire1")){ 

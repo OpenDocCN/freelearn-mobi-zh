@@ -38,7 +38,7 @@
 
 我们将通过脚本播放声音。打开`buttonClicks.cs`文件。在类的顶部创建一个名为`punchSound`的公共变量，其类型为`AudioSource`，如下面的代码所示：
 
-```kt
+```java
     public class buttonClick : MonoBehaviour {  
  public AudioSource punchSound; 
         public IAPManager iapManager; 
@@ -51,7 +51,7 @@
 
 现在，你可以将音频源调用到你想播放的任何地方。假设，我们在`onButtonClick`类中调用函数，它加载一个新的场景：
 
-```kt
+```java
     punchSound.Play();
 
 ```
@@ -60,7 +60,7 @@
 
 我们将使用协程等待一段时间，然后加载场景，以便播放音效：
 
-```kt
+```java
     public void onButtonClick (string level){  
         punchSound.Play();  
  StartCoroutine (onSceneLoad(level)); 
@@ -81,7 +81,7 @@
 
 现在，让我们看看如何在游戏过程中添加声音效果。在 startScene 中，将两个声音效果加载到场景中，并禁用两个文件的唤醒时播放。在 playerScript 中，为打击和阻挡声音效果添加公共变量：
 
-```kt
+```java
     float totalTime = 0.0f; 
     float timeSinceLastHit = 0.0f; 
     float hitTimeInterval = 30.0f * .016f; 
@@ -98,7 +98,7 @@
 
 现在，每当玩家被击中时，我们必须播放打击声音效果，如果玩家正在阻挡，我们播放阻挡声音效果。因此，打开 playerScript，在检查敌人是否正在打击的地方，对代码进行以下更改：
 
-```kt
+```java
     if (eScript.isPunching == true) { 
         if (anim.GetBool("bIsDefending") == false) { 
             //Debug.Log("player got hit"); 
@@ -118,7 +118,7 @@
 
 当你玩游戏时，你会发现声音效果播放得如预期。让我们也为敌人做同样的事情，如下所示：
 
-```kt
+```java
     if (pAnim.GetBool("tIsPunching")) {
         if (anim.GetBool("bEnemyIsDefending") == false) {
         // Debug.Log("enemy got hit");

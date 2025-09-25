@@ -212,14 +212,14 @@
 
 1.  在文件顶部添加以下`using`语句：
 
-    ```kt
+    ```java
     using UnityEngine.XR.ARFoundation; /* ARRaycastManager */
     using UnityEngine.XR.ARSubsystems; /* TrackableType */
     ```
 
 1.  将以下属性添加到类中：
 
-    ```kt
+    ```java
     /// <summary>
     /// A reference to the Raycast Manager for being able
     /// to perform raycasts
@@ -233,7 +233,7 @@
 
 1.  然后，我们需要在`Start`函数中初始化属性：
 
-    ```kt
+    ```java
     /// <summary>
     /// Start is called before the first frame update.
     /// Initialize our private variables
@@ -248,7 +248,7 @@
 
 1.  最后，我们需要替换我们的`Update`函数并使用`LateUpdate`代替：
 
-    ```kt
+    ```java
     /// <summary>
     /// LateUpdate is called once per frame after all
     /// Update functions have been called
@@ -268,7 +268,7 @@
 
 1.  在前面的代码片段中，我们使用了一个当前不存在的`UpdateIndicator`函数，所以让我们添加它：
 
-    ```kt
+    ```java
     /// <summary>
     /// Will update the placement indicator's position and
     /// rotation to be on the floor of any plane surface
@@ -312,7 +312,7 @@
 
 1.  更新`UpdateIndicator`函数，在末尾使用以下代码：
 
-    ```kt
+    ```java
             /* Rotate to face in front of the camera */
             placementPose.rotation =
                 Quaternion.LookRotation(camForward);
@@ -358,13 +358,13 @@
 
 1.  打开`PlaceARObject`脚本，并向其中添加以下属性：
 
-    ```kt
+    ```java
     [Tooltip("The object to spawn when the screen is tapped")] public GameObject objectToSpawn;
     ```
 
 1.  然后，更新`LateUpdate`函数为以下内容：
 
-    ```kt
+    ```java
         /// <summary>
         /// LateUpdate is called once per frame after all
         /// Update functions have been called

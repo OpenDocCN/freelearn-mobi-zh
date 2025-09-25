@@ -48,7 +48,7 @@ Anko 是一个 Kotlin 库，它使 Android 开发变得更快、更简单。它�
 
 1.  我们可以通过在 `build.gradle` 依赖项中添加以下行一次添加所有 Anko 功能和组件：
 
-```kt
+```java
 // Anko
 compile "org.jetbrains.anko:anko:$anko_version"
 ```
@@ -57,7 +57,7 @@ compile "org.jetbrains.anko:anko:$anko_version"
 
 1.  之后，同步您的 `build.gradle` 文件。现在，Anko 依赖项已经添加到您的项目中。让我们通过简单地使用 Anko 公共库来创建并显示一个警报对话框来检查这一点。通过在您的 XML 布局中定义它并在上面添加 `onClickListener` 来在您的活动中创建一个按钮，点击它应该运行以下代码：
 
-```kt
+```java
 alert("This is my message from alert dialog", "An Alert!") {
     yesButton { toast("Thanks for clicking ok") }
     noButton {
@@ -73,7 +73,7 @@ alert("This is my message from alert dialog", "An Alert!") {
 
 1.  现在将以下行添加到您的项目 app 级 `build.gradle` 依赖项中：
 
-```kt
+```java
 // Anko Layouts
 compile "org.jetbrains.anko:anko-sdk25:$anko_version"
 compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
@@ -81,7 +81,7 @@ compile "org.jetbrains.anko:anko-appcompat-v7:$anko_version"
 
 1.  同步您的 `build.gradle` 文件，如果没有错误，您现在可以在项目中使用 Anko 布局。在此阶段，我们还应该添加 Anko 协程的依赖项，因为我们显然需要在布局上添加监听器。您可以通过将以下行添加到您的 `build.gradle` 文件中来添加这些依赖项：
 
-```kt
+```java
 // Coroutine listeners for Anko Layouts
 compile "org.jetbrains.anko:anko-sdk25-coroutines:$anko_version"
 compile "org.jetbrains.anko:anko-appcompat-v7-coroutines:$anko_version"
@@ -90,7 +90,7 @@ compile "org.jetbrains.anko:anko-appcompat-v7-coroutines:$anko_version"
 
 1.  完成！现在，让我们检查一切是否运行得完美。为此，让我们向我们的主活动添加一个基本的 DSL 布局。查看以下目标活动 `onCreate()` 方法的代码：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     verticalLayout {
@@ -131,7 +131,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  这是您需要在目标活动中放置的 `onCreate()` 方法的代码：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     verticalLayout {
@@ -157,14 +157,14 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  让我们尝试另一个例子，在这个例子中，我们将前面的布局放入一个带有工具栏的协调器布局中。为了能够使用协调器布局，我们需要添加 Anko 设计支持库的依赖项。将以下行添加到您的`build.gradle`文件中，并同步您的项目：
 
-```kt
+```java
 // Anko layouts design support
 compile "org.jetbrains.anko:anko-design:$anko_version"
 ```
 
 1.  目前市面上有很多 Anko 为各种 Android 支持库提供的工具。以下是一个列表：
 
-```kt
+```java
 // Appcompat-v7 (only Anko Commons)
  compile "org.jetbrains.anko:anko-appcompat-v7-commons:$anko_version"
 // Appcompat-v7 (Anko Layouts)
@@ -190,7 +190,7 @@ compile "org.jetbrains.anko:anko-design:$anko_version"
 
 1.  现在我们需要的是一个能够适应父元素整个宽度和高度的`coordinator layout`，在其内部，我们需要一个带有工具栏的应用栏，在应用栏下方我们需要之前提到的垂直布局。我建议你在查看我的方法之前先自己尝试编写这段代码，方法如下：
 
-```kt
+```java
 coordinatorLayout {
     fitsSystemWindows = true
     lparams {
@@ -268,7 +268,7 @@ Anko 布局的最好之处在于其灵活性，能够与我们的 XML 布局一�
 
 1.  让我们从先有一个旧的 XML 文件开始工作。将以下代码添加到您将要添加为目标活动内容视图的 XML 布局中：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout        xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -304,7 +304,7 @@ Anko 布局的最好之处在于其灵活性，能够与我们的 XML 布局一�
 
 1.  传统上，我们在活动中使用`findViewById()`和`onClickListener()`来操作布局元素的属性并处理事件。然而，使用 Anko 布局，这变得和以下一样简单：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
@@ -324,7 +324,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  我们可以获取和设置视图属性，还可以将监听器附加到视图事件。另一件事是，Kotlin 的 Android 扩展函数还允许我们处理视图而不使用`find`方法。查看以下代码，它使使用合成扩展属性获取和设置视图属性变得超级简单：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
@@ -361,7 +361,7 @@ Anko 为我们提供了这些扩展函数和属性，使得访问视图变得更
 
 1.  让我们先在实现`AnkoComponent`接口的不同类中添加我们的 UI。如下所示：
 
-```kt
+```java
 class MainActivityUI : AnkoComponent<MainActivity> {
     override fun createView(ui: AnkoContext<MainActivity>) = with(ui) {
     verticalLayout {
@@ -385,7 +385,7 @@ class MainActivityUI : AnkoComponent<MainActivity> {
 
 1.  注意，前面的类实现了`AnkoComponent`接口。我们需要重写`createView()`方法并从中返回 DSL 布局。现在，让我们看看如何获取这个布局并将其设置到我们的活动中。检查我们活动中的修改后的`onCreate()`方法：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     MainActivityUI().setContentView(this)
@@ -394,7 +394,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  现在，让我们尝试在我们的活动中访问这些视图，如果我们已经正确设置了布局，我们应该能够做到这一点。我们将像访问 XML 布局中的视图一样访问它们：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     MainActivityUI().setContentView(this)
@@ -438,7 +438,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  让我们先为按钮创建一个样式。自定义样式是在`res/values/`目录中的`styles.xml`文件内创建的。让我们创建一个按钮样式，命名为`newButton`。在`styles.xml`中添加以下代码：
 
-```kt
+```java
 <style name="newButton" parent="android:Widget.Holo.Light.Button">
     <item name="android:colorButtonNormal">@color/colorAccent</item>
     <item name="android:textColor">@color/white</item>
@@ -447,7 +447,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  现在，让我们使用这个样式在我们的目标活动中创建一个主题按钮。让我们使用`AnkoComponent`接口将我们的 UI 保持在另一个类中。以下是如何在 DSL 布局中创建一个具有自定义主题的按钮的示例（注意代码中的粗体部分）：
 
-```kt
+```java
 class MainActivityUI : AnkoComponent<MainActivity> {
     override fun createView(ui: AnkoContext<MainActivity>) = with(ui) {
         verticalLayout {
@@ -472,7 +472,7 @@ class MainActivityUI : AnkoComponent<MainActivity> {
 
 1.  此外，为了设置我们活动的布局，我们在`onCreate()`方法中添加了`LayoutActivity().setContentView(this)`这一行，如下所示（注意代码中的粗体部分）：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
  MainActivityUI().setContentView(this)
@@ -502,7 +502,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  让我们从创建一个继承自`AnkoComponent`接口的外部类中的视图开始。为了向视图添加布局参数（我们使用 Anko 提供的扩展函数添加），我们使用`lparams()`扩展函数，它在 DSL 视图块的末尾添加，类似于这样：
 
-```kt
+```java
 val message = editText {
     id = R.id.message
     hint = "Your message"
@@ -513,7 +513,7 @@ val message = editText {
 
 1.  让我们尝试一个简单的垂直布局示例；查看以下代码块（注意代码中的粗体部分）：
 
-```kt
+```java
 verticalLayout {
     verticalLayout {
         background = context.getDrawable(R.color.colorLightGrey)
@@ -553,7 +553,7 @@ verticalLayout {
 
 1.  让我们通过另一个示例来了解，在这个示例中我们有一个包含页面标题的工具栏。查看下一个示例，它使用协调布局、应用栏布局和工具栏。给定的代码生成与代码后面的截图一致的布局：
 
-```kt
+```java
 coordinatorLayout {
     fitsSystemWindows = true
     lparams {
@@ -615,7 +615,7 @@ coordinatorLayout {
 
 查看以下示例，它具有作为根布局的相对布局：
 
-```kt
+```java
 class MainActivityUI : AnkoComponent<MainActivity> {
     override fun createView(ui: AnkoContext<MainActivity>) =     with(ui) {
         relativeLayout {
@@ -647,14 +647,14 @@ class MainActivityUI : AnkoComponent<MainActivity> {
 
 1.  让我们从监听按钮上的点击事件的一个简单示例开始。以下是给具有 `btn_send` ID 的按钮附加 `onClick` 监听器的代码：
 
-```kt
+```java
 btn_send.onClick { toast("Hello there we have recorded your message!") }
 
 ```
 
 1.  前面的代码与以下代码相同：
 
-```kt
+```java
 var btn = find<EditText>(R.id.btn_send)
 btn.setOnClickListener(object : OnClickListener {
     override fun onClick(v: View) {
@@ -665,7 +665,7 @@ btn.setOnClickListener(object : OnClickListener {
 
 1.  现在，让我们创建一个包含按钮和评分栏的布局。我们将在按钮上附加一个 `onLongPress` 监听器，并在评分栏上附加一个 `onRatingBarChange` 监听器。查看以下代码：
 
-```kt
+```java
 verticalLayout {
     padding = dip(20)
     val name = editText {
@@ -708,7 +708,7 @@ verticalLayout {
 
 1.  我们也可以将监听器与布局分开，如下面的代码所示。但是，我们需要设置监听器的视图的 ID 才能使此操作生效：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     MainActivityUI().setContentView(this)
@@ -740,7 +740,7 @@ Anko 提供事件监听器作为扩展函数，以帮助简化添加事件监听
 
 1.  要在 DSL 中包含 XML 布局，我们使用 `include()` 方法。我们可以通过简单地添加 `{}` 并在其中定义我们的视图属性来向使用 `include()` 方法创建的视图添加视图属性。我们也可以向视图添加布局参数，就像我们在 DSL 视图中做的那样。查看以下语法：
 
-```kt
+```java
 include<View>(R.layout.layoutName) {
     id = R.id.someId
     hint = "Some hint"
@@ -750,7 +750,7 @@ include<View>(R.layout.layoutName) {
 
 1.  让我们在 XML 中创建一个布局，然后将其包含在我们的 DSL 布局中。让我们在线性布局中创建一个按钮，并将其保存到名为 `test.xml` 的文件中。查看以下我们将保存到 `text.xml` 中的布局代码：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout 
     android:orientation="vertical"
@@ -774,7 +774,7 @@ include<View>(R.layout.layoutName) {
 
 1.  现在，你需要尝试将你刚刚创建的布局包含在你的 DSL 布局中。你可以在活动的 `onCreate()` 方法中或在一个实现 `AnkoComponent` 接口的外部类中添加 DSL 布局。查看以下 DSL 布局的代码（注意给定代码中的粗体文本）：
 
-```kt
+```java
 verticalLayout {
     padding = dip(20)
     val name = editText {
@@ -806,7 +806,7 @@ verticalLayout {
 
 1.  我们可以通过使用 Kotlin 的合成属性、Anko 的 `find()` 方法或 `findViewById()` 来附加监听器并获取/设置包含视图的属性。上述每种方法都需要视图有一个 ID。查看以下代码，为具有 `btn_test` ID 的 `test.xml` 中的按钮附加点击监听器：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MainActivityUI().setContentView(this)
@@ -818,7 +818,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  我已经通过导入 `test.xml` 的合成属性导入了所有视图，如下所示：
 
-```kt
+```java
 import kotlinx.android.synthetic.main.test.*
 ```
 
@@ -834,7 +834,7 @@ import kotlinx.android.synthetic.main.test.*
 
 让我们从创建一个空白活动并开始工作于 XML 布局开始，以便有一个可以转换为 DSL 的东西。我将以下 XML 布局转换为 DSL：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout 
 
@@ -914,7 +914,7 @@ Snackbars 是向用户显示反馈和消息的绝佳方式。Snackbars 在移动
 
 1.  让我们创建几个按钮，每个按钮对应不同的 snackbars。我们将在每个按钮的 `onClick` 监听器内部创建一个 snackbar。以下是某些 snackbars 的语法。我建议你在查看解决方案之前先自己尝试编写代码：
 
-```kt
+```java
 snackbar(parentView, "feedback message")
 snackbar(parentView, R.string.message_string)
 longSnackbar(parentView, "longer message")
@@ -923,7 +923,7 @@ snackbar(parentView, "message for action snackbbar", "Action name") { doSomethin
 
 1.  查看一个可能的解决方案：
 
-```kt
+```java
 verticalLayout {
     id = R.id.rootView
     padding = dip(20)
@@ -986,7 +986,7 @@ Toasts 用于在 Android 中以弹出窗口的形式显示反馈或消息。Toas
 
 +   这是使用 Anko 的托盘语法：
 
-```kt
+```java
 toast("a toast message")
 toast(R.string.message_string)
 longToast("a long duration toast message")
@@ -996,7 +996,7 @@ longToast("a long duration toast message")
 
 以下是在三个按钮中创建布局的一种方法，我们在按钮的 `onClick` 监听器中放置了显示托盘的代码。你也可以将布局放在一个实现 `AnkoComponent` 接口的外部类中：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         verticalLayout {
@@ -1045,7 +1045,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  让我们从 XML 布局和一个使用此 XML 布局的 Activity 开始。从创建一个空白 Activity 开始，并创建你希望工作的 XML 布局。我正在使用以下布局文件：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout
 
@@ -1100,13 +1100,13 @@ override fun onCreate(savedInstanceState: Bundle?) {
 
 1.  要使用视图的合成属性，我们需要在活动中导入它们，如下所示：
 
-```kt
+```java
 import kotlinx.android.synthetic.main.xml_layout_name.*
 ```
 
 1.  以下是我们如何直接使用视图 ID 提供对视图的引用并获取/设置视图属性的方法：
 
-```kt
+```java
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main2)
@@ -1136,7 +1136,7 @@ Kotlin 有一些我们可以用于类的运算符。我们将重载这些运算�
 
 1.  我们可以通过重载`get`运算符来访问视图组的视图，如下所示：
 
-```kt
+```java
 operator fun ViewGroup.get(position: Int): View
 {
     return getChildAt(position)
@@ -1145,14 +1145,14 @@ operator fun ViewGroup.get(position: Int): View
 
 1.  现在，为了从视图组获取视图，我们可以使用以下任一方法：
 
-```kt
+```java
 val view = viewContainer.get(2)
 // where 2 is the position for the view we want to access
 ```
 
 1.  或者，使用以下方法，因为我们使用了运算符重载，`el.get(index)`与类似数组的`el[index]`操作匹配：
 
-```kt
+```java
 val view = viewContainer[2]
 // where 2 is the position for the view we want to access
 ```

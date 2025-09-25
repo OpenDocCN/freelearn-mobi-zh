@@ -30,50 +30,50 @@ Kotlin 已经占据了 Java 世界。它已经成为 Android 生态系统中的�
 
 1.  下载的文件将是一个压缩文件，你可以使用以下方法提取它：
 
-```kt
+```java
 tar xvzf apache-tomcat-8.0.9.tar.gz
 ```
 
 1.  接下来，你需要将其从下载文件夹移动到正确的位置，在：
 
-```kt
+```java
 mv apache-tomcat-8.0.9 /opt/tomcat
 ```
 
 1.  你还需要检查你的系统上是否已设置 JDK。你可以通过输入以下命令来完成：
 
-```kt
+```java
 java -version
 ```
 
 1.  如果你看到“The program 'java' can be found in the following packages:”，这意味着你需要安装 JDK。你可以使用以下方法完成：
 
-```kt
+```java
 sudo apt-get install openjdk-7-jdk
 ```
 
 1.  然后，将以下行添加到`.bashrc`文件的末尾：
 
-```kt
+```java
 export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
 export CATALINA_HOME=/opt/tomcat
 ```
 
 1.  简单保存并退出`.bashrc`，然后通过运行以下命令使更改生效：
 
-```kt
+```java
 . ~/.bashrc
 ```
 
 1.  Tomcat 和 Java 现在应该已安装并配置在您的服务器上。要激活 Tomcat，请运行以下脚本：
 
-```kt
+```java
 $CATALINA_HOME/bin/startup.sh
 ```
 
 你应该得到以下类似的结果：
 
-```kt
+```java
 Using CATALINA_BASE: /opt/tomcat
 Using CATALINA_HOME: /opt/tomcat
 Using CATALINA_TMPDIR: /opt/tomcat/temp
@@ -88,7 +88,7 @@ Tomcat started.
 
 1.  为了运行应用程序，我们需要相应的 WAR 文件进行部署，你只需在终端中添加以下行即可完成：
 
-```kt
+```java
 gradle war
 ```
 
@@ -118,7 +118,7 @@ gradle war
 
 1.  当你创建了项目后，只需将以下行添加到你的`build.gradle`文件中。这些代码行包含我们将需要来开发 Web 应用程序的 Spring-boot 依赖项：
 
-```kt
+```java
 buildscript {
     ext.kotlin_version = '1.1.60' // Required for Kotlin integration
     ext.spring_boot_version = '1.5.4.RELEASE'
@@ -161,7 +161,7 @@ dependencies {
 
 重要的是要保持`App.kt`文件在一个包中（我们使用了`college`包）。否则，你将得到一个错误，如下所示：
 
-```kt
+```java
 ** WARNING ** : Your ApplicationContext is unlikely to start due to a `@ComponentScan` of the default package.
 ```
 
@@ -169,7 +169,7 @@ dependencies {
 
 1.  现在，让我们尝试运行`App.kt`类。我们将放置以下代码来测试它是否正在运行：
 
-```kt
+```java
 @SpringBootApplication
 open class App {
 }
@@ -181,7 +181,7 @@ fun main(args: Array<String>) {
 
 1.  现在运行项目；如果一切顺利，你将在最后看到以下行：
 
-```kt
+```java
 Started AppKt in 5.875 seconds (JVM running for 6.445)
 ```
 
@@ -205,7 +205,7 @@ Started AppKt in 5.875 seconds (JVM running for 6.445)
 
 1.  让我们首先创建一个具有姓名和学号属性的`Student`类：
 
-```kt
+```java
 package college
 
 class Student() {
@@ -222,7 +222,7 @@ class Student() {
 
 1.  接下来，我们将创建`StudentDatabase`端点，它将作为应用程序的数据库：
 
-```kt
+```java
 @Component
 class StudentDatabase {
     private val students = mutableListOf<Student>()
@@ -233,7 +233,7 @@ class StudentDatabase {
 
 1.  我们还需要一个`@PostConstruct`注解，因为这是一个内存数据库，当应用程序关闭时会被销毁。因此，我们希望在应用程序启动时有一个填充的数据库。所以我们将创建一个`init`方法，在启动时将一些项目添加到“数据库”中：
 
-```kt
+```java
 @PostConstruct
 private fun init() {
     students.add(Student("2013001","Aanand Shekhar Roy"))
@@ -245,13 +245,13 @@ private fun init() {
 
     +   `getStudent`：获取我们数据库中现有学生的列表：
 
-```kt
+```java
 fun getStudents()=students
 ```
 
 1.  +   `addStudent`：这个方法将学生添加到我们的数据库中：
 
-```kt
+```java
 fun addStudent(student: Student): Boolean {
     students.add(student)
     return true
@@ -262,7 +262,7 @@ fun addStudent(student: Student): Boolean {
 
 1.  一旦创建，我们需要通过 Spring 依赖注入提供我们的数据库，为此我们需要`@Autowired`注解。以下是我们的`StudentController`的样子：
 
-```kt
+```java
 @RestController
 class StudentController {
     @Autowired
@@ -272,14 +272,14 @@ class StudentController {
 
 1.  现在我们将设置响应到`/`路径。我们将显示数据库中的学生列表。为此，我们将简单地创建一个列出学生的方法。我们需要用`@RequestMapping`注解它，并提供路径和请求方法（GET、POST 等）等参数：
 
-```kt
+```java
 @RequestMapping("", method = arrayOf(RequestMethod.GET))
 fun students() = database.getStudents()
 ```
 
 1.  这就是我们现在控制器的样子。它是一个简单的 REST 控制器：
 
-```kt
+```java
 package college
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -304,7 +304,7 @@ class StudentController {
 
 1.  现在，让我们尝试创建另一个端点，它将根据学号获取学生的详细信息：
 
-```kt
+```java
 @GetMapping("/student/{roll_number}")
 fun studentWithRollNumber( @PathVariable("roll_number")  roll_number:String) =
     database.getStudentWithRollNumber(roll_number)
@@ -312,13 +312,13 @@ fun studentWithRollNumber( @PathVariable("roll_number")  roll_number:String) =
 
 1.  现在，如果你尝试访问`http://localhost:8080/student/2013001`端点，你将看到以下输出：
 
-```kt
+```java
 {"roll_number":"2013001","name":"Aanand Shekhar Roy"}
 ```
 
 1.  接下来，我们将尝试将学生添加到数据库中。我们将通过`POST`方法来完成：
 
-```kt
+```java
 @RequestMapping("/add", method = arrayOf(RequestMethod.POST))
 fun addStudent(@RequestBody student: Student) =
         if (database.addStudent(student)) student
@@ -329,19 +329,19 @@ fun addStudent(@RequestBody student: Student) =
 
 到目前为止，我们的服务器一直依赖于 IDE。我们肯定希望让它独立于 IDE。多亏了 Gradle，只需以下步骤就可以轻松创建一个可运行的 JAR：
 
-```kt
+```java
 ./gradlew clean bootRepackage
 ```
 
 上述命令是平台无关的，并使用 Gradle 构建系统构建应用程序。现在，你只需输入提到的命令来运行它：
 
-```kt
+```java
 java -jar build/libs/gs-rest-service-0.1.0.jar 
 ```
 
 你可以像之前一样看到以下输出：
 
-```kt
+```java
 Started AppKt in 4.858 seconds (JVM running for 5.548)
 ```
 
@@ -363,7 +363,7 @@ Started AppKt in 4.858 seconds (JVM running for 5.548)
 
 这里是一个 Spring Boot 应用程序的示例：
 
-```kt
+```java
 package college
 
 import org.springframework.boot.SpringApplication
@@ -381,7 +381,7 @@ Spring Boot 应用程序执行静态的`run()`方法，它接受两个参数，�
 
 当一切设置完毕后，你可以通过执行以下命令来启动应用程序：
 
-```kt
+```java
 ./gradlew bootRun
 ```
 
@@ -393,12 +393,12 @@ Spring Boot 应用程序执行静态的`run()`方法，它接受两个参数，�
 
 为了将其作为一个独立的服务器运行，你需要创建一个 JAR 文件，然后你可以按照以下方式执行：
 
-```kt
+```java
 ./gradlew clean bootRepackage
 ```
 
 现在，要运行它，你只需输入以下命令：
 
-```kt
+```java
 java -jar build/libs/gs-rest-service-0.1.0.jar 
 ```

@@ -38,7 +38,7 @@ Jetpack 导航简化了屏幕之间的导航，在本章中，我们将学习如
 
 1.  在创建我们的新空 `Activity BottomNavigationBarSample` 项目后，我们首先将在 `build.gradle` 中添加所需的导航依赖项，然后同步项目：
 
-    ```kt
+    ```java
     implementation 'android.navigation:navigation-compose:2.5.2'
     ```
 
@@ -46,7 +46,7 @@ Jetpack 导航简化了屏幕之间的导航，在本章中，我们将学习如
 
 1.  删除这些代码后，让我们继续在主包目录中创建一个 `sealed` 类，命名为 `Destination.kt`，我们将在这里定义我们的 `route` 字符串、`icon:` `Int` 和 `title: String` 用于底部导航项：
 
-    ```kt
+    ```java
     sealed class Destination(val route: String, val icon: Int, val title: String) {...}
     ```
 
@@ -54,95 +54,95 @@ Jetpack 导航简化了屏幕之间的导航，在本章中，我们将学习如
 
 1.  在`sealed`类内部，现在让我们继续创建我们的目的地。对于我们的示例，我们将假设我们正在创建一个预算应用。因此，我们可以有的目的地是`Transactions`、`Budgets`、`Tasks`和`Settings`。关于如何获取图标，请参阅下一步；此外，你还需要导入它们。为了良好的实践，你可以提取`String`资源并将其保存到`String` XML 文件中。你可以尝试这个小练习：
 
-    ```kt
+    ```java
     sealed class Destination(val route: String, val icon: Int, val title: String) {
     ```
 
-    ```kt
+    ```java
         object Transaction : Destination(
     ```
 
-    ```kt
+    ```java
             route = "transactions", icon =
     ```
 
-    ```kt
+    ```java
                 R.drawable.ic_baseline_wallet,
     ```
 
-    ```kt
+    ```java
                 title = "Transactions"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         object Budgets : Destination(
     ```
 
-    ```kt
+    ```java
             route = "budget", icon =
     ```
 
-    ```kt
+    ```java
                 R.drawable.ic_baseline_budget,
     ```
 
-    ```kt
+    ```java
                 title = "Budget"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         object Tasks : Destination(route = "tasks", icon =
     ```
 
-    ```kt
+    ```java
             R.drawable.ic_add_task, title = "Tasks")
     ```
 
-    ```kt
+    ```java
         object Settings : Destination(
     ```
 
-    ```kt
+    ```java
             route = "settings", icon =
     ```
 
-    ```kt
+    ```java
                 R.drawable.ic_settings,
     ```
 
-    ```kt
+    ```java
                 title = "Settings"
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         companion object {
     ```
 
-    ```kt
+    ```java
             val toList = listOf(Transaction, Budgets,
     ```
 
-    ```kt
+    ```java
             Tasks, Settings)
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -160,43 +160,43 @@ Jetpack 导航简化了屏幕之间的导航，在本章中，我们将学习如
 
 1.  现在，对于我们刚刚添加的目的地，让我们继续添加一些占位文本来验证，当我们导航时，我们确实在正确的屏幕上。创建一个新文件，并将其命名为`AppContent.kt`。在`AppContent`中，我们将添加我们的`Transaction`函数，这将是我们的主页，新用户第一次进入应用时将在这里；然后他们可以导航到其他屏幕：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun Transaction(){
     ```
 
-    ```kt
+    ```java
         Column(
     ```
 
-    ```kt
+    ```java
             modifier = Modifier
     ```
 
-    ```kt
+    ```java
                 .fillMaxSize()
     ```
 
-    ```kt
+    ```java
                 .wrapContentSize(Alignment.Center)
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -204,187 +204,187 @@ Jetpack 导航简化了屏幕之间的导航，在本章中，我们将学习如
 
 1.  我们现在需要创建一个可组合的底部导航栏，并告诉`Composable`函数如何响应用户点击，以及在选择之前选中的项目时如何恢复状态：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun BottomNavigationBar(navController: NavController, appItems: List<Destination>) {
     ```
 
-    ```kt
+    ```java
         BottomNavigation(
     ```
 
-    ```kt
+    ```java
             backgroundColor = colorResource(id =
     ```
 
-    ```kt
+    ```java
                 R.color.purple_700),
     ```
 
-    ```kt
+    ```java
                 contentColor = Color.White
     ```
 
-    ```kt
+    ```java
         ) {
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在，让我们转到`MainActivity`并创建`NavHost`以及几个可组合函数，`AppScreen()`、`AppNavigation()`和`BottomNavigationBar()`。每个导航控制器必须与一个单独的导航宿主可组合函数相关联，因为它将控制器与一个帮助指定可组合方向的导航图连接起来：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun AppNavigation(navController: NavHostController) {
     ```
 
-    ```kt
+    ```java
         NavHost(navController, startDestination =
     ```
 
-    ```kt
+    ```java
         Destination.Transaction.route) {
     ```
 
-    ```kt
+    ```java
             composable(Destination.Transaction.route) {
     ```
 
-    ```kt
+    ```java
                 Transaction()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             composable(Destination.Budgets.route) {
     ```
 
-    ```kt
+    ```java
                 Budget()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             composable(Destination.Tasks.route) {
     ```
 
-    ```kt
+    ```java
                 Tasks()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             composable(Destination.Settings.route) {
     ```
 
-    ```kt
+    ```java
                 Settings()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  最后，让我们通过创建另一个可组合函数并命名为`AppScreen()`来将所有内容粘合在一起。我们将在`onCreate()`函数中的`setContent`中调用此函数：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun AppScreen() {
     ```
 
-    ```kt
+    ```java
         val navController = rememberNavController()
     ```
 
-    ```kt
+    ```java
         Scaffold(
     ```
 
-    ```kt
+    ```java
             bottomBar = {
     ```
 
-    ```kt
+    ```java
                 BottomNavigationBar(navController =
     ```
 
-    ```kt
+    ```java
                 navController, appItems =
     ```
 
-    ```kt
+    ```java
                 Destination.toList) },
     ```
 
-    ```kt
+    ```java
             content = { padding ->
     ```
 
-    ```kt
+    ```java
                 Box(modifier = Modifier.padding(padding))
     ```
 
-    ```kt
+    ```java
                 {
     ```
 
-    ```kt
+    ```java
                     AppNavigation(navController =
     ```
 
-    ```kt
+    ```java
                         navController)
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -402,7 +402,7 @@ Jetpack 导航简化了屏幕之间的导航，在本章中，我们将学习如
 
 `NavController()` 是我们导航组件的主要 API，它跟踪组成我们应用程序屏幕的 composables 的每个返回栈条目以及每个屏幕的状态。我们使用 `rememberNavController()` 创建了这个功能：正如我们在上一章中提到的，`remember`这个名字意味着记住值；在这个例子中，我们正在记住 `NavController`：
 
-```kt
+```java
 val navController = rememberNavController()
 ```
 
@@ -410,7 +410,7 @@ val navController = rememberNavController()
 
 这与 Android 开发者在组合片段之前构建导航的方式非常相似。步骤包括创建一个带有 `menu` 项的底部导航菜单，如下面的代码块所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <menu >
     <item
@@ -429,7 +429,7 @@ val navController = rememberNavController()
 
 然后，我们在 `navigation` 包中创建另一个资源，该资源指向屏幕（片段）：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <navigation 
     app:startDestination="@+id/transaction_home">
@@ -470,89 +470,89 @@ val navController = rememberNavController()
 
 1.  打开你的 `SampleLogin` 项目，创建一个新的 `sealed` 类，并将其命名为 `Destination`。为了确保我们保持良好的封装，将此类添加到 `util` 中。同样，就像底部栏一样，我们将有一个路由，但这次我们不需要任何图标或标题：
 
-    ```kt
+    ```java
     sealed class Destination (val route: String){
     ```
 
-    ```kt
+    ```java
         object Main: Destination("main_route")
     ```
 
-    ```kt
+    ```java
         object LoginScreen: Destination("login_screen")
     ```
 
-    ```kt
+    ```java
         object RegisterScreen:
     ```
 
-    ```kt
+    ```java
             Destination("register_screen")
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在创建目的地之后，我们现在需要在 `LoginContent` 中添加可点击文本，询问用户是否是首次使用应用程序。他们应该点击 `RegisterContent`。如果你需要参考任何步骤，可以通过查看 *技术要求* 部分来打开项目：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun LoginContent(
     ```
 
-    ```kt
+    ```java
         ...
     ```
 
-    ```kt
+    ```java
         onRegister: () -> Unit
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
     ClickableText(
     ```
 
-    ```kt
+    ```java
         modifier = Modifier.padding(top = 12.dp),
     ```
 
-    ```kt
+    ```java
         text = AnnotatedString(stringResource(id =
     ```
 
-    ```kt
+    ```java
             R.string.register)),
     ```
 
-    ```kt
+    ```java
         onClick = { onRegister.invoke() },
     ```
 
-    ```kt
+    ```java
         style = TextStyle(
     ```
 
-    ```kt
+    ```java
            colorResource(id = R.color.purple_700),
     ```
 
-    ```kt
+    ```java
            fontSize = 16.sp
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     )
     ```
 
@@ -564,135 +564,135 @@ val navController = rememberNavController()
 
 1.  对于 **注册** 屏幕，您可以在 *技术要求* 部分找到整个代码。我们将重用我们创建的用户输入字段，只需更改文本：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun PasswordInputField(
     ```
 
-    ```kt
+    ```java
         text: String
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         OutlinedTextField(
     ```
 
-    ```kt
+    ```java
             label = { Text(text = text) },
     ```
 
-    ```kt
+    ```java
     ...
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在 `MainActivity` 中，我们将有一个 `Navigation()` 函数，如下所示：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun Navigation(navController: NavHostController) {
     ```
 
-    ```kt
+    ```java
         NavHost(navController, startDestination =
     ```
 
-    ```kt
+    ```java
         Destination.LoginScreen.route) {
     ```
 
-    ```kt
+    ```java
             composable(Destination.LoginScreen.route) {
     ```
 
-    ```kt
+    ```java
                 LoginContentScreen(loginViewModel =
     ```
 
-    ```kt
+    ```java
                     hiltViewModel(),
     ```
 
-    ```kt
+    ```java
                 onRegisterNavigateTo = {
     ```
 
-    ```kt
+    ```java
                     navController.navigate(
     ```
 
-    ```kt
+    ```java
                         Destination.RegisterScreen.route)
     ```
 
-    ```kt
+    ```java
                 })
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
             composable(Destination.RegisterScreen.route) {
     ```
 
-    ```kt
+    ```java
                 RegisterContentScreen(registerViewModel =
     ```
 
-    ```kt
+    ```java
                     hiltViewModel())
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在 `PasswordInputField` 中，我们将为每个输入项适当地命名以提高其可重用性：
 
-    ```kt
+    ```java
     PasswordInputField(
     ```
 
-    ```kt
+    ```java
         text = stringResource(id = R.string.password),
     ```
 
-    ```kt
+    ```java
         authState = uiState,
     ```
 
-    ```kt
+    ```java
         onValueChanged = onPasswordUpdated,
     ```
 
-    ```kt
+    ```java
         passwordToggleVisibility =
     ```
 
-    ```kt
+    ```java
             passwordToggleVisibility)
     ```
 
@@ -700,95 +700,95 @@ val navController = rememberNavController()
 
 1.  最后，在 `setContent` 中，我们需要更新代码以适应新的导航：
 
-    ```kt
+    ```java
     @AndroidEntryPoint
     ```
 
-    ```kt
+    ```java
     class MainActivity : ComponentActivity() {
     ```
 
-    ```kt
+    ```java
         override fun onCreate(savedInstanceState: Bundle?)
     ```
 
-    ```kt
+    ```java
         {
     ```
 
-    ```kt
+    ```java
             super.onCreate(savedInstanceState)
     ```
 
-    ```kt
+    ```java
             setContent {
     ```
 
-    ```kt
+    ```java
                 SampleLoginTheme {
     ```
 
-    ```kt
+    ```java
                     // A surface container using the
     ```
 
-    ```kt
+    ```java
                        'background' color from the theme
     ```
 
-    ```kt
+    ```java
                     Surface(
     ```
 
-    ```kt
+    ```java
                         modifier = Modifier.fillMaxSize(),
     ```
 
-    ```kt
+    ```java
                         color =
     ```
 
-    ```kt
+    ```java
                            MaterialTheme.colors.background
     ```
 
-    ```kt
+    ```java
                     ) {
     ```
 
-    ```kt
+    ```java
                         val navController =
     ```
 
-    ```kt
+    ```java
                             rememberNavController()
     ```
 
-    ```kt
+    ```java
                         Navigation(navController =
     ```
 
-    ```kt
+    ```java
                             navController)
     ```
 
-    ```kt
+    ```java
                     }
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -804,7 +804,7 @@ val navController = rememberNavController()
 
 您可以使用 `enterTransition`，它明确指定了您导航到特定目的地时运行的动画，而 `exitTransition` 执行相反的操作：
 
-```kt
+```java
 AnimatedNavHost(
     modifier = Modifier
         .padding(padding),
@@ -845,89 +845,89 @@ AnimatedNavHost(
 
 1.  让我们继续创建`SearchScreen`，这个屏幕将只包含一个搜索功能，`EditText`以及一个用于显示从 API 返回的数据的列：
 
-    ```kt
+    ```java
     SearchScreen(
     ```
 
-    ```kt
+    ```java
         viewModel = hiltViewModel(),
     ```
 
-    ```kt
+    ```java
         navigateToRepositoryScreen = { orgName ->
     ```
 
-    ```kt
+    ```java
             navController.navigate(
     ```
 
-    ```kt
+    ```java
                 Destination.BrowseRepositoryScreen.route +
     ```
 
-    ```kt
+    ```java
                 "/" + orgName
     ```
 
-    ```kt
+    ```java
             )
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     )
     ```
 
 1.  现在，当设置导航到`BrowseRepository`时，你需要添加以下代码。这段代码是为了从一个屏幕传递一个必需的数据参数到另一个屏幕，但同时也添加了传递可选参数的示例；默认值将帮助用户：
 
-    ```kt
+    ```java
     composable(
     ```
 
-    ```kt
+    ```java
         route = Destination.BrowseRepositoryScreen.route +
     ```
 
-    ```kt
+    ```java
                 "/{org_name}",
     ```
 
-    ```kt
+    ```java
         arguments = listOf(navArgument("org_name") { type
     ```
 
-    ```kt
+    ```java
             = NavType.StringType }),
     ```
 
-    ```kt
+    ```java
         enterTransition = { scaleIn(tween(700)) },
     ```
 
-    ```kt
+    ```java
         exitTransition = { scaleOut(tween(700)) },
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         BrowseRepositoryScreen(
     ```
 
-    ```kt
+    ```java
             viewModel = hiltViewModel(),
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -937,7 +937,7 @@ AnimatedNavHost(
 
 当你想向目的地传递一个可能需要的参数时，你需要明确将其附加到在初始化`navigate`函数调用时的路由上，就像你在下面的代码片段中看到的那样：
 
-```kt
+```java
 navController.navigate(Destination.BrowseScreen.route + "/" + orgName)
 ```
 
@@ -971,45 +971,45 @@ Compose 让开发者处理深链接变得更加容易。`composable`函数接受
 
 1.  我们将首先通过向我们的`AndroidManifest.xml`文件添加适当的 intent 过滤器来使深链接外部可用：
 
-    ```kt
+    ```java
     <activity>
     ```
 
-    ```kt
+    ```java
         <intent-filter>
     ```
 
-    ```kt
+    ```java
           ...
     ```
 
-    ```kt
+    ```java
           <data android:scheme="https"
     ```
 
-    ```kt
+    ```java
           android:host="www.yourcompanieslink.com" />
     ```
 
-    ```kt
+    ```java
         </intent-filter>
     ```
 
-    ```kt
+    ```java
     </activity>
     ```
 
 1.  现在在我们的`composable`函数中，我们可以使用`deepLinks`参数，指定`navDeepLink`列表，然后传递 URI 模式：
 
-    ```kt
+    ```java
     val uri = "www.yourcompanieslink.com"
     ```
 
-    ```kt
+    ```java
     composable(deepLinks = listOf(navDeepLink { uriPattern = "$uri/{id}" }))
     ```
 
-    ```kt
+    ```java
     {...}
     ```
 
@@ -1017,7 +1017,7 @@ Compose 让开发者处理深链接变得更加容易。`composable`函数接受
 
 许多应用在导航时仍然使用`launchMode`。这就是在以下代码片段中使用 Navigation Jetpack 组件时的情况：
 
-```kt
+```java
 override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     navigationController.handleDeepLink(intent)
@@ -1054,237 +1054,237 @@ override fun onNewIntent(intent: Intent) {
 
 1.  让我们打开 `LoginContentTest` 类。现在，让我们将 `LoginContent` 类移动到一个我们将创建的辅助类中，以帮助我们测试 UI 逻辑：
 
-    ```kt
+    ```java
     @Composable
     ```
 
-    ```kt
+    ```java
     fun contentLoginForTest(
     ```
 
-    ```kt
+    ```java
         uiState: AuthenticationState =
     ```
 
-    ```kt
+    ```java
         AuthenticationState(),
     ```
 
-    ```kt
+    ```java
         onUsernameUpdated : (String) -> Unit = {},
     ```
 
-    ```kt
+    ```java
         onPasswordUpdated :(String) -> Unit = {},
     ```
 
-    ```kt
+    ```java
         onLogin : () -> Unit = {},
     ```
 
-    ```kt
+    ```java
         passwordToggleVisibility: (Boolean) -> Unit = {},
     ```
 
-    ```kt
+    ```java
         onRegisterNavigateTo: () -> Unit = {}
     ```
 
-    ```kt
+    ```java
     ) {
     ```
 
-    ```kt
+    ```java
         LoginContent(
     ```
 
-    ```kt
+    ```java
             uiState = uiState,
     ```
 
-    ```kt
+    ```java
             onUsernameUpdated = onUsernameUpdated,
     ```
 
-    ```kt
+    ```java
             onPasswordUpdated = onPasswordUpdated,
     ```
 
-    ```kt
+    ```java
             onLogin = onLogin,
     ```
 
-    ```kt
+    ```java
             passwordToggleVisibility =
     ```
 
-    ```kt
+    ```java
                 passwordToggleVisibility,
     ```
 
-    ```kt
+    ```java
             onRegister = onRegisterNavigateTo
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  在 `LoginContentTest` 类内部，现在我们将 `LoginContent` 替换为在 `initCompose` 函数内部新创建的 `contentLoginForTest()` 函数：
 
-    ```kt
+    ```java
     private fun initCompose() {
     ```
 
-    ```kt
+    ```java
         composeRuleTest.activity.setContent {
     ```
 
-    ```kt
+    ```java
             SampleLoginTheme {
     ```
 
-    ```kt
+    ```java
                 contentLoginForTest()
     ```
 
-    ```kt
+    ```java
                 launchRegisterScreenWithNavGraph()
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
 1.  现在我们已经修复了测试，我们现在可以为我们的新创建的可点击的 `TextView` 添加一个 `test` 标签：
 
-    ```kt
+    ```java
     const val REGISTER_USER = "register_user"
     ```
 
 1.  一旦完成，我们现在需要创建 `lateint var NavHostController`，以及一个 `launchRegisterScreenWithNavGraph` 函数来帮助我们设置导航：
 
-    ```kt
+    ```java
     private fun launchRegisterScreenWithNavGraph() {
     ```
 
-    ```kt
+    ```java
         composeRuleTest.activity.setContent {
     ```
 
-    ```kt
+    ```java
             SampleLoginTheme {
     ```
 
-    ```kt
+    ```java
                 navController = rememberNavController()
     ```
 
-    ```kt
+    ```java
                 NavHost(
     ```
 
-    ```kt
+    ```java
                     navController = navController,
     ```
 
-    ```kt
+    ```java
                     startDestination =
     ```
 
-    ```kt
+    ```java
                         Destination.LoginScreen.route
     ```
 
-    ```kt
+    ```java
                 ) {
     ```
 
-    ```kt
+    ```java
                     composable(Destination.LoginScreen
     ```
 
-    ```kt
+    ```java
                     .route) {
     ```
 
-    ```kt
+    ```java
                     LoginContentScreen(
     ```
 
-    ```kt
+    ```java
                     onRegisterNavigateTo = {
     ```
 
-    ```kt
+    ```java
                         navController.navigate(
     ```
 
-    ```kt
+    ```java
                             Destination.RegisterScreen
     ```
 
-    ```kt
+    ```java
                             .route)
     ```
 
-    ```kt
+    ```java
                     }, loginViewModel = hiltViewModel())
     ```
 
-    ```kt
+    ```java
                     }
     ```
 
-    ```kt
+    ```java
                     composable(
     ```
 
-    ```kt
+    ```java
                         Destination.RegisterScreen
     ```
 
-    ```kt
+    ```java
                         .route) {
     ```
 
-    ```kt
+    ```java
                             RegisterContentScreen(
     ```
 
-    ```kt
+    ```java
                                 hiltViewModel())
     ```
 
-    ```kt
+    ```java
                         }
     ```
 
-    ```kt
+    ```java
                 }
     ```
 
-    ```kt
+    ```java
             }
     ```
 
-    ```kt
+    ```java
         }
     ```
 
-    ```kt
+    ```java
     }
     ```
 
@@ -1292,51 +1292,51 @@ override fun onNewIntent(intent: Intent) {
 
 1.  现在，让我们创建一个测试函数，并将其命名为 `assertRegisterClickableButtonNavigatesToRegisterScreen()`。在这个测试用例中，我们将设置我们的路由，然后在正确的 `TextView` 被点击时使用 `assert`；我们将导航到正确的目的地：
 
-    ```kt
+    ```java
     @Test
     ```
 
-    ```kt
+    ```java
     fun assertRegisterClickableButtonNavigatesToRegisterScreen() {
     ```
 
-    ```kt
+    ```java
         initCompose()
     ```
 
-    ```kt
+    ```java
         composeRuleTest.onNodeWithTag(
     ```
 
-    ```kt
+    ```java
             TestTags.LoginContent.REGISTER_USER)
     ```
 
-    ```kt
+    ```java
                 .performClick(
     ```
 
-    ```kt
+    ```java
         )
     ```
 
-    ```kt
+    ```java
         val route =
     ```
 
-    ```kt
+    ```java
             navController.currentDestination?.route
     ```
 
-    ```kt
+    ```java
         assert(route.equals(
     ```
 
-    ```kt
+    ```java
             Destination.RegisterScreen.route))
     ```
 
-    ```kt
+    ```java
     }
     ```
 

@@ -28,7 +28,7 @@
 
 当创建新函数时，我们经常需要允许一些参数是可选的。这迫使我们使用方法重载来创建具有相同名称但与不同用例和场景相关的不同参数集的多个函数声明。通常，在底层，每个函数变体都会调用具有默认实现的基本函数。让我们考虑一个简单的函数示例，该函数计算以恒定加速度率移动的物体的位移：
 
-```kt
+```java
 fun calculateDisplacement(initialSpeed: Float, 
                           acceleration: Float, 
                           duration: Long): Double =
@@ -37,7 +37,7 @@ fun calculateDisplacement(initialSpeed: Float,
 
 我们可能还需要为对象初始速度始终等于零的情况提供一个位移计算。在这种情况下，我们最终会以以下方式对基本函数进行重载：
 
-```kt
+```java
 fun calculateDisplacement(acceleration: Float, duration: Long): Double = calculateDisplacement(0f, acceleration, duration)
 ```
 
@@ -47,7 +47,7 @@ fun calculateDisplacement(acceleration: Float, duration: Long): Double = calcula
 
 1.  让我们为该函数声明基本实现：
 
-```kt
+```java
 fun calculateDisplacement(initialSpeed: Float, 
                           acceleration: Float, 
                           duration: Long): Double =
@@ -57,12 +57,12 @@ fun calculateDisplacement(initialSpeed: Float,
 
 1.  让我们为 `initialSpeed` 参数声明一个默认值：*
 
-```kt
+```java
 fun calculateDisplacement(initialSpeed: Float = 0f, 
                           acceleration: Float, 
 ```
 
-```kt
+```java
                           duration: Long): Double =
     initialSpeed * duration + 0.5 * acceleration * duration * 
     duration
@@ -72,13 +72,13 @@ fun calculateDisplacement(initialSpeed: Float = 0f,
 
 我们已经为 `initialSpeed` 参数声明了一个默认值，等于 `0`。一旦我们分配了默认值，`initialSpeed` 参数就变成了可选的。现在，我们可以在调用函数时省略它，如下面的示例所示：
 
-```kt
+```java
 val displacement = calculateDisplacement(acceleration = 9.81f, duration = 1000)
 ```
 
 注意，如果我们省略了一些参数并使用它们的默认值，我们必须明确指定其他参数的值及其名称。这允许编译器将值映射到特定的参数。当然，我们能够使用标准方式覆盖默认值：
 
-```kt
+```java
 val displacement = calculateDisplacement(10f, 9.81f, 1000)
 ```
 
@@ -96,7 +96,7 @@ Kotlin 通过提供为其函数声明默认实现和定义其属性默认值的�
 
 声明具有默认函数实现的接口很简单。我们不需要声明函数头，还需要包括其体：
 
-```kt
+```java
 interface MyInterface {
     fun foo() {
         // default function body
@@ -108,13 +108,13 @@ interface MyInterface {
 
 1.  声明一个新的接口，称为 `EmailValidator`：
 
-```kt
+```java
 interface EmailValidator {}
 ```
 
 1.  添加一个字符串属性，用于存储当前文本输入：
 
-```kt
+```java
 interface EmailValidator {
     var input: String
 }
@@ -122,7 +122,7 @@ interface EmailValidator {
 
 1.  将 `isEmailValid()` 函数添加到接口中：
 
-```kt
+```java
 interface EmailValidator {
     var input: String
     fun isEmailValid(): Boolean = input.contains("@")
@@ -131,7 +131,7 @@ interface EmailValidator {
 
 1.  添加 `getUserLogin()` 函数：
 
-```kt
+```java
 interface EmailValidator {
     var input: String
 
@@ -150,7 +150,7 @@ interface EmailValidator {
 
 现在，让我们试一试，看看我们如何在实际操作中使用 `EmailValidator` 接口。假设我们有一个 `RegistrationForm` 类，它包含一个钩子方法，每次输入文本被修改时都会被调用：
 
-```kt
+```java
 class RegistrationForm() {
     fun onInputTextUpdated(text: String) {
         // do some actions on text changed
@@ -160,7 +160,7 @@ class RegistrationForm() {
 
 为了使用我们的 `EmailValidator` 接口，我们需要声明一个实现该接口的类。我们可以修改 `RegistrationForm` 类以实现 `EmailValidator` 接口：
 
-```kt
+```java
 class RegistrationForm(override var input: String = ""): EmailValidator {
     fun onInputTextUpdated(newText: String) {
         this.input = newText
@@ -182,7 +182,7 @@ class RegistrationForm(override var input: String = ""): EmailValidator {
 
 与 Java 一样，我们不能扩展多个类；然而，我们可以实现多个接口。当我们有一个类实现了包含默认实现的多个接口时，我们可能会遇到由具有相同签名的函数引起的冲突：
 
-```kt
+```java
 interface A {
     fun foo() {
         // some operations 
@@ -198,7 +198,7 @@ interface B {
 
 在这种情况下，我们需要显式重写`foo()`函数以解决冲突：
 
-```kt
+```java
 class MyClass: A, B {
     override fun foo() {
         print("I'm the first one here!")
@@ -208,7 +208,7 @@ class MyClass: A, B {
 
 否则，我们会得到以下错误：
 
-```kt
+```java
 Class 'MyClass' must override public open fun foo(): Unit because it inherits multiple interface methods of it.
 ```
 
@@ -228,7 +228,7 @@ Class 'MyClass' must override public open fun foo(): Unit because it inherits mu
 
 扩展函数的语法与标准函数的语法非常相似。我们只需要添加有关新函数扩展的类型信息，如下所示：
 
-```kt
+```java
 fun SomeClass.newFunctionName(args): ReturnType {
     // body
 }
@@ -240,7 +240,7 @@ fun SomeClass.newFunctionName(args): ReturnType {
 
 1.  在其中实现`swap()`函数：
 
-```kt
+```java
 fun <T> Array<T>.swap(a: T, b: T) {
     val positionA = indexOf(a)
     val positionB = indexOf(b)
@@ -260,7 +260,7 @@ fun <T> Array<T>.swap(a: T, b: T) {
 
 因此，我们能够对`Array`类的任何实例调用`swap`函数。让我们考虑以下示例：
 
-```kt
+```java
 val array: Array<String> = arrayOf("a", "b", "c", "d")
 array.swap("c", "b")
 print(array.joinToString())
@@ -268,7 +268,7 @@ print(array.joinToString())
 
 这将在控制台输出以下内容：
 
-```kt
+```java
 a, c, b, d
 ```
 
@@ -278,7 +278,7 @@ a, c, b, d
 
 除了扩展函数之外，Kotlin 还提供了扩展属性功能。例如，我们可以为`List<T>`类声明一个属性，该属性将保存有关最后一个元素索引值的详细信息：
 
-```kt
+```java
 val <T> List<T>.lastIndex: Int  get() = size - 1
 ```
 
@@ -288,7 +288,7 @@ val <T> List<T>.lastIndex: Int  get() = size - 1
 
 通常，将复杂类型的一个对象转换为多个变量是非常实用的。这允许你为变量提供适当的命名，并简化代码。Kotlin 提供了一个简单内置的功能来实现这一点，称为*解构*：
 
-```kt
+```java
 data class User(val login: String, val email: String, val birthday: LocalDate)
 
 fun getUser() = User("Agata", "ag@t.pl", LocalDate.of(1990, 1, 18))
@@ -300,13 +300,13 @@ print("$name was born on $birthday")
 
 因此，这段代码会在控制台打印以下信息：
 
-```kt
+```java
 Agata was born on 1990-01-18
 ```
 
 非常棒！解构对于数据类是开箱即用的。Kotlin 标准库还为许多常见类型提供了这个功能。然而，当我们处理自定义的非数据类时，解构并不是明确可用的。特别是，当我们与其他语言（如 Java）编写的类库中的类一起工作时，我们需要手动定义解构机制。在这个菜谱中，我们将为以下定义的 Java 类实现解构：
 
-```kt
+```java
 // Java code
 public class LightBulb {
     private final int id;
@@ -338,14 +338,14 @@ Kotlin 中的解构声明是位置相关的，与在其他语言中可用的基�
 
 1.  声明一个扩展函数，返回`LightBulb`类的`id`属性：
 
-```kt
+```java
 operator fun LightBulb.component1() = this.id
 
 ```
 
 1.  添加另一个扩展`componentN`函数，用于返回`turnedOn`属性：
 
-```kt
+```java
 operator fun LightBulb.component2() = this.turnedOn
 ```
 
@@ -353,14 +353,14 @@ operator fun LightBulb.component2() = this.turnedOn
 
 一旦我们声明了适当的`componentN`函数，我们就可以从`LightBulb`类型对象的解构中受益：
 
-```kt
+```java
 val (id, turnedOn) = LightBulb(1)
 print("Light bulb number $id is turned ${if (turnedOn) "on" else "off"}")
 ```
 
 这段代码会在控制台打印以下输出：
 
-```kt
+```java
 Light bulb number 1 is turned off
 ```
 
@@ -370,27 +370,27 @@ Light bulb number 1 is turned off
 
 由于解构对象赋值中的属性是位置相关的，有时我们被迫声明比我们想要使用的变量更多的变量。如果我们不需要使用某个值，我们可以使用下划线，以避免编译器提示未使用的变量，并稍微简化代码：
 
-```kt
+```java
 val (_, turnedOn) = LightBulb(1)
 print("Light bulb is turned ${if (turnedOn) "on" else "off"}")
 ```
 
 解构也适用于函数返回值：
 
-```kt
+```java
 val (login, domain) = "agata@magdalena.com".split("@")
 print("login: $login, domain: $domain")
 ```
 
 上述代码将返回以下输出：
 
-```kt
+```java
 login: agata, domain: magdalena.com
 ```
 
 我们还可以在 lambda 表达式中使用解构声明：
 
-```kt
+```java
 listOf(LightBulb(0), LightBulb(1))
         .filter { (_, isOn) -> isOn }
         .map { (id, _) -> id }
@@ -398,7 +398,7 @@ listOf(LightBulb(0), LightBulb(1))
 
 解构声明的一个有用应用是迭代。例如，我们可以使用此功能遍历映射条目：
 
-```kt
+```java
 val lightBulbsWithNames = 
         mapOf(LightBulb(0) to "Bedroom", LightBulb(1) to "Kitchen")
 
@@ -415,13 +415,13 @@ for ((lightbulb, name) in lightBulbsWithNames) {
 
 1.  让我们从声明一个用于返回类型的数据类开始：
 
-```kt
+```java
 data class DivisionResult(val quotient: Int, val remainder: Int)
 ```
 
 1.  让我们实现`divide()`函数：
 
-```kt
+```java
 fun divide(dividend: Int, divisor: Int): DivisionResult {
     val quotient = dividend.div(divisor)
     val remainder = dividend.rem(divisor)
@@ -433,7 +433,7 @@ fun divide(dividend: Int, divisor: Int): DivisionResult {
 
 我们可以看到`divide()`函数的作用：
 
-```kt
+```java
 val dividend = 10
 val divisor = 3
 val (quotient, remainder) = divide(dividend, divisor)
@@ -443,7 +443,7 @@ print("$dividend / $divisor = $quotient r $remainder")
 
 以下代码将打印以下输出：
 
-```kt
+```java
 10 / 3 = 3 r 1
 ```
 
@@ -455,7 +455,7 @@ Kotlin 标准库提供了现成的`Pair`和`Triple`类。我们可以使用它�
 
 以下示例演示了使用`Pair`类同时返回两个对象：
 
-```kt
+```java
 fun getBestScore(): Pair<String, Int> = Pair("Max", 1000)
 val (name, score) = getBestScore()
 print("User $name has the best score of $score points")
@@ -479,7 +479,7 @@ print("User $name has the best score of $score points")
 
 让我们声明一个带有两个参数的`lock()`函数——`Lock`接口的一个实例以及获取锁后要调用的函数：
 
-```kt
+```java
 inline fun performHavingLock(lock: Lock, task: () -> Unit) {
     lock.lock()
     try {
@@ -495,7 +495,7 @@ inline fun performHavingLock(lock: Lock, task: () -> Unit) {
 
 `performHavingLock()`函数允许我们为其`task`参数提供的函数提供同步。
 
-```kt
+```java
 performHavingLock(ReentrantLock()) {
  print("Wait for it!")
 }
@@ -503,13 +503,13 @@ performHavingLock(ReentrantLock()) {
 
 因此，`performHavingLock()`函数将打印以下输出到控制台：
 
-```kt
+```java
 Wait for it!
 ```
 
 在底层，`inline`修饰符会影响函数本身以及传递给它的 lambda 表达式。它们都将内联到生成的字节码中：
 
-```kt
+```java
 Lock lock = (Lock)(new ReentrantLock());
 lock.lock();
 
@@ -527,7 +527,7 @@ try {
 
 如果你只想将函数传递的一些 lambda 表达式内联，你可以使用`noinline`修饰符标记一些函数参数：
 
-```kt
+```java
 inline fun foo(inlined: () -> Unit, noinline notInlined: () -> Unit) {  
     // ... 
 }
@@ -535,7 +535,7 @@ inline fun foo(inlined: () -> Unit, noinline notInlined: () -> Unit) {
 
 Kotlin 还允许声明内联类属性。`inline`修饰符可以与没有后置字段的属性的 getter 和 setter 方法一起使用。例如：
 
-```kt
+```java
 val foo: Foo  
     inline get() = Foo()  
 
@@ -546,7 +546,7 @@ var bar: Bar
 
 我们还可以注释整个属性：
 
-```kt
+```java
 inline var bar: Bar  
     get() = ...  
     set(v) { ... }
@@ -566,7 +566,7 @@ inline var bar: Bar
 
 声明`concat()`扩展函数并实现其主体：
 
-```kt
+```java
 infix fun String.concat(next: String): String = this + next
 ```
 
@@ -574,13 +574,13 @@ infix fun String.concat(next: String): String = this + next
 
 让我们通过运行以下代码来测试`concat()`函数：
 
-```kt
+```java
 print("This" concat "is" concat "weird")
 ```
 
 太棒了！我们刚刚将以下文本打印到控制台：
 
-```kt
+```java
 Thisisweird
 ```
 
@@ -588,7 +588,7 @@ Thisisweird
 
 Kotlin 标准库广泛使用中缀表示法。你可以利用中缀函数以整洁的方式塑造你的代码。一个值得注意的中缀函数是`Map.Entry<K, V>`类提供的`to()`扩展函数，它允许你以极简的方式声明映射条目：
 
-```kt
+```java
 val namesWithBirthdays: Map<String, LocalDate> =
         mapOf("Agata" to LocalDate.of(1990, 1, 18))
 ```
@@ -605,7 +605,7 @@ val namesWithBirthdays: Map<String, LocalDate> =
 
 在实现支持泛型类型参数的函数时，我们经常需要提供有关对象类型在运行时的额外信息。在 JVM 平台上，类型在`Class<T>`类实例中有它们的表示。例如，当我们使用`Gson`库将 JSON 格式的数据解析到 Kotlin 类实例时，我们可能会遇到这样的需求：
 
-```kt
+```java
 data class ApiResponse(val gifsWithPandas: List<ByteArray>)
 data class Error(val message: String)
 
@@ -620,7 +620,7 @@ fun parseJsonResponse(json: String): ApiResponse {
 
 确保你的项目中包含了 Gson 依赖项（[`github.com/google/gson`](https://github.com/google/gson)）。如果你使用 Gradle，可以在构建脚本中使用以下声明来获取它：
 
-```kt
+```java
 dependencies {
     compile 'com.google.code.gson:gson:2.8.2'
 }
@@ -634,7 +634,7 @@ dependencies {
 
 1.  在文件内部，声明一个`Gson`类的扩展函数：
 
-```kt
+```java
 inline fun <reified T> Gson.fromJson(json: String): T { 
     return fromJson(json, T::class.java)
 }
@@ -646,7 +646,7 @@ inline fun <reified T> Gson.fromJson(json: String): T {
 
 结果，我们能够在代码中使用更优雅版本的`fromGson()`函数：
 
-```kt
+```java
 data class ApiResponse(val gifsWithPandas: List<ByteArray>)
 
 val response = Gson().fromJson<ApiResponse>(json)
@@ -654,7 +654,7 @@ val response = Gson().fromJson<ApiResponse>(json)
 
 我们还可以利用 Kotlin 智能转换并从函数调用中省略显式的类型声明：
 
-```kt
+```java
 val response: ApiResponse = Gson().fromJson(json)
 ```
 
@@ -748,13 +748,13 @@ Kotlin 语言提供了一套具有自己符号（例如，`+`、`-`、`*`或`/`�
 
 1.  使用`x`、`y`、`z`属性声明与笛卡尔坐标系中当前位置相关的`Position`数据类：
 
-```kt
+```java
 data class Position(val x: Float, val y: Float, val z: Float)
 ```
 
 1.  为`Position`类添加一个`plus`操作符实现：
 
-```kt
+```java
 data class Position(val x: Float, val y: Float, val z: Float) {
     operator fun plus(other: Position) = 
       Position(x + other.x, y + other.y, z + other.z)
@@ -763,7 +763,7 @@ data class Position(val x: Float, val y: Float, val z: Float) {
 
 1.  覆盖`minus`操作符：
 
-```kt
+```java
 data class Position(val x: Float, val y: Float, val z: Float) {
     operator fun plus(other: Position) = 
       Position(x + other.x, y + other.y, z + other.z)
@@ -777,7 +777,7 @@ data class Position(val x: Float, val y: Float, val z: Float) {
 
 现在我们可以使用`Position`类以及`plus`和`minus`操作符。让我们尝试使用减号操作符：
 
-```kt
+```java
 val position1 = Position(132.5f, 4f, 3.43f)
 val position2 = position1 - Position(1.5f, 400f, 11.56f)
 print(position2)
@@ -785,7 +785,7 @@ print(position2)
 
 就这样。前面的代码将打印以下结果到控制台：
 
-```kt
+```java
 Position(x=131.0, y=-396.0, z=-8.13)
 ```
 
@@ -793,7 +793,7 @@ Position(x=131.0, y=-396.0, z=-8.13)
 
 一些操作符有它们对应的复合*赋值*操作符定义。一旦我们覆盖了`plus`和`minus`操作符，我们就可以自动使用`plusAssign (+=)`和`minusAssign (-=)`操作符。例如，我们可以使用`plusAssign`操作符来更新`Position`实例状态如下：
 
-```kt
+```java
 var position = Position(132.5f, 4f, 3.5f)
 position += Position(1f, 1f, 1f)
 print(position)
@@ -801,7 +801,7 @@ print(position)
 
 因此，我们将得到以下状态的`position`变量：
 
-```kt
+```java
 Position(x=133.5, y=5.0, z=4.5)
 ```
 
@@ -809,7 +809,7 @@ Position(x=133.5, y=5.0, z=4.5)
 
 值得注意的是，Kotlin 还提供了对 Java 类的运算符重载。要重载运算符，我们只需向具有运算符名称和`public`可见性修饰符的类中添加一个适当的方法。以下是具有重载`plus`运算符的`Position`类的 Java 版本：
 
-```kt
+```java
 public class Position { 
         private final float x; 
         private final float y; 
@@ -835,7 +835,7 @@ public class Position {
 
 ```
 
-```kt
+```java
        public Position plus(Position pos) { 
  return new Position(pos.getX() + x, pos.getY() + y,
             pos.getZ() + z); 
@@ -845,13 +845,13 @@ public class Position {
 
 在 Kotlin 代码中，可以这样使用它：
 
-```kt
+```java
 val position = Position(2.f, 9.f, 55.5f) += (2.f, 2.f, 2.f)
 ```
 
 Kotlin 标准库还包含不同运算符的预定义实现。你应每天使用的运算符之一是`MutableCollection`类型的`plus`运算符。这允许以下方式向集合中添加新元素：
 
-```kt
+```java
 val list = mutableListOf("A", "B", "C")
 list += "D"
 print(list)
@@ -859,6 +859,6 @@ print(list)
 
 因此，前面的代码将在控制台打印以下输出：
 
-```kt
+```java
 [A, B, C, D]
 ```

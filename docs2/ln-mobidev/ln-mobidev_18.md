@@ -150,7 +150,7 @@ SonarQube 将负责：
 
 在`productFlavors`部分，你可以找到不同的口味：
 
-```kt
+```java
 productFlavors {
      flavorBlueTest {
          applicationId = "com.coolapp.flavorblue.test"
@@ -175,7 +175,7 @@ productFlavors {
 
 在`productFlavors`部分，你可以看到每个口味引用哪些源和资源：
 
-```kt
+```java
 sourceSets {
      flavorBlueTest {
          java.srcDirs = ['src/blue/java']
@@ -206,7 +206,7 @@ sourceSets {
 
 例如，`main` 文件夹中的 `color.xml` 文件有如下内容：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
  <resources>
      <color name="colorPrimary">#3F51B5</color>
@@ -218,7 +218,7 @@ sourceSets {
 
 例如，您可以看到对于 `green` 香草，相同的资源文件存在，但这次 `colorBackground` 的值不同（一个漂亮的绿色）：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
  <resources>
      <color name="colorPrimary">#3F51B5</color>
@@ -234,7 +234,7 @@ sourceSets {
 
 在 `productFlavors` 部分，您可以看到特定香草的发布签名配置与 `signingConfigs` 部分条目的映射，我们将在 `buildTypes` 部分之后检查：
 
-```kt
+```java
 buildTypes {
 
      release {
@@ -255,7 +255,7 @@ buildTypes {
 
 在 `productFlavors` 部分，您可以看到我们可以为每个香草使用不同的签名，使用不同的密钥库：
 
-```kt
+```java
 signingConfigs {
      flavorBlueTest{
          storeFile file('../app/signing/coolapp_flavorBlue.jks')
@@ -292,7 +292,7 @@ signingConfigs {
 
 现在，您只需要告诉 Gradle 构建特定的变体，如下所示：
 
-```kt
+```java
 ./gradlew assemblectFlavorGreenTestRelease 
 ./gradlew assemblectFlavorGreenProdRelease 
 ./gradlew assemblectFlavorBlueTestRelease 
@@ -307,7 +307,7 @@ signingConfigs {
 
 在服务器上下载、安装和配置 TeamCity，或者如果只是为了测试目的，可以在您的开发机器上安装。安装 TeamCity 后，您可以启动构建服务器。在 OS X 上，打开一个终端窗口，定位到 `teamcity` 文件夹的 `bin` 文件夹（例如，`/Users/mike/Dev/teamcity/bin`），然后输入以下命令：
 
-```kt
+```java
 m010:bin mike$ sh runall.sh start 
 ```
 
@@ -357,7 +357,7 @@ m010:bin mike$ sh runall.sh start
 
 有许多 SaaS 解决方案可用于分发并通知您的用户新的临时发布。其中之一是 HockeyApp。您可以使用一个 (**cURL**) 脚本将您的已签名 APK 或 IPA 文件上传到 HockeyApp。HockeyApp 还可以通知您的用户新的构建，并且每个版本都可以包含发布说明，例如，通过添加一个运行此命令的构建步骤：
 
-```kt
+```java
     curl -F "status=2" -F "notify=0" -F "ipa=@//TeamCity/buildAgent/work/<work folder>/app/build/outputs/apk/app-release.apk" -H "X-HockeyAppToken:<your hockey app token>" https://rink.hockeyapp.net/api/2/apps/<app id>/app_versions/upload  
 ```
 

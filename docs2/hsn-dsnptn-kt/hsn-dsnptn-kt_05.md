@@ -30,7 +30,7 @@
 
 函数式编程的一个关键概念是不可变性。这意味着从函数接收输入的那一刻起，到函数返回输出的那一刻止，对象不会改变。你怎么可能改变呢？让我们看看一个简单的例子：
 
-```kt
+```java
 fun <T> printAndClear(list: MutableList<T>) {
     for (e in list) {
         println(e)
@@ -48,27 +48,27 @@ printAndClear(mutableListOf("a", "b", "c"))
 
 在函数式编程中，元组是在创建后无法更改的数据片段。Kotlin 中最基本的元组之一是 Pair：
 
-```kt
+```java
 val pair = "a" to 1
 ```
 
 一对包含两个属性，第一个和第二个，且是不可变的：
 
-```kt
+```java
 pair.first = "b" // Doesn't work
 pair.second = 2  // Still doesn't
 ```
 
 我们可以将一对拆分为两个单独的值：
 
-```kt
+```java
 val (key, value) = pair
 println("$key => $value")
 ```
 
 当遍历映射时，我们会收到另一个元组，`Map.Entry`：
 
-```kt
+```java
 for (p in mapOf(1 to "Sunday", 2 to "Monday")) {
    println("${p.key} ${p.value}")
 }
@@ -80,7 +80,7 @@ for (p in mapOf(1 to "Sunday", 2 to "Monday")) {
 
 在 Maronic 中，我们希望计算一千场比赛的平均分。为此，我们有一个以下的数据类：
 
-```kt
+```java
 data class AverageScore(var totalScore: Int = 0,
                         var gamesPlayed: Int = 0) {
     val average: Int
@@ -95,7 +95,7 @@ data class AverageScore(var totalScore: Int = 0,
 
 但当我们编写以下代码时会发生什么？
 
-```kt
+```java
 val counter = AverageScore()
 
 thread(isDaemon = true) {
@@ -118,7 +118,7 @@ for (i in 1..1_000) {
 
 我想我们的初级开发者已经吸取了教训。相反，他们产生了以下代码，虽然效率不高，但去掉了那些变量：
 
-```kt
+```java
 data class ScoreCollector(val scores: MutableList<Int> = mutableListOf())
 
 val counter = ScoreCollector()
@@ -132,7 +132,7 @@ for (i in 1..1_000) {
 
 但邪恶的线程再次发动攻击：
 
-```kt
+```java
 thread(isDaemon= true, name="Maleficent") {
     while(true) counter.scores.clear()
 }
@@ -142,7 +142,7 @@ thread(isDaemon= true, name="Maleficent") {
 
 如果你的数据类只包含值，那就不够了。如果它的值是一个集合，那么为了使数据类被认为是不可变的，这个集合必须是不可变的。同样的规则也适用于其他数据类中包含的类：
 
-```kt
+```java
 data class ImmutableScoreCollector(val scores: List<Int>)
 ```
 
@@ -150,7 +150,7 @@ data class ImmutableScoreCollector(val scores: List<Int>)
 
 一种选择是将整个列表传递给构造函数：
 
-```kt
+```java
 val counter = ImmutableScoreCollector(List(1_000) {
     Random().nextInt(100)
 })
@@ -164,7 +164,7 @@ val counter = ImmutableScoreCollector(List(1_000) {
 
 正如我们之前讨论的，在 Kotlin 中，一个函数可以返回另一个函数：
 
-```kt
+```java
 fun generateMultiply(): (Int, Int) -> Int {
     return { x: Int, y: Int -> x * y}
 }
@@ -172,7 +172,7 @@ fun generateMultiply(): (Int, Int) -> Int {
 
 函数也可以分配给变量或值，稍后调用：
 
-```kt
+```java
 val multiplyFunction = generateMultiply()
 ...
 println(multiplyFunction(3, 4))
@@ -180,7 +180,7 @@ println(multiplyFunction(3, 4))
 
 分配给变量的函数通常被称为*字面函数*。也可以将函数指定为参数：
 
-```kt
+```java
 fun mathInvoker(x: Int, y: Int, mathFunction: (Int, Int) -> Int) {
     println(mathFunction(x, y))
 }
@@ -190,7 +190,7 @@ mathInvoker(5, 6, multiplyFunction)
 
 如果函数是最后一个参数，它也可以在括号外以特定方式提供：
 
-```kt
+```java
 mathInvoker(7, 8) { x, y ->
    x * y
 }
@@ -198,7 +198,7 @@ mathInvoker(7, 8) { x, y ->
 
 通常，没有名称的函数被称为*匿名函数*。如果一个没有名称的函数使用简短语法，它被称为 lambda：
 
-```kt
+```java
 val squareAnonymous = fun(x: Int) = x * x
 val squareLambda = {x: Int -> x * x} 
 ```
@@ -207,7 +207,7 @@ val squareLambda = {x: Int -> x * x}
 
 纯函数是没有副作用的函数。以下函数就是一个例子：
 
-```kt
+```java
 fun sayHello() {
     println("Hello")
 }
@@ -217,13 +217,13 @@ fun sayHello() {
 
 将它与以下函数进行比较：
 
-```kt
+```java
 fun hello() = "Hello"
 ```
 
 以下函数没有任何副作用。这使得它更容易测试：
 
-```kt
+```java
 fun testHello(): Boolean {
     return "Hello" == hello()
 }
@@ -233,7 +233,7 @@ fun testHello(): Boolean {
 
 并非所有用 Kotlin 编写的函数都是纯函数：
 
-```kt
+```java
 fun <T> removeFirst(list: MutableList<T>): T {
     return list.removeAt(0)
 }
@@ -241,7 +241,7 @@ fun <T> removeFirst(list: MutableList<T>): T {
 
 如果我们在同一个列表上两次调用该函数，它将返回不同的结果：
 
-```kt
+```java
 val list = mutableListOf(1, 2, 3)
 
 println(removeFirst(list)) // Prints 1
@@ -250,7 +250,7 @@ println(removeFirst(list)) // Prints 2
 
 尝试这个：
 
-```kt
+```java
 fun <T> withoutFirst(list: List<T>): T {
     return ArrayList(list).removeAt(0)
 }
@@ -258,7 +258,7 @@ fun <T> withoutFirst(list: List<T>): T {
 
 现在函数是完全可预测的，无论我们调用多少次：
 
-```kt
+```java
 val list = mutableListOf(1, 2, 3)
 
 println(withoutFirst(list)) // It's 1
@@ -271,7 +271,7 @@ println(withoutFirst(list)) // Still 1
 
 柯里化是将接受多个参数的函数转换为一系列每个函数只接受一个参数的函数的方法。这听起来可能有些令人困惑，所以让我们看看一个简单的例子：
 
-```kt
+```java
 fun subtract(x: Int, y: Int): Int {
     return x - y
 }
@@ -280,13 +280,13 @@ println(subtract(50, 8))
 
 这是一个返回两个参数的函数。结果非常明显。但也许我们希望用以下语法调用这个函数：
 
-```kt
+```java
 subtract(50)(8)
 ```
 
 我们已经看到如何从一个函数中返回另一个函数：
 
-```kt
+```java
 fun subtract(x: Int): (Int) -> Int {
     return fun(y: Int): Int {
         return x - y
@@ -296,7 +296,7 @@ fun subtract(x: Int): (Int) -> Int {
 
 这里是它的简短形式：
 
-```kt
+```java
 fun subtract(x: Int) = fun(y: Int): Int {
     return x + y
 }
@@ -304,7 +304,7 @@ fun subtract(x: Int) = fun(y: Int): Int {
 
 这里还有一个更简短的形式：
 
-```kt
+```java
 fun subtract(x: Int) = {y: Int -> x - y}
 ```
 
@@ -314,7 +314,7 @@ fun subtract(x: Int) = {y: Int -> x - y}
 
 如果我们的函数总是对相同的输入返回相同的输出，我们就可以轻松地在先前的输入和输出之间建立映射，并将其用作缓存。这种技术被称为*记忆化*：
 
-```kt
+```java
 class Summarizer {
     private val resultsCache = mutableMapOf<List<Int>, Double>()
 
@@ -332,7 +332,7 @@ class Summarizer {
 
 注意，`sum()` 是一个纯函数，而 `summarize()` 则不是。后者对相同的输入会有不同的行为。但这正是我们想要的：
 
-```kt
+```java
 val l1 = listOf(1, 2, 3)
 val l2 = listOf(1, 2, 3)
 val l3 = listOf(1, 2, 3, 4)
@@ -361,7 +361,7 @@ println(summarizer.summarize(l3)) // Computes
 
 考虑以下 Java 代码：
 
-```kt
+```java
 class Cat implements Animal {
     public String purr() {
         return "Purr-purr";
@@ -374,7 +374,7 @@ class Dog implements Animal {
     }
 ```
 
-```kt
+```java
 }
 
 interface Animal {}
@@ -382,7 +382,7 @@ interface Animal {}
 
 如果我们要决定调用哪个函数，我们需要像这样：
 
-```kt
+```java
 public String getSound(Animal animal) {
     String sound = null;
     if (animal instanceof Cat) {
@@ -405,7 +405,7 @@ public String getSound(Animal animal) {
 
 与下面的 Kotlin 代码比较一下：
 
-```kt
+```java
 fun getSound(animal: Animal) = when(animal) {
     is Cat -> animal.purr()
     is Dog -> animal.bark()
@@ -419,7 +419,7 @@ fun getSound(animal: Animal) = when(animal) {
 
 递归是一个函数用新的参数调用自己：
 
-```kt
+```java
 fun sumRec(i: Int, numbers: List<Int>): Long {
     return if (i == numbers.size) {
         0
@@ -431,7 +431,7 @@ fun sumRec(i: Int, numbers: List<Int>): Long {
 
 我们通常避免递归，因为如果我们的调用栈太深，我们可能会收到**栈溢出**错误。你可以用一个包含一百万个数字的列表调用这个函数来体验它：
 
-```kt
+```java
 val numbers = List(1_000_000) {it}
 println(sumRec(0,  numbers)) // Crashed pretty soon, around 7K 
 ```
@@ -440,7 +440,7 @@ println(sumRec(0,  numbers)) // Crashed pretty soon, around 7K
 
 让我们使用一个新的关键字`tailrec`重写我们的递归函数，以避免这个问题：
 
-```kt
+```java
 tailrec fun sumRec(i: Int, sum: Long, numbers: List<Int>): Long {
     return if (i == numbers.size) {
         return sum

@@ -36,11 +36,11 @@
 
 通常，如果你有一个类，你可以创建尽可能多的实例。例如，假设我们都要求列出我们最喜欢的电影：
 
-```kt
+```java
 val myFavoriteMovies = listOf("Black Hawk Down", "Blade   Runner")
 ```
 
-```kt
+```java
 val yourFavoriteMovies = listOf(...)
 ```
 
@@ -48,11 +48,11 @@ val yourFavoriteMovies = listOf(...)
 
 *接下来，如果我们俩都想列出《快速而愤怒》系列中的最佳电影呢？*
 
-```kt
+```java
 val myFavoriteQuickAndAngryMovies = listOf()
 ```
 
-```kt
+```java
 val yourFavoriteQuickAndAngryMovies = listOf()
 ```
 
@@ -86,25 +86,25 @@ Kotlin 通过引入一个名为 `object` 的关键字使创建单例变得简单
 
 我们声明对象就像一个普通类一样，但没有构造函数，因为单例对象不能由我们实例化：
 
-```kt
+```java
 object NoMoviesList
 ```
 
 从现在起，我们可以在代码的任何地方访问 `NoMoviesList`，并且它将只有一个实例：
 
-```kt
+```java
 val myFavoriteQuickAndAngryMovies = NoMoviesList
 ```
 
-```kt
+```java
 val yourFavoriteQuickAndAngryMovies = NoMoviesList
 ```
 
-```kt
+```java
 println(myFavoriteQuickAndAngryMovies === 
 ```
 
-```kt
+```java
     yourFavoriteQuickAndAngryMovies) // true
 ```
 
@@ -112,43 +112,43 @@ println(myFavoriteQuickAndAngryMovies ===
 
 让我们创建一个打印我们电影列表的函数：
 
-```kt
+```java
 fun printMovies(movies: List<String>) {
 ```
 
-```kt
+```java
     for (m in movies) {
 ```
 
-```kt
+```java
         println(m)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 当我们传递一个初始电影列表时，代码可以正常编译：
 
-```kt
+```java
 // Prints each movie on a newline    
 ```
 
-```kt
+```java
 printMovies(myFavoriteMovies) 
 ```
 
 但如果我们传递一个空的电影列表给它，代码将无法编译：
 
-```kt
+```java
 printMovies(myFavoriteQuickAndAngryMovies) 
 ```
 
-```kt
+```java
 // Type mismatch: inferred type is NoMoviesList but // List<String> was expected
 ```
 
@@ -156,35 +156,35 @@ printMovies(myFavoriteQuickAndAngryMovies)
 
 幸运的是，在 Kotlin 中，单例对象可以实现接口，并且有一个通用的 `List` 接口可用：
 
-```kt
+```java
 object NoMoviesList : List<String>
 ```
 
 现在，我们的编译器将提示我们实现所需的函数。我们将通过为 `object` 添加一个主体来实现这一点：
 
-```kt
+```java
 object NoMoviesList : List<String> {
 ```
 
-```kt
+```java
     override val size = 0
 ```
 
-```kt
+```java
     override fun contains(element: String) = false 
 ```
 
-```kt
+```java
     ... /
 ```
 
-```kt
+```java
 }
 ```
 
 如果您愿意，我们可以将其他函数的实现留给您。这将是对您至今为止所学的 Kotlin 知识的良好练习。然而，您不必这样做。Kotlin 已经提供了一个创建任何类型空列表的函数：
 
-```kt
+```java
 printMovies(emptyList())
 ```
 
@@ -192,31 +192,31 @@ printMovies(emptyList())
 
 Kotlin 的`object`与类有一个主要区别——它不能有构造函数。如果你需要为你的 Singleton 实现初始化，例如第一次从配置文件加载数据，你可以使用`init`块代替：
 
-```kt
+```java
 object Logger {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         println("I was accessed for the first time")
 ```
 
-```kt
+```java
         // Initialization logic goes here
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     // More code goes here
 ```
 
-```kt
+```java
 }
 ```
 
@@ -240,49 +240,49 @@ object Logger {
 
 给定符号列表，我们希望用它们填充我们的棋盘：
 
-```kt
+```java
 // More pieces here
 ```
 
-```kt
+```java
 val notations = listOf("pa8", "qc3", ...)
 ```
 
-```kt
+```java
 val pieces = mutableListOf<ChessPiece>()
 ```
 
-```kt
+```java
 for (n in notations) {
 ```
 
-```kt
+```java
     pieces.add(createPiece(n))
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 println(pieces)
 ```
 
 在我们可以实现我们的`createPiece`函数之前，我们需要决定所有棋子共有的东西。我们将为此创建一个接口：
 
-```kt
+```java
 interface ChessPiece {
 ```
 
-```kt
+```java
     val file: Char
 ```
 
-```kt
+```java
     val rank: Char
 ```
 
-```kt
+```java
 }
 ```
 
@@ -290,35 +290,35 @@ interface ChessPiece {
 
 每个棋子都将是一个实现我们接口的`data class`：
 
-```kt
+```java
 data class Pawn(
 ```
 
-```kt
+```java
     override val file: Char,
 ```
 
-```kt
+```java
     override val rank: Char
 ```
 
-```kt
+```java
 ) : ChessPiece
 ```
 
-```kt
+```java
 data class Queen(
 ```
 
-```kt
+```java
     override val file: Char,
 ```
 
-```kt
+```java
     override val rank: Char
 ```
 
-```kt
+```java
 ) : ChessPiece
 ```
 
@@ -326,39 +326,39 @@ data class Queen(
 
 现在，剩下的就是实现我们的`createPiece`函数：
 
-```kt
+```java
 fun createPiece(notation: String): ChessPiece {
 ```
 
-```kt
+```java
     val (type, file, rank) = notation.toCharArray()
 ```
 
-```kt
+```java
     return when (type) {
 ```
 
-```kt
+```java
         'q' -> Queen(file, rank)
 ```
 
-```kt
+```java
         'p' -> Pawn(file, rank)
 ```
 
-```kt
+```java
         // ...
 ```
 
-```kt
+```java
         else -> throw RuntimeException("Unknown piece: $type")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -370,15 +370,15 @@ fun createPiece(notation: String): ChessPiece {
 
 之前的代码示例类似于以下更冗长的代码：
 
-```kt
+```java
 val type = notation.toCharArray()[0]
 ```
 
-```kt
+```java
 val file = notation.toCharArray()[1]
 ```
 
-```kt
+```java
 val rank = notation.toCharArray()[2]
 ```
 
@@ -398,11 +398,11 @@ val rank = notation.toCharArray()[2]
 
 静态工厂方法设计模式是由 Joshua Bloch 在他的书《*Effective Java*》中推广的。为了更好地理解这一点，让我们看看 Java 标准库中的几个例子：`valueOf()`方法。从字符串构建`Long`（即 64 位整数）至少有两种方式：
 
-```kt
+```java
 Long l1 = new Long("1"); // constructor
 ```
 
-```kt
+```java
 Long l2 = Long.valueOf("1"); // static factory method
 ```
 
@@ -434,35 +434,35 @@ Long l2 = Long.valueOf("1"); // static factory method
 
 在 Java 中，静态工厂方法被声明为`static`。但在 Kotlin 中，没有这样的关键字。相反，不属于类实例的方法可以声明在`companion object`内部：
 
-```kt
+```java
 class Server(port: Long) {
 ```
 
-```kt
+```java
     init {
 ```
 
-```kt
+```java
         println("Server started on port $port")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     companion object {
 ```
 
-```kt
+```java
         fun withPort(port: Long) = Server(port)
 ```
 
-```kt
+```java
   }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -474,13 +474,13 @@ class Server(port: Long) {
 
 这个对象有自己的方法，您可能会想知道这有什么好处。就像 Java 静态方法一样，当第一次访问包含的类时，会惰性实例化`companion` `object`：
 
-```kt
+```java
 Server.withPort(8080) // Server started on port 8080
 ```
 
 此外，在类的实例上调用它根本不起作用，与 Java 不同：
 
-```kt
+```java
 Server(8080) // Won't compile, constructor is private
 ```
 
@@ -490,25 +490,25 @@ Server(8080) // Won't compile, constructor is private
 
 有时候，我们也希望静态工厂方法是实例化我们的对象的唯一方式。为了做到这一点，我们可以将对象的默认构造函数声明为`private`：
 
-```kt
+```java
 class Server private constructor(port: Long) {
 ```
 
-```kt
+```java
     ...
 ```
 
-```kt
+```java
 }
 ```
 
 这意味着现在构建我们类实例的唯一方式是通过我们的静态工厂方法：
 
-```kt
+```java
 val server = Server(8080))  // Doesn't compile
 ```
 
-```kt
+```java
 val server = Server.withPort(8080) // Works!
 ```
 
@@ -522,15 +522,15 @@ val server = Server.withPort(8080) // Works!
 
 为了更好地理解设计模式的工作原理，让我们假设我们有一个用 YAML 文件编写的服务器配置：
 
-```kt
+```java
 server: 
 ```
 
-```kt
+```java
     port: 8080
 ```
 
-```kt
+```java
 environment: production
 ```
 
@@ -540,63 +540,63 @@ environment: production
 
 首先，让我们将它们描述为接口：
 
-```kt
+```java
 interface Property {
 ```
 
-```kt
+```java
     val name: String
 ```
 
-```kt
+```java
     val value: Any
 ```
 
-```kt
+```java
 }
 ```
 
 我们将返回一个接口而不是`data class`。您将在本节后面看到这如何帮助我们：
 
-```kt
+```java
 interface ServerConfiguration {
 ```
 
-```kt
+```java
     val properties: List<Property>
 ```
 
-```kt
+```java
 }
 ```
 
 然后，我们可以提供基本实现供以后使用：
 
-```kt
+```java
 data class PropertyImpl(
 ```
 
-```kt
+```java
     override val name: String,
 ```
 
-```kt
+```java
     override val value: Any
 ```
 
-```kt
+```java
 ) : Property
 ```
 
-```kt
+```java
 data class ServerConfigurationImpl(
 ```
 
-```kt
+```java
     override val properties: List<Property>
 ```
 
-```kt
+```java
 ) : ServerConfiguration
 ```
 
@@ -606,55 +606,55 @@ data class ServerConfigurationImpl(
 
 现在，让我们编写我们的第一个工厂方法，它将根据给定的字符串创建 `Property`：
 
-```kt
+```java
 fun property(prop: String): Property {
 ```
 
-```kt
+```java
     val (name, value) = prop.split(":")
 ```
 
-```kt
+```java
     return when (name) {
 ```
 
-```kt
+```java
         "port" -> PropertyImpl(name, value.trim().toInt())
 ```
 
-```kt
+```java
         "environment" -> PropertyImpl(name, value.trim())
 ```
 
-```kt
+```java
         else -> throw RuntimeException("Unknown property:           $name")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 与许多其他语言一样，`trim()` 是一个在字符串上声明的函数，用于删除字符串中的任何空格。现在，让我们创建两个属性来表示我们的服务的端口 (`port`) 和环境 (`environment`)：
 
-```kt
+```java
 val portProperty = property("port: 8080")
 ```
 
-```kt
+```java
 val environment = property("environment: production") 
 ```
 
 这段代码有一个小问题。为了理解它是什么，让我们尝试将 `port` 属性的值存储到另一个变量中：
 
-```kt
+```java
 val port: Int = portProperty.value
 ```
 
-```kt
+```java
 // Type mismatch: inferred type is Any but Int was expected
 ```
 
@@ -664,7 +664,7 @@ val port: Int = portProperty.value
 
 在类型语言中，**转换**是一种尝试强制编译器使用我们指定的类型，而不是它推断出的类型。如果我们确定值的类型，我们可以在它上面使用一个 *不安全的* 转换：
 
-```kt
+```java
 val port: Int = portProperty.value as Int
 ```
 
@@ -672,7 +672,7 @@ val port: Int = portProperty.value as Int
 
 或者，我们可以使用 *安全的* 转换：
 
-```kt
+```java
 val port: Int? = portProperty.value as? Int
 ```
 
@@ -682,85 +682,85 @@ val port: Int? = portProperty.value as? Int
 
 而不是求助于转换，让我们尝试另一种方法。我们不会使用一个具有 `Any` 类型值的单个实现，而是使用两个独立的实现：
 
-```kt
+```java
 data class IntProperty(
 ```
 
-```kt
+```java
     override val name: String,
 ```
 
-```kt
+```java
     override val value: Int
 ```
 
-```kt
+```java
 ) : Property
 ```
 
-```kt
+```java
 data class StringProperty(
 ```
 
-```kt
+```java
     override val name: String,
 ```
 
-```kt
+```java
     override val value: String
 ```
 
-```kt
+```java
 ) : Property
 ```
 
 我们的工厂方法需要稍作修改才能返回这两个类中的一个：
 
-```kt
+```java
 fun property(prop: String): Property {
 ```
 
-```kt
+```java
     val (name, value) = prop.split(":")
 ```
 
-```kt
+```java
     return when (name) {
 ```
 
-```kt
+```java
         "port" -> IntProperty(name, value.trim().toInt())
 ```
 
-```kt
+```java
         "environment" -> StringProperty(name, value.trim())
 ```
 
-```kt
+```java
         else -> throw RuntimeException("Unknown property:           $name")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
 这看起来不错，但如果我们再次尝试编译我们的代码，它仍然不会工作：
 
-```kt
+```java
 val portProperty = Parser.property("port: 8080")
 ```
 
-```kt
+```java
 val port: Int = portProperty.value 
 ```
 
 虽然我们现在有两个具体的类，但编译器不知道解析的属性是 `IntProperty` 还是 `StringProperty`。它只知道它是 `Property`，并且值的类型仍然是 `Any`：
 
-```kt
+```java
 > Type mismatch: inferred type is Any but Int was expected
 ```
 
@@ -770,7 +770,7 @@ val port: Int = portProperty.value
 
 我们可以使用 `is` 关键字来检查一个对象是否为给定的类型：
 
-```kt
+```java
 println(portProperty is IntProperty) // true
 ```
 
@@ -778,15 +778,15 @@ println(portProperty is IntProperty) // true
 
 Kotlin 编译器会为我们做这件事：
 
-```kt
+```java
 if (portProperty is IntProperty) {
 ```
 
-```kt
+```java
     val port: Int = portProperty.value // works!
 ```
 
-```kt
+```java
 }
 ```
 
@@ -794,21 +794,21 @@ if (portProperty is IntProperty) {
 
 智能转换也适用于 null。在 Kotlin 的类型层次结构中，不可为 null 的 `Int` 类型是可空类型 `Int?` 的子类，这对于所有类型都是真的。之前，我们提到，如果 *安全的* 转换失败，它将返回 `null`：
 
-```kt
+```java
 val port: Int? = portProperty.value as? Int
 ```
 
 我们可以检查 `port` 是否为 null，如果不是，它将智能地转换为非可空类型：
 
-```kt
+```java
 if (port != null) {
 ```
 
-```kt
+```java
     val port: Int = port
 ```
 
-```kt
+```java
 }
 ```
 
@@ -820,19 +820,19 @@ if (port != null) {
 
 首先，让我们考虑如果没有遮蔽，我们的代码会是什么样子。我们必须声明两个不同名称的变量：
 
-```kt
+```java
 val portOrNull: Int? = portProperty.value as? Int
 ```
 
-```kt
+```java
 if (portOrNull != null) {
 ```
 
-```kt
+```java
     val port: Int = portOrNull // works
 ```
 
-```kt
+```java
 }
 ```
 
@@ -844,35 +844,35 @@ if (portOrNull != null) {
 
 既然我们已经对类型转换和变量遮蔽有了了解，让我们回到之前的代码示例，并实现第二个工厂方法，该方法将创建一个 `server` 配置对象：
 
-```kt
+```java
 fun server(propertyStrings: List<String>): 
 ```
 
-```kt
+```java
   ServerConfiguration {
 ```
 
-```kt
+```java
     val parsedProperties = mutableListOf<Property>()
 ```
 
-```kt
+```java
     for (p in propertyStrings) {
 ```
 
-```kt
+```java
         parsedProperties += property(p)
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     return ServerConfigurationImpl(parsedProperties)
 ```
 
-```kt
+```java
 }
 ```
 
@@ -880,15 +880,15 @@ fun server(propertyStrings: List<String>):
 
 我们可以测试我们的第二个工厂方法是否正常工作：
 
-```kt
+```java
 println(server(listOf("port: 8080", "environment: 
 ```
 
-```kt
+```java
   production")))
 ```
 
-```kt
+```java
 > ServerConfigurationImpl(properties=[IntProperty(name=port, value=8080), StringProperty(name=environment, value=production)])
 ```
 
@@ -898,43 +898,43 @@ println(server(listOf("port: 8080", "environment:
 
 结果实现将看起来像这样：
 
-```kt
+```java
 class Parser {
 ```
 
-```kt
+```java
     companion object {
 ```
 
-```kt
+```java
         fun property(prop: String): Property {
 ```
 
-```kt
+```java
            ...
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
         fun server(propertyStrings: List<String>): ...{
 ```
 
-```kt
+```java
            ...        
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
 }
 ```
 
@@ -942,43 +942,43 @@ class Parser {
 
 之前的代码只是实现抽象工厂的一种方式。你可能会发现一些实现依赖于实现接口：
 
-```kt
+```java
 interface Parser {
 ```
 
-```kt
+```java
     fun property(prop: String): Property
 ```
 
-```kt
+```java
     fun server(propertyStrings: List<String>):       ServerConfiguration
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class YamlParser : Parser {
 ```
 
-```kt
+```java
     // Implementation specific to YAML files
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 class JsonParser : Parser {
 ```
 
-```kt
+```java
     // Implementation specific to JSON files
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1006,31 +1006,31 @@ class JsonParser : Parser {
 
 我们可以在我们的系统中将电子邮件描述为一个`data class`：
 
-```kt
+```java
 data class Mail_V1(
 ```
 
-```kt
+```java
     val to: List<String>,
 ```
 
-```kt
+```java
     val cc: List<String>?,
 ```
 
-```kt
+```java
     val title: String?,
 ```
 
-```kt
+```java
     val message: String?,
 ```
 
-```kt
+```java
     val important: Boolean,
 ```
 
-```kt
+```java
 )
 ```
 
@@ -1040,27 +1040,27 @@ data class Mail_V1(
 
 接下来，让我们尝试创建一封致我们经理的电子邮件：
 
-```kt
+```java
 val mail = Mail_V1(
 ```
 
-```kt
+```java
     listOf("manager@company.com"),    // To
 ```
 
-```kt
+```java
     null,                             // CC
 ```
 
-```kt
+```java
     "Ping ",                          // Title
 ```
 
-```kt
+```java
     null,                             // Message,
 ```
 
-```kt
+```java
     true))                            // Important
 ```
 
@@ -1076,63 +1076,63 @@ val mail = Mail_V1(
 
 让我们先创建一个新的类，`MailBuilder`，它将包装我们的`Mail`类：
 
-```kt
+```java
 class MailBuilder {
 ```
 
-```kt
+```java
     private var to: List<String> = listOf()
 ```
 
-```kt
+```java
     private var cc: List<String> = listOf()
 ```
 
-```kt
+```java
     private var title: String = ""
 ```
 
-```kt
+```java
     private var message: String = ""
 ```
 
-```kt
+```java
     private var important: Boolean = false
 ```
 
-```kt
+```java
     class Mail internal constructor(
 ```
 
-```kt
+```java
         val to: List<String>,
 ```
 
-```kt
+```java
         val cc: List<String>?,
 ```
 
-```kt
+```java
         val title: String?,
 ```
 
-```kt
+```java
         val message: String?,
 ```
 
-```kt
+```java
         val important: Boolean
 ```
 
-```kt
+```java
     )
 ```
 
-```kt
+```java
     ... // More code will come here soon
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1142,55 +1142,55 @@ class MailBuilder {
 
 为了最终创建我们的类，我们将引入`build()`函数：
 
-```kt
+```java
 fun build(): Mail {
 ```
 
-```kt
+```java
     if (to.isEmpty()) {
 ```
 
-```kt
+```java
         throw RuntimeException("To property is empty")
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     return Mail(to, cc, title, message, important)
 ```
 
-```kt
+```java
 }
 ```
 
 对于每个属性，我们还需要另一个函数来设置它：
 
-```kt
+```java
 fun message(message: String): MailBuilder {
 ```
 
-```kt
+```java
     this.message = message
 ```
 
-```kt
+```java
     return this
 ```
 
-```kt
+```java
 }
 ```
 
-```kt
+```java
 // More functions for each of the properties
 ```
 
 现在，我们可以使用我们的构建器以以下方式创建一个电子邮件：
 
-```kt
+```java
 val email = MailBuilder("hello@hello.com").title("What's   up?").build()
 ```
 
@@ -1208,55 +1208,55 @@ Kotlin 提供了两种其他方法，你可能觉得它们更有用。
 
 使用 `data class` 构造函数的方法将仅包含必填字段。所有其他字段将变为 `private`，我们将为这些字段提供设置器：
 
-```kt
+```java
 data class Mail_V2(
 ```
 
-```kt
+```java
     val to: List<String>,
 ```
 
-```kt
+```java
     private var _message: String? = null,
 ```
 
-```kt
+```java
     private var _cc: List<String>? = null,
 ```
 
-```kt
+```java
     private var _title: String? = null,
 ```
 
-```kt
+```java
     private var _important: Boolean? = null
 ```
 
-```kt
+```java
 ) {
 ```
 
-```kt
+```java
     fun message(message: String) = apply {
 ```
 
-```kt
+```java
         _message = message
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     // Pattern repeats for every other field
 ```
 
-```kt
+```java
     //...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1266,25 +1266,25 @@ data class Mail_V2(
 
 在这个代码示例中，我们使用了 `apply` 函数。这是可以调用在每个 Kotlin 对象上的作用域函数系列的一部分，我们将在 *第九章*，*惯用和反模式* 中详细讨论它们。`apply` 函数在执行代码块后返回对象的引用。因此，它是上一个示例中设置器函数的简短版本：
 
-```kt
+```java
 fun message(message: String): MailBuilder {
 ```
 
-```kt
+```java
     this.message = message
 ```
 
-```kt
+```java
     return this
 ```
 
-```kt
+```java
 }
 ```
 
 这为我们提供了与上一个示例相同的 API：
 
-```kt
+```java
 val mailV2 = Mail_V2(listOf("manager@company.com")).message("Ping")
 ```
 
@@ -1292,19 +1292,19 @@ val mailV2 = Mail_V2(listOf("manager@company.com")).message("Ping")
 
 然后，我们可以这样创建我们的电子邮件：
 
-```kt
+```java
 val mail = Mail_V2("hello@mail.com").apply {
 ```
 
-```kt
+```java
     message = "Something" 
 ```
 
-```kt
+```java
     title = "Apply"
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1322,31 +1322,31 @@ val mail = Mail_V2("hello@mail.com").apply {
 
 在 Kotlin 中，我们可以为构造函数和函数参数指定默认值：
 
-```kt
+```java
 data class Mail_V3(
 ```
 
-```kt
+```java
     val to: List<String>,
 ```
 
-```kt
+```java
     val cc: List<String> = listOf(),
 ```
 
-```kt
+```java
     val title: String = "",
 ```
 
-```kt
+```java
     val message: String = "",
 ```
 
-```kt
+```java
     val important: Boolean = false
 ```
 
-```kt
+```java
 )
 ```
 
@@ -1354,7 +1354,7 @@ data class Mail_V3(
 
 所以，如果你想创建一个没有正文的电子邮件，你可以这样做：
 
-```kt
+```java
 val mail = Mail_V3(listOf("manager@company.com"), listOf(), "Ping")
 ```
 
@@ -1364,7 +1364,7 @@ val mail = Mail_V3(listOf("manager@company.com"), listOf(), "Ping")
 
 不需要使用流畅设置器指定顺序非常方便。Kotlin 有 `*命名参数*` 来实现这一点：
 
-```kt
+```java
 val mail = Mail_V3(title = "Hello", message = "There", to = listOf("my@dear.cat"))
 ```
 
@@ -1378,31 +1378,31 @@ val mail = Mail_V3(title = "Hello", message = "There", to = listOf("my@dear.cat"
 
 想象我们有一个管理系统，用于管理用户及其权限。表示用户的 `data class` 可能看起来像这样：
 
-```kt
+```java
 data class User(
 ```
 
-```kt
+```java
     val name: String,
 ```
 
-```kt
+```java
     val role: Role,
 ```
 
-```kt
+```java
     val permissions: Set<String>,
 ```
 
-```kt
+```java
 ) {
 ```
 
-```kt
+```java
     fun hasPermission(permission: String) = permission in       permissions
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1410,23 +1410,23 @@ data class User(
 
 我们将把角色描述为一个 `enum` 类：
 
-```kt
+```java
 enum class Role {
 ```
 
-```kt
+```java
     ADMIN,
 ```
 
-```kt
+```java
     SUPER_ADMIN,
 ```
 
-```kt
+```java
     REGULAR_USER
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1434,87 +1434,87 @@ enum class Role {
 
 当我们创建一个新的 *用户* 时，我们将为他们分配与具有相同 *角色* 的另一个用户相似的权限：
 
-```kt
+```java
 // In real application this would be a database of users
 ```
 
-```kt
+```java
 val allUsers = mutableListOf<User>()
 ```
 
-```kt
+```java
 fun createUser(name: String, role: Role) {
 ```
 
-```kt
+```java
     for (u in allUsers) {
 ```
 
-```kt
+```java
         if (u.role == role) {
 ```
 
-```kt
+```java
             allUsers += User(name, role, u.permissions)
 ```
 
-```kt
+```java
             return
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     // Handle case that no other user with such a role exists
 ```
 
-```kt
+```java
 }
 ```
 
 让我们假设现在我们需要向 `User` 类添加一个新字段，我们将它命名为 `tasks`：
 
-```kt
+```java
 data class User(
 ```
 
-```kt
+```java
     val name: String,
 ```
 
-```kt
+```java
     val role: Role,
 ```
 
-```kt
+```java
     val permissions: Set<String>,
 ```
 
-```kt
+```java
     val tasks: List<String>,
 ```
 
-```kt
+```java
 ) {
 ```
 
-```kt
+```java
    ...
 ```
 
-```kt
+```java
 }
 ```
 
 我们的 `createUser` 函数将停止编译。我们将不得不通过将新添加字段的值复制到我们类的新的实例中来更改它：
 
-```kt
+```java
 allUsers += User(name, role, u.permissions, u.tasks)
 ```
 
@@ -1522,35 +1522,35 @@ allUsers += User(name, role, u.permissions, u.tasks)
 
 然而，还有一个更大的问题：*如果引入了新的需求，使得* `permissions` *属性，例如，*变为 `private`*，会发生什么？*
 
-```kt
+```java
 data class User(
 ```
 
-```kt
+```java
     val name: String,
 ```
 
-```kt
+```java
     val role: Role,
 ```
 
-```kt
+```java
     private val permissions: Set<String>,
 ```
 
-```kt
+```java
     val tasks: List<String>,
 ```
 
-```kt
+```java
 ) {
 ```
 
-```kt
+```java
    ...
 ```
 
-```kt
+```java
 }
 ```
 
@@ -1570,47 +1570,47 @@ data class User(
 
 幸运的是，Kotlin 修复了 Java `clone()` 方法的某些缺陷。数据类有一个 `copy()` 方法，它接受一个现有的 `data class`，并创建它的一个新副本，在此过程中可以选择更改一些属性：
 
-```kt
+```java
 // Name argument is underscored here simply not to confuse 
 ```
 
-```kt
+```java
 // it with the property of the same name in the User object
 ```
 
-```kt
+```java
 fun createUser(_name: String, role: Role) {
 ```
 
-```kt
+```java
     for (u in allUsers) {
 ```
 
-```kt
+```java
         if (u.role == role) {
 ```
 
-```kt
+```java
             allUsers += u.copy(name = _name)
 ```
 
-```kt
+```java
             return
 ```
 
-```kt
+```java
         }
 ```
 
-```kt
+```java
     }
 ```
 
-```kt
+```java
     // Handle case that no other user with such a role exists
 ```
 
-```kt
+```java
 }
 ```
 

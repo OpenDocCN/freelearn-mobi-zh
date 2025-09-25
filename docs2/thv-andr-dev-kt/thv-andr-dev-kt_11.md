@@ -62,7 +62,7 @@ Android 作为一款多功能的移动操作系统，为各种类型的媒体提
 
 下面是一个使用 MediaPlayer 重新生成音频文件的示例：
 
-```kt
+```java
 @Composable
 fun AudioPlayerComposable() {
     val context = LocalContext.current
@@ -146,7 +146,7 @@ SurfaceView 是 Android 框架中的一个专用组件，它为应用视图层�
 
 现在我们已经了解了其功能和推荐的使用案例，让我们通过一个示例来了解它是如何工作的。在这个例子中，我们使用的是`androidx.media:media`库的 1.7.0 版本：
 
-```kt
+```java
 @Composable
 fun VideoPlayer(modifier: Modifier = Modifier, videoUrl:
 String) {
@@ -202,7 +202,7 @@ ExoPlayer 实例本身充当媒体播放的中心枢纽，协调播放过程中�
 
 下面是一个如何初始化 ExoPlayer 并准备播放媒体项的简单示例：
 
-```kt
+```java
 val context = ... // Your context here
 val player = ExoPlayer.Builder(context).build().apply {
     // Media item to be played
@@ -237,7 +237,7 @@ val player = ExoPlayer.Builder(context).build().apply {
 
 在实际操作中，一旦创建并配置了 MediaItem，它就会被传递给 ExoPlayer 实例，以便进行播放准备。您可以为简单的播放场景加载单个 MediaItem，或者通过加载多个 MediaItem 来管理播放列表。让我们看一个简短的例子：
 
-```kt
+```java
 val mediaItem =
     MediaItem.fromUri("https://example.com/video.mp4")
 player.setMediaItem(mediaItem)
@@ -255,7 +255,7 @@ player.playWhenReady = true // Starts playback as soon as
 
 这里是一个使用示例：
 
-```kt
+```java
 val trackSelector =
     DefaultTrackSelector(context).apply {
         setParameters(buildUponParameters()
@@ -278,7 +278,7 @@ val player = ExoPlayer.Builder(context)
 
 以下是一个创建自定义 `LoadControl` 组件以修改缓冲策略的示例：
 
-```kt
+```java
 val loadControl = DefaultLoadControl.Builder().apply {
     // Set minimum buffer duration to 2 minutes
     setBufferDurationsMs(
@@ -321,7 +321,7 @@ val player = ExoPlayer.Builder(context)
 
 为了说明这一点，考虑以下示例，其中使用自定义渲染器将灰度过滤器应用于视频内容：
 
-```kt
+```java
 class GrayscaleVideoRenderer(
     eventHandler: Handler,
     videoListener: VideoRendererEventListener,
@@ -354,7 +354,7 @@ class GrayscaleVideoRenderer(
 
 要集成 ExoPlayer，我们必须在我们的版本目录中包含必要的库依赖项：
 
-```kt
+```java
 [versions]
 ...
 exoPlayer = "1.2.1"
@@ -366,7 +366,7 @@ exoPlayer-ui = { module = " androidx.media3:media3-ui", version.ref = "exoPlayer
 
 与我们包含的每个依赖项一样，我们必须将它们添加到我们将要使用的模块的`build.gradle`文件中。在这种情况下，我们将将其添加到`build.gradle`文件中的`:feature:playback`：
 
-```kt
+```java
 dependencies {
     implementation(libs.exoPlayer.core)
     implementation(libs.exoPlayer.ui)
@@ -389,7 +389,7 @@ dependencies {
 
 让我们开始构建`PlaybackScreen`可组合组件：
 
-```kt
+```java
 @Composable
 fun PlaybackScreen() {
     Box(
@@ -411,7 +411,7 @@ fun PlaybackScreen() {
 
 现在我们已经构建了屏幕的基础，包括每个需要的可组合组件，是时候构建它们了。我们将从`TopMediaRow`可组合组件开始：
 
-```kt
+```java
 @Composable
 fun TopMediaRow(modifier: Modifier = Modifier) {
     Row(
@@ -437,7 +437,7 @@ fun TopMediaRow(modifier: Modifier = Modifier) {
 
 现在，让我们转到下一行，其中包含`PlayPauseButton`可组合元素：
 
-```kt
+```java
 @Composable
 fun PlayPauseButton(modifier: Modifier = Modifier) {
     Row(
@@ -494,7 +494,7 @@ fun PlayPauseButton(modifier: Modifier = Modifier) {
 
 最后，我们还有一个需要构建的可组合元素，即`ProgressBarWithTime`可组合元素：
 
-```kt
+```java
 @Composable
 fun ProgressBarWithTime(modifier: Modifier = Modifier) {
     Row(
@@ -541,7 +541,7 @@ fun ProgressBarWithTime(modifier: Modifier = Modifier) {
 
 我们知道如果播放控件一段时间内没有被使用，它们应该消失。最简单的方法是有一个值来指示控件是否可见，并且当屏幕空闲一段时间后，我们将修改其值为`false`。让我们在`PlaybackScreen`可组合组件中进行以下修改：
 
-```kt
+```java
 @Composable
 fun PlaybackScreen() {
     val isControlsVisible = remember { mutableStateOf(true) }
@@ -604,7 +604,7 @@ fun PlaybackScreen() {
 
 我们将首先创建一个名为`PlaybackActivity`的新`Activity`来提供此功能：
 
-```kt
+```java
 class PlaybackActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -619,7 +619,7 @@ class PlaybackActivity: ComponentActivity() {
 
 我们还希望我们的播放 UI 始终以横屏模式显示。为此，我们将在`AndroidManifest.xml`文件中配置此活动，如下所示：
 
-```kt
+```java
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android =
 "http://schemas.android.com/apk/res/android">
@@ -639,7 +639,7 @@ class PlaybackActivity: ComponentActivity() {
 
 首先，我们将构建`PlaybackViewModel`中播放器的基本设置逻辑：
 
-```kt
+```java
 @HiltViewModel
 class PlaybackViewModel @Inject constructor(): ViewModel()
 {
@@ -680,7 +680,7 @@ class PlaybackViewModel @Inject constructor(): ViewModel()
 
 现在，我们将在 `PlaybackScreen` 中添加渲染媒体内容的视图并将其连接到播放器：
 
-```kt
+```java
 @Composable
 fun PlaybackScreen() {
     val viewModel: PlaybackViewModel = hiltViewModel()
@@ -727,7 +727,7 @@ fun PlaybackScreen() {
 
 让我们看看我们如何实现这个新的可组合项。不幸的是，在撰写本文时，该库没有提供 Jetpack Compose 选项来显示播放器，因此我们需要在 `AndroidView` 可组合项内部创建一个，如下所示：
 
-```kt
+```java
 @Composable
 fun VideoPlayerComposable(
     modifier: Modifier = Modifier,
@@ -774,7 +774,7 @@ fun VideoPlayerComposable(
 
 让我们从修改 `PlayPauseButton` 可组合项开始。在这种情况下，我们需要将控制函数与 ViewModel 绑定：
 
-```kt
+```java
 @Composable
 fun PlayPauseButton(
     isPlaying: Boolean,
@@ -848,7 +848,7 @@ fun PlayPauseButton(
 
 现在我们已经添加了这些新参数，我们需要从父可组合组件中传递它们。以下是包含并调用此可组合组件所需参数的方法：
 
-```kt
+```java
 val isPlaying = viewModel.isPlaying.collectAsState()
 PlayPauseButton(
     isPlaying = isPlaying.value,
@@ -863,7 +863,7 @@ PlayPauseButton(
 
 现在，让我们在 `ViewModel` 中实现这些函数：
 
-```kt
+```java
 private val _isPlaying = MutableStateFlow<Boolean>(false)
 val isPlaying: MutableStateFlow<Boolean> = _isPlaying
 fun setupPlayer(context: Context) {
@@ -924,7 +924,7 @@ fun fastForward() {
 
 现在，让我们连接下一个（也是最后一个）可组合的组件，`ProgressBarWithTime`：
 
-```kt
+```java
 @Composable
 fun ProgressBarWithTime(
     currentPosition: Long,
@@ -972,7 +972,7 @@ fun ProgressBarWithTime(
 
 关于前面提到的 `formatTime` 函数，它将按以下方式工作：
 
-```kt
+```java
 fun formatTime(millis: Long): String {
     val totalSeconds = millis / 1000
     val hours = totalSeconds / 3600
@@ -1005,7 +1005,7 @@ fun formatTime(millis: Long): String {
 
 回到可组合组件，我们还需要修改在 `PlaybackScreen` 中调用 `ProgressBarWithTime` 的位置：
 
-```kt
+```java
 val currentPosition =
     viewModel.currentPosition.collectAsState()
 val duration = viewModel.duration.collectAsState()
@@ -1027,7 +1027,7 @@ ProgressBarWithTime(
 
 使进度条正常工作的最后一步是修改 `PlaybackViewModel`。我们可以添加控制进度条所需的功能，如下所示：
 
-```kt
+```java
 private val _currentPosition = MutableStateFlow<Long>(0L)
 val currentPosition: StateFlow<Long> = _currentPosition
 private val _duration = MutableStateFlow<Long>(0L)
@@ -1146,7 +1146,7 @@ ExoPlayer 支持广泛的字幕格式，以便满足各种用例和标准。以�
 
 为了让您了解这种格式的外观，以下是一个 SubRip（`.srt`）文件内容的示例：
 
-```kt
+```java
 1
 00:00:01,000 --> 00:00:03,000
 Hello, welcome to our video!
@@ -1168,7 +1168,7 @@ And that's all there is to it!
 
 现在我们对如何在 ExoPlayer 中添加字幕有了更多的了解，让我们将它们默认添加到我们已实现的播放功能中。我们只需要更改`PlaybackViewModel`中播放器设置的逻辑：
 
-```kt
+```java
 @OptIn(UnstableApi::class)
 private fun preparePlayerWithMediaSource(exoPlayer:
 ExoPlayer) {

@@ -80,7 +80,7 @@
 
 代码块设置如下：
 
-```kt
+```java
 void main() {
    float t = length(a_Position)/u_FurthestPoint;
    v_Color = vec4(t, 1.0-t,t,1.0);
@@ -91,7 +91,7 @@ void main() {
 
 当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
 
-```kt
+```java
 uniform mat4 u_ModelViewProjection;
 uniform vec4 u_Color;
 uniform float u_PointSize;
@@ -100,7 +100,7 @@ uniform float u_FurthestPoint;
 
 任何命令行输入或输出都按以下方式编写：
 
-```kt
+```java
 cd c:\Android
 npm install http-server -g
 ```

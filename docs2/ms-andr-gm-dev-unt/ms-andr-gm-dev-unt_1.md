@@ -540,7 +540,7 @@ Unity 以精美的预览显示了所有图像。在此必须指出，如果 Unit
 
 1.  现在，让我们开始编写企鹅的逻辑。我们将从在类中创建一个变量 `jetpackForce` 开始，如下所示：
 
-```kt
+```java
         public float jetpackForce = 75.0f;
 
 ```
@@ -553,7 +553,7 @@ Unity 以精美的预览显示了所有图像。在此必须指出，如果 Unit
 
 1.  接下来是将这个`jetpackForce`的值用作在触摸按下时施加在企鹅上的力。为了检测触摸，我们必须使用`Input.GetButton()`方法。但是，这个方法最好用在`MonoBehaviour`类的`Update()`或`FixedUpdate()`方法中。`FixedUpdate()`方法在每个固定帧被调用，而不是每个帧。这意味着如果游戏的 FPS 是 60，那么在 FixedUpdate 中，每秒这个函数将被调用 60 次。无论场景是否有变化。相比之下，`Regular Update ()`函数不会遵循 60fps 规则，并且会在场景有变化时更新。这应该用于处理 RigidBody。由于我们的企鹅是 RigidBody2D，所以使用`FixedUpdate()`方法比`Update()`方法更好。`PenguinController.cs`脚本不包含`FixedUpdate()`方法，所以现在让我们在这个类中添加以下代码：
 
-```kt
+```java
         void FixedUpdate()
         {
             bool jetpackkActive = Input.GetButton ("Fire1);
