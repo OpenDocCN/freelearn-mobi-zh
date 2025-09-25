@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Unity5 安卓精要
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/f55d0ecf7d416168243be63d69c588de`](https://zh.annas-archive.org/md5/f55d0ecf7d416168243be63d69c588de)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

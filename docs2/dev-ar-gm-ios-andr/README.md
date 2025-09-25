@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# IOS 和安卓 AR 游戏开发指南
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/eaf1b154611090aa6422cd5e3d6dc2fc`](https://zh.annas-archive.org/md5/eaf1b154611090aa6422cd5e3d6dc2fc)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Livecode 移动开发初学者指南
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/22c3e2f849bce6854d99de0199f046a1`](https://zh.annas-archive.org/md5/22c3e2f849bce6854d99de0199f046a1)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

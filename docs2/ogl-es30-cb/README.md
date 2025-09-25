@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# OpenGL ES3.0 秘籍
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/6af3fef9d7eaacad35584099b375188e`](https://zh.annas-archive.org/md5/6af3fef9d7eaacad35584099b375188e)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
