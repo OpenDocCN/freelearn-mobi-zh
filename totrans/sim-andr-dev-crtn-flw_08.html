@@ -1,0 +1,267 @@
+<html><head></head><body>
+		<div id="_idContainer037">
+			<h1 id="_idParaDest-70"><em class="italic"><a id="_idTextAnchor075"/>Chapter 6</em>: Handling Flow Cancelations and Exceptions</h1>
+			<p>In the previous chapter, we focused on Kotlin Flows and learned how we can use them in our Android projects. We learned about creating Kotlin Flows with Flow builders. We then explored Flow operators and how to use them with Kotlin Flows. We then learned about buffering and combining Flows. Finally, we explored <strong class="source-inline">SharedFlow</strong> and <strong class="source-inline">StateFlow</strong>.</p>
+			<p>Flows can be canceled, and they can fail or encounter exceptions. Developers must be able to handle these properly to prevent application crashes and to inform their users with a dialog or a toast message. We will discuss how to do these tasks in this chapter. </p>
+			<p>In this chapter, we will start by understanding Flow cancelation. We will learn how to cancel Flows and handle cancelations for our Flows. Then, we will learn how to manage failures and exceptions that can happen in our Flows. We will also learn about retrying and handling Flow completion.</p>
+			<p>In this chapter, we are going to cover the following main topics:</p>
+			<ul>
+				<li>Canceling Kotlin Flows</li>
+				<li>Retrying tasks with Flow</li>
+				<li>Catching exceptions in Flows</li>
+				<li>Handling flow completion</li>
+			</ul>
+			<p>By the end of this chapter, you will understand how to cancel flows, and will have learned how to manage cancelations and how to handle exceptions in flows.</p>
+			<h1 id="_idParaDest-71"><a id="_idTextAnchor076"/>Technical requirements</h1>
+			<p>You will need to download and install the latest version of Android Studio. You can find the latest version at <a href="https://developer.android.com/studio">https://developer.android.com/studio</a>. For an optimal learning experience, a computer with the following specifications is recommended: </p>
+			<ul>
+				<li>Intel Core i5 or equivalent or higher</li>
+				<li>4 GB RAM minimum</li>
+				<li>4 GB available space</li>
+			</ul>
+			<p>The code examples for this chapter can be found on GitHub at <a href="https://github.com/PacktPublishing/Simplifying-Android-Development-with-Coroutines-and-Flows/tree/main/Chapter06">https://github.com/PacktPublishing/Simplifying-Android-Development-with-Coroutines-and-Flows/tree/main/Chapter06</a></p>
+			<h1 id="_idParaDest-72"><a id="_idTextAnchor077"/>Canceling Kotlin Flows</h1>
+			<p>In this section, we <a id="_idIndexMarker281"/>will start by looking at Kotlin Flow cancelations. Like coroutines, Flows can also be canceled manually or automatically. </p>
+			<p>In <a href="B17773_03_Epub.xhtml#_idTextAnchor042"><em class="italic">Chapter 3</em></a>, <em class="italic">Handling Coroutine Cancelations and Exceptions</em>, we learned about canceling coroutines and that coroutine cancellation must be cooperative. As Kotlin Flows are built on top of coroutines, Flow follows the cooperative cancellation of coroutines.</p>
+			<p>Flows created using the <strong class="source-inline">flow{}</strong> builder are cancellable by default. Each <strong class="source-inline">emit</strong> call to send new values to the Flow also calls <strong class="source-inline">ensureActive</strong> internally. This checks whether the coroutine is still active, and if not, it will throw <strong class="source-inline">CancellationException</strong>.</p>
+			<p>For example, we can use the <strong class="source-inline">flow{}</strong> builder to create a cancellable Flow, as shown in the following: </p>
+			<pre class="source-code">class MovieViewModel : ViewModel() {</pre>
+			<pre class="source-code">    ...</pre>
+			<pre class="source-code">    fun fetchMovies(): Flow&lt;Movie&gt; = flow {</pre>
+			<pre class="source-code">        movieRepository.fetchMovies().forEach {</pre>
+			<pre class="source-code">            emit(it)</pre>
+			<pre class="source-code">        }</pre>
+			<pre class="source-code">    }</pre>
+			<pre class="source-code">}</pre>
+			<p>In the <strong class="source-inline">fetchMovies</strong> function here, we used the <strong class="source-inline">flow</strong> builder to create the Flow of movies returned by <strong class="source-inline">movieRepository.fetchMovies</strong>. This <strong class="source-inline">Flow&lt;Movie&gt;</strong> will be a cancellable Flow by default.</p>
+			<p>All other Flows, such as ones created using the <strong class="source-inline">asFlow</strong> and <strong class="source-inline">flowOf</strong> Flow builders, are not cancellable by default. We must handle the cancellation ourselves. There is a <strong class="source-inline">cancellable()</strong> operator we can use on a Flow to make it cancelable. This will add an <strong class="source-inline">ensureActive</strong> call on each emission of a new value.</p>
+			<p>The following <a id="_idIndexMarker282"/>example shows how we can make a Flow cancelable using the <strong class="source-inline">cancellable</strong> Flow operator:</p>
+			<pre class="source-code">class MovieViewModel : ViewModel() {</pre>
+			<pre class="source-code">    ...</pre>
+			<pre class="source-code">    fun fetchMovies(): Flow&lt;Movie&gt; {</pre>
+			<pre class="source-code">        return movieRepository.fetchMovies().cancellable()</pre>
+			<pre class="source-code">    }</pre>
+			<pre class="source-code">}</pre>
+			<p>In this example, we used the cancelable operator on the Flow returned by <strong class="source-inline">movieRepository.fetchMovies()</strong> to make the resulting Flow cancelable.</p>
+			<p>In this section, we learned how to cancel Kotlin Flows and how to make sure your Flows can be cancellable. In the next section, we will focus on how to retry your tasks with Kotlin Flows.</p>
+			<h1 id="_idParaDest-73"><a id="_idTextAnchor078"/>Retrying tasks with Flow</h1>
+			<p>In this section, we<a id="_idIndexMarker283"/> will explore Kotlin Flow retrying. There are cases when retrying an operation is needed for your application.</p>
+			<p>When performing long-running tasks, such as a network call, sometimes it is necessary to try the call again. This includes cases such as logging in/out, posting data, or even fetching data. The user may be in an area with a low internet connection, or there may be other factors why the call is failing. With Kotlin Flows, we have the <strong class="source-inline">retry</strong> and <strong class="source-inline">retryWhen</strong> operators that we can use to retry Flows automatically.</p>
+			<p>The <strong class="source-inline">retry</strong> operator allows you <a id="_idIndexMarker284"/>to set a <strong class="bold">Long</strong> <strong class="source-inline">retries</strong> as the maximum number of times the Flow will retry. You can also set a <strong class="source-inline">predicate</strong> condition, a code block that will retry the Flow when it returns <strong class="source-inline">true</strong>. The predicate <a id="_idIndexMarker285"/>has a <strong class="bold">Throwable</strong> parameter representing the exception that occurred; you can use that to check whether you want to do the retry or not. </p>
+			<p>The following example shows how we can use the <strong class="source-inline">retry</strong> Flow operator to retry our tasks in our Flow:</p>
+			<pre class="source-code">class MovieViewModel : ViewModel() {</pre>
+			<pre class="source-code">    ...</pre>
+			<pre class="source-code">    fun favoriteMovie(id: Int) =</pre>
+			<pre class="source-code">        movieRepository.favoriteMovie(id)</pre>
+			<pre class="source-code">            .retry(3) { cause -&gt; cause is IOException }</pre>
+			<pre class="source-code">}</pre>
+			<p>Here, the Flow from <strong class="source-inline">movieRepository.favoriteMovie(id)</strong> will be retried up to three times when the exception encountered is <strong class="source-inline">IOException</strong>. </p>
+			<p>If you do not pass a value for the retries, the default of <strong class="source-inline">Long.MAX_VALUE</strong> will be used. <strong class="source-inline">predicate,</strong> when not provided, has a default value of <strong class="source-inline">true</strong>, meaning the Flow will always be retried if <strong class="source-inline">retries</strong> has not yet been reached. </p>
+			<p>The <strong class="source-inline">retryWhen</strong> operator is similar to the <strong class="source-inline">retry</strong> operator. We need to specify <strong class="source-inline">predicate</strong>, which is the condition and only when <strong class="source-inline">true</strong> will it perform the retry. <strong class="source-inline">predicate</strong> has a <strong class="bold">Throwable</strong> parameter <a id="_idIndexMarker286"/>representing the exception encountered <a id="_idIndexMarker287"/>and a <strong class="bold">Long</strong> parameter for the number of attempts (which starts at zero). We can use both to create the condition which, if evaluated to <strong class="source-inline">true</strong>, will retry the Flow. The following code shows an example of using <strong class="source-inline">retryWhen</strong> to retry your tasks in your Flow:</p>
+			<pre class="source-code">class MovieViewModel : ViewModel() {</pre>
+			<pre class="source-code">    ...</pre>
+			<pre class="source-code">    fun favoriteMovie(id: Int) =</pre>
+			<pre class="source-code">        movieRepository.favoriteMovie(id)</pre>
+			<pre class="source-code">            .retryWhen { cause, attempt -&gt; attempt &lt;3 &amp;&amp;</pre>
+			<pre class="source-code">                cause is IOException }</pre>
+			<pre class="source-code">}</pre>
+			<p>In this<a id="_idIndexMarker288"/> example, we used <strong class="source-inline">retryWhen</strong> and specified that the retry will be done when the value of <strong class="source-inline">attempt</strong> is less than three and only if the exception is <strong class="source-inline">IOException</strong>.</p>
+			<p>With the <strong class="source-inline">retryWhen</strong> operator, we can also emit a value to the Flow (with the <strong class="source-inline">emit</strong> function), which we can use to represent the retry attempt or a value. We can then display this value on the screen or process it. The following example shows how we can use <strong class="source-inline">emit</strong> with the <strong class="source-inline">retryWhen</strong> operator:</p>
+			<pre class="source-code">class MovieViewModel : ViewModel() { </pre>
+			<pre class="source-code">    ... </pre>
+			<pre class="source-code"> </pre>
+			<pre class="source-code">    fun getTopMovieTitle(): Flow&lt;String&gt; { </pre>
+			<pre class="source-code">        return movieRepository.getTopMovieTitle(id) </pre>
+			<pre class="source-code">            .retryWhen { cause, attempt -&gt; </pre>
+			<pre class="source-code">                emit("Fetching title again...")</pre>
+			<pre class="source-code">                attempt &lt;3 &amp;&amp; cause is IOException </pre>
+			<pre class="source-code">            }</pre>
+			<pre class="source-code">            ...</pre>
+			<pre class="source-code">}</pre>
+			<p>Here, the Flow’s task will be retried when the number of attempts is less than three and only if the <a id="_idIndexMarker289"/>exception is <strong class="bold">IOException</strong>. It will then emit a <strong class="source-inline">Fetching title again</strong> string that can be processed by the activity or fragment that listens to the Flow returned by <strong class="source-inline">MovieViewModel.getTopMovieTitle()</strong>.</p>
+			<p>In this section, you<a id="_idIndexMarker290"/> learned about retrying tasks such as network requests with Kotlin Flow. We will explore Kotlin Flow exceptions and how to update our code to catch these exceptions in the next section. </p>
+			<h1 id="_idParaDest-74"><a id="_idTextAnchor079"/>Catching exceptions in Flows</h1>
+			<p>The Flows in<a id="_idIndexMarker291"/> your code can encounter <strong class="source-inline">CancellationException</strong> when they are canceled or other exceptions when emitting or collecting values. In this section, we will learn how to handle these Kotlin Flow exceptions.</p>
+			<p>Exceptions can happen in Flows during the collection of values or when using any operators on a Flow. We can handle exceptions in Flows by enclosing the collection of the Flow in our code with a <strong class="source-inline">try-catch</strong> block. For example, in the following code, the <strong class="source-inline">try-catch</strong> block is used to add exception handling:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code"> ...</pre>
+			<pre class="source-code"> override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">     ...</pre>
+			<pre class="source-code">     lifecycleScope.launch {</pre>
+			<pre class="source-code">         repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">             try {</pre>
+			<pre class="source-code">                 viewModel.fetchMovies().collect { movie -&gt;</pre>
+			<pre class="source-code">                     processMovie(movie)</pre>
+			<pre class="source-code">                 }</pre>
+			<pre class="source-code">             } catch (exception: Exception) {</pre>
+			<pre class="source-code">                 Log.e("Error", exception.message)</pre>
+			<pre class="source-code">             }  </pre>
+			<pre class="source-code">         }</pre>
+			<pre class="source-code">     }</pre>
+			<pre class="source-code"> }</pre>
+			<pre class="source-code">}</pre>
+			<p>Here, the collection code for the Flow returned by <strong class="source-inline">viewModel.fetchMovies</strong> was wrapped in a <strong class="source-inline">try-catch</strong> block. If an exception was encountered in the Flow, the exception message will be logged with the <strong class="source-inline">Error</strong> tag and <strong class="source-inline">exception.message</strong> as the message.</p>
+			<p>We can also <a id="_idIndexMarker292"/>use the <strong class="source-inline">catch</strong> Flow operator to handle exceptions in our Flow. With the <strong class="source-inline">catch</strong> operator, we can catch the exceptions from the upstream Flow, or the function and operators before the <strong class="source-inline">catch</strong> operator was called.</p>
+			<p>In the following example, the <strong class="source-inline">catch</strong> operator was used to catch exceptions from the Flow returned by <strong class="source-inline">viewModel.fetchMovies</strong>:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code">  ...</pre>
+			<pre class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">      ...</pre>
+			<pre class="source-code">      lifecycleScope.launch {</pre>
+			<pre class="source-code">          repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">              viewModel.fetchMovies()</pre>
+			<pre class="source-code">                  .catch { exception -&gt;</pre>
+			<pre class="source-code">                      handleException(exception) }</pre>
+			<pre class="source-code">                  .collect { movie -&gt; processMovie(movie) }</pre>
+			<pre class="source-code">            }</pre>
+			<pre class="source-code">        }</pre>
+			<pre class="source-code">    }</pre>
+			<pre class="source-code">}</pre>
+			<p>Here, the <strong class="source-inline">catch</strong> operator was used in the Flow to catch the exceptions. The exception, which is an instance of <strong class="bold">Throwable</strong>, was then passed to the <strong class="source-inline">handleException</strong> function that is going to handle the exception.</p>
+			<p>We can also use the <strong class="source-inline">catch</strong> operator to emit a new value to represent the error or for use as a<a id="_idIndexMarker293"/> fallback value instead, such as an empty list. In the following example, a default string value of <strong class="source-inline">No Movie Fetched</strong> will be used when an exception occurs in the Flow that returns the title of the top movie:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code">  ...</pre>
+			<pre class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">      ...</pre>
+			<pre class="source-code">      lifecycleScope.launch {</pre>
+			<pre class="source-code">          repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">              viewModel.getTopMovieTitle()</pre>
+			<pre class="source-code">                  .catch { emit("No Movie Fetched") }</pre>
+			<pre class="source-code">                  .collect { title -&gt; displayTitle(title) }</pre>
+			<pre class="source-code">          }</pre>
+			<pre class="source-code">      }</pre>
+			<pre class="source-code">  }</pre>
+			<pre class="source-code">}</pre>
+			<p>In this example, we used the <strong class="source-inline">catch</strong> operator to emit the <strong class="source-inline">No Movie Fetched</strong> string when an exception occurs in getting the top movie title from <strong class="source-inline">ViewModel</strong>. This will be the value that will be used in the <strong class="source-inline">displayTitle()</strong> call. </p>
+			<p>As the <strong class="source-inline">catch</strong> operator only handles exceptions in the upstream Flow, an exception that happens during the <strong class="source-inline">collect{}</strong> call won’t be caught. While you can use the <strong class="source-inline">try-catch</strong> block to handle these exceptions, you can also move the collection code to an <strong class="source-inline">onEach</strong> operator, add the <strong class="source-inline">catch</strong> operator after it, and use <strong class="source-inline">collect()</strong> to start the collection.</p>
+			<p>The following example shows how your code can look when using an <strong class="source-inline">onEach</strong> operator for the collection of<a id="_idIndexMarker294"/> values and the <strong class="source-inline">catch</strong> operator for handling exceptions:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code">  ...</pre>
+			<pre class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">      ...</pre>
+			<pre class="source-code">      lifecycleScope.launch {</pre>
+			<pre class="source-code">          repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">              viewModel.fetchMovies()</pre>
+			<pre class="source-code">                  .onEach { movie -&gt; processMovie(movie) }</pre>
+			<pre class="source-code">                  .catch { exception -&gt;</pre>
+			<pre class="source-code">                      handleError(exception) }</pre>
+			<pre class="source-code">                  .collect()</pre>
+			<pre class="source-code">          }</pre>
+			<pre class="source-code">      }</pre>
+			<pre class="source-code">  }</pre>
+			<pre class="source-code">}</pre>
+			<p>Here, the <strong class="source-inline">collect()</strong> function without parameters was used, and the <strong class="source-inline">onEach</strong> operator <a id="_idIndexMarker295"/>will process each movie from the Flow.</p>
+			<p>In this section, we learned how to catch exceptions in Flows. In the following section, we will focus on Kotlin Flow completion.</p>
+			<h1 id="_idParaDest-75"><a id="_idTextAnchor080"/>Handling Flow completion</h1>
+			<p>In this section, we <a id="_idIndexMarker296"/>will explore how to handle Flow completion. We can add code to perform additional tasks after our Flows have completed. </p>
+			<p>When the Flow encounters an exception, it will be canceled and complete the Flow. A Flow is also completed when the last element of the Flow has been emitted. </p>
+			<p>To add a listener in your Flow when it has completed, you can use the <strong class="source-inline">onCompletion</strong> operator and add the code block that will be run when the Flow completes. A common usage of <strong class="source-inline">onCompletion</strong> is hiding<a id="_idIndexMarker297"/> the <strong class="bold">ProgressBar</strong> in your UI when the Flow has completed, as shown in the following code:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code">  ...</pre>
+			<pre class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">      ...</pre>
+			<pre class="source-code">      lifecycleScope.launch {</pre>
+			<pre class="source-code">          repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">              viewModel.fetchMovies()</pre>
+			<pre class="source-code">                  .onStart { progressBar.isVisible = true }</pre>
+			<pre class="source-code">                  .onEach { movie -&gt; processMovie(movie) }</pre>
+			<pre class="source-code">                  .onCompletion { progressBar.isVisible =</pre>
+			<pre class="source-code">                      false }</pre>
+			<pre class="source-code">                  .catch { exception -&gt;</pre>
+			<pre class="source-code">                      handleError(exception) }</pre>
+			<pre class="source-code">                  .collect()</pre>
+			<pre class="source-code">          }</pre>
+			<pre class="source-code">      }</pre>
+			<pre class="source-code">  }</pre>
+			<pre class="source-code">}</pre>
+			<p>In this example, we have added the <strong class="source-inline">onCompletion</strong> operator to hide <strong class="source-inline">progressBar</strong> when the Flow has completed. We have also used <strong class="source-inline">onStart</strong> to display <strong class="source-inline">progressBar</strong>.</p>
+			<p>The <strong class="source-inline">onStart</strong> operator is the opposite of <strong class="source-inline">onCompletion</strong>. It will be called before the Flow starts emitting values. In the previous example, <strong class="source-inline">onStart</strong> was used so that before the Flow starts, <strong class="source-inline">progressBar</strong> will be displayed on the screen.</p>
+			<p>Within the <a id="_idIndexMarker298"/>code block you add in <strong class="source-inline">onStart</strong> and <strong class="source-inline">onCompletion</strong> (if the Flow completed successfully and without exception), you can also emit values, such as an initial and final value. In the following example, an <strong class="source-inline">onStart</strong> operator is used to emit an initial value to be displayed on the screen:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code">  ...</pre>
+			<pre class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">      ...</pre>
+			<pre class="source-code">      lifecycleScope.launch {</pre>
+			<pre class="source-code">          repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">              viewModel.getTopMovieTitle()</pre>
+			<pre class="source-code">                  .onStart { emit("Loading...") }</pre>
+			<pre class="source-code">                  .catch { emit("No Movie Fetched") }</pre>
+			<pre class="source-code">                  .collect { title -&gt; displayTitle(title) }</pre>
+			<pre class="source-code">          }</pre>
+			<pre class="source-code">      }</pre>
+			<pre class="source-code">  }</pre>
+			<pre class="source-code">}</pre>
+			<p>Here, <strong class="source-inline">onStart</strong> is used to listen to when the Flow starts. When the Flow starts, it will emit a <strong class="source-inline">Loading…</strong> string as the initial value of the Flow. This will then be the first item that will be displayed on the screen.</p>
+			<p>The <strong class="source-inline">onCompletion</strong> code block also has a nullable <strong class="bold">Throwable</strong> that corresponds to the exception thrown by the Flow. It will be null if the Flow has completed successfully. However, unlike <strong class="source-inline">catch</strong>, the exception itself will not be handled, so you still need to use <strong class="source-inline">catch</strong> or <strong class="source-inline">try-catch</strong> to handle this exception.</p>
+			<p>The following example <a id="_idIndexMarker299"/>shows how we can use this nullable <strong class="bold">Throwable</strong> in our Flow’s <strong class="source-inline">onCompletion</strong> call:</p>
+			<pre class="source-code">class MainActivity : AppCompatActivity() {</pre>
+			<pre class="source-code"> ...</pre>
+			<pre class="source-code"> override fun onCreate(savedInstanceState: Bundle?) {</pre>
+			<pre class="source-code">     ...</pre>
+			<pre class="source-code">     lifecycleScope.launch {</pre>
+			<pre class="source-code">         repeatOnLifecycle(Lifecycle.State.STARTED) {</pre>
+			<pre class="source-code">             viewModel.getTopMovieTitle()</pre>
+			<pre class="source-code">                 .onCompletion { cause -&gt;</pre>
+			<pre class="source-code">                     progressBar.isVisible = false</pre>
+			<pre class="source-code">                     if (cause != null) displayError(cause)</pre>
+			<pre class="source-code">                 }</pre>
+			<pre class="source-code">                 .catch { emit("No Movie Fetched") }</pre>
+			<pre class="source-code">                 .collect { title -&gt; displayTitle(title) }</pre>
+			<pre class="source-code">         }</pre>
+			<pre class="source-code">     }</pre>
+			<pre class="source-code"> }</pre>
+			<pre class="source-code">}</pre>
+			<p>In this example, we checked the cause in the <strong class="source-inline">onCompletion</strong> block, and if it’s not null (which means an exception was encountered), <strong class="source-inline">displayError</strong> will be called and the cause passed to it.</p>
+			<p>In this section, we learned about <strong class="source-inline">onStart</strong> and <strong class="source-inline">onCompletion</strong> to handle when Flows start and <a id="_idIndexMarker300"/>when they are completed. </p>
+			<p>Let’s try what you have learned by adding code to handle exceptions that can occur in Flows in an Android project.</p>
+			<h1 id="_idParaDest-76"><a id="_idTextAnchor081"/>Exercise 6.01 – Handling Flow exception in an Android app</h1>
+			<p>In this exercise, you <a id="_idIndexMarker301"/>will be continuing with the movie <a id="_idIndexMarker302"/>app you worked on in <em class="italic">Exercise 5.01 – Using Kotlin Flow in an Android app</em>. This application displays the movies that are playing now in movie theaters. You will be updating the project to handle Flow cancelations and exceptions by following these steps:</p>
+			<ol>
+				<li>In Android Studio, open the movie app you worked on in <em class="italic">Exercise 5.01 – Using Kotlin Flow in an Android app</em>.</li>
+				<li>Go to the <strong class="source-inline">MovieViewModel</strong> class. In the <strong class="source-inline">fetchMovies</strong> function, remove the line that sets the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">true</strong>. Your function will look like the following:<p class="source-code">fun fetchMovies() {</p><p class="source-code">    viewModelScope.launch (dispatcher) {</p><p class="source-code">        MovieRepository.fetchMoviesFlow()</p><p class="source-code">            .collect {</p><p class="source-code">                _movies.value = it</p><p class="source-code">                _loading.value = false</p><p class="source-code">            }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>You removed the code that sets <strong class="source-inline">loading</strong> to <strong class="source-inline">true</strong> (and displays <strong class="source-inline">ProgressBar</strong> on the screen). It will be replaced in the next step with an <strong class="source-inline">onStart</strong> Flow operator.</p>
+			<ol>
+				<li value="3">Add an <strong class="source-inline">onStart</strong> operator <a id="_idIndexMarker303"/>before the <strong class="source-inline">collect</strong> call, <a id="_idIndexMarker304"/>which will set the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">true</strong> when the Flow starts, as shown in the following:<p class="source-code">fun fetchMovies() {</p><p class="source-code">    viewModelScope.launch (dispatcher) {</p><p class="source-code">        MovieRepository.fetchMoviesFlow()</p><p class="source-code">            .onStart { _loading.value = true }</p><p class="source-code">            .collect {</p><p class="source-code">                _movies.value = it</p><p class="source-code">                _loading.value = false</p><p class="source-code">            }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>The <strong class="source-inline">onStart</strong> operator will set the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">true</strong> and display <strong class="source-inline">ProgressBar</strong> on the screen when the Flow starts.</p>
+			<ol>
+				<li value="4">Next, remove the line that sets the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">false</strong> in the code block inside the <strong class="source-inline">collect</strong> call. Your function will look like the following:<p class="source-code">fun fetchMovies() {</p><p class="source-code">    viewModelScope.launch (dispatcher) {</p><p class="source-code">        MovieRepository.fetchMoviesFlow()</p><p class="source-code">            .onStart { _loading.value = true }</p><p class="source-code">            .collect {</p><p class="source-code">                _movies.value = it</p><p class="source-code">            }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>You removed the code that sets the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">false</strong> and hides <strong class="source-inline">ProgressBar</strong> on <a id="_idIndexMarker305"/>the screen when the Flow is <a id="_idIndexMarker306"/>collected.</p>
+			<ol>
+				<li value="5">Add an <strong class="source-inline">onCompletion</strong> operator before the <strong class="source-inline">collect</strong> call, which will set the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">false</strong> when the Flow has completed, as shown in the following:<p class="source-code">fun fetchMovies() {</p><p class="source-code">    viewModelScope.launch (dispatcher) {</p><p class="source-code">        MovieRepository.fetchMoviesFlow()</p><p class="source-code">            .onStart { _loading.value = true }</p><p class="source-code">            .onCompletion { _loading.value = false }</p><p class="source-code">            .collect {</p><p class="source-code">                _movies.value = it</p><p class="source-code">            }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>The <strong class="source-inline">onCompletion</strong> Flow operator will set the value of <strong class="source-inline">_loading</strong> to <strong class="source-inline">false</strong>. This will then hide, upon completion of the Flow, <strong class="source-inline">ProgressBar</strong>, which is displayed on the screen while the movies are being fetched. </p>
+			<ol>
+				<li value="6">Add a <strong class="source-inline">catch</strong> operator before the <strong class="source-inline">collect</strong> function to handle the case when the Flow<a id="_idIndexMarker307"/> has<a id="_idIndexMarker308"/> encountered an exception:<p class="source-code">fun fetchMovies() {</p><p class="source-code">    viewModelScope.launch (dispatcher) {</p><p class="source-code">        MovieRepository.fetchMoviesFlow()</p><p class="source-code">            .onStart { _loading.value = true }</p><p class="source-code">            .onCompletion { _loading.value = false }</p><p class="source-code">            .catch {</p><p class="source-code">                _error.value = "An exception occurred:</p><p class="source-code">                  ${it.message}"</p><p class="source-code">            }</p><p class="source-code">            .collect {</p><p class="source-code">                _movies.value = it</p><p class="source-code">            }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>This will set a string containing <strong class="source-inline">An exception occurred:</strong> and the exception message as the value of the <strong class="source-inline">_error</strong> LiveData. This <strong class="source-inline">_error</strong> LiveData will display an error message in <strong class="source-inline">MainActivity</strong>.</p>
+			<ol>
+				<li value="7">On your device or emulator, turn off the Wi-Fi and mobile data. Then, run the app. This will cause an error in fetching the movies, as there is no internet connection. The app will display a <strong class="source-inline">SnackBar</strong> message, as shown in the following screenshot:</li>
+			</ol>
+			<div>
+				<div id="_idContainer035" class="IMG---Figure">
+					<img src="image/Figure_6.1_B17773_new.jpg" alt="Figure 6.1 – The error message displayed in the movie app&#13;&#10;"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 6.1 – The error message displayed in the movie app</p>
+			<ol>
+				<li value="8">Close<a id="_idIndexMarker309"/> the <a id="_idIndexMarker310"/>application and turn on the Wi-Fi and/or mobile data on your device or emulator. Run the application again. The app should show <strong class="source-inline">ProgressBar</strong>, display a list of movies (with the movie title and poster) on the screen, and hide <strong class="source-inline">ProgressBar</strong>, as shown in the following screenshot:</li>
+			</ol>
+			<div>
+				<div id="_idContainer036" class="IMG---Figure">
+					<img src="image/Figure_6.2_B17773.jpg" alt="Figure 6.2 – The movie app with the list of movies&#13;&#10;"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 6.2 – The movie app with the list of movies</p>
+			<p>In this exercise, you<a id="_idIndexMarker311"/> have updated the application so that <a id="_idIndexMarker312"/>it can handle exceptions in the Flow instead of crashing.</p>
+			<h1 id="_idParaDest-77"><a id="_idTextAnchor082"/>Summary</h1>
+			<p>This chapter focused on Kotlin Flow cancelations. You learned that Flows follow the cooperative cancellation of coroutines. The <strong class="source-inline">flow{}</strong> builder and <strong class="source-inline">StateFlow</strong> and <strong class="source-inline">SharedFlow</strong> implementations are cancellable by default. You can use the <strong class="source-inline">cancellable</strong> operator to make other Flows cancellable.</p>
+			<p>We then learned about retrying tasks with Kotlin Flow. You can use the <strong class="source-inline">retry</strong> and <strong class="source-inline">retryWhen</strong> functions to retry the Flow based on the number of attempts and the exception encountered by the Flow.</p>
+			<p>Then, we learned about handling exceptions that can happen during the emission or collection of data in a Flow. You can use the <strong class="source-inline">try-catch</strong> block or the <strong class="source-inline">catch</strong> Flow operator to handle Flow exceptions.</p>
+			<p>We learned how to handle Flow completion. With the <strong class="source-inline">onStart</strong> and <strong class="source-inline">onCompletion</strong> operators, you can listen and run code when Flows start and when they have finished. You can also emit values with the <strong class="source-inline">onStart</strong> and <strong class="source-inline">onCompletion</strong> code blocks, such as when you want to set an initial and final value for the Flow.</p>
+			<p>Finally, we worked on an exercise to update our Android project and handle the exceptions that can be encountered in a Flow. We used the <strong class="source-inline">catch</strong> Flow operator to handle exceptions in the project.</p>
+			<p>In the next chapter, we will dive into creating and running tests for the Kotlin Flows in our Android projects.</p>
+		</div>
+	</body></html>

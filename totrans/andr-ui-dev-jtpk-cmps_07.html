@@ -1,0 +1,351 @@
+<html><head></head><body><div id="sbo-rt-content"><div id="_idContainer039">
+			<h1 id="_idParaDest-71"><a id="_idTextAnchor089"/>Chapter 5: Managing the State of Your Composable Functions</h1>
+			<p>In <a href="B17505_04_ePub.xhtml#_idTextAnchor076"><em class="italic">Chapter 4</em></a>, <em class="italic">Laying Out UI Elements</em>, I showed you how to set the red, green, and blue portions of a color by dragging sliders. We used <strong class="bold">state</strong> to share these values among composable functions. Quite a few other sample apps of the previous chapters dealt with state, too. In fact, reacting to state changes is critical to how modern mobile apps work. </p>
+			<p>So far, I have described state as data that can change over time. You learned about a few important functions, for example, <strong class="source-inline">remember { }</strong> and <strong class="source-inline">mutableStateOf()</strong>. I also briefly touched on a concept called <strong class="bold">state hoisting</strong>.</p>
+			<p>This chapter builds on these foundations. For example, you will understand the difference between stateless and stateful composables, and when to choose which. Also, I will show you how events should flow in a well-behaving Compose app.</p>
+			<p>The main sections of this chapter are the following:</p>
+			<ul>
+				<li><a id="_idTextAnchor090"/>Understanding stateful and stateless composable functions</li>
+				<li>Hoisting state and passing events</li>
+				<li>Surviving configuration changes</li>
+			</ul>
+			<p>We will start by exploring the differences between stateful and stateless composable functions. You will learn their typical use cases and understand why you should try to keep your composables stateless. Hoisting state is a tool to achieve that; we will cover this important topic in the second main section. Also, I will show you that you can make your composable functions reusable by passing logic as parameters, rather than implementing it inside the composable.</p>
+			<p>Finally, the <em class="italic">Surviving configuration changes</em> section will explore the integration of a Compose UI hierarchy in activities, concerning how to retain user input. If the user changes from portrait to landscape mode (or vice versa), activities are destroyed and recreated. Of course, input should not be lost. We look at several ways that a Compose app can achieve this.</p>
+			<h1 id="_idParaDest-72"><a id="_idTextAnchor091"/>Technical requirements</h1>
+			<p>This chapter includes three sample apps. Please refer to the <em class="italic">Technical requirements</em> section in <a href="B17505_01_ePub.xhtml#_idTextAnchor014"><em class="italic">Chapter 1</em></a>, <em class="italic">Building Your First Compose App</em>, for information about how to install and set up Android Studio, and how to get them. <strong class="source-inline">StateDemo</strong> contains all examples from the <em class="italic">Understanding stateful and stateless composable functions</em> section. The <em class="italic">Hoisting state and passing events</em> section discusses the <strong class="source-inline">FlowOfEventsDemo</strong> sample. Finally, <strong class="source-inline">ViewModelDemo</strong> belongs to the <em class="italic">Surviving configuration changes</em> section.</p>
+			<p>All the code files for this chapter can be found on GitHub at <a href="https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_05">https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_05</a>.</p>
+			<h1 id="_idParaDest-73"><a id="_idTextAnchor092"/>Understanding stateful and stateless composable functions</h1>
+			<p>In this section, I will show you the difference between stateful and stateless composable functions. To understand <a id="_idIndexMarker175"/>why this is important, let's first focus on the <strong class="bold">state</strong> term. In previous <a id="_idIndexMarker176"/>chapters, I described state as <em class="italic">data that can change over time</em>. Where <a id="_idIndexMarker177"/>the data is held (an SQLite database, a file, or a value inside an object) does not matter. What is important is that the UI must always show the current data. Therefore, if a value changes, the UI must be notified. To achieve this, we use <strong class="bold">observable</strong> types. This is not specific to <a id="_idIndexMarker178"/>Jetpack Compose, but a common pattern in many frameworks, programming languages, and platforms. For example, Kotlin supports observables through property delegates:</p>
+			<p class="source-code">var counter by observable(-1) { _, oldValue, newValue -&gt;</p>
+			<p class="source-code">  println("$oldValue -&gt; $newValue")</p>
+			<p class="source-code">}</p>
+			<p class="source-code">for (i in 0..3) counter = i</p>
+			<p><strong class="source-inline">observable()</strong> returns a delegate for a property that can be read and written to. In the previous code snippet, the initial value is set to <strong class="source-inline">-1</strong>. The property calls a specified function when its value is changed (<strong class="source-inline">counter = i</strong>). My example prints the old and new values. In an imperative UI framework, state changes require modifying the component tree. Such code could be put in the callback function. Fortunately, Jetpack Compose doesn't require this, because state changes automatically trigger a recomposition of the relevant UI elements. Let's see how this works.</p>
+			<p>The <strong class="source-inline">androidx.compose.runtime.State</strong> base interface defines a value holder, an object that stores a value of a particular type in a property named <strong class="source-inline">value</strong>. If this property is read during <a id="_idIndexMarker179"/>the execution of a composable function, the composable <a id="_idIndexMarker180"/>will be recomposed whenever <strong class="source-inline">value</strong> changes, because internally the current <strong class="source-inline">RecomposeScope</strong> interface will be subscribed to changes of that value. Please note that to be able to change the value, state must be an implementation of <strong class="source-inline">MutableState</strong>; unlike its immediate predecessor (<strong class="source-inline">State</strong>), this interface defines <strong class="source-inline">value</strong> using <strong class="source-inline">var</strong> instead of <strong class="source-inline">val</strong>.</p>
+			<p>The easiest way to create <strong class="source-inline">State</strong> instances is to invoke <strong class="source-inline">mutableStateOf()</strong>. This function returns a new <strong class="source-inline">MutableState</strong> instance, initialized with the value that was passed in. The next section explains how to use <strong class="source-inline">mutableStateOf()</strong> to create a stateful composable function.</p>
+			<h2 id="_idParaDest-74"><a id="_idTextAnchor093"/>Using state in a composable function</h2>
+			<p>A composable <a id="_idIndexMarker181"/>function is said to be <strong class="bold">stateful</strong> if it maintains (remembers) some <a id="_idIndexMarker182"/>value. We achieve this by invoking <strong class="source-inline">remember {}</strong>. Let's take a look:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun SimpleStateDemo1() {</p>
+			<p class="source-code">  val num = remember { mutableStateOf(Random.nextInt(0,</p>
+			<p class="source-code">    10)) }</p>
+			<p class="source-code">  Text(text = num.value.toString())</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">SimpleStateDemo1()</strong> creates a mutable state holding a random integer. By invoking <strong class="source-inline">remember {}</strong>, we save the state, and in using <strong class="source-inline">=</strong>, we assign it to <strong class="source-inline">num</strong>. We get the random number through <strong class="source-inline">num.value</strong>. Please note that although we defined <strong class="source-inline">num</strong> with the <strong class="source-inline">val</strong> keyword, we could change the value with <strong class="source-inline">num.value = …</strong>, because <strong class="source-inline">num</strong> holds the reference to a mutable value holder (whose <strong class="source-inline">value</strong> property is writeable). Think of it as modifying an item in a list, not changing to another list. We can slightly alter the code, as shown in the following snippet. Can you spot the difference?</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun SimpleStateDemo2() {</p>
+			<p class="source-code">  val num by remember { mutableStateOf(Random.nextInt(0,</p>
+			<p class="source-code">   10)) }</p>
+			<p class="source-code">  Text(text = num.toString())</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">SimpleStateDemo2()</strong> creates a mutable state holding a random integer number, too. Using <strong class="source-inline">by</strong>, we do not <a id="_idIndexMarker183"/>assign the state itself to <strong class="source-inline">num</strong> but the <a id="_idIndexMarker184"/>value it stores (the random number). This spares us from using <strong class="source-inline">.value</strong>, which makes the code a little shorter and hopefully more understandable. However, if we want to change <strong class="source-inline">num</strong>, we must change <strong class="source-inline">val</strong> to <strong class="source-inline">var</strong>. Otherwise, we see a <strong class="source-inline">Val cannot be reassigned</strong> error message.</p>
+			<p>You may be wondering what <strong class="source-inline">remember {}</strong> does under the hood. Let's peek into its code and find out:</p>
+			<div>
+				<div id="_idContainer035" class="IMG---Figure">
+					<img src="Images/B17505_05_1.jpg" alt="Figure 5.1 – The source code of remember {}&#13;&#10;" width="732" height="133"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 5.1 – The source code of remember {}</p>
+			<p>The read-only, top-level <strong class="source-inline">currentComposer</strong> property belongs to the <strong class="source-inline">androidx.compose.runtime</strong> package. It references an instance of <strong class="source-inline">Composer</strong>. This interface is targeted by the Compose Kotlin compiler plugin and used by code generation helpers. You should not call it directly, because the runtime assumes that calls are generated by the compiler and therefore do not contain much validation logic. <strong class="source-inline">Cache()</strong> is an extension function of <strong class="source-inline">Composer</strong>. It stores a value in the composition data of a composition. So, <strong class="source-inline">remember {}</strong> creates internal state. Therefore, composable functions that contain <strong class="source-inline">remember {}</strong> are stateful.</p>
+			<p><strong class="source-inline">calculation</strong> represents a lambda expression that creates the value to be remembered. It is <a id="_idIndexMarker185"/>evaluated only once, during the <a id="_idIndexMarker186"/>composition. Subsequent calls to <strong class="source-inline">remember {}</strong> (during recompositions) always return this value. The expression is not evaluated again. But what if we need to reevaluate the calculation, that is, remember a new value? After all, isn't state data that can change over time? Here's how you can do this:</p>
+			<p class="source-code">@Composabl<a id="_idTextAnchor094"/>e</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun RememberWithKeyDemo() {</p>
+			<p class="source-code">  var key by remember { mutableStateO<a id="_idTextAnchor095"/>f(false) }</p>
+			<p class="source-code">  val date by remember(key) { mutableStateOf(Date()) }</p>
+			<p class="source-code">  Column(horizontalAlignment =</p>
+			<p class="source-code">         Alignment.CenterHorizontally) {</p>
+			<p class="source-code">    Text(date.toString())</p>
+			<p class="source-code">    Button(onClick = { key = !key }) {</p>
+			<p class="source-code">      Text(text = stringResource(id = R.string.click))</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>The preview of <strong class="source-inline">RememberWithKeyDemo()</strong> is shown in <em class="italic">Figure 5.2</em>:</p>
+			<div>
+				<div id="_idContainer036" class="IMG---Figure">
+					<img src="Images/B17505_05_2.jpg" alt="Figure 5.2 – Preview of RememberWithKeyDemo()&#13;&#10;" width="505" height="184"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 5.2 – Preview of RememberWithKeyDemo()</p>
+			<p><strong class="source-inline">RememberWithKeyDemo()</strong> emits <strong class="source-inline">Column()</strong> with two horizontally centered children:</p>
+			<ul>
+				<li><strong class="source-inline">Text()</strong> shows the string representation of a remembered <strong class="source-inline">Date</strong> instance.</li>
+				<li><strong class="source-inline">Button()</strong> toggles a Boolean value (<strong class="source-inline">key</strong>).</li>
+			</ul>
+			<p>Have you noticed that I pass <strong class="source-inline">key</strong> to <strong class="source-inline">remember { mutableStateOf(Date()) }</strong>? Here's what <a id="_idIndexMarker187"/>happens – when <strong class="source-inline">remember {}</strong> is invoked for the <a id="_idIndexMarker188"/>first time, the result of the calculation (<strong class="source-inline">mutableStateOf(Date())</strong>) is remembered and returned. During recompositions, the calculation is not reevaluated unless <strong class="source-inline">key</strong> is <em class="italic">not</em> equal to the previous composition. In this case, a new value is calculated, remembered, and returned.</p>
+			<p class="callout-heading">Tip</p>
+			<p class="callout">You can pass any number of keys to <strong class="source-inline">remember {}</strong>. If one of them has changed since the previous composition, the calculation is reevaluated, and the new value is remembered and returned.</p>
+			<p>Passing keys to <strong class="source-inline">remember {}</strong> allows you to change remembered values. Please keep in mind, though, that this makes the composable function less predictable. Therefore, you should consider whether such logic needs to be composable or whether you could pass all state to it.</p>
+			<p>In the next section, we turn to stateless composables.</p>
+			<h2 id="_idParaDest-75"><a id="_idTextAnchor096"/>Writing stateless composable functions</h2>
+			<p><strong class="source-inline">remember {}</strong> makes a <a id="_idIndexMarker189"/>composable function stateful. A stateless composable, on the other hand, doesn't hold any state. Here's an example:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun SimpleStatelessComposable1() {</p>
+			<p class="source-code">  Text(text = "Hello Compose")</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">SimpleStatelessComposable1()</strong> doesn't receive parameters and it always calls <strong class="source-inline">Text()</strong>with the same parameters. Clearly, it doesn't hold any state. But how about the following one?</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun SimpleStatelessComposable2(text: State&lt;String&gt;) {</p>
+			<p class="source-code">  Text(text = text.value)</p>
+			<p class="source-code">}</p>
+			<p>While it receives state through the <strong class="source-inline">text</strong> parameter, it doesn't store it, and it doesn't remember other state. Consequently, <strong class="source-inline">SimpleStatelessComposable2()</strong> is stateless, too. It behaves <a id="_idIndexMarker190"/>the same way when called with the same argument multiple times. Such functions are said to be <strong class="bold">idempotent</strong>. This makes <strong class="source-inline">SimpleStatelessComposable2()</strong> a good blueprint for your own composable functions. They should be as follows:</p>
+			<ul>
+				<li><strong class="bold">Fast</strong>: Your composable must not do heavy (that is, time-consuming) computations. Never invoke a web service or do any other I/O. Data that is used by a composable should be passed to it.</li>
+				<li><strong class="bold">Free of side-effects</strong>: Do not modify global properties or produce unintended observable effects (modifying state that has been passed to a composable is certainly intentional).</li>
+				<li><strong class="bold">Idempotent</strong>: Do not use <strong class="source-inline">remember {}</strong>, do not access global properties, and do not call unpredictable code. For example, <strong class="source-inline">SimpleStateDemo1()</strong> and <strong class="source-inline">SimpleStateDemo2()</strong> use <strong class="source-inline">Random.nextInt()</strong>, which, by definition, is (practically) not predictable.</li>
+			</ul>
+			<p>Such composable functions <a id="_idIndexMarker191"/>are both easy to reuse and test because they don't rely on anything that isn't passed in as parameters.</p>
+			<p>When developing reusable composables, you may want to expose both a stateful and a stateless version. Let's see how this looks:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun TextFieldDemo(state: MutableState&lt;TextFieldValue&gt;) {</p>
+			<p class="source-code">  TextField(</p>
+			<p class="source-code">    value = state.value,</p>
+			<p class="source-code">    onValueChange = {</p>
+			<p class="source-code">      state.value = it</p>
+			<p class="source-code">    },</p>
+			<p class="source-code">    placeholder = { Text("Hello") },</p>
+			<p class="source-code">    modifier = Modifier.fillMaxWidth()</p>
+			<p class="source-code">  )</p>
+			<p class="source-code">}</p>
+			<p>This version is stateless because it receives state and does not remember anything. Stateless versions are necessary for callers that need to control the state or hoist it themselves:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun TextFieldDemo() {</p>
+			<p class="source-code">  val state = remember { mutableStateOf(TextFieldValue("")) }</p>
+			<p class="source-code">  TextFieldDemo(state)</p>
+			<p class="source-code">}</p>
+			<p>This version is <a id="_idIndexMarker192"/>stateful because it remembers the state it creates. Stateful versions are convenient for callers that don't care about the state.</p>
+			<p>To conclude, try to make your composables stateless by not relying on <strong class="source-inline">remember {}</strong> or other functions that remember state (for example, <strong class="source-inline">rememberLazyListState()</strong> or <strong class="source-inline">rememberSaveable()</strong>). Instead, pass state to the composable. You will see more use cases in the next section.</p>
+			<h1 id="_idParaDest-76"><a id="_idTextAnchor097"/>Hoisting state and passing events</h1>
+			<p>So, state is any value that can change over time. As Jetpack Compose is a declarative UI framework, the only <a id="_idIndexMarker193"/>way to update a composable is to call it with new arguments. This happens <a id="_idIndexMarker194"/>automatically when state a composable is using changes. State hoisting is a pattern of moving state up to make a composable stateless.</p>
+			<p>Besides making a composable more easily reusable and testable, moving state up is necessary to use it in more than one composable function. You have already seen this in quite a few of my sample apps. For example, in the <em class="italic">Composing and recomposing the UI</em> section of <a href="B17505_03_ePub.xhtml#_idTextAnchor054"><em class="italic">Chapter 3</em></a>, <em class="italic">Exploring the Key Principles of Compose</em>, we used three sliders to create and display a color.</p>
+			<p>While state controls the visual representation of a composable function (that is, how it looks on screen), <strong class="bold">events</strong> notify a part of a program that something has happened. Let's focus a little more on this. My sample <strong class="source-inline">FlowOfEventsDemo</strong> app is a simple temperature converter. The user enters a value, specifies whether it represents degrees Celsius or Fahrenheit, and then hits the <strong class="bold">C<a id="_idTextAnchor098"/>onvert</strong> button:</p>
+			<div>
+				<div id="_idContainer037" class="IMG---Figure">
+					<img src="Images/B17505_05_3.jpg" alt="Figure 5.3 – Sample FlowOfEventsDemo app &#13;&#10;" width="1064" height="570"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 5.3 – Sample FlowOfEventsDemo app </p>
+			<p>The UI <a id="_idIndexMarker195"/>consists of <strong class="source-inline">Column()</strong> with four children: a text input field, a group <a id="_idIndexMarker196"/>of radio buttons with text, a button, and some result text. Let's look at the text input field first:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun TemperatureTextField(</p>
+			<p class="source-code">  temperature: MutableState&lt;String&gt;,</p>
+			<p class="source-code">  modifier: Modifier = Modifier,</p>
+			<p class="source-code"><strong class="bold">  callback: () -&gt; Unit</strong></p>
+			<p class="source-code">) {</p>
+			<p class="source-code">  TextField(</p>
+			<p class="source-code">    value = temperature.value,</p>
+			<p class="source-code"><strong class="bold">    onValueChange = {</strong></p>
+			<p class="source-code"><strong class="bold">      temperature.value = it</strong></p>
+			<p class="source-code"><strong class="bold">    },</strong></p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    modifier = modifier,</p>
+			<p class="source-code"><strong class="bold">    keyboardActions = KeyboardActions(onAny = {</strong></p>
+			<p class="source-code"><strong class="bold">      callback()</strong></p>
+			<p class="source-code"><strong class="bold">    }),</strong></p>
+			<p class="source-code">    keyboardOptions = KeyboardOptions(</p>
+			<p class="source-code">      keyboardType = KeyboardType.Number,</p>
+			<p class="source-code">      imeAction = ImeAction.Done</p>
+			<p class="source-code">    ),</p>
+			<p class="source-code">    singleLine = true</p>
+			<p class="source-code">  )</p>
+			<p class="source-code">}</p>
+			<p>It receives <strong class="source-inline">MutableState&lt;String&gt;</strong>, to which it pushes changes to the text in <strong class="source-inline">onValueChange {}</strong>. The virtual keyboard is configured to show a <em class="italic">Done</em> button. If it is invoked, code passed to <a id="_idIndexMarker197"/>the composable through <strong class="source-inline">callback</strong> is executed. As you will <a id="_idIndexMarker198"/>see a little later, that same code will run if the user clicks on the <em class="italic">Convert</em> button.</p>
+			<p>In the next section, I'll show you how to create radio buttons and put them in groups so that only one button is selected at a time. The section also covers the button and the result text, which you can see in <em class="italic">Fig. 5.3</em>.</p>
+			<h2 id="_idParaDest-77"><a id="_idTextAnchor099"/>Creating radio button groups</h2>
+			<p>The app converts between degrees Celsius and Fahrenheit. Therefore, the user must choose the target scale. Such selections <a id="_idIndexMarker199"/>can be implemented easily in Jetpack Compose using <strong class="source-inline">androidx.compose.material.RadioButton()</strong>. This composable doesn't show some descriptive text, but it is easy to add some. Here's how:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun TemperatureRadioButton(</p>
+			<p class="source-code">  selected: Boolean,</p>
+			<p class="source-code">  resId: Int,</p>
+			<p class="source-code"><strong class="bold">  onClick: (Int) -&gt; Unit,</strong></p>
+			<p class="source-code">  modifier: Modifier = Modifier</p>
+			<p class="source-code">) {</p>
+			<p class="source-code">  Row(</p>
+			<p class="source-code">    verticalAlignment = Alignment.CenterVertically,</p>
+			<p class="source-code">    modifier = modifier</p>
+			<p class="source-code">  ) {</p>
+			<p class="source-code">    RadioButton(</p>
+			<p class="source-code">      selected = selected,</p>
+			<p class="source-code"><strong class="bold">      onClick = {</strong></p>
+			<p class="source-code"><strong class="bold">        onClick(resId)</strong></p>
+			<p class="source-code"><strong class="bold">      }</strong></p>
+			<p class="source-code">    )</p>
+			<p class="source-code">    Text(</p>
+			<p class="source-code">      text = stringResource(resId),</p>
+			<p class="source-code">      modifier = Modifier</p>
+			<p class="source-code">        .padding(start = 8.dp)</p>
+			<p class="source-code">    )</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">RadioButton()</strong> and <strong class="source-inline">Text()</strong> are simply added to <strong class="source-inline">Row()</strong> and vertically centered. <strong class="source-inline">TemperatureRadioButton()</strong> receives a lambda expression with the <strong class="source-inline">onClick</strong> parameter. That code is <a id="_idIndexMarker200"/>executed when the radio button is clicked. My implementation passes the <strong class="source-inline">resId</strong> parameter to the lambda expression, which will be used to determine the button in a group. Here's how:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun TemperatureScaleButtonGroup(</p>
+			<p class="source-code"><strong class="bold">  selected: MutableState&lt;Int&gt;,</strong></p>
+			<p class="source-code">  modifier: Modifier = Modifier</p>
+			<p class="source-code">) {</p>
+			<p class="source-code">  val sel = selected.value</p>
+			<p class="source-code"><strong class="bold">  val onClick = { resId: Int -&gt; selected.value = resId }</strong></p>
+			<p class="source-code">  Row(modifier = modifier) {</p>
+			<p class="source-code">    TemperatureRadioButton(</p>
+			<p class="source-code">      selected = sel == R.string.celsius,</p>
+			<p class="source-code">      resId = R.string.celsius,</p>
+			<p class="source-code">      onClick = onClick</p>
+			<p class="source-code">    )</p>
+			<p class="source-code">    TemperatureRadioButton(</p>
+			<p class="source-code">      selected = sel == R.string.fahrenheit,</p>
+			<p class="source-code">      resId = R.string.fahrenheit,</p>
+			<p class="source-code">      onClick = onClick,</p>
+			<p class="source-code">      modifier = Modifier.padding(start = 16.dp)</p>
+			<p class="source-code">    )</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>Two <strong class="source-inline">TemperatureRadioButton()</strong> are put in a <strong class="source-inline">Row()</strong>. The first one is configured to represent degrees Celsius, the second one degrees Fahrenheit. Both receive the same <strong class="source-inline">onClick</strong> lambda. It sets the <strong class="source-inline">resId</strong> parameter it received from <strong class="source-inline">TemperatureRadioButton()</strong> as the new value of the <strong class="source-inline">selected</strong> parameter, a mutable state. So, what is <a id="_idIndexMarker201"/>happening here? Clicks on a radio button are not handled inside <strong class="source-inline">TemperatureRadioButton()</strong> but passed to the parent, <strong class="source-inline">TemperatureScaleButtonGroup()</strong>. The event, a button click, is said to <strong class="bold">bubble up</strong>. This way, the parent can orchestrate its children and notify its parent. In my <a id="_idIndexMarker202"/>example, this means changing some state.</p>
+			<p>Next, let's see what happens when the user clicks the <strong class="bold">Convert</strong> button. This happens inside <strong class="source-inline">FlowOfEventsDemo()</strong>. Here's the overall structure of this composable function:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun FlowOfEventsDemo() {</p>
+			<p class="source-code">  ...</p>
+			<p class="source-code"><strong class="bold">  val calc = {</strong></p>
+			<p class="source-code"><strong class="bold">    val temp = temperature.value.toFloat()</strong></p>
+			<p class="source-code"><strong class="bold">    convertedTemperature = if (scale.value ==</strong></p>
+			<p class="source-code"><strong class="bold">                               R.string.celsius)</strong></p>
+			<p class="source-code"><strong class="bold">      (temp * 1.8F) + 32F</strong></p>
+			<p class="source-code"><strong class="bold">    else</strong></p>
+			<p class="source-code"><strong class="bold">      (temp - 32F) / 1.8F</strong></p>
+			<p class="source-code"><strong class="bold">  }</strong></p>
+			<p class="source-code">  val result = remember(convertedTemperature) {</p>
+			<p class="source-code">    if (convertedTemperature.isNaN())</p>
+			<p class="source-code">      ""</p>
+			<p class="source-code">    else</p>
+			<p class="source-code">      "${convertedTemperature}${</p>
+			<p class="source-code">        if (scale.value == R.string.celsius)</p>
+			<p class="source-code">          strFahrenheit</p>
+			<p class="source-code">        else strCelsius</p>
+			<p class="source-code">      }"</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  val enabled = temperature.value.isNotBlank()</p>
+			<p class="source-code">  Column( ... ) {</p>
+			<p class="source-code">    TemperatureTextField(</p>
+			<p class="source-code">      temperature = temperature,</p>
+			<p class="source-code">      modifier = Modifier.padding(bottom = 16.dp),</p>
+			<p class="source-code"><strong class="bold">      callback = calc</strong></p>
+			<p class="source-code">    )</p>
+			<p class="source-code">    TemperatureScaleButtonGroup(</p>
+			<p class="source-code">      selected = scale,</p>
+			<p class="source-code">      modifier = Modifier.padding(bottom = 16.dp)</p>
+			<p class="source-code">    )</p>
+			<p class="source-code">    Button(</p>
+			<p class="source-code"><strong class="bold">      onClick = calc,</strong></p>
+			<p class="source-code">      enabled = enabled</p>
+			<p class="source-code">    ) {</p>
+			<p class="source-code">      Text( ... )</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    if (result.isNotEmpty()) {</p>
+			<p class="source-code">      Text(text = result, …</p>
+			<p class="source-code">      )</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>The conversion logic is assigned to a read-only variable called <strong class="source-inline">calc</strong>. It is passed to <strong class="source-inline">TemperatureTextField()</strong> and <strong class="source-inline">Button()</strong>. Passing the code that is going to be executed in response to an event to a composable function rather than hard coding it inside makes the composable more easily reusable and testable.</p>
+			<p>The text that is displayed after conversion is remembered and assigned to <strong class="source-inline">result</strong>. It is re-evaluated <a id="_idIndexMarker203"/>when <strong class="source-inline">convertedTemperature</strong> changes. This happens inside the <strong class="source-inline">calc</strong> lambda expression. Please note that I need to pass a key to <strong class="source-inline">remember {}</strong>; otherwise, the result would be changed also if the user picks another scale.</p>
+			<p>In the next section, we will look at how state can be persisted. To be more precise, we turn to configuration changes. If the user rotates a device, the UI should not be reset. Unfortunately, this is what happens with all sample apps I have shown you so far. It's time to fix this.</p>
+			<h1 id="_idParaDest-78">Surviv<a id="_idTextAnchor100"/>ing configuration changes</h1>
+			<p>Please recall that our definition of state as data that may change over time is quite broad. For example, we do not specify where the data is stored. If it resides in a database, a file, or some <a id="_idIndexMarker204"/>backend in the cloud, the app should include a dedicated persistence layer. However, until Google introduced the Android Architecture Components back in 2017, there had been practically no guidance for developers on how to structure their apps. Consequently, persistence code, UI logic, and domain logic were often crammed into one activity. Such code was difficult to maintain and often prone to errors. To make matters a little more complicated, there are situations when an activity is destroyed and recreated shortly after. For example, this happens when a user rotates a device. Certainly, data should then be remembered.</p>
+			<p>The <strong class="source-inline">Activity</strong> class has a few methods to handle this. For example, <strong class="source-inline">onSaveInstanceState()</strong> is invoked when the activity is (temporarily) destroyed. Its counterpart <strong class="source-inline">onRestoreInstanceState()</strong> method is called only when such an instance state has been saved before. Both methods receive an instance of <strong class="source-inline">Bundle</strong>, which has getters and setters for various data types. However, the concept of instance state has been designed for the traditional view system. Most activities held references to UI elements and therefore could be accessed easily inside <strong class="source-inline">onSaveInstanceState()</strong> and <strong class="source-inline">onRestoreInstanceState()</strong>. </p>
+			<p>Composables, on the other hand, are usually implemented as top-level functions. So, how can their state be set or queried from inside an activity? To temporarily save state in a Compose app, you <a id="_idIndexMarker205"/>can use <strong class="source-inline">rememberSaveable {}</strong>. This composable function remembers the value produced by a factory function. It behaves similarly to <strong class="source-inline">remember {}</strong>. The stored value will survive the activity or process recreation. Internally, the <strong class="source-inline">savedInstanceState</strong> mechanism is used. The sample <strong class="source-inline">ViewModelDemo</strong> app shows how to use <strong class="source-inline">rememberSaveable {}</strong>. Here's what the main activity looks like:</p>
+			<p class="source-code">class ViewModelDemoActivity : ComponentActivity() {</p>
+			<p class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</p>
+			<p class="source-code">    super.onCreate(savedInstanceState)</p>
+			<p class="source-code">    setContent {</p>
+			<p class="source-code">      ViewModelDemo()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>We don't need to override <strong class="source-inline">onSaveInstanceState()</strong> to temporarily save our state used with composables:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">@Preview</p>
+			<p class="source-code">fun ViewModelDemo() {</p>
+			<p class="source-code">  ...</p>
+			<p class="source-code">  val state1 = remember {</p>
+			<p class="source-code">    mut<a id="_idTextAnchor101"/>ableStateOf("Hello #1")</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  val state2 = rememberSaveable {</p>
+			<p class="source-code">    mutableStateOf("Hello #2")</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  ...</p>
+			<p class="source-code">  state3.value?.let {</p>
+			<p class="source-code">    Column(modifier = Modifier.fillMaxWidth()) {</p>
+			<p class="source-code">      MyTextField(state1) { state1.value = it }</p>
+			<p class="source-code">      MyTextField(state2) { state2.value = it }</p>
+			<p class="source-code">      ...</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>The app shows three text input fields that receive their values from states assigned to <strong class="source-inline">state1</strong>, <strong class="source-inline">state2</strong>, and <strong class="source-inline">state3</strong>. For now, we will focus on the first two. <strong class="source-inline">state3</strong> will be the subject of the <em class="italic">Using ViewModel</em> section. <strong class="source-inline">state1</strong> invokes <strong class="source-inline">remember {}</strong>, whereas <strong class="source-inline">state2</strong> uses <strong class="source-inline">rememberSaveable {}</strong>. If you ran <strong class="source-inline">ViewModelDemo</strong>, changed the content <a id="_idIndexMarker206"/>of the text input fields, and rotated the device, the first one would be reset to the original text, whereas the second one would keep your changes.</p>
+			<p><strong class="source-inline">MyTextField</strong> is a very simple composable. It looks like this:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun MyTextField(</p>
+			<p class="source-code">  value: State&lt;String?&gt;,</p>
+			<p class="source-code">  onValueChange: (String) -&gt; Unit</p>
+			<p class="source-code">) {</p>
+			<p class="source-code">  value.value?.let {</p>
+			<p class="source-code">    TextField(</p>
+			<p class="source-code">      value = it,</p>
+			<p class="source-code">      onValueChange = onValueChange,</p>
+			<p class="source-code">      modifier = Modifier.fillMaxWidth()</p>
+			<p class="source-code">    )</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>Have you noticed that <strong class="source-inline">value</strong> is of <strong class="source-inline">State&lt;String?&gt;</strong>? Why would I need a value holder whose value can be <strong class="source-inline">null</strong>, and therefore need to check with <strong class="source-inline">value.value?.let {}</strong> that it isn't? We will be reusing the composable in the following section, and <a id="_idIndexMarker207"/>you will find the answer to this question there. Please note, though, that for both <strong class="source-inline">state1</strong> and <strong class="source-inline">state2</strong>, this would not have been necessary.</p>
+			<h2 id="_idParaDest-79"><a id="_idTextAnchor102"/>Using ViewModel</h2>
+			<p>While temporarily storing state with <strong class="source-inline">rememberSaveable {}</strong> works great, an app still must get data that <a id="_idIndexMarker208"/>is persisted for a longer time (for example, in a database or file) and make it available as state that can be used in composables. The Android Architecture Components include <strong class="source-inline">ViewModel</strong> and <strong class="source-inline">LiveData</strong>. Both can be used seamlessly with Jetpack Compose.</p>
+			<p>First, you need to add a few implementation dependencies to the module-level <strong class="source-inline">build.gradle</strong> file:</p>
+			<p class="source-code">implementation "androidx.compose.runtime:runtime-</p>
+			<p class="source-code">  livedata:$compose_version"</p>
+			<p class="source-code">implementation 'androidx.lifecycle:lifecycle-runtime-</p>
+			<p class="source-code">  ktx:2.4.0'</p>
+			<p class="source-code">implementation 'androidx.lifecycle:lifecycle-viewmodel-</p>
+			<p class="source-code">  compose:2.4.0'</p>
+			<p>The next step is to define a <strong class="source-inline">ViewModel</strong> class. It extends <strong class="source-inline">androidx.lifecycle.ViewModel</strong>. A <strong class="source-inline">ViewModel</strong> class stores and manages UI-related data in a lifecycle-conscious way. This means that data will survive configuration changes, such as <a id="_idIndexMarker209"/>screen rotations. <strong class="source-inline">MyViewModel</strong> exposes one property called <strong class="source-inline">text</strong> and a me<a id="_idTextAnchor103"/>thod named <strong class="source-inline">setText()</strong> to set it:</p>
+			<p class="source-code">class MyViewModel : ViewModel() {</p>
+			<p class="source-code">    private val _text: MutableLiveData&lt;String&gt; =</p>
+			<p class="source-code">        MutableLiveData&lt;String&gt;("Hello #3")</p>
+			<p class="source-code">    val text: LiveData&lt;String&gt;</p>
+			<p class="source-code">        get() = _text</p>
+			<p class="source-code">    fun setText(value: String) {</p>
+			<p class="source-code">        _text.value = value</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>My example shows a <strong class="source-inline">ViewModel</strong> class using <strong class="source-inline">LiveData</strong>. Depending on the architecture of an app, you can utilize other mechanisms for working with observable data. Going into more detail is, however, beyond the scope of this book. You can find additional <a id="_idIndexMarker210"/>information in <em class="italic">Guide to app architecture</em> at <a href="https://developer.android.com/jetpack/guide#fetching_data">https://developer.android.com/jetpack/guide</a>.</p>
+			<p>To access the <strong class="source-inline">ViewModel</strong> class from inside a composable function, we invoke the composable <strong class="source-inline">viewModel()</strong>. It belongs to the <strong class="source-inline">androidx.lifecycle.viewmodel.compose</strong> package:</p>
+			<p class="source-code">val viewModel: MyViewModel = viewModel()</p>
+			<p><strong class="source-inline">LiveData</strong> is made available as state like this:</p>
+			<p class="source-code">val state3 = viewModel.text.observeAsState()</p>
+			<p>Let's take a quick look at its source code:</p>
+			<div>
+				<div id="_idContainer038" class="IMG---Figure">
+					<img src="Images/B17505_05_4.jpg" alt="Figure 5.4 – Source code of the observeAsState() extension function&#13;&#10;" width="725" height="196"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 5.4 – Source code of the observeAsState() extension function</p>
+			<p><strong class="source-inline">observeAsState()</strong> is an extension function of <strong class="source-inline">LiveData</strong>. It passes the <strong class="source-inline">value</strong> property of its <strong class="source-inline">LiveData</strong> instance to a variant of <strong class="source-inline">observeAsState()</strong> that takes parameters. Have you <a id="_idIndexMarker211"/>noticed that the return type is <strong class="source-inline">State&lt;T?&gt;</strong>? That is why I defined <strong class="source-inline">MyTextField()</strong> in the previous section to receive <strong class="source-inline">State&lt;String?&gt;</strong>. To be able to use <strong class="source-inline">State&lt;String&gt;</strong> as with <strong class="source-inline">remember {}</strong> and <strong class="source-inline">rememberSaveable {}</strong>, we would need to define <strong class="source-inline">state3</strong> like this:</p>
+			<p class="source-code">val state3 =</p>
+			<p class="source-code">   viewModel.text.observeAsState(viewModel.text.value) as</p>
+			<p class="source-code">   State&lt;String&gt;</p>
+			<p>In my opinion, this is less favorable than using <strong class="source-inline">State&lt;String?&gt;</strong> because we use an unchecked cast.</p>
+			<p>To reflect changes in state in the <strong class="source-inline">ViewModel</strong> class, we need code like this:</p>
+			<p class="source-code">MyTextField(state3) {</p>
+			<p class="source-code">  viewModel.setText(it)</p>
+			<p class="source-code">}</p>
+			<p>Unlike using <strong class="source-inline">MutableState</strong>, we must explicitly invoke the <strong class="source-inline">setText()</strong> method of <strong class="source-inline">MyViewModel</strong> and pass the changed text.</p>
+			<p>To conclude, <strong class="source-inline">rememberSaveable {}</strong> is simple and easy to use. For more complex scenarios than presented in this chapter, you can provide <strong class="source-inline">androidx.compose.runtime.saveable.Saver</strong> implementations, which make your data objects simpler and convert them to something saveable. Bigger apps should use <strong class="source-inline">ViewModel</strong> classes, as <a id="_idIndexMarker212"/>recommended for quite a while now by Google. The combination of <strong class="source-inline">ViewModel</strong> and <strong class="source-inline">LiveData</strong> classes can be integrated nicely into composable apps using <strong class="source-inline">observerAsState()</strong>.</p>
+			<h1 id="_idParaDest-80"><a id="_idTextAnchor104"/>Summary</h1>
+			<p>This chapter aimed to give a more detailed look at state in Compose apps. We started by exploring the differences between stateful and stateless composable functions. You learned their typical use cases and why you should try to keep your composables stateless. Hoisting state is a tool to achieve that. We covered this important topic in the second main section. I also showed you that you can make your composable functions more reusable by passing logic as parameters, rather than implementing it inside the composable. The previous section explored the integration of a Compose UI hierarchy in activities concerning how to retain user input. We looked at the differences between <strong class="source-inline">remember {}</strong> and <strong class="source-inline">rememberSaveable {}</strong>, and I gave you a glimpse of how bigger Compose apps can benefit from <strong class="source-inline">ViewModel</strong> classes.</p>
+			<p>Chapters 1 to 5 introduced you to various aspects of Jetpack Compose, such as composable functions, state, and layout. <a href="B17505_06_ePub.xhtml#_idTextAnchor105"><em class="italic">Chapter 6</em></a>, <em class="italic">Putting Pieces Together</em>, focuses on one app, providing you with a bigger picture of how these pieces work together to form a real-world app. We will implement a simple unit converter app, focusing on app architecture and UI, including theming and navigation.</p>
+		</div>
+	</div></body></html>

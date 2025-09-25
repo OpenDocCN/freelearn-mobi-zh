@@ -1,0 +1,1056 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">More on Operators and Error Handling</h1>
+                </header>
+            
+            <article>
+                
+<p>In the previous chapter, we learned about operators and how to use them. We learned how operators can help us in solving complex problems with ease. We got a grip on operators and their types, and we learned basic filtering operators and transforming operators in detail. It's time to move on to some interesting and advanced things you can do with operators.</p>
+<p>We will cover the following topics in this chapter:</p>
+<ul>
+<li>Combining producers (Observable/Flowable)</li>
+<li>Grouping emissions</li>
+<li>Filtering/suppressing operators</li>
+<li>Error handling operators</li>
+<li>Real-world HTTP client example</li>
+</ul>
+<p>So, what are we waiting for? Let's get started with combining producer (Observable/Flowable) instances.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Combining producers (Observable/Flowable)</h1>
+                </header>
+            
+            <article>
+                
+<p>While developing applications, it's a common situation to combine data from multiple sources before using them. One such situation is when you are building some offline application following an offline-first approach, and you want to combine the resultant data you got from the HTTP call with the data from the local database.</p>
+<p>Now, without wasting much time, let's take a look at the operators that can help us combine producers:</p>
+<ul>
+<li><kbd>startWith()</kbd></li>
+<li><kbd>merge()</kbd>, <kbd>mergeDelayError()</kbd></li>
+<li><kbd>concat()</kbd></li>
+<li><kbd>zip()</kbd></li>
+<li><kbd>combineLatest()</kbd></li>
+</ul>
+<p>Basically, there are a few mechanisms to combine producers (Observables/Flowables). They are as follows:</p>
+<ul>
+<li>Merging producers</li>
+<li>Concatenating producers</li>
+<li>Ambiguous combination of producers</li>
+<li>Zipping</li>
+<li>Combine latest</li>
+</ul>
+<p>We will discuss all the previously mentioned techniques to combine producers in this chapter. However, let's start with an operator that we are already aware of.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The startWith operator</h1>
+                </header>
+            
+            <article>
+                
+<p>We got introduced to the <kbd>startWith</kbd> operator in the previous chapter, but there's still a lot to cover. This operator also lets you combine multiple producers. Take a look at the following example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      println("startWith Iterator") 
+      Observable.range(5,10) 
+        .startWith(listOf(1,2,3,4))//(1) 
+        .subscribe { 
+           println("Received $it") 
+        } 
+        println("startWith another source Producer") 
+       Observable.range(5,10) 
+         .startWith(Observable.just(1,2,3,4))//(2) 
+         .subscribe { 
+            println("Received $it") 
+         } 
+   } </pre>
+<p>We can pass another source <kbd>Observable</kbd> or an <kbd>Iterator</kbd> instance to be prepended before the source <kbd>Observable</kbd> that the operator has subscribed to starts emitting.</p>
+<p>In the preceding program, on comment <kbd>(1)</kbd>, we used the <kbd>startWith</kbd> operator and passed an <kbd>Interator</kbd> instance to it. The <kbd>startWith</kbd> operator internally converts the passed <kbd>Iterator</kbd> instance to an <kbd>Observable</kbd> instance (it'll convert it to a <kbd>Flowable</kbd> instance in case you're using <kbd>Flowable</kbd>). Here is the signature of the <kbd>startWith</kbd> operator:</p>
+<pre>    fun startWith(items: Iterable&lt;T&gt;): Observable&lt;T&gt; { 
+      return concatArray&lt;T&gt;(fromIterable&lt;out T&gt;(items), this) 
+    } </pre>
+<p>From the preceding signature of the <kbd>startWith</kbd> operator, we can also see that it uses <kbd>concatArray</kbd> internally, which we will be covering very soon in this chapter.</p>
+<p>On comment <kbd>(2)</kbd>, we used the <kbd>startWith</kbd> operator with another source <kbd>Observable</kbd>.</p>
+<p>Here is the output of the program:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="535" width="356" class=" image-border" src="assets/7f451284-3231-439c-8882-2f532286a69a.png"/></div>
+<p>As we have got some grip on the <kbd>startWith</kbd> operator, now let's move forward with the <kbd>zip</kbd> operator. The <kbd>zip</kbd> operator implements a zipping mechanism to combine producers.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Zipping emissions – zip operator</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>zip</kbd> operator is quite interesting. Think of a situation where you're working with multiple <kbd>Observable</kbd>/<kbd>Flowables</kbd> and want to perform some kind of operation on each subsequent emission of each producer. The <kbd>zip</kbd> operator enables you to perform exactly that. It accumulates emissions of multiple producers to create a new emission via the specified function. So, let's look at a pictorial representation to delve deeper:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="347" width="419" src="assets/a9bcc79d-99a6-490f-94ce-5f00d05cfb18.jpg"/></div>
+<p>As the picture depicts, the <kbd>zip</kbd> operator accumulates emissions from multiple producers into a single emission. It also takes a function to apply on the emissions as the <kbd>scan</kbd> or <kbd>reduce</kbd> operator, but applies them to emissions from different producers.</p>
+<div class="packt_infobox">For the sake of simplicity, we used two <kbd>Observable</kbd> in the preceding picture and the following example, but the <kbd>zip</kbd> operator works with up to nine <kbd>Observables</kbd>/<kbd>Flowables</kbd>.</div>
+<p>Consider the following code:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.range(1,10) 
+      val observable2 = Observable.range(11,10) 
+      Observable.zip(observable1,observable2,  <br/>      io.reactivex.functions.BiFunction<br/>      &lt;Int, Int, Int&gt; { emissionO1, emissionO2 -&gt; 
+      emissionO1+emissionO2 
+      }).subscribe { 
+          println("Received $it") 
+      } 
+    } </pre>
+<p>The <kbd>zip</kbd> operator is defined in <kbd>companion object</kbd> (<kbd>static</kbd> method in Java) of the <kbd>Observable</kbd> class, thus can be directly accessed by writing <kbd>Observable.zip</kbd> itself. No need to access it through another instance. So, let's take a look at the output before we proceed:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="219" width="364" class=" image-border" src="assets/4f81d024-cb15-45c4-95aa-954067938d35.png"/></div>
+<p>In order to understand and use the <kbd>zip</kbd> operator better, you need to keep the following points about it in mind:</p>
+<ul>
+<li>The <kbd>zip</kbd> operator works on each emission of the supplied producers. For example, if you pass three producers <em>x</em>, <em>y</em>, and <em>z</em> to the <kbd>zip</kbd> operator, it will accumulate the <em>n<sup>th</sup></em> emission of <em>x</em> with the <em>n<sup>th</sup></em> emission of <em>y</em> and <em>z</em>.</li>
+<li>The <kbd>zip</kbd> operator waits for each of its producers to emit, before applying the function to them. For example, if you use <kbd>Observable.interval</kbd> as one of the producers in the <kbd>zip</kbd> operator, the <kbd>zip</kbd> operator will wait for each emission and will emit the accumulated values at the specified intervals as well.</li>
+<li>If any of the producers notify <kbd>onComplete</kbd> or <kbd>onError</kbd> without emitting the item it was waiting for, then it'll discard all emissions afterwards, including that particular one from other producers as well. For example, if producer <em>x</em> emits <kbd>10</kbd> items, producer <em>y</em> emits <kbd>11</kbd> items, and producer <em>z</em> emits <kbd>8</kbd> items, the <kbd>zip</kbd> operator will accumulate the first <kbd>8</kbd> emissions from all the producers and will discard all remaining emissions from producer <em>x</em> and <em>y</em>.</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The zipWith operator</h1>
+                </header>
+            
+            <article>
+                
+<p>The instance version (that is, the copy of the function, which should be called with an instance rather than static) of the <kbd>zip</kbd> operator is <kbd>zipWith</kbd>, which can be called from the <kbd>Observable</kbd> instance itself. The only problem with this version is that you can pass only another source <kbd>Observable</kbd>. If you need to work with three or more <kbd>Observable</kbd> instances, you should rather consider using the <kbd>zip</kbd> operator instead of <kbd>zipWith</kbd>.</p>
+<p>Here's an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.range(1,10) 
+      val observable2 = listOf("String 1","String 2","String 3",<br/>      "String 4","String 5","String 6","String 7","String 8",<br/>      "String 9","String 10").toObservable() 
+ 
+      observable1.zipWith(observable2,{e1:Int,e2:String -&gt; <br/>      "$e2 $e1"})//(1) 
+        .subscribe { 
+            println("Received $it") 
+        } 
+    }</pre>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="220" width="360" class=" image-border" src="assets/b6e88bba-25d3-4737-b3ba-390da7fae31b.png"/></div>
+<p>On comment <kbd>(1)</kbd>, we used the <kbd>zipWith</kbd> operator on the <kbd>Observable</kbd> instance, <kbd>observable1</kbd>, and passed another <kbd>Observable</kbd> instance, <kbd>observable2</kbd>, to it with a lambda to apply to the emissions. From the output, we can tell that the <kbd>zipWith</kbd> operator accumulates the producer it's subscribed to, with the producer it is provided with.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The combineLatest operator</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>combineLatest</kbd> operator works in a similar way like the <kbd>zip</kbd> operator. It accumulates the emissions of the provided producers. The only difference between <kbd>combineLatest</kbd> and <kbd>zip</kbd> is that the <kbd>zip</kbd> operator waits for each of its source producers to emit, before it starts processing all the emissions to create its new one, but the <kbd>combineLatest</kbd> operator starts as soon as it receives any emit from any of its source producers.</p>
+<p>To understand this operator better, we will see an example with both, the <kbd>zip</kbd> and the <kbd>combineLatest</kbd> operator. Let's first try the example with the <kbd>zip</kbd> operator, as we gained some grip on it already:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 =  <br/>      Observable.interval(100,TimeUnit.MILLISECONDS)//(1) 
+      val observable2 =<br/>      Observable.interval(250,TimeUnit.MILLISECONDS)//(2) 
+ 
+      Observable.zip(observable1,observable2, 
+        BiFunction { t1:Long, t2:Long -&gt; "t1: $t1, t2: $t2" })//(3) 
+        .subscribe{ 
+           println("Received $it") 
+        } 
+ 
+       runBlocking { delay(1100) } 
+    } </pre>
+<p>The output is as follows. As expected, it accumulates each and every emission and prints them:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="128" width="391" class=" image-border" src="assets/608d635c-814e-4199-a81d-cf6e69c67487.png"/></div>
+<p>In this program, we created <kbd>Observable</kbd> with a 100 milliseconds interval on comment <kbd>(1)</kbd>. On comment <kbd>(2)</kbd>, we created another <kbd>Observable</kbd> with a <kbd>250</kbd> milliseconds interval. In the output, we can see <kbd>3</kbd> emits, as, after zipping them, the total interval becomes <kbd>350</kbd> milliseconds, and within 1,100 milliseconds of delay, there is room for only <kbd>3</kbd> emits with <kbd>350</kbd> milliseconds interval in between them.</p>
+<p>Now, let's test the same code with <kbd>combineLatest</kbd>:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.interval(100, TimeUnit.MILLISECONDS) 
+      val observable2 = Observable.interval(250, TimeUnit.MILLISECONDS) 
+ 
+      Observable.combineLatest(observable1,observable2, 
+        BiFunction { t1:Long, t2:Long -&gt; "t1: $t1, t2: $t2" }) 
+        .subscribe{ 
+           println("Received $it") 
+        } 
+ 
+        runBlocking { delay(1100) } 
+    }</pre>
+<p>Here is the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="231" width="297" class=" image-border" src="assets/8fba26bd-b03d-462c-ad06-38bbeb21d92b.png"/></div>
+<p>As the output suggests, the <kbd>combineLatest</kbd> operator processes and emits the value as soon as it gets an emit from any of its source producers by using the last emitted value for all other source producers.</p>
+<p>Now, let's move forward with merging producers, with the help of the <kbd>merge</kbd> operator.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Merging Observables/Flowables – merge operator</h1>
+                </header>
+            
+            <article>
+                
+<p>The zipping operation will let you accumulate emissions, but what if you want to subscribe to each emission by all the source producers? Say you have two different producers and have the same set of actions to be applied when subscribing to them; there's no way to mix imperative programming and reactive programming and repeatedly subscribe to both of the producers separately with the same code. It'll also result in redundant code. So, what is the solution here? You got it right; merging all the emissions of all the source producers together and subscribing to them as a whole is the solution.</p>
+<p>So, let's get an example here:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = listOf("Kotlin", "Scala",<br/>      "Groovy").toObservable() 
+      val observable2 = listOf("Python", "Java", "C++",<br/>      "C").toObservable() 
+ 
+      Observable 
+       .merge(observable1,observable2)//(1) 
+       .subscribe { 
+          println("Received $it") 
+       } 
+    } </pre>
+<p>In this program, on comment <kbd>(1)</kbd>, we will merge two <kbd>observable</kbd> and subscribe to them as a whole. The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="167" width="360" src="assets/df6ceb40-6b39-4978-ac8d-51a2e27e0a61.jpg"/></div>
+<p>As the output shows, the <kbd>merge</kbd> operator merged two <kbd>Observables</kbd> and put the emissions of both the <kbd>Observables</kbd> in their order of emission.</p>
+<p>The merging operation, however, doesn't maintain the order specified; rather, it'll start listening to all the provided producers instantly and will fire emissions as soon as they are emitted from the source. Let's look at an example that illustrates this:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.interval(500,  <br/>      TimeUnit.MILLISECONDS).map { "Observable 1 $it" }//(1) 
+      val observable2 = Observable.interval(100,<br/>      TimeUnit.MILLISECONDS).map { "Observable 2 $it" }//(2) 
+ 
+      Observable 
+        .merge(observable1,observable2) 
+        .subscribe { 
+          println("Received $it") 
+        } 
+        runBlocking { delay(1500) } 
+     }</pre>
+<p>In the preceding example, on comment <kbd>(1)</kbd> and <kbd>(2)</kbd>, we created two <kbd>Observable&lt;Long&gt;</kbd> instances with the <kbd>Observable.interval</kbd> operator, then mapped it with <kbd>Observable</kbd> numbering and got instances of <kbd>Observable&lt;String&gt;</kbd>. The objective of the <kbd>map</kbd> operator here is to inject an <kbd>Observable</kbd> identification in the output so we can easily identify the <kbd>Observable</kbd> source from the merged output.</p>
+<p>So, here is the much discussed output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="308" width="311" src="assets/ff22fe73-51f3-4f15-98fd-1b208241fa60.jpg"/></div>
+<p>The output clearly shows that the <kbd>merge</kbd> operator took emissions from <kbd>observable2</kbd> first, as they came first, even though we put <kbd>observable1</kbd> first in the <kbd>merge</kbd> operator.</p>
+<p>The <kbd>merge</kbd> operator, however, supports up to four parameters. As a fallback, we have the <kbd>mergeArray</kbd> operator, which accepts <kbd>vararg</kbd> of <kbd>Observable</kbd>; the following is an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = listOf("A", "B", "C").toObservable() 
+      val observable2 = listOf("D", "E", "F", "G").toObservable() 
+      val observable3 = listOf("I", "J", "K", "L").toObservable() 
+      val observable4 = listOf("M", "N", "O", "P").toObservable() 
+      val observable5 = listOf("Q", "R", "S", "T").toObservable() 
+      val observable6 = listOf("U", "V", "W", "X").toObservable() 
+      val observable7 = listOf("Y", "Z").toObservable() 
+ 
+      Observable.mergeArray(observable1, observable2, observable3, 
+        observable4, observable5, observable6, observable7) 
+        .subscribe { 
+           println("Received $it") 
+        } 
+    }</pre>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="475" width="367" src="assets/2589493f-e1c8-42b1-b8e2-1a7430d6c215.jpg"/></div>
+<p>As with the <kbd>zip</kbd> operator, the <kbd>merge</kbd> operator also has a version for calling on instances of <kbd>Observable</kbd>'s rather than, statically, <kbd>mergeWith</kbd>; we can call this operator on <kbd>Observable</kbd> instances. So, let's look at an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = listOf("Kotlin", "Scala",<br/>      "Groovy").toObservable() 
+      val observable2 = listOf("Python", "Java", "C++",<br/>      "C").toObservable() 
+ 
+       observable1 
+         .mergeWith(observable2) 
+         .subscribe { 
+            println("Received $it") 
+         } 
+    } </pre>
+<p>The program is simple enough. We are creating two <kbd>Observable</kbd> instances, and then merging <kbd>observable1</kbd> with <kbd>observable2</kbd> with the <kbd>mergeWith</kbd> operator called on the <kbd>observable1</kbd> instance.</p>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="171" width="384" src="assets/6229c197-8b2f-4b50-92df-86f4bbe2293d.jpg"/></div>
+<p>The literal meaning of merging is combining two things together to create a new one, irrespective of any order; all the merging operators do the same thing. If you want to maintain the order, you have to concatenate one after another.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Concatenating producers (Observable/Flowable)</h1>
+                </header>
+            
+            <article>
+                
+<p>Concatenating operators are almost the same with <kbd>merge</kbd> operators, except that the concatenating operators respect the prescribed ordering. Instead of subscribing to all provided producers in one go, it subscribes to the producers one after another; only once, it received <kbd>onComplete</kbd> from the previous subscription.</p>
+<p>So, let's modify our last program with the <kbd>concatenate</kbd> operator and see the changes:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.interval(500, TimeUnit.MILLISECONDS) 
+        .take(2)//(1) 
+        .map { "Observable 1 $it" }//(2) 
+      val observable2 = Observable.interval(100,<br/>      TimeUnit.MILLISECONDS).map { "Observable 2 $it" }//(3) 
+ 
+     Observable 
+       .concat(observable1,observable2) 
+       .subscribe { 
+          println("Received $it") 
+       } 
+ 
+      runBlocking { delay(1500) } 
+    } </pre>
+<p>As we already mentioned, the <kbd>concat</kbd> operator subscribes to the next source <kbd>Observable</kbd> in the queue only after it got <kbd>onComplete</kbd> from its current source <kbd>Observable</kbd>; we also know that the <kbd>Observable</kbd> instances created with <kbd>Observable.interval</kbd> never emit <kbd>onComplete</kbd>. Rather, they keep emitting numbers until <kbd>Long.MAX_VALUE</kbd> is reached. So, as a quick fix, we used the <kbd>take</kbd> operator on comment <kbd>(1)</kbd>, which will take the first two emissions from <kbd>Observable.interval</kbd> and then will append an <kbd>onComplete</kbd> notification to it so that the <kbd>concat</kbd> operator can start listening to the next source Observable as well.</p>
+<div class="packt_infobox">We are discussing the <kbd>take</kbd> operators in this chapter in the <em>Skipping and taking emissions</em> section. Don't forget to take a look.</div>
+<p>So, here is the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="171" width="366" src="assets/af28c538-b870-460e-9eae-28b4c6925bc4.jpg"/></div>
+<p>From the output, we can clearly see that the <kbd>concat</kbd> operator is subscribed to the next supplied source <kbd>Observable</kbd> only after it got the <kbd>onComplete</kbd> notification from its first one.</p>
+<p>Just like the <kbd>merge</kbd> operator, the <kbd>concat</kbd> operator also has <kbd>concatArray</kbd> and <kbd>concatWith</kbd> variants, and they work in almost the same way, just concatenating instead of merging.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Ambiguously combining producers</h1>
+                </header>
+            
+            <article>
+                
+<p>The ambiguous combination of producers is probably the easiest among all combination types. Think of a situation where you're fetching data from two data sources (may be two separate APIs or database tables), and want to proceed with the first one you got and discard the other one. In the imperative programming technique, you would probably be required to write checks for that; however, with RxKotlin, the <kbd>amb</kbd> operator is there to hold your back.</p>
+<p>The <kbd>amb</kbd> operator takes a list of <kbd>Observable</kbd> (<kbd>Iterable&lt;Observable&gt;</kbd> instance) as parameter, subscribes to all <kbd>Observables</kbd> present in the <kbd>Iterable</kbd> instance, emits the items that it got from the first <kbd>Observable</kbd> it got an emit from, and discards the rest of <kbd>Observables</kbd> present on the <kbd>Iterable</kbd> instance.</p>
+<p>The following example will help us understand better:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.interval(500, <br/>      TimeUnit.MILLISECONDS).map { "Observable 1 $it" }//(1) 
+      val observable2 = Observable.interval(100,<br/>      TimeUnit.MILLISECONDS).map { "Observable 2 $it" }//(2) 
+ 
+      Observable 
+        .amb(listOf(observable1,observable2))//(3) 
+        .subscribe { 
+            println("Received $it") 
+         } 
+ 
+         runBlocking { delay(1500) } 
+    } </pre>
+<p>So, in this program, we created two <kbd>Observable</kbd>'s with a <kbd>500</kbd> and a <kbd>100</kbd> milliseconds interval on comment <kbd>(1)</kbd> and <kbd>(2)</kbd> respectively. On comment <kbd>(3)</kbd>, we used the <kbd>listOf</kbd> function to create a <kbd>List&lt;Observable&gt;</kbd> from those two <kbd>Observable</kbd> and passed it to the <kbd>amb</kbd> operator. Here's the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="301" width="343" src="assets/4a444006-a544-4e14-a511-161416f032af.jpg"/></div>
+<p>We can see from the output that the <kbd>amb</kbd> operator took the emissions from <kbd>observable2</kbd> and didn't care about <kbd>observable1</kbd>, as the <kbd>observable2</kbd> instance emitted first.</p>
+<p>Just like other combination operators, <kbd>amb</kbd> also has <kbd>ambArray</kbd> and <kbd>ambWith</kbd> operator variants.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Grouping</h1>
+                </header>
+            
+            <article>
+                
+<p>Grouping is a powerful operation that can be achieved using RxKotlin. This operation allows you to group emissions based on their property. Say, for example, you have an <kbd>Observable</kbd> / <kbd>Flowable</kbd> emitting integer numbers (<kbd>Int</kbd>), and, as per your business logic, you have some separate code for even and odd numbers and want to handle them separately. Grouping is the best solution in that scenario.</p>
+<p>Let's take an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable = Observable.range(1,30) 
+ 
+      observable.groupBy {//(1) 
+        it%5 
+      }.blockingSubscribe {//(2) 
+        println("Key ${it.key} ") 
+        it.subscribe {//(3) 
+            println("Received $it") 
+        } 
+      } 
+    } </pre>
+<p>In this example, I've grouped emissions based on their remainder when divided by <kbd>5</kbd>, so, basically, there should be <kbd>5</kbd> groups (<kbd>0</kbd> through <kbd>4</kbd>). On comment <kbd>(1)</kbd> of this example, we used the <kbd>groupBy</kbd> operator and passed a predicate to it, upon which the grouping should be performed. The <kbd>groupBy</kbd> operator takes the result of the predicate to group emissions.</p>
+<p>On comment <kbd>(2)</kbd> of this example, we used the <kbd>blockingSubscribe</kbd> operator to subscribe to the newly created <kbd>Observable&lt;GroupedObservable&lt;K, T&gt;&gt;</kbd> instance. We could also use the simple <kbd>subscribe</kbd> operator; however, as we are printing the output to the console, by using <kbd>subscribe</kbd>, everything will look like a mess. Mainly because the <kbd>subscribe</kbd> operator doesn't wait for the given task on emission to complete before taking the next emission. On the other hand, <kbd>blockingSubscribe</kbd> will make the program wait until it completes processing an emission, before proceeding to a new one.</p>
+<p>The <kbd>groupBy</kbd> operator returns <kbd>Observable</kbd> that emits <kbd>GroupedObservable</kbd>, containing our groups; so, inside <kbd>blockingSubscribe</kbd>, we need to subscribe to the emitted <kbd>GroupedObservable</kbd> instance. On comment <kbd>(3)</kbd>, we did the same, after printing the <kbd>key</kbd> of the emitted <kbd>GroupedObservable</kbd> instance.</p>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="582" width="341" src="assets/4e4b8792-faec-4bba-bfb6-e69ecaf5e0a3.jpg"/></div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">flatMap, concatMap – In details</h1>
+                </header>
+            
+            <article>
+                
+<p>As promised in the previous chapter, now we will take a deeper dive into the <kbd>flatMap</kbd> and <kbd>concatMap</kbd> operators, as, by now, we have already gained some sort of expertise on the <kbd>merge</kbd> and <kbd>concat</kbd> operators and know the differences between them.</p>
+<p>Let's start with the differences between <kbd>flatMap</kbd> and <kbd>concatMap</kbd>, after which, we will also discuss their ideal implementation scenarios. We will also discuss some of their variants to know them better.</p>
+<p>In the previous chapter, we mentioned that <kbd>flatMap</kbd> internally uses the <kbd>merge</kbd> operator and <kbd>concatMap</kbd> internally uses the <kbd>concat</kbd> operator. However, what difference does that make? You just learned the differences between the <kbd>merge</kbd> and the <kbd>concat</kbd> operator, but what is the point of having two separate mapping operators based on them? So, let's start with an example. We will see an example with <kbd>flatMap</kbd>, and then we will try to implement the same with <kbd>concatMap</kbd>:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.range(1,10) 
+        .flatMap { 
+            val randDelay = Random().nextInt(10) 
+            return@flatMap Observable.just(it) 
+                         <br/>           .delay(randDelay.toLong(),TimeUnit.MILLISECONDS)//(1) 
+         } 
+         .blockingSubscribe { 
+            println("Received $it") 
+         } 
+    } </pre>
+<p>In the preceding program, we created an <kbd>Observable</kbd> instance. We then used the <kbd>flatMap</kbd> operator with the <kbd>delay</kbd> operator on it to add a random delay to the emissions.</p>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="155" width="259" src="assets/6d34b8d5-676e-409a-9f4b-c50b60f2b5e0.jpg"/></div>
+<p>From the output, we can see that the downstream didn't get the emissions in their prescribed order; I think you got the reason behind it, didn't you? That's right; the cause behind it is simply the <kbd>merge</kbd> operator, as the <kbd>merge</kbd> operator subscribes and reemits the emissions asynchronously all at one go, thus the order is not maintained.</p>
+<p>Now, let's implement the code with the <kbd>concatMap</kbd> operator:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.range(1,10) 
+         .concatMap { 
+             val randDelay = Random().nextInt(10) 
+             return@concatMap Observable.just(it) 
+            .delay(randDelay.toLong(), TimeUnit.MILLISECONDS)//(1) 
+          } 
+         .blockingSubscribe { 
+             println("Received $it") 
+          } 
+     } </pre>
+<p>The output is as follows:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="212" width="353" src="assets/fa64ca05-a241-4e58-b7bc-b7b48ec15e2e.jpg"/></div>
+<p>As the <kbd>concatMap</kbd> operator uses <kbd>concat</kbd> internally, it maintains the prescribed order of emissions.</p>
+<p>So, when to use which operator? Let's take a look at the following real-time scenarios; all of them are applicable, especially when you are building an app.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">When to use flatMap operator</h1>
+                </header>
+            
+            <article>
+                
+<p>Take a look at the following list—it contains the contexts and situations where <kbd>flatMap</kbd> will fit best:</p>
+<ul>
+<li>When you're working with a list of data within a page, activity, or fragment and want to send some data to a server or a database per item of the list. The <kbd>concatMap</kbd> operator will also do here; however, as the <kbd>flatMap</kbd> operator works asynchronously, it'll be faster, and, as you're sending data, the order doesn't really matter.</li>
+<li>Whenever you want to perform any operation on list items asynchronously and in a comparatively short time period.</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">When to use concatMap operator</h1>
+                </header>
+            
+            <article>
+                
+<p>So, when to use <kbd>concatMap</kbd><span>?</span></p>
+<p>The following list contains the contexts and situations where <kbd>concatMap</kbd> will fit best:</p>
+<ul>
+<li>When you are downloading the list of data to display to the user. The order really matters here, you will surely not want to load and display the second item of the list after the third and fourth one are already displayed, would you?</li>
+<li>Performing some operation on a sorted list, making sure the list stays the same.</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Understanding switchMap operator</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>switchMap</kbd> operator is really interesting. It listens to all the emissions of the source producer (Observable/Flowable) asynchronously, but emits only the latest one within the timeframe. Let's explain it a bit more.</p>
+<p>When the source <kbd>Observable</kbd> emits more than one item consecutively before the <kbd>switchMap</kbd> has emitted any of them, <kbd>switchMap</kbd> will take the last one and discard any emission that came in between. Let's take an example to understand it better:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      println("Without delay") 
+      Observable.range(1,10) 
+      .switchMap { 
+         val randDelay = Random().nextInt(10) 
+         return@switchMap Observable.just(it)//(1) 
+       } 
+       .blockingSubscribe { 
+          println("Received $it") 
+        } 
+       println("With delay") 
+       Observable.range(1,10) 
+       .switchMap { 
+          val randDelay = Random().nextInt(10) 
+          return@switchMap Observable.just(it) 
+          .delay(randDelay.toLong(), TimeUnit.MILLISECONDS)//(2) 
+       } 
+       .blockingSubscribe { 
+          println("Received $it") 
+       } 
+    } </pre>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="271" width="369" src="assets/60858640-4fdd-41eb-8dc1-b6b82683cfea.jpg"/></div>
+<p>In the program, we took two approaches at first, we used the <kbd>delay</kbd> operator, and then we reused the same with the <kbd>delay</kbd> operator. From the output, we can see that, for the second one, <kbd>switchMap</kbd> only emitted the last item, as it got consecutive emission for each one before it reemitted them. However, for the first one, it reemitted all the items before receiving any further emit.</p>
+<p>Still confused? Let's modify the program a bit more:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.range(1,10) 
+        .switchMap { 
+           val randDelay = Random().nextInt(10) 
+           if(it%3 == 0) 
+               Observable.just(it) 
+           else 
+               Observable.just(it) 
+               .delay(randDelay.toLong(), TimeUnit.MILLISECONDS) 
+         } 
+         .blockingSubscribe { 
+             println("Received $it") 
+         } 
+    } </pre>
+<p>In this program, instead of adding delay to all the emissions, we emitted all the numbers divisible by <kbd>3</kbd> without delay, and added a delay to the rest.</p>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="123" width="357" src="assets/70c95536-36a1-43b6-95c6-f5ead179e4ec.jpg"/></div>
+<p>As expected, the <kbd>switchMap</kbd> operator emits the only those items which were emitted by the source without delay, and the last emitted item by the source. The reason is quite simple; the <kbd>switchMap</kbd> operator was able to emit them before it received the following item.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Skipping and taking emissions</h1>
+                </header>
+            
+            <article>
+                
+<p>Just like the preceding situation in this chapter, where we used the <kbd>take</kbd> operator, there are often some scenarios where you would like to take some of the emissions and skip the remaining ones. The <kbd>skip</kbd> and <kbd>take</kbd> operators are of huge help in those scenarios. They are actually a part of the filtering operators we discussed in the previous chapter; however, honestly, they do deserve a dedicated discussion. So, here it is.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Skipping emissions (skip, skipLast, skipUntil, and skipWhile)</h1>
+                </header>
+            
+            <article>
+                
+<p>There may be a requirement where you would like to skip some emissions at the beginning or skip emissions until a particular condition is met. You may even have to wait for another producer before taking emissions and skip all remaining ones.</p>
+<p>These operators are designed keeping the exact scenario in mind. They help you skip emissions in various ways.</p>
+<p>RxKotlin provides us with many variations and overloads of the <kbd>skip</kbd> operator; we will discuss the most important ones among them:</p>
+<ul>
+<li><kbd>skip</kbd></li>
+<li><kbd>skipLast</kbd></li>
+<li><kbd>skipWhile</kbd></li>
+<li><kbd>skipUntil</kbd></li>
+</ul>
+<p>We will take a look at all of the preceding listed operators one by one.</p>
+<p>Let's start with <kbd>skip</kbd>:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.range(1,20) 
+      observable1 
+      .skip(5)//(1) 
+      .subscribe(object:Observer&lt;Int&gt; { 
+         override fun onError(e: Throwable) { 
+            println("Error $e") 
+         } 
+ 
+         override fun onComplete() { 
+            println("Complete") 
+         } 
+ 
+         override fun onNext(t: Int) { 
+            println("Received $t") 
+         } 
+ <br/>         override fun onSubscribe(d: Disposable) { 
+            println("starting skip(count)") 
+         } 
+ 
+     }) 
+ 
+     val observable2 = Observable.interval(100,TimeUnit.MILLISECONDS) 
+     observable2 
+        .skip(400,TimeUnit.MILLISECONDS)//(2) 
+        .subscribe( 
+            object:Observer&lt;Long&gt; { 
+               override fun onError(e: Throwable) { 
+                 println("Error $e") 
+               } 
+ 
+               override fun onComplete() { 
+                 println("Complete") 
+               } 
+ <br/>               override fun onNext(t: Long) { 
+                  println("Received $t") 
+               } 
+ 
+               override fun onSubscribe(d: Disposable) { 
+                  println("starting skip(time)") 
+               } 
+ 
+            } 
+           ) 
+ 
+           runBlocking { 
+             delay(1000) 
+           } 
+ 
+    } </pre>
+<p>The <kbd>skip</kbd> operator has two important overloads: <kbd>skip(count:Long)</kbd> and <kbd>skip(time:Long, unit:TimeUnit)</kbd>; the first overload works on count, discarding the first <em>n</em> number of emissions, while the second overload works on time, discarding all the emissions that came in the specified time duration.</p>
+<p>In this program, on comment <kbd>(1)</kbd>, we used the <kbd>skip(count)</kbd> operator to skip the first <kbd>5</kbd> emissions. On comment <kbd>(2)</kbd>, we used the <kbd>skip(time,unit)</kbd> operator to skip all emissions in the first <kbd>400</kbd> milliseconds (4 seconds) of the subscription.</p>
+<p>Here is the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="368" width="310" class=" image-border" src="assets/506e0abb-25c6-4dac-b820-a20fe9287f81.png"/></div>
+<p>Now, let's take a look at how the <kbd>skipLast</kbd> operator works:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable = Observable.range(1,20) 
+      observable 
+       .skipLast(5)//(1) 
+       .subscribe(object: Observer&lt;Int&gt; { 
+         override fun onError(e: Throwable) { 
+           println("Error $e") 
+         } 
+ 
+         override fun onComplete() { 
+           println("Complete") 
+         } 
+ 
+         override fun onNext(t: Int) { 
+            println("Received $t") 
+         } 
+ 
+         override fun onSubscribe(d: Disposable) { 
+            println("starting skipLast(count)") 
+         } 
+ 
+       }) 
+    } </pre>
+<p>The <kbd>skipLast</kbd> operator has many overloads like the <kbd>skip</kbd> operator. The only difference is that this operator discards emissions from last. In this program, we used the <kbd>skipLast(count)</kbd> operator to skip the last <kbd>5</kbd> emissions on comment <kbd>(1)</kbd>.</p>
+<p>Here is the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img class=" image-border" src="assets/72778450-3956-42c5-ac04-9c3337ec6556.png"/></div>
+<p>Unlike <kbd>skip</kbd> and <kbd>skipLast</kbd>, both of which skip emissions on the basis of count or time, <kbd>skipWhile</kbd> skips them on the base of a predicate (logical expression). You've to pass a predicate to the <kbd>skipWhile</kbd> operator, just like the <kbd>filter</kbd> operator. It will keep skipping emissions while the predicate evaluates to true. It will start passing all emissions downstream as soon as the predicate returns false. Let's take a look at the following piece of code:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable = Observable.range(1,20) 
+      observable 
+       .skipWhile {item-&gt;item&lt;10}//(1) 
+       .subscribe(object: Observer&lt;Int&gt; { 
+          override fun onError(e: Throwable) { 
+            println("Error $e") 
+          } 
+ 
+          override fun onComplete() { 
+            println("Complete") 
+          } 
+ 
+          override fun onNext(t: Int) { 
+            println("Received $t") 
+          } 
+ 
+          override fun onSubscribe(d: Disposable) { 
+             println("starting skipWhile") 
+          } 
+ 
+        }) 
+    } </pre>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img class=" image-border" src="assets/7c858ab3-fdba-42c1-92e5-ca5f9be5ed7d.png"/></div>
+<div class="packt_infobox">Note that, unlike filter, the <kbd>skipWhile</kbd> operator will execute the predicate until it returns false and pass all the emissions thereafter. If you want the predicate, check on all the emissions; you should rather consider the <kbd>filter</kbd> operator.</div>
+<p>Think of a situation where you're working with two producers, producer1 and producer2, and want to start processing emissions from producer1 as soon as producer2 starts emitting. In this scenario, <kbd>skipUntil</kbd> can help you out. Let's look at this example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.interval(100, TimeUnit.MILLISECONDS) 
+      val observable2 =<br/>      Observable.timer(500,TimeUnit.MILLISECONDS)//(1) 
+ 
+      observable1 
+        .skipUntil(observable2)//(2) 
+        .subscribe( 
+           object: Observer&lt;Long&gt; { 
+             override fun onError(e: Throwable) { 
+                println("Error $e") 
+             } 
+ 
+             override fun onComplete() { 
+                println("Complete") 
+            } 
+ 
+            override fun onNext(t: Long) { 
+               println("Received $t") 
+            } 
+ <br/>            override fun onSubscribe(d: Disposable) { 
+               println("starting skip(time)") 
+            } 
+ 
+          } 
+         ) 
+ 
+         runBlocking { delay(1500) } 
+    }</pre>
+<p>We will explain the code, but take a look at the output first:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="249" width="339" class=" image-border" src="assets/167b8199-a206-4b24-904b-ece08f0cb4b4.png"/></div>
+<p>On comment <kbd>(1)</kbd>, we created an <kbd>Observable</kbd> instance (<kbd>observable2</kbd>) with <kbd>Observable.timer</kbd>, which should trigger emission after <kbd>500</kbd> milliseconds. On comment <kbd>(2)</kbd>, we used that <kbd>Observable</kbd> instance (<kbd>observable2</kbd>) as the parameter to the <kbd>skipUntil</kbd> operator, which will make it discard all the emissions of <kbd>observable1</kbd> until <kbd>observable2</kbd> emits.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Take operators (take, takeLast, takeWhile, and takeUntil)</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>take</kbd> operators work in exactly the opposite way than the <kbd>skip</kbd> operators. Let's take an example of them one by one and understand how they work:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable1 = Observable.range(1,20) 
+      observable1 
+        .take(5)//(1) 
+        .subscribe(object:Observer&lt;Int&gt; { 
+           override fun onError(e: Throwable) { 
+              println("Error $e") 
+          } 
+ 
+          override fun onComplete() { 
+              println("Complete") 
+          } 
+ 
+          override fun onNext(t: Int) { 
+              println("Received $t") 
+          } 
+ 
+          override fun onSubscribe(d: Disposable) { 
+              println("starting skip(count)") 
+          } 
+ 
+       }) 
+ 
+      val observable2 = Observable.interval(100,TimeUnit.MILLISECONDS) 
+      observable2 
+         .take(400,TimeUnit.MILLISECONDS)//(2) 
+         .subscribe( 
+            object:Observer&lt;Long&gt; { 
+               override fun onError(e: Throwable) { 
+                  println("Error $e") 
+               } 
+ 
+               override fun onComplete() { 
+                  println("Complete") 
+               } 
+ 
+               override fun onNext(t: Long) { 
+                  println("Received $t") 
+               } 
+ 
+               override fun onSubscribe(d: Disposable) { 
+                  println("starting skip(time)") 
+               } 
+ 
+             } 
+           ) 
+ 
+           runBlocking { 
+             delay(1000) 
+           } 
+ 
+     }</pre>
+<p>This program is almost like the program with <kbd>skip</kbd>. The difference is that here, we used <kbd>take</kbd> instead of <kbd>skip</kbd>. Let's check the difference to understand better:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="233" width="292" class=" image-border" src="assets/5f9ecce8-1164-4214-aaf3-0acac163aedf.png"/></div>
+<p>The output shows it clearly. In the exact opposite way than the <kbd>skip</kbd> operator, the <kbd>take</kbd> operator passes the specified emissions to downstream, discarding the remaining ones. Most importantly, it also sends <kbd>onComplete</kbd> notifications to downstream on its own, as soon as it completes passing all the specified emissions.</p>
+<p>Let's test it with <kbd>takeLast</kbd> operator:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable = Observable.range(1,20) 
+      observable 
+        .takeLast(5)//(1) 
+        .subscribe(object: Observer&lt;Int&gt; { 
+           override fun onError(e: Throwable) { 
+             println("Error $e") 
+           } 
+ 
+           override fun onComplete() { 
+             println("Complete") 
+           } 
+ 
+           override fun onNext(t: Int) { 
+             println("Received $t") 
+           } 
+ 
+           override fun onSubscribe(d: Disposable) { 
+             println("starting skipLast(count)") 
+           } 
+ 
+        }) 
+    } </pre>
+<p>And, here is the output; it prints the last <kbd>5</kbd> numbers in the emission:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="156" width="311" class=" image-border" src="assets/b68993d0-5f7f-4e5c-a9b7-30d127ae0b96.png"/></div>
+<p>Now take a look at the <kbd>takeWhile</kbd>:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val observable = Observable.range(1,20) 
+      observable 
+        .takeWhile{item-&gt;item&lt;10}//(1) 
+        .subscribe(object: Observer&lt;Int&gt; { 
+            override fun onError(e: Throwable) { 
+              println("Error $e") 
+            } 
+ 
+            override fun onComplete() { 
+              println("Complete") 
+            } 
+ <br/>            override fun onNext(t: Int) { 
+              println("Received $t") 
+            } 
+ 
+            override fun onSubscribe(d: Disposable) { 
+               println("starting skipWhile") 
+            } 
+ 
+          }) 
+    }</pre>
+<p>The output is the exact opposite of <kbd>skipWhile</kbd>; instead of skipping the first <kbd>10</kbd> numbers, it prints them and discards the remaining ones:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="229" width="341" class=" image-border" src="assets/b09b0f74-c355-4734-8478-f8ddfd573c14.png"/></div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The error handling operators</h1>
+                </header>
+            
+            <article>
+                
+<p>While developing applications, errors may occur. We have to handle those errors properly to make sure our applications perform seamlessly on the user's end. Take the following program as an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.just(1,2,3,4,5) 
+        .map { it/(3-it) } 
+        .subscribe { 
+           println("Received $it") 
+        } 
+    }</pre>
+<p>Here is the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="298" width="666" src="assets/5ce81943-b2e2-46d0-854d-6202f1815d5e.jpg"/></div>
+<p>As expected, the program threw an error and that is a bad thing if that occurs on the user end. So, let's take a look at how we can handle errors in a reactive way. RxKotlin provides us with a few operators for error handling, which we'll take a look at. We will use the previous program and apply various error handling operators to them to understand them better.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">onErrorReturn – return a default value on error</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>onErrorReturn</kbd> provides you with a technique to specify a default value to return to the downstream in case an error occurred in the upstream. Take a look at the following code snippet:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.just(1,2,3,4,5) 
+        .map { it/(3-it) } 
+        .onErrorReturn { -1 }//(1) 
+        .subscribe { 
+           println("Received $it") 
+        } 
+    }</pre>
+<p>We used the <kbd>onErrorReturn</kbd> operator to return <kbd>-1</kbd> whenever an error occurs. The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="118" width="356" src="assets/b47f7737-4dd2-4843-8c97-6de780c3e88c.jpg"/></div>
+<p>As we can see in the output, the <kbd>onErrorReturn</kbd> operator returns the specified default value. The downstream didn't receive any item further as the upstream stopped emitting items as soon as the error occurred.</p>
+<div class="packt_infobox">As we mentioned earlier, both <kbd>onError</kbd> and <kbd>onComplete</kbd> are terminal operators, so the downstream stops listening to that upstream as soon as it receives any of them.</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The onErrorResumeNext operator</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>onErrorResumeNext</kbd> operator helps you subscribe to a different producer in case any error occurs.</p>
+<p>Here is an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.just(1,2,3,4,5) 
+        .map { it/(3-it) } 
+        .onErrorResumeNext(Observable.range(10,5))//(1) 
+        .subscribe { 
+           println("Received $it") 
+        } 
+   }</pre>
+<p>The output is as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="170" width="358" src="assets/4a5eb34f-e255-4706-b80b-929b6810fed6.jpg"/></div>
+<p>This operator is especially useful when you want to subscribe to another source producer in case any error occurs.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Retrying on error</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>retry</kbd> operator is another error handling operator that enables you to retry/re-subscribe to the same producer when an error occurs. You just need to provide a predicate or retry-limit when it should stop retrying. So, let's look at an example:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      Observable.just(1,2,3,4,5) 
+        .map { it/(3-it) } 
+        .retry(3)//(1) 
+        .subscribeBy ( 
+            onNext  = {println("Received $it")}, 
+            onError = {println("Error")} 
+         ) 
+         println("\n With Predicate \n") 
+        var retryCount = 0 
+        Observable.just(1,2,3,4,5) 
+        .map { it/(3-it) } 
+        .retry {//(2) 
+           _, _-&gt; 
+           (++retryCount)&lt;3 
+        } 
+        .subscribeBy ( 
+           onNext  = {println("Received $it")}, 
+           onError = {println("Error")} 
+        ) 
+    }</pre>
+<p>On comment <kbd>(1)</kbd>, we used the <kbd>retry</kbd> operator with a retry limit, and on comment <kbd>(2)</kbd>, we used the <kbd>retry</kbd> operator with a predicate. The <kbd>retry</kbd> operator will keep retrying until the predicate returns true and will pass the error to downstream whenever the predicate returns false.</p>
+<p>Here is the output:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="305" width="295" src="assets/0eb2a87c-b227-44ed-a8ed-883acece3045.jpg"/></div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">An HTTP example</h1>
+                </header>
+            
+            <article>
+                
+<p>Any learning is not complete until and unless we apply it to a real-time scenario. So far, you have learned many concepts of reactive programming. Now, it's time to apply them to a real-world scenario, where we will use an API to get some data through an HTTP request and print the response data to the console.</p>
+<p>We used one additional plugin for this example—<kbd>RxJava-Apache-HTTP</kbd>. If you're using Gradle as your build tool, add the following dependency:</p>
+<pre>    //RxJava - Apache - HTTP 
+    compile "com.netflix.rxjava:rxjava-apache-http:0.20.7" </pre>
+<p>Here is the code:</p>
+<pre>    fun main(args: Array&lt;String&gt;) { 
+      val httpClient = HttpAsyncClients.createDefault()//(1) 
+      httpClient.start()//(2) 
+      ObservableHttp.createGet("http://rivuchk.com/feed/json",<br/>      httpClient).toObservable()//(3) 
+        .flatMap{ response -&gt; 
+           response.content.map{ bytes -&gt; 
+           String(bytes) 
+         }//(4) 
+       } 
+       .onErrorReturn {//(5) 
+          "Error Parsing data " 
+       } 
+       .subscribe { 
+          println(it)//(6) 
+          httpClient.close()//(7) 
+       } 
+    }  </pre>
+<p>In this program, we used <kbd>HttpAsyncClients.createDefault()</kbd> to get an instance of <kbd>CloseableHttpAsyncClient</kbd>. Before starting an HTTP request, we first need to start the client. We did this in the code on comment <kbd>(2)</kbd>, with <kbd>httpClient.start()</kbd>. On comment <kbd>(3)</kbd>, we created a GET request and converted it to an observable of type <kbd>ObservableHttpResponse</kbd>, so we used the <kbd>flatMap</kbd> operator to get access to the content of the response. Inside the <kbd>flatMap</kbd> operator, we used the <kbd>map</kbd> operator to convert the byte response into a <kbd>String</kbd> on comment <kbd>(4)</kbd>.</p>
+<p>On comment <kbd>(5)</kbd>, we used the <kbd>onErrorReturn</kbd> operator to return a default <kbd>String</kbd> in case there's an error.</p>
+<p>Finally, after the <kbd>onErrorReturn</kbd> operator, we subscribed to the chain and printed the response on comment <kbd>(6)</kbd>. We closed the <kbd>httpClient</kbd> as soon as we were done with the response.</p>
+<p>The following is partly a screenshot of the output:</p>
+<div class="CDPAlignCenter CDPAlign"><img src="assets/44dfe194-ba14-4a85-b8c0-5760ff6aeb3b.jpg"/></div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>This was a rather a long chapter. You learned about combining producers, and learned, in depth, about the <kbd>flatMap</kbd>, <kbd>concatMap</kbd>, and <kbd>switchMap</kbd> operators. You got introduced to the <kbd>take</kbd> and <kbd>skip</kbd> operators and their variants. You learned about the error handling approaches in reactive programming. We also tried our skills with an HTTP client example, where we requested an API to fetch JSON data and print it to the console. We didn't try to parse the JSON data, as it could increase complexity at this level. Later in this book, we will definitely parse data and display that properly.</p>
+<p>While this and <a href="e395e42a-afc0-4424-9d0f-2de06e19989d.xhtml">Chapter 5</a>, <em>Asynchronous Data Operators and Transformations</em> were more about operators, the next chapter, <a href="7eb4ad8c-cb73-4c9d-b611-fdc9b61b6a17.xhtml" target="_blank">Chapter 7</a>, <em>Concurrency and Parallel Processing in RxKotlin with Schedulers</em>, is mainly about schedulers, handling concurrency, and multi-threading, and we will get a deeper dive in asynchronous programming with RxKotlin. As we are gradually moving to more advanced topics and chapters through this book, you need to pay more attention to each chapter to get a proper grasp on each aspect of reactive programming in Kotlin.</p>
+<p>So, what are you waiting for? Turn the page, <a href="7eb4ad8c-cb73-4c9d-b611-fdc9b61b6a17.xhtml" target="_blank">Chapter 7</a>, <em>Concurrency and Parallel Processing in RxKotlin with Schedulers</em> is waiting for you.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

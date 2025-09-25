@@ -1,0 +1,448 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting Started with Arrow</h1>
+                </header>
+            
+            <article>
+                
+<p class="mce-root"><strong>Arrow</strong> (<a href="http://arrow-kt.io/">http://arrow-kt.io/</a>) is a Kotlin library that provides functional constructs, datatypes, and other abstractions. Kotlin syntax is powerful and flexible, and Arrow takes advantage of it to offer features that don't come as standard.</p>
+<p>Arrow is the result of combining the two most successful and popular functional libraries, <kbd>funKTionale</kbd> and <kbd>Kategory</kbd><span>,</span> into one. In late 2017, both developer groups, fearing a split that would damage the whole Kotlin community, decided to join forces and create a single, unified functional library.</p>
+<p class="mce-root">In this chapter, we'll cover how to use existing functions to build new and richer functions. Some of the topics that we'll cover are as follows:</p>
+<ul>
+<li class="mce-root">Function composition</li>
+<li class="mce-root">Partial application</li>
+<li class="mce-root">Currying</li>
+<li class="mce-root">Memoization</li>
+<li>Pipes</li>
+<li>Optics</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Function composition</h1>
+                </header>
+            
+            <article>
+                
+<p>One big part of functional programming as a concept is to use functions in the same way that we use any other type—as values, parameters, returns, and so on. One thing that we can do with other types is to take them as construction blocks to build other types; the same concept can be applied to functions.</p>
+<p>Function composition is a technique to build functions using existing functions; similar to Unix pipes or channel pipelines, the result value of a function is used as a parameter for the next one.</p>
+<p>In Arrow, function composition comes as a set of the <kbd>infix</kbd> extension functions:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Function</strong></p>
+</td>
+<td>
+<p><strong>Description</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>compose</kbd></p>
+</td>
+<td>
+<p>Takes the result of invoking the right-hand function as the parameter for the left-hand function.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>forwardCompose</kbd></p>
+</td>
+<td>
+<p>Takes the result of invoking the left-hand function as the parameter for the right-hand function.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>andThen</kbd></p>
+</td>
+<td>
+<p>Is an alias for <kbd>forwardCompose</kbd>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p class="mce-root">Let's compose some functions:</p>
+<pre>import arrow.syntax.function.andThen<br/>import arrow.syntax.function.compose<br/>import arrow.syntax.function.forwardCompose<br/>import java.util.*<br/><br/>val p: (String) -&gt; String = { body -&gt; "&lt;p&gt;$body&lt;/p&gt;" }<br/><br/>val span: (String) -&gt; String = { body -&gt; "&lt;span&gt;$body&lt;/span&gt;" }<br/><br/>val div: (String) -&gt; String = { body -&gt; "&lt;div&gt;$body&lt;/div&gt;" }<br/><br/>val randomNames: () -&gt; String = {<br/>    if (Random().nextInt() % 2 == 0) {<br/>        "foo"<br/>    } else {<br/>        "bar"<br/>    }<br/>}<br/><br/>fun main(args: Array&lt;String&gt;) {<br/>    val divStrong: (String) -&gt; String = div compose strong<br/><br/>    val spanP: (String) -&gt; String = p forwardCompose span<br/><br/>    val randomStrong: () -&gt; String = randomNames andThen strong<br/><br/>    println(divStrong("Hello composition world!"))<br/>    println(spanP("Hello composition world!"))<br/>    println(randomStrong())<br/>}</pre>
+<p>To build the <kbd>divStrong: (String) -&gt; String</kbd><span> function</span><span>, we compose</span> <kbd>div:(String) -&gt; String</kbd> <span>and</span> <kbd>strong:(String) -&gt; String</kbd><span>. In other words,</span> <kbd>divStrong</kbd> <span>is equivalent to the following code snippet:</span></p>
+<pre>val divStrong: (String) -&gt; String = { body -&gt; "&lt;div&gt;&lt;strong&gt;$body&lt;/div&gt;&lt;/strong&gt;"}</pre>
+<p>For <kbd>spanP:(String) -&gt; String</kbd>, we compose <kbd>span:(String) -&gt; (String)</kbd> and <kbd>p:(String) -&gt; String</kbd> as follows:</p>
+<pre>val spanP: (String) -&gt; String = { body -&gt; "&lt;span&gt;&lt;p&gt;$body&lt;/p&gt;&lt;/span&gt;"}</pre>
+<p>Notice that we are using the same type <kbd>(String) -&gt; String</kbd>, but any function can be composed if it has the right return type that the other functions need.</p>
+<p>Let's rewrite our <kbd>Channel</kbd> pipeline example with function composition:</p>
+<pre><span>data class </span>Quote(<span>val </span><span>value</span>: Double<span>, val </span><span>client</span>: String<span>, val </span><span>item</span>: String<span>, val </span><span>quantity</span>: Int)<br/><br/><span>data class </span>Bill(<span>val </span><span>value</span>: Double<span>, val </span><span>client</span>: String)<br/><br/><span>data class </span>PickingOrder(<span>val </span><span>item</span>: String<span>, val </span><span>quantity</span>: Int)<br/><br/><span>fun </span><span>calculatePrice</span>(<span>quote</span>: Quote) = Bill(<span>quote</span>.<span>value </span>* <span>quote</span>.<span>quantity</span><span>, </span><span>quote</span>.<span>client</span>) <span>to </span>PickingOrder(<span>quote</span>.<span>item</span><span>, </span><span>quote</span>.<span>quantity</span>)<br/><br/><span>fun </span><span>filterBills</span>(<span>billAndOrder</span>: Pair&lt;Bill<span>, </span>PickingOrder&gt;): Pair&lt;Bill<span>, </span>PickingOrder&gt;? {<br/>   <span>val </span>(<span>bill</span><span>, </span><span>_</span>) = <span>billAndOrder<br/></span><span>   </span><span>return if </span>(<span>bill</span>.<span>value </span>&gt;= <span>100</span>) {<br/>      <span>billAndOrder<br/></span><span>   </span>} <span>else </span>{<br/>      <span>null<br/></span><span>   </span>}<br/>}<br/><br/><span>fun </span><span>warehouse</span>(<span>order</span>: PickingOrder) {<br/>   <span>println</span>(<span>"Processing order = </span><span>$</span><span>order</span><span>"</span>)<br/>}<br/><br/><span>fun </span><span>accounting</span>(<span>bill</span>: Bill) {<br/>   <span>println</span>(<span>"processing = </span><span>$</span><span>bill</span><span>"</span>)<br/>}<br/><br/><span>fun </span><span>splitter</span>(<span>billAndOrder</span>: Pair&lt;Bill<span>, </span>PickingOrder&gt;?) {<br/>   <span>if </span>(<span>billAndOrder </span>!= <span>null</span>) {<br/>      <span>warehouse</span>(<span>billAndOrder</span>.<span>second</span>)<br/>      <span>accounting</span>(<span>billAndOrder</span>.<span>first</span>)<br/>   }<br/>}<br/><br/><span>fun main(args: Array&lt;String&gt;) {<br/></span><span>   val salesSystem:(Quote) -&gt; Unit = ::calculatePrice andThen ::filterBills forwardCompose ::splitter<br/></span><span>   salesSystem(Quote(20.0, "Foo", "Shoes", 1))<br/></span><span>   salesSystem(Quote(20.0, "Bar", "Shoes", 200))<br/></span><span>   salesSystem(Quote(2000.0, "Foo", "Motorbike", 1))<br/></span><span>}<br/></span></pre>
+<p>The <kbd>salesSystem: (Quote) -&gt; Unit</kbd> function is very complex in its behavior, but was built using other functions as building blocks.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Partial application</h1>
+                </header>
+            
+            <article>
+                
+<p>With function composition, we take two functions to create the third function; with partial application, we create a new function by passing a parameter to an existing function.</p>
+<p>Arrow comes with two flavours of partial application—explicit and implicit.</p>
+<p>The explicit style uses a series of extension functions called <kbd>partially1</kbd>, <kbd>partially2</kbd>, all the way up to <kbd>partially22</kbd>. The implicit style takes a series of extensions, overloading the <kbd>invoke</kbd> operator:</p>
+<pre><span>package </span>com.packtpub.functionalkotlin.chapter11<br/><br/><span>import </span>arrow.syntax.function.invoke<br/><span>import </span>arrow.syntax.function.partially3<br/><span><br/></span><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>strong</span>: (String<span>, </span>String<span>, </span>String) -&gt; String = <span>{ </span><span>body</span><span>, </span><span>id</span><span>, </span><span>style </span><span>-&gt; </span><span>"&lt;strong id=</span><span>\"$</span><span>id</span><span>\"</span><span> style=</span><span>\"$</span><span>style</span><span>\"</span><span>&gt;</span><span>$</span><span>body</span><span>&lt;/strong&gt;" </span><span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>redStrong</span>: (String<span>, </span>String) -&gt; String = <span>strong</span>.<span>partially3</span>(<span>"font: red"</span>) <span>//Explicit<br/></span><span><br/></span><span>   </span><span>val </span><span>blueStrong</span>: (String<span>, </span>String) -&gt; String = <span>strong</span>(<span>p3 = </span><span>"font: blue"</span>) <span>//Implicit<br/></span><span><br/></span><span>   </span><span>println</span>(<span>redStrong</span>(<span>"Red Sonja"</span><span>, </span><span>"movie1"</span>))<br/>   <span>println</span>(<span>blueStrong</span>(<span>"Deep Blue Sea"</span><span>, </span><span>"movie2"</span>))<br/>}</pre>
+<p>Both styles can be chained as follows:</p>
+<pre><span>fun </span><span>partialSplitter</span>(<span>billAndOrder</span>: Pair&lt;Bill<span>, </span>PickingOrder&gt;?<span>, </span><span>warehouse</span>: (PickingOrder) -&gt; <span>Unit</span><span>, </span><span>accounting</span>: (Bill) -&gt; <span>Unit</span>) {<br/>   <span>if </span>(<span>billAndOrder </span>!= <span>null</span>) {<br/>      <span>warehouse</span>(<span>billAndOrder</span>.<span>second</span>)<br/>      <span>accounting</span>(<span>billAndOrder</span>.<span>first</span>)<br/>   }<br/>}<br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>splitter</span>: (<span>billAndOrder</span>: Pair&lt;Bill<span>, </span>PickingOrder&gt;?) -&gt; <span>Unit </span>= ::partialSplitter.<span>partially2 </span><span>{ </span><span>order </span><span>-&gt; </span><span>println</span>(<span>"TESTING </span><span>$</span><span>order</span><span>"</span>) <span>}</span>(<span>p2 = </span>::accounting)<br/><br/>   <span>val </span><span>salesSystem</span>: (<span>quote</span>: Quote) -&gt; <span>Unit </span>= ::calculatePrice <span>andThen </span>::filterBills <span>forwardCompose </span><span>splitter<br/></span><span>   salesSystem</span>(Quote(<span>20.0</span><span>, </span><span>"Foo"</span><span>, </span><span>"Shoes"</span><span>, </span><span>1</span>))<br/>   <span>salesSystem</span>(Quote(<span>20.0</span><span>, </span><span>"Bar"</span><span>, </span><span>"Shoes"</span><span>, </span><span>200</span>))<br/>   <span>salesSystem</span>(Quote(<span>2000.0</span><span>, </span><span>"Foo"</span><span>, </span><span>"Motorbike"</span><span>, </span><span>1</span>))<br/>}</pre>
+<p>Our original <kbd>splitter</kbd> function was not very flexible as it directly invoked warehouse and accounting functions. The <kbd>partialSplitter</kbd> function resolves this problem by taking <kbd>warehouse</kbd> and <kbd>accounting</kbd> as parameters; however a <kbd>(Pair&lt;Bill, PickingOrder&gt;?, (PickingOrder) -&gt; Unit, (Bill) -&gt; Unit)</kbd> function can't be used in composition. Then, we partially apply two functions—a lambda and a reference.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Binding</h1>
+                </header>
+            
+            <article>
+                
+<p>A special case of partial application is <strong>binding</strong>. With binding, you pass a <kbd>T</kbd> <span>parameter </span>to the <kbd>(T) -&gt; R</kbd> function but without executing it, effectively returning an <kbd>() -&gt; R</kbd> function:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/><br/>   <span>val </span><span>footer</span>:(String) -&gt; String = <span>{</span><span>content </span><span>-&gt; </span><span>"&lt;footer&amp;gt;</span><span>$</span><span>content</span><span>&lt;/footer&gt;"</span><span>}</span><span><br/></span><span>   </span><span>val </span><span>fixFooter</span>: () -&gt; String = <span>footer</span>.<span>bind</span>(<span>"Functional Kotlin - 2018"</span>) <span>//alias for partially1</span><span><br/></span><span>   </span><span>println</span>(<span>fixFooter</span>())<br/>}</pre>
+<p>The function bind is just an alias for <kbd>partially1</kbd>, but it makes sense to have a separate name for it and make it more semantically correct.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Reverse</h1>
+                </header>
+            
+            <article>
+                
+<p><strong>Reverse</strong> takes any function and returns it with its parameter in the reverse order (in other languages, this function is known as <strong>flip</strong>). Let's look at the following code:</p>
+<pre><span>import </span>arrow.syntax.function.partially3<br/><span>import </span>arrow.syntax.function.reverse<br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>strong</span>: (String<span>, </span>String<span>, </span>String) -&gt; String = <span>{ </span><span>body</span><span>, </span><span>id</span><span>, </span><span>style </span><span>-&gt; </span><span>"&lt;strong id=</span><span>\"$</span><span>id</span><span>\"</span><span> style=</span><span>\"$</span><span>style</span><span>\"</span><span>&gt;</span><span>$</span><span>body</span><span>&lt;/strong&gt;" </span><span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>redStrong</span>: (String<span>, </span>String) -&gt; String = <span>strong</span>.<span>partially3</span>(<span>"font: red"</span>) <span>//Explicit<br/></span><span><br/></span><span>   </span><span>println</span>(<span>redStrong</span>(<span>"Red Sonja"</span><span>, </span><span>"movie1"</span>))<br/><br/>   <span>println</span>(<span>redStrong</span>.<span>reverse</span>()(<span>"movie2"</span><span>, </span><span>"The Hunt for Red October"</span>))<br/><br/>}</pre>
+<p>Our <kbd>redStrong</kbd> function is awkward to use, as we'll expect to have <kbd>id</kbd> first and then <kbd>body</kbd>, but, is easily fixable with the <kbd>reverse</kbd> extension function. The <kbd>reverse</kbd> function can be applied to functions from <span>parameters</span> <kbd>1</kbd> to <kbd>22</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Pipes</h1>
+                </header>
+            
+            <article>
+                
+<p>A <kbd>pipe</kbd> <span>function </span>takes a <kbd>T</kbd> <span>value </span>and invokes a <kbd>(T) -&gt; R</kbd> <span>function </span>with it:</p>
+<pre><span>import </span>arrow.syntax.function.pipe<br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>    <span>val </span><span>strong</span>: (String) -&gt; String = <span>{ </span><span>body </span><span>-&gt; </span><span>"&lt;strong&gt;</span><span>$</span><span>body</span><span>&lt;/strong&gt;" </span><span>}<br/></span><span><br/></span><span>   </span><span>"From a pipe"</span>.<span>pipe</span>(<span>strong</span>).<span>pipe</span>(::println)<br/>}</pre>
+<p>A <strong>pipe</strong> is similar to function composition, but instead of generating new functions, we can chain function invocations to produce new values, reducing nesting calls. Pipes are known in other languages, such as <strong>Elm</strong> and <strong>Ocaml</strong>, as the operator <kbd>|&gt;</kbd>:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>splitter</span>(<span>filterBills</span>(<span>calculatePrice</span>(Quote(<span>20.0</span><span>, </span><span>"Foo"</span><span>, </span><span>"Shoes"</span><span>, </span><span>1</span>)))) //Nested<br/><br/>   Quote(<span>20.0</span><span>, </span><span>"Foo"</span><span>, </span><span>"Shoes"</span><span>, </span><span>1</span>) <span>pipe </span>::calculatePrice <span>pipe </span>::filterBills <span>pipe </span>::splitter //Pipe<br/>}</pre>
+<p>Both lines are equivalent, but the first one must be understood backwards and the second one should read from left to right:</p>
+<pre><span>import </span>arrow.syntax.function.pipe<br/><span>import </span>arrow.syntax.function.pipe3<br/><span>import </span>arrow.syntax.function.reverse<br/><span><br/></span><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>strong</span>: (String<span>, </span>String<span>, </span>String) -&gt; String = <span>{ </span><span>body</span><span>, </span><span>id</span><span>, </span><span>style </span><span>-&gt; </span><span>"&lt;strong id=</span><span>\"$</span><span>id</span><span>\"</span><span> style=</span><span>\"$</span><span>style</span><span>\"</span><span>&gt;</span><span>$</span><span>body</span><span>&lt;/strong&gt;" </span><span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>redStrong</span>: (String<span>, </span>String) -&gt; String = <span>"color: red" </span><span>pipe3 </span><span>strong</span>.<span>reverse</span>()<br/>   <br/>   <span>redStrong</span>(<span>"movie3"</span><span>, </span><span>"Three colors: Red"</span>) <span>pipe </span>::println<br/>}</pre>
+<p>When <kbd>pipe</kbd> is applied to a multi-parameter function, using its variants <kbd>pipe2</kbd> to <kbd>pipe22</kbd>, it behaves as <kbd>partially1</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Currying</h1>
+                </header>
+            
+            <article>
+                
+<p>Applying curried to a function of <em>n</em> parameters, for example, <kbd>(A, B) -&gt; R</kbd>, transforms it into a chain of the <kbd>n</kbd> function calls, <kbd>(A) -&gt; (B) -&gt; R</kbd>:</p>
+<pre><span>import </span>arrow.syntax.function.curried<br/><span>import </span>arrow.syntax.function.pipe<br/><span>import </span>arrow.syntax.function.reverse<br/><span>import </span>arrow.syntax.function.uncurried<br/><br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/><br/>   <span>val </span><span>strong</span>: (String<span>, </span>String<span>, </span>String) -&gt; String = <span>{ </span><span>body</span><span>, </span><span>id</span><span>, </span><span>style </span><span>-&gt; </span><span>"&lt;strong id=</span><span>\"$</span><span>id</span><span>\"</span><span> style=</span><span>\"$</span><span>style</span><span>\"</span><span>&gt;</span><span>$</span><span>body</span><span>&lt;/strong&gt;" </span><span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>curriedStrong</span>: (<span>style</span>: String) -&gt; (<span>id</span>: String) -&gt; (<span>body</span>: String) -&gt; String = <span>strong</span>.<span>reverse</span>().<span>curried</span>()<br/><br/>   <span>val </span><span>greenStrong</span>: (<span>id</span>: String) -&gt; (<span>body</span>: String) -&gt; String = <span>curriedStrong</span>(<span>"color:green"</span>)<br/><br/>   <span>val </span><span>uncurriedGreenStrong</span>: (<span>id</span>: String<span>, </span><span>body</span>: String) -&gt; String = <span>greenStrong</span>.<span>uncurried</span>()<br/><br/>   <span>println</span>(<span>greenStrong</span>(<span>"movie5"</span>)(<span>"Green Inferno"</span>))<br/><br/>   <span>println</span>(<span>uncurriedGreenStrong</span>(<span>"movie6"</span><span>, </span><span>"Green Hornet"</span>))<br/><br/>   <span>"Fried Green Tomatoes" </span><span>pipe </span>(<span>"movie7" </span><span>pipe </span><span>greenStrong</span>) <span>pipe </span>::println<br/>}</pre>
+<p>Functions on curried forms can be transformed into a normal, multi-parameter form with <kbd>uncurried()</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Differences between the currying and partial application</h1>
+                </header>
+            
+            <article>
+                
+<p>There is some confusion between currying and partial application. Some authors treat them as synonymous, but they are different:</p>
+<pre><span>import </span>arrow.syntax.function.curried<br/><span>import </span>arrow.syntax.function.invoke<br/><span><br/></span><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>strong</span>: (String<span>, </span>String<span>, </span>String) -&gt; String = <span>{ </span><span>body</span><span>, </span><span>id</span><span>, </span><span>style </span><span>-&gt; </span><span>"&lt;strong id=</span><span>\"$</span><span>id</span><span>\"</span><span> style=</span><span>\"$</span><span>style</span><span>\"</span><span>&gt;</span><span>$</span><span>body</span><span>&lt;/strong&gt;" </span><span>}<br/></span><span><br/></span><span>   </span><span>println</span>(<span>strong</span>.<span>curried</span>()(<span>"Batman Begins"</span>)(<span>"trilogy1"</span>)(<span>"color:black"</span>)) <span>// Curried<br/></span><span><br/></span><span>   </span><span>println</span>(<span>strong</span>(<span>"The Dark Knight"</span>)(<span>"trilogy2"</span>)(<span>"color:black"</span>)) <span>// Fake curried, just partial application<br/></span><span><br/></span><span>   </span><span>println</span>(<span>strong</span>(<span>p2 = </span><span>"trilogy3"</span>)(<span>p2 = </span><span>"color:black"</span>)(<span>"The Dark Knight rises"</span>)) <span>// partial application</span><span>   <br/></span>}</pre>
+<p>The differences are significant and they can help us to decide when to use one or the other:</p>
+<table>
+<tbody>
+<tr>
+<td/>
+<td>
+<p><strong>Currying</strong></p>
+</td>
+<td>
+<p><strong>Partial application</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Return value</strong></p>
+</td>
+<td>
+<p>When a function of arity <em>N</em> gets curried, it returns a chain of functions of <em>N</em> size, (curried form).</p>
+</td>
+<td>
+<p>When a function or arity <em>N</em> gets partially applied, it returns a function of arity <em>N - 1</em>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Parameter application</strong></p>
+</td>
+<td>
+<p>After curried, only the first parameter of the chain can be applied.</p>
+</td>
+<td>
+<p>Any parameter can be applied in any order.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Reverting</strong></p>
+</td>
+<td>
+<p>It is possible to take a function on the curried form and revert it to a multi-parameter function.</p>
+</td>
+<td>
+<p>As partial application doesn't change the function form, reverting is not applicable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p class="mce-root">Partial application can be more flexible, but some functional styles tend to favor currying. The important thing to grasp is that both styles are different and both are supported by Arrow.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Logical complement</h1>
+                </header>
+            
+            <article>
+                
+<p>A <strong>logical complement</strong> takes any predicate (a function with a return <kbd>Boolean</kbd> <span>type</span>) and negates it. Let's look at the following code:</p>
+<pre><span>import </span>arrow.core.Predicate<br/><span>import </span>arrow.syntax.function.complement<br/><br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>evenPredicate</span>: Predicate&lt;Int&gt; = <span>{ </span><span>i</span>: Int <span>-&gt; </span><span>i </span>% <span>2 </span>== <span>0 </span><span>}<br/></span><span>   </span><span>val </span><span>oddPredicate</span>: (Int) -&gt; Boolean = <span>evenPredicate</span>.<span>complement</span>()<br/><br/>   <span>val </span><span>numbers</span>: IntRange = <span>1</span>..<span>10<br/></span><span>   </span><span>val </span><span>evenNumbers</span>: <span>List</span>&lt;Int&gt; = <span>numbers</span>.<span>filter</span>(<span>evenPredicate</span>)<br/>   <span>val </span><span>oddNumbers</span>: <span>List</span>&lt;Int&gt; = <span>numbers</span>.<span>filter</span>(<span>oddPredicate</span>)<br/><br/>   <span>println</span>(<span>evenNumbers</span>)<br/>   <span>println</span>(<span>oddNumbers</span>)<br/>}</pre>
+<p>Notice that we use a <kbd>Predicate&lt;T&gt;</kbd> type, but it is just an alias for <kbd>(T) -&gt; Boolean</kbd>. There are complement extension functions for predicates from <kbd>0</kbd> to <kbd>22</kbd> parameters.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Memoization</h1>
+                </header>
+            
+            <article>
+                
+<p><strong>Memoization</strong> is a technique to cache results of pure functions. A memoized function behaves as a normal function, but stores the result of previous computations associated with the parameters supplied to produce that result.</p>
+<p>The classic example of memoization is Fibonacci:</p>
+<pre><span>import </span>arrow.syntax.function.memoize<br/><span>import </span>kotlin.system.measureNanoTime<br/><br/><span>fun </span><span>recursiveFib</span>(<span>n</span>: Long): Long = <span>if </span>(<span>n </span>&lt; <span>2</span>) {<br/>   <span>n<br/></span>} <span>else </span>{<br/>   <span>recursiveFib</span>(<span>n </span>- <span>1</span>) + <span>recursiveFib</span>(<span>n </span>- <span>2</span>)<br/>}<br/><br/><span>fun </span><span>imperativeFib</span>(<span>n</span>: Long): Long {<br/>   <span>return when </span>(<span>n</span>) {<br/>      <span>0L </span>-&gt; <span>0<br/></span><span>      1L </span>-&gt; <span>1<br/></span><span>      </span><span>else </span>-&gt; {<br/>         <span>var </span><span>a </span>= <span>0L<br/></span><span>         </span><span>var </span><span>b </span>= <span>1L<br/></span><span>         </span><span>var </span><span>c </span>= <span>0L<br/></span><span>         </span><span>for </span>(<span>i </span><span>in </span><span>2</span>..<span>n</span>) {<br/>            <span>c </span>= <span>a </span>+ <span>b<br/></span><span>            a </span>= <span>b<br/></span><span>            b </span>= <span>c<br/></span><span>         </span>}<br/>         <span>c<br/></span><span>      </span>}<br/>   }<br/>}<br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/><br/>   <span>var </span><span>lambdaFib</span>: (Long) -&gt; Long = <span>{ </span><span>it </span><span>} </span><span>//Declared ahead to be used inside recursively<br/></span><span><br/></span><span>   </span><span>lambdaFib </span>= <span>{ </span><span>n</span>: Long <span>-&gt;<br/></span><span>      </span><span>if </span>(<span>n </span>&lt; <span>2</span>) <span>n </span><span>else </span><span>lambdaFib</span>(<span>n </span>- <span>1</span>) + <span>lambdaFib</span>(<span>n </span>- <span>2</span>)<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>var </span><span>memoizedFib</span>: (Long) -&gt; Long = <span>{ </span><span>it </span><span>}<br/></span><span><br/></span><span>   </span><span>memoizedFib </span>= <span>{ </span><span>n</span>: Long <span>-&gt;<br/></span><span>      </span><span>if </span>(<span>n </span>&lt; <span>2</span>) <span>n </span><span>else </span><span>memoizedFib</span>(<span>n </span>- <span>1</span>) + <span>memoizedFib</span>(<span>n </span>- <span>2</span>)<br/>   <span>}</span>.<span>memoize</span>()<br/><br/>   <span>println</span>(<span>milliseconds</span>(<span>"imperative fib"</span>) <span>{ </span><span>imperativeFib</span>(<span>40</span>) <span>}</span>) <span>//0.006<br/></span><span>   <br/></span><span>   </span><span>println</span>(<span>milliseconds</span>(<span>"recursive fib"</span>) <span>{ </span><span>recursiveFib</span>(<span>40</span>) <span>}</span>) <span>//1143.167<br/></span><span>   </span><span>println</span>(<span>milliseconds</span>(<span>"lambda fib"</span>) <span>{ </span><span>lambdaFib</span>(<span>40</span>) <span>}</span>) <span>//4324.890<br/></span><span>   </span><span>println</span>(<span>milliseconds</span>(<span>"memoized fib"</span>) <span>{ </span><span>memoizedFib</span>(<span>40</span>) <span>}</span>) <span>//1.588<br/></span>}<br/><br/><span>inline fun </span><span>milliseconds</span>(<span>description</span>: String<span>, </span><span>body</span>: () -&gt; <span>Unit</span>): String {<br/>   <span>return </span><span>"</span><span>$</span><span>description</span><span>:</span><span>${</span><span>measureNanoTime</span>(<span>body</span>) / <span>1_000_000.00</span><span>}</span><span> ms"<br/></span>}</pre>
+<p>Our memoized version is more than 700 times faster than a recursive function version (which is almost four times faster than the lambda version). The imperative version is unbeatable, as it is heavily optimized by the compiler:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span><br/></span><span>   </span><span>var </span><span>lambdaFib</span>: (Long) -&gt; Long = <span>{ </span><span>it </span><span>} </span><span>//Declared ahead to be used inside recursively<br/></span><span><br/></span><span>   </span><span>lambdaFib </span>= <span>{ </span><span>n</span>: Long <span>-&gt;<br/></span><span>      </span><span>if </span>(<span>n </span>&lt; <span>2</span>) <span>n </span><span>else </span><span>lambdaFib</span>(<span>n </span>- <span>1</span>) + <span>lambdaFib</span>(<span>n </span>- <span>2</span>)<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>var </span><span>memoizedFib</span>: (Long) -&gt; Long = <span>{ </span><span>it </span><span>}<br/></span><span><br/></span><span>   </span><span>memoizedFib </span>= <span>{ </span><span>n</span>: Long <span>-&gt;<br/></span><span>      </span><span>println</span>(<span>"from memoized fib n = </span><span>$</span><span>n</span><span>"</span>)<br/>      <span>if </span>(<span>n </span>&lt; <span>2</span>) <span>n </span><span>else </span><span>memoizedFib</span>(<span>n </span>- <span>1</span>) + <span>memoizedFib</span>(<span>n </span>- <span>2</span>)<br/>   <span>}</span>.<span>memoize</span>()<br/>   <span>val </span><span>job </span>= <span>launch </span><span>{<br/></span><span>      </span><span>repeat</span>(<span>10</span>) <span>{ </span><span>i </span><span>-&gt;<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{ </span><span>println</span>(<span>milliseconds</span>(<span>"On coroutine </span><span>$</span><span>i</span><span> - imperative fib"</span>) <span>{ </span><span>imperativeFib</span>(<span>40</span>) <span>}</span>) <span>}<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{ </span><span>println</span>(<span>milliseconds</span>(<span>"On coroutine </span><span>$</span><span>i</span><span> - recursive fib"</span>) <span>{ </span><span>recursiveFib</span>(<span>40</span>) <span>}</span>) <span>}<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{ </span><span>println</span>(<span>milliseconds</span>(<span>"On coroutine </span><span>$</span><span>i</span><span> - lambda fib"</span>) <span>{ </span><span>lambdaFib</span>(<span>40</span>) <span>}</span>) <span>}<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{ </span><span>println</span>(<span>milliseconds</span>(<span>"On coroutine </span><span>$</span><span>i</span><span> - memoized fib"</span>) <span>{ </span><span>memoizedFib</span>(<span>40</span>) <span>}</span>) <span>}<br/></span><span>      }<br/></span><span>   }<br/></span><span><br/></span><span>   </span><span>job</span>.<span>join</span>()<br/><br/><span>}</span></pre>
+<p>Memoized functions, internally, use a thread-safe structure to store their results, and are therefore safe to use on coroutines or any other concurrent code.</p>
+<p>There are potential downsides of using memoized functions. The first is that the process of reading the internal cache is higher than the actual computation or memory consumption, as right now, memoized functions don't expose any behavior to control their internal storage.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Partial functions</h1>
+                </header>
+            
+            <article>
+                
+<p>A <strong>partial function</strong> (not to be confused with partial applied function) is a function that is not defined for every possible value of its parameter type. In contrast, a <strong>total function</strong> is a function that is defined for every possible value.</p>
+<p>Let's have a look at the following example:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>upper</span>: (String?) -&gt; String = <span>{ </span><span>s</span>:String? <span>-&gt; </span><span>s</span>!!.<span>toUpperCase</span>()<span>} </span><span>//Partial function, it can't transform null<br/></span><span>   <br/></span><span>   </span><span>listOf</span>(<span>"one"</span><span>, </span><span>"two"</span><span>, null, </span><span>"four"</span>).<span>map</span>(<span>upper</span>).<span>forEach</span>(::println) //NPE<br/>}</pre>
+<p>The <kbd>upper</kbd> function is a partial function; it can't process a null value despite the fact that <kbd>null</kbd> is a valid <kbd>String?</kbd> value. If you try to run this code, it will throw a <kbd>NullPointerException</kbd> (<strong>NPE</strong>).</p>
+<p>Arrow provides an explicit type <kbd>PartialFunction&lt;T, R&gt;</kbd> for partial functions of type <kbd>(T) -&gt; R</kbd>:</p>
+<pre><span>import </span>arrow.core.PartialFunction<br/><span><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/> <span>val </span><span>upper</span>: (String?) -&gt; String = <span>{ </span><span>s</span>: String? <span>-&gt; </span><span>s</span>!!.<span>toUpperCase</span>() <span>} </span><span>//Partial function, it can't transform null<br/></span><span><br/></span><span> </span><span>val </span><span>partialUpper</span>: <span>PartialFunction</span>&lt;String?<span>, </span>String&gt; = <span>PartialFunction</span>(<span>definetAt = </span><span>{ </span><span>s </span><span>-&gt; </span><span>s </span>!= <span>null </span><span>}</span><span>, </span><span>f = </span><span>upper</span>)<br/><br/> <span>listOf</span>(<span>"one"</span><span>, </span><span>"two"</span><span>, null, </span><span>"four"</span>).<span>map</span>(<span>partialUpper</span>).<span>forEach</span>(::println) //IAE: Value: (null) isn't supported by this function <br/>}</pre>
+<p><kbd>PartialFunction&lt;T, R&gt;</kbd> receives a predicate <kbd>(T) -&gt; Boolean</kbd> as the first parameter which must return  <kbd>true</kbd> if the function is defined for that particular value. A <kbd>PartialFunction&lt;T, R&gt;</kbd> function extends from <kbd>(T) -&gt; R</kbd>, therefore it can be used as a normal function.</p>
+<p>In this example, the code still throws an exception but now of type <kbd>IllegalArgumentException</kbd> (<strong>IAE</strong>), with an informative message.</p>
+<p>To avoid getting exceptions, we must transform our partial function into a total one:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/><br/>   <span>val </span><span>upper</span>: (String?) -&gt; String = <span>{ </span><span>s</span>: String? <span>-&gt; </span><span>s</span>!!.<span>toUpperCase</span>() <span>} </span><span>//Partial function, it can't transform null<br/></span><span><br/></span><span>   </span><span>val </span><span>partialUpper</span>: <span>PartialFunction</span>&lt;String?<span>, </span>String&gt; = <span>PartialFunction</span>(<span>definetAt = </span><span>{ </span><span>s </span><span>-&gt; </span><span>s </span>!= <span>null </span><span>}</span><span>, </span><span>f = </span><span>upper</span>)<br/><br/>   <span>listOf</span>(<span>"one"</span><span>, </span><span>"two"</span><span>, null, </span><span>"four"</span>).<span>map</span><span>{ </span><span>s </span><span>-&gt; </span><span>partialUpper</span>.<span>invokeOrElse</span>(<span>s</span><span>, </span><span>"NULL"</span>)<span>}</span>.<span>forEach</span>(::println)<br/>}</pre>
+<p>One option is to use the <kbd>invokeOrElse</kbd> function that returns a default value in case the value <kbd>s</kbd> isn't defined for this function:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/><br/>   <span>val </span><span>upper</span>: (String?) -&gt; String = <span>{ </span><span>s</span>: String? <span>-&gt; </span><span>s</span>!!.<span>toUpperCase</span>() <span>} </span><span>//Partial function, it can't transform null<br/></span><span><br/></span><span>   </span><span>val </span><span>partialUpper</span>: <span>PartialFunction</span>&lt;String?<span>, </span>String&gt; = <span>PartialFunction</span>(<span>definetAt = </span><span>{ </span><span>s </span><span>-&gt; </span><span>s </span>!= <span>null </span><span>}</span><span>, </span><span>f = </span><span>upper</span>)<br/><br/>   <span>val </span><span>upperForNull</span>: <span>PartialFunction</span>&lt;String?<span>, </span>String&gt; = <span>PartialFunction</span>(<span>{ </span><span>s </span><span>-&gt; </span><span>s </span>== <span>null </span><span>}</span>) <span>{ </span><span>"NULL" </span><span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>totalUpper</span>: <span>PartialFunction</span>&lt;String?<span>, </span>String&gt; = <span>partialUpper </span><span>orElse </span><span>upperForNull<br/></span><span><br/></span><span>   </span><span>listOf</span>(<span>"one"</span><span>, </span><span>"two"</span><span>, null, </span><span>"four"</span>).<span>map</span>(<span>totalUpper</span>).<span>forEach</span>(::println)<br/>}</pre>
+<p>The second option is to create a total function using several partial functions with the function <kbd>orElse</kbd>:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>fizz </span>= <span>PartialFunction</span>(<span>{ </span><span>n</span>: Int <span>-&gt; </span><span>n </span>% <span>3 </span>== <span>0 </span><span>}</span>) <span>{ </span><span>"FIZZ" </span><span>}<br/></span><span>   </span><span>val </span><span>buzz </span>= <span>PartialFunction</span>(<span>{ </span><span>n</span>: Int <span>-&gt; </span><span>n </span>% <span>5 </span>== <span>0 </span><span>}</span>) <span>{ </span><span>"BUZZ" </span><span>}<br/></span><span>   </span><span>val </span><span>fizzBuzz </span>= <span>PartialFunction</span>(<span>{ </span><span>n</span>: Int <span>-&gt; </span><span>fizz</span>.<span>isDefinedAt</span>(<span>n</span>) &amp;&amp; <span>buzz</span>.<span>isDefinedAt</span>(<span>n</span>) <span>}</span>) <span>{ </span><span>"FIZZBUZZ" </span><span>}<br/></span><span>   </span><span>val </span><span>pass </span>= <span>PartialFunction</span>(<span>{ </span><span>true </span><span>}</span>) <span>{ </span><span>n</span>: Int <span>-&gt; </span><span>n</span>.<span>toString</span>() <span>}<br/></span><span><br/></span><span>   </span>(<span>1</span>..<span>50</span>).<span>map</span>(<span>fizzBuzz </span><span>orElse </span><span>buzz </span><span>orElse </span><span>fizz </span><span>orElse </span><span>pass</span>).<span>forEach</span>(::println)<br/>}</pre>
+<p>Through the <kbd>isDefinedAt(T)</kbd> function we can reuse the internal predicate, in this case, to build the condition for <kbd>fizzBuzz</kbd>. When used in a chain of <kbd>orElse</kbd>, the declaration order takes precedence, the first partial function that is defined for a value will be executed, and the other functions down the chain will be ignored.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Identity and constant</h1>
+                </header>
+            
+            <article>
+                
+<p>Identity and constant are straightforward functions. The <kbd>identity</kbd> function returns the same value provided as parameter; similar to additive and multiplicative identity property, adding 0 to any number is still the same number.</p>
+<p>The <kbd>constant&lt;T, R&gt;(t: T)</kbd> function returns a new function that will always return the <kbd>t</kbd> <span>value</span>:</p>
+<pre><span>fun main(args: Array&lt;String&gt;) {<br/></span><span><br/></span><span>   val oneToFour = 1..4<br/></span><span><br/></span><span>   println("With identity: ${oneToFour.map(::identity).joinToString()}") //1, 2, 3, 4<br/></span><span><br/></span><span>   println("With constant: ${oneToFour.map(constant(1)).joinToString()}") //1, 1, 1, 1<br/></span><span>   <br/></span><span>}</span></pre>
+<p>We can rewrite our <kbd>fizzBuzz</kbd> value using <kbd>constant</kbd>:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>fizz </span>= <span>PartialFunction</span>(<span>{ </span><span>n</span>: Int <span>-&gt; </span><span>n </span>% <span>3 </span>== <span>0 </span><span>}</span><span>, </span><span>constant</span>(<span>"FIZZ"</span>))<br/>   <span>val </span><span>buzz </span>= <span>PartialFunction</span>(<span>{ </span><span>n</span>: Int <span>-&gt; </span><span>n </span>% <span>5 </span>== <span>0 </span><span>}</span><span>, </span><span>constant</span>(<span>"BUZZ"</span>))<br/>   <span>val </span><span>fizzBuzz </span>= <span>PartialFunction</span>(<span>{ </span><span>n</span>: Int <span>-&gt; </span><span>fizz</span>.<span>isDefinedAt</span>(<span>n</span>) &amp;&amp; <span>buzz</span>.<span>isDefinedAt</span>(<span>n</span>) <span>}</span><span>, </span><span>constant</span>(<span>"FIZZBUZZ"</span>))<br/>   <span>val </span><span>pass </span>= <span>PartialFunction</span>&lt;Int<span>, </span>String&gt;(<span>constant</span>(<span>true</span>)) <span>{ </span><span>n </span><span>-&gt; </span><span>n</span>.<span>toString</span>() <span>}<br/></span><span><br/></span><span>   </span>(<span>1</span>..<span>50</span>).<span>map</span>(<span>fizzBuzz </span><span>orElse </span><span>buzz </span><span>orElse </span><span>fizz </span><span>orElse </span><span>pass</span>).<span>forEach</span>(::println)<br/>}</pre>
+<p>Identity and constant functions are useful in functional programming or in implementations of math algorithms, for example, constant is K in SKI combinator calculus.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Optics</h1>
+                </header>
+            
+            <article>
+                
+<p><strong>Optics</strong> are abstractions to update immutable data structures elegantly. One form of optics is <kbd>Lens</kbd> (or lenses, depending on the library implementation). A <kbd>Lens</kbd> is a functional reference that can focus (hence the name) into a structure and read, write, or modify its target:</p>
+<pre><span>typealias </span>GB = Int<br/><br/><span>data class </span>Memory(<span>val </span><span>size</span>: GB)<br/><span>data class </span>MotherBoard(<span>val </span><span>brand</span>: String<span>, val </span><span>memory</span>: Memory)<br/><span>data class </span>Laptop(<span>val </span><span>price</span>: Double<span>, val </span><span>motherBoard</span>: MotherBoard)<br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>laptopX8 </span>= Laptop(<span>500.0</span><span>, </span>MotherBoard(<span>"X"</span><span>, </span>Memory(<span>8</span>)))<br/><br/>   <span>val </span><span>laptopX16 </span>= <span>laptopX8</span>.<span>copy</span>(<br/>         <span>price = </span><span>780.0</span><span>,<br/></span><span>         </span><span>motherBoard = </span><span>laptopX8</span>.<span>motherBoard</span>.<span>copy</span>(<br/>               <span>memory = </span><span>laptopX8</span>.<span>motherBoard</span>.<span>memory</span>.<span>copy</span>(<br/>                     <span>size = </span><span>laptopX8</span>.<span>motherBoard</span>.<span>memory</span>.<span>size </span>* <span>2<br/></span><span>               </span>)<br/>         )<br/>   )<br/><br/>   <span>println</span>(<span>"laptopX16 = </span><span>$</span><span>laptopX16</span><span>"</span>)<br/>}</pre>
+<p>To create a new <kbd>Laptop</kbd> value from an existing one, we need to use several nested copy methods and references. In this example, it isn't as bad but you can imagine that in a more complex data structure, things can overgrow into madness.</p>
+<p>Let's write our very first <kbd>Lens</kbd> values:</p>
+<pre><span>val laptopPrice: Lens&lt;Laptop, Double&gt; = Lens(<br/></span><span>      get = { laptop -&gt; laptop.price },<br/></span><span>      set = { price -&gt; { laptop -&gt; laptop.copy(price = price) } }<br/></span><span>)</span></pre>
+<p>The <kbd>laptopPrice</kbd> value is a <kbd>Lens&lt;Laptop, Double&gt;</kbd> that we initialize using the function <kbd>Lens&lt;S, T, A, B&gt;</kbd> (actually <kbd>Lens.invoke</kbd>). <kbd>Lens</kbd> takes two functions as parameters, as <kbd>get: (S) -&gt; A</kbd> and <kbd>set: (B) -&gt; (S) -&gt; T</kbd>.</p>
+<p>As you can see, <kbd>set</kbd> is a curried function so that you can write your set like this:</p>
+<pre><span>import arrow.optics.Lens<br/><br/>val laptopPrice: Lens&lt;Laptop, Double&gt; = Lens(<br/></span><span>      get = { laptop -&gt; laptop.price },<br/></span><span>      set = { price: Double, laptop: Laptop -&gt; laptop.copy(price = price) }.curried()<br/></span><span>)</span></pre>
+<p>Which, depending on your preferences, can be easier to read and <span>write.</span></p>
+<p>Now that you have your first lens, it can be used to set, read, and modify a laptop's price. Not too impressive, but the magic of lenses is combining them:</p>
+<pre><span>import arrow.optics.modify<br/><br/>val laptopMotherBoard: Lens&lt;Laptop, MotherBoard&gt; = Lens(<br/></span><span>      get = { laptop -&gt; laptop.motherBoard },<br/></span><span>      set = { mb -&gt; { laptop -&gt; laptop.copy(motherBoard = mb) } }<br/></span><span>)<br/></span><span><br/></span><span>val motherBoardMemory: Lens&lt;MotherBoard, Memory&gt; = Lens(<br/></span><span>      get = { mb -&gt; mb.memory },<br/></span><span>      set = { memory -&gt; { mb -&gt; mb.copy(memory = memory) } }<br/></span><span>)<br/></span><span><br/></span><span>val memorySize: Lens&lt;Memory, GB&gt; = Lens(<br/></span><span>      get = { memory -&gt; memory.size },<br/></span><span>      set = { size -&gt; { memory -&gt; memory.copy(size = size) } }<br/></span><span>)<br/><br/></span><span>fun main(args: Array&lt;String&gt;) {<br/></span><span>   val laptopX8 = Laptop(500.0, MotherBoard("X", Memory(8)))<br/></span><span><br/></span><span>   val laptopMemorySize: Lens&lt;Laptop, GB&gt; = laptopMotherBoard compose motherBoardMemory compose memorySize<br/></span><span><br/></span><span>   val laptopX16 = laptopMemorySize.modify(laptopPrice.set(laptopX8, 780.0)) { size -&gt;<br/></span><span>      size * 2<br/></span><span>   }<br/></span><span><br/></span><span>   println("laptopX16 = $laptopX16")<br/></span><span>}</span></pre>
+<p>We created <kbd>laptopMemorySize</kbd> combining lenses from <kbd>Laptop</kbd> all the way to <kbd>memorySize</kbd>; then, we can set laptop's price and modify its memory.</p>
+<p>Despite how cool lenses are, it looks like a lot of boilerplate code. Fear not, Arrow can generate those lenses for you.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Configuring Arrows code generation</h1>
+                </header>
+            
+            <article>
+                
+<p>On a Gradle project, add a file called <kbd>generated-kotlin-sources.gradle</kbd>:</p>
+<pre><span>apply </span><span>plugin</span>: <span>'idea'<br/></span><span><br/></span><span>idea </span><span>{<br/></span><span>    </span><span>module </span><span>{<br/></span><span>        </span>sourceDirs <span>+= </span><span>files</span><span>(<br/></span><span>            </span><span>'build/generated/source/kapt/main'</span>,<br/>            <span>'build/generated/source/kaptKotlin/main'</span>,<br/>            <span>'build/tmp/kapt/main/kotlinGenerated'</span><span>)<br/></span><span>        </span>generatedSourceDirs <span>+= </span><span>files</span><span>(<br/></span><span>            </span><span>'build/generated/source/kapt/main'</span>,<br/>            <span>'build/generated/source/kaptKotlin/main'</span>,<br/>            <span>'build/tmp/kapt/main/kotlinGenerated'</span><span>)<br/></span><span>    }<br/></span><span>}</span></pre>
+<p>Then, in the <kbd>build.gradle</kbd> file, add the following content:</p>
+<pre><span>apply </span><span>plugin</span>: <span>'kotlin-kapt'<br/></span><span>apply </span><span>from</span>: rootProject.<span>file</span><span>(</span><span>'gradle/generated-kotlin-sources.gradle'</span><span>)</span></pre>
+<p>Add a new dependency in the <kbd>build.gradle</kbd> file:</p>
+<pre><span>dependencies </span><span>{<br/></span><span>    ...<br/></span><span>    </span><span>kapt    </span><span>'io.arrow-kt:arrow-annotations-processor:0.5.2'<br/></span><span>    ... </span><span>    <br/></span><span>}</span></pre>
+<p>Once configured, you can generate Arrow code with a normal build command, <kbd>./gradlew build</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Generating lenses</h1>
+                </header>
+            
+            <article>
+                
+<p>Once Arrow's code generation is configured, you can add the <kbd>@lenses</kbd> annotation to the data classes that you want to have lenses generated for:</p>
+<pre><span>import </span>arrow<span>.</span><span>lenses<br/></span><span>import </span>arrow<span>.</span>optics<span>.</span>Lens<br/><span>import </span>arrow<span>.</span>optics<span>.</span>modify<br/><br/><span>typealias </span>GB <span>= </span><span>Int<br/></span><span><br/></span><span>@lenses </span><span>data class </span><span>Memory</span><span>(</span><span>val </span>size: GB<span>)<br/></span><span>@lenses </span><span>data class </span><span>MotherBoard</span><span>(</span><span>val </span>brand: <span>String</span><span>, </span><span>val </span>memory: <span>Memory</span><span>)<br/></span><span>@lenses </span><span>data class </span><span>Laptop</span><span>(</span><span>val </span>price: <span>Double</span><span>, </span><span>val </span>motherBoard: <span>MotherBoard</span><span>)<br/></span><span><br/></span><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>   </span><span>val </span>laptopX8 <span>= </span><span>Laptop</span><span>(</span><span>500.0</span><span>, </span><span>MotherBoard</span><span>(</span><span>"X"</span><span>, </span><span>Memory</span><span>(</span><span>8</span><span>)))<br/></span><span><br/></span><span>   </span><span>val </span>laptopMemorySize: Lens<span>&lt;</span><span>Laptop</span><span>, </span>GB<span>&gt; = </span><span>laptopMotherBoard</span><span>() </span><span>compose </span><span>motherBoardMemory</span><span>() </span><span>compose </span><span>memorySize</span><span>()<br/></span><span><br/></span><span>   </span><span>val </span>laptopX16 <span>= </span>laptopMemorySize<span>.</span><span>modify</span><span>(</span><span>laptopPrice</span><span>().</span><span>set</span><span>(</span>laptopX8<span>, </span><span>780.0</span><span>)) </span><span>{ </span>size <span>-&gt;<br/></span><span>      </span>size <span>* </span><span>2<br/></span><span>   </span><span>}<br/></span><span><br/></span><span>   </span><span>println</span><span>(</span><span>"laptopX16 = </span><span>$</span>laptopX16<span>"</span><span>)<br/></span><span>}</span></pre>
+<p>Arrow generates as many lenses as constructor parameters our data classes have, with the name convention <kbd>classProperty</kbd> and in the same package, so no extra imports are needed.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>In this chapter, we covered many features of Arrow that give us tools to create, generate, and enrich existing functions. We composed new functions using existing ones; we included partial application and currying. We also cached results of pure functions with memoization and modified data structures using lenses.</p>
+<p>Arrow's features open up the possibility of creating rich and maintainable applications, using basic functional principles.</p>
+<p>In the next chapter, we'll cover more Arrow features, including datatypes such as <kbd>Option</kbd>, <kbd>Either</kbd>, and <kbd>Try</kbd>. </p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

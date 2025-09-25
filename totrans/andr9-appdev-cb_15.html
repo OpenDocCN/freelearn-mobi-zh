@@ -1,0 +1,1066 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting Your App Ready for the Play Store</h1>
+                </header>
+            
+            <article>
+                
+<p>In this chapter, we will cover the following topics:</p>
+<ul>
+<li>The Android 6.0 Runtime Permission Model</li>
+<li>How to schedule an alarm</li>
+<li>Receiving notification of device boot</li>
+<li>Using AsyncTask for background work</li>
+<li>Adding speech recognition to your app</li>
+<li>How to add Google sign-in to your app</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Introduction</h1>
+                </header>
+            
+            <article>
+                
+<p>As we approach the end of this book, it's time to add the finishing touches to your application before releasing it to the Play Store. The recipes in this chapter cover the topics that can make a difference between users keeping your app or removing it.</p>
+<p>Our first recipe, <em>The Android 6.0 Runtime permission model</em>, is certainly an important topic, possibly being the primary reason Android went from version 5.x to version 6! Changes to the Android permission model have been requested for some time, so this new model is a welcome change, at least for users.</p>
+<p>Next, we'll take a look at alarms in <em>How to schedule an alarm</em>. One of the primary benefits of alarms is that the OS is responsible for maintaining the alarm, even when your application is not running. Since alarms do not persist after rebooting the device, we'll also look at how to detect a device reboot so you can recreate your alarms in <em>Receiving notification of device boot</em>.</p>
+<p>Almost any serious Android application will need a way to perform potentially blocking tasks off the main thread. Otherwise, your app runs the risk of being perceived as sluggish, or worse, completely unresponsive. <kbd>AsyncTask</kbd> was designed to make it easier to create a background worker task, as we'll demonstrate in the <em>Using AsyncTask for background work</em> recipe.</p>
+<p>If you want your app to benefit from hands-free typing or voice recognition, take a look at the <em>Adding speech recognition to your app</em> recipe, in which we'll explore the Google Speech API.</p>
+<p>Finally, we'll end the chapter with a recipe showing how to make your app more comfortable and encourage users to log in with the <em>How to add Google sign-in to your app</em> recipe.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The Android 6.0 Runtime Permission Model</h1>
+                </header>
+            
+            <article>
+                
+<p>The old security model was a sore point for many in Android. It's common to see reviews commenting on the permissions an app requires. Sometimes, permissions were unrealistic (such as a Flashlight app requiring internet permission), but other times, the developer had good reasons to request certain permissions. The main problem was that it was an all-or-nothing prospect.</p>
+<p>This finally changed with the Android 6 Marshmallow (API 23) release. The new permission model still declares permissions in the manifest as before, but users have the option of selectively accepting or denying each permission. Users can even revoke a previously granted permission.</p>
+<p>Although this is a welcome change for many, for a developer, it has the potential to break the code that was working before. We've talked about this permission change in the previous recipes, as it has far-reaching implications. This recipe will put it all together to serve as a single point of reference when implementing this change in your own apps.</p>
+<p>Google now requires apps to target Android 6.0 (API 23) and above to be included on the Play Store. If you haven't already updated your app, apps not updated will be removed by the end of the year (2018).</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting ready</h1>
+                </header>
+            
+            <article>
+                
+<p>Create a new project in Android Studio and call it <kbd>RuntimePermission</kbd>. Use the default <span class="packt_screen">Phone &amp; Tablet</span> option and select <span class="packt_screen">Empty Activity</span> when prompted for <span class="packt_screen">Activity Type</span>.</p>
+<p>The sample source code sets the minimum API to 23, but this is not required. If your <kbd>compileSdkVersion</kbd> is API 23 or above, the compiler will flag your code for the new security model.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to do it...</h1>
+                </header>
+            
+            <article>
+                
+<p>We need to start by adding our required permission to the manifest, then we'll add a button to call our check permission code. Open the Android Manifest and follow these steps:</p>
+<ol>
+<li>Add the following permission:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;uses-permission </span><span>android</span><span>:name=</span><span>"android.permission.SEND_SMS"</span><span>/&gt;</span></pre>
+<ol start="2">
+<li>Open <kbd>activity_main.xml</kbd> and replace the existing <kbd>TextView</kbd> with this button:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;Button<br/></span><span>    </span><span>android</span><span>:id=</span><span>"@+id/button"<br/></span><span>    </span><span>android</span><span>:layout_width=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:layout_height=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:text=</span><span>"Do Something"<br/></span><span>    </span><span>android</span><span>:onClick=</span><span>"doSomething"<br/></span><span>    </span><span>app</span><span>:layout_constraintBottom_toBottomOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintLeft_toLeftOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintRight_toRightOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintTop_toTopOf=</span><span>"parent" </span><span>/&gt;</span></pre>
+<ol start="3">
+<li>Open <kbd>MainActivity.java</kbd> and add the following constant to the class:</li>
+</ol>
+<pre style="padding-left: 60px">private final int REQUEST_PERMISSION_SEND_SMS=1; </pre>
+<ol start="4">
+<li>Add this method for a permission check:</li>
+</ol>
+<pre style="padding-left: 60px">private boolean checkPermission(String permission) { 
+    int permissionCheck = <br/>         ContextCompat.checkSelfPermission( 
+            this, permission); 
+    return (permissionCheck == <br/>         PackageManager.PERMISSION_GRANTED); 
+} </pre>
+<ol start="5">
+<li>Add this method to request permission:</li>
+</ol>
+<pre style="padding-left: 60px"><span>private void </span><span>requestPermission</span>(String permissionName<span>, int </span>permissionRequestCode) {    <br/>    ActivityCompat.<span>requestPermissions</span>(<span>this, new </span>String[]{permissionName}<span>, <br/></span><span>            </span>permissionRequestCode)<span>;<br/></span>}</pre>
+<ol start="6">
+<li>Add this method to show the explanation dialog:</li>
+</ol>
+<pre style="padding-left: 60px"><span>private void </span><span>showExplanation</span>(String title<span>, </span>String message<span>, <br/></span><span>                             final </span>String permission<span>, <br/></span><span>                             final int </span>permissionRequestCode) {<br/>    AlertDialog.Builder builder = <span>new </span>AlertDialog.Builder(<span>this</span>)<span>;<br/></span><span>    </span>builder.setTitle(title)<br/>            .setMessage(message)<br/>            .setPositiveButton(android.R.string.<span>ok</span><span>,<br/></span><span>                    new </span>DialogInterface.OnClickListener() {<br/>                        <span>public void </span><span>onClick</span>(DialogInterface    <br/>                        dialog<span>,int </span>id) <br/>{<br/>                            requestPermission(<span>permission</span><span>,    <br/></span><span>                            permissionRequestCode</span>)<span>;<br/></span><span>                        </span>}<br/>                    })<span>;<br/></span><span>    </span>builder.create().show()<span>;<br/></span>}</pre>
+<ol start="7">
+<li>Add this method to handle the button click:</li>
+</ol>
+<pre style="padding-left: 60px"><span>public void </span><span>doSomething</span>(View view) {<br/>    <span>if </span>(!checkPermission(Manifest.permission.<span>SEND_SMS</span>)) {<br/>        <span>if </span>(ActivityCompat.<span>shouldShowRequestPermissionRationale</span>(<span>this, <br/></span><span>                </span>Manifest.permission.<span>SEND_SMS</span>)) {<br/>            showExplanation(<span>"Permission Needed"</span><span>, </span><span>"Rationale"</span><span>,<br/></span><span>                    </span>Manifest.permission.<span>SEND_SMS</span><span>, </span><span>REQUEST_PERMISSION_SEND_SMS</span>)<span>;<br/></span><span>        </span>} <span>else </span>{<br/>            requestPermission(Manifest.permission.<span>SEND_SMS</span><span>,<br/></span><span>                    </span><span>REQUEST_PERMISSION_SEND_SMS</span>)<span>;<br/></span><span>        </span>}<br/>    } <span>else </span>{<br/>        Toast.<span>makeText</span>(MainActivity.<span>this, </span><span>"Permission (already) <br/>        Granted!"</span><span>, </span>Toast.<span>LENGTH_SHORT</span>)<br/>                .show()<span>;<br/></span><span>    </span>}<br/>}</pre>
+<ol start="8">
+<li>Override <kbd>onRequestPermissionsResult()</kbd> as follows:</li>
+</ol>
+<pre style="padding-left: 60px"><span>@Override<br/></span><span>public void </span><span>onRequestPermissionsResult</span>(<span>int </span>requestCode<span>, </span>String permissions[]<span>, <br/></span><span>                                       int</span>[] grantResults) {<br/>    <span>switch </span>(requestCode) {<br/>        <span>case </span><span>REQUEST_PERMISSION_SEND_SMS</span>: {<br/>            <span>if </span>(grantResults.<span>length </span>&gt; <span>0 </span>&amp;&amp; grantResults[<span>0</span>] ==<br/>                    PackageManager.<span>PERMISSION_GRANTED</span>) {<br/>                Toast.<span>makeText</span>(MainActivity.<span>this, </span><span>"Granted!"</span><span>, </span>Toast.<span>LENGTH_SHORT</span>)<br/>                        .show()<span>;<br/></span><span>            </span>} <span>else </span>{<br/>                Toast.<span>makeText</span>(MainActivity.<span>this, </span><span>"Denied!"</span><span>, </span>Toast.<span>LENGTH_SHORT</span>)<br/>                        .show()<span>;<br/></span><span>            </span>}<br/>            <span>return;<br/></span><span>        </span>}<br/>    }<br/>}</pre>
+<ol start="9">
+<li>Now, you're ready to run the application on a device or emulator.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How it works...</h1>
+                </header>
+            
+            <article>
+                
+<p>Using the new Runtime Permission model involves the following:</p>
+<ol>
+<li>Check to see whether you have the desired permissions</li>
+<li>If not, check whether we should display the rationale (meaning that the request was previously denied)</li>
+<li>Request the permission; only the OS can display the permission request</li>
+<li>Handle the request response</li>
+</ol>
+<p>Here are the corresponding methods:</p>
+<ul>
+<li><kbd>ContextCompat.checkSelfPermission</kbd></li>
+<li><kbd>ActivityCompat.requestPermissions</kbd></li>
+<li><kbd>ActivityCompat.shouldShowRequestPermissionRationale</kbd></li>
+<li><kbd>onRequestPermissionsResult</kbd></li>
+</ul>
+<div class="packt_infobox">Even though you are requesting permissions at runtime, the desired permission must be listed in the Android Manifest. If the permission is not specified, the OS will automatically deny the request.</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">There's more...</h1>
+                </header>
+            
+            <article>
+                
+<p>You can grant/revoke permissions through the ADB with the following:</p>
+<pre>adb shell pm [grant|revoke] &lt;package&gt; &lt;permission-name&gt; </pre>
+<p>Here's an example to grant the <kbd>SEND_SMS</kbd> permission for our test app:</p>
+<pre>adb shell pm grant com.packtpub.androidcookbook.runtimepermissions android.permission.SEND_SMS </pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">See also</h1>
+                </header>
+            
+            <article>
+                
+<ul>
+<li>System Permissions Developer Docs: <a href="https://developer.android.com/guide/topics/security/permissions.html"><span class="URLPACKT">https://developer.android.com/guide/topics/security/permissions.html</span></a></li>
+<li>See the following link on how Android 8 (API 26) modified the behavior of how permissions are granted: <a href="https://developer.android.com/about/versions/oreo/android-8.0-changes#rmp">https://developer.android.com/about/versions/oreo/android-8.0-changes#rmp</a></li>
+<li>For a Kotlin version of this recipe, see<span> </span><em>Runtime Permission in Kotlin</em><span> </span>in <a href="939d2c0b-84d8-4093-a827-641186032dee.xhtml">Chapter 16</a>,<span> </span><em>Getting Started with Kotlin</em></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to schedule an alarm</h1>
+                </header>
+            
+            <article>
+                
+<p>Android provides <kbd>AlarmManager</kbd> to create and schedule alarms. Alarms offer the following features:</p>
+<ul>
+<li>Schedule alarms for a set time or interval</li>
+<li>Maintained by the OS, not your application, so alarms are triggered even if your application is not running or the device is asleep</li>
+</ul>
+<ul>
+<li>Can be used to trigger periodic tasks (such as an hourly news update), even if your application is not running</li>
+<li>Your app does not use resources (such as timers or background services), since the OS manages the scheduling</li>
+</ul>
+<p>Alarms are not the best solution if you need a simple delay while your application is running (such as a short delay for a UI event.) For short delays, it's easier and more efficient to use a Handler, as we've done in several previous recipes.</p>
+<p>When using alarms, keep these best practices in mind:</p>
+<ul>
+<li>Use as infrequent an alarm timing as possible</li>
+<li>Avoid waking up the device</li>
+<li>Use as imprecise timing as possible; the more precise the timing, the more resources required</li>
+<li>Avoid setting alarm times based on clock time (such as 12:00); add random adjustments if possible to avoid congestion on servers (especially important when checking for new content, such as weather or news)</li>
+</ul>
+<p>Alarms have three properties, as follows:</p>
+<ul>
+<li>Alarm type (see in the following list)</li>
+<li>Trigger time (if the time has already passed, the alarm is triggered immediately)</li>
+<li>Pending Intent</li>
+</ul>
+<p>A repeating alarm has the same three properties, plus an Interval:</p>
+<ul>
+<li>Alarm type (see the following list)</li>
+<li>Trigger time (if the time has already passed, it triggers immediately)</li>
+<li>Interval</li>
+<li>Pending Intent</li>
+</ul>
+<p>There are four alarm types:</p>
+<ul>
+<li><kbd>RTC</kbd> (<strong>Real Time Clock</strong>): This is based on the wall clock time. This does not wake<br/>
+the device.</li>
+<li><kbd>RTC_WAKEUP</kbd>: This is based on the wall clock time. This wakes the device if it<br/>
+is sleeping.</li>
+</ul>
+<ul>
+<li><kbd>ELAPSED_REALTIME</kbd>: This is based on the time elapsed since the device boot.<br/>
+This does not wake the device.</li>
+<li><kbd>ELAPSED_REALTIME_WAKEUP</kbd>: This is based on the time elapsed since the<br/>
+device boot. This wakes the device if it is sleeping.</li>
+</ul>
+<p>Elapsed Real Time is better for time interval alarms, such as every 30 minutes.</p>
+<div class="packt_tip">Alarms do not persist after device reboots. All alarms are canceled when a device shuts down, so it is your app's responsibility to reset the alarms on device boot. (See the <em>Receive notification of device boot</em> recipe for more information.)</div>
+<p>The following recipe will demonstrate how to create alarms with <kbd>AlarmManager</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting ready</h1>
+                </header>
+            
+            <article>
+                
+<p>Create a new project in Android Studio and call it <kbd>Alarms</kbd>. Use the default <span class="packt_screen">Phone &amp; Tablet</span> option and select <span class="packt_screen">Empty Activity</span> when prompted for <span class="packt_screen">Activity Type</span>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to do it...</h1>
+                </header>
+            
+            <article>
+                
+<p>Setting an alarm requires a Pending Intent, which Android sends when the alarm is triggered. Therefore, we need to set up a Broadcast Receiving to capture the alarm intent. Our UI will consist of just a simple button to set the alarm. To start, open the Android Manifest and follow these steps:</p>
+<ol>
+<li>Add the following <kbd>&lt;receiver&gt;</kbd> to the <kbd>&lt;application&gt;</kbd> element at the same level as the existing <kbd>&lt;activity&gt;</kbd> element:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;receiver </span><span>android</span><span>:name=</span><span>".AlarmBroadcastReceiver"</span><span>&gt;<br/></span><span>    &lt;intent-filter&gt;<br/></span><span>        &lt;action </span><span>android</span><span>:name=</span><span>"com.packtpub.alarms.ACTION_ALARM" </span><span>/&gt;<br/></span><span>    &lt;/intent-filter&gt;<br/></span><span>&lt;/receiver&gt;</span></pre>
+<ol start="2">
+<li>Open <kbd>activity_main.xml</kbd> and replace the existing TextView with the<br/>
+following button:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;Button<br/></span><span>    </span><span>android</span><span>:id=</span><span>"@+id/button"<br/></span><span>    </span><span>android</span><span>:layout_width=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:layout_height=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:text=</span><span>"Set Alarm"<br/></span><span>    </span><span>android</span><span>:onClick=</span><span>"setAlarm"<br/></span><span>    </span><span>app</span><span>:layout_constraintBottom_toBottomOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintLeft_toLeftOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintRight_toRightOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintTop_toTopOf=</span><span>"parent" </span><span>/&gt;</span></pre>
+<ol start="3">
+<li>Create a new Java class called <kbd>AlarmBroadcastReceiver</kbd> using the following code:</li>
+</ol>
+<pre style="padding-left: 60px"><span>public class </span>AlarmBroadcastReceiver <span>extends </span>BroadcastReceiver {    <br/>    <span>public static final </span>String <span>ACTION_ALARM</span>= <span>"com.packtpub.alarms.ACTION_ALARM"</span><span>;<br/></span><span><br/></span><span>    </span><span>@Override<br/></span><span>    </span><span>public void </span><span>onReceive</span>(Context context<span>, </span>Intent intent) {<br/>        <span>if </span>(<span>ACTION_ALARM</span>.equals(intent.getAction())) {<br/>            Toast.<span>makeText</span>(context<span>, </span><span>ACTION_ALARM</span><span>, </span>Toast.<span>LENGTH_SHORT</span>).show()<span>;<br/></span><span>        </span>}<br/>    }<br/>} </pre>
+<ol start="4">
+<li>Open <kbd>ActivityMain.java</kbd> and add the method for the button click:</li>
+</ol>
+<pre style="padding-left: 60px"><span>public void </span><span>setAlarm</span>(View view) {<br/>    Intent intentToFire = <span>new </span>Intent(getApplicationContext()<span>, </span>AlarmBroadcastReceiver.<span>class</span>)<span>;<br/></span><span>    </span>intentToFire.setAction(AlarmBroadcastReceiver.<span>ACTION_ALARM</span>)<span>;<br/></span><span>    </span>PendingIntent alarmIntent = PendingIntent.<span>getBroadcast</span>(getApplicationContext()<span>, </span><span>0</span><span>,<br/></span><span>            </span>intentToFire<span>, </span><span>0</span>)<span>;<br/></span><span>    </span>AlarmManager alarmManager = (AlarmManager)getSystemService(Context.<span>ALARM_SERVICE</span>)<span>;<br/></span><span>    long </span>thirtyMinutes=SystemClock.<span>elapsedRealtime</span>() + <span>30 </span>* <span>1000</span><span>;<br/></span><span>    </span>alarmManager.set(AlarmManager.<span>ELAPSED_REALTIME</span><span>, </span>thirtyMinutes<span>, </span>alarmIntent)<span>;<br/></span>}</pre>
+<ol start="5">
+<li>You're ready to run the application on a device or emulator.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How it works...</h1>
+                </header>
+            
+            <article>
+                
+<p>Creating the alarm is done with this line of code:</p>
+<pre>alarmManager.set(AlarmManager.ELAPSED_REALTIME, thirtyMinutes, <br/>     alarmIntent);</pre>
+<p>Here's the method signature:</p>
+<pre>set(AlarmType, Time, PendingIntent); </pre>
+<div class="packt_infobox">Prior to Android 4.4 KitKat (API 19), this was the method to request an exact time. Android 4.4 and later will consider this as an inexact time for efficiency, but will not deliver the intent prior to the requested time. (See <kbd>setExact()</kbd> as follows if you need an exact time.)</div>
+<p>To set the alarm, we create a Pending Intent with our previously defined alarm action:</p>
+<pre><span>public static final </span>String <span>ACTION_ALARM</span>= <span>"com.packtpub.alarms.ACTION_ALARM"</span><span>;</span></pre>
+<p>This is an arbitrary string and could be anything we want, but it needs to be unique, so we prepend our package name. We check for this action in the Broadcast Receiver's <kbd>onReceive()</kbd> callback.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">There's more...</h1>
+                </header>
+            
+            <article>
+                
+<p>If you click the <span class="packt_screen">Set Alarm</span> button and wait for thirty minutes, you will see the Toast when the alarm triggers. If you are too impatient to wait and click the <span class="packt_screen">Set Alarm</span> button again before the first alarm is triggered, you won't get two alarms. Instead, the OS will replace the first alarm with the new alarm, since they both use the same Pending Intent. (If you need multiple alarms, you need to create different Pending Intents, such as using different Actions.)</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Cancel the alarm</h1>
+                </header>
+            
+            <article>
+                
+<p>If you want to cancel the alarm, call the <kbd>cancel()</kbd> method by passing the same Pending Intent you have used to create the alarm. If we continue with our recipe, this is how it would look:</p>
+<pre>alarmManager.cancel(alarmIntent); </pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Repeating alarm</h1>
+                </header>
+            
+            <article>
+                
+<p>If you want to create a repeating alarm, use the <kbd>setRepeating()</kbd> method. The Signature is similar to the <kbd>set()</kbd> method, but with an interval. This is shown as follows:</p>
+<pre>setRepeating(AlarmType, Time (in milliseconds), Interval, PendingIntent);</pre>
+<p>For the Interval, you can specify the interval time in milliseconds or use one of the predefined <kbd>AlarmManager</kbd> constants:</p>
+<ul>
+<li><kbd>INTERVAL_DAY</kbd></li>
+<li><kbd>INTERVAL_FIFTEEN_MINUTES</kbd></li>
+<li><kbd>INTERVAL_HALF_DAY</kbd></li>
+<li><kbd>INTERVAL_HALF_HOUR</kbd></li>
+<li><kbd>INTERVAL_HOUR</kbd></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">See also</h1>
+                </header>
+            
+            <article>
+                
+<ul>
+<li><span><span class="packt_screen">AlarmManager</span> </span>Developer Docs: <a href="https://developer.android.com/reference/android/app/AlarmManager.html"><span class="URLPACKT">https://developer.android.com/reference/android/app/AlarmManager.html</span></a></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Receiving notification of device boot</h1>
+                </header>
+            
+            <article>
+                
+<p>Android sends out many intents during its lifetime. One of the first intents sent is <kbd>ACTION_BOOT_COMPLETED</kbd>. If your application needs to know when the device boots, you need to capture this intent.</p>
+<p>This recipe will walk you through the steps required to be notified when the device boots.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting ready</h1>
+                </header>
+            
+            <article>
+                
+<p>Create a new project in Android Studio and call it <kbd>DeviceBoot</kbd>. Use the default <span class="packt_screen">Phone &amp; Tablet</span> option and select <span class="packt_screen">Empty Activity</span> when prompted for <span class="packt_screen">Activity Type</span>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to do it...</h1>
+                </header>
+            
+            <article>
+                
+<p>To start, open the Android Manifest and follow these steps:</p>
+<ol>
+<li>Add the following permission:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;uses-permission </span><span>android</span><span>:name=</span><span>"android.permission.RECEIVE_BOOT_COMPLETED"</span><span>/&gt;</span></pre>
+<ol start="2">
+<li>Add the following <kbd>&lt;receiver&gt;</kbd> to the <kbd>&lt;application&gt;</kbd> element, at the same level as the existing <kbd>&lt;activity&gt;</kbd> element:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;receiver </span><span>android</span><span>:name=</span><span>".BootBroadcastReceiver"</span><span>&gt;<br/></span><span>    &lt;intent-filter&gt;<br/></span><span>        &lt;action </span><span>android</span><span>:name=</span><span>"android.intent.action.BOOT_COMPLETED"</span><span>/&gt;<br/></span><span>        &lt;category </span><span>android</span><span>:name=</span><span>"android.intent.category.DEFAULT" </span><span>/&gt;<br/></span><span>    &lt;/intent-filter&gt;<br/></span><span>&lt;/receiver&gt;</span></pre>
+<ol start="3">
+<li>Create a new Java class called <kbd>BootBroadcastReceiver</kbd> using the following code:</li>
+</ol>
+<pre style="padding-left: 60px"><span>public class </span>BootBroadcastReceiver <span>extends </span>BroadcastReceiver {<br/>    <span>@Override<br/></span><span>    </span><span>public void </span><span>onReceive</span>(Context context<span>, </span>Intent intent) {<br/>        <span>if </span>(intent.getAction().equals(<br/>                <span>"android.intent.action.BOOT_COMPLETED"</span>)) {            <br/>            Toast.<span>makeText</span>(context<span>, </span><span>"BOOT_COMPLETED"</span><span>, </span>Toast.<span>LENGTH_SHORT</span>).show()<span>;<br/></span><span>        </span>}<br/>    }<br/>}</pre>
+<ol start="4">
+<li>Reboot the device to see the Toast.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How it works...</h1>
+                </header>
+            
+            <article>
+                
+<p>When the device boots, Android will send the <kbd>BOOT_COMPLETED</kbd> intent. As long as our application has the permission to receive the intent, we will receive notifications in our Broadcast Receiver.</p>
+<p>There are three aspects to make this work:</p>
+<ul>
+<li>A permission for <kbd>RECEIVE_BOOT_COMPLETED</kbd></li>
+<li>Adding both <kbd>BOOT_COMPLETED</kbd> and <kbd>DEFAULT</kbd> to the receiver intent filter</li>
+<li>Checking for the <kbd>BOOT_COMPLETED</kbd> action in the Broadcast Receiver</li>
+</ul>
+<p>Obviously, you'll want to replace the Toast message with your own code, such as for recreating any alarms you might need.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">There's more...</h1>
+                </header>
+            
+            <article>
+                
+<p>If you followed the previous recipe, then you already have a Broadcast Receiver. You don't need a separate <kbd>BroadcastReceiver</kbd> for each action, just check for each action as needed. Here's an example if we need to handle another action:</p>
+<pre><span>@Override<br/></span><span>public void </span><span>onReceive</span>(Context context<span>, </span>Intent intent) {<br/>    <span>if </span>(intent.getAction().equals(<span>"android.intent.action.BOOT_COMPLETED"</span>)) {<br/>        Toast.<span>makeText</span>(context<span>, </span><span>"BOOT_COMPLETED"</span><span>, </span>Toast.<span>LENGTH_SHORT</span>).show()<span>;<br/></span><span>    </span>} <span>else if </span>(intent.getAction().equals(<span>"&lt;another_action&gt;"</span>)) {<br/>        <span>//handle another action <br/></span><span>    </span>}<br/>}</pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">See also</h1>
+                </header>
+            
+            <article>
+                
+<ul>
+<li><span><span class="packt_screen">Intent</span> </span>Developer Docs: <a href="https://developer.android.com/reference/android/content/Intent.html"><span class="URLPACKT">https://developer.android.com/reference/android/content/Intent.html</span></a></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Using the AsyncTask for background work</h1>
+                </header>
+            
+            <article>
+                
+<p>Throughout this book, we have mentioned the importance of not blocking the main thread. Performing long running operations on the main thread can cause your application to appear sluggish, or worse, hang. If your application doesn't respond within about 5 seconds, the system will likely display the <strong>Application Not Responding</strong> (<strong>ANR</strong>) dialog with the option to terminate your app. (This is something you will want to avoid as it's a good way to get your app uninstalled.)</p>
+<p>Android applications use a single thread model with two simple rules, as follows:</p>
+<ul>
+<li>Don't block the main thread</li>
+<li>Perform all UI operations <em>on</em> the main thread</li>
+</ul>
+<p>When Android starts your application, it automatically creates the main (or UI) thread. This is the thread from which all UI operations must be called. The first rule is "don't block the main thread." This means that you need to create a background, or a worker, thread for any long-running or potentially-blocking task. This is why all network-based tasks should be performed off the main thread.</p>
+<p>Android offers the following options when working with background threads:</p>
+<ul>
+<li><kbd>Activity.runOnUiThread()</kbd></li>
+<li><kbd>View.post()</kbd></li>
+<li><kbd>View.postDelayed()</kbd></li>
+<li><kbd>Handler</kbd></li>
+<li><kbd>AsyncTask</kbd></li>
+</ul>
+<p>This recipe will explore the <kbd>AsyncTask</kbd> class; since it was created previously, you won't have to use the Handler or post methods directly.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting ready</h1>
+                </header>
+            
+            <article>
+                
+<p>Create a new project in Android Studio and call it <kbd>AsyncTask</kbd>. Use the default <span class="packt_screen">Phone &amp; Tablet</span> option and select <span class="packt_screen">Empty Activity</span> when prompted for <span class="packt_screen">Activity Type</span>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to do it...</h1>
+                </header>
+            
+            <article>
+                
+<p>We only need a single button for this example. Open <kbd>activity_main.xml</kbd> and follow<br/>
+these steps:</p>
+<ol>
+<li>Replace the existing TextView with the following button:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;Button<br/></span><span>    </span><span>android:id=</span><span>"@+id/buttonStart"<br/></span><span>    </span><span>android:layout_width=</span><span>"wrap_content"<br/></span><span>    </span><span>android:layout_height=</span><span>"wrap_content"<br/></span><span>    </span><span>android:text=</span><span>"Start"<br/></span><span>    </span><span>android:onClick=</span><span>"start"<br/></span><span>    </span><span>app:layout_constraintBottom_toBottomOf=</span><span>"parent"<br/></span><span>    </span><span>app:layout_constraintLeft_toLeftOf=</span><span>"parent"<br/></span><span>    </span><span>app:layout_constraintRight_toRightOf=</span><span>"parent"<br/></span><span>    </span><span>app:layout_constraintTop_toTopOf=</span><span>"parent" </span><span>/&gt;</span></pre>
+<ol start="2">
+<li>Open <kbd>MainActivity.java</kbd> and add the following global variable:</li>
+</ol>
+<pre style="padding-left: 60px">Button mButtonStart; </pre>
+<ol start="3">
+<li>Add the <kbd>AsyncTask</kbd> class:</li>
+</ol>
+<pre style="padding-left: 60px"><span>private class </span>CountingTask <span>extends </span>AsyncTask&lt;Integer<span>, </span>Integer<span>, </span>Integer&gt; {<br/>    <span>@Override<br/></span><span>    </span><span>protected </span>Integer <span>doInBackground</span>(Integer... params) {<br/>        <span>int </span>count = params[<span>0</span>]<span>;<br/></span><span>        for </span>(<span>int </span>x=<span>0</span><span>;</span>x&lt;count<span>; </span>x++){<br/>            <span>try </span>{<br/>                Thread.<span>sleep</span>(<span>1000</span>)<span>;<br/></span><span>            </span>} <span>catch </span>(InterruptedException e) {<br/>                e.printStackTrace()<span>;<br/></span><span>            </span>}<br/>        }<br/>        <span>return </span>count<span>;<br/></span><span>    </span>}<br/>    <span>@Override<br/></span><span>    </span><span>protected void </span><span>onPostExecute</span>(Integer returnVal) {<br/>        <span>super</span>.onPostExecute(returnVal)<span>;<br/></span><span>        </span><span>mButtonStart</span>.setEnabled(<span>true</span>)<span>;<br/></span><span>    </span>}<br/>}</pre>
+<ol start="4">
+<li>Add the following code to <kbd>onCreate()</kbd> to initialize the button:</li>
+</ol>
+<pre style="padding-left: 60px"><span>mButtonStart</span>=findViewById(R.id.<span>buttonStart</span>)<span>;</span></pre>
+<ol start="5">
+<li>Add the method for the button click:</li>
+</ol>
+<pre style="padding-left: 60px"><span>public void </span><span>start</span>(View view){<br/>    <span>mButtonStart</span>.setEnabled(<span>false</span>)<span>;<br/></span><span>    new </span>CountingTask().execute(<span>10</span>)<span>;<br/></span>}</pre>
+<ol start="6">
+<li>You're ready to run the application on a device or emulator.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How it works...</h1>
+                </header>
+            
+            <article>
+                
+<p>This is a very simple example of an <kbd>AsyncTask</kbd> just to show it working. Technically, only <kbd>doInBackground()</kbd> is required, but usually, you want to receive notifications <span>when it finishes, which is done</span> via <kbd>onPostExecute()</kbd> .</p>
+<p>An <kbd>AsyncTask</kbd> works by creating a worker thread for the <kbd>doInBackground()</kbd> method, then responds on the UI thread in the <kbd>onPostExecute()</kbd> callback. Our example uses the Thread.Sleep() method to put the thread to sleep for the specified time (1000 milliseconds in our example). Since we call CountingTask with the value 10, the background task is going to take 10 seconds. This example illustrates that in fact the task is executing in the background since otherwise, Android would display the ANR dialog after 5 seconds.</p>
+<p>It's also important to note how we waited until <kbd>onPostExecute()</kbd> is called before we do any UI actions (such as enabling the button in our example.) If we attempt to modify the UI in the worker thread, the code would either not compile or throw a runtime exception. You should also note how we instantiated a new <kbd>CountingTask</kbd> object on each button click. This is because an <kbd>AsyncTask</kbd> can only execute once. Attempting to call execute again will also throw an exception.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">There's more...</h1>
+                </header>
+            
+            <article>
+                
+<p>At its minimum, the <kbd>AsyncTask</kbd> can be very simple but it is still very flexible with more options available if you need them. When using an <kbd>AsyncTask</kbd> with an Activity, it's important to understand when the Activity is destroyed and recreated (such as during an orientation change), the <kbd>AsyncTask</kbd> continues to run. This can leave your <kbd>AsyncTask</kbd> orphaned and it might respond to the now destroyed activity (causing a <kbd>NullPointer</kbd> exception). For this reason, it's common to use the <kbd>AysncTask</kbd> with a Fragment (which is not destroyed on screen rotation). </p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Parameter types</h1>
+                </header>
+            
+            <article>
+                
+<p>For many people, the most confusing aspect of the <kbd>AsyncTask</kbd> is the parameters when creating their own class. If you look at our class declaration, there are three parameters for the <kbd>AsyncTask</kbd>; they are defined as follows:</p>
+<pre>AsyncTask&lt;Params, Progress, Result &gt; </pre>
+<p>The parameters are generic types and are used as follows:</p>
+<ul>
+<li><strong>Params</strong>: This is the parameter type to call <kbd>doInBackground()</kbd></li>
+<li><strong>Progress</strong>: This is the parameter type to post updates</li>
+<li><strong>Result</strong>: This is the parameter type to post results</li>
+</ul>
+<p>When you declare your own class, substitute the parameters with the variable type you need.</p>
+<p>Here's the process flow for the <kbd>AsyncTask</kbd> and how the preceding parameters are used:</p>
+<ul>
+<li><kbd>onPreExecute()</kbd>: This is called before <kbd>doInBackground()</kbd> begins</li>
+<li><kbd>doInBackground(Params)</kbd>: This executes in a background thread</li>
+<li><kbd>onProgressUpdate(Progress)</kbd>: This is called (on the UI thread) in response<br/>
+to the calling of <kbd>publishProgress(Progress)</kbd> in the worker thread</li>
+<li><kbd>onPostExecute(Result)</kbd>: This is called (on the UI thread) when the worker<br/>
+thread finishes</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Canceling the task</h1>
+                </header>
+            
+            <article>
+                
+<p>To cancel the task, call the cancel method on the object as follows:</p>
+<pre>&lt; AsyncTask&gt;.cancel(true); </pre>
+<p>You will need to have the object instance to access the <kbd>cancel()</kbd> method. (We did not save the object in our previous example.) After setting <kbd>cancel(true)</kbd>, calling <kbd>isCancelled()</kbd> in <kbd>doInBackground()</kbd> will return <kbd>true</kbd>, allowing you to exit a loop. If cancelled, <kbd>onCancelled()</kbd> will be called instead of <kbd>onPostExecute()</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">See also</h1>
+                </header>
+            
+            <article>
+                
+<ul>
+<li><span><span class="packt_screen">AsyncTask</span> </span>Developer Docs: <span class="URLPACKT">http://developer.android.com/reference/android/os/AsyncTask.html</span></li>
+<li>RXJava for Android is another option and gaining much traction in Android development: <a href="https://github.com/ReactiveX/RxAndroid">https://github.com/ReactiveX/RxAndroid</a></li>
+<li>Definitely take a look at the Android Architecture Components included with the Android JetPack: <a href="https://developer.android.com/topic/libraries/architecture/">https://developer.android.com/topic/libraries/architecture/</a></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Adding speech recognition to your app</h1>
+                </header>
+            
+            <article>
+                
+<p>Android 2.2 (API 8) introduced speech recognition in Android, and it continues to improve with almost every new major Android release. This recipe will demonstrate how to add speech recognition to your app using the Google Speech service.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting ready</h1>
+                </header>
+            
+            <article>
+                
+<p>Create a new project in Android Studio and call it <kbd>SpeechRecognition</kbd>. Use the default <span class="packt_screen">Phone &amp; Tablet</span> option and select <span class="packt_screen">Empty Activity</span> when prompted for <span class="packt_screen">Activity Type</span>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to do it...</h1>
+                </header>
+            
+            <article>
+                
+<p>We'll start by adding a Speak Now (or microphone) button to the layout, then we'll add the necessary code to call the speech recognizer. Open <kbd>activity_main.xml</kbd> and follow these steps:</p>
+<ol>
+<li>Replace the existing <kbd>TextView</kbd> with the following XML:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;TextView<br/></span><span>    </span><span>android</span><span>:id=</span><span>"@+id/textView"<br/></span><span>    </span><span>android</span><span>:layout_width=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:layout_height=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:text=</span><span>"Hello World!"<br/></span><span>    </span><span>app</span><span>:layout_constraintLeft_toLeftOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintRight_toRightOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintTop_toTopOf=</span><span>"parent" </span><span>/&gt;<br/></span><span><br/></span><span>&lt;ImageButton<br/></span><span>    </span><span>android</span><span>:id=</span><span>"@+id/imageButton"<br/></span><span>    </span><span>android</span><span>:layout_width=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:layout_height=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:src=</span><span>"@android:drawable/ic_btn_speak_now"<br/></span><span>    </span><span>android</span><span>:onClick=</span><span>"speakNow"<br/></span><span>    </span><span>app</span><span>:layout_constraintBottom_toBottomOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintLeft_toLeftOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintRight_toRightOf=</span><span>"parent" </span><span>/&gt;</span></pre>
+<ol start="2">
+<li>Define the <kbd>REQUEST_SPEECH</kbd> constant:</li>
+</ol>
+<pre style="padding-left: 60px">private final int REQUEST_SPEECH=1; </pre>
+<ol start="3">
+<li>Add the following code to the existing <kbd>onCreate()</kbd> callback:</li>
+</ol>
+<pre style="padding-left: 60px">PackageManager pm = getPackageManager()<span>;<br/></span>List&lt;ResolveInfo&gt; activities = pm<br/>        .queryIntentActivities(<span>new </span>Intent(RecognizerIntent.<span>ACTION_RECOGNIZE_SPEECH</span>)<span>, </span><span>0</span>)<span>;<br/></span><span>if </span>(activities.isEmpty()) {<br/>    findViewById(R.id.<span>imageButton</span>).setEnabled(<span>false</span>)<span>;<br/></span><span>    </span>Toast.<span>makeText</span>(<span>this, </span><span>"Speech Recognition Not Supported"</span><span>, </span>Toast.<span>LENGTH_LONG</span>).show()<span>;<br/></span>}</pre>
+<ol start="4">
+<li>Add the button click method:</li>
+</ol>
+<pre style="padding-left: 60px"><span>public void </span><span>speakNow</span>(View view) {<br/>    Intent intent = <span>new </span>Intent(RecognizerIntent.<span>ACTION_RECOGNIZE_SPEECH</span>)<span>;<br/></span><span>    </span>intent.putExtra(RecognizerIntent.<span>EXTRA_LANGUAGE_MODEL</span><span>, <br/></span><span>            </span>RecognizerIntent.<span>LANGUAGE_MODEL_FREE_FORM</span>)<span>;<br/></span><span>    </span>startActivityForResult(intent<span>, </span><span>REQUEST_SPEECH</span>)<span>;<br/></span>}</pre>
+<ol start="5">
+<li>Add the following code to override the <kbd>onActivityResult()</kbd> callback:</li>
+</ol>
+<pre style="padding-left: 60px"><span>@Override<br/></span><span>protected void </span><span>onActivityResult</span>(<span>int </span>requestCode<span>, int </span>resultCode<span>, </span>Intent data) {<br/>    <span>super</span>.onActivityResult(requestCode<span>, </span>resultCode<span>, </span>data)<span>;<br/></span><span>    if </span>(requestCode==<span>REQUEST_SPEECH </span>&amp;&amp; resultCode == <span>RESULT_OK </span>&amp;&amp; data!=<span>null</span>) {<br/>        ArrayList&lt;String&gt; result = data.getStringArrayListExtra(RecognizerIntent.<span>EXTRA_RESULTS</span>)<span>;<br/></span><span>        </span>TextView textView = findViewById(R.id.<span>textView</span>)<span>;<br/></span><span>        if </span>(!result.isEmpty()){<br/>            textView.setText(<span>""</span>)<span>;<br/></span><span>            for </span>(String item : result ) {<br/>                textView.append(item+<span>"</span><span>\n</span><span>"</span>)<span>;<br/></span><span>            </span>}<br/>        }<br/>    }<br/>}</pre>
+<ol start="6">
+<li>You're ready to run the application on a device or emulator.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How it works...</h1>
+                </header>
+            
+            <article>
+                
+<p>The work here is done by the Google Speech Recognizer included in Android. To make sure the service is available on the device, we call <kbd>PackageManager</kbd> in <kbd>onCreate()</kbd>. If at least one activity is registered to handle the <kbd>RecognizerIntent.ACTION_RECOGNIZE_SPEECH</kbd> intent, then we know it's available. If no activities are available, we display a Toast indicating speech recognition is not available and disable the mic button.</p>
+<p>The button click starts the recognition process by calling an intent created with <kbd>RecognizerIntent.ACTION_RECOGNIZE_SPEECH</kbd>. The <kbd>EXTRA_LANGUAGE_MODEL</kbd> parameter is required and has the following two choices:</p>
+<ul>
+<li><kbd>LANGUAGE_MODEL_FREE_FORM</kbd></li>
+<li><kbd>LANGUAGE_MODEL_WEB_SEARCH</kbd></li>
+</ul>
+<p>We get the result back in the <kbd>onActivityResult()</kbd> callback. If the result equals <kbd>RESULT_OK</kbd>, then we should have a list of words recognized, which we can retrieve using <kbd>getStringArrayListExtra()</kbd>. The array list will be ordered starting with the highest recognition confidence.</p>
+<p>If you want to retrieve the confidence rating, retrieve the float array using <kbd>EXTRA_CONFIDENCE_SCORES</kbd>. Here's an example:</p>
+<pre><span>float</span>[] confidence = data.getFloatArrayExtra(RecognizerIntent.<span>EXTRA_CONFIDENCE_SCORES</span>)<span>;</span></pre>
+<p>The confidence rating is optional and may not be present. A score of 1.0 indicates highest confidence, while 0.0 indicates lowest confidence.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">There's more...</h1>
+                </header>
+            
+            <article>
+                
+<p>Using the intent is a quick and easy way to get speech recognition; however, if you would prefer not to use the default Google activity, you can call the <kbd>SpeechRecognizer</kbd> class directly. Here's an example of how to instantiate the class:</p>
+<pre>SpeechRecognizer speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);</pre>
+<p>You will need to add the <kbd>RECORD_AUDIO</kbd> permission and implement the <kbd>RecognitionListener</kbd> class to handle the speech events. (See the following links for more information.)</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">See also</h1>
+                </header>
+            
+            <article>
+                
+<ul>
+<li><span><span class="packt_screen">RecognizerIntent</span> </span>Developer Docs: <a href="http://developer.android.com/reference/android/speech/RecognizerIntent.html"><span class="URLPACKT">http://developer.android.com/reference/android/speech/RecognizerIntent.html</span></a></li>
+<li><span><span class="packt_screen">SpeechRecognizer</span> </span>Developer Docs: <a href="http://developer.android.com/reference/android/speech/SpeechRecognizer.html"><span class="URLPACKT">http://developer.android.com/reference/android/speech/SpeechRecognizer.html</span></a></li>
+<li><span><span class="packt_screen">RecognitionListener</span> </span>Developer Docs: <a href="http://developer.android.com/reference/android/speech/RecognitionListener.html"><span class="URLPACKT">http://developer.android.com/reference/android/speech/RecognitionListener.html</span></a></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to add Google sign-in to your app</h1>
+                </header>
+            
+            <article>
+                
+<p><em>Google sign in</em> allows your users to sign in to your application using their Google credentials. This option offers several advantages to your user, including the following:</p>
+<ul>
+<li>Confidence because they're using Google</li>
+<li>Convenience since they can use their existing account</li>
+</ul>
+<p>There are also several advantages for you, the developer:</p>
+<ul>
+<li>Convenience of not having to write your own authentication server</li>
+<li>More users logging in to your app </li>
+</ul>
+<p>This recipe will walk you through the process of adding Google sign-in to your application. Here's a screenshot showing the "GoogleSignin" button in the application that we'll create in the recipe:</p>
+<p class="CDPAlignCenter CDPAlign"><img src="assets/eb69fe5e-d18a-4499-8cf6-ad9e5ede4c5c.png" style="width:22.08em;height:44.17em;"/></p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Getting ready</h1>
+                </header>
+            
+            <article>
+                
+<p>Create a new project in Android Studio and call it <kbd>GoogleSignIn</kbd>. Use the default <span class="packt_screen">Phone &amp; Tablet</span> option and select <span class="packt_screen">Empty Activity</span> when prompted for <span class="packt_screen">Activity Type</span>.</p>
+<p>Google sign-in uses the Google Services plugin, which requires a Google Services Configuration file, which is available from the Google Developer Console. To create the configuration file, you will need the following information:</p>
+<ul>
+<li>Your application package name</li>
+<li>Your signing certificate's SHA-1 hash code (see the <em>Authenticating Your Client</em> link at the end of the recipe for more information)</li>
+</ul>
+<p>When you have the information, log in to this Google link and follow the wizard to enable sign-in:</p>
+<p><a href="https://developers.google.com/identity/sign-in/android/start-integrating?refresh=1#configure_a_console_name_project">https://developers.google.com/identity/sign-in/android/start-integrating?refresh=1#configure_a_console_name_project</a></p>
+<div class="packt_infobox">If you are downloading the source files, you will need to create a new package name when following the preceding steps, as the existing package name has already been registered.</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How to do it...</h1>
+                </header>
+            
+            <article>
+                
+<p>After completing the preceding <em>Getting ready</em> section, follow these steps:</p>
+<ol>
+<li>Copy the <kbd>google-services.json</kbd> file you downloaded in the <em>Getting ready</em> section to your app folder (<kbd>&lt;project folder&gt;\GoogleSignIn\app</kbd>)</li>
+<li>Open the app module Gradle build file, <kbd>build.gradle (Module: app)</kbd>, and add the following statement to the dependencies section:</li>
+</ol>
+<pre style="padding-left: 60px">implementation <span>'com.google.android.gms:play-services-auth:16.0.0'</span></pre>
+<ol start="3">
+<li>Open <kbd>activity_main.xml</kbd> and replace the existing <kbd>TextView</kbd> with the following XML:</li>
+</ol>
+<pre style="padding-left: 60px"><span>&lt;com.google.android.gms.common.SignInButton<br/></span><span>    </span><span>android</span><span>:id=</span><span>"@+id/signInButton"<br/></span><span>    </span><span>android</span><span>:layout_width=</span><span>"wrap_content"<br/></span><span>    </span><span>android</span><span>:layout_height=</span><span>"wrap_content"<br/></span><span>    </span><span>app</span><span>:layout_constraintBottom_toBottomOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintLeft_toLeftOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintRight_toRightOf=</span><span>"parent"<br/></span><span>    </span><span>app</span><span>:layout_constraintTop_toTopOf=</span><span>"parent" </span><span>/&gt;</span></pre>
+<ol start="4">
+<li>Open <kbd>MainActivity.java</kbd> and add the following global declarations:</li>
+</ol>
+<pre style="padding-left: 60px"><span>private final int </span><span>REQUEST_SIGN_IN</span>=<span>1</span><span>;<br/></span>GoogleSignInClient <span>mGoogleSignInClient</span><span>;</span></pre>
+<ol start="5">
+<li>Add the following code to the existing <kbd>onCreate()</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">findViewById(R.id.<span>signInButton</span>).setOnClickListener(<span>new </span>View.OnClickListener() {<br/>    <span>@Override<br/></span><span>    </span><span>public void </span><span>onClick</span>(View view) {<br/>        signIn()<span>;<br/></span><span>    </span>}<br/>})<span>;<br/></span>GoogleSignInOptions googleSignInOptions = <span>new </span>GoogleSignInOptions<br/>        .Builder(GoogleSignInOptions.<span>DEFAULT_SIGN_IN</span>)<br/>        .requestEmail()<br/>        .build()<span>;<br/></span><span>mGoogleSignInClient </span>= GoogleSignIn.<span>getClient</span>(<span>this, </span>googleSignInOptions)<span>;</span></pre>
+<ol start="6">
+<li>Add the <kbd>signIn()</kbd> method: </li>
+</ol>
+<pre style="padding-left: 60px"><span>private void </span><span>signIn</span>() {<br/>    Intent signInIntent = <span>mGoogleSignInClient</span>.getSignInIntent()<span>;<br/></span><span>    </span>startActivityForResult(signInIntent<span>, </span><span>REQUEST_SIGN_IN</span>)<span>;<br/></span>}</pre>
+<ol start="7">
+<li>Create an override for the <kbd>onActivityResult()</kbd> callback as follows:</li>
+</ol>
+<pre style="padding-left: 60px"><span>@Override<br/></span><span>public void </span><span>onActivityResult</span>(<span>int </span>requestCode<span>, int </span>resultCode<span>, </span>Intent data) {<br/>    <span>super</span>.onActivityResult(requestCode<span>, </span>resultCode<span>, </span>data)<span>;<br/></span><span><br/></span><span>    if </span>(requestCode == <span>REQUEST_SIGN_IN</span>) {<br/>        Task&lt;GoogleSignInAccount&gt; task = GoogleSignIn.<span>getSignedInAccountFromIntent</span>(data)<span>;<br/></span><span>        try </span>{<br/>            GoogleSignInAccount account = task.getResult(ApiException.<span>class</span>)<span>;<br/></span><span>            </span>findViewById(R.id.<span>signInButton</span>).setVisibility(View.<span>GONE</span>)<span>;<br/></span><span>            </span>Toast.<span>makeText</span>(<span>this, </span><span>"Logged in:"</span>+account.getDisplayName()<span>, </span>Toast.<span>LENGTH_SHORT</span>)<br/>                    .show()<span>;<br/></span><span>        </span>} <span>catch </span>(ApiException e) {<br/>            e.printStackTrace()<span>;<br/></span><span>            </span>Toast.<span>makeText</span>(<span>this, </span><span>"Sign in failed:"</span>+e.getLocalizedMessage()<span>, </span>Toast.<span>LENGTH_SHORT</span>)<br/>                    .show()<span>;<br/></span><span>        </span>}<br/>    }<br/>}</pre>
+<ol start="8">
+<li>You're ready to run the application on a device or emulator.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">How it works...</h1>
+                </header>
+            
+            <article>
+                
+<p>Google has made it relatively easy to add Google sign-in with their <kbd>GoogleSignInClient</kbd> and <kbd>GoogleSignInOptions</kbd> APIs. First, we create a <kbd>GoogleSignInOptions</kbd> object with the builder. This is where we specify the sign-in options we want, such as requesting email ID. Then, call the <kbd>GoogleSignIn.getClient()</kbd> method to get the <kbd>GoogleSignInClient</kbd>.</p>
+<p>When the user clicks on the Google sign-in button (created with the <kbd>com.google.android.gms.common.SignInButton</kbd> class), we send an Intent for <kbd>GoogleSignInApi</kbd> to the handle. We process the result in <kbd>onActivityResult()</kbd>. If the sign-in was successful, we can get the account details. In our example, we just get the email, but additional information is available such as the following:</p>
+<ul>
+<li><kbd>getDisplayName()</kbd>: This is the display name</li>
+<li><kbd>getEmail()</kbd>: The email address</li>
+<li><kbd>getId()</kbd>: The unique ID for the Google account</li>
+<li><kbd>getPhotoUrl()</kbd>: The display photo</li>
+<li><kbd>getIdToken()</kbd>: This is for backend authentication</li>
+</ul>
+<p>Refer to the <em>GoogleSignInAccount</em> link in the <em>See also</em> section for a complete list.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">There's more...</h1>
+                </header>
+            
+            <article>
+                
+<p>What if you want to check whether the user has already signed in?</p>
+<pre class="prettyprint"><span class="typ">GoogleSignInAccount</span><span class="pln"> account </span><span class="pun">=</span><span class="pln"> </span><span class="typ">GoogleSignIn</span><span class="pun">.</span><span class="pln">getLastSignedInAccount</span><span class="pun">(</span><span class="kwd">this</span><span class="pun">);</span></pre>
+<p>If the account is not null, then you have the details for the last sign-in.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">See also</h1>
+                </header>
+            
+            <article>
+                
+<ul>
+<li>Google link for authenticating your client: <a href="https://developers.google.com/android/guides/client-auth"><span class="URLPACKT">https://developers.google.com/android/guides/client-auth</span></a></li>
+</ul>
+<ul>
+<li><span class="packt_screen">GoogleSignInAccount</span> <span>Developer</span> Docs: <a href="https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount"><span class="URLPACKT">https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount</span></a></li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

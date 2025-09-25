@@ -1,0 +1,674 @@
+<html><head></head><body><div id="book-content"><div id="sbo-rt-content"><div id="_idContainer109">
+			<h1 id="_idParaDest-92" class="chapter-number"><a id="_idTextAnchor101"/>8</h1>
+			<h1 id="_idParaDest-93"><a id="_idTextAnchor102"/>Persisting Data Locally and Doing Background Work</h1>
+			<p>To provide better user experiences, we must ensure that apps don’t fetch data every time the user opens the app. At times, the user can be in areas that do not have internet access, and this can be very frustrating when the user can’t use your app in such situations. For such scenarios, we have to store data locally. We also have to store and update the data in an efficient way that doesn’t drain the device’s battery or block the user from doing other things on the app. In this chapter, we will be exploring how to do so for <span class="No-Break">our apps.</span></p>
+			<p>In this chapter, we will learn how to save data to a local database, <strong class="bold">Room</strong>, which is part of the Jetpack libraries. We will be able to save items and read from the Room database. Additionally, we will learn how to do long-running operations using <strong class="bold">WorkManager</strong> and some of the <span class="No-Break">best practices.</span></p>
+			<p>In this chapter, we’re going to cover the following <span class="No-Break">main topics:</span></p>
+			<ul>
+				<li>Saving and reading data from a <span class="No-Break">local database</span></li>
+				<li>Handling updates and migrations in the <span class="No-Break">Room database</span></li>
+				<li>Using WorkManager to schedule <span class="No-Break">background tasks</span></li>
+				<li>Testing <span class="No-Break">your workers</span></li>
+			</ul>
+			<h1 id="_idParaDest-94"><a id="_idTextAnchor103"/>Technical requirements</h1>
+			<p>To follow the instructions in this chapter, you will need to have Android Studio Hedgehog or later (<a href="https://developer.android.com/studio"><span class="No-Break">https://developer.android.com/studio</span></a><span class="No-Break">) </span><span class="No-Break">downloaded.</span></p>
+			<p>You can use the previous chapter’s code to follow the instructions in this chapter. You can find the code for this chapter <span class="No-Break">at </span><a href="https://github.com/PacktPublishing/Mastering-Kotlin-for-Android/tree/main/chaptereight"><span class="No-Break">https://github.com/PacktPublishing/Mastering-Kotlin-for-Android/tree/main/chaptereight</span></a><span class="No-Break">.</span></p>
+			<h1 id="_idParaDest-95"><a id="_idTextAnchor104"/>Saving and reading data from a local database</h1>
+			<p>We are going to build up on the Pets app, which displays a list of cute cats. <a id="_idTextAnchor105"/>We will save our cute cats in a local database, Room, which is a part of the Android Jetpack libraries and provides a wrapper and <a id="_idIndexMarker387"/>abstraction layer over SQLite. We <a id="_idIndexMarker388"/>will also use the <strong class="bold">repository pattern</strong> to abstract away the data source from <strong class="source-inline">ViewModel</strong>. The Room database provides an abstraction layer over SQLite to allow fluent <a id="_idIndexMarker389"/>database access while harnessing the full power of SQLite. It also has inbuilt support for Kotlin coroutines and flows to allow for asynchronous database access. Room is also compile-time safe and hence any errors in SQL queries are caught at compile time. It allows us to do all this with <span class="No-Break">concise code.</span></p>
+			<p>To use Room in our project, we need to add its dependency to our <strong class="source-inline">libs.versions.toml</strong> file. Let us start by defining the Room version in the <strong class="source-inline">versions</strong> section as <span class="No-Break">the following:</span></p>
+			<pre class="source-code">
+room = "2.5.2"</pre>			<p>Next, let us add the dependencies in our <span class="No-Break"><strong class="source-inline">libraries</strong></span><span class="No-Break"> section:</span></p>
+			<pre class="source-code">
+room-runtime = { module = "androidx.room:room-runtime" , version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }</pre>			<p>Sync the project for the changes to be added. Before we add these dependencies to the app level <strong class="source-inline">build.gradle.kts</strong> file, we need to set up an annotation processor for the room compiler. Room<a id="_idIndexMarker390"/> uses the <strong class="bold">annotation processor</strong> to generate the code that will be used to read, write, update, and delete data from the database. To do this, we need to add the following to the plugins section of the project level <span class="No-Break"><strong class="source-inline">build.gradle.kts</strong></span><span class="No-Break"> file:</span></p>
+			<pre class="source-code">
+id("com.google.devtools.ksp") version "1.9.0-1.0.13" apply false</pre>			<p>We have added the <strong class="bold">Kotlin Symbol Processing</strong> (<strong class="bold">KSP</strong>) plugin to our project. This is a new annotation<a id="_idIndexMarker391"/> processing tool that<a id="_idIndexMarker392"/> is faster than the <strong class="bold">Kotlin Annotation Processing Tool</strong> (<strong class="bold">KAPT</strong>). KSP analyses the Kotlin code directly and has a better understanding of the Kotlin language<a id="_idIndexMarker393"/> constructs. KSP is now the recommended annotation processing tool for Kotlin. Next, we need to add KSP to our app level <span class="No-Break"><strong class="source-inline">build.gradle.kts</strong></span><span class="No-Break"> file:</span></p>
+			<pre class="source-code">
+id("com.google.devtools.ksp")</pre>			<p>This allows us to use<a id="_idIndexMarker394"/> KSP in our app module. To finalize setting up Room, now let us add the dependencies we declared earlier to the app level <span class="No-Break"><strong class="source-inline">build.gradle.kts</strong></span><span class="No-Break"> file:</span></p>
+			<pre class="source-code">
+implementation(libs.room.runtime)
+implementation(libs.room.ktx)
+ksp(libs.room.compiler)</pre>			<p>We have added our Room dependencies and the Room KTX library with the <strong class="source-inline">implementation</strong> configuration and the Room compiler with the <strong class="source-inline">ksp</strong> configuration. We are now ready to start using Room in our project. Let us start by creating an entity class for our <strong class="source-inline">Cat</strong> object. This will be the data class that will be used to store our pets in the database. Inside the <strong class="source-inline">data</strong> package, create a new file called <strong class="source-inline">CatEntity.kt</strong> and add the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+@Entity(tableName = "Cat")
+data class CatEntity(
+    @PrimaryKey
+    val id: String,
+    val owner: String,
+    val tags: List&lt;String&gt;,
+    val createdAt: String,
+    val updatedAt: String
+)</pre>			<p>This data class represents the Room table for our cats. The <strong class="source-inline">@Entity</strong> annotation is used to define the table for our cats. We have passed the <strong class="source-inline">tableName</strong> value to specify the name of our table. The <strong class="source-inline">@PrimaryKey</strong> annotation is used to define the <strong class="bold">primary key</strong> for our table. The other properties are the<a id="_idIndexMarker395"/> columns in our table. One thing to keep in mind is that Room needs <a id="_idIndexMarker396"/>type converters to save fields such as <strong class="source-inline">tags</strong>, which is a list of strings. Room provides functionality to save <a id="_idIndexMarker397"/>non-primitive types using the <strong class="source-inline">@TypeConverter</strong> annotation. Let us create a new file named <strong class="source-inline">PetsTypeConverters.kt</strong> and add the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+class PetsTypeConverters {
+    @TypeConverter
+    fun convertTagsToString(tags: List&lt;String&gt;): String {
+        return Json.encodeToString(tags)
+    }
+    @TypeConverter
+    fun convertStringToTags(tags: String): List&lt;String&gt; {
+        return Json.decodeFromString(tags)
+    }
+}</pre>			<p>This class has two functions annotated with the <strong class="source-inline">@TypeConverter</strong> annotation. The first function converts a list of strings to a string. The second function converts a string to a list of strings. We have used the Kotlinx serialization library to convert the list of strings to a string and vice versa. This class will be referenced in our database class that we will <span class="No-Break">create shortly.</span></p>
+			<p>We are now ready to create our database. We need to create a <strong class="bold">Data Access Object</strong> (<strong class="bold">DAO</strong>) to access our database. A DAO is<a id="_idIndexMarker398"/> an interface that defines the methods to create, read, update, and<a id="_idIndexMarker399"/> delete values from our<a id="_idIndexMarker400"/> database. Inside the <strong class="source-inline">data</strong> package, create a new file called <strong class="source-inline">CatDao.kt</strong> and add the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+@Dao
+interface CatDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(catEntity: CatEntity)
+    @Query("SELECT * FROM Cat")
+    fun getCats(): Flow&lt;List&lt;CatEntity&gt;&gt;
+}</pre>			<p>The interface is annotated with the <strong class="source-inline">@Dao</strong> annotation to tell Room that we will use this class as our DAO. We have defined two functions in our DAO. The <strong class="source-inline">insert</strong> function is used to insert a cat into our database. Notice that this is a <strong class="source-inline">suspend</strong> function. This is because we will be using coroutines to insert the cats into our database. Inserting items into the database needs to happen on a background thread since it is a resource-intensive operation. We also use the <strong class="source-inline">@Insert</strong> annotation with the <strong class="source-inline">onConflict</strong> parameter set to <strong class="source-inline">OnConflictStrategy.REPLACE</strong>. This tells Room to replace the cat if it already exists in the database. The <strong class="source-inline">getCats</strong> function is used to get all the cats from our database. It has the <strong class="source-inline">@Query</strong> annotation, which is used to define a query to get the cats from our database. We are using <strong class="source-inline">Flow</strong> to return the cats from our database. <strong class="source-inline">Flow</strong> is a stream of data that can be observed. This means that every time we update the database, the changes will be emitted to the view layers immediately without us doing any extra work. <span class="No-Break">Cool, right?</span></p>
+			<p>We now need to create our database class. Inside the <strong class="source-inline">data</strong> package, create a new file called <strong class="source-inline">CatDatabase.kt</strong> and add the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+@Database(
+    entities = [CatEntity::class],
+    version = 1
+)
+@TypeConverters(PetsTypeConverters::class)
+abstract class CatDatabase: RoomDatabase() {
+    abstract fun catDao(): CatDao
+}</pre>			<p>We have defined an abstract class that extends the <strong class="source-inline">RoomDatabase</strong> class. We passed the <strong class="source-inline">entities</strong> parameter to specify the entities or tables stored in our database. We have also passed the <strong class="source-inline">version</strong> parameter to specify the version of our database. We have used the <strong class="source-inline">@TypeConverters</strong> annotation to specify the type converters that we will be using in our database. We <a id="_idIndexMarker401"/>have also defined an abstract method that returns our <strong class="source-inline">CatDao</strong>. We need to provide an instance of the database to classes that need it. We will do this by using the<a id="_idIndexMarker402"/> dependency injection pattern we have been using in our project. Let us head over to the <strong class="source-inline">di</strong> package and in the <strong class="source-inline">Module.kt</strong> file, add the Room dependency just below the <span class="No-Break">Retrofit dependency:</span></p>
+			<pre class="source-code">
+single {
+    Room.databaseBuilder(
+        androidContext(),
+        CatDatabase::class.java,
+        "cat-database"
+    ).build()
+}
+single { get&lt;CatDatabase&gt;().carDao() }</pre>			<p>First, we have created a single instance of our database. We have used the <strong class="source-inline">databaseBuilder</strong> method to create our database. We have passed the <strong class="source-inline">androidContext()</strong> method from Koin to get the context of our application. We have also passed <strong class="source-inline">CatDatabase::class.java</strong> to specify the class of our database. We have also passed the <strong class="source-inline">name</strong> of our database. We have then created a single instance of our <strong class="source-inline">CatDao</strong>. We are using the <strong class="source-inline">get</strong> method to get the instance of our database and then calling the <strong class="source-inline">catDao</strong> function to get <span class="No-Break">our </span><span class="No-Break"><strong class="source-inline">CatDao</strong></span><span class="No-Break">.</span></p>
+			<p>Our database is now ready to be used in our repository. We are going to modify <strong class="source-inline">PetRepository</strong> and its implementation to be able to do <span class="No-Break">the following:</span></p>
+			<ul>
+				<li>Save items to <span class="No-Break">our database</span></li>
+				<li>Read items from <span class="No-Break">our database</span></li>
+				<li>Change our <strong class="source-inline">getPets()</strong> function<a id="_idIndexMarker403"/> to return a <strong class="source-inline">Flow</strong> <span class="No-Break">of pets</span></li>
+			</ul>
+			<p>The modified <strong class="source-inline">PetRepository.kt</strong> file should look like <span class="No-Break">the following:</span></p>
+			<pre class="source-code">
+interface PetsRepository {
+    suspend fun getPets(): Flow&lt;List&lt;Cat&gt;&gt;
+    suspend fun fet<a id="_idTextAnchor106"/>chRemotePets()
+}</pre>			<p>We have modified the <strong class="source-inline">getPets</strong> function to return a <strong class="source-inline">Flow</strong> of pets. Room does not allow database access on the main thread, therefore, our queries have to be asynchronous. Room <a id="_idIndexMarker404"/>provides support for observable queries that read data from our database every time data in our database changes and emits new values to reflect the changes. This is the reason we return a <strong class="source-inline">Flow</strong> instance type from the <strong class="source-inline">getPets</strong> function. We have also added the <strong class="source-inline">fetchRemotePets</strong> function to fetch the pets from the remote data source. Let us now modify <strong class="source-inline">PetRepositoryImpl.kt</strong> with a <span class="No-Break">few changes:</span></p>
+			<pre class="source-code">
+class PetsRepositoryImpl(
+    private  val catsAPI: CatsAPI,
+    private val dispatcher: CoroutineDispatcher,
+    private val catDao: CatDao
+): PetsRepository {
+    override suspend fun getPets(): Flow&lt;List&lt;Cat&gt;&gt; {
+        return withContext(dispatcher) {
+           catDao.getCats()
+               .map { petsCached -&gt;
+                   petsCached.map { catEntity -&gt;
+                       Cat(
+                           id = catEntity.id,
+                           owner = catEntity.owner,
+                           tags = catEntity.tags,
+                           createdAt = catEntity.createdAt,
+                           updatedAt = catEntity.updatedAt
+                       ) }
+               }
+               .onEach {
+                     if (it.isEmpty()) {
+                          fetchRemotePets()
+                     }
+               }
+        }
+    }
+    override suspend fun fetchRemotePets() {
+        withContext(dispatcher) {
+            val response = catsAPI.fetchCats("cute")
+            if (response.isSuccessful) {
+                response.body()!!.map {
+                    catDao.insert(CatEntity(
+                        id = it.id,
+                        owner = it.owner,
+                        tags = it.tags,
+                        createdAt = it.createdAt,
+                        updatedAt = it.updatedAt
+                    ))
+                }
+            }
+        }
+    }
+}</pre>			<p>We have made the <span class="No-Break">following changes:</span></p>
+			<ul>
+				<li>We have added the <strong class="source-inline">catDao</strong> property to the constructor of <span class="No-Break">the class.</span></li>
+				<li>We have modified the <strong class="source-inline">getPets</strong> function to return a <strong class="source-inline">Flow</strong> of pets. Additionally, we<a id="_idIndexMarker405"/> have added a <strong class="source-inline">map</strong> operator to map <strong class="source-inline">CatEntity</strong> to a <strong class="source-inline">Cat</strong> object. We have<a id="_idIndexMarker406"/> also added an <strong class="source-inline">onEach</strong> operator to check if the list of pets is empty. If it is empty, we call the <strong class="source-inline">fetchRemotePets</strong> function to fetch the pets from the remote data source. This provides an <strong class="bold">offline first experience</strong> to our<a id="_idIndexMarker407"/> users; that is, we first check if we have the data in our database and if we don’t, we fetch it from the remote <span class="No-Break">data source.</span></li>
+				<li>Lastly, we have modified the <strong class="source-inline">fetchRemotePets</strong> function that fetches the pets from the remote data source. When the response is successful, we map the response to a <strong class="source-inline">CatEntity</strong> instance type and insert it into <span class="No-Break">our database.</span></li>
+			</ul>
+			<p>We need to update the <strong class="source-inline">PetsRepository</strong> dependency in our <strong class="source-inline">Module.kt</strong> file to add the <span class="No-Break"><strong class="source-inline">CatDao</strong></span><span class="No-Break"> dependency:</span></p>
+			<pre class="source-code">
+single&lt;PetsRepository&gt; { PetsRepositoryImpl(get(), get(), get()) }</pre>			<p>In our <strong class="source-inline">PetsRepositoryImpl</strong> class, we have been able to read and fetch data from the Room database. Next, we are going to modify the <strong class="source-inline">getPets()</strong> function in <strong class="source-inline">PetsViewModel</strong> to <a id="_idIndexMarker408"/>accommodate these new changes. Head<a id="_idIndexMarker409"/> over to the <strong class="source-inline">PetsViewModel.kt</strong> file and modify the <strong class="source-inline">getPets()</strong> function to look like <span class="No-Break">the following:</span></p>
+			<pre class="source-code">
+private fun getPets() {
+    petsUIState.value = PetsUIState(isLoading = true)
+    viewModelScope.launch {
+        petsRepository.getPets().asResult().collect { result -&gt;
+            when (result ) {
+                is NetworkResult.Success -&gt; {
+                    petsUIState.update {
+                        it.copy(isLoading = false, pets = result.data)
+                    }
+                }
+                is NetworkResult.Error -&gt; {
+                    petsUIState.update {
+                        it.copy(isLoading = false, error = result.error)
+                    }
+                }
+            }
+        }
+    }
+}</pre>			<p>We have made a few minor changes. We have used the <strong class="source-inline">asResult()</strong> extension function to convert the <strong class="source-inline">Flow</strong> of pets to a <strong class="source-inline">Flow</strong> of <strong class="source-inline">NetworkResult</strong>. This is because we are now returning a <strong class="source-inline">Flow</strong> of pets from our repository. The rest of the code remains the same as <a id="_idIndexMarker410"/>before. We will get an error since we have not <a id="_idIndexMarker411"/>created the <strong class="source-inline">asResult() </strong>extension function. Let us create it in our <span class="No-Break"><strong class="source-inline">NetworkResult.kt</strong></span><span class="No-Break"> file:</span></p>
+			<pre class="source-code">
+fun &lt;T&gt; Flow&lt;T&gt;.asResult(): Flow&lt;NetworkResult&lt;T&gt;&gt; {
+    return this
+        .map&lt;T, NetworkResult&lt;T&gt;&gt; {
+            NetworkResult.Success(it)
+        }
+        .catch { emit(NetworkResult.Error(it.message.toString())) }
+}</pre>			<p>This is an extension function on the <strong class="source-inline">Flow</strong> class. It maps a <strong class="source-inline">Flow</strong> of items to the <strong class="source-inline">NetworkResult</strong> class. We can now head back to our <strong class="source-inline">PetsViewModel</strong> class and add the extension function imports to resolve <span class="No-Break">the error.</span></p>
+			<p>The last change we need to make is to provide the application context to our Koin instance in the <strong class="source-inline">Application</strong> class. Head over to the <strong class="source-inline">ChapterEightApplication.kt</strong> file and modify the <strong class="source-inline">startKoin</strong> block to <span class="No-Break">the following:</span></p>
+			<pre class="source-code">
+startKoin {
+    androidContext(applicationContext)
+    modules(appModules)
+}</pre>			<p>We have provided the application context to our Koin instance. Now, we can run the app. You should see the list of <span class="No-Break">cute cats.</span></p>
+			<div>
+				<div id="_idContainer100" class="IMG---Figure">
+					<img src="image/B19779_08_01.jpg" alt="Figure 8.1 – Cute cats" width="501" height="1094"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.1 – Cute cats</p>
+			<p>The app still works as before, but now we are reading items from the Room database. If you turn off your data and Wi-Fi, the app still shows the list of cute cats! Amazing, isn’t it? We have been <a id="_idIndexMarker412"/>able to make the app work offline. One of the benefits of having an architecture in place for our app is that we can change the different layers without necessarily affecting the other layers. We have been able to change the data source from the remote data <a id="_idIndexMarker413"/>source to the local data source without affecting the view layer. This is the power of having a good architecture <span class="No-Break">in place.</span></p>
+			<p>We know how to insert and <a id="_idIndexMarker414"/>read data from our Room database, but what about updating it? In the next section, we will learn how to update the data that is in our Room database. In<a id="_idIndexMarker415"/> the process, we will also learn how to migrate from one<a id="_idIndexMarker416"/> database version to the other using the Room <strong class="bold">automated </strong><span class="No-Break"><strong class="bold">migration</strong></span><span class="No-Break"> feature.</span></p>
+			<h1 id="_idParaDest-96"><a id="_idTextAnchor107"/>Handling updates and migrations in the Room database</h1>
+			<p><strong class="source-inline">FavoritePetsScreen</strong> doesn’t have any functionality yet. We are going to add the functionality to favorite pets and <a id="_idIndexMarker417"/>update this information in the Room database. To achieve this, we need to do <span class="No-Break">the following:</span></p>
+			<ul>
+				<li>Set up a Room <span class="No-Break">schema directory.</span></li>
+				<li>Add a new column to our <strong class="source-inline">CatEntity</strong> class to store the favorite status of <span class="No-Break">the cat.</span></li>
+				<li>Add a new function to <strong class="source-inline">CatDao</strong> to update the favorite status of <span class="No-Break">the cat.</span></li>
+				<li>Update our UIs with a favorite icon and, once clicked, update the favorite status of the cat. This means the ViewModel and repository classes will also be updated in <span class="No-Break">the process.</span></li>
+			</ul>
+			<p>Let’s get started with <span class="No-Break">the steps:</span></p>
+			<ol>
+				<li>Let us start by setting up the schema directory. In our app level <strong class="source-inline">build.gradle.kts</strong> file, add the <span class="No-Break">following code:</span><pre class="source-code">
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}</pre><p class="list-inset">Do a Gradle sync and then build the project. This generates a <strong class="source-inline">schema json</strong> file with the name <a id="_idIndexMarker418"/>of the current database version as shown in the <span class="No-Break">following figure:</span></p></li>			</ol>
+			<div>
+				<div id="_idContainer101" class="IMG---Figure">
+					<img src="image/B19779_08_02.jpg" alt="Figure 8.2 – Room schema directory" width="563" height="470"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.2 – Room schema directory</p>
+			<p class="list-inset">As shown in the preceding image, you have to switch to the <strong class="bold">Project</strong> view to see the schema directory. The contents of the file are the table name and the columns in our table. We are now ready to add a new column to our <strong class="source-inline">CatEntity</strong> interface to store the favorite status of <span class="No-Break">the cat.</span></p>
+			<ol>
+				<li value="2">We will add this field to the <strong class="source-inline">CatEntity</strong> and the <strong class="source-inline">Cat</strong> data classes. Head over to the <strong class="source-inline">CatEntity.kt</strong> file and add a new field <span class="No-Break">called </span><span class="No-Break"><strong class="source-inline">isFavorite</strong></span><span class="No-Break">:</span><pre class="source-code">
+@ColumnInfo(defaultValue = "0")
+val isFavorite: Boolean = false</pre><p class="list-inset">This is a Boolean whose default value is <strong class="source-inline">false</strong>. We have used the <strong class="source-inline">@ColumnInfo</strong> annotation to<a id="_idIndexMarker419"/> specify the default value of the column in our database, too. We will use this field to store the favorite status of the cat. Ensure you add the <strong class="source-inline">val isFavorite: Boolean = false</strong> field to the <strong class="source-inline">Cat</strong> data class, too. We now need to update our <strong class="source-inline">CatDao</strong> class to be able to update the favorite status of <span class="No-Break">the cat.</span></p></li>				<li>Let us head over to the <strong class="source-inline">CatDao.kt</strong> file and add the <span class="No-Break">following functions:</span><pre class="source-code">
+@Update
+suspend fun update(catEntity: CatEntity)
+@Query("SELECT * FROM Cat WHERE isFavorite = 1")
+fun getFavoriteCats(): Flow&lt;List&lt;CatEntity&gt;&gt;</pre><p class="list-inset">We have two functions here. The first function will be used to update the favorite status of the cat. We have used the <strong class="source-inline">@Update</strong> annotation to tell Room that this function will be used to update the <strong class="source-inline">CatEntity</strong> class in our database. The second function will be used to get the favorite cats from our database. We have used the <strong class="source-inline">@Query</strong> annotation to define the query to get the favorite cats from our database. We have used <strong class="source-inline">Flow</strong> to return the favorite cats from our database. Now, we need to add a migration to our database to add the new column to our database. This ensures that we don’t lose any data when we update our database. <strong class="bold">Room version 2.4.0-alpha01</strong> introduced <a id="_idIndexMarker420"/>a new way of handling migrations – automated migrations. This means that we don’t have to write any SQL queries to<a id="_idIndexMarker421"/> handle migrations; Room will automatically handle the migrations <span class="No-Break">for us.</span></p></li>				<li>Let us modify <strong class="source-inline">CatDatabase</strong> to add <strong class="source-inline">autoMigration</strong> <span class="No-Break">as follows:</span><pre class="source-code">
+@Database(
+    entities = [CatEntity::class],
+    version = 2,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2)
+    ]
+)</pre><p class="list-inset">We have added the <strong class="source-inline">autoMigrations</strong> parameter to our database. We have passed a list of <strong class="source-inline">AutoMigration</strong> objects to the parameter. We have passed the <strong class="source-inline">from</strong> and <strong class="source-inline">to</strong> parameters to specify the version of our database. Ensure you add the imports for the <strong class="source-inline">AutoMigration</strong> class. Notice that we have also increased the <strong class="source-inline">version</strong> of our database. This is because we have added a new column to our database. Build the project to be able to generate the <strong class="source-inline">schema json</strong> file. You should see a new schema JSON file with the name of the new database version. Our schema directory should look like <span class="No-Break">the following:</span></p></li>			</ol>
+			<div>
+				<div id="_idContainer102" class="IMG---Figure">
+					<img src="image/B19779_08_03.jpg" alt="Figure 8.3 – Updated Room schema directory" width="562" height="509"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.3 – Updated Room schema directory</p>
+			<p class="list-inset">If we open the <strong class="source-inline">2.json</strong> file, we will notice that the new <strong class="source-inline">isFavorite</strong> column has been added to our table. That it’s for <a id="_idIndexMarker422"/>automated migration. We are now ready to update our repository to be able to update the favorite status of <span class="No-Break">the cat.</span></p>
+			<ol>
+				<li value="5">Let us head over to the <strong class="source-inline">PetsRepository.kt</strong> file and add the <span class="No-Break">following functions:</span><pre class="source-code">
+suspend fun updatePet(cat: Cat)
+suspend fun getFavoritePets(): Flow&lt;List&lt;Cat&gt;&gt;</pre></li>			</ol>
+			<p>The <strong class="source-inline">updatePet(cat: Cat)</strong> and <strong class="source-inline">getFavoritePets()</strong> functions will be used to update the favorite status <a id="_idIndexMarker423"/>of the cat and get <span class="No-Break">favorite cats.</span></p>
+			<ol>
+				<li>Let us add the implementation of the two functions in our <span class="No-Break"><strong class="source-inline">PetsRepositoryImpl.kt</strong></span><span class="No-Break"> class:</span><pre class="source-code">
+override suspend fun updatePet(cat: Cat) {
+    withContext(dispatcher) {
+        catDao.update(CatEntity(
+            id = cat.id,
+            owner = cat.owner,
+            tags = cat.tags,
+            createdAt = cat.createdAt,
+            updatedAt = cat.updatedAt,
+            isFavorite = cat.isFavorite
+        ))
+    }
+}
+override suspend fun getFavoritePets(): Flow&lt;List&lt;Cat&gt;&gt; {
+    return withContext(dispatcher) {
+        catDao.getFavoriteCats()
+            .map { petsCached -&gt;
+                petsCached.map { catEntity -&gt;
+                    Cat(
+                        id = catEntity.id,
+                        owner = catEntity.owner,
+                        tags = catEntity.tags,
+                        createdAt = catEntity.createdAt,
+                        updatedAt = catEntity.updatedAt,
+                        isFavorite = catEntity.isFavorite
+                    )
+                }
+            }
+    }
+}</pre><p class="list-inset">Here is an explanation of <span class="No-Break">the functions:</span></p><ul><li>In the <strong class="source-inline">updatePet</strong> function, we have <a id="_idIndexMarker424"/>used the update method of our <strong class="source-inline">CatDao</strong> interface to update the favorite status of the cat. We have also used <strong class="source-inline">withContext</strong> to ensure that the update runs on a background thread. We have created a new <strong class="source-inline">CatEntity</strong> class from the <strong class="source-inline">Cat</strong> object that we have passed to <span class="No-Break">the function.</span></li><li>In the <strong class="source-inline">getFavoritePets</strong> function, we have used the <strong class="source-inline">getFavoriteCats</strong> function from our <strong class="source-inline">CatDao</strong> interface to get the favorite cats from our database. We have also mapped the list of <strong class="source-inline">CatEntity</strong> to a list of <strong class="source-inline">Cat</strong>. We then returned a <strong class="source-inline">Flow</strong> instance type of <span class="No-Break">favorite cats.</span></li></ul></li>				<li>In the <strong class="source-inline">PetsRepositoryImpl.kt</strong> file, we need to update the <strong class="source-inline">fetchRemotePets</strong> and <strong class="source-inline">getPets</strong> functions<a id="_idIndexMarker425"/> to update the favorite status of the cat <span class="No-Break">as follows:</span><pre class="source-code">
+override suspend fun getPets(): Flow&lt;List&lt;Cat&gt;&gt; {
+    return withContext(dispatcher) {
+       catDao.getCats()
+           .map { petsCached -&gt;
+               petsCached.map { catEntity -&gt;
+                   Cat(
+                       id = catEntity.id,
+                       owner = catEntity.owner,
+                       tags = catEntity.tags,
+                       createdAt = catEntity.createdAt,
+                       updatedAt = catEntity.updatedAt,
+                       isFavorite = catEntity.isFavorite
+                   )
+               }
+           }
+           .onEach {
+               if (it.isEmpty()) {
+                   fetchRemotePets()
+               }
+           }
+    }
+}
+override suspend fun fetchRemotePets() {
+    withContext(dispatcher) {
+        val response = catsAPI.fetchCats("cute")
+        if (response.isSuccessful) {
+            response.body()!!.map {
+                catDao.insert(CatEntity(
+                    id = it.id,
+                    owner = it.owner,
+                    tags = it.tags,
+                    createdAt = it.createdAt,
+                    updatedAt = it.updatedAt,
+                    isFavorite = it.isFavorite
+                ))
+            }
+        }
+    }
+}</pre><p class="list-inset">We add the <strong class="source-inline">isFavorite</strong> parameter to the <strong class="source-inline">Cat</strong> object when we are mapping the <strong class="source-inline">CatEntity</strong> class to a <strong class="source-inline">Cat</strong>. This <a id="_idIndexMarker426"/>will ensure that we have the favorite status of the cat when we are fetching the cats from the remote and local <span class="No-Break">data sources.</span></p></li>				<li>Let us head over to the <strong class="source-inline">PetsViewModel</strong> class and add the following variables below the <span class="No-Break"><strong class="source-inline">petsUIState</strong></span><span class="No-Break"> variable:</span><pre class="source-code">
+private val _favoritePets = MutableStateFlow&lt;List&lt;Cat&gt;&gt;(emptyList())
+val favoritePets: StateFlow&lt;List&lt;Cat&gt;&gt; get() = _favoritePets</pre><p class="list-inset">Here, we have created a private <strong class="source-inline">MutableStateFlow</strong> of favorite cats and a public <strong class="source-inline">StateFlow</strong> of favorite cats. We will use the <strong class="source-inline">_favoritePets</strong> variable to update the favorite cats and the <strong class="source-inline">favoritePets</strong> variable to observe the favorite cats. This pattern is normally recommended to prevent exposing mutable states to the <span class="No-Break">view layer.</span></p></li>				<li>Next, let us add these two <a id="_idIndexMarker427"/>functions below the <strong class="source-inline">getPets()</strong> function in <span class="No-Break">the </span><span class="No-Break"><strong class="source-inline">PetsViewModel</strong></span><span class="No-Break">:</span><pre class="source-code">
+fun updatePet(cat: Cat) {
+    viewModelScope.launch {
+        petsRepository.updatePet(cat)
+    }
+}
+fun getFavoritePets() {
+    viewModelScope.launch {
+        petsRepository.getFavoritePets().collect {
+            _favoritePets.value = it
+        }
+    }
+}</pre><p class="list-inset">The <strong class="source-inline">updatePet</strong> function will be called from the UI to update the favorite status of the cat. The <strong class="source-inline">getFavoritePets</strong> function will be called from the UI to fetch the favorite cats from our database. We collect the favorite cats from our database and update the <strong class="source-inline">_favoritePets</strong> variable. With these changes, we are now ready to make changes to our views to be able to favorite a cat and see a list of <span class="No-Break">favorite pets.</span></p></li>				<li>We will start by adding our favorite icon to the <strong class="source-inline">PetListItem</strong> composable. Let us head over to the <strong class="source-inline">PetList.kt</strong> file and update the <strong class="source-inline">PetListItem</strong> composable to be<a id="_idIndexMarker428"/> <span class="No-Break">the following:</span><pre class="source-code">
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun PetListItem(
+    cat: Cat,
+    onPetClicked: (Cat) -&gt; Unit,
+    onFavoriteClicked: (Cat) -&gt; Unit
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(6.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp)
+                .clickable {
+                    onPetClicked(cat)
+                }
+        ) {
+            AsyncImage(
+                model = "https://cataas.com/cat/${cat.id}",
+                contentDescription = "Cute cat",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentScale = ContentScale.FillWidth
+            )
+            Row(
+                modifier = Modifier
+                    .padding(start = 6.dp, end = 6.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                FlowRow(
+                    modifier = Modifier
+                        .padding(start = 6.dp, end = 6.dp)
+                ) {
+                    repeat(cat.tags.size) {
+                        SuggestionChip(
+                            modifier = Modifier
+                                .padding(start = 3.dp, end = 3.dp),
+                            onClick = { },
+                            label = {
+                                Text(text = cat.tags[it])
+                            }
+                        )
+                    }
+                }
+                Icon(
+                    modifier = Modifier
+                        .clickable {
+                            onFavoriteClicked(cat.copy(isFavorite = !cat.isFavorite))
+                        },
+                    imageVector = if (cat.isFavorite) {
+                        Icons.Default.Favorite
+                    } else {
+                        Icons.Default.FavoriteBorder
+                    },
+                    contentDescription = "Favorite",
+                    tint = if (cat.isFavorite) {
+                        Color.Red
+                    } else {
+                        Color.Gray
+                    },
+                )
+            }
+        }
+    }
+}</pre><p class="list-inset">We have added the <strong class="source-inline">Icon</strong> composable to the <strong class="source-inline">PetListItem</strong> composable. We have used the <strong class="source-inline">Icons.Default.Favorite</strong> icon if the cat is favorited and the <strong class="source-inline">Icons.Default.FavoriteBorder</strong> icon if the cat is not favorited. We have also used the <strong class="source-inline">tint</strong> parameter to change the color of the icon depending on the favorite status of the cat. <strong class="source-inline">Icon</strong> is now inside a <strong class="source-inline">Row</strong> together with <strong class="source-inline">FlowRow</strong>, which displays a <a id="_idIndexMarker429"/>list of tags. We have also added the <strong class="source-inline">onFavoriteClicked</strong> parameter to the <strong class="source-inline">PetListItem</strong> composable. We have used this parameter to update the favorite status of <span class="No-Break">the cat.</span></p></li>				<li>Let us update the <strong class="source-inline">PetList</strong> composable to add a new callback parameter called <strong class="source-inline">onFavoriteClicked</strong> and pass the parameter to the <span class="No-Break"><strong class="source-inline">PetListItem</strong></span><span class="No-Break"> composable:</span><pre class="source-code">
+@Composable
+fun PetList(
+    onPetClicked: (Cat) -&gt; Unit,
+    pets: List&lt;Cat&gt;,
+    modifier: Modifier,
+    onFavoriteClicked: (Cat) -&gt; Unit
+) {
+    LazyColumn(
+        modifier = modifier
+    ) {
+        items(pets) { pet -&gt;
+            PetListItem(
+                cat = pet,
+                onPetClicked = onPetClicked,
+                onFavoriteClicked = onFavoriteClicked
+            )
+        }
+    }
+}</pre></li>				<li>Next, we will add the <strong class="source-inline">onFavoriteClicked</strong> callback <a id="_idIndexMarker430"/>as a parameter to <span class="No-Break">the </span><span class="No-Break"><strong class="source-inline">PetsScreenContent</strong></span><span class="No-Break">:</span><pre class="source-code">
+@Composable
+fun PetsScreenContent(
+    modifier: Modifier,
+    onPetClicked: (Cat) -&gt; Unit,
+    contentType: ContentType,
+    petsUIState: PetsUIState,
+    onFavoriteClicked: (Cat) -&gt; Unit
+) {
+    // code
+    }</pre></li>				<li>We can now pass the parameter to the <span class="No-Break"><strong class="source-inline">PetList</strong></span><span class="No-Break"> composable:</span><pre class="source-code">
+PetList(
+    onPetClicked = onPetClicked,
+    pets = petsUIState.pets,
+    modifier = Modifier
+    .fillMaxWidth(),
+    onFavoriteClicked = onFavoriteClicked
+)</pre></li>				<li>Let us update the <strong class="source-inline">PetAndDetails</strong> composable<a id="_idIndexMarker431"/> to add the <span class="No-Break"><strong class="source-inline">onFavoriteClicked</strong></span><span class="No-Break"> parameter:</span><pre class="source-code">
+@Composable
+fun PetListAndDetails(
+    pets: List&lt;Cat&gt;,
+    onFavoriteClicked: (Cat) -&gt; Unit
+) {
+    // code
+    }</pre></li>				<li>We can now pass the parameter to the <span class="No-Break"><strong class="source-inline">PetList</strong></span><span class="No-Break"> composable:</span><pre class="source-code">
+PetList(
+    onPetClicked = {
+    currentPet = it
+    },
+    pets = pets,
+    modifier = Modifier
+    .fillMaxWidth()
+    .weight(1f),
+    onFavoriteClicked = onFavoriteClicked
+)</pre></li>				<li>Back in the <strong class="source-inline">PetsScreenContent.kt</strong> file, we need to pass the <strong class="source-inline">onFavoriteClicked</strong> parameter<a id="_idIndexMarker432"/> to the <span class="No-Break"><strong class="source-inline">PetListAndDetails</strong></span><span class="No-Break"> composable:</span><pre class="source-code">
+PetListAndDetails(
+    pets = petsUIState.pets,
+    onFavoriteClicked = onFavoriteClicked
+)</pre><p class="list-inset">The final <strong class="source-inline">PetScreenContent.kt</strong> file with all the changes we have made so far should look <span class="No-Break">like this:</span></p></li>			</ol>
+			<div>
+				<div id="_idContainer103" class="IMG---Figure">
+					<img src="image/B19779_08_04.jpg" alt="Figure 8.4 – Updated PetscreenContent" width="540" height="1014"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.4 – Updated PetscreenContent</p>
+			<ol>
+				<li value="12">Next, in the <strong class="source-inline">PetsScreen</strong> composable, which<a id="_idIndexMarker433"/> is in the <strong class="source-inline">PetsScreen.kt</strong> file, we need to add the <strong class="source-inline">onFavoriteClicked</strong> parameter to the <span class="No-Break"><strong class="source-inline">PetsScreenContent</strong></span><span class="No-Break"> composable:</span><pre class="source-code">
+PetsScreenContent(
+    modifier = Modifier
+        .fillMaxSize(),
+    onPetClicked = onPetClicked,
+    contentType = contentType,
+    petsUIState = petsUIState,
+    onFavoriteClicked = {
+        petsViewModel.updatePet(it)
+    }
+)</pre><p class="list-inset">We have passed the <strong class="source-inline">onFavoriteClicked</strong> callback to the <strong class="source-inline">PetsScreenContent</strong> composable. We have called the <strong class="source-inline">updatePet</strong> method of our <strong class="source-inline">PetsViewModel</strong> class with<a id="_idIndexMarker434"/> the updated cat object. Let us run the app; it now has a new favorite icon. If we click on the icon, the icon changes to a filled heart icon with a <span class="No-Break">red color:</span></p></li>			</ol>
+			<div>
+				<div id="_idContainer104" class="IMG---Figure">
+					<img src="image/B19779_08_05.jpg" alt="Figure 8.5 – Cute cats with favorite" width="503" height="1096"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.5 – Cute cats with favorite</p>
+			<ol>
+				<li value="13">Lastly, we are<a id="_idIndexMarker435"/> going to update <strong class="source-inline">FavoritePetsScreen</strong> to display a list of favorite cats. Let us head over to the <strong class="source-inline">FavoritePetsScreen.kt</strong> file and update the <strong class="source-inline">FavoritePetsScreen</strong> composable to be <span class="No-Break">the following:</span><pre class="source-code">
+@Composable
+fun FavoritePetsScreen(
+    onPetClicked: (Cat) -&gt; Unit
+) {
+    val petsViewModel: PetsViewModel = koinViewModel()
+    LaunchedEffect(Unit) {
+        petsViewModel.getFavoritePets()
+    }
+    val pets by petsViewModel.favoritePets.collectAsStateWithLifecycle()
+    if (pets.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "No favorite pets")
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            items(pets) { pet -&gt;
+                PetListItem(
+                    cat = pet,
+                    onPetClicked = onPetClicked,
+                    onFavoriteClicked = {
+                        petsViewModel.updatePet(it)
+                    }
+                )
+            }
+        }
+    }
+}</pre><p class="list-inset">Here is an explanation<a id="_idIndexMarker436"/> of <span class="No-Break">the changes:</span></p><ul><li>We have added a new parameter, <strong class="source-inline">onPetClicked</strong> to the <strong class="source-inline">FavoritePetsScreen</strong> composable. We will use this parameter to navigate to the <span class="No-Break"><strong class="source-inline">PetDetailsScreen</strong></span><span class="No-Break"> composable.</span></li><li>We have created a new instance of our <strong class="source-inline">PetsViewModel</strong> class using the <span class="No-Break"><strong class="source-inline">koinViewModel()</strong></span><span class="No-Break"> method.</span></li><li>We have called the <strong class="source-inline">getFavoritePets</strong> function from our <strong class="source-inline">PetsViewModel</strong> class to get the favorite cats from our database. We used <strong class="source-inline">LaunchedEffect</strong> to call this method when the composable was first launched. This is to ensure that we do not call the function every time the <span class="No-Break">composable recomposes.</span></li><li>We have a new variable called <strong class="source-inline">pets</strong>, which is a <strong class="source-inline">StateFlow</strong> of favorite cats. We have used the <strong class="source-inline">collectAsStateWithLifecycle</strong> method to collect the favorite cats from our database. This method is lifecycle aware and hence it will only collect the favorite cats when the composable <span class="No-Break">is active.</span></li><li>We have added a check to see if the list of favorite cats is empty. If it is empty, we display a message<a id="_idIndexMarker437"/> to the user. If it is not empty, we display a list of <span class="No-Break">favorite cats.</span></li></ul></li>				<li>We need to update the <strong class="source-inline">AppNavigation.kt</strong> file to pass the <strong class="source-inline">onPetClicked</strong> callback to the <span class="No-Break"><strong class="source-inline">FavoritePetsScreen</strong></span><span class="No-Break"> composable:</span><pre class="source-code">
+FavoritePetsScreen(
+    onPetClicked = { cat -&gt;
+        navHostController.navigate(
+            "${Screens.PetDetailsScreen.route}/${Json.encodeToString(cat)}"
+        )
+    }
+)</pre><p class="list-inset">This logic is like what we had in the <strong class="source-inline">PetsScreen</strong> and it handles navigation to <strong class="source-inline">PetDetailsScreen</strong> when we are in <strong class="source-inline">FavoritePetsScreen</strong>. Build and run the app. Tap the favorite icon on the bottom bar and you should see a list of your favorite cute cats. If you tap the favorite icon, the cat is immediately removed from the list of favorite cats. This is because the list of favorite cats is a <strong class="source-inline">Flow</strong> and every time Room updates the data, they are immediately emitted to the <span class="No-Break">view layer.</span></p></li>			</ol>
+			<div>
+				<div id="_idContainer105" class="IMG---Figure">
+					<img src="image/B19779_08_06.jpg" alt="Figure 8.6 – Favorite Pets Screen" width="505" height="1095"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.6 – Favorite Pets Screen</p>
+			<p>We have been able to add the functionality to favorite cats and update this information in the Room database. We <a id="_idIndexMarker438"/>have also been able to handle updates and migrations in the Room database. In the next section, we will see how to use WorkManager to schedule background tasks. In this case, we will use WorkManager to fetch the cats from the remote data source and save them to our database. This improves our first offline experience since we will always have the latest data in <span class="No-Break">our database.</span></p>
+			<h1 id="_idParaDest-97"><a id="_idTextAnchor108"/>Using WorkManager to schedule background tasks</h1>
+			<p>WorkManager is a Jetpack library<a id="_idIndexMarker439"/> that is best suited for performing long-running tasks in the background. It ensures that background tasks are<a id="_idIndexMarker440"/> completed even when your app restarts or the phone restarts. With WorkManager, you can either schedule one-time jobs or <span class="No-Break">recurring jobs.</span></p>
+			<p>We will start by adding the WorkManager dependency to our project. Follow <span class="No-Break">these steps:</span></p>
+			<ol>
+				<li>Let us head over to the <strong class="source-inline">libs.versions.toml</strong> file and define the work version in our <strong class="source-inline">versions</strong> section <span class="No-Break">as follows:</span><pre class="source-code">
+work = "2.8.1"</pre></li>				<li>In the libraries section, add the <span class="No-Break">following dependencies:</span><pre class="source-code">
+work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+workmanager-koin = { module = "io.insert-koin:koin-androidx-workmanager", version.ref = "koin" }</pre><p class="list-inset">Here, we have two dependencies: the <strong class="source-inline">work-runtime-ktx</strong> dependency, which is the core dependency for WorkManager, and the <strong class="source-inline">koin-androidx-workmanager</strong> dependency, which is used to integrate WorkManager with Koin. Sync the project for the changes to <span class="No-Break">be added.</span></p></li>				<li>Next, we need to add the dependencies to the app-level <span class="No-Break"><strong class="source-inline">build.gradle.kts</strong></span><span class="No-Break"> file:</span><pre class="source-code">
+implementation(libs.work.runtime)
+implementation(libs.workmanager.koin)</pre></li>				<li>Do a Gradle sync to add these dependencies to <span class="No-Break">our project.</span></li>
+			</ol>
+			<p>We are now ready to start using WorkManager in our project. We will use WorkManager to fetch the cats from the remote data source and save them to our database. We will use the <strong class="source-inline">OneTimeWorkRequest</strong> class to schedule a one-time job to fetch the cats from the remote data source and save them to our database. Let’s get started with <span class="No-Break">the </span><span class="No-Break"><a id="_idIndexMarker441"/></span><span class="No-Break">steps:</span></p>
+			<ol>
+				<li>Let us create a new package named <strong class="source-inline">workers</strong> and create a new file inside it called <strong class="source-inline">PetsSyncWorker.kt</strong> and add the <span class="No-Break">following code:</span><pre class="source-code">
+class PetsSyncWorker(
+    appContext: Context,
+    workerParams: WorkerParameters,
+    private val  petsRepository: PetsRepository
+): CoroutineWorker(appContext, workerParams) {
+    override suspend fun doWork(): Result {
+        return try {
+            petsRepository.fetchRemotePets()
+            Result.success()
+        } catch (e: Exception) {
+            Result.failure()
+        }
+    }
+}</pre><p class="list-inset">In the preceding code block, we have created a class that implements the <strong class="source-inline">CoroutineWorker</strong> class. We<a id="_idIndexMarker442"/> implement this class when we want to perform a long-running task in the background. It uses coroutines to perform long-running tasks. We have passed the <strong class="source-inline">appContext</strong> and <strong class="source-inline">workerParams</strong> parameters to the constructor of the class. We have also passed the <strong class="source-inline">petsRepository</strong> parameter to the constructor of the class. We have overridden the <strong class="source-inline">doWork</strong> method, which is a <strong class="source-inline">suspend</strong> function that will be called when the work is scheduled. We have called <strong class="source-inline">fetchRemotePets</strong> from <strong class="source-inline">PetsRepository</strong> to fetch the cats from the remote data source and save them to our database. We are also returning <strong class="source-inline">Result.success()</strong> if the work is successful and <strong class="source-inline">Result.failure()</strong> if the <span class="No-Break">work fails.</span></p></li>				<li>Next, let us create an instance of <strong class="source-inline">PetsSyncWorker</strong> in our <span class="No-Break"><strong class="source-inline">Module.kt</strong></span><span class="No-Break"> file:</span><pre class="source-code">
+worker { PetsSyncWorker(get(), get(), get()) }</pre><p class="list-inset">We are using the <strong class="source-inline">worker</strong> Koin DSL to create an instance of <strong class="source-inline">PetsSyncWorker</strong>. This is from the<a id="_idIndexMarker443"/> Koin WorkManager library that we just added. We have passed the <strong class="source-inline">appContext</strong>, <strong class="source-inline">workerParams</strong>, and <strong class="source-inline">petsRepository</strong> parameters <a id="_idIndexMarker444"/>to the constructor <span class="No-Break">of </span><span class="No-Break"><strong class="source-inline">PetsSyncWorker</strong></span><span class="No-Break">.</span></p></li>				<li>Next, let us add this function in our <span class="No-Break"><strong class="source-inline">MainActivity.kt</strong></span><span class="No-Break"> file:</span><pre class="source-code">
+private fun startPetsSync() {
+    val syncPetsWorkRequest = OneTimeWorkRequestBuilder&lt;PetsSyncWorker&gt;()
+        .setConstraints(
+            Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiresBatteryNotLow(true)
+                .build()
+        )
+        .build()
+    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+        "PetsSyncWorker",
+        ExistingWorkPolicy.KEEP,
+        syncPetsWorkRequest
+    )
+}</pre><p class="list-inset">In the preceding code, we created a new <strong class="source-inline">OneTimeWorkRequest</strong> using <strong class="source-inline">PetSyncWorker</strong>. We have also set some constraints o<a id="_idTextAnchor109"/>n our work request. We have set the network type to <strong class="source-inline">NetworkType.CONNECTED</strong> to ensure that the work request is only executed when the device is connected to the internet. We also have other network types, which are <span class="No-Break">as follows:</span></p><ul><li><strong class="source-inline">NOT_REQUIRED</strong>: For this type, a network is not required. This is useful for tasks that do not <a id="_idIndexMarker445"/>need any internet connection <span class="No-Break">to work.</span></li><li><strong class="source-inline">UNMETERED</strong>: An unmetered <a id="_idIndexMarker446"/>network connection such as Wi-Fi is required for this type of network. This is suitable for tasks that involve large <span class="No-Break">data transfers.</span></li><li><strong class="source-inline">METERED</strong>: A metered network connection is required for this type of network. Tasks that require a significant amount of data might be deferred when the device is on a metered connection to avoid <span class="No-Break">unnecessary costs.</span></li><li><strong class="source-inline">NOT_ROAMING</strong>: For this type of work, a non-roaming connection is required. This is relevant for tasks that might incur additional costs when executed when the device <span class="No-Break">is roaming.</span></li></ul><p class="list-inset">We have also set the <strong class="source-inline">BatteryNotLow constraint</strong> to <strong class="source-inline">true</strong> to ensure that the work request is only executed when the battery is not low. We then used <strong class="source-inline">WorkManager.getInstance(applicationContext)</strong> to get an instance of the WorkManager and then called the <strong class="source-inline">enqueueUniqueWork</strong> method to enqueue our work request. We have passed the name of our work request, <strong class="source-inline">ExistingWorkPolicy</strong>, and the work request to the <strong class="source-inline">enqueueUniqueWork</strong> method. <strong class="source-inline">ExistingWorkPolicy</strong> is used to specify what should happen if there is already a work request with the same name. We have used <strong class="source-inline">ExistingWorkPolicy.KEEP</strong> to ensure that the work request is not replaced if there is already a work request with the same name. The following are other <span class="No-Break">available policies:</span></p><ul><li><strong class="source-inline">REPLACE</strong>: This cancels existing work with the same unique name and enqueues the new work. This is suitable when we want only the latest version of the work to be<a id="_idIndexMarker447"/> executed, discarding <span class="No-Break">previous instances.</span></li><li><strong class="source-inline">APPEND</strong>: Enqueues the <a id="_idIndexMarker448"/>new work even if there is existing work with the same unique name. Both new and existing work will be executed independently. This is appropriate when we want multiple instances of the same work <span class="No-Break">to coexist.</span></li></ul><p class="list-inset">We are now ready to start our work request. We will start the work request in the <strong class="source-inline">onCreate</strong> method <span class="No-Break">of </span><span class="No-Break"><strong class="source-inline">MainActivity</strong></span><span class="No-Break">.</span></p></li>				<li>In the <strong class="source-inline">MainActivity.kt</strong> file, add the following code in the <span class="No-Break"><strong class="source-inline">onCreate</strong></span><span class="No-Break"> method:</span><pre class="source-code">
+startPetsSync()</pre><p class="list-inset">Since we are using Koin, we need to disable the default WorkManager initialization in our <span class="No-Break">app manifest.</span></p></li>				<li>Let us head over to the <strong class="source-inline">AndroidManifest.xml</strong> file and add the following code inside the <span class="No-Break">application tag:</span><pre class="source-code">
+&lt;provider
+    android:name="androidx.startup.InitializationProvider"
+    android:authorities="${applicationId}.androidx-startup"
+    android:exported="false"
+    tools:node="merge"&gt;
+    &lt;!-- Removing WorkManager Default Initializer--&gt;
+    &lt;meta-data
+        android:name="androidx.work.WorkManagerInitializer"
+        android:value="androidx.startup"
+        tools:node="remove" /&gt;
+&lt;/provider&gt;</pre><p class="list-inset">Adding the preceding <a id="_idIndexMarker449"/>code prevents WorkManager <a id="_idIndexMarker450"/>from being initialized automatically. Not doing this causes an app to crash once you set up Koin initialization. The crash is caused by a conflict between Koin’s dependency injection and WorkManager’s default initialization. Lastly, we have also removed App Startup (<a href="https://developer.android.com/topic/libraries/app-startup">https://developer.android.com/topic/libraries/app-startup</a>), which is used internally within WorkManager from <span class="No-Break">WorkManager 2.6.</span></p></li>				<li>To set up a custom WorkManager instance, head over to the <strong class="source-inline">ChapterEightApplication.kt</strong> file and add the following code inside the <span class="No-Break"><strong class="source-inline">startKoin</strong></span><span class="No-Break"> block:</span><pre class="source-code">
+workManagerFactory()</pre></li>				<li>Build and run the app, and nothing changes. However, we have scheduled a background task to fetch the cats from the remote data source and save them to <span class="No-Break">our database.</span></li>
+			</ol>
+			<div>
+				<div id="_idContainer106" class="IMG---Figure">
+					<img src="image/B19779_08_07.jpg" alt="Figure 8.7 – Cute cats" width="499" height="1095"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.7 – Cute cats</p>
+			<p>We have <a id="_idIndexMarker451"/>created our <strong class="source-inline">PetsSyncWorker</strong> class and learned how to do <a id="_idIndexMarker452"/>work in the background. In the next section, we are going to write tests for our <span class="No-Break"><strong class="source-inline">PetsSyncWorker</strong></span><span class="No-Break"> class.</span></p>
+			<h1 id="_idParaDest-98"><a id="_idTextAnchor110"/>Testing your workers</h1>
+			<p>Testing the code is very important. It <a id="_idIndexMarker453"/>ensures that our code works as expected and it also helps us to catch bugs early. We will be writing tests for our workers in this section. To test our workers, we first need to set up WorkManager testing dependencies with the <span class="No-Break">following steps:</span></p>
+			<ol>
+				<li>Let us head over to the <strong class="source-inline">libs.versions.toml</strong> file and add the following dependency to the <span class="No-Break"><strong class="source-inline">libraries</strong></span><span class="No-Break"> section:</span><pre class="source-code">
+work-testing = { module = "androidx.work:work-testing", version.ref = "work" }</pre><p class="list-inset">Sync your project. This will add the <strong class="source-inline">work-testing</strong> artifact that helps in testing workers to <span class="No-Break">our project.</span></p></li>				<li>Next, we need to add the dependency to our app level <span class="No-Break"><strong class="source-inline">build.gradle.kts</strong></span><span class="No-Break"> file:</span><pre class="source-code">
+androidTestImplementation(libs.work.testing)</pre><p class="list-inset">We have used <strong class="source-inline">androidTestImplementation</strong> because we will be writing our tests in the <strong class="source-inline">androidTest</strong> folder. Do a Gradle sync to add the dependency to our project. We are now ready to start writing <span class="No-Break">our tests.</span></p></li>			</ol>
+			<p>Since our <strong class="source-inline">PetsSyncWorker</strong> class requires some dependencies, we will create a test rule that provides the Koin dependencies that we need. Let us head over to the <strong class="source-inline">androidTest</strong> folder, create a new file called <strong class="source-inline">KoinTestRule.kt</strong>, and add the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+class KoinTestRule: TestRule {
+    override fun apply(base: Statement?, description: Description?): Statement {
+        return object : Statement() {
+            override fun evaluate() {
+                stopKoin()
+                startKoin {
+                    androidLogger(Level.ERROR)
+                    androidContext(ApplicationProvider.getApplicationContext())
+                    modules(appModules)
+                }
+            }
+        }
+    }
+}</pre>			<p><strong class="source-inline">KoinTestRule</strong> implements the <strong class="source-inline">TestRule</strong> interface. We have used this rule to provide the Koin dependencies that we need in our tests. We have used the <strong class="source-inline">startKoin</strong> method to provide the<a id="_idIndexMarker454"/> Koin dependencies that we need. We have used the <strong class="source-inline">androidContext(ApplicationProvider.getApplicationContext())</strong> method to get the application context. We have also used the <strong class="source-inline">modules(appModules)</strong> method to provide the Koin modules that we need. Now, we are ready to start writing our tests. Let us create a new file called <strong class="source-inline">PetsSyncWorkerTest.kt</strong> and add the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+@RunWith(AndroidJUnit4::class)
+class PetsSyncWorkerTest {
+    @get:Rule
+    val koinTestRule = KoinTestRule()
+    @Before
+    fun setUp() {
+        val config = Configuration.Builder()
+            .setMinimumLoggingLevel(Log.DEBUG)
+            .setExecutor(SynchronousExecutor())
+            .build()
+        // Initialize WorkManager for instrumentation tests.
+        WorkManagerTestInitHelper.initializeTestWorkManager(
+            ApplicationProvider.getApplicationContext(),
+            config
+        )
+    }
+}</pre>			<p>We have created a test class called <strong class="source-inline">PetsSyncWorkerTest</strong>. We have annotated the class with the <strong class="source-inline">@RunWith(AndroidJUnit4::class)</strong> annotation. We have also created a <strong class="source-inline">KoinTestRule</strong> instance and<a id="_idIndexMarker455"/> annotated it with the <strong class="source-inline">@get:Rule</strong> annotation to provide the <strong class="source-inline">KoinTestRule</strong> to our test class. We have also created a <strong class="source-inline">setup</strong> function and annotated it with the <strong class="source-inline">@Before</strong> annotation. This function will be executed before each test. We are using the <strong class="source-inline">WorkManagerTestInitHelper</strong> class to initialize WorkManager for instrumentation tests. We are using the <strong class="source-inline">SynchronousExecutor</strong> class to ensure that the work is executed synchronously. This is to ensure that our tests are deterministic. We are now ready to start writing <span class="No-Break">our tests.</span></p>
+			<p>Follow these steps to create <span class="No-Break">our test:</span></p>
+			<ol>
+				<li>We will start by creating a test function that will test the functionality of our worker. Add the following code to the <strong class="source-inline">PetsSyncWorkerTest.kt</strong> file below the <span class="No-Break"><strong class="source-inline">setup</strong></span><span class="No-Break"> function:</span><pre class="source-code">
+@Test
+fun testPetsSyncWorker() {
+}</pre><p class="list-inset">This is an empty function <a id="_idIndexMarker456"/>annotated with the <strong class="source-inline">@</strong><span class="No-Break"><strong class="source-inline">Test</strong></span><span class="No-Break"> annotation.</span></p></li>				<li>Create a work request <span class="No-Break">as follows:</span><pre class="source-code">
+val syncPetsWorkRequest = OneTimeWorkRequestBuilder&lt;PetsSyncWorker&gt;()
+    .setConstraints(
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+    )
+    .build()</pre><p class="list-inset">In the preceding code, we have created a one-time request using our <strong class="source-inline">PetsSyncWorker</strong> class. We have also set the constraints to our work request. We have set the network type to <strong class="source-inline">NetworkType.CONNECTED</strong> to ensure that the work request is only executed when the device is connected to the internet. We have also set the <strong class="source-inline">BatteryNotLow</strong> constraint to <strong class="source-inline">true</strong> to ensure that the work request is only executed when the battery is <span class="No-Break">not low.</span></p></li>				<li>Next, set up the <span class="No-Break">test drivers:</span><pre class="source-code">
+val workManager = WorkManager.getInstance(ApplicationProvider.getApplicationContext())
+val testDriver =
+    WorkManagerTestInitHelper.getTestDriver(ApplicationProvider.getApplicationContext())!!</pre><p class="list-inset">Here, we have set up the test<a id="_idIndexMarker457"/> drivers that help us simulate conditions needed for our tests. For example, it simulates that constraints <span class="No-Break">are met.</span></p></li>				<li>Enqueue the <span class="No-Break">work request:</span><pre class="source-code">
+workManager.enqueueUniqueWork(
+    "PetsSyncWorker",
+    ExistingWorkPolicy.KEEP,
+    syncPetsWorkRequest).result.get()</pre><p class="list-inset">We have used the <strong class="source-inline">enqueueUniqueWork</strong> method to enqueue our work request. We have passed the name of our work request, <strong class="source-inline">ExistingWorkPolicy</strong>, and the work request to the <strong class="source-inline">enqueueUniqueWork</strong> method. We have used <strong class="source-inline">ExistingWorkPolicy.KEEP</strong> to ensure that the work request is not replaced if there is already a work request with the same name. We have also used the <strong class="source-inline">result.get()</strong> method to get the result of our <span class="No-Break">work request.</span></p></li>				<li>Get the information about our work request using the <span class="No-Break"><strong class="source-inline">WorkInfo</strong></span><span class="No-Break"> class:</span><pre class="source-code">
+val workInfo = workManager.getWorkInfoById(syncPetsWorkRequest.id).get()</pre><p class="list-inset">We are getting <strong class="source-inline">WorkInfo</strong> for our work request. We have used the <strong class="source-inline">getWorkInfoById</strong> method to get <strong class="source-inline">WorkInfo</strong> for our work request. We are using the <strong class="source-inline">result.get()</strong> method to get the result of our <span class="No-Break">work request.</span></p></li>				<li>Next, let us get the worker state and assert that our work <span class="No-Break">is enqueued:</span><pre class="source-code">
+assertEquals(WorkInfo.State.ENQUEUED, workInfo.state)</pre><p class="list-inset">We have used the <strong class="source-inline">assertEquals</strong> method to assert that our work is enqueued. We have <a id="_idIndexMarker458"/>used the <strong class="source-inline">WorkInfo.State.ENQUEUED</strong> to check if our work <span class="No-Break">is enqueued.</span></p></li>				<li>Next, let us simulate our constraints being met by using the <strong class="source-inline">testDriver</strong> instance that we <span class="No-Break">created earlier:</span><pre class="source-code">
+testDriver.setAllConstraintsMet(syncPetsWorkRequest.id)</pre><p class="list-inset">We use <strong class="source-inline">testDriver</strong> to simulate that the constraints are met. We have used the <strong class="source-inline">setAllConstraintsMet function</strong> to simulate that the constraints are met. We have passed the <strong class="source-inline">id</strong> of our work request to the <strong class="source-inline">setAllConstraintsMet</strong> method. The work request <strong class="source-inline">id</strong> has an instance type of <strong class="source-inline">Universally Unique </strong><span class="No-Break"><strong class="source-inline">Identifier (UUID)</strong></span><span class="No-Break">.</span></p></li>				<li>Lastly, let us get the output and state of <span class="No-Break">our workers:</span><pre class="source-code">
+val postRequirementWorkInfo =
+    workManager.getWorkInfoById(syncPetsWorkRequest.id).get()
+assertEquals(WorkInfo.State.RUNNING, postRequirementWorkInfo.state)</pre><p class="list-inset">This is the final step of our test. We have used the <strong class="source-inline">getWorkInfoById</strong> method to get the <strong class="source-inline">WorkInfo</strong> of our work request. We have used the <strong class="source-inline">result.get()</strong> method to get the result of our work request. We have used <strong class="source-inline">WorkInfo.State.RUNNING</strong> to check if our work is running. Our final test function should look like <span class="No-Break">the following:</span></p></li>			</ol>
+			<div>
+				<div id="_idContainer107" class="IMG---Figure">
+					<img src="image/B19779_08_08.jpg" alt="Figure 8.8 – PetsSyncWorker test" width="835" height="812"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.8 – PetsSyncWorker test</p>
+			<ol>
+				<li value="9">Click the green run icon on the left of<a id="_idIndexMarker459"/> our test to run the test. The test runs and it’s all green! Our test passes, as seen in the <span class="No-Break">following screenshot:</span></li>
+			</ol>
+			<div>
+				<div id="_idContainer108" class="IMG---Figure">
+					<img src="image/B19779_08_09.jpg" alt="Figure 8.9 – Test results" width="890" height="240"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 8.9 – Test results</p>
+			<p>Making all these<a id="_idIndexMarker460"/> tests work together is <span class="No-Break">amazing work.</span></p>
+			<h1 id="_idParaDest-99"><a id="_idTextAnchor111"/>Summary</h1>
+			<p>In this chapter, we learned how to save data to a local database, Room, which is part of the Jetpack libraries. We also saved items and read from the Room database. In the process, we also learned how to update items in the Room database and how to handle automated migrations in our database. Additionally, we learned how to do long-running operations using WorkManager, its best practices, and how to write tests for <span class="No-Break">our workers.</span></p>
+			<p>In the next chapter, we will learn about runtime permissions and how to request them in <span class="No-Break">our app.</span></p>
+		</div>
+	</div></div></body></html>

@@ -1,0 +1,624 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Asynchronous Programming with Coroutines</h1>
+                </header>
+            
+            <article>
+                
+<p class="mce-root">Today's software development landscape makes asynchronous processing one of the most important topics. The ever-increasing number of processors and cores and the massive consumption of external services (which has grown in recent years with the adoption of microservices architectures) are some of the factors that we should keep an eye on and strive to use a good asynchronous approach.</p>
+<p>Kotlin's implementation of coroutines is an excellent tool to build asynchronous applications.</p>
+<p>In this chapter, we'll cover the following topics:</p>
+<ul>
+<li>Coroutines</li>
+<li>Alternative approaches</li>
+<li>Asynchronous processing</li>
+<li>Channels and actors</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Introduction to coroutines</h1>
+                </header>
+            
+            <article>
+                
+<p>Let's start with a simple example without coroutines:</p>
+<pre><span>import kotlin.concurrent.thread<br/><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>thread </span><span>{<br/></span><span>      </span>Thread.<span>sleep</span>(<span>1000</span>)<br/>      <span>println</span>(<span>"World!"</span>)<br/>   <span>}<br/></span><span>   </span><span>print</span>(<span>"Hello "</span>)<br/>   Thread.<span>sleep</span>(<span>2000</span>)<br/>}</pre>
+<p>The <kbd>thread</kbd> function executes a block of code in a different thread. Inside the block, we are simulating an expensive I/O computation (such as accessing data from a microservice over HTTP) with <kbd>Thread.sleep</kbd>. <kbd>Thread.sleep</kbd> will block the current thread for the number of milliseconds passed as a parameter. In this example, we don't wait until the computation finishes to keep working on other things; we print another message, <kbd>"Hello"</kbd>, while the other computation is being executed. At the end, we wait for two seconds until the computation is finished.</p>
+<p>That's not a pretty code, and we can do better: </p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) {<br/>   <span>val </span><span>computation </span>= <span>thread </span><span>{<br/></span><span>      </span>Thread.<span>sleep</span>(<span>1000</span>)<br/>      <span>println</span>(<span>"World!"</span>)<br/>   <span>}<br/></span><span>   </span><span>print</span>(<span>"Hello "</span>)<br/>   <span>computation</span>.<span>join</span>()<br/>}</pre>
+<p>In this version, we have a reference to our thread called, <kbd>computation</kbd>; at the end, we wait for the <kbd>join()</kbd> <span>method </span>to finish. This is smarter than just waiting for a fixed amount of time, as real-life computations could have different execution times.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Understanding JVM threads</h1>
+                </header>
+            
+            <article>
+                
+<p>Threads are the building blocks of asynchronous concurrent applications on JVM (and other platforms, too). A JVM thread is, most of the time, backed by a hardware thread (such as a core inside a processor). A hardware thread can support several software threads (a JVM thread is a kind of software thread), but only one software thread is executed at any given time.</p>
+<p>The OS (or the JVM) decides which software thread is executed on each hardware thread and switches quickly among the live threads, thereby, giving the appearance that there are several software threads executing at the same time, when in reality there are as many active software threads being executed as there are hardware threads. But, in most circumstances, it is useful to think that all software threads are being performed at the same time. </p>
+<p>Threads in JVM are very fast and responsive, but they come at a cost. Each <kbd>Thread</kbd> has a cost in CPU time and memory on creation, disposal (when garbage is collected), and context switch (the process to store and recover a thread's state when it becomes the executing thread or stops being it). Because this cost is relatively high, a JVM application can't have a significant number of threads.</p>
+<p>A JVM application on a typical development machine can easily handle 100 threads:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) <span>{</span><br/>   <span>val </span><span>threads </span>= <span>List</span>(<span>100</span>)<span>{<br/></span><span>      </span><span>thread </span><span>{<br/></span><span>         </span>Thread.<span>sleep</span>(<span>1000</span>)<br/>         <span>print</span>(<span>'.'</span>)<br/>      <span>}<br/></span><span>   }<br/></span><span>   </span><span>threads</span>.<span>forEach</span>(Thread::join)<br/><span>}</span></pre>
+<p>If you use any external application to monitor the JVM application, such as VisualVM or JConsole (among others), you'll see a graphic like this:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="582" width="446" src="assets/8001e2a4-f132-429f-b70e-395a0d19f861.png"/></div>
+<p>We can increase our threads to 1,000 as shown in the following screenshot:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="600" width="458" src="assets/57378487-0433-49f3-9d6b-a949b372100f.png"/></div>
+<p>The amount of memory is growing at a fast rate, reaching more than 1.5 GB.</p>
+<p>Can we increase our threads to 10,000? Take a look at the following screenshot:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="634" width="487" src="assets/7ecf2a92-c546-463f-877c-77b1df3b49f4.png"/></div>
+<p>The answer is a blunt no; around 2,020 threads were created when the application died with <kbd>OutOfMemoryError</kbd> (this application was running with default settings; those settings can be changed at startup time).</p>
+<p>Let's try with 1,900, a fair estimate of what we can execute safely:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="579" width="442" src="assets/9bb2bf52-dc3a-483d-8164-cae5b7ea75b2.png"/></div>
+<p>Yes, we can run 1,900 concurrent threads.</p>
+<p>In modern JVM applications, creating and destroying threads is considered a bad practice; instead, we use <kbd>Executor</kbd>, an abstraction that lets us manage and reuse threads, reducing the cost of creation and disposal:</p>
+<pre><span>import java.util.concurrent.Executors<br/>import java.util.concurrent.TimeUnit<br/><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;)<span>{</span><br/>   <span>val </span><span>executor </span>= Executors.<span>newFixedThreadPool</span>(<span>1024</span>)<br/>   <span>repeat</span>(<span>10000</span>)<span>{<br/></span><span>      </span><span>executor</span>.<span>submit </span><span>{<br/></span><span>         </span>Thread.<span>sleep</span>(<span>1000</span>)<br/>         <span>print</span>(<span>'.'</span>)<br/>      <span>}<br/></span><span>   }<br/></span><span>   </span><span>executor</span>.<span>shutdown</span>() <br/><span>}</span></pre>
+<p>We created an <kbd>executor</kbd> value that, internally, has a thread pool of up to 1,024 threads. Then, we submit 10,000 tasks; at the end, we shut down <kbd>Executor</kbd>. When we shut down <kbd>Executor</kbd>, it can't accept new tasks and executes all pending ones as follows:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="607" width="461" src="assets/5908d8bf-a749-4bd4-b949-5f61661ef9e1.png"/></div>
+<p>There are many options to fine-tune and play with, <kbd>Executor</kbd>, such as the number of threads and the type of pool or its actual implementation.</p>
+<div class="packt_infobox">There is a lot more theory on JVM threads than is possible to cover in this book. If you want to read and learn more about threads and concurrency, we recommend the classic book, <em>Java Concurrency in Practice (2006)</em> by Dough Lea, David Holmes, Joseph Bower, Joshua Block, Tim Peierls, and Brian Goetz, from Addison-Wesley Professional. We also recommend <em>Programming Concurrency on the JVM (2011)</em> by Venkat Subramanian from Pragmatic Bookshelf, and the <em>Java Concurrency LiveLessons (2015)</em> video by Douglas Schmidt from Addison-Wesley Professional. Last but not least,  we suggest the series of books and videos, <em>Java Concurrency</em> by Javier Fernández Gonzáles, published by Packt. </div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Hello, coroutine world!</h1>
+                </header>
+            
+            <article>
+                
+<p>Now, let's rewrite our <kbd>Hello World</kbd> application with coroutines.</p>
+<p>But, hey! What is a coroutine? Basically, a coroutine is a very light thread that runs a block of code and has a similar life cycle, but can complete with a return value or an exception. Technically, a coroutine is an instance of a suspendable computation, a computation that may suspend. Coroutines aren't bound to a particular thread and can suspend in one <kbd>Thread</kbd> and resume execution in a different one:</p>
+<pre><span>import </span>kotlinx<span>.</span>coroutines<span>.</span>experimental<span>.</span>delay<br/><span>import </span>kotlinx<span>.</span>coroutines<span>.</span>experimental<span>.</span>launch<br/><span>import </span>kotlinx<span>.</span>coroutines<span>.</span>experimental<span>.</span>runBlocking<br/><br/><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span>    </span><span>launch </span><span>{<br/></span><span>        </span><span>delay</span>(<span>1000</span>)<br/>        <span>println</span>(<span>"World"</span>)<br/>    <span>}<br/></span><span>    </span><span>print</span>(<span>"Hello "</span>)<br/>    <span>delay</span>(<span>2000</span>)<br/><span>}</span></pre>
+<p>There are a few things to cover here:</p>
+<ul>
+<li><kbd>runBlocking</kbd>: This function creates a coroutine and blocks the current <kbd>Thread</kbd> until the coroutine finishes, returning its result value (<kbd>Unit</kbd> in this case).</li>
+<li><kbd>launch</kbd>: This function creates a new coroutine without blocking the current <kbd>Thread</kbd> and returns <kbd>Job</kbd> (ignored here).</li>
+<li><kbd>delay</kbd>: This function is a suspending (more on this later) function that delays the current coroutine without blocking the current thread.</li>
+<li><kbd>suspend</kbd>: A suspending function is a function that may <span>suspend the execution of a coroutine, without blocking the current</span> <kbd>Thread</kbd><span>; therefore a</span> suspending <span>function must be called inside a coroutine—it can't be invoked from normal code. The function must be marked with the <kbd>suspend</kbd> modifier. So, </span><kbd>delay</kbd> <span>can be invoked inside</span> <kbd>runBlocking</kbd> <span>and</span> <kbd>launch</kbd><span>, both functions (among others) take a suspending lambda as the last parameter—a suspending lambda is a lambda marked with the</span> <kbd>suspend</kbd> <span>modifier.</span></li>
+</ul>
+<p>Let's summarize what we know now, and a few other concepts before going further:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Concept</strong></p>
+</td>
+<td>
+<p><strong>Description</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Coroutine</strong></p>
+</td>
+<td>
+<p>A very light thread that can return a value and can suspend and resume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Suspending function</strong></p>
+</td>
+<td>
+<p>A function marked with a <kbd>suspend</kbd> modifier. It can suspend a coroutine without blocking the thread. Suspending functions must be invoked inside a coroutine, for example <kbd>delay</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Suspending lambda</strong></p>
+</td>
+<td>
+<p>A lambda function marked with a <kbd>suspend</kbd> modifier. It can suspend a coroutine without blocking the thread.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Coroutine builder</strong></p>
+</td>
+<td>
+<p>A function that takes a suspending lambda, creates a coroutine and may return a result, for example <kbd>runBlocking</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Suspension point</strong></p>
+</td>
+<td>
+<p>A point where a suspending function is invoked.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Continuation</strong></p>
+</td>
+<td>
+<p>The state of a suspended coroutine at a suspension point, it represents the rest of its execution after suspension point.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="mce-root">Let's get back to business.</p>
+<p>As we discussed previously, computations can have different execution times. So, <kbd>delay</kbd> isn't ideal in our <kbd>Hello World</kbd> example:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span>   </span><span>val </span><span>job </span>= <span>launch </span><span>{<br/></span><span>      </span><span>delay</span>(<span>1000</span>)<br/>      <span>println</span>(<span>"World"</span>)<br/>   <span>}<br/></span><span>   </span><span>print</span>(<span>"Hello "</span>)<br/>   <span>job</span>.<span>join</span>()<br/><span>}</span></pre>
+<p>As with our example with threads, we take the reference to the job created by <kbd>launch</kbd>, and we suspend it at the end with the suspending function <kbd>join</kbd>.</p>
+<p>So far, so good. But are coroutines so very light? Can we have 10,000 coroutines?</p>
+<p>Let's try it by executing the following code snippet:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span>      </span><span>val </span><span>jobs </span>= <span>List</span>(<span>10000</span>) <span>{<br/></span><span>         </span><span>launch </span><span>{<br/></span><span>            </span><span>delay</span>(<span>1000</span>)<br/>            <span>print</span>(<span>'.'</span>)<br/>         <span>}<br/></span><span>      }<br/></span><span>      </span><span>jobs</span>.<span>forEach </span><span>{ </span><span>job </span><span>-&gt; </span><span>job</span>.<span>join</span>() <span>}<br/></span><span>   }<br/></span><span>}</span></pre>
+<p>Oh, indeed! It works:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="635" width="487" src="assets/b4ef915b-0b6c-4500-ae98-3abd33dc1c36.png"/></div>
+<p>They are orders of magnitude faster than the <kbd>Executor</kbd> solution, a lot less memory, fewer threads (barely seven threads) and, on top of that, are very easy to read.</p>
+<p>Let's go with 1 million coroutines:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="550" width="420" src="assets/976557d1-0cf2-4969-9415-6f931b29b2aa.png"/></div>
+<p>Less than 2,000 threads need more than 1.5 GB of memory. 1 million coroutines need less than 700 MB of memory—I rest my case. The verdict is that the coroutines are very, very light.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Using coroutines in real life</h1>
+                </header>
+            
+            <article>
+                
+<p>Microbenchmarks are very funny and they give us an idea of the power of Kotlin coroutines, but they don't represent a real-case scenario.</p>
+<p>Let's introduce our real-case scenario:</p>
+<pre><span>enum class </span>Gender {<br/>   <span>MALE</span><span>, </span><span>FEMALE</span><span>;<br/></span><span><br/></span><span>   companion object </span>{<br/>      <span>fun </span><span>valueOfIgnoreCase</span>(<span>name</span>: String): Gender = <span>valueOf</span>(<span>name</span>.<span>toUpperCase</span>())<br/>   }<br/>}<br/><span><br/></span><span>typealias </span>UserId = Int<br/><br/><span>data class </span>User(<span>val </span><span>id</span>: UserId<span>, val </span><span>firstName</span>: String<span>, val </span><span>lastName</span>: String<span>, val </span><span>gender</span>: Gender)<br/><br/><span>data class </span>Fact(<span>val </span><span>id</span>: Int<span>, val </span><span>value</span>: String<span>, val </span><span>user</span>: User? = <span>null</span>)<br/><span><br/></span><span>interface </span><span>UserService </span>{<br/>   <span>fun </span><span>getFact</span>(<span>id</span>: UserId): Fact<br/>}</pre>
+<p>Our <kbd>UserService</kbd> interface has just one method—<kbd>getFact</kbd> will return a Chuck Norris-style fact about our user, identified by the user ID.</p>
+<p>The implementation should check first on a local database for a user; if the user doesn't exist in the database, it should get it from the <strong>RandomUser API</strong> service, (<a href="https://randomuser.me/documentation">https://randomuser.me/documentation</a>), and then store for future use. Once the service has a user, it should check again in the database for a fact related to that user; if the fact doesn't exist in the database, it should get it from The <strong>Internet Chuck Norris Database API</strong> service, (<a href="http://www.icndb.com/api/">http://www.icndb.com/api/</a>), and store it in the database. Once the service has a fact, it could be returned. The service must try to reduce the number of external calls (database, API services) without using a cache.</p>
+<p>Now, let's introduce other interfaces, HTTP clients—<kbd>UserClient</kbd> and <kbd>FactClient</kbd>:</p>
+<pre><span>interface </span><span>UserClient </span>{<br/>   <span>fun </span><span>getUser</span>(<span>id</span>: UserId): User<br/>}<br/><br/><span>interface </span><span>FactClient </span>{<br/>   <span>fun </span><span>getFact</span>(<span>user</span>: User): Fact<br/>}</pre>
+<p>Our clients will be implemented using <kbd>http4k</kbd> (<a href="https://www.http4k.org/">https://www.http4k.org/</a>) for HTTP communication, and Kotson (<a href="https://github.com/SalomonBrys/Kotson">https://github.com/SalomonBrys/Kotson</a>) for JSON processing. Both libraries are being designed for Kotlin, but any other library should work fine:</p>
+<pre><span>import com.github.salomonbrys.kotson.*<br/>import com.google.gson.GsonBuilder<br/>import org.http4k.client.ApacheClient<br/><br/>abstract class </span><span>WebClient </span>{<br/>   <span>protected val </span><span>apacheClient </span>= ApacheClient()<br/><br/>   <span>protected val </span><span>gson </span>= GsonBuilder()<br/>         .<span>registerTypeAdapter</span>&lt;User&gt; <span>{<br/></span><span>            </span><span>deserialize </span><span>{ </span><span>des </span><span>-&gt;<br/></span><span>               </span><span>val </span><span>json </span>= <span>des</span>.<span>json<br/></span><span>               </span>User(<span>json</span>[<span>"info"</span>][<span>"seed"</span>].<span>int</span><span>,<br/></span><span>                     </span><span>json</span>[<span>"results"</span>][<span>0</span>][<span>"name"</span>][<span>"first"</span>].<span>string</span>.<span>capitalize</span>()<span>,<br/></span><span>                     </span><span>json</span>[<span>"results"</span>][<span>0</span>][<span>"name"</span>][<span>"last"</span>].<span>string</span>.<span>capitalize</span>()<span>,<br/></span><span>                     </span><span>Gender</span>.<span>valueOfIgnoreCase</span>(<span>json</span>[<span>"results"</span>][<span>0</span>][<span>"gender"</span>].<span>string</span>))<br/><br/>            <span>}<br/></span><span>         }<br/></span><span>         </span>.<span>registerTypeAdapter</span>&lt;Fact&gt; <span>{<br/></span><span>            </span><span>deserialize </span><span>{ </span><span>des </span><span>-&gt;<br/></span><span>               </span><span>val </span><span>json </span>= <span>des</span>.<span>json<br/></span><span>               </span>Fact(<span>json</span>[<span>"value"</span>][<span>"id"</span>].<span>int</span><span>,<br/></span><span>                     </span><span>json</span>[<span>"value"</span>][<span>"joke"</span>].<span>string</span>)<br/>            <span>}<br/></span><span>         }</span>.<span>create</span>()!!<br/>}</pre>
+<p>Both clients will extend a common parent class that contains <kbd>http4k ApacheClient</kbd> and a <kbd>Gson</kbd> value configured with Kotson DSL:</p>
+<pre><span>import org.http4k.core.Method<br/>import org.http4k.core.Request<br/><br/>class </span>Http4KUserClient : WebClient()<span>, </span><span>UserClient </span>{<br/>   <span>override fun </span><span>getUser</span>(<span>id</span>: UserId): User {<br/>      <span>return </span><span>gson</span>.<span>fromJson</span>(<span>apacheClient</span>(<span>Request</span>(Method.<span>GET</span><span>, </span><span>"https://randomuser.me/api"</span>)<br/>            .<span>query</span>(<span>"seed"</span><span>, </span><span>id</span>.<span>toString</span>()))<br/>            .<span>bodyString</span>())<br/>   }<br/>}</pre>
+<p><kbd>Http4KUserClient</kbd> is very simple, both libraries are easy to use, and we move a lot of code to the parent class:</p>
+<pre><span>class </span>Http4KFactClient : WebClient()<span>, </span><span>FactClient </span>{<br/>   <span>override fun </span><span>getFact</span>(<span>user</span>: User): Fact {<br/>      <span>return </span><span>gson</span>.<span>fromJson</span>&lt;Fact&gt;(<span>apacheClient</span>(<span>Request</span>(Method.<span>GET</span><span>, </span><span>"http://api.icndb.com/jokes/random"</span>)<br/>            .<span>query</span>(<span>"firstName"</span><span>, </span><span>user</span>.<span>firstName</span>)<br/>            .<span>query</span>(<span>"lastName"</span><span>, </span><span>user</span>.<span>lastName</span>))<br/>            .<span>bodyString</span>())<br/>            .<span>copy</span>(<span>user = </span><span>user</span>)<br/>   }<br/>}</pre>
+<p><kbd>Http4KFactClient</kbd> sets the user value inside the <kbd>Fact</kbd> instance, using the <kbd>copy</kbd> method.</p>
+<p>These classes are very nicely implemented, but to test the actual performance of our algorithm, we will mock these interfaces:</p>
+<pre><span>class </span>MockUserClient : <span>UserClient </span>{<br/>   <span>override fun </span><span>getUser</span>(<span>id</span>: UserId): User {<br/>      <span>println</span>(<span>"MockUserClient.getUser"</span>)<br/>      Thread.<span>sleep</span>(<span>500</span>)<br/>      <span>return </span>User(<span>id</span><span>, </span><span>"Foo"</span><span>, </span><span>"Bar"</span><span>, </span>Gender.<span>FEMALE</span>)<br/>   }<br/>}<br/><br/><span>class </span>MockFactClient : <span>FactClient </span>{<br/>   <span>override fun </span><span>getFact</span>(<span>user</span>: User): Fact {<br/>      <span>println</span>(<span>"MockFactClient.getFact"</span>)<br/>      Thread.<span>sleep</span>(<span>500</span>)<br/>      <span>return </span>Fact(Random().<span>nextInt</span>()<span>, </span><span>"FACT </span><span>${</span><span>user</span>.<span>firstName</span><span>}</span><span>, </span><span>${</span><span>user</span>.<span>lastName</span><span>}</span><span>"</span><span>, </span><span>user</span>)<br/>   }<br/>}</pre>
+<p>Take a look at the following database repositories, <kbd>UserRepository</kbd> and <kbd>FactRepository</kbd>:</p>
+<pre><span>interface </span><span>UserRepository </span>{<br/>   <span>fun </span><span>getUserById</span>(<span>id</span>: UserId): User?<br/>   <span>fun </span><span>insertUser</span>(<span>user</span>: User)<br/>}<br/><br/><span>interface </span><span>FactRepository </span>{<br/>   <span>fun </span><span>getFactByUserId</span>(<span>id</span>: UserId): Fact?<br/>   <span>fun </span><span>insertFact</span>(<span>fact</span>: Fact)<br/>}</pre>
+<p>For our repositories, we'll use <kbd>JdbcTemplate</kbd> of Spring 5. Spring 5 comes with support for Kotlin, including extension functions for easy and idiomatic Kotlin use (you can use <kbd>JdbcTemplate</kbd> in any application, it doesn't need to be a Spring one):</p>
+<pre><span>import org.springframework.dao.EmptyResultDataAccessException<br/>import org.springframework.jdbc.core.JdbcTemplate<br/><br/>abstract class </span><span>JdbcRepository</span>(<span>protected val </span><span>template</span>: JdbcTemplate) {<br/>   <span>protected fun </span>&lt;<span>T</span>&gt; <span>toNullable</span>(<span>block</span>: () -&gt; <span>T</span>): <span>T</span>? {<br/>      <span>return try </span>{<br/>         <span>block</span>()<br/>      } <span>catch </span>(<span>_</span>: EmptyResultDataAccessException) {<br/>         <span>null<br/></span><span>      </span>}<br/>   }<br/>}</pre>
+<p>As with the clients, both repositories will have a parent class—in this case, with a function to transform, <kbd>EmptyResultDataAccessException</kbd>; (spring's way to indicate a non-existing record) into a nullable—idiomatic Kotlin.</p>
+<p>Both implementations are straightforward, as follows:</p>
+<pre><span>import org.springframework.jdbc.core.queryForObject<br/><br/>class </span>JdbcUserRepository(<span>template</span>: JdbcTemplate) : JdbcRepository(<span>template</span>)<span>, </span><span>UserRepository </span>{<br/>   <span>override fun </span><span>getUserById</span>(<span>id</span>: UserId): User? {<br/>      <span>return </span><span>toNullable </span><span>{<br/></span><span>         </span><span>template</span>.<span>queryForObject</span>(<span>"select * from USERS where id = ?"</span><span>, </span><span>id</span>) <span>{ </span><span>resultSet</span><span>, </span><span>_ </span><span>-&gt;<br/></span><span>            </span><span>with</span>(<span>resultSet</span>) <span>{<br/></span><span>               </span>User(<span>getInt</span>(<span>"ID"</span>)<span>,<br/></span><span>                     </span><span>getString</span>(<span>"FIRST_NAME"</span>)<span>,<br/></span><span>                     </span><span>getString</span>(<span>"LAST_NAME"</span>)<span>,<br/></span><span>                     </span><span>Gender</span>.<span>valueOfIgnoreCase</span>(<span>getString</span>(<span>"GENDER"</span>)))<br/>            <span>}<br/></span><span>         }<br/></span><span>      }<br/></span><span>   </span>}<br/><br/>   <span>override fun </span><span>insertUser</span>(<span>user</span>: User) {<br/>      <span>template</span>.<span>update</span>(<span>"INSERT INTO USERS VALUES (?,?,?,?)"</span><span>,<br/></span><span>            </span><span>user</span>.<span>id</span><span>,<br/></span><span>            </span><span>user</span>.<span>firstName</span><span>,<br/></span><span>            </span><span>user</span>.<span>lastName</span><span>,<br/></span><span>            </span><span>user</span>.<span>gender</span>.<span>name</span>)<br/>   }<br/>}<br/><br/><span>class </span>JdbcFactRepository(<span>template</span>: JdbcTemplate) : JdbcRepository(<span>template</span>)<span>, </span><span>FactRepository </span>{<br/>   <span>override fun </span><span>getFactByUserId</span>(<span>id</span>: Int): Fact? {<br/>      <span>return </span><span>toNullable </span><span>{<br/></span><span>         </span><span>template</span>.<span>queryForObject</span>(<span>"select * from USERS as U inner join FACTS as F on U.ID = F.USER where U.ID = ?"</span><span>, </span><span>id</span>) <span>{ </span><span>resultSet</span><span>, </span><span>_ </span><span>-&gt;<br/></span><span>            </span><span>with</span>(<span>resultSet</span>) <span>{<br/></span><span>               </span>Fact(<span>getInt</span>(<span>5</span>)<span>,<br/></span><span>                     </span><span>getString</span>(<span>6</span>)<span>,<br/></span><span>                     </span>User(<span>getInt</span>(<span>1</span>)<span>,<br/></span><span>                           </span><span>getString</span>(<span>2</span>)<span>,<br/></span><span>                           </span><span>getString</span>(<span>3</span>)<span>,<br/></span><span>                           </span><span>Gender</span>.<span>valueOfIgnoreCase</span>(<span>getString</span>(<span>4</span>))))<br/>            <span>}<br/></span><span>         }<br/></span><span>      }<br/></span><span>   </span>}<br/><br/>   <span>override fun </span><span>insertFact</span>(<span>fact</span>: Fact) {<br/>      <span>template</span>.<span>update</span>(<span>"INSERT INTO FACTS VALUES (?,?,?)"</span><span>, </span><span>fact</span>.<span>id</span><span>, </span><span>fact</span>.<span>value</span><span>, </span><span>fact</span>.<span>user</span>?.<span>id</span>)<br/>   }<br/>}</pre>
+<p>For our database, we are using the H2 in-memory database, but any database will work (you can make this application work with some different persistence mechanisms, such as NoSQL database or any cache):</p>
+<pre><span>fun </span><span>initJdbcTemplate</span>(): JdbcTemplate {<br/>   <span>return </span>JdbcTemplate(JdbcDataSource()<br/>         .<span>apply </span><span>{<br/></span><span>            </span><span>setUrl</span>(<span>"jdbc:h2:mem:facts_app;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false"</span>)<br/>         <span>}</span>)<br/>         .<span>apply </span><span>{<br/></span><span>            </span><span>execute</span>(<span>"CREATE TABLE </span><span>USERS</span><span> (</span><span>ID </span><span>INT</span><span> AUTO_INCREMENT PRIMARY KEY, </span><span>FIRST_NAME </span><span>VARCHAR</span><span>(64) NOT NULL, </span><span>LAST_NAME </span><span>VARCHAR</span><span>(64) NOT NULL, </span><span>GENDER </span><span>VARCHAR</span><span>(8) NOT NULL);"</span>)<br/>            <span>execute</span>(<span>"CREATE TABLE </span><span>FACTS</span><span> (</span><span>ID </span><span>INT</span><span> AUTO_INCREMENT PRIMARY KEY, </span><span>VALUE_</span><span> TEXT NOT NULL, </span><span>USER </span><span>INT</span><span> NOT NULL,  FOREIGN KEY (</span><span>USER</span><span>) REFERENCES USERS(ID) ON DELETE RESTRICT)"</span>)<br/>         <span>}<br/></span>}</pre>
+<p>The function <kbd>initJdbcTemplate</kbd> creates <kbd>JdbcTemplate</kbd> with an H2 <kbd>DataSource</kbd>, and, once it is ready, it creates the tables inside the <kbd>apply</kbd> extension function. The <kbd>apply</kbd> extension function is useful to configure properties and call initialization code, returning the same value:</p>
+<pre><span>public inline fun </span>&lt;T&gt; T.apply(block: T.() -&gt; Unit): T {<span><br/></span><span>    </span>block()<br/>    <span>return this<br/></span>}</pre>
+<p>As with the clients, for testing, we will use mocks:</p>
+<pre><span>class </span>MockUserRepository : <span>UserRepository </span>{<br/>   <span>private val </span><span>users </span>= <span>hashMapOf</span>&lt;UserId<span>, </span>User&gt;()<br/><br/>   <span>override fun </span><span>getUserById</span>(<span>id</span>: UserId): User? {<br/>      <span>println</span>(<span>"MockUserRepository.getUserById"</span>)<br/>      Thread.<span>sleep</span>(<span>200</span>)<br/>      <span>return </span><span>users</span>[<span>id</span>]<br/>   }<br/><br/>   <span>override fun </span><span>insertUser</span>(<span>user</span>: User) {<br/>      <span>println</span>(<span>"MockUserRepository.insertUser"</span>)<br/>      Thread.<span>sleep</span>(<span>200</span>)<br/>      <span>users</span>[<span>user</span>.<span>id</span>] = <span>user<br/></span><span>   </span>}<br/>}<br/><br/><span>class </span>MockFactRepository : <span>FactRepository </span>{<br/><br/>   <span>private val </span><span>facts </span>= <span>hashMapOf</span>&lt;UserId<span>, </span>Fact&gt;()<br/><br/>   <span>override fun </span><span>getFactByUserId</span>(<span>id</span>: UserId): Fact? {<br/>      <span>println</span>(<span>"MockFactRepository.getFactByUserId"</span>)<br/>      Thread.<span>sleep</span>(<span>200</span>)<br/>      <span>return </span><span>facts</span>[<span>id</span>]<br/>   }<br/><br/>   <span>override fun </span><span>insertFact</span>(<span>fact</span>: Fact) {<br/>      <span>println</span>(<span>"MockFactRepository.insertFact"</span>)<br/>      Thread.<span>sleep</span>(<span>200</span>)<br/>      <span>facts</span>[<span>fact</span>.<span>user</span>?.<span>id </span>?: <span>0</span>] = <span>fact<br/></span><span>   </span>}<br/><br/>}</pre>
+<p>With these mocks, our worst case scenario is around 1,600 milliseconds:</p>
+<ul>
+<li><kbd>UserRepository.getUserById = 200ms ~</kbd></li>
+<li><kbd>UserClient.getUser = 500ms ~</kbd></li>
+<li><kbd>UserRepository = 200ms ~</kbd></li>
+<li><kbd>FactClient.getFact = 500ms ~</kbd></li>
+<li><kbd>FactRepository.insertRepository = 200ms ~</kbd></li>
+</ul>
+<p>Now, we'll implement <kbd>UserService</kbd> with different styles of asynchronicity, including a synchronous implementation, our baseline.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Synchronous implementation</h1>
+                </header>
+            
+            <article>
+                
+<p>Synchronous code is easy to write, predictable, and easy to test, but in some cases, it doesn't use system resources in an optimal manner: </p>
+<pre><span>class </span>SynchronousUserService(<span>private val </span><span>userClient</span>: <span>UserClient</span><span>,<br/></span><span>                      private val </span><span>factClient</span>: <span>FactClient</span><span>,<br/></span><span>                      private val </span><span>userRepository</span>: <span>UserRepository</span><span>,<br/></span><span>                      private val </span><span>factRepository</span>: <span>FactRepository</span>) : <span>UserService </span>{<br/><br/>   <span>override fun </span><span>getFact</span>(<span>id</span>: UserId): Fact {<br/>      <span>val </span><span>user </span>= <span>userRepository</span>.<span>getUserById</span>(<span>id</span>)<br/>      <span>return if </span>(<span>user </span>== <span>null</span>) {<br/>         <span>val </span><span>userFromService </span>= <span>userClient</span>.<span>getUser</span>(<span>id</span>)<br/>         <span>userRepository</span>.<span>insertUser</span>(<span>userFromService</span>)<br/>         <span>getFact</span>(<span>userFromService</span>)<br/>      } <span>else </span>{<br/>         <span>factRepository</span>.<span>getFactByUserId</span>(<span>id</span>) ?: <span>getFact</span>(<span>user</span>)<br/>      }<br/>   }<br/><br/>   <span>private fun </span><span>getFact</span>(<span>user</span>: User): Fact {<br/>      <span>val </span><span>fact </span>= <span>factClient</span>.<span>getFact</span>(<span>user</span>)<br/>      <span>factRepository</span>.<span>insertFact</span>(<span>fact</span>)<br/>      <span>return </span><span>fact<br/></span><span>   </span>}<br/>}</pre>
+<p>There's nothing fancy here, just your normal, old boring code:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) <span>{</span><br/>   <br/>   <span>fun </span><span>execute</span>(<span>userService</span>: <span>UserService</span><span>, </span><span>id</span>: Int) {<br/>         <span>val </span>(<span>fact</span><span>, </span><span>time</span>) = <span>inTime </span><span>{<br/></span><span>            </span><span>userService</span>.<span>getFact</span>(<span>id</span>)<br/>         <span>}<br/></span><span>         </span><span>println</span>(<span>"fact = </span><span>$</span><span>fact</span><span>"</span>)<br/>         <span>println</span>(<span>"time = </span><span>$</span><span>time</span><span> ms."</span>)<br/>      }<br/>   <br/><span>   </span><span>val </span><span>userClient </span>= MockUserClient()<br/>   <span>val </span><span>factClient </span>= MockFactClient()<br/>   <span>val </span><span>userRepository </span>= MockUserRepository()<br/>   <span>val </span><span>factRepository </span>= MockFactRepository()<br/><br/>   <span>val </span><span>userService </span>= SynchronousUserService(<span>userClient</span><span>,<br/></span><span>         </span><span>factClient</span><span>,<br/></span><span>         </span><span>userRepository</span><span>,<br/></span><span>         </span><span>factRepository</span>)<br/><span><br/></span><span>   </span><span>execute</span>(<span>userService</span><span>, </span><span>1</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>2</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>1</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>2</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>3</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>4</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>5</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>10</span>)<br/>   <span>execute</span>(<span>userService</span><span>, </span><span>100</span>)   <br/>   <br/><span>}</span></pre>
+<p>We execute the <kbd>UserService.getFact</kbd> method 10 times to warm up the JVM (JVM optimizations make the application run faster after a while). Needless to say, execution time is 1,600 milliseconds, no surprises here.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Callbacks</h1>
+                </header>
+            
+            <article>
+                
+<p>A popular style of asynchronous code is to execute the code in a separate thread and invoke a <kbd>callback</kbd> function when the aforementioned thread finishes its execution. One downside of the callback style is that our asynchronous functions now need an extra parameter. Callback style is easy to write in Kotlin with its support for lambdas.</p>
+<p>For our callback implementation, we'll need adapters for our clients and repositories:</p>
+<pre><span>import kotlin.concurrent.thread<br/><br/>class </span>CallbackUserClient(<span>private val </span><span>client</span>: <span>UserClient</span>) {<br/>   <span>fun </span><span>getUser</span>(<span>id</span>: Int<span>, </span><span>callback</span>: (User) -&gt; <span>Unit</span>) {<br/>      <span>thread </span><span>{<br/></span><span>         </span><span>callback</span>(<span>client</span>.<span>getUser</span>(<span>id</span>))<br/>      <span>}<br/></span><span>   </span>}<br/>}<br/><br/><span>class </span>CallbackFactClient(<span>private val </span><span>client</span>: <span>FactClient</span>) {<br/>   <span>fun </span><span>get</span>(<span>user</span>: User<span>, </span><span>callback</span>: (Fact) -&gt; <span>Unit</span>) {<br/>      <span>thread </span><span>{<br/></span><span>         </span><span>callback</span>(<span>client</span>.<span>getFact</span>(<span>user</span>))<br/>      <span>}<br/></span><span>   </span>}<br/>}<br/><br/><span>class </span>CallbackUserRepository(<span>private val </span><span>userRepository</span>: <span>UserRepository</span>) {<br/>   <span>fun </span><span>getUserById</span>(<span>id</span>: UserId<span>, </span><span>callback</span>: (User?) -&gt; <span>Unit</span>) {<br/>      <span>thread </span><span>{<br/></span><span>         </span><span>callback</span>(<span>userRepository</span>.<span>getUserById</span>(<span>id</span>))<br/>      <span>}<br/></span><span>   </span>}<br/><br/>   <span>fun </span><span>insertUser</span>(<span>user</span>: User<span>, </span><span>callback</span>: () -&gt; <span>Unit</span>) {<br/>      <span>thread </span><span>{<br/></span><span>         </span><span>userRepository</span>.<span>insertUser</span>(<span>user</span>)<br/>         <span>callback</span>()<br/>      <span>}<br/></span><span><br/></span><span>   </span>}<br/>}<br/><br/><span>class </span>CallbackFactRepository(<span>private val </span><span>factRepository</span>: <span>FactRepository</span>) {<br/>   <span>fun </span><span>getFactByUserId</span>(<span>id</span>: Int<span>, </span><span>callback</span>: (Fact?) -&gt; <span>Unit</span>) {<br/>      <span>thread </span><span>{<br/></span><span>         </span><span>callback</span>(<span>factRepository</span>.<span>getFactByUserId</span>(<span>id</span>))<br/>      <span>}<br/></span><span>   </span>}<br/><br/>   <span>fun </span><span>insertFact</span>(<span>fact</span>: Fact<span>, </span><span>callback</span>: () -&gt; <span>Unit</span>) {<br/>      <span>thread </span><span>{<br/></span><span>         </span><span>factRepository</span>.<span>insertFact</span>(<span>fact</span>)<br/>         <span>callback</span>()<br/>      <span>}<br/></span><span>   </span>}<br/>}</pre>
+<p>These adapters execute our code in a separate thread and invoke the callback, lambda, once it is completed:</p>
+<pre><span>class </span>CallbackUserService(<span>private val </span><span>userClient</span>: CallbackUserClient<span>,<br/></span><span>                    private val </span><span>factClient</span>: CallbackFactClient<span>,<br/></span><span>                    private val </span><span>userRepository</span>: CallbackUserRepository<span>,<br/></span><span>                    private val </span><span>factRepository</span>: CallbackFactRepository) : <span>UserService </span>{<br/><br/>   <span>override fun </span><span>getFact</span>(<span>id</span>: UserId): Fact {<br/>      <span>var </span><span>aux</span>: Fact? = <span>null<br/></span><span>      </span><span>userRepository</span>.<span>getUserById</span>(<span>id</span>) <span>{ </span><span>user </span><span>-&gt;<br/></span><span>         </span><span>if </span>(<span>user </span>== <span>null</span>) {<br/>            <span>userClient</span>.<span>getUser</span>(<span>id</span>) <span>{ </span><span>userFromClient </span><span>-&gt;<br/></span><span>               </span><span>userRepository</span>.<span>insertUser</span>(<span>userFromClient</span>) <span>{}<br/></span><span>               </span><span>factClient</span>.<span>get</span>(<span>userFromClient</span>) <span>{ </span><span>fact </span><span>-&gt;<br/></span><span>                  </span><span>factRepository</span>.<span>insertFact</span>(<span>fact</span>) <span>{}<br/></span><span>                  </span><span>aux </span>= <span>fact<br/></span><span>               </span><span>}<br/></span><span><br/></span><span>            }<br/></span><span>         </span>} <span>else </span>{<br/>            <span>factRepository</span>.<span>getFactByUserId</span>(<span>id</span>) <span>{ </span><span>fact </span><span>-&gt;<br/></span><span>               </span><span>if </span>(<span>fact </span>== <span>null</span>) {<br/>                  <span>factClient</span>.<span>get</span>(<span>user</span>) <span>{ </span><span>factFromClient </span><span>-&gt;<br/></span><span>                     </span><span>factRepository</span>.<span>insertFact</span>(<span>factFromClient</span>) <span>{}<br/></span><span>                     </span><span>aux </span>= <span>factFromClient<br/></span><span>                  </span><span>}<br/></span><span>               </span>} <span>else </span>{<br/>                  <span>aux </span>= <span>fact<br/></span><span>               </span>}<br/>            <span>}<br/></span><span>         </span>}<br/>      <span>}<br/></span><span>      </span><span>while </span>(<span>aux </span>== <span>null</span>) {<br/>         Thread.<span>sleep</span>(<span>2</span>)<br/>      }<br/>      <span>return </span><span>aux</span>!!<br/>   }<br/>}</pre>
+<p>Callback style tends to be very obscure and hard to read; when several callbacks are nested, it is even worse (affectionately known in the community as callback hell). The <kbd>while</kbd> block at the end with <kbd>Thread.sleep</kbd> looks very hacky. It is also very fast with an execution time of 1,200 milliseconds but with many threads created and memory consumption to match it.</p>
+<p>A callback implementation that creates a thread per function call will quickly consume all the application's resources in a production scenario; therefore, it should be based on some <kbd>Executor</kbd> implementation or similar.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Java Futures</h1>
+                </header>
+            
+            <article>
+                
+<p>As callback style tends to be hard to maintain, other styles have emerged in recent years. One of these styles is futures. A <strong>future</strong> is a computation that may complete in the future. When we invoke the <kbd>Future.get</kbd> <span>method</span>, it will obtain its result, but we also block the thread:</p>
+<pre><span>import java.util.concurrent.ExecutorService<br/>import java.util.concurrent.Executors<br/><br/>class </span>FutureUserService(<span>private val </span><span>userClient</span>: <span>UserClient</span><span>,<br/></span><span>                  private val </span><span>factClient</span>: <span>FactClient</span><span>,<br/></span><span>                  private val </span><span>userRepository</span>: <span>UserRepository</span><span>,<br/></span><span>                  private val </span><span>factRepository</span>: <span>FactRepository</span>) : <span>UserService </span>{<br/>   <span>override fun </span><span>getFact</span>(<span>id</span>: UserId): Fact {<br/><br/>      <span>val </span><span>executor </span>= Executors.<span>newFixedThreadPool</span>(<span>2</span>)<br/><br/>      <span>val </span><span>user </span>= <span>executor</span>.<span>submit</span>&lt;User?&gt; <span>{ </span><span>userRepository</span>.<span>getUserById</span>(<span>id</span>) <span>}</span>.<span>get</span>()<br/>      <span>return if </span>(<span>user </span>== <span>null</span>) {<br/>         <span>val </span><span>userFromService </span>= <span>executor</span>.<span>submit</span>&lt;User&gt; <span>{ </span><span>userClient</span>.<span>getUser</span>(<span>id</span>) <span>}</span>.<span>get</span>()<br/>         <span>executor</span>.<span>submit </span><span>{ </span><span>userRepository</span>.<span>insertUser</span>(<span>userFromService</span>) <span>}<br/></span><span>         </span><span>getFact</span>(<span>userFromService</span><span>, </span><span>executor</span>)<br/>      } <span>else </span>{<br/>         <span>executor</span>.<span>submit</span>&lt;Fact&gt; <span>{<br/></span><span>            </span><span>factRepository</span>.<span>getFactByUserId</span>(<span>id</span>) ?: <span>getFact</span>(<span>user</span><span>, </span><span>executor</span>)<br/>         <span>}</span>.<span>get</span>()<br/>      }.<span>also </span><span>{<br/></span><span>         </span><span>executor</span>.<span>shutdown</span>()<br/>      <span>}<br/></span><span>   </span>}<br/><br/>   <span>private fun </span><span>getFact</span>(<span>user</span>: User<span>, </span><span>executor</span>: <span>ExecutorService</span>): Fact {<br/>      <span>val </span><span>fact </span>= <span>executor</span>.<span>submit</span>&lt;Fact&gt; <span>{ </span><span>factClient</span>.<span>getFact</span>(<span>user</span>) <span>}</span>.<span>get</span>()<br/>      <span>executor</span>.<span>submit </span><span>{ </span><span>factRepository</span>.<span>insertFact</span>(<span>fact</span>) <span>}<br/></span><span>      </span><span>return </span><span>fact<br/></span><span>   </span>}<br/>}</pre>
+<p>The implementation with futures is very similar to our synchronous implementation, but with those weird <kbd>submit</kbd> and <kbd>get</kbd> functions all over the place. We also have <kbd>Executor</kbd> that we need to take care of. Total time is around 1,200 milliseconds, with many threads created, more than in the callback example. One possible option is to have <kbd>Executor</kbd> per instance or globally, but in that case, we also need to have some way to manage its life cycle.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Promises with Kovenant </h1>
+                </header>
+            
+            <article>
+                
+<p>Another option to write asynchronous code is to use promises. A <strong>promise</strong> is similar to a future (in many frameworks, futures and promises are synonymous), as it represents a computation that may complete in the future. We have a blocking method to obtain its result, but we can also react to its result, callback style. </p>
+<p><strong>Kovenant</strong> (<a href="http://kovenant.komponents.nl/">http://kovenant.komponents.nl/</a>) is an implementation of promises for Kotlin:</p>
+<pre><span>import nl.komponents.kovenant.Promise<br/>import nl.komponents.kovenant.task<br/>import nl.komponents.kovenant.then<br/><br/>class </span>PromiseUserService(<span>private val </span><span>userClient</span>: <span>UserClient</span><span>,<br/></span><span>                   private val </span><span>factClient</span>: <span>FactClient</span><span>,<br/></span><span>                   private val </span><span>userRepository</span>: <span>UserRepository</span><span>,<br/></span><span>                   private val </span><span>factRepository</span>: <span>FactRepository</span>) : <span>UserService </span>{<br/><br/>   <span>override fun </span><span>getFact</span>(<span>id</span>: UserId): Fact {<br/><br/>      <span>return </span>(<span>task </span><span>{<br/></span><span>         </span><span>userRepository</span>.<span>getUserById</span>(<span>id</span>)<br/>      <span>} </span><span>then </span><span>{ </span><span>user </span><span>-&gt;<br/></span><span>         </span><span>if </span>(<span>user </span>== <span>null</span>) {<br/>            <span>task </span><span>{<br/></span><span>               </span><span>userClient</span>.<span>getUser</span>(<span>id</span>)<br/>            <span>} </span><span>success  </span><span>{ </span><span>userFromService </span><span>-&gt;<br/></span><span>               </span><span>userRepository</span>.<span>insertUser</span>(<span>userFromService</span>)<br/>            <span>} </span><span>then </span><span>{ </span><span>userFromService </span><span>-&gt;<br/></span><span>               </span><span>getFact</span>(<span>userFromService</span>).<span>get</span>()<br/>            <span>}<br/></span><span>         </span>} <span>else </span>{<br/>            <span>task </span><span>{ </span><span>factRepository</span>.<span>getFactByUserId</span>(<span>id</span>) ?: <span>getFact</span>(<span>user</span>).<span>get</span>() <span>}<br/></span><span>         </span>}<br/>      <span>}</span>).<span>get</span>().<span>get</span>()<br/>   }<br/><br/>   <span>private fun </span><span>getFact</span>(<span>user</span>: User): <span>Promise</span>&lt;Fact<span>, </span>Exception&gt; = <span>task </span><span>{<br/></span><span>      </span><span>factClient</span>.<span>getFact</span>(<span>user</span>)<br/>   <span>} </span><span>success  </span><span>{ </span><span>fact </span><span>-&gt;<br/></span><span>      </span><span>factRepository</span>.<span>insertFact</span>(<span>fact</span>)<br/>   <span>}<br/></span>}</pre>
+<p>The function <kbd>task</kbd> creates <kbd>Promise&lt;T, Exception&gt;</kbd> (something that we didn't cover previously in our other implementations). We can interact with <kbd>Promise&lt;T, Exception&gt;</kbd> in several ways:</p>
+<ul>
+<li><kbd>get(): T</kbd>: This blocks the current thread and returns the promise's result.</li>
+<li><kbd>then(bind: (T) -&gt; R): Promise&lt;R, Exception&gt;</kbd>: This is similar to <kbd>map</kbd> on functional collections; it returns a new <kbd>Promise</kbd> value with a new type.</li>
+<li><kbd>success(callback: (T) -&gt; Unit): Promise&lt;T, Exception&gt;</kbd>: This is callback on successful <kbd>Promise</kbd> execution. It's useful for side effects</li>
+<li><kbd>fail(callback: (Exception) -&gt; Unit): Promise&lt;T, Exception&gt;</kbd>: This is callback on fail, like a <kbd>catch</kbd> block.</li>
+<li><kbd>always(callback: () -&gt; Unit): Promise&lt;T, Exception&gt;</kbd>: This always executes, like a <kbd>finally</kbd> block.</li>
+</ul>
+<p>The codes feel difficult to grasp at first sight, but, once you get used to the promise idioms, it is easy to read. Also, notice that a promise is a future, so you can write something similar to our future's example but without messing around with <kbd>Executors</kbd>. Java 8 includes a new type of future named <kbd>CompletableFuture&lt;T&gt;</kbd> which can be considered a promise.</p>
+<p>Execution time is around 1,350 milliseconds for the first execution (Kovenant initialization phase), and then it stabilizes around 1,200 milliseconds. On its default configuration, Kovenant uses as many threads as possible, resulting in a high use of memory, but Kovenant can be fine-tuned to use fewer threads.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Coroutines</h1>
+                </header>
+            
+            <article>
+                
+<p>Now, let's rework our example with coroutines:</p>
+<pre><span>import kotlinx.coroutines.experimental.Deferred<br/>import kotlinx.coroutines.experimental.async<br/>import kotlinx.coroutines.experimental.launch<br/>import kotlinx.coroutines.experimental.runBlocking<br/><br/>class </span>CoroutineUserService(<span>private val </span><span>userClient</span>: <span>UserClient</span><span>,<br/></span><span>                     private val </span><span>factClient</span>: <span>FactClient</span><span>,<br/></span><span>                     private val </span><span>userRepository</span>: <span>UserRepository</span><span>,<br/></span><span>                     private val </span><span>factRepository</span>: <span>FactRepository</span>) : <span>UserService </span>{<br/>   <span>override fun </span><span>getFact</span>(<span>id</span>: UserId): Fact = <span>runBlocking </span><span>{<br/></span><span>      </span><span>val </span><span>user </span>= <span>async </span><span>{ </span><span>userRepository</span>.<span>getUserById</span>(<span>id</span>) <span>}</span>.<span>await</span>()<br/>      <span>if </span>(<span>user </span>== <span>null</span>) {<br/>         <span>val </span><span>userFromService </span>= <span>async </span><span>{ </span><span>userClient</span>.<span>getUser</span>(<span>id</span>) <span>}</span>.<span>await</span>()<br/>         <span>launch </span><span>{ </span><span>userRepository</span>.<span>insertUser</span>(<span>userFromService</span>) <span>}<br/></span><span>         </span><span>getFact</span>(<span>userFromService</span>)<br/>      } <span>else </span>{<br/>         <span>async </span><span>{ </span><span>factRepository</span>.<span>getFactByUserId</span>(<span>id</span>) ?: <span>getFact</span>(<span>user</span>) <span>}</span>.<span>await</span>()<br/>      }<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>private suspend fun </span><span>getFact</span>(<span>user</span>: User):Fact {<br/>      <span>val </span><span>fact</span>: <span>Deferred</span>&lt;Fact&gt; = <span>async </span><span>{ </span><span>factClient</span>.<span>getFact</span>(<span>user</span>) <span>}<br/></span><span>      </span><span>launch </span><span>{ </span><span>factRepository</span>.<span>insertFact</span>(<span>fact</span>.<span>await</span>()) <span>}<br/></span><span>      </span><span>return </span><span>fact</span>.<span>await</span>()<br/>   }<br/>}</pre>
+<p>Our code is more straightforward than our <kbd>Future</kbd> example, getting very close to our synchronous code. We covered <kbd>runBlocking</kbd> and <kbd>launch</kbd> in the previous section, but a new coroutine builder is introduced here, <kbd>async</kbd>.</p>
+<p>The <kbd>async</kbd> coroutine builder takes a block of code and executes it asynchronously, returning <kbd>Deferred&lt;T&gt;</kbd>. A <kbd>Deferred</kbd> is a <kbd>Future</kbd> with an <kbd>await</kbd> method that blocks the coroutine until completion but not the thread; <kbd>Deferred</kbd> also extends from <kbd>Job</kbd> so inherits all its methods, such as <kbd>join</kbd>.</p>
+<p>Coroutine code feels natural yet it is explicit when we are using asynchronous code, but due to the low cost on resources, we can use as many coroutines as we want in our code; for example, <kbd>CoroutineUserService</kbd> uses less than half of threads and memory than any other implementation.</p>
+<p>Now that we have all implementations, we can compare code complexity and resource consumption:</p>
+<table>
+<tbody>
+<tr>
+<td/>
+<td>
+<p><strong>Code complexity</strong></p>
+</td>
+<td>
+<p><strong>Resource consumption</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Synchronous</strong></p>
+</td>
+<td>
+<p>There is very low code complexity.</p>
+</td>
+<td>
+<p>The resource consumption is very low with slow performance.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Callbacks</strong></p>
+</td>
+<td>
+<p>Very high adapters are needed; duplication is expected; nested callbacks are hard to read; and there are various hacks.</p>
+</td>
+<td>
+<p><span>The resource consumption is h</span>igh. It could improve using a shared <kbd>Executor</kbd>, but it will add more code complexity.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Futures</strong></p>
+</td>
+<td>
+<p>Code complexity is medium. <kbd>Executors</kbd> and <kbd>get()</kbd> are noisy but it is still readable.</p>
+</td>
+<td>
+<p>Resource consumption is high, but it can be fine-tuned using different <kbd>Executor</kbd> implementations and sharing executors but this adds code complexity.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Promises</strong></p>
+</td>
+<td>
+<p>Code complexity is medium using promise style (<kbd>then</kbd>, <kbd>success</kbd>). Using a futures style (<kbd>get</kbd>), it can be as slick as coroutines without affecting performance.</p>
+</td>
+<td>
+<p>Resource consumption is very high, with top performance, but it can be fine-tuned without altering the code.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><strong>Coroutines</strong></p>
+</td>
+<td>
+<p>Code complexity is low; it's the same size as synchronous style with explicit blocks for asynchronous operations.</p>
+</td>
+<td>
+<p><span>Resource consumption is l</span>ow, with top performance out of the box.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p>Overall, coroutines are a clear winner, with Kovenant promises coming in a close second.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Coroutine context</h1>
+                </header>
+            
+            <article>
+                
+<p>Coroutines always run in a context. All coroutine builders have context specified by default, and that context is available through the value <kbd>coroutineContext</kbd>, inside the coroutine body:</p>
+<pre><span>import kotlinx.coroutines.experimental.*<br/><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span>   </span><span>println</span>(<span>"run blocking coroutineContext = </span><span>$</span><span>coroutineContext</span><span>"</span>)<br/>   <span>println</span>(<span>"coroutineContext[Job] = </span><span>${</span><span>coroutineContext</span>[<span>Job</span>]<span>}</span><span>"</span>)<br/>   <span>println</span>(Thread.<span>currentThread</span>().<span>name</span>)<br/>   <span>println</span>(<span>"-----"</span>)<br/><br/>   <span>val </span><span>jobs </span>= <span>listOf</span>(<br/>         <span>launch </span><span>{<br/></span><span>            </span><span>println</span>(<span>"launch coroutineContext = </span><span>$</span><span>coroutineContext</span><span>"</span>)<br/>            <span>println</span>(<span>"coroutineContext[Job] = </span><span>${</span><span>coroutineContext</span>[<span>Job</span>]<span>}</span><span>"</span>)<br/>            <span>println</span>(Thread.<span>currentThread</span>().<span>name</span>)<br/>            <span>println</span>(<span>"-----"</span>)<br/>         <span>}</span><span>,<br/></span><span>         </span><span>async </span><span>{<br/></span><span>            </span><span>println</span>(<span>"async coroutineContext = </span><span>$</span><span>coroutineContext</span><span>"</span>)<br/>            <span>println</span>(<span>"coroutineContext[Job] = </span><span>${</span><span>coroutineContext</span>[<span>Job</span>]<span>}</span><span>"</span>)<br/>            <span>println</span>(Thread.<span>currentThread</span>().<span>name</span>)<br/>            <span>println</span>(<span>"-----"</span>)<br/>         <span>}</span><span>,<br/></span><span>         </span><span>launch</span>(<span>CommonPool</span>) <span>{<br/></span><span>            </span><span>println</span>(<span>"common launch coroutineContext = </span><span>$</span><span>coroutineContext</span><span>"</span>)<br/>            <span>println</span>(<span>"coroutineContext[Job] = </span><span>${</span><span>coroutineContext</span>[<span>Job</span>]<span>}</span><span>"</span>)<br/>            <span>println</span>(Thread.<span>currentThread</span>().<span>name</span>)<br/>            <span>println</span>(<span>"-----"</span>)<br/>         <span>}</span><span>,<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{<br/></span><span>            </span><span>println</span>(<span>"inherit launch coroutineContext = </span><span>$</span><span>coroutineContext</span><span>"</span>)<br/>            <span>println</span>(<span>"coroutineContext[Job] = </span><span>${</span><span>coroutineContext</span>[<span>Job</span>]<span>}</span><span>"</span>)<br/>            <span>println</span>(Thread.<span>currentThread</span>().<span>name</span>)<br/>            <span>println</span>(<span>"-----"</span>)<br/>         <span>}<br/></span><span>   </span>)<br/><br/>   <span>jobs</span>.<span>forEach </span><span>{ </span><span>job </span><span>-&gt;<br/></span><span>      </span><span>println</span>(<span>"job = </span><span>$</span><span>job</span><span>"</span>)<br/>      <span>job</span>.<span>join</span>()<br/>   <span>}<br/></span><span>}</span></pre>
+<p>Each coroutine context also includes <kbd>CoroutineDispatcher</kbd> that decides which thread the coroutine runs. Coroutines builders, such as <kbd>async</kbd> and <kbd>launch</kbd>, use the <kbd>DefaultDispatcher</kbd> dispatcher as default (in the current coroutines version, 0.2.1, <kbd>DefaultDispatcher</kbd> is equal to <kbd>CommonPool</kbd>; however, this behavior can change in the future).</p>
+<p>The coroutine context can also hold values; for example, you can recover the coroutine's job by using <kbd>coroutineContext[Job]</kbd>.</p>
+<p>Coroutine contexts can be used to control its children. Our 1 million coroutines example can be reworked to join all its children:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span><br/></span><span>   </span><span>val </span><span>job </span>= <span>launch </span><span>{<br/></span><span>      </span><span>repeat</span>(<span>1_000_000</span>) <span>{<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{<br/></span><span>            </span><span>delay</span>(<span>1000</span>)<br/>            <span>print</span>(<span>'.'</span>)<br/>         <span>}<br/></span><span>      }<br/></span><span>   }<br/></span><span><br/></span><span>   </span><span>job</span>.<span>join</span>()<br/><span>}</span></pre>
+<p>Instead of each one of the million coroutines having its own context, we can set a shared coroutine context that actually comes from the external <kbd>launch</kbd> coroutine context. When we join the outer <kbd>launch</kbd> job, it joins all its coroutine children, too.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Channels</h1>
+                </header>
+            
+            <article>
+                
+<p>One way for two coroutines to communicate (or for a coroutine to the external world as with <kbd>async</kbd>) is through <kbd>Deferred&lt;T&gt;</kbd>:</p>
+<pre><span>import kotlinx.coroutines.experimental.delay<br/>import kotlinx.coroutines.experimental.launch<br/>import kotlinx.coroutines.experimental.runBlocking<br/><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking</span><span> </span><span>{<br/></span><span>    </span><span>val </span><span>result </span>= <span>CompletableDeferred</span>&lt;String&gt;()<br/><br/>   <span>val </span><span>world </span>= <span>launch </span><span>{<br/></span><span>      </span><span>delay</span>(<span>500</span>)<br/>      <span>result</span>.<span>complete</span>(<span>"World (from another coroutine)"</span>)<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>hello </span>=<span>launch </span><span>{<br/></span><span>      </span><span>println</span>(<span>"Hello </span><span>${</span><span>result</span>.<span>await</span>()<span>}</span><span>"</span>)<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>hello</span>.<span>join</span>()<br/>   <span>world</span>.<span>join</span>()<br/><span>}</span></pre>
+<p>Deferreds are fine for single values, but sometimes we want to send a sequence or a stream. In that case, we can use <kbd>Channel</kbd>. <kbd>Channel</kbd> which is similar to <kbd>BlockingQueue</kbd>, but with suspending operations instead of blocking ones, also <kbd>Channel</kbd> can be <kbd>close</kbd>:</p>
+<pre><span>import kotlinx.coroutines.experimental.channels.*<br/><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking</span><span>&lt;Unit&gt; </span><span>{<br/></span><span>   </span><span>val </span><span>channel </span>= <span>Channel</span>&lt;String&gt;()<br/><br/>   <span>val </span><span>world </span>= <span>launch </span><span>{<br/></span><span>      </span><span>delay</span>(<span>500</span>)<br/>      <span>channel</span>.<span>send</span>(<span>"World (from another coroutine using a channel)"</span>)<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>val </span><span>hello </span>= <span>launch </span><span>{<br/></span><span>      </span><span>println</span>(<span>"Hello </span><span>${</span><span>channel</span>.<span>receive</span>()<span>}</span><span>"</span>)<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>hello</span>.<span>join</span>()<br/>   <span>world</span>.<span>join</span>()<br/><span>}</span></pre>
+<p>Let's write our 1 million coroutines example with channels as follows:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking</span><span>&lt;Unit&gt; </span><span>{<br/></span><span><br/></span><span>   </span><span>val </span><span>channel </span>= <span>Channel</span>&lt;Char&gt;()<br/><br/>   <span>val </span><span>jobs </span>= <span>List</span>(<span>1_000_000</span>) <span>{<br/></span><span>      </span><span>launch </span><span>{<br/></span><span>         </span><span>delay</span>(<span>1000</span>)<br/>         <span>channel</span>.<span>send</span>(<span>'.'</span>)<br/>      <span>}<br/></span><span>   }<br/></span><span><br/></span><span>   </span><span>repeat</span>(<span>1_000_000</span>) <span>{<br/></span><span>      </span><span>print</span>(<span>channel</span>.<span>receive</span>())<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>jobs</span>.<span>forEach </span><span>{ </span><span>job </span><span>-&gt; </span><span>job</span>.<span>join</span>() <span>}<br/></span><span>}</span></pre>
+<p class="mce-root">Of course, this isn't the intended use case for channels. Usually, a single coroutine (or many) sends messages to the channel:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking</span><span>&lt;Unit&gt; </span><span>{<br/></span><span><br/></span><span>   </span><span>val </span><span>channel </span>= <span>Channel</span>&lt;Char&gt;()<br/><br/>   <span>val </span><span>sender </span>= <span>launch </span><span>{<br/></span><span>      </span><span>repeat</span>(<span>1000</span>) <span>{<br/></span><span>         </span><span>delay</span>(<span>10</span>)<br/>         <span>channel</span>.<span>send</span>(<span>'.'</span>)<br/>         <span>delay</span>(<span>10</span>)<br/>         <span>channel</span>.<span>send</span>(<span>','</span>)<br/>      <span>}<br/></span><span>      </span><span>channel</span>.<span>close</span>()<br/>   <span>}<br/></span><span><br/></span><span>   </span><span>for </span>(<span>msg </span><span>in </span><span>channel</span>) {<br/>      <span>print</span>(<span>msg</span>)<br/>   }<br/><br/>   <span>sender</span>.<span>join</span>()<br/><br/><span>}</span></pre>
+<p>A channel is itself an Iterator, so it can be used on the <kbd>for</kbd> blocks.</p>
+<p>A simpler way to write this code is by using the <kbd>produce</kbd> builder as follows:</p>
+<pre><span>fun </span><span>dotsAndCommas</span>(<span>size</span>: Int) = <span>produce </span><span>{<br/></span><span>   </span><span>repeat</span>(<span>size</span>) <span>{<br/></span><span>      </span><span>delay</span>(<span>10</span>)<br/>      <span>send</span>(<span>'.'</span>)<br/>      <span>delay</span>(<span>10</span>)<br/>      <span>send</span>(<span>','</span>)<br/>   <span>}<br/></span><span>}<br/></span><span><br/></span><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking</span><span>&lt;Unit&gt; </span><span>{<br/></span><span>   </span><span>val </span><span>channel </span>= <span>dotsAndCommas</span>(<span>1000</span>)<br/><br/>   <span>for </span>(<span>msg </span><span>in </span><span>channel</span>) {<br/>      <span>print</span>(<span>msg</span>)<br/>   }<br/><span>}</span></pre>
+<p>The <kbd>produce</kbd> builder returns <kbd>ReceiveChannel&lt;T&gt;</kbd>, a channel type just for receiving. A <kbd>Channel&lt;T&gt;</kbd> extends both types, <kbd>SendChannel&lt;T&gt;</kbd> and <kbd>ReceiveChannel&lt;T&gt;</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Channel pipelines</h1>
+                </header>
+            
+            <article>
+                
+<p>When we have channels, we can have related patterns, such as pipelines. A <strong>pipeline</strong> is a series of channels connecting consumers and producers, similar to Unix pipes or <span><strong>Enterprise Integration Patterns</strong> (</span><strong>EIP</strong>).</p>
+<p>Let's write our own sales system using EIPs. Let's first take a look at the models:</p>
+<pre><span>data class </span>Quote(<span>val </span><span>value</span>: Double<span>, val </span><span>client</span>: String<span>, val </span><span>item</span>: String<span>, val </span><span>quantity</span>: Int)<br/><br/><span>data class </span>Bill(<span>val </span><span>value</span>: Double<span>, val </span><span>client</span>: String)<br/><br/><span>data class </span>PickingOrder(<span>val </span><span>item</span>: String<span>, val </span><span>quantity</span>: Int)</pre>
+<p>Now, let's take a look at the patterns:</p>
+<pre><span>import kotlinx.coroutines.experimental.CoroutineContext<br/><br/>fun </span><span>calculatePriceTransformer</span>(<span>coroutineContext</span>: <span>CoroutineContext</span><span>, </span><span>quoteChannel</span>: <span>ReceiveChannel</span>&lt;Quote&gt;) = <span>produce</span>(<span>coroutineContext</span>) <span>{<br/></span><span>   </span><span>for </span>(<span>quote </span><span>in </span><span>quoteChannel</span>) {<br/>      <span>send</span>(Bill(<span>quote</span>.<span>value </span>* <span>quote</span>.<span>quantity</span><span>, </span><span>quote</span>.<span>client</span>) <span>to </span>PickingOrder(<span>quote</span>.<span>item</span><span>, </span><span>quote</span>.<span>quantity</span>))<br/>   }<br/><span>}</span></pre>
+<p>The <kbd>calculatePriceTransformer</kbd> function receives quotes from a channel and transforms it into <kbd>Pair&lt;Bill, PickingOrder&gt;</kbd>:</p>
+<pre><span>fun </span><span>cheapBillFilter</span>(<span>coroutineContext</span>: <span>CoroutineContext</span><span>, </span><span>billChannel</span>: <span>ReceiveChannel</span>&lt;Pair&lt;Bill<span>, </span>PickingOrder&gt;&gt;) = <span>produce</span>(<span>coroutineContext</span>) <span>{<br/></span><span>   </span><span>billChannel</span>.<span>consumeEach </span><span>{ </span>(<span>bill</span><span>, </span><span>order</span>) <span>-&gt;<br/></span><span>      </span><span>if </span>(<span>bill</span>.<span>value </span>&gt;= <span>100</span>) {<br/>         <span>send</span>(<span>bill </span><span>to </span><span>order</span>)<br/>      } <span>else </span>{<br/>         <span>println</span>(<span>"Discarded bill </span><span>$</span><span>bill</span><span>"</span>)<br/>      }<br/>   <span>}<br/></span><span>}</span></pre>
+<p>The <kbd>cheapBillFilter</kbd> function well filters the <kbd>bill</kbd> value below <kbd>100</kbd>:</p>
+<pre><span>suspend fun </span><span>splitter</span>(<span>filteredChannel</span>: <span>ReceiveChannel</span>&lt;Pair&lt;Bill<span>, </span>PickingOrder&gt;&gt;<span>,<br/></span><span>                </span><span>accountingChannel</span>: <span>SendChannel</span>&lt;Bill&gt;<span>,<br/></span><span>                </span><span>warehouseChannel</span>: <span>SendChannel</span>&lt;PickingOrder&gt;) = <span>launch </span><span>{<br/></span><span>   </span><span>filteredChannel</span>.<span>consumeEach </span><span>{ </span>(<span>bill</span><span>, </span><span>order</span>) <span>-&gt;<br/></span><span>      </span><span>accountingChannel</span>.<span>send</span>(<span>bill</span>)<br/>      <span>warehouseChannel</span>.<span>send</span>(<span>order</span>)<br/>   <span>}<br/></span><span>}</span></pre>
+<p><kbd>splitter</kbd> splits <kbd>Pair&lt;Bill, PickingOrder&gt;</kbd> into their own channels:</p>
+<pre><span>suspend fun </span><span>accountingEndpoint</span>(<span>accountingChannel</span>: <span>ReceiveChannel</span>&lt;Bill&gt;) = <span>launch </span><span>{<br/></span><span>   </span><span>accountingChannel</span>.<span>consumeEach </span><span>{ </span><span>bill </span><span>-&gt;<br/></span><span>      </span><span>println</span>(<span>"Processing bill = </span><span>$</span><span>bill</span><span>"</span>)<br/>   <span>}<br/></span><span>}<br/></span><span><br/></span><span>suspend fun </span><span>warehouseEndpoint</span>(<span>warehouseChannel</span>: <span>ReceiveChannel</span>&lt;PickingOrder&gt;) = <span>launch </span><span>{<br/></span><span>   </span><span>warehouseChannel</span>.<span>consumeEach </span><span>{ </span><span>order </span><span>-&gt;<br/></span><span>      </span><span>println</span>(<span>"Processing order = </span><span>$</span><span>order</span><span>"</span>)<br/>   <span>}<br/></span><span>}</span></pre>
+<p>Both <kbd>accountingEndpoint</kbd> and <kbd>warehouseEndpoint</kbd> process their respective messages by printing, but, in a real-life scenario, we could be storing these messages into our database, sending emails or sending messages to other systems using <strong>JMS</strong>, <strong>AMQP</strong>, or <strong>Kafka</strong>:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span><br/></span><span>   </span><span>val </span><span>quoteChannel </span>= <span>Channel</span>&lt;Quote&gt;()<br/>   <span>val </span><span>accountingChannel </span>= <span>Channel</span>&lt;Bill&gt;()<br/>   <span>val </span><span>warehouseChannel </span>= <span>Channel</span>&lt;PickingOrder&gt;()<br/>   <br/>   <span>val </span><span>transformerChannel </span>= <span>calculatePriceTransformer</span>(<span>coroutineContext</span><span>, </span><span>quoteChannel</span>)<br/><br/>   <span>val </span><span>filteredChannel </span>= <span>cheapBillFilter</span>(<span>coroutineContext</span><span>, </span><span>transformerChannel</span>)<br/><br/>   <span>splitter</span>(<span>filteredChannel</span><span>, </span><span>accountingChannel</span><span>, </span><span>warehouseChannel</span>)<br/><br/>   <span>warehouseEndpoint</span>(<span>warehouseChannel</span>)<br/><br/>   <span>accountingEndpoint</span>(<span>accountingChannel</span>)<br/><br/>   <span>launch</span>(<span>coroutineContext</span>) <span>{<br/></span><span>      </span><span>quoteChannel</span>.<span>send</span>(Quote(<span>20.0</span><span>, </span><span>"Foo"</span><span>, </span><span>"Shoes"</span><span>, </span><span>1</span>))<br/>      <span>quoteChannel</span>.<span>send</span>(Quote(<span>20.0</span><span>, </span><span>"Bar"</span><span>, </span><span>"Shoes"</span><span>, </span><span>200</span>))<br/>      <span>quoteChannel</span>.<span>send</span>(Quote(<span>2000.0</span><span>, </span><span>"Foo"</span><span>, </span><span>"Motorbike"</span><span>, </span><span>1</span>))<br/>   <span>}<br/></span><span>   <br/></span><span>   </span><span>delay</span>(<span>1000</span>)<br/>   <span>coroutineContext</span>.<span>cancelChildren</span>()<br/><span>}</span></pre>
+<p>The <kbd>main</kbd> method assembles our sales system and tests it.</p>
+<p>Many other channel messages patterns can be implemented with coroutine channels, such as fan-in, fan-out, and <kbd>actors</kbd>. We'll cover <kbd>actors</kbd> in our next section.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Managing mutable state</h1>
+                </header>
+            
+            <article>
+                
+<p>The main concern (and nightmare fuel) when we deal with asynchronous code is how to handle mutable state. We covered how to reduce mutable state with a functional style in <a href="3d8794f8-c237-4d9e-992e-c54a1392a89c.xhtml">Chapter 3</a>, <em>Immutability - It's Important</em>. But sometimes it is impossible to use a functional immutable style. Coroutines offer some alternatives to this problem.</p>
+<p>In the following example, we'll use several coroutines to update a counter:</p>
+<pre><span>import kotlin.system.measureTimeMillis<br/><br/>suspend fun </span><span>repeatInParallel</span>(<span>times</span>: Int<span>, </span><span>block</span>: <span>suspend </span>() -&gt; <span>Unit</span>) {<br/>   <span>val </span><span>job </span>= <span>launch </span><span>{<br/></span><span>      </span><span>repeat</span>(<span>times</span>) <span>{<br/></span><span>         </span><span>launch</span>(<span>coroutineContext</span>) <span>{<br/></span><span>            </span><span>block</span>()<br/>         <span>}<br/></span><span>      }<br/></span><span>   }<br/></span><span>   </span><span>job</span>.<span>join</span>()<br/>}<br/><br/><span>fun main(args: Array&lt;String&gt;) = runBlocking {<br/></span><span>   var counter = 0<br/></span><span><br/></span><span>   val time = measureTimeMillis {<br/></span><span>      repeatInParallel(1_000_000) {<br/></span><span>         counter++<br/></span><span>      }<br/></span><span>   }<br/></span><span>   println("counter = $counter")<br/></span><span>   println("time = $time")<br/></span><span>}</span></pre>
+<p>On smaller numbers, <kbd>counter</kbd> is right, but once we start increasing the size, we'll see wacky numbers.</p>
+<p>Now we can have a look at the alternatives that coroutines provide us.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Switching contexts</h1>
+                </header>
+            
+            <article>
+                
+<p>Our first option is to use a different context for our update operation:</p>
+<pre><span>import kotlinx.coroutines.experimental.*<br/><br/>fun main(args: Array&lt;String&gt;) = runBlocking {<br/></span><span>   var counter = 0<br/></span><span><br/></span><span>   val counterContext = newSingleThreadContext("CounterContext")<br/></span><span><br/></span><span>   val time = measureTimeMillis {<br/></span><span>      repeatInParallel(1_000_000) {<br/></span><span>         withContext(counterContext) {<br/></span><span>            counter++<br/></span><span>         }<br/></span><span>      }<br/></span><span>   }<br/></span><span>   println("counter = $counter")<br/></span><span>   println("time = $time")<br/></span><span>}</span></pre>
+<p>The <kbd>withContext</kbd> <span>function </span>executes a block in a specific coroutine context—in this case, a single-threaded one. Switching context is a powerful technique that lets us manipulate, in a fine-grained way, how our code runs.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Thread safe structures</h1>
+                </header>
+            
+            <article>
+                
+<p>From Java 5 and onwards, we have access to some atomic thread safe structures, that are still useful with coroutines:</p>
+<pre><span>import java.util.concurrent.atomic.AtomicInteger<br/><br/>fun main(args: Array&lt;String&gt;) = runBlocking {<br/></span><span>   val counter = AtomicInteger(0)<br/></span><span><br/></span><span>   val time = measureTimeMillis {<br/></span><span>      repeatInParallel(1_000_000) {<br/></span><span>         counter.incrementAndGet()<br/></span><span>      }<br/></span><span>   }<br/></span><span>   println("counter = ${counter.get()}")<br/></span><span>   println("time = $time")<br/></span><span>}</span></pre>
+<p><kbd>AtomicInteger</kbd> gives us many atomic operations that are thread safe. There are more thread safe structures such as other atomic primitives and concurrent collections.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Mutexes</h1>
+                </header>
+            
+            <article>
+                
+<p>A <kbd>Mutex</kbd> (mutual exclusion) object allows access to multiple coroutines to share the same resource but not simultaneously:</p>
+<pre><span>import kotilnx.coroutines.experimental.sync.Mutex<br/>import kotlinx.coroutines.experimental.sync.withLock<br/><br/>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span>   </span><span>val </span><span>mutex </span>= <span>Mutex</span>()<br/>   <span>var </span><span>counter </span>= <span>0<br/></span><span><br/></span><span>   </span><span>val </span><span>time </span>= <span>measureTimeMillis </span><span>{<br/></span><span>      </span><span>repeatInParallel</span>(<span>1_000_000</span>) <span>{<br/></span><span>         </span><span>mutex</span>.<span>withLock </span><span>{<br/></span><span>            </span><span>counter</span>++<br/>         <span>}<br/></span><span>      }<br/></span><span>   }<br/></span><span>   </span><span>println</span>(<span>"counter = </span><span>$</span><span>counter</span><span>"</span>)<br/>   <span>println</span>(<span>"time = </span><span>$</span><span>time</span><span>"</span>)<br/><span>}</span></pre>
+<p>A <kbd>Mutex</kbd> object works similarly to a synchronized control structure, but, instead of blocking the thread, it just blocks the coroutine.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Actors</h1>
+                </header>
+            
+            <article>
+                
+<p>An <kbd>actor</kbd> is kind of object that interacts with other actors and with the external world through messages. An <kbd>actor</kbd> object can have a private internal mutable state that can be modified and accessed externally through messages, but not directly. Actors are growing in popularity in recent years due to their consistent programming model, and have been tested successfully in multi-million user applications, such as <strong>WhatsApp</strong> that is built with <strong>Erlang</strong>, the language that brings actors into the limelight:</p>
+<pre><span>import kotlinx.coroutines.experimental.channels.actor<br/><br/>sealed class </span>CounterMsg<br/><span>object </span><span>IncCounter </span>: CounterMsg()<br/><span>class </span>GetCounter(<span>val </span><span>response</span>: <span>CompletableDeferred</span>&lt;Int&gt;) : CounterMsg()<br/><br/><span>fun </span><span>counterActor</span>(<span>start</span>:Int) = <span>actor</span>&lt;CounterMsg&gt; <span>{<br/></span><span>   </span><span>var </span><span>counter </span>= <span>start<br/></span><span>   </span><span>for </span>(<span>msg </span><span>in </span><span>channel</span>) {<br/>      <span>when </span>(<span>msg</span>) {<br/>         <span>is </span><span>IncCounter </span>-&gt; <span>counter</span>++<br/>         <span>is </span>GetCounter -&gt; <span>msg</span>.<span>response</span>.<span>complete</span>(<span>counter</span>)<br/>      }<br/>   }<br/><span>}</span><br/><br/></pre>
+<p>To write an <kbd>actor</kbd>, first, we need to define which messages we want to send. Here, we are creating two messages, <kbd>IncCounter</kbd> and <kbd>GetCounter</kbd>. <kbd>GetCounter</kbd> has a <kbd>CompletableDeferred&lt;Int&gt;</kbd> value that will let us know the counter value outside the <kbd>actor</kbd>.</p>
+<p>We can use the <kbd>actor&lt;CounterMsg&gt;</kbd> builder to create <kbd>actor</kbd>. Inside our <kbd>actor</kbd> coroutine, we have access to the <kbd>channel</kbd> property, <kbd>ReceiveChannel&lt;CounterMsg&gt;</kbd>, to receive the messages and react to them. The <kbd>counterActor(Int)</kbd> function will return <kbd>SendChannel&lt;CounterMsg&gt;</kbd>; therefore, the only functions that we can call are <kbd>send(CounterMsg)</kbd> and <kbd>close()</kbd>:</p>
+<pre><span>fun </span><span>main</span>(<span>args</span>: Array&lt;String&gt;) = <span>runBlocking </span><span>{<br/></span><span>   </span><span>val </span><span>counterActor </span>= <span>counterActor</span>(<span>0</span>)<br/><br/>   <span>val </span><span>time </span>= <span>measureTimeMillis </span><span>{<br/></span><span>      </span><span>repeatInParallel</span>(<span>1_000_000</span>) <span>{<br/></span><span>         </span><span>counterActor</span>.<span>send</span>(<span>IncCounter</span>)<br/>      <span>}<br/></span><span>   }<br/></span><span>   <br/></span><span>   </span><span>val </span><span>counter </span>= <span>CompletableDeferred</span>&lt;Int&gt;()<br/>   <span>counterActor</span>.<span>send</span>(GetCounter(<span>counter</span>))<br/>   <span>println</span>(<span>"counter = </span><span>${</span><span>counter</span>.<span>await</span>()<span>}</span><span>"</span>)<br/>   <span>println</span>(<span>"time = </span><span>$</span><span>time</span><span>"</span>)<br/><span>}</span></pre>
+<p>Actors can be hard to grasp at the beginning but once, you understand, the <kbd>actor</kbd> model is straightforward for creating complex and powerful systems.</p>
+<div class="packt_infobox">In the example code for this book, you can find an implementation of our <kbd>UserService</kbd> example using <kbd>actors</kbd>. You can watch it online at <a href="https://github.com/MarioAriasC/FunctionalKotlin/blob/master/Chapter07/src/main/kotlin/com/packtpub/functionalkotlin/chapter07/facts.kt#L377">https://github.com/MarioAriasC/FunctionalKotlin/blob/master/Chapter07/src/main/kotlin/com/packtpub/functionalkotlin/chapter07/facts.kt#L377</a>.</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>Coroutines show a high potential to transform the way we think about asynchronous code and execution. In this chapter, we covered how to write coroutines and how to use coroutine contexts and channels. We also took a comprehensive look at how to deal with asynchronous shared mutable state.</p>
+<p>In our next chapter, we'll learn about functional collections and their operations.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

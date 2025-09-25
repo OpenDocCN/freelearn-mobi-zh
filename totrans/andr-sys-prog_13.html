@@ -1,0 +1,531 @@
+<html><head></head><body>
+        <section>
+
+            <header>
+                <h1 class="header-title">Creating OTA Packages</h1>
+            </header>
+
+            <article>
+                
+<p>In the last chapter, we analyzed the internals of recovery and learnt how it works. As we saw, one of the major functionalities of recovery is to support OTA update. In this chapter, we will look at the OTA package and study the process of the OTA package update. We will cover the following topics:</p>
+<ul>
+<li>We will look at what is inside an OTA package. We will study the internals of <kbd>updater</kbd> and <kbd>updater-script</kbd>.</li>
+<li>We will learn the process about how to build an OTA package.</li>
+<li>Finally, we need to improve recovery to remove the dependencies from the Android system.</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">What is inside an OTA package</h1>
+            </header>
+
+            <article>
+                
+<p>Before we start to build an OTA package, let's look at what's inside an OTA package. The OTA package can be used to update the system to a new release. The new release can be a major release or a minor release. For example, it could be a minor update to the existing Android version to fix critical issues or security flaws. It could also be the major update from Android 6 to Android 7. Let's look at the content of the OTA package that we are going to create in this chapter to find out what is inside an OTA package. The OTA package that we are going to create in this chapter is an OTA update package of our entire ROM. We can use recovery to flash the OTA package to our VirtualBox device. This is another way to install the system image that we build to the virtual device.</p>
+<p>Let's look at the content of the OTA package that we will build in this chapter. The OTA package itself is a ZIP file. After we extract the ZIP file, we can list the content of the ZIP file as follows:</p>
+<pre>
+<strong>$ ls -F</strong><br/><strong>boot.img*  file_contexts*  META-INF/  recovery/  system/</strong>  
+</pre>
+<p>We can see that it includes two files and three folders. After we flash this update package using recovery, it will update the <kbd>/boot</kbd> partition and the <kbd>/system</kbd> partition:</p>
+<ul>
+<li><kbd>boot.img</kbd>: The image of the <kbd>/boot</kbd> partition, which includes kernel and ramdisk.</li>
+<li><kbd>file_contexts</kbd>: This file is used to assign labels to files according to SELinux policy. SELinux is enabled by default in the latest Android system. After the recovery updates the system partition, it must apply labels using this file.</li>
+<li><kbd>META-INF</kbd>: This folder includes the signature of the OTA package, the updater, and updater script. We will look at the details of this folder later.</li>
+<li><kbd>recovery</kbd>: This folder includes an <kbd>install-recovery.sh</kbd> shell script and a <kbd>recovery-from-boot.p</kbd> patch file.</li>
+<li><kbd>system</kbd>: This is the <kbd>system</kbd> folder that recovery will update to the <kbd>/system</kbd> partition.</li>
+</ul>
+<p>OTA packages are usually used to update <kbd>/boot</kbd> and <kbd>/system</kbd> partitions. It does not update itself. The update of the <kbd>/recovery</kbd> partition is in the normal boot up process. During the boot up, the init will execute <kbd>install-recovery.sh</kbd> in the <kbd>init.rc</kbd> script through the following <kbd>flash_recovery</kbd> service:</p>
+<pre>
+service flash_recovery /system/bin/install-recovery.sh <br/>    class main <br/>    oneshot 
+</pre>
+<p>The <kbd>install-recovery.sh</kbd> script installs recovery using the <kbd>recovery-from-boot.p</kbd> patch file as follows:</p>
+<pre>
+#!/system/bin/sh <br/>if ! applypatch -c EMMC:/dev/block/sda7:7757824:853301871de495db2b8c93f7a37779b9eeccb169; then <br/>  applypatch -b /system/etc/recovery-resource.dat EMMC:/dev/block/sda8:6877184:2f58cc1a4035176c8fefc19be70c00e625acc16b EMMC:/dev/block/sda7 853301871de495db2b8c93f7a37779b9eeccb169 7757824 2f58cc1a4035176c8fefc19be70c00e625acc16b:/system/recovery-from-boot.p &amp;&amp; log -t recovery "Installing new recovery image: succeeded" || log -t recovery "Installing new recovery image: failed" <br/>else <br/>  log -t recovery "Recovery image already installed" <br/>fi 
+</pre>
+<p>In our environment setup, the <kbd>/recovery</kbd> partition is in the <kbd>/dev/block/sda7</kbd> partition. This script will check the <kbd>sha1</kbd> hash of the <kbd>/dev/block/sha7</kbd> partition. If the <kbd>sha1</kbd> hash value is not the same, it will update the <kbd>/recovery</kbd> partition.</p>
+<p>Now let's look at the <kbd>META-INF</kbd> folder, as shown in the following screenshot:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="263" width="381" class=" image-border" src="assets/image_13_001.png"/></div>
+<p>As we can see, the signature of the update package, updater, and updater script are included in the <kbd>META-INF</kbd> folder. Before the recovery applies the update, it will verify the package signature in the <kbd>META-INF</kbd> folder against the trusted certificates at <kbd>/system/etc/security/otacerts.zip</kbd>.</p>
+<p>The updater is an executable at <kbd>META-INF/com/google/android/update-binary</kbd>. It interprets a script in the <kbd>META-INF/com/google/android/updater-script</kbd> file. The script is written in an extensible scripting language (edify) that supports commands for typical update related tasks.</p>
+<p>Since the updater and the updater script are the key components in the OTA package to support an OTA update, we will look into the details of them.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Updater</h1>
+            </header>
+
+            <article>
+                
+<p>updater is an individual executable for the target device in the AOSP source tree. It can be found in the <kbd>$AOSP/bootable/recovery/updater</kbd> folder. Let's look at the main function in the <kbd>updater.cpp</kbd> file. Since the <kbd>main</kbd> function is a little long, let's look at it in several paragraphs:</p>
+<pre>
+#include &lt;stdio.h&gt; <br/>#include &lt;unistd.h&gt; <br/>#include &lt;stdlib.h&gt; <br/>#include &lt;string.h&gt; <br/><br/>#include "edify/expr.h" <br/>#include "updater.h" <br/>#include "install.h" <br/>#include "blockimg.h" <br/>#include "minzip/Zip.h" <br/>#include "minzip/SysUtil.h" <br/><br/>#include "register.inc" <br/><br/>#define SCRIPT_NAME "META-INF/com/google/android/updater-script" <br/><br/>extern bool have_eio_error; <br/><br/>struct selabel_handle *sehandle; <br/><br/>int main(int argc, char** argv) { <br/>    setbuf(stdout, NULL); <br/>    setbuf(stderr, NULL); <br/><br/>    if (argc != 4 &amp;&amp; argc != 5) { <br/>        printf("unexpected number of arguments (%d)\n", argc); <br/>        return 1; <br/>    } <br/><br/>    char* version = argv[1]; <br/>    if ((version[0] != '1' &amp;&amp; version[0] != '2' &amp;&amp; version[0] != '3')  <br/>    || <br/>        version[1] != '\0') { <br/>        // We support version 1, 2, or 3. <br/>        printf("wrong updater binary API; expected 1, 2, or 3; " <br/>                        "got %s\n", <br/>                argv[1]); <br/>        return 2; <br/>    } 
+</pre>
+<p>The updater has four arguments. The first thing it will do is check whether there are four arguments passed to it. As we can see from the code, these four arguments are:</p>
+<ul>
+<li>The first argument is the executable name, which is <kbd>update-binary</kbd> here</li>
+<li>The second argument is the updater version</li>
+<li>The third argument is the pipe that can be used to communicate to the recovery</li>
+<li>The fourth argument is the OTA package path</li>
+</ul>
+<p>It will check the updater version before it continues:</p>
+<pre>
+// Set up the pipe for sending commands back to the parent process. <br/><br/>int fd = atoi(argv[2]); <br/>FILE* cmd_pipe = fdopen(fd, "wb"); <br/>setlinebuf(cmd_pipe); <br/><br/>// Extract the script from the package. <br/><br/>const char* package_filename = argv[3]; <br/>MemMapping map; <br/>if (sysMapFile(package_filename, &amp;map) != 0) { <br/>    printf("failed to map package %s\n", argv[3]); <br/>    return 3; <br/>} <br/>ZipArchive za; <br/>int err; <br/>err = mzOpenZipArchive(map.addr, map.length, &amp;za); <br/>if (err != 0) { <br/>    printf("failed to open package %s: %s\n", <br/>           argv[3], strerror(err)); <br/>    return 3; <br/>} <br/>ota_io_init(&amp;za); <br/><br/>const ZipEntry* script_entry = mzFindZipEntry(&amp;za, SCRIPT_NAME); <br/>if (script_entry == NULL) { <br/>    printf("failed to find %s in %s\n", SCRIPT_NAME, package_filename); <br/>    return 4; <br/>} <br/><br/>char* script = reinterpret_cast&lt;char*&gt;(malloc(script_entry-&gt;uncompLen+1)); <br/>if (!mzReadZipEntry(&amp;za, script_entry, script, script_entry-&gt;uncompLen)) { <br/>    printf("failed to read script from package\n"); <br/>    return 5; <br/>} <br/>script[script_entry-&gt;uncompLen] = '\0';     
+</pre>
+<p>The next thing to do is to open the pipe to establish the communication channel with recovery. Then it extracts <kbd>updater-script</kbd> from the OTA package to prepare for the execution of the script:</p>
+<pre>
+// Configure edify's functions. <br/><br/>RegisterBuiltins(); <br/>RegisterInstallFunctions(); <br/>RegisterBlockImageFunctions(); <br/>RegisterDeviceExtensions(); <br/>FinishRegistration(); <br/><br/>// Parse the script. <br/><br/>Expr* root; <br/>int error_count = 0; <br/>int error = parse_string(script, &amp;root, &amp;error_count); <br/>if (error != 0 || error_count &gt; 0) { <br/>    printf("%d parse errors\n", error_count); <br/>    return 6; <br/>} <br/><br/>struct selinux_opt seopts[] = { <br/>  { SELABEL_OPT_PATH, "/file_contexts" } <br/>}; <br/><br/>sehandle = selabel_open(SELABEL_CTX_FILE, seopts, 1); <br/><br/>if (!sehandle) { <br/>    fprintf(cmd_pipe, "ui_print Warning: No file_contexts\n"); <br/>} <br/><br/>// Evaluate the parsed script. <br/><br/>UpdaterInfo updater_info; <br/>updater_info.cmd_pipe = cmd_pipe; <br/>updater_info.package_zip = &amp;za; <br/>updater_info.version = atoi(version); <br/>updater_info.package_zip_addr = map.addr; <br/>updater_info.package_zip_len = map.length; <br/><br/>State state; <br/>state.cookie = &amp;updater_info; <br/>state.script = script; <br/>state.errmsg = NULL; <br/><br/>if (argc == 5) { <br/>    if (strcmp(argv[4], "retry") == 0) { <br/>        state.is_retry = true; <br/>    } else { <br/>        printf("unexpected argument: %s", argv[4]); <br/>    } <br/>} <br/><br/>char* result = Evaluate(&amp;state, root); <br/><br/>if (have_eio_error) { <br/>    fprintf(cmd_pipe, "retry_update\n"); <br/>} <br/><br/>if (result == NULL) { <br/>    if (state.errmsg == NULL) { <br/>        printf("script aborted (no error message)\n"); <br/>        fprintf(cmd_pipe, "ui_print script aborted (no error <br/>        message)\n"); <br/>    } else { <br/>        printf("script aborted: %s\n", state.errmsg); <br/>        char* line = strtok(state.errmsg, "\n"); <br/>        while (line) { <br/>            if (*line == 'E') { <br/>              if (sscanf(line, "E%u: ", &amp;state.error_code) != 1) { <br/>               printf("Failed to parse error code: [%s]\n", line); <br/>               } <br/>            } <br/>            fprintf(cmd_pipe, "ui_print %s\n", line); <br/>            line = strtok(NULL, "\n"); <br/>        } <br/>        fprintf(cmd_pipe, "ui_print\n"); <br/>    } <br/><br/>    if (state.error_code != kNoError) { <br/>        fprintf(cmd_pipe, "log error: %d\n", state.error_code); <br/>        if (state.cause_code != kNoCause) { <br/>            fprintf(cmd_pipe, "log cause: %d\n", state.cause_code); <br/>        } <br/>    } <br/><br/>    free(state.errmsg); <br/>    return 7; <br/>} else { <br/>    fprintf(cmd_pipe, "ui_print script succeeded: result was [%s]\n", <br/>    result); <br/>    free(result); <br/>} <br/><br/>if (updater_info.package_zip) { <br/>    mzCloseZipArchive(updater_info.package_zip); <br/>} <br/>sysReleaseMap(&amp;map); <br/>free(script); <br/><br/>return 0; <br/>} 
+</pre>
+<p>Before it can start to execute the update script, it needs to register functions to interpret edify language inside the update script. As we can see from the preceding code, these functions include the following four categories:</p>
+<ul>
+<li>Built-in functions to support the edify language syntax. These functions are implemented in <kbd>bootable/recovery/edify/expr.cpp</kbd>.</li>
+<li>Package installation related functions. These functions are implemented in <kbd>bootable/recovery/updater/install.cpp</kbd>.</li>
+<li>Functions to handle block-based OTA packages. In Android 4.4 and earlier versions, the file-based OTA updates are used. In Android 5.0 and later versions, the block-based OTA updates are used. Refer to the following URL about file versus block OTAs:<br/>
+<a href="https://source.android.com/devices/tech/ota/block.html"><span class="URLPACKT">https://source.android.com/devices/tech/ota/block.html</span></a><br/>
+The block-based functions are implemented in <kbd>bootable/recovery/updater/blockimg.cpp</kbd>.</li>
+<li>The developers can extend recovery and updater to provide device-specific OTA extensions.</li>
+</ul>
+<p>After it registers all functions, it calls the <kbd>parse_string</kbd> function to parse the script. Finally, it calls the <kbd>Evaluate</kbd> function to execute the script.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">The updater script</h1>
+            </header>
+
+            <article>
+                
+<p>After we explore the implementation of updater, we will look at the updater script in this section. The updater script is the one that performs the update operations in the target device. The updater script is written in a simple script language called edify. An edify script is a list of expressions, one expression per line. It supports the following operators:</p>
+<ul>
+<li>The comparison operators, such as <kbd>==</kbd> (string equal) and <kbd>!=</kbd> (string not equal)</li>
+<li>The logical operators, such as <kbd>||</kbd> (logical or), <kbd>&amp;&amp;</kbd> (logical and), and <kbd>!</kbd> (logical not)</li>
+<li>The concatenation operator <kbd>+</kbd></li>
+</ul>
+<p>The only reserved keywords are conditional keywords <kbd>if</kbd>, <kbd>then</kbd>, <kbd>else</kbd>, and <kbd>endif</kbd>.</p>
+<p>All values in edify are strings. Empty strings are <kbd>false</kbd> in a Boolean context and all other strings are <kbd>true</kbd>.</p>
+<div class="packt_infobox">You can refer to the following URL to learn more about edify syntax:<br/>
+<a href="https://source.android.com/devices/tech/ota/inside_packages">https://source.android.com/devices/tech/ota/inside_packages</a></div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Edify functions</h1>
+            </header>
+
+            <article>
+                
+<p>The major functionalities of the edify language are implemented as edify functions and the edify functions are registered in the preceding updater source code. To support the OTA update, the edify functions include built-in functions, installation functions, block image functions, and device extensions. We will look at each category in the following sections.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Built-in functions</h1>
+            </header>
+
+            <article>
+                
+<p>The built-in functions are used to support edify language syntax. The built-in functions are registered by <kbd>RegisterBuiltins</kbd>. We can look at the following source code:</p>
+<pre>
+void RegisterBuiltins() { <br/>    RegisterFunction("ifelse", IfElseFn); <br/>    RegisterFunction("abort", AbortFn); <br/>    RegisterFunction("assert", AssertFn); <br/>    RegisterFunction("concat", ConcatFn); <br/>    RegisterFunction("is_substring", SubstringFn); <br/>    RegisterFunction("stdout", StdoutFn); <br/>    RegisterFunction("sleep", SleepFn); <br/><br/>    RegisterFunction("less_than_int", LessThanIntFn); <br/>    RegisterFunction("greater_than_int", GreaterThanIntFn); <br/>} 
+</pre>
+<p>The <kbd>RegisterBuiltins</kbd> function registers the following built-in functions:</p>
+<ul>
+<li><kbd>ifelse(cond, e1[, e2])</kbd>: Evaluates <kbd>cond</kbd>, and if it is true it evaluates and returns the value of <kbd>e1</kbd>, otherwise it evaluates and returns <kbd>e2</kbd> (if present).</li>
+<li><kbd>abort([msg])</kbd>: Aborts execution of the script immediately, with the optional <kbd>msg</kbd>. If the user has turned on text display, <kbd>msg</kbd> appears in the recovery log and on screen.</li>
+<li><kbd>assert(expr[, expr, ...])</kbd>: Evaluates each <kbd>expr</kbd> in turn. If any is false, it immediately aborts execution with the message <kbd>assert failed</kbd>.</li>
+<li><kbd>concat(expr[, expr, ...])</kbd>: Evaluates each expression and concatenates them.</li>
+<li><kbd>is_substring(substring, string)</kbd>: Returns true if a substring can be found.</li>
+<li><kbd>stdout(expr[, expr, ...])</kbd>: Evaluates each expression and dumps its value to <kbd>stdout</kbd>. This is useful for debugging.</li>
+<li><kbd>sleep(secs)</kbd>: Sleeps for <kbd>secs</kbd> seconds.</li>
+<li><kbd>less_than_int(a, b)</kbd>: Returns true if and only if <kbd>a</kbd> (interpreted as an integer) is less than <kbd>b</kbd> (interpreted as an integer).</li>
+<li><kbd>greater_than_int(a, b)</kbd>: Returns true if and only if <kbd>a</kbd> (interpreted as an integer) is greater than <kbd>b</kbd> (interpreted as an integer).</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Installation functions</h1>
+            </header>
+
+            <article>
+                
+<p>The installation-related functions are registered by <kbd>RegisterInstallFunctions</kbd>. The following is the source code of it:</p>
+<pre>
+void RegisterInstallFunctions() { <br/>    RegisterFunction("mount", MountFn); <br/>    RegisterFunction("is_mounted", IsMountedFn); <br/>    RegisterFunction("unmount", UnmountFn); <br/>    RegisterFunction("format", FormatFn); <br/>    RegisterFunction("show_progress", ShowProgressFn); <br/>    RegisterFunction("set_progress", SetProgressFn); <br/>    RegisterFunction("delete", DeleteFn); <br/>    RegisterFunction("delete_recursive", DeleteFn); <br/>    RegisterFunction("package_extract_dir", PackageExtractDirFn); <br/>    RegisterFunction("package_extract_file", PackageExtractFileFn); <br/>    RegisterFunction("symlink", SymlinkFn); <br/>    RegisterFunction("set_metadata", SetMetadataFn); <br/>    RegisterFunction("set_metadata_recursive", SetMetadataFn); <br/>    RegisterFunction("getprop", GetPropFn); <br/>    RegisterFunction("file_getprop", FileGetPropFn); <br/>    RegisterFunction("write_raw_image", WriteRawImageFn); <br/>    RegisterFunction("apply_patch", ApplyPatchFn); <br/>    RegisterFunction("apply_patch_check", ApplyPatchCheckFn); <br/>    RegisterFunction("apply_patch_space", ApplyPatchSpaceFn); <br/>    RegisterFunction("wipe_block_device", WipeBlockDeviceFn); <br/>    RegisterFunction("read_file", ReadFileFn); <br/>    RegisterFunction("sha1_check", Sha1CheckFn); <br/>    RegisterFunction("rename", RenameFn); <br/>    RegisterFunction("wipe_cache", WipeCacheFn); <br/>    RegisterFunction("ui_print", UIPrintFn); <br/>    RegisterFunction("run_program", RunProgramFn); <br/>    RegisterFunction("reboot_now", RebootNowFn); <br/>    RegisterFunction("get_stage", GetStageFn); <br/>    RegisterFunction("set_stage", SetStageFn); <br/>    RegisterFunction("enable_reboot", EnableRebootFn); <br/>    RegisterFunction("tune2fs", Tune2FsFn); <br/>} 
+</pre>
+<p>As we can see, most functions are registered here; we will now have a look at them:</p>
+<ul>
+<li><kbd>mount(fs_type, partition_type, name, mount_point)</kbd>: This function mounts a filesystem of <kbd>fs_type</kbd> at <kbd>mount_point</kbd>. The <kbd>partition_type</kbd> argument must be one of MTD or EMMC. The <kbd>name</kbd> argument is the name of a partition (system, userdata or cache, and so on). Recovery does not mount any filesystems by default and the updater script must mount any partitions it needs to modify.</li>
+<li><kbd>is_mounted(mount_point)</kbd>: Returns true if there is a filesystem mounted at <kbd>mount_point</kbd>.</li>
+<li><kbd>unmount(mount_point)</kbd>: Unmounts the filesystem mounted at <kbd>mount_point</kbd>.</li>
+<li><kbd>format(fs_type, partition_type, location, fs_size, mount_point)</kbd>: This function formats a given partition. The <kbd>fs_type</kbd> argument can be yaffs2, ext4, or f2fs. The <kbd>partition_type</kbd> argument can be MTD or EMMC. The <kbd>location</kbd> argument is either the name of the partition or device. The <kbd>fs_size</kbd> argument is the filesystem size and <kbd>mount_point</kbd> is the mount point name.</li>
+<li><kbd>show_progress(frac, secs)</kbd>: Advances the progress meter over the next <kbd>frac</kbd> of its length over the <kbd>secs</kbd> seconds. The <kbd>secs</kbd> argument may be zero, in which case the meter is not advanced automatically, but by the use of the <kbd>set_progress</kbd> function defined as follows:
+<ul>
+<li><kbd>set_progress(frac)</kbd>: This function sets the position of the progress meter within the chunk defined by the most recent <kbd>show_progress</kbd> call.</li>
+</ul>
+</li>
+<li><kbd>delete([filename, ...])</kbd>: Deletes all the filenames listed. Returns the number of files successfully deleted.</li>
+<li><kbd>delete_recursive([dirname, ...])</kbd>: Recursively deletes <kbd>dirname</kbd> and all their contents. Returns the number of directories successfully deleted.</li>
+<li><kbd>package_extract_dir(package_dir, dest_dir)</kbd>: Extracts all files from the package underneath <kbd>package_dir</kbd> and writes them to the corresponding tree beneath <kbd>dest_dir</kbd>. Any existing files are overwritten.</li>
+<li><kbd>package_extract_file(package_file[, dest_file])</kbd>: Extracts a single <kbd>package_file</kbd> from the <kbd>update</kbd> package and writes it to <kbd>dest_file</kbd>, overwriting existing files if necessary.</li>
+<li><kbd>symlink(target[, source, ...])</kbd>: Creates all sources as symlinks to target.</li>
+<li><kbd>set_metadata(filename, key1, value1[, key2 , value2, ...])</kbd>: Sets the keys of the given filename to values.</li>
+<li><kbd>set_metadata_recursive(dirname, key1, value1[, key2, value2, ...])</kbd>: Recursively sets the keys of the given <kbd>dirname</kbd> and all its children to values.</li>
+<li><kbd>getprop(key)</kbd>: Returns the value of the system property key (or the empty string, if it's not defined).</li>
+<li><kbd>file_getprop(filename, key)</kbd>: Reads the given filename, interprets it as a properties file (for example, <kbd>/system/build.prop</kbd>), and returns the value of the given key, or the empty string if the key is not present.</li>
+<li><kbd>write_raw_image(filename_or_blob, partition)</kbd>: Writes the image in <kbd>filename_or_blob</kbd> to the MTD partition.</li>
+<li><kbd>apply_patch(src_file, tgt_file, tgt_sha1, tgt_size, patch1_sha1, patch1_blob, [...])</kbd>: Applies a binary patch to <kbd>src_file</kbd> to produce <kbd>tgt_file</kbd>.</li>
+<li><kbd>apply_patch_check(filename, sha1[, sha1, ...])</kbd>: Returns true if the contents of <kbd>filename</kbd> or the temporary copy in the cache partition (if present) have a SHA1 checksum equal to one of the given <kbd>sha1</kbd> values.</li>
+<li><kbd>apply_patch_space(bytes)</kbd>: Returns true if at least bytes of scratch space is available for applying binary patches.</li>
+<li><kbd>wipe_block_device(block_dev, len)</kbd>: Wipes the <kbd>len</kbd> bytes of the given block device, <kbd>block_dev</kbd>.</li>
+<li><kbd>read_file(filename)</kbd>: Reads <kbd>filename</kbd> and returns its contents as a binary blob.</li>
+<li><kbd>sha1_check(blob[, sha1])</kbd>: The <kbd>blob</kbd> argument is a blob of the type returned by <kbd>read_file</kbd> or the one-argument form of <kbd>package_extract_file</kbd>. With no <kbd>sha1</kbd> arguments, this function returns the SHA1 hash of the blob. With one or more <kbd>sha1</kbd> arguments, this function returns the SHA1 hash if it equals one of the arguments, or the empty string if it does not equal any of them.</li>
+<li><kbd>rename(src_filename, tgt_filename)</kbd>: Renames <kbd>src_filename</kbd> to <kbd>tgt_filename</kbd>.</li>
+<li><kbd>wipe_cache()</kbd>: Causes the cache partition to be wiped at the end of a successful installation.</li>
+<li><kbd>ui_print([text, ...])</kbd>: Concatenates all text arguments and prints the result to the UI.</li>
+<li><kbd>run_program(path[, arg, ...])</kbd>: Executes the binary at <kbd>path</kbd> with arguments <kbd>arg</kbd>. Returns the program's exit status.</li>
+<li><kbd>reboot_now(name[, arg, ...])</kbd>: Reboots the device immediately. The <kbd>name</kbd> argument is the partition name passed to the Android reboot property.</li>
+<li><kbd>get_stage(name)</kbd>: This function returns the value saved by the <kbd>set_stage</kbd> function. The <kbd>name</kbd> argument is the block device for the <kbd>/misc</kbd> partition.</li>
+<li><kbd>set_stage(name, stage)</kbd>: This function stores a string value that future invocations of recovery can access. The <kbd>name</kbd> argument is the block device for the <kbd>/misc</kbd> partition. The stage is the string to store.</li>
+<li><kbd>enable_reboot()</kbd>: Sends the <kbd>enable_reboot</kbd> command to recovery through the pipe.</li>
+<li><kbd>tune2fs(arg, ...)</kbd>: Changes the filesystem parameters on an ext2/ext3 filesystem.</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Block image functions</h1>
+            </header>
+
+            <article>
+                
+<p>In Android 5.0 or above, the block-based OTA packages can be used. The block-based OTA packages treat the entire partition as a single file and update it at block level. The functions for block-based OTA packages are registered by the <kbd>RegisterBlockImageFunctions</kbd> function:</p>
+<pre>
+void RegisterBlockImageFunctions() { <br/>    RegisterFunction("block_image_verify", BlockImageVerifyFn); <br/>    RegisterFunction("block_image_update", BlockImageUpdateFn); <br/>    RegisterFunction("range_sha1", RangeSha1Fn); <br/>} 
+</pre>
+<p>The block-based update implementation includes three functions:</p>
+<ul>
+<li><kbd>block_image_verify(partition, transfer_list, new, patch)</kbd>: The <kbd>partition</kbd> argument is the device that the update will do. Usually, it is the <kbd>/system</kbd> partition. The <kbd>transfer_list</kbd> argument is a text file containing commands to transfer data from one place to another on the <kbd>target</kbd> partition. This command only performs a dry run without writing to test if an update can proceed.</li>
+<li><kbd>block_image_update(partition, transfer_list, new, patch)</kbd>: This function is the same as <kbd>block_image_verify</kbd> except it performs the actual update.</li>
+<li><kbd>range_sha1(partition, range)</kbd>: This function checks the SHA1 hash of a partition in the specified range.</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Device extensions</h1>
+            </header>
+
+            <article>
+                
+<p>As Android system developers, we can extend the edify language to meet our device-specific requirements. To extend the edify language with our own functions, we can register our functions using the following function call:</p>
+<pre>
+RegisterDeviceExtensions();  
+</pre>
+<p>We will explain how to extend the edify language in the next chapter.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Preparing an OTA package for x86vbox</h1>
+            </header>
+
+            <article>
+                
+<p>We have understood updater and the updater script inside an OTA package so far. We can build an OTA package for our x86vbox device now. To build an OTA package, we can use the following commands:</p>
+<pre>
+<strong>$ mkdir -p dist_output</strong><br/><strong>$ make dist DIST_DIR=dist_output</strong>  
+</pre>
+<p>The default OTA package build in Android 5 or above is to build the block-based OTA package, but we will get an error building block-based OTA packages for x86vbox. There are a lot more configurations that are needed to be done to support block-based OTA packages in our environment. All the third-party recovery packages cannot use block-based update packages as well.</p>
+<p>To avoid this error, we need to change the following <kbd>build/core/Makefile</kbd> file to remove the <kbd>--block</kbd> option:</p>
+<pre>
+$(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(DISTTOOLS) <br/>        @echo "Package OTA: $@" <br/>        $(hide) PATH=$(foreach <br/>        p,$(INTERNAL_USERIMAGES_BINARY_PATHS),$(p):)$$PATH <br/>        MKBOOTIMG=$(MKBOOTIMG) \ <br/>           ./build/tools/releasetools/ota_from_target_files -v \ <br/><strong>           --block \</strong> <br/>           -p $(HOST_OUT) \ <br/>           -k $(KEY_CERT_PAIR) \ <br/>           $(if $(OEM_OTA_CONFIG), -o $(OEM_OTA_CONFIG)) \ <br/>           $(BUILT_TARGET_FILES_PACKAGE) $@ 
+</pre>
+<p>After the build is completed, we can check the OTA package as follows:</p>
+<pre>
+<strong>$ ls dist_output/**-ota-*.zip</strong><br/><strong>dist_output/x86vbox-ota-eng.sgye.zip</strong>  
+</pre>
+<p>Let's take a look at the updater script inside the OTA package that we just built:</p>
+<pre>
+(!less_than_int(1482376066, getprop("ro.build.date.utc"))) || abort("Can't install this package (Thu Dec 22 11:07:46 CST 2016) over newer build (" + getprop("ro.build.date") + ")."); <br/>getprop("ro.product.device") == "x86vbox" || abort("This package is for \"x86vbox\" devices; this is a \"" + getprop("ro.product.device") + "\"."); <br/>ui_print("Target: Android-x86/x86vbox/x86vbox:7.1.1/MOB30Z/roger12221103:eng/test-keys"); <br/>show_progress(0.750000, 0); <br/>format("ext4", "EMMC", "/dev/block/sda1", "0", "/system"); <br/>mount("ext4", "EMMC", "/dev/block/sda1", "/system", "max_batch_time=0,commit=1,data=ordered,barrier=1,errors=panic,nodelalloc"); <br/>package_extract_dir("system", "/system"); <br/>symlink("../../gm200/acr/bl.bin", "/system/lib/firmware/nvidia/gm204/acr/bl.bin", <br/>        "/system/lib/firmware/nvidia/gm206/acr/bl.bin"); <br/>... <br/>symlink("wl127x-nvs.bin", "/system/lib/firmware/ti-connectivity/wl1271-nvs.bin", <br/>        "/system/lib/firmware/ti-connectivity/wl12xx-nvs.bin"); <br/>set_metadata_recursive("/system", "uid", 0, "gid", 0, "dmode", 0755, "fmode", 0644, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0"); <br/>set_metadata_recursive("/system/bin", "uid", 0, "gid", 2000, "dmode", 0755, "fmode", 0755, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0"); <br/>set_metadata("/system/bin/app_process32", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:zygote_exec:s0"); <br/>... <br/>set_metadata("/system/xbin/su", "uid", 0, "gid", 2000, "mode", 04751, "capabilities", 0x0, "selabel", "u:object_r:su_exec:s0"); <br/>show_progress(0.050000, 5); <br/>package_extract_file("boot.img", "/dev/block/sda8"); <br/>show_progress(0.200000, 10); <br/>unmount("/system"); 
+</pre>
+<p>In the updater script, it checks the build information of the current system first. If the current system is newer than the OTA package, it won't update the system. After that, it also checks the device name of the running system and the OTA package, both should match each other. Otherwise, we may update the system using a wrong OTA package.</p>
+<p>After all verification work has been done, the script will format the <kbd>/system</kbd> partition and create a new <kbd>system</kbd> folder from the OTA package. Once the system files are installed, the script will create all necessary soft-links and apply properties for SELinux.</p>
+<p>Finally, it will update the <kbd>/boot</kbd> partition with a new kernel and ramdisk.</p>
+<p>Once we build the OTA package for the x86vbox device, and we also build recovery in <a href="5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml">Chapter 12</a>, <em>Introducing Recovery</em>, we can update our system to the OTA package. We should be able to update the system using this OTA package, but the system may not be able to boot up at the moment. We have two issues that need to be resolved before we can do more.</p>
+<p>Recalling how we built recovery for x86vbox, we reuse the source code that we developed from <a href="acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml">Chapter 8</a>, <em>Creating Your Own Device on VirtualBox,</em> to <a href="3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml">Chapter 11</a>, <em>Enabling VirtualBox-Specific Hardware Interfaces</em> as much as possible. This means we inherited the following features in the recovery build in <a href="5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml">Chapter 12</a>, <em>Introducing Recovery</em>:</p>
+<ul>
+<li>The first problem inherited from the two stages boot is that we use the components in the Android <kbd>system</kbd> folder to boot recovery. Ideally, the recovery should not depend on anything else. It should be a self-contained system. For example, the recovery should work properly, even though the system image is damaged. We can repair the system using recovery.</li>
+<li>We use the two stages boot process from the Android-x86 project. As we can see from the previous chapters, the system disk layout for a two stages boot is different from the standard Android system. The system that we create using the OTA package is the standard Android system disk layout. We can only use the standard boot process to boot the system after the OTA update. This means we have to boot the system using <kbd>ramdisk.img</kbd> instead of <kbd>initrd.img</kbd>.</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Removing dependencies on /system</h1>
+            </header>
+
+            <article>
+                
+<p>The dependencies to the Android <kbd>/system</kbd> folder include two parts:</p>
+<ul>
+<li>All kernel modules for device drivers are located at: <kbd>$OUT/system/lib/modules/4.x.x-android-x86</kbd>.</li>
+<li>We need to run some basic Linux commands during the recovery boot process. For example, we do hardware initialization using the following command:<br/>
+<kbd>on init<br/>
+exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh</kbd></li>
+</ul>
+<p>Let's work on the preceding two points one by one in the following sections.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Hardware initialization in recovery</h1>
+            </header>
+
+            <article>
+                
+<p>To load the minimum device drivers needed by recovery, we have to change the execution of the shell script for Android system start. This is a customization process from general to specific, which is different from the goal of the Android-x86 project. In the Android-x86 project, all possible device drivers are available, while we should only include the drivers needed by recovery for VirtualBox here. As we can see when we introduce a two stages boot, all possible device drivers are compiled and available in the <kbd>$OUT/system/lib/modules/4.x.x-android-x86</kbd> folder.</p>
+<p>The kernel modules will be loaded to the system depending on the hardware found by the kernel dynamically. In our case, we will remove the dynamically loading process and keep the minimum kernel modules only necessary for the recovery boot up. Let's look at the original startup script for x86vbox:</p>
+<pre>
+on init <br/>    exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh 
+</pre>
+<p>During the startup, the <kbd>init</kbd> process will run the preceding command line to execute the <kbd>/system/etc/init.sh</kbd> script. The commands <kbd>/system/bin/logwrapper</kbd> and <kbd>/system/bin/sh</kbd> are both part of the Android system in the <kbd>/system/bin</kbd> folder. They are not available to recovery, since the <kbd>/system</kbd> partition is not mounted after recovery boot up.</p>
+<p>To resolve this issue, we will use the <kbd>busybox</kbd> binary in <kbd>initrd.img</kbd> to provide a minimum environment to execute Linux shell commands in recovery environments. We cannot execute the <kbd>/system/etc/init.sh</kbd> script either, since it is stored in the <kbd>/system/etc</kbd> folder, which is also not available to recovery. We will replace it by creating another script, <kbd>init.x86vbox.sh,</kbd> in <kbd>/sbin</kbd> in the recovery environment.</p>
+<p>We changed <kbd>init.recovery.x86vbox.rc</kbd> to the following one to remove the dependency from <kbd>/system</kbd>:</p>
+<pre>
+on early-init <br/>    # for /bin/busybox <br/>    symlink /bin/ld-linux.so.2 /lib/ld-linux.so.2 <br/>    symlink /bin/busybox /bin/sh <br/><br/>on init <br/>    mkdir /vendor <br/>    exec -- /bin/sh /sbin/init.x86vbox.sh <br/><br/>service network_start /sbin/network_start.sh <br/>    user root <br/>    seclabel u:r:recovery:s0 <br/>    oneshot <br/><br/>service console /bin/sh <br/>    class core <br/>    console <br/>    group shell log <br/>    seclabel u:r:shell:s0 <br/><br/>on property:ro.debuggable=1 <br/>    start console 
+</pre>
+<p>During the <kbd>early-init</kbd> stage, we create the soft-links to make <kbd>/bin/sh</kbd> available. We replaced <kbd>/system/bin/sh</kbd> with <kbd>/bin/sh</kbd> residing in recovery ramdisk.</p>
+<p>In the <kbd>init.x86vbox.sh</kbd> script, we load the device drivers needed by recovery as follows:</p>
+<pre>
+#!/bin/busybox sh  <br/><br/>echo -n "Initializing x86vbox hardware ..." <br/>PATH=/bin:/sbin:/bin; export PATH <br/><br/>cd /bin;busybox --install -s <br/><br/>cd /x86vbox <br/>insmod atkbd.ko <br/>insmod cn.ko <br/>insmod vboxguest.ko <br/>insmod vboxsf.ko <br/>insmod uvesafb.ko mode_option=${UVESA_MODE:-1024x768}-32 <br/><br/>/sbin/mount.vboxsf sdcard /vendor 
+</pre>
+<p>As we can see, in the shell script <kbd>init.x86vbox.sh</kbd>, we created all soft-links for <kbd>busybox</kbd> first. Then, we loaded all necessary device drivers. We also mounted a shared folder of VirtualBox under the <kbd>/vendor</kbd> folder so that we can exchange data between the host and the guest. We will use this folder in the next chapter.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Minimum execution environment in recovery</h1>
+            </header>
+
+            <article>
+                
+<p>As we can see from both scripts, <kbd>init.recovery.x86vbox.rc</kbd> and <kbd>init.x86vbox.sh</kbd>, we need to execute some Linux commands so that we can perform our tasks during the boot up process.</p>
+<p>We need to include all these Linux commands in <kbd>ramdisk-recovery.img</kbd> so that they are available to recovery. However, the problem is not as simple as we think so far. Most of the commands are dynamically linked instead of static linked in AOSP build output.</p>
+<p>In our case, we have two sets of shared libraries that we need to include in <kbd>ramdisk-recovery.img</kbd>. The <kbd>busybox</kbd> binary in <kbd>initrd.img</kbd> from Android-x86 is prebuilt out of the AOSP tree, so they have their own dependencies. If we go to the <kbd>newinstaller</kbd> folder <kbd>bootable/newinstaller/initrd</kbd>, we can see the list of executable and shared libraries:</p>
+<pre>
+<strong>$ ls -1 lib</strong><br/><strong>libcrypt.so.1</strong><br/><strong>libc.so.6</strong><br/><strong>libdl.so.2</strong><br/><strong>libm.so.6</strong><br/><strong>libntfs-3g.so.31</strong><br/><strong>libpthread.so.0</strong><br/><strong>librt.so.1</strong><br/><strong>$ ls -1 bin</strong><br/><strong>busybox</strong><br/><strong>ld-linux.so.2</strong><br/><strong>lndir</strong>  
+</pre>
+<p>There are eight shared libraries besides the <kbd>busybox</kbd> binary, as we can see in the preceding snippet.</p>
+<p>Besides <kbd>busybox</kbd>, we also have some executables that are built as part of the AOSP source tree. They have a different set of shared libraries, which need to be included in <kbd>ramdisk-recovery.img</kbd> as well. For example, the display <kbd>uvesafb</kbd> driver needs a user space daemon <kbd>/sbin/v86d</kbd>, which is built as part of the AOSP tree. Without a set of shared libraries in place, it won't be able to work properly. To allow us to run these executable files, we need to include the following shared libraries in <kbd>ramdisk-recovery.img</kbd>:</p>
+<pre>
+<strong>$ ls -1 recovery/root/system/lib</strong><br/><strong>libc.so</strong><br/><strong>libc++.so</strong><br/><strong>libcutils.so</strong><br/><strong>libext2_uuid.so</strong><br/><strong>liblog.so</strong><br/><strong>libm.so</strong><br/><strong>libpcre.so</strong><br/><strong>libselinux.so</strong> 
+</pre>
+<p>You may be wondering how to find the shared library dependencies. One way that we can do this is to get the linkage information using the following command:</p>
+<pre>
+<strong>$ readelf -d $OUT/recovery/root/sbin/v86d</strong><br/><br/><strong>Dynamic section at offset 0x3e68 contains 29 entries:</strong><br/><strong> Tag        Type                         Name/Value</strong><br/><strong> 0x00000003 (PLTGOT)                     0x4f7c</strong><br/><strong>0x00000002 (PLTRELSZ)                   240 (bytes)</strong><br/><strong>0x00000017 (JMPREL)                     0x5b0</strong><br/><strong>0x00000014 (PLTREL)                     REL</strong><br/><strong>0x00000011 (REL)                        0x5a8</strong><br/><strong>0x00000012 (RELSZ)                      8 (bytes)</strong><br/><strong>0x00000013 (RELENT)                     8 (bytes)</strong><br/><strong>0x00000015 (DEBUG)                      0x0</strong><br/><strong>0x00000006 (SYMTAB)                     0x1a0</strong><br/><strong>0x0000000b (SYMENT)                     16 (bytes)</strong><br/><strong>0x00000005 (STRTAB)                     0x3d0</strong><br/><strong>0x0000000a (STRSZ)                      324 (bytes)</strong><br/><strong>0x6ffffef5 (GNU_HASH)                   0x514</strong><br/><strong>0x00000001 (NEEDED)                     Shared library: [libc++.so]</strong><br/><strong>0x00000001 (NEEDED)                     Shared library: [libdl.so]</strong><br/><strong>0x00000001 (NEEDED)                     Shared library: [libc.so]</strong><br/><strong>0x00000001 (NEEDED)                     Shared library: [libm.so]</strong><br/><strong>0x00000020 (PREINIT_ARRAY)              0x4e50</strong><br/><strong>0x00000021 (PREINIT_ARRAYSZ)            0x8</strong><br/><strong>0x00000019 (INIT_ARRAY)                 0x4e58</strong><br/><strong>0x0000001b (INIT_ARRAYSZ)               8 (bytes)</strong><br/><strong>0x0000001a (FINI_ARRAY)                 0x4e60</strong><br/><strong>0x0000001c (FINI_ARRAYSZ)               8 (bytes)</strong><br/><strong>0x0000001e (FLAGS)                      BIND_NOW</strong><br/><strong>0x6ffffffb (FLAGS_1)                    Flags: NOW</strong><br/><strong>0x6ffffff0 (VERSYM)                     0x540</strong><br/><strong>0x6ffffffe (VERNEED)                    0x588</strong><br/><strong>0x6fffffff (VERNEEDNUM)                 1</strong><br/><strong>0x00000000 (NULL)                       0x0</strong> 
+</pre>
+<p>As we can see from the preceding output, we can find the shared libraries needed by <kbd>/sbin/v86d</kbd> using the <kbd>readelf</kbd> command. We also need to verify the dependencies through the testing in the recovery environment, which we will discuss more in the next chapter.</p>
+<p>To include all the discussed kernel modules and shared libraries in <kbd>ramdisk-recovery.img</kbd>, we changed a part of <kbd>x86vbox.mk</kbd> as follows:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="553" width="646" class=" image-border" src="assets/image_13_002.png"/></div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Building and testing</h1>
+            </header>
+
+            <article>
+                
+<p>After we have done all the analysis in this chapter, we can build and test our code now.</p>
+<p>As usual, we have a manifest file for each chapter. We make changes for this chapter based on the source code of <a href="5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml">Chapter 12</a>, <em>Introducing Recovery</em>. The following are the projects that we changed in this chapter:</p>
+<pre>
+&lt;?xml version="1.0" encoding="UTF-8"?&gt; <br/>&lt;manifest&gt; <br/><br/>  &lt;remote  name="github" <br/>           revision="refs/tags/android-7.1.1_r4_x86vbox_ch13_r1" <br/>           fetch="." /&gt; <br/><br/>  &lt;remote  name="aosp" <br/>           fetch="https://android.googlesource.com/" /&gt; <br/>  &lt;default revision="refs/tags/android-7.1.1_r4" <br/>           remote="aosp" <br/>           sync-c="true" <br/>           sync-j="1" /&gt; <br/><br/>  &lt;!-- github/android-7.1.1_r4_ch13 --&gt; <br/>  &lt;project path="kernel" name="goldfish" remote="github" /&gt; <br/>  &lt;project path="bootable/newinstaller"  <br/>  name="platform_bootable_newinstaller" remote="github" /&gt; <br/>  &lt;project path="device/generic/common" name="device_generic_common"  <br/>  groups="pdk" remote="github" /&gt; <br/>  &lt;project path="device/generic/x86vbox" name="x86vbox" remote="github" <br/>  /&gt; <br/>  &lt;project path="bootable/recovery" name="android_bootable_recovery" <br/>  remote="github" groups="pdk" /&gt; <br/>...  
+</pre>
+<p>We can see that we need to change four projects: <kbd>recovery</kbd>, <kbd>newinstaller</kbd>, <kbd>common</kbd>, and <kbd>x86vbox</kbd>. We have an <kbd>android-7.1.1_r4_x86vbox_ch13_r1</kbd> tag as the baseline of the source code for this chapter.</p>
+<p>To get the source code from GitHub and AOSP directly, the following command can be used:</p>
+<pre>
+<strong>$ repo init -u https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch13_aosp</strong><br/><strong>$ repo sync</strong>  
+</pre>
+<p>After the source code is ready for use, we can set the environment and build the system as follows:</p>
+<pre>
+<strong>$ . build/envsetup.sh</strong><br/><strong>$ lunch x86vbox-eng</strong><br/><strong>$ make -j4</strong>  
+</pre>
+<p>To build <kbd>initrd.img</kbd>, we can run the following command:</p>
+<pre>
+<strong>$ make initrd USE_SQUASHFS=0</strong>  
+</pre>
+<p>To build the OTA package for the x86vbox device, we can run the following command:</p>
+<pre>
+<strong>$ mkdir -p dist_output</strong><br/><strong>$ make dist DIST_DIR=dist_output</strong>  
+</pre>
+<p>To test the AOSP images in VirtualBox, we need to use PXE boot and NFS as we introduced in <span class="ChapterrefPACKT"><a href="c8d10155-cc8e-4b8c-a5e0-f359520c894a.xhtml">Chapter 9</a>, <em>Booting Up x86vbox Using PXE/NFS</em></span>.</p>
+<p>After the build is completed, we can add an entry in the PXE boot configuration file, <kbd>$HOME/.VirtualBox/TFTP/pxelinux.cfg/default</kbd>, as follows to test recovery:</p>
+<pre>
+<strong>label 3. Recovery - x86vbox</strong><br/><strong>menu x86vbox_ramdisk_recovery</strong><br/><strong>kernel x86vbox/kernel</strong><br/><strong>append ip=dhcp console=ttyS3,115200 initrd=x86vbox/ramdisk-recovery.img androidboot.hardware=x86vbox</strong>  
+</pre>
+<p>After the recovery is started, we can see the following screen of recovery on the x86vbox device:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="491" width="614" class=" image-border" src="assets/image_13_003.png"/></div>
+<p>The user interface of recovery for x86vbox looks the same on any Android device.</p>
+<p>Before you download the source code and build everything by yourself, you can also download and test the pre-built image in this chapter at <a href="https://sourceforge.net/projects/android-system-programming/files/android-7/ch13/ch13.zip/download">https://sourceforge.net/projects/android-system-programming/files/android-7/ch13/ch13.zip/download</a>.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Summary</h1>
+            </header>
+
+            <article>
+                
+<p>In this chapter, we learnt about the workflow of updater, which is the one actually to do the work of the OTA update. The updater interprets the updater script inside the OTA package to perform the update. We don't have to create the updater script by ourselves. It is created during the build process automatically. You may have some questions here, since you may use some recovery packages created by open source developers or ROM developers. You may even use recovery distributed by LineageOS/CyanogenMod or TWRP. How do they relate to the topics that we discussed in this chapter? These are the topics that we will cover in the next chapter.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    </body></html>

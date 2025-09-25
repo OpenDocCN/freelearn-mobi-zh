@@ -1,0 +1,377 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Real-World Motion Tracking</h1>
+                </header>
+            
+            <article>
+                
+<p class="mce-root">Now that we have all the fun stuff set up and ready to go, we can begin building some real-world AR apps. In order to do this, we will be picking and choosing various pieces we need from the samples. The samples are great examples, but, for the most part, they are nothing more than boilerplate code. This means that we have no reason to rewrite code sections that already work well. Instead, we will focus on adding new code to tackle AR problems. In this chapter, we will dive in and learn in depth how ARCore motion tracking works. We will learn the current limitations of motion tracking with ARCore and develop a technique for overcoming those limitations. Here are the main topics that we will cover in this chapter:</p>
+<ul>
+<li>Motion tracking in depth</li>
+<li>3D sound</li>
+<li>Resonance Audio</li>
+<li>A tracking service with Firebase</li>
+<li>Visualize tracked motion</li>
+</ul>
+<p>In order to successfully complete the exercises in this chapter, the reader will need to complete the setup till <a href="9739deb2-69a5-4756-aa54-946ba15eb405.xhtml" target="_blank">Chapter 4</a>, <em>ARCore on the Web</em>. It may be helpful to review some of the exercises from that chapter as well.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Motion tracking in depth</h1>
+                </header>
+            
+            <article>
+                
+<p>ARCore implements motion tracking using an algorithm known as <strong>visual-inertial odometry</strong> (<strong>VIO</strong>). VIO combines the identification of image features from the device's camera with internal motion sensors to track the device's orientation and position relative to where it started. By tracking orientation and position, we have the ability to understand where a device is in 6 degrees of freedom, or what we will often refer to as the device's/object's <strong>pose</strong>. Let's take a look at what a pose looks like in the following diagram:</p>
+<div class="packt_figref CDPAlignCenter CDPAlign"><img src="assets/63cc29fa-8877-4442-ade8-3a65019042b2.png" style="width:39.83em;height:18.17em;"/></div>
+<div class="packt_figref CDPAlignCenter CDPAlign">6 Degrees of Freedom, Pose</div>
+<p>We will use the term pose frequently when identifying an object's position and orientation in 3D. If you recall from <a href="9739deb2-69a5-4756-aa54-946ba15eb405.xhtml" target="_blank">Chapter 4</a>, <em>ARCore on the Web</em>, a pose can also be expressed in a mathematical notation called a matrix. We can also refer to rotation in a special form of complex math called a <strong>quaternion</strong>. Quaternions allow us to define all aspects of 3D rotation in a simple form. Again, we won't worry about the specific math here; we will just mention how it is used.</p>
+<p>Perhaps it will be more helpful if we can see how this works in a modified ARCore sample. Open up the <kbd>spawn-at-surface.html</kbd> example from the <kbd>Android/three.ar.js/examples</kbd> folder in a text editor and follow the given steps:</p>
+<ol>
+<li>Scroll down or search for the <kbd>update</kbd> function.</li>
+<li>Locate the following line of code:</li>
+</ol>
+<pre style="padding-left: 60px"><strong>camera.updateProjectionMatrix();</strong></pre>
+<ol start="3">
+<li>Add the following lines of code right after the highlighted line:</li>
+</ol>
+<pre style="padding-left: 60px">var pos = camera.position;<br/>var rot = camera.rotation;<br/>console.log("Device position (X:" + pos.x + ",Y:" + pos.y + ",Z:" + pos.z + ")");<br/>console.log("Device orientation (pitch:" + rot._x + ",yaw:" + rot._y + ",roll:" + rot._z + ")");</pre>
+<ol start="4">
+<li>Save the file. The code we added just extracts the camera's position and orientation (rotation) into some helper variables: <kbd>pos</kbd> and <kbd>rot</kbd>. Then, it outputs the values to the console with the <kbd>console.log</kbd> function. As it happens, the camera also represents the device's view.</li>
+<li>Open Command Prompt or shell window.</li>
+<li>Launch the <kbd>http-server</kbd> in your <kbd>android</kbd> folder by entering this:</li>
+</ol>
+<pre style="padding-left: 60px"><strong>cd /android</strong><br/><strong>http-server -d -p 9999</strong></pre>
+<ol start="7">
+<li>Launch the Chrome debugging tools and connect remotely to your device.</li>
+<li>Open the <kbd>spawn-at-surface.html</kbd> file using the WebARCore browser app on your device.</li>
+<li>Switch back to the Chrome tools and click on <span class="packt_screen">Inspect</span>.</li>
+<li>Wait for the new window to open and click on <span class="packt_screen">Console</span>. Move your device around while running the AR app (<kbd>spawn-at-surface.html</kbd>), and you should see the <span class="packt_screen">Console</span> tab updated with messages about the device's position and orientation. Here's an example of how this should look:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img src="assets/0c42ea9a-646c-4dda-bb38-cfb0f89fe7c9.png" style="font-family: 'Times New Roman', times, serif;font-size: 10pt;text-align: center;width:43.00em;height:10.83em;"/></div>
+<div class="packt_figref CDPAlignCenter CDPAlign">Console output showing device position and orientation being tracked</div>
+<p>The code we added in this example tracks the camera, which, as it so happens, represents the view projected through the device in an AR app. We refer to a camera as the view of a scene in 3D. A 3D scene can have multiple cameras, but, typically, we only use one <span>in AR</span>. The following is a diagram of how we define a camera or view projection in 3D:</p>
+<div class="CDPAlignCenter CDPAlign packt_figref"><img src="assets/9b8e5644-539d-48a4-ad41-41e09850b6bb.png" style="width:30.42em;height:18.00em;"/><br/>
+<br/>
+Viewing frustum of a 3D camera</div>
+<p>The main task of a camera is to project or flatten the 3D virtual objects into a 2D image, which is then displayed on the device. If you scroll near the middle of the <kbd>spawn-at-surface.html</kbd> file, you will see the following code, which creates the camera for the scene:</p>
+<pre>camera = new THREE.ARPerspectiveCamera(<br/>    vrDisplay,<br/>    60,<br/>    window.innerWidth / window.innerHeight,<br/>    vrDisplay.depthNear,<br/>    vrDisplay.depthFar<br/>  );  </pre>
+<p>Here, <kbd>vrDisplay</kbd> is the device's actual camera, <kbd>60</kbd> represents the field of view, <kbd>window.innerWidth / window.innerHeight</kbd> represents the <strong>aspect ratio</strong>, and <kbd>vrDisplay.depthNear</kbd> and <kbd>vrDisplay.depthFar</kbd> represent the near and far plane depth distances. The near and far, along with the field of view, represent the view frustum. All objects in the view frustum will be rendered. Feel free to try and change those parameters to see what effect they have on the scene view when running the app.</p>
+<div class="packt_infobox">We use a field of view of 60 degrees in this setting to give a more natural perspective to the objects in the scene. Feel free to experiment with larger and smaller angles to see the visual effect this has on the scene objects.</div>
+<p>Now that we have a better understanding of how we can track our device around a scene, we will extend our example. In the next section, we will introduce 3D spatial sound.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">3D sound</h1>
+                </header>
+            
+            <article>
+                
+<p>3D sound is another illusion we cast at the listener in order to further trick them into believing that our virtually generated world is real. In fact, 3D sound has been used extensively for years in movies, TV, and of course, video games in order to trick the listener into a more immersive experience. In a movie, for instance, the listener is stationary, so 3D sound can be mimicked by setting up multiple speakers. However, in an AR or VR mobile app, the sound needs to come from a single (mono) or double (stereo, headphones) source. Fortunately, numerous smart people figured out how our human ears hear using a technique called <strong>binaural sound</strong> to map out sounds in 3D. The next diagram goes into a little more detail on how binaural audio works:</p>
+<div class="packt_figref CDPAlignCenter CDPAlign"><img src="assets/8dae6f4d-343a-4209-b724-293e4762cd9b.jpg" style="width:38.67em;height:31.33em;"/><br/>
+<br/>
+3D sound visualized</div>
+<p>Since then, we have figured out not only how to record binaural audio, but also how to play it back, thus giving us the ability to play sounds that fool the brain into thinking that their source is different from reality. However, most of the current technology assumes that the user is stationary, but, of course, <span>that is far from the case </span>in an AR app. In an AR app, our user (listener) is moving in our virtual world, which means that the 3D sounds around the listener also need to adjust. Fortunately, Google has again come to the rescue and developed a 3D sound API for AR and VR, called <strong>Resonance Audio</strong>. We will explore more about Resonance Audio and how to use it in the next section.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Resonance Audio</h1>
+                </header>
+            
+            <article>
+                
+<p>Google developed Resonance Audio as a tool for developers who need to include 3D spatial audio in their AR and VR applications. We will use this tool to put 3D sound in our demo app. Let's get started by opening up the <kbd>spawn-at-surface.html</kbd> file in your favorite text editor and then follow the given steps:</p>
+<ol>
+<li>Locate the beginning of the JavaScript and add the following lines <span>in the variable declarations</span>:</li>
+</ol>
+<pre style="padding-left: 60px"><strong>var cube</strong><em><strong>; </strong></em> //after this line<br/>var audioContext;<br/>var resonanceAudioScene;<br/>var audioElement;<br/>var audioElementSource;<br/>var audio;</pre>
+<ol start="2">
+<li>Now, scroll down to just before the <kbd>update</kbd> function and start a new function called <kbd>initAudio</kbd>, like this:</li>
+</ol>
+<pre style="padding-left: 60px">function initAudio(){<br/><br/>}<br/><br/><strong>function update(){  </strong>//before this function</pre>
+<ol start="3">
+<li>Next, we need to initialize an <kbd>AudioContext</kbd>, which represents the device's stereo sound. Inside the <kbd>initAudio</kbd> function, enter the following:</li>
+</ol>
+<pre style="padding-left: 60px">audioContext = new AudioContext();</pre>
+<ol start="4">
+<li>Then, we set up the audio scene in <kbd>Resonance</kbd> and output the binaural audio to the device's stereo output by adding this:</li>
+</ol>
+<pre style="padding-left: 60px">resonanceAudioScene = new ResonanceAudio(audioContext); <br/>resonanceAudioScene.output.connect(audioContext.destination);</pre>
+<ol start="5">
+<li>After this, we define some properties for the virtual space around the user by adding the given code:</li>
+</ol>
+<pre style="padding-left: 60px">let roomDimensions = {   width: 10, height: 100, depth: 10 };<br/>let roomMaterials = {<br/>   // Room wall materials<br/>   left: 'brick-bare',<br/>   right: 'curtain-heavy',<br/>   front: 'marble',<br/>   back: 'glass-thin',<br/>   // Room floor<br/>   down: 'grass',<br/>   // Room ceiling<br/>   up: 'transparent' };</pre>
+<ol start="6">
+<li>As you can see, there is plenty of flexibility here to define any <kbd>room</kbd> you want. <span>We are describing a room in this example, but that room can also be described as an outdoor space. There's an example of this for the <strong>up</strong> direction at the bottom where the <strong>transparent</strong> option is used. Transparent means sound will pass through the virtual wall in that direction, and you can represent the outdoors by setting all directions to transparent.</span></li>
+<li>Now, we add the <kbd>room</kbd> to the audio scene by writing this:</li>
+</ol>
+<pre style="padding-left: 60px">resonanceAudioScene.setRoomProperties(roomDimensions,       <br/>                                      roomMaterials);</pre>
+<ol start="8">
+<li>Now that <kbd>room</kbd> is done, let's add the audio source by entering the following:</li>
+</ol>
+<pre style="padding-left: 60px">audioElement = document.createElement('audio');<br/>audioElement.src = 'cube-sound.wav'; <br/> <br/>audioElementSource = audioContext.createMediaElementSource(audioElement);<br/>audio = resonanceAudioScene.createSource();<br/>audioElementSource.connect(audio.input);</pre>
+<ol start="9">
+<li>The <kbd>audioElement</kbd> is a connection to an HTML <kbd>audio</kbd> tag. Essentially, what we are doing here is replacing the default audio of HTML with the audio routed through resonance to provide us with spatial sound.</li>
+<li>Finally, we need to add our <kbd>audio</kbd> object when we spawn our box and play the sound. Enter the given code just following the function call to <kbd>THREE.ARUtils.placeObjectAtHit</kbd><strong> </strong>inside the <kbd>onClick</kbd> function:</li>
+</ol>
+<pre style="padding-left: 60px">audio.setPosition(cube.position.x,cube.position.y,cube.position.z);<br/> <br/>audioElement.play();</pre>
+<p>Before we run our sample, we need to download the <kbd>cube-sound.wav</kbd> file and put it in our sample folder. Open the folder where you downloaded the book's source code and copy the file from <kbd>Chapter_5/Resources/cube-sound.wav</kbd> to your <kbd>Android/three.ar.js/examples</kbd> folder.</p>
+<div class="packt_infobox">Binaural is so named because we hear sound with both the ears. In order to get the most from the audio examples in this chapter, ensure that you wear stereo headphones. You will be able to hear some differences with your device's mono speaker, but it won't be the same without headphones.</div>
+<p>Now when you are ready to run the app, save the <kbd>spawn-at-surface.html</kbd> page, start your device, and close and reopen the WebARCore app. Play around with the app and spawn a box by tapping a surface. Now when the box spawns, you will hear the cube sound. Move around the scene and see how the sound moves.</p>
+<p>Not what you expected? That's right, the sound still moves with the user. So what's wrong? The problem is that our audio scene and 3D object scene are in two different virtual spaces or dimensions. Here's a diagram that hopefully explains this further:</p>
+<div class="packt_figref CDPAlignCenter CDPAlign"><img src="assets/8a2e4d4f-4f2e-43a1-95c9-cbeb057d3334.jpg" style="width:34.08em;height:16.33em;"/></div>
+<div class="packt_figref CDPAlignCenter CDPAlign">Difference in audio and virtual 3D object space</div>
+<p>The problem we have is that our audio space moves with the user. What we want is to align the audio space with the same reference as our camera and then move the listener. Now, this may sound like a lot of work, and it likely would be, if not for ARCore. So thankfully, we can do this by adding one line right after those couple of console lines we put in earlier, like this:</p>
+<ol>
+<li>Find the two <kbd>console.log</kbd> lines we added in the previous section and comment them out like this:</li>
+</ol>
+<div class="packt_tip">If you omitted the previous section, you will need to go back and complete it. The code we use in this section requires it<em>.</em></div>
+<pre style="padding-left: 60px"><span>//console.log("Device position (X:" + pos.x + ",Y:" + pos.y + ",Z:" + pos.z + ")");<br/>//</span><span>console.log("Device orientation (pitch:" + rot._x + ",yaw:" + rot._y + ",roll:" + rot._z + ")");</span></pre>
+<ol start="2">
+<li>Add our new line of code:</li>
+</ol>
+<pre style="padding-left: 60px"><span>audio.setPosition(pos.x-cube.position.x,pos.y-cube.position.y,pos.z-cube.position.z);</span></pre>
+<ol start="3">
+<li>All this line does is to adjust the audio position relative to the user (camera). It does this by subtracting the <kbd>X</kbd>, <kbd>Y</kbd>, and <kbd>Z</kbd> values of the position vectors. We could have also just as easily subtracted the vectors.</li>
+<li>Run the sample again. Spawn some boxes and move around.</li>
+</ol>
+<p>Note that when you place a box and move around, the sound changes, as you expect it to. This is due to our ability to track the user in 3D space relative to where a virtual sound is. In the next section, we will look at extending our ability to track users by setting up a tracking service.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">A tracking service with Firebase</h1>
+                </header>
+            
+            <article>
+                
+<p>Now, being able to track a user's motion is all well and good, but what if we wanted to track a user across applications or even multiple users at the same time? This will require us to write a server, set up a database, make a schema, and so on, which is certainly not an easy task and cannot be easily explained in just a chapter. However, what if there was an easier way? Well, there is, and again, Google comes to our rescue with Firebase.</p>
+<p>Firebase is an excellent collection of app tools and storage services that are dead simple to use and cross-platform. We will use Firebase database, a real-time database service, to track our user's position. Open up a web browser and follow the given steps:</p>
+<ol>
+<li>Browse to <a href="https://firebase.google.com/">firebase.google.com</a>.</li>
+<li>Click on the <span class="packt_screen">GET STARTED</span> button.</li>
+<li>Log in with your Google (Gmail) account. If you don't have one, yes, you will need to create one to continue.</li>
+<li>Click on the <span class="packt_screen">Add project</span> button.</li>
+<li>Name your project <kbd>ARCore</kbd> and select your own <span class="packt_screen">Country/Region</span>, as shown in the following excerpt:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img src="assets/7e5dfefe-4619-40ff-87d4-cc7708626781.png" style="font-family: 'Times New Roman', times, serif;font-size: 10pt;text-align: center;width:24.58em;height:26.83em;"/></div>
+<div class="CDPAlignCenter packt_figref CDPAlign">Setting up the ARCore project</div>
+<ol start="6">
+<li>Click on <span class="packt_screen">CREATE PROJECT</span>. This will create your project and open up the <span class="packt_screen">Firebase Console</span>.</li>
+</ol>
+<ol start="7">
+<li>Click on <span class="packt_screen">Add Firebase to your web app</span>, which can be found at the top of the <span class="packt_screen">Project Overview</span> page. This will open up a dialog similar to the following:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img src="assets/fa2c34a8-c817-4361-a43f-db671318adc6.png" style="font-family: 'Times New Roman', times, serif;font-size: 10pt;text-align: center;width:34.50em;height:18.42em;"/></div>
+<div class="CDPAlignCenter packt_figref CDPAlign">Copy the setup code for your project</div>
+<ol start="8">
+<li>Click on <span class="packt_screen">COPY</span>. This should copy the two script tags and contents to your clipboard.</li>
+</ol>
+<div class="packt_infobox">Don't worry if the keys and URLs you see are different; they should be different.</div>
+<ol start="9">
+<li>Open up the <kbd>spawn-at-surface.html</kbd> file in your favorite text editor. Scroll down to just before the last <kbd>&lt;script&gt;</kbd> tag, the one with the big block of code. Paste the code (<em>Ctrl</em> + <em>V</em> and<em> </em><em>command</em> + <em>V</em> on Mac) you copied earlier.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Setting up the database</h1>
+                </header>
+            
+            <article>
+                
+<p>With that, we have set up the ARCore Firebase project. Now we want to create our real-time database and set it up for us to connect to. Go back to the <span class="packt_screen">Firebase Console</span> and follow the given steps to set up a database:</p>
+<ol>
+<li>Close the configuration dialog that we left open from the last exercise.</li>
+<li>Click on <span class="packt_screen">Database</span> on the left-hand side menu.</li>
+</ol>
+<ol start="3">
+<li>Click on <span class="packt_screen">GET STARTED</span>. This will create a <span>Firebase Realtime Database</span> with default security turned on. We don't really need authentication at this point, so let's just turn it off.</li>
+<li>Click on the <span class="packt_screen">RULES</span> tab. The default security rule is defined with JSON. We want to change this so that our database has public access. Replace the JSON with the following:</li>
+</ol>
+<pre style="padding-left: 60px">{  "rules": {    ".read": true,    ".write": true  }}</pre>
+<ol start="5">
+<li>Click on <span class="packt_screen">PUBLISH</span>. You should now see the following security warning:</li>
+</ol>
+<div class="CDPAlignCenter packt_figref CDPAlign"><img src="assets/2053873a-2786-4adc-a044-9d4c4dea139d.png" style="width:44.75em;height:8.92em;"/></div>
+<div class="CDPAlignCenter CDPAlign packt_figref">The security warning after turning on public access</div>
+<ol start="6">
+<li>Click on the <span class="packt_screen">DATA</span> tab. Leave this tab and the browser window open.</li>
+</ol>
+<div class="packt_infobox">Turning off security is okay for development prototyping. However, as soon as you go past a prototype, you need to turn security <span>back on</span>. Failure to do this can cost you all manner of heartache, pain, and things you probably can't imagine.</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Time to test the connection</h1>
+                </header>
+            
+            <article>
+                
+<p>Believe it or not, our real-time database service is up and running; now we just want to test our connection by writing a single value to the database from our AR Web app. Open up <kbd>spawn-at-surface.html</kbd> in a text editor and follow along:</p>
+<ol>
+<li>Scroll down to the Firebase script we added earlier. Add the following code after the last line:</li>
+</ol>
+<pre style="padding-left: 60px">var database = firebase.database();</pre>
+<ol start="2">
+<li>The preceding line creates a reference to the database. Now, let's set some data using the following code:</li>
+</ol>
+<pre style="padding-left: 60px">firebase.database().ref('pose/' + 1).set({x: 12,y: 1,z: 0});</pre>
+<ol start="3">
+<li>Save the file.</li>
+</ol>
+<div class="packt_infobox">Various versions of the <kbd>spawn-at-surface.html</kbd> page can be found in the book's downloaded source code at <kbd>Chapter_5/Examples</kbd>.</div>
+<ol start="4">
+<li>Run the page on your desktop using the <a href="http://localhost:9999/three.ar.js/examples/spawn-at-surface.html"><strong>http://localhost:9999/three.ar.js/examples/spawn-at-surface.html</strong></a> <span>URL</span>. At this stage, we are just setting a single point of data when the page starts, as a test, so we don't need AR. Of course, ensure that you start <kbd>http-server</kbd> before running any tests.</li>
+<li>After the page loads, you will see the ARCore warning message, but not to worry, this is just a test of the real-time database service.</li>
+<li>Go back to the <span class="packt_screen">Firebase Console</span> <strong><strong>(<a href="https://console.firebase.google.com/u/0/?pli=1">https://console.firebase.google.com/u/0/?pli=1</a><strong>)</strong></strong></strong> window we left open. Ensure that you are looking at the <span class="packt_screen">Database</span> page and <span class="packt_screen">DATA</span> tab, as shown:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img src="assets/0beed976-b5a3-4217-ab4a-69574d4e8306.png"/></div>
+<div class="CDPAlignCenter CDPAlign packt_figref">Checking the data that was set on the Firebase database</div>
+<ol start="7">
+<li>Expand the <span class="packt_screen">pose</span> and its child objects, as shown in the preceding excerpt. If everything is working correctly, you should see the values we set for a simulated pose (position).</li>
+</ol>
+<p>We now have a service in place, with the ability to track any data we want. Firebase allows us to model our data and schema on the fly, which is very useful in prototyping. It also has the extra benefit of being free, public, and accessible from the other platforms we will work with later. In the next section, we will put our tracking service to use by tracking the user in real time.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Visualizing tracked motion</h1>
+                </header>
+            
+            <article>
+                
+<p>Now that we understand how to track motion and have a service in place, let's see how we can put this service to use and visualize the tracked data in our AR app. Open up the <kbd>spawn-at-surface.html</kbd> page in a text editor and follow the given steps:</p>
+<ol>
+<li>Find that last line of code we added in the last exercise and delete it:</li>
+</ol>
+<pre style="padding-left: 60px"><strong>firebase.database().ref('pose/' + 1).set({x: 12,y: 1,z : 0});  </strong>//delete me</pre>
+<ol start="2">
+<li>Replace that line with the following code:</li>
+</ol>
+<pre style="padding-left: 60px">var idx = 1;<br/>setInterval(function(){<br/> idx = idx + 1;<br/> if(camera){<br/>  camera.updateProjectionMatrix();<br/>  var pos = camera.position;<br/>  var rot = camera.rotation;<br/>  firebase.database().ref('pose/' + idx).set({x: pos.x,y: pos.y,z : pos.z, roll: rot._z, pitch: rot._x, yaw: rot._y });<br/> }  }, 1000);</pre>
+<ol start="3">
+<li>The first line in the preceding snippet is setting an index or count variable. Then, we use the <kbd>setInterval</kbd> function to set up a repeating timer that calls the anonymous function every second (1000 milliseconds). We do this so that we only track movement every second. We could <span>certainly </span>track movement every frame like in a multiplayer game, but for now, one second will work. The rest of the code, you have seen earlier in the previous exercises.</li>
+<li>Save the file.</li>
+<li>Run the sample in your browser's device. Now, move around with the device.</li>
+<li>Go to the <span class="packt_screen">Firebase Console</span>. You should now see a stream of data getting fed into the database. Feel free to expand the data points and see the values being captured.</li>
+</ol>
+<p>Great, we can <span>now </span>see our data being collected. Of course, it is a little difficult for us humans to easily make sense of the data unless we can visualize it in 2D or 3D, which means that we have a few options. We can build a separate web page to just track the users on a map. Yet, that sounds more like a standard web exercise, so let's leave that to readers who are so inclined. Instead, what we will do is draw a 3D path of where the user has traveled, using the same data that we are sending to our database. Open up that text editor again and load up <kbd>spawn-at-camera.html</kbd> to follow along:</p>
+<ol>
+<li>Locate that call to the <kbd>setInterval</kbd> function we added in the last exercise. We need to change some code in order to create a line from the points.</li>
+<li>Enter the following code after the identified line:</li>
+</ol>
+<pre style="padding-left: 60px"><strong>firebase.database().ref('pose/' + ... </strong>//after this line<em><strong><br/></strong></em>if(lastPos){   <br/>  var material = new THREE.LineBasicMaterial({ color: 0x0000ff   });<br/>  var geometry = new THREE.Geometry();<br/>  geometry.vertices.push(<br/>     new THREE.Vector3( pos.x, pos.y, pos.z ),<br/>   new THREE.Vector3( lastPos.x, lastPos.y, lastPos.z )<br/>  );<br/>  var line = new THREE.Line( geometry, material );<br/>  scene.add( line );<br/>}<br/>lastPos = { x: pos.x, y: pos.y, z: pos.z};</pre>
+<ol start="3">
+<li>This code first checks whether <kbd>lastPos</kbd> is defined. On the first run through the <kbd>setInterval</kbd> timer loop, <kbd>lastPos</kbd> will be undefined; it then gets set right after the <kbd>if</kbd> statement. Then, after <kbd>lastPos</kbd> is defined, we create a basic line <kbd>material</kbd> with the call to <kbd>THREE.LineBasicMaterial</kbd>, passing in a hexadecimal color value. Next, we create our <kbd>geometry</kbd>, a <kbd>line</kbd>, using the current <kbd>pos</kbd> and <kbd>lastPos</kbd> variables with the <kbd>material</kbd>. We do this by first constructing a <kbd>Vector3</kbd> object with the <kbd>x</kbd>, <kbd>y</kbd>, and <kbd>z</kbd> values of each position. Finally, we add the <kbd>line</kbd> to the scene with <kbd>scene.add(line)</kbd>.</li>
+</ol>
+<div class="packt_infobox">A vector is nothing more than an ordered set of numbers, where each number represents a dimension. There are a number of cool mathematical properties about vectors that are useful to know. However, for now, think of a <kbd>Vector3</kbd> as representing a point in 3D space at the <kbd>x</kbd>, <kbd>y</kbd>, and <kbd>z</kbd> <span>coordinates</span>. We use the term vertex to refer to a vector or point on a line, surface, or mesh.</div>
+<ol start="4">
+<li>
+<p>Save the file and run it in the WebARCore browser on your device. Now when you move around, you will see a trail of blue lines follow you, as shown in the following picture:</p>
+</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img src="assets/76425f6b-dd40-4dc1-b5a2-ad3ab343a3b9.png" style="width:16.75em;height:33.42em;"/></div>
+<div class="CDPAlignCenter CDPAlign packt_figref">Sample showing tracked path as blue lines</div>
+<p>Feel free to continue playing with the app. The development cycle (build, deploy, and run) is quick when developing a simple single page web app, which gives you plenty of opportunities to make quick changes, run them, and then debug easily.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Exercises</h1>
+                </header>
+            
+            <article>
+                
+<p>At the end or near the end of every chapter, an exercise section will be available to test your knowledge and give you more experience with ARCore. Complete the following exercises on your own:</p>
+<ol>
+<li><span>Change the color of the tracking line from </span>blue<span> to </span>red<span>, or another color.</span></li>
+<li><span>Replace the straight </span>line<span> segments with a </span><kbd>SplineCurve</kbd><span>. Hint—you will need to track more than one previous position.</span></li>
+<li><span>Make the cube and/or audio follow the user along the tracked path. Hint—you can use another </span><kbd>setInterval</kbd><span> timer function to move the box every 1.1 seconds (1100 milliseconds) along the path.</span></li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p class="mce-root">With that, we complete our look at motion tracking with ARCore. As we learned, ARCore gives us the ability to track position and rotation or the pose of a device using feature identification correlated with the device's motion sensors. We then learned why it is important to track the position of a user when building AR apps with 3D sound. This taught us the difference between our audio and virtual (3D) scene and how to convert between references. We then extended our ability to track a user by setting up a Firebase Realtime Database and connected that to our AR app. By doing this, we could now track a single user or multiple users globally. Of course, we didn't have enough time here to build on this further. For now, we finished the app by drawing the user's travel path while the device moves around an area.</p>
+<p>In the next chapter, we will jump back to working with Android (Java) and learn more about environmental understanding and various related 3D concepts, which is the next topic on the fundamental AR topics' list.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

@@ -1,0 +1,612 @@
+<html><head></head><body>
+        <section>
+
+            <header>
+                <h1 class="header-title">Debugging the Boot Up Process Using a Customized ramdisk</h1>
+            </header>
+
+            <article>
+                
+<p>In the last chapter, we learnt to enable Houdini in the Android emulator using our own x86emu device. With that, we can move on to more challenging tasks in the next few chapters. Most device- or system-level customization will involve changes to the Android system start up sequence. In this chapter, we will analyze the Android system start up sequence and learn the knowledge related to the customization and debugging of the start up sequence. In this chapter, we will cover the following topics:</p>
+<ul>
+<li>Android start up process analysis</li>
+<li>Starting up process for the Android-x86</li>
+<li>Creating a filesystem for the Android-x86 <kbd>initrd.img</kbd></li>
+</ul>
+<p>We will start with the analysis of a normal Android boot up process. After that, we will introduce the Android-x86 two-stage boot up. We will build a filesystem for the Android emulator that can work with Android-x86 <kbd>initrd.img</kbd>. This method provides a flexible way to help the debugging of start up process.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Analyzing the Android start up process</h1>
+            </header>
+
+            <article>
+                
+<p>The Android system boot up sequence is similar to other embedded Linux systems that start from the Boot ROM inside the processor. The Boot ROM will find the bootloader. The bootloader will load the kernel and ramdisk image. The kernel uses the ramdisk as the root filesystem. In a desktop Linux environment, once the kernel initializes the essential devices, it will remount the root filesystem on physical storage such as a hard disk. In Android, the various partitions (system, data, cache, and so on) will be mounted to the root filesystem in memory instead of a storage device. The kernel will invoke the i<strong>nit</strong> process in the ramdisk to start the rest of the system, as shown in the following figure:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="282" width="163" class="image-border" src="assets/image_06_001.png"/></div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Bootloader and the kernel</h1>
+            </header>
+
+            <article>
+                
+<p>As we can see, we won't be able to avoid the bootloader when we build our own devices. However, we won't spend too much time on this topic, since the bootloader is not our focus in this book. In the Android emulator, it is not necessary to have a bootloader, since there is a minimal bootloader built inside the emulator itself.</p>
+<div class="packt_infobox"><span class="packt_screen">A very small bootloader in QEMU to boot Linux</span><strong><br/></strong>If you are interested in the small bootloader in QEMU, you can refer to the AOSP source code at <kbd><span class="URLPACKT">$AOSP/external/qemu/hw/arm/boot.c</span></kbd>.<br/>
+Since the bootloader is hardware platform-specific, the bootloader implementation in QEMU is different for various hardware architectures, such as ARM, x86, or MIPS. The reason why I refer to the ARM implementation is because it is the cleanest and easiest to understand.<br/>
+You can refer to the book <em>Embedded Programming with Android</em> written by myself and published by Addison-Wesley Professional to find out more about bootloader for the Android emulator.</div>
+<p>For VirtualBox, which we will use as the virtual hardware from Chapter 8, <em>Creating Your <a href="https://epic.packtpub.com/index.php?module=oss_Chapters&amp;action=DetailView&amp;record=2e7afcf2-5e5f-39eb-5f4a-57ce5bfd0a6e"/>Own Device on VirtualBox</em> till Chapter 11, <em>Enabling VirtualBox-Specific Hardware Interfaces</em>, we will use the network boot to resolve the bootloader issue.</p>
+<p>The Linux kernel is one of the key elements to support various hardware devices. We will discuss the customization and configuration of the Linux kernel throughout this book. In this chapter, we will focus on the init process and see how it works in the Android system.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Analyzing the init process and ramdisk</h1>
+            </header>
+
+            <article>
+                
+<p>The implementation of the init process can be found in the <kbd>$AOSP/system/core/init</kbd> directory. If we look at the <kbd>main</kbd> function in <kbd>init.cpp</kbd>, it includes the code for <kbd>ueventd</kbd> and <kbd>watchdogd</kbd>, as shown in the following code snippet:</p>
+<pre>
+int main(int argc, char** argv) { <br/>    if (!strcmp(basename(argv[0]), "ueventd")) { <br/>        return ueventd_main(argc, argv); <br/>    } <br/><br/>    if (!strcmp(basename(argv[0]), "watchdogd")) { <br/>        return watchdogd_main(argc, argv); <br/>    } <br/>    ... 
+</pre>
+<p>We won't discuss <kbd>ueventd</kbd> and <kbd>watchdogd</kbd>, since they are not related to our topics. We will focus on the mainline code of <kbd>init.cpp</kbd>. The mainline code of init implements the following logic:</p>
+<ol>
+<li>Preparation for the environment, such as creating system folders, setting up the standard I/O, initialization of logging systems, and so on. The environment setup also includes the SELinux setup and loading the SELinux policy.</li>
+<li>Parsing init scripts <kbd>init.rc</kbd>, <kbd>init.${ro.hardware}.rc</kbd>, and so on. Add items from the init scripts to the action or service in <kbd>action_list</kbd> and <kbd>service_list</kbd>.</li>
+<li>Execute the <kbd>early-init</kbd> action in <kbd>action_list</kbd>.</li>
+<li>Execute the <kbd>init</kbd> action in <kbd>action_list</kbd>.</li>
+<li>Execute the <kbd>late-init</kbd> action in <kbd>action_list</kbd>.</li>
+<li>Enter an infinite loop to perform the following tasks:</li>
+</ol>
+<ol>
+<li>Execute the action in <kbd>action_queue</kbd>.</li>
+<li>Restart the service marked as <kbd>SVC_RESTARTING</kbd> in <kbd>service_list</kbd>.</li>
+<li>Provide the property service, handling <kbd>/dev/keychord</kbd> events.</li>
+<li>Monitor system property changes, signals, and keyboard events.</li>
+</ol>
+<p>The init scripts are stored in the ramdisk and are loaded in memory by the bootloader during boot up. If we look at the content of the x86emu <kbd>ramdisk.img</kbd>, we will see the following files:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="289" width="451" class="image-border" src="assets/image_06_002.png"/></div>
+<p>The init scripts define two types of element: <strong>actions</strong> and <strong>services</strong>. The init process parses all the scripts and runs the tasks depending on the type of element.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Actions</h1>
+            </header>
+
+            <article>
+                
+<p>The action syntax is as follows:</p>
+<pre>
+on &lt;trigger&gt; <br/>    &lt;command&gt; <br/>    &lt;command&gt; <br/>    &lt;command&gt; <br/>    ... 
+</pre>
+<p>Actions begin with the keyword <kbd>on</kbd>, followed by a trigger. Actions are left-aligned and the commands that follow are indented, as shown in the preceding snippet.</p>
+<p>For example, we mount all partitions for the emulator using <kbd>fstab.goldfish</kbd> on trigger <kbd>fs</kbd>:</p>
+<pre>
+on fs <br/>        mount_all /fstab.goldfish 
+</pre>
+<p><strong>Triggers</strong> are strings that can be used to match certain kinds of event and they are used to cause an action to occur. There are two types of action triggers: <strong>predefined triggers</strong> and <strong>triggers activated on property-value changes</strong>.</p>
+<p>Predefined triggers could be <kbd>early-init</kbd>, <kbd>init</kbd>, <kbd>early-fs</kbd>, <kbd>fs</kbd>, <kbd>post-fs</kbd>, <kbd>early-boot</kbd>, or <kbd>boot</kbd> as defined in the init scripts.</p>
+<p>Property-value triggers are in the following form:</p>
+<pre>
+&lt;name&gt;=&lt;value&gt; 
+</pre>
+<p>Triggers of this form occur when the <kbd>&lt;name&gt;</kbd> property is set to a specific value <kbd>&lt;value&gt;</kbd>.</p>
+<p>For example, when the <kbd>sys.init_log_level</kbd> property is changed, we need to reset the log level as follows:</p>
+<pre>
+on property:sys.init_log_level=* <br/>    loglevel ${sys.init_log_level} 
+</pre>
+<p>Commands in init scripts reassemble the shell commands and also add init-specific ones.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Services</h1>
+            </header>
+
+            <article>
+                
+<p>Services are programs that init launches and (optionally) restarts when they exit. Services take the form of:</p>
+<pre>
+service &lt;name&gt; &lt;pathname&gt; [ &lt;argument&gt; ]* <br/>   &lt;option&gt; <br/>   &lt;option&gt; <br/>   ... 
+</pre>
+<p>The service will be known by init as <kbd>&lt;name&gt;</kbd>. The actual name of the binary that is pointed to by <kbd>&lt;pathname&gt;</kbd> will not be recognized.</p>
+<p>Options are modifiers to services. They affect how and when init runs the service. We can use the following goldfish-specific service as an example:</p>
+<pre>
+service goldfish-setup /system/etc/init.goldfish.sh <br/>    user root <br/>    group root <br/>    oneshot 
+</pre>
+<p>The name of the service is <kbd>goldfish-setup</kbd> and it runs the <kbd>init.goldfish.sh</kbd> script as the root user. The <kbd>oneshot</kbd> option means that this service won't restart when it exits.</p>
+<div class="packt_infobox">A complete list of <kbd>init</kbd> commands and <kbd>service</kbd> options can be found in the following file:<br/>
+<kbd>$AOSP/system/core/init/readme.txt</kbd></div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Device-specific actions and services</h1>
+            </header>
+
+            <article>
+                
+<p>The source code of system-generated init scripts is located in the <kbd>$AOSP/system/core/rootdir</kbd> folder. They are copied to <kbd>$OUT/root</kbd> in the build process.</p>
+<p>The init process parses the <kbd>init.rc</kbd> script first. All other scripts are imported by <kbd>init.rc</kbd> and then parsed by the init process. If we look at the following code snippet of <kbd>init.rc</kbd>, we can see that there are a few scripts that are imported by <kbd>init.rc</kbd>:</p>
+<pre>
+# Copyright (C) 2012 The Android Open Source Project <br/># <br/># IMPORTANT: Do not create world writable files or directories. <br/># This is a common source of Android security bugs. <br/># <br/><br/>import /init.environ.rc <br/>import /init.usb.rc <br/>import /init.${ro.hardware}.rc <br/>import /init.usb.configfs.rc <br/>import /init.${ro.zygote}.rc <br/>import /init.trace.rc <br/><br/>on early-init <br/>... 
+</pre>
+<p>The <kbd>init.${ro.hardware}.rc</kbd> script is the one that can be used to customize for device-specific changes. The <kbd>ro.hardware</kbd> property is passed to init at runtime so that init can load the right one for the device. We should try to avoid changes to other init scripts and keep the device-specific changes in <kbd>init.${ro.hardware}.rc</kbd> only.</p>
+<p>If we look at the goldfish or ranchu device specifically, there are <kbd>init.goldfish.rc</kbd> and <kbd>init.ranchu.rc</kbd> scripts for them, respectively. Both scripts are part of the goldfish device, which can be found at <kbd>$AOSP/device/generic/goldfish</kbd>, as we can see in the following snippet. They are copied to <kbd>$OUT/root</kbd> in the build process:</p>
+<pre>
+<strong>$ ls device/generic/goldfish</strong><br/><strong>audio           fstab.ranchu      libqemu  qemu-props</strong><br/><strong>camera          gps               lights   sensors</strong><br/><strong>data            init.goldfish.rc  opengl   ueventd.goldfish.rc</strong><br/><strong>fingerprint     init.goldfish.sh  power    ueventd.ranchu.rc</strong><br/><strong>fstab.goldfish  init.ranchu.rc    qemud    vibrator</strong>  
+</pre>
+<p>Inside <kbd>init.goldfish.rc</kbd> or <kbd>init.ranchu.rc</kbd>, a <kbd>goldfish-setup</kbd> service is defined as follows:</p>
+<pre>
+service goldfish-setup /system/etc/init.goldfish.sh <br/>    user root <br/>    group root <br/>    oneshot 
+</pre>
+<p>In the last chapter, we added Houdini initialization to the <kbd>init.goldfish.sh</kbd> script and this is how Houdini can be initialized during boot up.</p>
+<p>The hardware name in the Android emulator is passed by the kernel command line. When you start the emulator with <kbd>-verbose</kbd> and <kbd>-show-kernel</kbd>, you will see the following command-line parameters in the console:</p>
+<pre>
+<strong>...</strong><br/><strong>emulator: argv[08] = "-append"</strong><br/><strong>emulator: argv[09] = "qemu=1 clocksource=pit androidboot.console=ttyGF2 android.checkjni=1 console=ttyS0,38400 <strong>androidboot.hardware=ranchu</strong> qemu.gles=1 android.qemud=1"</strong><br/><strong>...</strong>  
+</pre>
+<p>These parameters are passed to the kernel as kernel command-line parameters and then used by init to decide the hardware name. Since we cannot change the kernel parameters in the emulator, we cannot use our own script such as <kbd>init.x86emu.rc</kbd> in our device. If we want to customize the start up sequence, we should change the code in <kbd>$AOSP/device/generic/goldfish</kbd> and this is what we did in the last chapter.</p>
+<p>The ideal approach to customizing the start up sequence is to keep all customizations under our own <kbd>device</kbd> folder, such as <kbd>$AOSP/device/generic/x86emu</kbd>. In that case, we can upgrade to the newer Android version very easily. The more general AOSP code we change, the more difficult it is to move to a new Android version.</p>
+<p>If we can have control of the bootloader, we can pass our own kernel parameters through the bootloader. We will see this when we work on the x86vbox device in <span>Chapter 8,</span> <em>Creating Your <a href="https://epic.packtpub.com/index.php?module=oss_Chapters&amp;action=DetailView&amp;record=2e7afcf2-5e5f-39eb-5f4a-57ce5bfd0a6e"/>Own Device on VirtualBox</em><span> till Chapter 11,</span> <em>Enabling VirtualBox-Specific Hardware Interfaces</em>.</p>
+<p>If you really need to change <kbd>init.rc</kbd> so that you can fully customize the boot up sequence, you can define the <kbd>TARGET_PROVIDES_INIT_RC := true</kbd> variable in your <kbd>BoardConfig.mk</kbd>. With this definition, you can copy <kbd>init.rc</kbd> to your <kbd>device</kbd> folder and change it for your device.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Source code and manifest changes</h1>
+            </header>
+
+            <article>
+                
+<p>Now that we have been introduced to Android start up processes, we will now apply the two-stage boot up process from the Android-x86 project to the Android emulator. Before we talk about the two-stage boot up process, let's have a look at the changes for the AOSP source code and manifest file.</p>
+<p>If we look at the following manifest file that we will use for this chapter, we can see that we only changed <kbd>kernel</kbd>, the <kbd>x86emu</kbd> device, and <kbd>newinstaller</kbd> from the Android-x86 project:</p>
+<pre>
+&lt;?xml version="1.0" encoding="UTF-8"?&gt; <br/>&lt;manifest&gt; <br/><br/>  &lt;remote  name="github" <br/>           revision="refs/tags/android-7.1.1_r4_x86emu_ch06_r1" <br/>           fetch="." /&gt; <br/><br/>  &lt;remote  name="aosp" <br/>           fetch="https://android.googlesource.com/" /&gt; <br/>  &lt;default revision="refs/tags/android-7.1.1_r4" <br/>           remote="aosp" <br/>           sync-c="true" <br/>           sync-j="1" /&gt; <br/><br/>  &lt;!-- github/shugaoye --&gt; <br/><strong>  &lt;project path="kernel" name="goldfish" remote="github" /&gt;</strong><strong>  <br/>  &lt;project path="device/generic/x86emu" name="x86emu" <br/>  remote="github" /&gt;</strong><strong>  <br/>  &lt;project path="bootable/newinstaller"  <br/>  name="platform_bootable_newinstaller" remote="github" /&gt;</strong> <br/><br/>  &lt;!-- aosp --&gt; <br/>  &lt;project path="build" name="platform/build" groups="pdk,tradefed" &gt; <br/>    &lt;copyfile src="core/root.mk" dest="Makefile" /&gt; <br/>  &lt;/project&gt; <br/>... <br/>&lt;/manifest&gt; 
+</pre>
+<p>With the <kbd>newinstaller</kbd> project, we will build another ramdisk image, <kbd>initrd.img</kbd>, which will be used in the two stage boot up process.</p>
+<p>A Git tag, <kbd>android-7.1.1_r4_x86emu_ch06_r1</kbd>, is used to baseline the source code changes in this chapter.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">The Android-x86 start up process</h1>
+            </header>
+
+            <article>
+                
+<p>In <a href="4ddc5eff-b4d7-452c-b83c-0c3c1d40da57.xhtml">Chapter 1</a>, <em>Introduction to Android System Programming</em>, we introduced the Android-x86 project, which is an open source project to provide the Android <strong>Board Support Package</strong> (<strong>BSP</strong>) for Intel devices. It uses an approach similar to Microsoft Windows or Linux distributions for desktops by using universal media to boot all kinds of Intel devices.</p>
+<p>In order to achieve the goal of using one medium to boot all devices, it splits the boot sequence into two stages. The first stage is to boot a minimum embedded Linux environment to enable hardware devices. In the second stage, it switches to the Android system through <kbd>chroot</kbd> or <kbd>switch_root</kbd>. The second stage of the boot process is the same as we discussed previously. Let's look at the first stage of the Android-x86 boot process in detail. We will reuse it for the Android emulator in this chapter. This approach can help to simplify the start up process and it can also help us a lot with the debugging of start up processes.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">The first-stage boot using initrd.img</h1>
+            </header>
+
+            <article>
+                
+<p>The first stage of the start up process in Android-x86 uses a specific ramdisk <kbd>initrd.img</kbd>. The source code can be found at <kbd>$AOSP/bootable/newinstaller</kbd>. This project is duplicated from the Android-x86 project. As it is hosted in GitHub, I can make my own changes:</p>
+<pre>
+<strong>$ ls -1 -F</strong><br/><strong>Android.mk</strong><br/><strong>boot/</strong><br/><strong>editdisklbl/</strong><br/><strong>initrd/</strong><br/><strong>install/</strong> 
+</pre>
+<p>If we look at the contents in this <kbd>newinstaller</kbd> folder, we can see the preceding folders and files. The following is the explanation about the content of <kbd>newinstaller</kbd>:</p>
+<ul>
+<li><kbd>boot</kbd>: This is the bootloader for the installation media. The images of Android-x86 can be built into different formats (ISO, UEFI, and so on)</li>
+<li><kbd>editdisklbl</kbd>: A host tool used to edit system image partitions</li>
+<li><kbd>initrd</kbd>: The ramdisk for the first-stage boot</li>
+<li><kbd>install</kbd> : The installer for Android-x86</li>
+<li><kbd>Android.mk</kbd> : Android Makefile for <kbd>newinstaller</kbd></li>
+</ul>
+<p>If we build <kbd>newinstaller</kbd>, it can generate a few different image formats, such as ISO, USB, or UEFI. To build a specified image, you can run the following command after you set up the environment and choose a build target:</p>
+<pre>
+<strong>$ make iso_img/usb_img/efi_img</strong>  
+</pre>
+<p>Besides an installation image, it also produces another two images, <kbd>initrd.img</kbd> and <kbd>install.img</kbd>:</p>
+<ul>
+<li><kbd>initrd.img</kbd> : The ramdisk image for the first stage boot up</li>
+<li><kbd>install.img</kbd> : The image contains the Android-x86 installer</li>
+</ul>
+<p>We will look at the details about both <kbd>initrd.img</kbd> and <kbd>install.img</kbd> to understand how the first stage boot works in Android-x86.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Inside initrd.img</h1>
+            </header>
+
+            <article>
+                
+<p>If we look at the <kbd>initrd</kbd> folder, we can see the following contents:</p>
+<pre>
+<strong>$ cd bootable/newinstaller/initrd </strong><br/><strong>$ ls -1F </strong><br/><strong>bin/ </strong><br/><strong>init* </strong><br/><strong>lib/ </strong><br/><strong>sbin/ </strong><br/><strong>scripts/ </strong>
+</pre>
+<p>The content of <kbd>initrd.img</kbd> consists of a minimal Linux environment based on busybox. We can find busybox at <kbd>bin/busybox</kbd> and shared libraries required by busybox at <kbd>lib/</kbd>. There is an executable <kbd>init</kbd> file and a few folders inside the <kbd>initrd</kbd> folder. We know that the init process is the first process invoked by the kernel when the system starts. Android-x86 provides a separate init process to start the system inside <kbd>initrd.img</kbd>. This version of init is actually a shell script instead of a binary executable file:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="403" width="388" class="image-border" src="assets/image_06_003.png"/></div>
+<p>This shell script will perform the tasks shown in the preceding figure:</p>
+<ol>
+<li>When the kernel invokes the script, it prepares the environment first. This includes the controlling tty setup, the initialization of debug logs, and the debug level.</li>
+</ol>
+<ol start="2">
+<li>After the environment is ready, it will try to find either an existing Android system or an installation media on the storage devices. In this step, <kbd>ramdisk.img</kbd> must be found, otherwise, it will return with an error.</li>
+</ol>
+<ol start="3">
+<li>Once an Android system or installation media is found; it will extract <kbd>ramdisk.img</kbd> to the working folder <kbd>/android</kbd>. If the <kbd>INSTALL</kbd> variable is set, it will extract <kbd>install.img</kbd> to the filesystem root as well. The working folder <kbd>/android</kbd> is used as the root of the Android system, while the current root is the image of <kbd>initrd.img</kbd>.</li>
+<li>It now loads all additional scripts to prepare for the next steps. If the environment variable <kbd>INSTALL</kbd> is set to <kbd>1</kbd>, it will invoke the installation script to install Android-x86 to a storage device such as a hard disk.</li>
+<li>Before it switches to the Android system, it will load all the kernel modules for the devices, mount data and SD card partitions, set up the touch screen and display DPI, and so on.</li>
+<li>Once everything is ready, it switches to the Android system using <kbd>/android</kbd> as the new root and invokes <kbd>/init</kbd> under the new root. The Android system will be started from this point onwards.</li>
+</ol>
+<p>Let's look at a few important code snippets in the script to get a real feel for it:</p>
+<pre>
+#!/bin/busybox sh <br/># <br/># By Chih-Wei Huang &lt;cwhuang@linux.org.tw&gt; <br/># and Thorsten Glaser &lt;tg@mirbsd.org&gt; <br/># <br/># Last updated 2015/10/23 <br/># <br/># License: GNU Public License <br/># We explicitely grant the right to use the scripts <br/># with Android-x86 project. <br/># <br/><br/>PATH=/sbin:/bin:/system/bin:/system/xbin; export PATH <br/>... <br/>echo -n Detecting Android-x86... <br/>... <br/>while :; do <br/>   for device in ${ROOT:-/dev/[hmsv][dmr][0-9a-z]*}; do <br/><strong>         check_root $device &amp;&amp; break 2</strong> <br/>         mountpoint -q /mnt &amp;&amp; umount /mnt <br/>   done <br/>   sleep 1 <br/>   echo -n . <br/>done <br/>... 
+</pre>
+<p>In the preceding code snippet, we can see that it invokes the shell function <kbd>check_root</kbd> to find the root of the Android system in an infinite loop. If it could not find the root file system, it is stuck in this loop.</p>
+<p>In the following <kbd>check_root</kbd> function, the environment variable <kbd>SRC</kbd> is passed from the kernel command line and specifies the path of the filesystem root. It will check whether a <kbd>ramdisk.img</kbd> can be found in this path or not. If a <kbd>ramdisk.img</kbd> can be found, it will be extracted to the <kbd>/android</kbd> path, which is the current directory, otherwise; it will return an error:</p>
+<pre>
+... <br/>check_root() <br/>{ <br/>... <br/>   if [ -n "$iso" -a -e /mnt/$iso ]; then <br/>         mount --move /mnt /iso <br/>         mkdir /mnt/iso <br/>         mount -o loop /iso/$iso /mnt/iso <br/>         SRC=iso <br/><strong>   elif [ ! -e /mnt/$SRC/ramdisk.img ]; then</strong><strong>        <br/>   return 1</strong><strong>   <br/>   fi</strong><strong>   <br/>   zcat /mnt/$SRC/ramdisk.img | cpio -id &gt; /dev/null</strong> <br/>... 
+</pre>
+<p>After the root filesystem is detected, it will check the environment variable <kbd>INSTALL</kbd>. This <kbd>INSTALL</kbd> variable is also passed from the kernel command line. If <kbd>INSTALL</kbd> is set, it will extract <kbd>install.img</kbd> to the current root. This will overwrite some of the files in <kbd>initrd.img</kbd> and we will discuss this in more detail later:</p>
+<pre>
+... <br/>if [ -n "$INSTALL" ]; then <br/><strong>   zcat /src/install.img | ( cd /; cpio -iud &gt; /dev/null )</strong> <br/>fi <br/>... 
+</pre>
+<p>Then it will load all other shell scripts from either the <kbd>/scripts</kbd> or <kbd>/src/scripts</kbd> folders:</p>
+<pre>
+... <br/># load scripts <br/>for s in `ls /scripts/* /src/scripts/*`; do <br/>   test -e "$s" &amp;&amp; source $s <br/>done <br/>... 
+</pre>
+<p>Once all the shell scripts are loaded in memory, it will check the <kbd>INSTALL</kbd> variable again to see whether it should execute the installation script:</p>
+<pre>
+... <br/>[ -n "$INSTALL" ] &amp;&amp; do_install <br/><br/>load_modules <br/>mount_data <br/>mount_sdcard <br/>setup_tslib <br/>setup_dpi <br/>post_detect <br/>... <br/>exec ${SWITCH:-switch_root} /android /init <br/><br/># avoid kernel panic <br/>while :; do <br/>   echo <br/>   echo '      Android-x86 console shell. Use only in emergencies.' <br/>   echo <br/>   debug_shell fatal-err <br/>done 
+</pre>
+<p>No matter whether it executes the installation script or not, it will prepare the environment for the Android system to start. It will load kernel modules, mount <kbd>data/sdcard</kbd> partitions, and set up all other environment-related requirements. Lastly, it will execute <kbd>switch_root</kbd> or <kbd>chroot</kbd> to switch to the Android system. The Android system will be started from this point onwards.</p>
+<div class="packt_infobox"><span class="packt_screen">The main difference between switch_root and chroot</span><strong><br/></strong><strong>switch_root</strong> is intended to switch the complete system over to a new root directory and remove dependencies on the old one, so that you can unmount the original root directory and proceed as if it had never been in use.<br/>
+<strong>chroot</strong> is intended to be applied for the lifetime of a single process, with the rest of the system continuing to run in the old root directory, and the system being unchanged when the chrooted process exits.<br/>
+In Android-x86, <kbd>switch_root</kbd> is used in release mode and <kbd>chroot</kbd> is used in debug mode.</div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Inside install.img</h1>
+            </header>
+
+            <article>
+                
+<p>We have analyzed most of the first stage start up processes for Android-x86. One thing that we want to do more analysis on is how <kbd>install.img</kbd> works in the first stage start up process.</p>
+<p>If the <kbd>INSTALL</kbd> environment variable is set, <kbd>install.img</kbd> will be extracted. This will overwrite some of the contents from <kbd>initrd.img</kbd>. Let's take a look at this now. If we list the contents of both directories <kbd>initrd</kbd> and <kbd>install</kbd>, we can see that <kbd>bin/</kbd>, <kbd>lib/</kbd>, <kbd>sbin/</kbd>, and <kbd>scripts/</kbd> are duplicated in both images in the following screenshot:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="235" width="599" class=" image-border" src="assets/image_06_004.png"/></div>
+<p>In the <kbd>bin/</kbd>, <kbd>sbin/</kbd>, and <kbd>lib/</kbd> folders, there are tools such as <kbd>cfdisk</kbd>, <kbd>cgdisk</kbd>, <kbd>mkntfs</kbd>, <kbd>grub</kbd>, and so on. These are the tools used to partition hard disks, format extra filesystems, and so on.</p>
+<p>The <kbd>scripts/</kbd> folder includes the installation script and we will look at <kbd>scripts/</kbd> to explore how the Android-x86 installation works.</p>
+<p>If we look at the script files in both the <kbd>initrd</kbd> and <kbd>install</kbd> folders, we find that both include a <kbd>1-install</kbd> script. <kbd>initrd.img</kbd> is used as the root filesystem in the first stage boot. If the <kbd>INSTALL</kbd> variable is set, <kbd>install.img</kbd> will be extracted to the root as well. In that case, the one in the <kbd>install</kbd> folder will overwrite the one in the <kbd>initrd</kbd> folder. We can see from the following figure how <kbd>initrd.img</kbd>, <kbd>ramdisk.img</kbd>, and <kbd>install.img</kbd> are integrated to form the first stage and the second-stage filesystem:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="416" width="661" class=" image-border" src="assets/image_06_005.png"/></div>
+<p>If we look at <kbd>1-install</kbd> under the <kbd>initrd/scripts</kbd> folder, we will see the following shell script function:</p>
+<pre>
+do_install() <br/>{ <br/>   error -e 'n  Android-x86 installer is not available.\n  <br/>   Press RETURN to run live version.\n' <br/>   read <br/>   cd /android <br/>} 
+</pre>
+<p>It implements a <kbd>do_install</kbd> function, which will return an error message. If this script is not overwritten by the one from <kbd>install.img</kbd>, it means the installer is not available. If <kbd>install.img</kbd> is extracted, the real <kbd>do_install</kbd> function will be invoked to start the installation:</p>
+<pre>
+do_install() <br/>{ <br/>  until install_hd; do <br/>    if [ $retval -eq 255 ]; then <br/>      dialog --title ' Error! ' --yes-label Retry --no-label Reboot  <br/>      --yesno 'nInstallation failed! Please check if you have enough <br/>      free disk space to install Android-x86.' 8 51 <br/>       [ $? -eq 1 ] &amp;&amp; rebooting <br/>    fi <br/>  done <br/><br/>  [ -n "$VESA" ] || runit="Run Android-x86" <br/>... <br/>} 
+</pre>
+<p>The <kbd>do_install</kbd> function will call another function, <kbd>install_hd</kbd>, and <kbd>install_hd</kbd> will call an <kbd>install_to</kbd> function to perform the actual installation. The <kbd>install_to</kbd> function takes a parameter that is the target device for the installation. It will perform the following installation tasks:</p>
+<ul>
+<li>It will format the target device first and then mount the device to the <kbd>/hd</kbd> folder.</li>
+<li>It will install GRUB as the bootloader.</li>
+<li>It will create a folder using the <kbd>android-$VER</kbd> naming convention in the <kbd>/hd</kbd> folder as the target installation folder. For example, as our device is x86emu, the installation target will be <kbd>/hd/android-x86emu</kbd>.</li>
+<li>It will use the <kbd>cpio</kbd> command to copy the files from the installation media to the installation target. These files include <kbd>kernel</kbd>, <kbd>initrd.img</kbd>, <kbd>ramdisk.img</kbd>, and everything under the <kbd>system</kbd> folder from the AOSP build. It depends on the configuration; it may either copy the <kbd>system.sfs</kbd> or <kbd>system.img</kbd> image file, or it may copy everything in the <kbd>system</kbd> folder directly to <kbd>/hd/android-$VER/system</kbd>.</li>
+</ul>
+<p>In the following sections, we need to repeat the installation procedure to create a filesystem that can be used for the Android-x86 two-stage boot sequence.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Building x86emu with initrd.img</h1>
+            </header>
+
+            <article>
+                
+<p>After we did all the analysis of <kbd>initrd.img</kbd> for Android-x86, we can build a similar one for the Android emulator now. Be aware that this can work only with ranchu, but not with goldfish. The goldfish emulator uses an older version of QEMU and it doesn't support the additional storage devices for the emulator. To support the boot from <kbd>initrd.img</kbd>, we have to change the layout of the filesystem. It is not good to change the original filesystem image in AOSP. We will create another file image to be used for the boot with <kbd>initrd.img</kbd>.</p>
+<p>In the ranchu emulator, the images are emulated as virtio block devices. After we start the emulator, we can inspect the mount points, as shown in the following screenshot. We can see that <kbd>system.img</kbd> is mounted as <kbd>/dev/block/vda</kbd>, <kbd>userdata.img</kbd> as <kbd>/dev/block/vdb</kbd>, and <kbd>cache.img</kbd> as <kbd>/dev/block/vdc</kbd>:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="345" width="486" class=" image-border" src="assets/image_06_006.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">ranchu images emulated as virtio block devices</div>
+<p>All partitions in the ranchu emulator are mounted using the <kbd>fstab.ranchu</kbd> file, as we can see in the following snippet:</p>
+<pre>
+... <br/>/dev/block/vda  /system  ext4      ro                 wait <br/>/dev/block/vdb  /cache   ext4      noatime,nosuid,nodev,nomblk_io_submit,errors=panic    wait <br/>/dev/block/vdc  /data    ext4      noatime,nosuid,nodev,nomblk_io_submit,errors=panic    wait <br/>... 
+</pre>
+<p>With the ranchu emulator, we can easily add another storage device with the <kbd>-hda</kbd> QEMU option. With this option, we can see that a new block device, <kbd>/dev/block/sda</kbd>, is available after the emulator starts. We will discuss this in more detail later. Before we can test this idea, we need to create the disk image first.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Creating a filesystem image</h1>
+            </header>
+
+            <article>
+                
+<p>There are many ways that we can create disk images. QEMU can support many disk image formats. If you want to find details about the image formats that can be supported by QEMU, you can check using the following Linux command:</p>
+<pre>
+<strong>$ man qemu-img</strong>  
+</pre>
+<p>The supported image formats are:</p>
+<ul>
+<li><strong>raw</strong>: This plain disk image format has the advantage of being simple and easily exportable to all other emulators.</li>
+<li><strong>qcow2</strong>: This is the QEMU image format, which is the most versatile format. It is a compressed image format, so it has a smaller image size and can support snapshots.</li>
+<li><strong>qcow</strong>: This is the old QEMU image format.</li>
+<li><strong>cow</strong>: This is the User Mode Linux Copy-On-Write image format.</li>
+<li><strong>vdi</strong>: This is the VirtualBox 1.1-compatible image format.</li>
+<li><strong>vmdk</strong>: This is the VMware 3- and 4-compatible image format.</li>
+<li><strong>vpc</strong>: This is the VirtualPC-compatible image format (VHD).</li>
+<li><strong>cloop</strong>: This is the Linux compressed loop image, useful only to reuse directly compressed CD-ROM images present, for example, in Knoppix CD-ROMs.</li>
+</ul>
+<p>We will use the qcow2 file format to test our <kbd>initrd.img</kbd> for the Android emulator. In order to create a file image in qcow2 format, we need to add the following code in the <kbd>Android.mk</kbd> Makefile of <kbd>bootable/newinstaller</kbd>:</p>
+<pre>
+... <br/>initrd:  $(BUILT_IMG) <br/><br/>X86EMU_EXTRA_SIZE := 100000000 <br/>X86EMU_DISK_SIZE := $(shell echo ${BOARD_SYSTEMIMAGE_PARTITION_SIZE}+${X86EMU_EXTRA_SIZE} | bc) <br/>X86EMU_TMP := x86emu_tmp <br/><br/>qcow2_img: $(BUILT_IMG) <br/>  mkdir -p $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT} <br/>  cd $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT}; mkdir data <br/>  mv $(PRODUCT_OUT)/initrd.img $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT} <br/>  mv $(PRODUCT_OUT)/install.img $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT} <br/>  mv $(PRODUCT_OUT)/ramdisk.img $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT} <br/>  mv $(PRODUCT_OUT)/system.img $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT} <br/>  make_ext4fs -T -1 -l $(X86EMU_DISK_SIZE) $(PRODUCT_OUT)/${TARGET_PRODUCT}.img $(PRODUCT_OUT)/${X86EMU_TMP}  <br/>  mv $(PRODUCT_OUT)/${X86EMU_TMP}/${TARGET_PRODUCT}/*.img $(PRODUCT_OUT)/ <br/>  qemu-img convert -c -f raw -O qcow2 $(PRODUCT_OUT)/${TARGET_PRODUCT}.img $(PRODUCT_OUT)/${TARGET_PRODUCT}-qcow2.img <br/>  cd $(PRODUCT_OUT); qemu-img create -f qcow2 -b <br/>  ./${TARGET_PRODUCT}-qcow2.img ./${TARGET_PRODUCT}.img <br/>... 
+</pre>
+<p>The first thing that we have to do in the preceding Makefile is to create a directory layout that can be used by <kbd>initrd.img</kbd>, as shown in the following snippet:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="127" width="201" class=" image-border" src="assets/image_06_007.png"/></div>
+<div class="packt_figure packt_figref CDPAlignCenter CDPAlign">Directory layout of x86emu_x86.img</div>
+<p>We create a <kbd>data</kbd> folder to be used as data storage. Then, we move existing image files in the AOSP output folder to the <kbd>$OUT/x86emu_tmp/x86emu_x86</kbd> directory in order to create the preceding directory structure. These file images will be moved back after the file image is generated.</p>
+<p>Once we have the right directory structure, we can use the <kbd>make_ext4fs</kbd> command to create a raw filesystem image with the following options:</p>
+<pre>
+<strong>make_ext4fs -T {timestamp} -l {size of file system} {image file name} {source directory} {target out directory}</strong>  
+</pre>
+<p>The size of the filesystem is <kbd>BOARD_SYSTEMIMAGE_PARTITION_SIZE</kbd>; additionally, <kbd>X86EMU_EXTRA_SIZE</kbd>. <kbd>BOARD_SYSTEMIMAGE_PARTITION_SIZE</kbd> is defined in the board configuration file for the system image size. <kbd>X86EMU_EXTRA_SIZE</kbd> is for the space of ramdisk and kernel images.</p>
+<p>The next step is to generate the qcow2 format from the raw file image using the <kbd>qemu-img</kbd> command. Both raw and qcow2 format images can be used by the emulator, but the raw file image is much larger than the qcow2 image.</p>
+<p>Since the qcow2 image can support the snapshot feature, we can also generate a snapshot image (<kbd>x86emu_x86.img</kbd>) based on the qcow2 image (<kbd>x86emu_x86-qcow2.img</kbd>). If we use the snapshot image, we can restore to the original qcow2 image at any time. The snapshot image can be created using the following commands:</p>
+<pre>
+<strong>$ cd $OUT</strong><br/><strong>$ qemu-img create -f qcow2 -b ./x86emu_x86-qcow2.img ./x86emu_x86.img</strong>  
+</pre>
+<p>After the image is generated, we can inspect it using the <kbd>qemu-img</kbd> command as follows:</p>
+<pre>
+<strong>$ qemu-img info x86emu_x86.img</strong><br/><strong>image: x86emu_x86.img</strong><br/><strong>file format: qcow2</strong><br/><strong>virtual size: 1.3G (1442177024 bytes)</strong><br/><strong>disk size: 196K</strong><br/><strong>cluster_size: 65536</strong><br/><strong>backing file: ./x86emu_x86-qcow2.img</strong><br/><strong>Format specific information:</strong><br/><strong>    compat: 1.1</strong><br/><strong>    lazy refcounts: false</strong> 
+</pre>
+<p>We see that the <kbd>x86emu_x86.img</kbd> image is the snapshot image of <kbd>x86emu_x86-qcow2.img</kbd>.</p>
+<p>In the image that we just created, there are no partitions created. When we mount it in the Android emulator, it will appear as a <kbd>/dev/sda</kbd> or <kbd>/dev/block/sda</kbd> device. If we want to create partitions for the image file, we need to use the <kbd>edit_mbr</kbd> tool to do so. You can explore this option on your own. With multiple partitions, we can put the system, data, and cache into different partitions, which is closer to the disk layout in most mobile devices.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Kernel changes</h1>
+            </header>
+
+            <article>
+                
+<p>With effect from Android 4.4, SELinux is on by default. When we change the filesystem in Android, we have to take care of the SELinux settings as well. This will make the configuration more complicated than what we expect. If you are interested in this, you can do your homework to configure SELinux for this case.</p>
+<p>In this book, we will disable SELinux by default so that we can concentrate on our topics. To disable SELinux, we have to make some changes the kernel configuration file. You can check the changes using the <kbd>git</kbd> command as follows:</p>
+<pre>
+<strong>$ cd $AOSP/kernel</strong><br/><strong>$ git branch</strong><br/><strong>* android-x86emu-3.10</strong><br/><strong>$ gitk</strong>  
+</pre>
+<p>We can see the changes in the <kbd>android-x86emu-3.10</kbd> branch using <kbd>gitk</kbd>, as shown in the following screenshot. We can see that we set the default security to DAC and removed the SELinux setting, <kbd>CONFIG_SECURITY_SELINUX=y</kbd>:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="318" width="437" class=" image-border" src="assets/image_06_008.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">Disabling SELinux in the ranchu kernel</div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Booting a disk image on the Android emulator</h1>
+            </header>
+
+            <article>
+                
+<p>Once we have done all the changes, we can build the qcow2 image using the following command:</p>
+<pre>
+<strong>$ make qcow2_img USE_SQUASHFS=0</strong><br/><strong>...</strong><br/><strong>make_ext4fs -T -1 -S out/target/product/x86emu/root/file_contexts -L <br/>system -l 1342177280 -a system out/target/product/x86emu/obj/PACKAGING/systemimage_intermediates/system.img out/target/product/x86emu/system out/target/product/x86emu/system</strong><br/><strong>Creating filesystem with parameters:</strong><br/><strong>    Size: 1342177280</strong><br/><strong>    Block size: 4096</strong><br/><strong>    Blocks per group: 32768</strong><br/><strong>    Inodes per group: 8192</strong><br/><strong>    Inode size: 256</strong><br/><strong>    Journal blocks: 5120</strong><br/><strong>    Label: system</strong><br/><strong>    Blocks: 327680</strong><br/><strong>    Block groups: 10</strong><br/><strong>    Reserved block group size: 79</strong><br/><strong>Created filesystem with 2122/81920 inodes and 178910/327680 blocks</strong><br/><strong>Install system fs image: out/target/product/x86emu/system.img</strong>  
+</pre>
+<p>As we can see from the preceding command-line output, <kbd>system.img</kbd> will be built as usual. After that, the ramdisk image, <kbd>initrd.img</kbd>, will be created as follows. Pay attention to the <kbd>VER</kbd> environment variable. We changed the script to set it as <kbd>x86emu</kbd>. The original one in Android-x86 is the current date, such as 2016-11-11:</p>
+<pre>
+VER ?= $(shell date +"%F") 
+</pre>
+<p>This variable is used as part of the installation folder name. Let's continue reviewing the build log:</p>
+<pre>
+<strong>out/target/product/x86emu/system.img+ maxsize=1370278272 blocksize=2112 total=1342177280 reserve=13842048</strong><br/><strong>rm -rf out/target/product/x86emu/installer</strong><br/><strong>out/host/linux-x86/bin/acp -pr bootable/newinstaller/initrd out/target/product/x86emu/installer</strong><br/><strong>ln -s /bin/ld-linux.so.2 out/target/product/x86emu/installer/lib</strong><br/><strong>mkdir -p out/target/product/x86emu/installer/android out/target/product/x86emu/installer/iso out/target/product/x86emu/installer/mnt out/target/product/x86emu/installer/proc out/target/product/x86emu/installer/sys out/target/product/x86emu/installer/tmp out/target/product/x86emu/installer/sfs out/target/product/x86emu/installer/hd</strong><br/><strong>echo "VER=x86emu" &gt; out/target/product/x86emu/installer/scripts/00-ver</strong><br/><strong>out/host/linux-x86/bin/mkbootfs out/target/product/x86emu/installer | gzip -9 &gt; out/target/product/x86emu/initrd.img</strong>  
+</pre>
+<p>After ramdisk <kbd>initrd.img</kbd> is created, the raw and qcow2 file images will be created as we have added in the <kbd>Android.mk</kbd> file for <kbd>bootable/newinstaller</kbd>:</p>
+<pre>
+<strong>mkdir -p out/target/product/x86emu/x86emu_tmp/x86emu_x86</strong><br/><strong>cd out/target/product/x86emu/x86emu_tmp/x86emu_x86; mkdir data</strong><br/><strong>mv out/target/product/x86emu/initrd.img out/target/product/x86emu/x86emu_tmp/x86emu_x86</strong><br/><strong>mv out/target/product/x86emu/install.img out/target/product/x86emu/x86emu_tmp/x86emu_x86</strong><br/><strong>mv out/target/product/x86emu/ramdisk.img out/target/product/x86emu/x86emu_tmp/x86emu_x86</strong><br/><strong>mv out/target/product/x86emu/system.img out/target/product/x86emu/x86emu_tmp/x86emu_x86</strong><br/><strong>make_ext4fs -T -1 -l 1442177280 out/target/product/x86emu/x86emu_x86.img out/target/product/x86emu/x86emu_tmp out/target/product/x86emu/x86emu_tmp</strong><br/><strong>Creating filesystem with parameters:</strong><br/><strong>    Size: 1442177024</strong><br/><strong>    Block size: 4096</strong><br/><strong>    Blocks per group: 32768</strong><br/><strong>    Inodes per group: 8016</strong><br/><strong>    Inode size: 256</strong><br/><strong>    Journal blocks: 5501</strong><br/><strong>    Label: </strong><br/><strong>    Blocks: 352094</strong><br/><strong>    Block groups: 11</strong><br/><strong>    Reserved block group size: 87</strong><br/><strong>Created filesystem with 17/88176 inodes and 340722/352094 blocks</strong><br/><strong>mv out/target/product/x86emu/x86emu_tmp/x86emu_x86/*.img out/target/product/x86emu/</strong><br/><strong>qemu-img convert -c -f raw -O qcow2 out/target/product/x86emu/x86emu_x86.img out/target/product/x86emu/x86emu_x86-qcow2.img</strong><br/><strong>cd out/target/product/x86emu; qemu-img create -f qcow2 -b ./x86emu_x86-qcow2.img ./x86emu_x86.img</strong><br/><strong>Formatting './x86emu_x86.img', fmt=qcow2 size=1442177024 backing_file='./x86emu_x86-qcow2.img' encryption=off cluster_size=65536 lazy_refcounts=off</strong>  
+</pre>
+<p>We have the <kbd>x86emu_x86-qcow2.img</kbd> qcow2 image and the <kbd>x86emu_x86.img</kbd> snapshot image now. In order to test the images, we can use a shell script to help us. The shell script can be downloaded from GitHub at the following URL:</p>
+<p><span class="URLPACKT"><a href="https://github.com/shugaoye/asp-sample/blob/master/scripts/test-initrd.sh">https://github.com/shugaoye/asp-sample/blob/master/scripts/test-initrd.sh</a></span></p>
+<p>To run this script, you should set up your SDK environment first so that we can find the emulator in the <kbd>$PATH</kbd> environment variable:</p>
+<pre>
+#!/bin/sh <br/><br/>if [ -z "$1" ]; then <br/>  EMULATOR1=emulator <br/>else <br/>  EMULATOR1="/opt/VirtualGL/bin/vglrun emulator" <br/>fi <br/><br/>if [ -z "$OUT" ]; then <br/>  IMG_ROOT=. <br/>else <br/>  IMG_ROOT=$OUT <br/>fi <br/><br/>$EMULATOR1 @a23x86 -verbose -show-kernel -shell -system $IMG_ROOT/system.img -ramdisk $IMG_ROOT/initrd.img -initdata $IMG_ROOT/userdata.img -kernel $IMG_ROOT/kernel -qemu -append "qemu=1 clocksource=pit android.checkjni=1 DEBUG=2 console=ttyS0,11520 androidboot.hardware=ranchu qemu.gles=1 android.qemud=1 root=/dev/sda SRC=x86emu_x86" -hda $IMG_ROOT/x86emu_x86.img 
+</pre>
+<p>To launch this script, you can use the AOSP build result directly or you can download the images from SourceForge at the following URL:</p>
+<p><span class="URLPACKT"><a href="https://sourceforge.net/projects/android-system-programming/files/android-7/ch06/ch06.zip/download">https://sourceforge.net/projects/android-system-programming/files/android-7/ch06/ch06.zip/download</a></span></p>
+<p>If you use the AOSP build result, the script will use the <kbd>$OUT</kbd> environment variable to look for the images. If the <kbd>$OUT</kbd> environment variable is not set, it will assume that the images are stored in the current directory.</p>
+<p>To run the Android emulator in a remote <em>X</em> window session, we need to use VirtualGL for OpenGL ES support. With any command-line parameter, the script will launch the emulator using VirtualGL. If you use a Linux machine with a local <em>X</em> window session, you don't have to do this.</p>
+<p>To use <kbd>initrd.img</kbd> as the ramdisk, we can see that we specify <kbd>initrd.img</kbd> in the <kbd>-ramdisk</kbd> option in the emulator command line. The next thing that we need to pay attention to is the QEMU options. We can specify QEMU options after the <kbd>-qemu</kbd> Android emulator option. We use two QEMU options, <kbd>-append</kbd> and <kbd>-hda</kbd>. With the <kbd>-hda</kbd> option, we can add the <kbd>x86emu_x86-qcow2.img</kbd> image or the <kbd>x86emu_x86.img</kbd> snapshot image as another hard disk for the emulator. With the <kbd>-append</kbd> option, we can provide kernel parameters that we want to pass to the ranchu kernel. All other kernel parameters are the same as the one provided by the emulator except for the following parameters:</p>
+<ul>
+<li><kbd>DEBUG=2</kbd>: This option sets the debug level to <kbd>2</kbd> so that we can get the debug console during boot up</li>
+<li><kbd>root=/dev/sda</kbd>: This option specifies the root device as <kbd>/dev/sda</kbd>, which is the <kbd>x86emu_x86-qcow2.img</kbd> image or the <kbd>x86emu_x86.img</kbd> snapshot image that we provide as a QEMU option</li>
+<li><kbd>SRC=x86emu_x86</kbd>: This option defines the folder name on the root device that init can use to find all images</li>
+</ul>
+<p>You can launch the script from the command line and you will see the following screen output:</p>
+<pre>
+<strong>$ test-initrd.sh</strong><br/><strong>...</strong><br/><strong>(debug-found)@android:/android # mount</strong><br/><strong>rootfs on / type rootfs (rw)</strong><br/><strong>proc on /proc type proc (rw,relatime)</strong><br/><strong>sys on /sys type sysfs (rw,relatime)</strong><br/><strong>tmpfs on /android type tmpfs (rw,relatime)</strong><br/><strong>/dev/block/sda on /mnt type ext4 (rw,relatime,data=ordered)</strong><br/><strong>/dev/loop0 on /android/system type ext4 (rw,relatime,data=ordered)</strong><br/><strong>(debug-found)@android:/android # losetup -a                                  </strong><br/><strong>/dev/loop0: 0 /mnt/x86emu_x86/system.img</strong>  
+</pre>
+<p>In the command-line log and the following screenshot, you can see that the <kbd>/dev/sda</kbd> root device is found and mounted at <kbd>/mnt</kbd>. The Android system image is mounted as a loop device to <kbd>/dev/loop0</kbd>:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="367" width="547" class=" image-border" src="assets/image_06_009.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">Debug console of initrd.img</div>
+<p>After you exit the shell console, the Android system will start up as usual. With this approach, you can get a debug console at the point when you want to troubleshoot any issues. You can also change any Android startup scripts on-the-fly without rebuilding a new image to test. All the flexibilities in this setup will help debugging of the boot up process a lot.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Summary</h1>
+            </header>
+
+            <article>
+                
+<p>In this chapter, we learnt about the startup process for the Android system. After that, we dived deep into the startup process for Android-x86. We found a new way to boot up the system to a minimum Linux environment first and then use that environment to boot the Android system. In this process, we can gain control by obtaining a shell console so that we can examine the system at a given point. To support this kind of boot, we learnt how to build a system image that can be used together with <kbd>initrd.img</kbd>.</p>
+<p>In the next chapter, we will continue exploring how to customize the Android emulator by adding a Wi-Fi connection to it.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    </body></html>

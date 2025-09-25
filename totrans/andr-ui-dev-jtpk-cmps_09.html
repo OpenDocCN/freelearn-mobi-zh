@@ -1,0 +1,322 @@
+<html><head></head><body><div id="sbo-rt-content"><div id="_idContainer046">
+			<h1 id="_idParaDest-93"><a id="_idTextAnchor119"/>Chapter 7: Tips, Tricks, and Best Practices</h1>
+			<p>In <a href="B17505_06_ePub.xhtml#_idTextAnchor105"><em class="italic">Chapter 6</em></a>, <em class="italic">Putting Pieces Together</em>, we combined several key techniques of Jetpack Compose such as state hoisting, app theming, and navigation in a real-world example. <strong class="source-inline">ComposeUnitConverter</strong> stores state in a <strong class="source-inline">ViewModel</strong> and eventually persists it using the <em class="italic">Repository</em> pattern. In this chapter, I show you how to pass objects to a <strong class="source-inline">ViewModel</strong> upon instantiation and use these objects to load and save data. In <a href="B17505_03_ePub.xhtml#_idTextAnchor054"><em class="italic">Chapter 3</em></a>, <em class="italic">Exploring the Key Principles of Compose</em>, we examined features of well-behaved composable functions. Composables should be free of side effects to make them reusable and easy to test. However, there are situations when you need to either react to or initiate state changes that happen outside the scope of a composable function. We will cover this at the end of this chapter.</p>
+			<p>These are the main sections of this chapter:</p>
+			<ul>
+				<li><a id="_idTextAnchor120"/>Persisting and retrieving state</li>
+				<li><a id="_idTextAnchor121"/>Keeping your composables responsive</li>
+				<li>Understanding side effects</li>
+			</ul>
+			<p>We start by continuing the exploration of the <strong class="source-inline">ViewModel</strong> pattern we began in the <em class="italic">Using a ViewModel</em> section of <a href="B17505_05_ePub.xhtml#_idTextAnchor089"><em class="italic">Chapter 5</em></a>, <em class="italic">Managing the State of Your Composable Functions</em>. This time, we will add business logic to the <strong class="source-inline">ViewModel</strong> and inject an object that can persist and retrieve data.</p>
+			<p>The <em class="italic">Keeping your composables responsive</em> section revisits one of the key requirements of a composable function. As recomposition can occur very often, composables must be as fast as possible. This greatly influences what the code may and may not do. Long-running tasks—for example, complex computations or network calls—should not be invoked synchronously.</p>
+			<p>The <em class="italic">Understanding side effects</em> section covers situations when you need to either react to or initiate state changes that happen outside the scope of a composable function. For example, we will be using <strong class="source-inline">LaunchedEffect</strong> to start and stop complex computations.</p>
+			<h1 id="_idParaDest-94"><a id="_idTextAnchor122"/>Technical requirements</h1>
+			<p>The <em class="italic">Persisting and retrieving state</em> and <em class="italic">Keeping your composables responsive</em> sections further discuss the sample <strong class="source-inline">ComposeUnitConverter</strong> app. The <em class="italic">Understanding side effects</em> section is based on the <strong class="source-inline">EffectDemo</strong> sample. Please refer to the <em class="italic">Technical requirements</em> section of <a href="B17505_01_ePub.xhtml#_idTextAnchor014"><em class="italic">Chapter 1</em></a>, <em class="italic">Building Your First Compose App</em> for information about how to install and set up Android Studio and how to get the repository accompanying this book.</p>
+			<p>All the code files for this chapter can be found on GitHub at <a href="https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_07">https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_07</a>.</p>
+			<h1 id="_idParaDest-95"><a id="_idTextAnchor123"/>Persisting and retrieving state</h1>
+			<p>State is<a id="_idIndexMarker264"/> app data that may change over time. In a Compose app, state is typically <a id="_idIndexMarker265"/>represented as instances of <strong class="source-inline">State</strong> or <strong class="source-inline">MutableState</strong>. If such objects are used inside composable functions, a recomposition is triggered upon state changes. If a state is passed to several composables, all of them may be recomposed. This leads to the <em class="italic">state hoisting</em> principle: state is passed to composable functions rather than being remembered inside them. Often, such state is remembered in the composable that is the parent of the ones using the state. An alternative approach is to implement an architectural pattern called <strong class="source-inline">ViewModel</strong>. It is used in many <strong class="bold">user interface</strong> (<strong class="bold">UI</strong>) frameworks on various platforms. On Android, it has been available since 2017 as part of the <strong class="bold">Android Architecture Components</strong>.</p>
+			<p>The general idea of a <strong class="source-inline">ViewModel</strong> is to combine data and access logic that is specific to a certain part of an app. Depending on the platform, this may be a screen, a window, a dialog, or another similar top-level container. On Android, it's usually an activity. The data is observable, so UI elements can register and get notified upon changes. How the observable pattern is implemented depends on the platform. The Android Architecture Components introduced <strong class="source-inline">LiveData</strong> and <strong class="source-inline">MutableLiveData</strong>. In the <em class="italic">Surviving configuration changes</em> section of <a href="B17505_05_ePub.xhtml#_idTextAnchor089"><em class="italic">Chapter 5</em></a>, <em class="italic">Managing the State of Your Composable Functions</em>, I showed you how to use them inside a <strong class="source-inline">ViewModel</strong> to store data that survives device rotations and how to connect <strong class="source-inline">LiveData</strong> instances to composable functions.</p>
+			<p>Here's a brief recap: to connect <strong class="source-inline">LiveData</strong> objects to the Compose world, we first obtain a <strong class="source-inline">ViewModel</strong> instance using <strong class="source-inline">androidx.lifecycle.viewmodel.compose.viewModel()</strong>, and then invoke the <strong class="source-inline">observeAsState()</strong> extension function on a property of the <strong class="source-inline">ViewModel</strong>. The returned state is read-only, so if a composable wants to update the property, it must call a setter that needs to be provided by the <strong class="source-inline">ViewModel</strong>.</p>
+			<p>So far, I have not explained how to persist state and restore it later. To put it another way: where do <strong class="source-inline">ViewModel</strong> instances get the initial values for their data, and what do they do upon changes? Let's find out in the next section.</p>
+			<h2 id="_idParaDest-96"><a id="_idTextAnchor124"/>Injecting objects into a ViewModel</h2>
+			<p>If a <strong class="source-inline">ViewModel</strong> wants <a id="_idIndexMarker266"/>to load and save data, it may need to access <a id="_idIndexMarker267"/>a database, the local filesystem, or some remote web service. Yet, it should be irrelevant for the <strong class="source-inline">ViewModel</strong> how reading and writing data works behind the scenes. The Android Architecture Components suggest implementing the <em class="italic">Repository</em> pattern. A repository abstracts the mechanics of loading and saving data and makes it available through a collection-like interface. You can find out more about the Repository pattern at <a href="https://martinfowler.com/eaaCatalog/repository.html">https://martinfowler.com/eaaCatalog/repository.html</a>.</p>
+			<p>You will see shortly what the implementation of a simple repository may look like, but first, I need to show you how to pass objects to a <strong class="source-inline">ViewModel</strong> upon instantiation. <strong class="source-inline">viewModel()</strong> receives a <strong class="source-inline">factory</strong> parameter of type <strong class="source-inline">ViewModelProvider.Factory</strong>. It is used to create <strong class="source-inline">ViewModel</strong> instances. If you pass <strong class="source-inline">null</strong> (the default value), a built-in default factory is used. <strong class="source-inline">ComposeUnitConverter</strong> has two screens, so its factory must be able to create <strong class="source-inline">ViewModel</strong> instances for each screen. </p>
+			<p>Here's what <strong class="source-inline">ViewModelFactory</strong> looks like:</p>
+			<p class="source-code">class ViewModelFactory(private val repository: Repository)</p>
+			<p class="source-code"> :ViewModelProvider.NewInstanceFactory() {</p>
+			<p class="source-code">  override fun &lt;T : ViewModel?&gt; create(modelClass:</p>
+			<p class="source-code"> Class&lt;T&gt;): T =</p>
+			<p class="source-code">    if (modelClass.isAssignableFrom</p>
+			<p class="source-code">     (TemperatureViewModel::class.java))</p>
+			<p class="source-code">      TemperatureViewModel(repository) as T</p>
+			<p class="source-code">    else</p>
+			<p class="source-code">      DistancesViewModel(repository) as T</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">ViewModelFactory</strong> extends the <strong class="source-inline">ViewModelProvider.NewInstanceFactory</strong> static class and overrides the <strong class="source-inline">create()</strong> method (which belongs to the parent <strong class="source-inline">Factory</strong> interface). The <strong class="source-inline">modelClass</strong> represents the <strong class="source-inline">ViewModel</strong> to be created. Therefore, if the following code is <strong class="source-inline">true</strong>, then we instantiate <strong class="source-inline">TemperatureViewModel</strong> and pass <strong class="source-inline">repository</strong>:</p>
+			<p class="source-code">modelClass.isAssignableFrom</p>
+			<p class="source-code"> (TemperatureViewModel::class.java)</p>
+			<p>This parameter <a id="_idIndexMarker268"/>was passed to the constructor of <strong class="source-inline">ViewModelFactory</strong>. Otherwise, a <strong class="source-inline">DistancesViewModel</strong> instance is created. Its constructor also <a id="_idIndexMarker269"/>receives <strong class="source-inline">repository</strong>. If your factory needs to differentiate between more <strong class="source-inline">ViewModel</strong> instances, you will probably use a <strong class="source-inline">when</strong> instead.</p>
+			<p>Next, let's look at my <strong class="source-inline">Repository</strong> class to find out how <strong class="source-inline">ComposeUnitConverter</strong> loads and saves data. You can see this in the following code snippet:</p>
+			<p class="source-code">class Repository(context: Context) {</p>
+			<p class="source-code">    private val prefs =</p>
+			<p class="source-code">        PreferenceManager.getDefaultSharedPreferences(context)</p>
+			<p class="source-code">    fun getInt(key: String, default: Int) = </p>
+			<p class="source-code">        prefs.getInt(key, default)</p>
+			<p class="source-code">    fun putInt(key: String, value: Int) {</p>
+			<p class="source-code">        prefs.edit().putInt(key, value).apply()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    fun getString(key: String, </p>
+			<p class="source-code">        default: String) = prefs.getString(key, default)</p>
+			<p class="source-code">    fun putString(key: String, value: String) {</p>
+			<p class="source-code">        prefs.edit().putString(key, value).apply()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">Repository</strong> uses <a id="_idIndexMarker270"/>Jetpack Preference. This library is a replacement<a id="_idIndexMarker271"/> for the platform classes and interfaces inside the <strong class="source-inline">android.preference</strong> package, which was deprecated with <strong class="bold">application programming interface</strong> (<strong class="bold">API</strong>) level 29.</p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout">Both the platform classes and the library are designed for user settings. You should not use them to access more complex data, larger texts, or images. Record-like data is best kept in an SQLite database, whereas files are ideal for large texts or images.</p>
+			<p>To use Jetpack Preference, we need to add an implementation dependency to <strong class="source-inline">androidx.preference:preference-ktx</strong> in the module-level <strong class="source-inline">build.gradle</strong> file. <strong class="source-inline">getDefaultSharedPreferences()</strong> requires an instance of <strong class="source-inline">android.content.Context</strong>, which is passed to the constructor of <strong class="source-inline">Repository</strong>.</p>
+			<p>Before we move on, let's recap what I showed you so far, as follows:</p>
+			<ul>
+				<li><strong class="source-inline">TemperatureViewModel</strong> and <strong class="source-inline">DistancesViewModel</strong> receive a <strong class="source-inline">Repository</strong> instance in their constructor.</li>
+				<li><strong class="source-inline">Repository</strong> receives a <strong class="source-inline">Context</strong> object.</li>
+				<li><strong class="source-inline">ViewModel</strong> instances are decoupled from activities. They survive configuration changes.</li>
+			</ul>
+			<p>The last bullet point has an important consequence regarding the context we can pass to the repository. Let's find out more in the next section.</p>
+			<h2 id="_idParaDest-97"><a id="_idTextAnchor125"/>Using the factory</h2>
+			<p>Here's how both the repository and<a id="_idIndexMarker272"/> factory are created:</p>
+			<p class="source-code">class ComposeUnitConverterActivity : ComponentActivity() {</p>
+			<p class="source-code">  override fun onCreate(savedInstanceState: Bundle?) {</p>
+			<p class="source-code">    super.onCreate(savedInstanceState)</p>
+			<p class="source-code">    val factory =</p>
+			<p class="source-code">      ViewModelFactory(Repository(applicationContext))</p>
+			<p class="source-code">    setContent {</p>
+			<p class="source-code">      ComposeUnitConverter(factory)</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>Both <strong class="source-inline">Repository</strong> and <strong class="source-inline">ViewModelFactory</strong> are ordinary objects, so they are simply instantiated, passing the required parameters to them.</p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout">It may be tempting to pass <strong class="source-inline">this</strong> (the calling activity) as the context. However, as <strong class="source-inline">ViewModel</strong> instances survive configuration changes (that is, the recreation of an activity), the context may change. If it does, the repository would be accessing a no longer available activity. By using <strong class="source-inline">applicationContext</strong>, we make sure that this issue does not occur.</p>
+			<p><strong class="source-inline">ComposeUnitConverter()</strong> is the root of the composable hierarchy. It passes the factory to <strong class="source-inline">ComposeUnitConverterNavHost()</strong>, which in turn uses it inside <strong class="source-inline">composable {}</strong> as a parameter for the screens, as illustrated in the following code snippet:</p>
+			<p class="source-code">composable(ComposeUnitConverterScreen.route_temperature) {</p>
+			<p class="source-code">  TemperatureConverter(</p>
+			<p class="source-code">    viewModel = viewModel(factory = factory)</p>
+			<p class="source-code">  )</p>
+			<p class="source-code">}</p>
+			<p>In this section, I showed you how to inject a repository object into a <strong class="source-inline">ViewModel</strong> using simple constructor invocation. If your app relies on a <strong class="bold">dependency injection</strong> (<strong class="bold">DI</strong>) framework, you will need to use its mechanisms (for example, an annotation) instead. However, this is beyond the scope of this book. Next, we will look at how the <strong class="source-inline">ViewModel</strong> uses the repository.</p>
+			<h1 id="_idParaDest-98"><a id="_idTextAnchor126"/>Keeping your composables responsive</h1>
+			<p>When implementing <a id="_idIndexMarker273"/>composable functions, you should always keep in mind that their main purpose is to declare the UI and to handle user interactions. Ideally, anything needed to achieve this is passed to the composable, including state and logic (such as click handlers), making it stateless. If state is needed only inside a composable, the function may keep state temporarily using <strong class="source-inline">remember {}</strong>. Such composables<a id="_idIndexMarker274"/> are called <strong class="bold">stateful</strong>. If data is kept in a <strong class="source-inline">ViewModel</strong>, composables must interact with it. So, the <strong class="source-inline">ViewModel</strong> code must be fast, too.</p>
+			<h2 id="_idParaDest-99"><a id="_idTextAnchor127"/>Communicating with ViewModel instances</h2>
+			<p>Data inside <a id="_idIndexMarker275"/>a <strong class="source-inline">ViewModel</strong> should be observable. <strong class="source-inline">ComposeUnitConverter</strong> uses <strong class="source-inline">LiveData</strong> and <strong class="source-inline">MutableLiveData</strong> from the Android Architecture Components to achieve this. You can choose other implementations of the <em class="italic">Observer</em> pattern, provided there is a way to obtain <strong class="source-inline">State</strong> or <strong class="source-inline">MutableState</strong> instances that are updated upon changes in the <strong class="source-inline">ViewModel</strong>. This is beyond the scope of this book. <strong class="source-inline">TemperatureViewModel</strong> is the <strong class="source-inline">ViewModel</strong> for the <strong class="source-inline">TemperatureConverter()</strong> composable function.</p>
+			<p>Let's look at its implementation. In the following code snippet, I omitted code related to the <strong class="source-inline">scale</strong> property for brevity. You can find the full implementation in the GitHub repository:</p>
+			<p class="source-code">class TemperatureViewModel(private val repository:</p>
+			<p class="source-code"> Repository): ViewModel() {</p>
+			<p class="source-code">  ...</p>
+			<p class="source-code"><strong class="bold">  private val _temperature: MutableLiveData&lt;String&gt;</strong></p>
+			<p class="source-code"><strong class="bold">             = MutableLiveData(</strong></p>
+			<p class="source-code"><strong class="bold">                repository.getString("temperature", "")</strong></p>
+			<p class="source-code"><strong class="bold">  )</strong></p>
+			<p class="source-code"><strong class="bold">  val temperature: LiveData&lt;String&gt;</strong></p>
+			<p class="source-code"><strong class="bold">    get() = _temperature</strong></p>
+			<p class="source-code">  fun getTemperatureAsFloat(): Float</p>
+			<p class="source-code">          = (_temperature.value ?: "").let {</p>
+			<p class="source-code">    return try {</p>
+			<p class="source-code">      it.toFloat()</p>
+			<p class="source-code">    } catch (e: NumberFormatException) {</p>
+			<p class="source-code">      Float.NaN</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code"><strong class="bold">  fun setTemperature(value: String) {</strong></p>
+			<p class="source-code"><strong class="bold">    _temperature.value = value</strong></p>
+			<p class="source-code"><strong class="bold">    repository.putString("temperature", value)</strong></p>
+			<p class="source-code"><strong class="bold">  }</strong></p>
+			<p class="source-code"><strong class="bold">  fun convert() = getTemperatureAsFloat().let {</strong></p>
+			<p class="source-code">    if (!it.isNaN())</p>
+			<p class="source-code">      if (_scale.value == R.string.celsius)</p>
+			<p class="source-code">        (it * 1.8F) + 32F</p>
+			<p class="source-code">      else</p>
+			<p class="source-code">        (it - 32F) / 1.8F</p>
+			<p class="source-code">    else</p>
+			<p class="source-code">      Float.NaN</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">ViewModel</strong> instances present their data through pairs of variables, as follows:</p>
+			<ul>
+				<li>A public read-only property (<strong class="source-inline">temperature</strong>)</li>
+				<li>A private writeable backing variable (<strong class="source-inline">_temperature</strong>)</li>
+			</ul>
+			<p>Properties are <a id="_idIndexMarker276"/>not changed by assigning a new value but by invoking some setter functions (<strong class="source-inline">setTemperature()</strong>). You can find an explanation of why this is the case in the <em class="italic">Using a ViewModel</em> section of <a href="B17505_05_ePub.xhtml#_idTextAnchor089"><em class="italic">Chapter 5</em></a>, <em class="italic">Managing the State of Your Composable Functions</em>. There may be additional functions that can be invoked by the composable—for example, logic to convert a temperature from °C to °F (<strong class="source-inline">convert()</strong>) should not be part of the composable code. The same applies to format conversions (from <strong class="source-inline">String</strong> to <strong class="source-inline">Float</strong>). These are best kept in the <strong class="source-inline">ViewModel</strong>.</p>
+			<p>Here's how the <strong class="source-inline">ViewModel</strong> is used from a composable function:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun TemperatureConverter(viewModel: TemperatureViewModel) {</p>
+			<p class="source-code">  …</p>
+			<p class="source-code">  val currentValue = viewModel.temperature.observeAsState(</p>
+			<p class="source-code">                        viewModel.temperature.value ?: "")</p>
+			<p class="source-code">  val scale = viewModel.scale.observeAsState(</p>
+			<p class="source-code">                 viewModel.scale.value ?: R.string.celsius)</p>
+			<p class="source-code">  var result by remember { mutableStateOf("") }</p>
+			<p class="source-code">  val calc = {</p>
+			<p class="source-code">    val temp = viewModel.convert()</p>
+			<p class="source-code">    result = if (temp.isNaN())</p>
+			<p class="source-code">      ""</p>
+			<p class="source-code">    else</p>
+			<p class="source-code">      "$temp${</p>
+			<p class="source-code">        if (scale.value == R.string.celsius)</p>
+			<p class="source-code">          strFahrenheit</p>
+			<p class="source-code">        else strCelsius</p>
+			<p class="source-code">      }"</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  …</p>
+			<p class="source-code">  Column(</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">  ) {</p>
+			<p class="source-code">    TemperatureTextField(</p>
+			<p class="source-code">      temperature = currentValue,</p>
+			<p class="source-code">      modifier = Modifier.padding(bottom = 16.dp),</p>
+			<p class="source-code">      callback = calc,</p>
+			<p class="source-code">      viewModel = viewModel</p>
+			<p class="source-code">    )</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    Button(</p>
+			<p class="source-code">      onClick = calc,</p>
+			<p class="source-code">      …</p>
+			<p class="source-code">    if (result.isNotEmpty()) {</p>
+			<p class="source-code">      Text(</p>
+			<p class="source-code">        text = result,</p>
+			<p class="source-code">        style = MaterialTheme.typography.h3</p>
+			<p class="source-code">      )</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    …</p>
+			<p>Have you noticed<a id="_idIndexMarker277"/> that <strong class="source-inline">TemperatureConverter()</strong> receives its <strong class="source-inline">ViewModel</strong> as a parameter?</p>
+			<p class="callout-heading">Tip</p>
+			<p class="callout">You should provide a default value (<strong class="source-inline">viewModel()</strong>) for preview and testability, if possible. However, this doesn't work if the <strong class="source-inline">ViewModel</strong> requires a repository (as in my example) or other constructor values.</p>
+			<p><strong class="source-inline">State</strong> instances are obtained by invoking <strong class="source-inline">observeAsState()</strong> of <strong class="source-inline">ViewModel</strong> properties (<strong class="source-inline">temperature</strong> and <strong class="source-inline">scale</strong>), which are <strong class="source-inline">LiveData</strong> instances. The code assigned to <strong class="source-inline">calc</strong> is executed when either the <strong class="bold">Convert</strong> button or <strong class="bold">Done</strong> button of the virtual keyboard is pressed. It creates a string representing the converted temperature, including scale, and assigns it to <strong class="source-inline">result</strong>, a state being used in a <strong class="source-inline">Text()</strong> composable. Please note that the <strong class="source-inline">calc</strong> lambda expression calls the <strong class="source-inline">convert()</strong> function of <strong class="source-inline">ViewModel</strong> function to get the converted temperature. You should always try to remove business logic from composables and instead put it inside the <strong class="source-inline">ViewModel</strong>.</p>
+			<p>So far, I showed you how to observe changes in the <strong class="source-inline">ViewModel</strong> and how to invoke logic inside it. There is one piece left: changing a property. In the preceding code snippet, <strong class="source-inline">TemperatureTextField()</strong> receives the <strong class="source-inline">ViewModel</strong>. Let's see what it does with it here:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun TemperatureTextField(</p>
+			<p class="source-code">  temperature: State&lt;String&gt;,</p>
+			<p class="source-code">  modifier: Modifier = Modifier,</p>
+			<p class="source-code">  callback: () -&gt; Unit,</p>
+			<p class="source-code">  viewModel: TemperatureViewModel</p>
+			<p class="source-code">) {</p>
+			<p class="source-code">  TextField(</p>
+			<p class="source-code">    value = temperature.value,</p>
+			<p class="source-code">    onValueChange = {</p>
+			<p class="source-code">      viewModel.setTemperature(it)</p>
+			<p class="source-code">    },</p>
+			<p class="source-code">    …</p>
+			<p>Whenever the text<a id="_idIndexMarker278"/> changes, <strong class="source-inline">setTemperature()</strong> is invoked with the new value. Please recall that the setter does the following:</p>
+			<p class="source-code">_temperature.value = value</p>
+			<p>The <strong class="source-inline">ViewModel</strong> updates the value of the <strong class="source-inline">_temperature</strong> (<strong class="source-inline">MutableLiveData</strong>) backing variable. As the <strong class="source-inline">temperature</strong> public property references <strong class="source-inline">_temperature</strong>, its observers (in my example, the state returned by <strong class="source-inline">observeAsState()</strong> in <strong class="source-inline">TemperatureConverter()</strong>) are notified. This triggers a recomposition.</p>
+			<p>In this section, we focused on how communication flows between composable functions and <strong class="source-inline">ViewModel</strong> instances. Next, we examine what can go wrong if the <strong class="source-inline">ViewModel</strong> breaks the contract with the composable and what you can do to prevent this.</p>
+			<h2 id="_idParaDest-100"><a id="_idTextAnchor128"/>Handling long-running tasks</h2>
+			<p>Composable functions actively<a id="_idIndexMarker279"/> interact with a <strong class="source-inline">ViewModel</strong> by setting new values for properties (<strong class="source-inline">setTemperature()</strong>) and by invoking functions that implement business logic (<strong class="source-inline">convert()</strong>). As recompositions can occur frequently, these functions may be called very often. Consequently, they must return very fast. This surely is the case for simple arithmetic, such as converting between °C and °F.</p>
+			<p>On the other hand, some algorithms may become increasingly time-consuming for certain inputs. Here's an example. Fibonacci numbers can be computed recursively and iteratively. While a recursive algorithm is simpler to implement, it takes much longer for large numbers. If a synchronous function call does not return in a timely fashion, it may affect how the user perceives your app. You can test this by adding <strong class="source-inline">while (true) ;</strong> as the first line of code inside <strong class="source-inline">convert()</strong>. If you then run <strong class="source-inline">ComposeUnitConverter</strong>, enter some number, and press <strong class="bold">Convert</strong>, the app will no longer respond.</p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout">Potentially long-running tasks must be implemented asynchronously.</p>
+			<p>To avoid situations <a id="_idIndexMarker280"/>where the app is not responding because a computation takes too much time, you must decouple the computation from delivering the result. This is done with just a few steps, as follows:</p>
+			<ol>
+				<li>Provide the result as an observable property.</li>
+				<li>Compute the result using a coroutine or a Kotlin flow.</li>
+				<li>Once the computation is finished, update the <strong class="source-inline">result</strong> property.</li>
+			</ol>
+			<p>Here's a sample implementation taken from <strong class="source-inline">DistancesViewMod<a id="_idTextAnchor129"/>el</strong>:</p>
+			<p class="source-code">private val _convertedDistance: MutableLiveData&lt;Float&gt;</p>
+			<p class="source-code">                = MutableLiveData(Float.NaN)</p>
+			<p class="source-code">val convertedDistance: LiveData&lt;Float&gt;</p>
+			<p class="source-code">  get() = _convertedDistance</p>
+			<p class="source-code">fun convert() {</p>
+			<p class="source-code">  getDistanceAsFloat().let {</p>
+			<p class="source-code">    viewModelScope.launch {</p>
+			<p class="source-code">      _convertedDistance.value = if (!it.isNaN())</p>
+			<p class="source-code">        if (_unit.value == R.string.meter)</p>
+			<p class="source-code">          it * 0.00062137F</p>
+			<p class="source-code">        else</p>
+			<p class="source-code">          it / 0.00062137F</p>
+			<p class="source-code">      else</p>
+			<p class="source-code">        Float.NaN</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">viewModelScope</strong> is available via an implementation dependency to <strong class="source-inline">androidx.lifecycle:lifecycle-viewmodel-ktx</strong> in the module-level <strong class="source-inline">build.gradle</strong> file. <strong class="source-inline">convert()</strong> spawns a coroutine, which will update the value of <strong class="source-inline">_convertedDistance</strong> once the computation is finished. Composable functions can observe changes by invoking <strong class="source-inline">observeAsState()</strong> on the <strong class="source-inline">convertedDistance</strong> public property. But how do you access <strong class="source-inline">convertedDistance</strong> and <strong class="source-inline">convert()</strong>? Here's a code <a id="_idIndexMarker281"/>snippet from <strong class="source-inline">DistancesConverter.kt</strong>:</p>
+			<p class="source-code">val convertedValue by</p>
+			<p class="source-code">        viewModel.<strong class="bold">convertedDistance</strong>.observeAsState()</p>
+			<p class="source-code">val result by remember(convertedValue) {</p>
+			<p class="source-code">  mutableStateOf(</p>
+			<p class="source-code">    if (convertedValue?.isNaN() != false)</p>
+			<p class="source-code">      ""</p>
+			<p class="source-code">    else</p>
+			<p class="source-code">      "$convertedValue ${</p>
+			<p class="source-code">        if (unit.value == R.string.meter)</p>
+			<p class="source-code">          strMile</p>
+			<p class="source-code">        else strMeter</p>
+			<p class="source-code">      }"</p>
+			<p class="source-code">  )</p>
+			<p class="source-code">}</p>
+			<p class="source-code">val calc = {</p>
+			<p class="source-code">  viewModel.<strong class="bold">convert()</strong></p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">result</strong> receives the text to be output once a distance has been converted, so it should update itself whenever <strong class="source-inline">convertedValue</strong> changes. Therefore, I pass <strong class="source-inline">convertedValue</strong> as a key to <strong class="source-inline">remember {}</strong>. Whenever the key changes, the <strong class="source-inline">mutableStateOf()</strong> lambda expression is recomputed, so <strong class="source-inline">result</strong> gets updated. <strong class="source-inline">calc</strong> is invoked when the <strong class="bold">Convert</strong> button or the <strong class="bold">Done</strong> button on the virtual keyboard is pressed. It spawns an asynchronous operation, which eventually will update <strong class="source-inline">convertedValue</strong>.</p>
+			<p>In this section, I have<a id="_idIndexMarker282"/> often used the term <em class="italic">computation</em>. Computation does not only mean arithmetic. Accessing databases, files, or web services may also consume considerable resources and be time-consuming. Such operations must be executed asynchronously. Please keep in mind that long-running tasks may not be part of the <strong class="source-inline">ViewModel</strong> itself but be invoked from it (for example, a repository). Consequently, such code must be fast too. My <strong class="source-inline">Repository</strong> implementation accesses the <strong class="source-inline">Preferences</strong> API synchronously for simplicity. Strictly speaking, even such basic operations should be asynchronous.</p>
+			<p class="callout-heading">Tip</p>
+			<p class="callout">Jetpack DataStore allows you to store key-value pairs or typed objects with protocol buffers. It uses Kotlin coroutines and Flow to store data asynchronously. You can find more information about Jetpack DataStore<a id="_idIndexMarker283"/> at <a href="https://developer.android.com/topic/libraries/architecture/datastore">https://developer.android.com/topic/libraries/architecture/datastore</a>.</p>
+			<p>This concludes our look at the communication between composable functions and <strong class="source-inline">ViewModel</strong> instances. In the next section, I will introduce you to composables that do not emit UI elements but cause side effects to run when a composition completes.</p>
+			<h1 id="_idParaDest-101"><a id="_idTextAnchor130"/>Understanding side effects</h1>
+			<p>In the <em class="italic">Using Scaffold() to structure your screen</em> section of <a href="B17505_06_ePub.xhtml#_idTextAnchor105"><em class="italic">Chapter 6</em></a>, <em class="italic">Putting Pieces Together</em>, I showed you how to display a snack bar using <strong class="source-inline">rememberCoroutineScope {}</strong> and <strong class="source-inline">scaffoldState.snackbarHostState.showSnackbar()</strong>. As <strong class="source-inline">showSnackbar()</strong> is a suspending function, it must be called from a coroutine or another suspending function. Therefore, we created and remembered <strong class="source-inline">CoroutineScope</strong> using <strong class="source-inline">rememberCoroutineScope()</strong> and invoked its <strong class="source-inline">launch {}</strong> function. </p>
+			<h2 id="_idParaDest-102"><a id="_idTextAnchor131"/>Invoking suspending functions</h2>
+			<p>The <strong class="source-inline">LaunchedEffect()</strong> composable is <a id="_idIndexMarker284"/>an alternative approach for spawning a suspending function. To see how it works, let's look at the <strong class="source-inline">LaunchedEffectDemo()</strong> composable. It belongs to the <strong class="source-inline">EffectDemo</strong> sample, as illustrated in the following screenshot: </p>
+			<div>
+				<div id="_idContainer045" class="IMG---Figure">
+					<img src="Images/B17505_07_01.jpg" alt="Figure 7.1 – The EffectDemo sample showing LaunchedEffectDemo()&#13;&#10;" width="1068" height="573"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 7.1 – The EffectDemo sample showing LaunchedEffectDemo()</p>
+			<p><strong class="source-inline">LaunchedEffectDemo()</strong> implements a counter. Once the <strong class="bold">Start</strong> button has been clicked, a counter is incremented every second. Clicking on <strong class="bold">Restart</strong> resets the counter. <strong class="bold">Stop</strong> terminates it. The code<a id="_idIndexMarker285"/> to achieve this is illustrated in the following snippet:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun LaunchedEffectDemo() {</p>
+			<p class="source-code">   var clickCount by rememberSaveable { mutableStateOf(0) }</p>
+			<p class="source-code">   var counter by rememberSaveable { mutableStateOf(0) }</p>
+			<p class="source-code">    Column(</p>
+			<p class="source-code">        modifier = Modifier</p>
+			<p class="source-code">            .fillMaxSize()</p>
+			<p class="source-code">            .padding(16.dp),</p>
+			<p class="source-code">        horizontalAlignment = Alignment.CenterHorizontally</p>
+			<p class="source-code">    ) {</p>
+			<p class="source-code">        Row {</p>
+			<p class="source-code">            Button(onClick = {</p>
+			<p class="source-code">                clickCount += 1</p>
+			<p class="source-code">            }) {</p>
+			<p class="source-code">                Text(</p>
+			<p class="source-code">                    text = if (clickCount == 0)</p>
+			<p class="source-code">                      stringResource(id = R.string.start)</p>
+			<p class="source-code">                    else</p>
+			<p class="source-code">                      stringResource(id = R.string.restart)</p>
+			<p class="source-code">                )</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">            Spacer(modifier = Modifier.width(8.dp))</p>
+			<p class="source-code">            Button(enabled = clickCount &gt; 0,</p>
+			<p class="source-code">                onClick = {</p>
+			<p class="source-code">                    clickCount = 0</p>
+			<p class="source-code">                }) {</p>
+			<p class="source-code">                Text(text = stringResource(id =</p>
+			<p class="source-code">                              R.string.stop))</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">            if (clickCount &gt; 0) {</p>
+			<p class="source-code">                <strong class="bold">LaunchedEffect(clickCount)</strong> {</p>
+			<p class="source-code">                    counter = 0</p>
+			<p class="source-code"><strong class="bold">                    while (isActive) {</strong></p>
+			<p class="source-code"><strong class="bold">                        counter += 1</strong></p>
+			<p class="source-code"><strong class="bold">                        delay(1000)</strong></p>
+			<p class="source-code"><strong class="bold">                    }</strong></p>
+			<p class="source-code">                }</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">        Text(</p>
+			<p class="source-code">            text = "$counter",</p>
+			<p class="source-code">            style = MaterialTheme.typography.h3</p>
+			<p class="source-code">        )</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">clickCount</strong> counts how often <strong class="bold">Start</strong> or <strong class="bold">Restart</strong> has been clicked. <strong class="bold">Stop</strong> resets it to <strong class="source-inline">0</strong>. A value greater than <strong class="source-inline">0</strong> indicates that another remembered variable (<strong class="source-inline">counter</strong>) should be increased every second. This is done by a suspending function that is passed to <strong class="source-inline">LaunchedEffect()</strong>. This composable is used to safely call suspend functions from inside a composable. Let's see how it works.</p>
+			<p>When <strong class="source-inline">LaunchedEffect()</strong> enters the composition (<strong class="source-inline">if (clickCount &gt; 0) …</strong>), it launches a coroutine with the block of code passed as a parameter. The coroutine will be cancelled if <strong class="source-inline">LaunchedEffect()</strong> leaves the composition (<strong class="source-inline">clickCount &lt;= 0</strong>). Have you noticed that it receives one parameter? If <strong class="source-inline">LaunchedEffect()</strong> is recomposed with different keys (my example uses just one, but you can pass more if needed), the<a id="_idIndexMarker286"/> existing coroutine will be canceled and a new one is started.</p>
+			<p>As you have seen, <strong class="source-inline">LaunchedEffect()</strong> makes it easy to start and restart asynchronous tasks. The corresponding coroutines are cleaned up automatically. But what if you need to do some additional housekeeping (such as unregistering listeners) when keys change or when the composable leaves the composition? Let's find out in the next section.</p>
+			<h2 id="_idParaDest-103"><a id="_idTextAnchor132"/>Cleaning up with DisposableEffect()</h2>
+			<p>The <strong class="source-inline">DisposableEffect()</strong> composable function runs code when its key changes. Additionally, you can pass a lambda expression for cleanup<a id="_idIndexMarker287"/> purposes. It will be executed when the <strong class="source-inline">DisposableEffect()</strong> function leaves the composition. The code is illustrated in the following snippet:</p>
+			<p class="source-code">DisposableEffect(clickCount) {</p>
+			<p class="source-code">  println("init: clickCount is $clickCount")</p>
+			<p class="source-code">  onDispose {</p>
+			<p class="source-code">    println("dispose: clickCount is $clickCount")</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>A message starting with <strong class="source-inline">init:</strong> will be printed each time <strong class="source-inline">clickCount</strong> changes (that is, when <strong class="bold">Start</strong> or <strong class="bold">Restart</strong> is clicked). A message starting with <strong class="source-inline">dispose:</strong> will appear when <strong class="source-inline">clickCount</strong> changes or when <strong class="source-inline">DisposableEffect()</strong> leaves the composition.</p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout"><strong class="source-inline">DisposableEffect()</strong> <em class="italic">must</em> include an <strong class="source-inline">onDispose {}</strong> clause as the final statement in its block.</p>
+			<p>I have given you two<a id="_idIndexMarker288"/> hands-on examples that use side effects in a Compose app. The <strong class="source-inline">Effect</strong> APIs contain several other useful composables—for example, you can use <strong class="source-inline">SideEffect()</strong> to publish Compose state to non-Compose parts of your app, and <strong class="source-inline">produceState()</strong> allows you to convert non-Compose state into <strong class="source-inline">State</strong> instances.</p>
+			<p>You can find additional information about the <strong class="source-inline">Effect</strong> APIs<a id="_idIndexMarker289"/> at <a href="https://developer.android.com/jetpack/compose/side-effects">https://developer.android.com/jetpack/compose/side-effects</a>.</p>
+			<h1 id="_idParaDest-104"><a id="_idTextAnchor133"/>Summary</h1>
+			<p>This chapter covered additional aspects of the <strong class="source-inline">ComposeUnitConverter</strong> example. We continued the exploration of the <strong class="source-inline">ViewModel</strong> pattern we began looking at in the <em class="italic">Using a ViewModel</em> section of <a href="B17505_05_ePub.xhtml#_idTextAnchor089"><em class="italic">Chapter 5</em></a>, <em class="italic">Managing the State of Your Composable Functions</em>. This time, we added business logic to the <strong class="source-inline">ViewModel</strong> and injected an object that can persist and retrieve data.</p>
+			<p>The <em class="italic">Keeping your composables responsive</em> section revisited one of the key requirements of a composable function. Recomposition can occur very often, therefore composables must be as fast as possible, which dictates what code inside them may and may not do. I showed you how a simple loop can cause a Compose app to stop responding, and how coroutines counteract this.</p>
+			<p>In the final main section, <em class="italic">Understanding side effects</em>, we examined so-called side effects and used <strong class="source-inline">LaunchedEffect</strong> to implement a simple counter.</p>
+			<p>In <a href="B17505_08_ePub.xhtml#_idTextAnchor135"><em class="italic">Chapter 8</em></a>, <em class="italic">Working with Animations</em>, you will learn how to show and hide UI elements with animations. We will spice up transitions through visual effects and use animation to visualize state changes.</p>
+		</div>
+	</div></body></html>

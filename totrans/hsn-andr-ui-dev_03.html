@@ -1,0 +1,447 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Taking Actions</h1>
+                </header>
+            
+            <article>
+                
+<p class="mce-root">Handling events is an essential part of any application; they are the raw input data for a user interface and how we interact with our users (rather than just presenting them with data). Android has an event model that will be instantly familiar to anyone who has programmed Java on their desktop--you attach listener objects to the widgets, and they deliver events to you<span>.</span></p>
+<p class="mce-root">Event listeners in Android take the form of interfaces that you need to implement in order to receive the events. Each possible event type is declared as a method on the relevant interface. To receive a notification that the user has <em>clicked</em> or <em>tapped</em> on a widget, you use the <kbd>OnClickListener</kbd> interface, which declares a method--<kbd>onClick(View)</kbd>--which will be invoked when the relevant widget receives what it considers a click gesture from the user.</p>
+<p class="mce-root">In this chapter, we'll take a look at events on Android, and how best to implement them. Specifically, we'll be taking a closer look at the following:</p>
+<ul>
+<li>How Android dispatches events, and how it affects your program and user experience</li>
+<li>Different ways to implement event listeners and their pros and cons</li>
+<li>How to wrap groups of events into logical classes</li>
+<li>How to make events always happen quickly</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Understanding Android event requirements</h1>
+                </header>
+            
+            <article>
+                
+<p>Android has a number of requirements around events delivered from the user interface that are important to be aware of, because they directly affect the user's experience and the perceived performance of your application. Android runs the <strong>main</strong> thread of an application as an event loop, rather than having a separate <strong>event loop</strong> or <strong>event dispatcher</strong> thread. This is an extremely important concept to understand, because this thread and event queue are shared between the following:</p>
+<ul>
+<li style="font-weight: 400">All the events from the user interface</li>
+<li style="font-weight: 400">The drawing requests from the widgets, where they paint themselves</li>
+<li style="font-weight: 400">The layout system and all the calculations for positioning and sizing widget</li>
+<li style="font-weight: 400">A variety of system-level events (such as network state changes)</li>
+</ul>
+<p>This makes the <em>main</em> thread of the application a precious resource--every frame of an animation has to run through this event loop as a separate event, as does every layout pass, and every event from the user interface widget. On the other side of this contract, there are three other important factors to know and understand:</p>
+<ul>
+<li style="font-weight: 400">All method calls to user interface elements must be done on the main thread</li>
+<li style="font-weight: 400">No networking is allowed on the main thread</li>
+<li style="font-weight: 400">Every event <em>slice</em> on the main thread is externally timed, and long-running events may cause your application to be terminated through an <span class="packt_screen">Application Not Responding</span> dialog displayed to the user (which is as bad as crashing in most cases)</li>
+</ul>
+<p>So, it's vital that we have models in place to avoid using the main thread more than is absolutely required. Every time you run something on the main thread, you're taking time away from vital systems such as graphics rendering and input events. This will cause your application to appear to stutter and become unresponsive. Fortunately, Android has many utilities to help, and there are a few extra steps that can be taken as a developer, which will reduce the complexity and help ensure the best possible user experience.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Listening for some events</h1>
+                </header>
+            
+            <article>
+                
+<p>When listening for user-interface events in Android, you'll typically hook up a listener object of some sort to the widgets you want to receive events on. However, how the listener object is defined may follow a number of different patterns, and listeners can take a number of different forms. You'll often see a simple anonymous class being defined as the listener, which is something like this:</p>
+<pre>closeButton.setOnClickListener(new View.OnClickListener() {<br/>  @Override<br/>  public void onClick(View v) {<br/>    finish();<br/>  }<br/>});</pre>
+<p>However, while this pattern is common (especially because the much shorter lambda syntax was only introduced in Java 8, and Android didn't properly support it until 2017), it's not always your best choice for several reasons:</p>
+<ul>
+<li style="font-weight: 400">This anonymous class is not reusable at all. It serves one purpose, for a single object in the entire application.</li>
+<li style="font-weight: 400">You just allocated a new object that will also need to be garbage collected. This is not a big deal, but can sometimes be avoided or minimized by grouping listeners into classes that handle multiple related events.</li>
+<li style="font-weight: 400">Any local variables from <kbd>onCreate</kbd> that are captured by the anonymous inner class must have references copied over into the new class as fields. You don't see this happen, but the compiler does it automatically (it's why the fields must be final).</li>
+</ul>
+<p>If Java 8 is available on your project, you can, of course, use lambdas, and shorten the syntax. However, this still results in an anonymous inner class being created. Another pattern for listening for events is to have the class that contains the layout (typically an <kbd>Activity</kbd> or <kbd>Fragment</kbd>) implement the listener interfaces, and use a <kbd>switch</kbd> statement to handle events from different widgets:</p>
+<pre class="mce-root">public class MyListenerActivity extends Activity implements View.OnClickListener {<br/>  @Override<br/>  protected void onCreate(@Nullable Bundle savedInstanceState) {<br/>    super.onCreate(savedInstanceState);<br/>    setContentView(R.layout.eventful_layout);<br/><br/>    findViewById(R.id.open).setOnClickListener(this);<br/>    findViewById(R.id.find).setOnClickListener(this);<br/>    findViewById(R.id.close).setOnClickListener(this);<br/>  }<br/><br/>  // ...<br/><br/>  @Override<br/>  public void onClick(View v) {<br/>    switch (v.getId()){<br/>      case R.id.open:<br/>        onOpen();<br/>        break;<br/>      case R.id.find:<br/>        onFind();<br/>        break;<br/>      case R.id.close:<br/>        onClose();<br/>        break;<br/>    }<br/>  }<br/>}</pre>
+<p>This has two advantages: there are no new listener objects, and all the layout and event logic is now encapsulated within the <kbd>Activity</kbd> class. The <kbd>switch</kbd> statement carries a tiny overhead, but as the layout increases in size, it becomes a lot of boilerplate to maintain and somewhat encourages you to place simple event code directly into the <kbd>onClick</kbd> method, instead of always just dispatching to another method. This simple event code almost always leads to more complex event code, and eventually to a horrible mess in your code base.</p>
+<p>So, what is the right way to handle events? The answer is that there isn't one, but when deciding how to handle events, you should always consider how you will reuse the event handler code--don't repeat yourself. For the date selection widget from the last chapter, the expectation is that when the user taps on the date, they will see a calendar dialog open, allowing them to choose a new date. This will need an event handler, and such a handler should be reusable since you may want it elsewhere, so follow these steps to build the date-picker event listener:</p>
+<ol>
+<li style="font-weight: 400">Right-click on your default package (that is, <kbd>com.packtpub.claim</kbd>) and select <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img height="203" width="375" src="assets/3b39a6a6-872e-41ca-b8a7-ec5badc6ee32.png"/></div>
+<ol start="2">
+<li style="font-weight: 400">Name the new class <kbd>ui.DatePickerWrapper</kbd>; Android Studio will create a new package named <kbd>ui</kbd> automatically and place <kbd>DatePickerWrapper</kbd> inside it.</li>
+<li style="font-weight: 400">In the <span class="packt_screen">Interfaces</span> list, add the following listener interfaces (use commas "<kbd>,</kbd>" to separate the interfaces):<br/>
+<ul>
+<li style="font-weight: 400"><kbd>android.view.View.OnClickListener</kbd>: To receive an event when the user taps on the date picker</li>
+<li style="font-weight: 400"><kbd>android.view.View.OnFocusChangeListener</kbd>: To receive an event if the date picker receives keyboard focus; this is important to handle if the user chooses to navigate the form using the "next" button on the keyboard, or has a physical keyboard attached to their device</li>
+<li style="font-weight: 400"><kbd>android.app.DatePickerDialog.OnDateSetListener</kbd>: To receive an event when the user selects a new date from <kbd>DatePickerDialog</kbd>:</li>
+</ul>
+</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img height="303" width="400" src="assets/45838db5-91bb-4c6e-b3a1-bb60ae7cbb3a.png"/></div>
+<ol start="4">
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new package and class.</li>
+<li style="font-weight: 400">If Android Studio has not created the skeleton methods for the listeners, select class name as <kbd>DatePickerWrapper</kbd> in the source, and use the code assistant to implement the methods:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img height="132" width="515" src="assets/9cceaca6-0ba5-425b-9a6a-eb28cb70d41e.png"/></div>
+<ol start="6">
+<li>Now you'll need a way to format the date string for the user, and it should be localized, so declare a <kbd>java.text.DateFormat</kbd> for this purpose:</li>
+</ol>
+<pre style="padding-left: 60px">private final DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.LONG);</pre>
+<ol start="7">
+<li style="font-weight: 400">This class is a wrapper, and will also need some fields to keep track of what it is wrapping, namely, the <kbd>TextView</kbd>, where it will display the date to the user (and where the user can tap to open the date picker dialog), an instance of <kbd>DatePickerDialog</kbd> to display to the user, and the currently selected/displayed <kbd>Date</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">private final TextView display;<br/><br/>private DatePickerDialog dialog = null;<br/>private Date currentDate = null;</pre>
+<ol start="8">
+<li>Then, we need a simple constructor that will capture <kbd>TextView</kbd> for display, and set it up as a date display and configure the events:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public DatePickerWrapper(final TextView display) {<br/>  this.display = display;<br/>  this.display.setFocusable(true);<br/>  this.display.setClickable(true);<br/>  this.display.setOnClickListener(this);<br/>  this.display.setOnFocusChangeListener(this);<br/><br/>  this.setDate(new Date());<br/>}</pre>
+<ol start="9">
+<li>Now, we'll need getter and setter-like methods to change and retrieve the state of the date picker:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public void setDate(final Date date) {<br/>  if(date == null) {<br/>    throw new IllegalArgumentException("date may not be null");<br/>  }<br/><br/>  this.currentDate = (Date) date.clone();<br/>  this.display.setText(dateFormat.format(currentDate));<br/><br/>  if(this.dialog != null) {<br/>    final GregorianCalendar calendar = new GregorianCalendar();<br/>    calendar.setTime(<span>currentDate</span>);<br/>    this.dialog.updateDate(<br/>        calendar.get(Calendar.YEAR),<br/>        calendar.get(Calendar.MONTH),<br/>        calendar.get(Calendar.DAY_OF_MONTH)<br/>    );<br/>  }<br/>}<br/><br/>public Date getDate() {<br/>  return currentDate;<br/>}</pre>
+<ol start="10">
+<li>Before we can actually handle the event, we need a method to display <kbd>DatePickerDialog</kbd> that will allow the user to change the date:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">void openDatePickerDialog() {<br/>  if (dialog == null) {<br/>    final GregorianCalendar calendar = new GregorianCalendar();<br/>    calendar.setTime(getDate());<br/>    dialog = new DatePickerDialog(<br/>        display.getContext(),<br/>        this,<br/>        calendar.get(Calendar.YEAR),<br/>        calendar.get(Calendar.MONTH),<br/>        calendar.get(Calendar.DAY_OF_MONTH)<br/>    );<br/>  }<br/>  dialog.show();<br/>}</pre>
+<ol start="11">
+<li>Then, we need to complete the event listener methods so that when the user selects the displayed date, we open the <kbd>DatePickerDialog</kbd>, allowing them to change the selected date:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">@Override<br/>public void onClick(final View v) {<br/>  openDatePickerDialog();<br/>}<br/><br/>@Override<br/>public void onFocusChange(final View v, final boolean hasFocus) {<br/>  if (hasFocus) {<br/>    openDatePickerDialog();<br/>  }<br/>}</pre>
+<ol start="12">
+<li>Finally, we need to handle the event that comes back from the <kbd>DatePickerDialog</kbd>, indicating that the user has chosen a date:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public void onDateSet(<br/>      final DatePicker view,<br/>      final int year,<br/>      final int month,<br/>      final int dayOfMonth) {<br/><br/>  final Calendar calendar = new GregorianCalendar(<br/>      year, month, dayOfMonth<br/>  );<br/><br/>  setDate(calendar.getTime());<br/>}</pre>
+<p>Now you have a class that can turn any <kbd>TextView</kbd> object into a space where the user can select a date via the standard <kbd>DatePickerDialog</kbd>. This is an ideal example of a good place to encapsulate events; you actually have three different event handlers that perform a related group of actions, and maintain user interface state in a single class that can be reused throughout your application.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Wiring the CaptureClaimActivity events</h1>
+                </header>
+            
+            <article>
+                
+<p>Now that we have a way for the user to pick a date for their travel expense claims, we need to actually wire it into the <kbd>CaptureClaimActivity</kbd>, which is where all the logic and wiring for the screen will live. To start wiring the events for the <kbd>CaptureClaimActivity</kbd>, follow these steps:</p>
+<ol>
+<li style="font-weight: 400">Open the <kbd>CaptureClaimActivity.java</kbd> file in Android Studio.</li>
+<li style="font-weight: 400">Now, declare a new field in the class (before the <kbd>onCreate</kbd> method) for the <kbd>DatePickerWrapper</kbd> that you wrote (Android Studio can help by writing the import for you):</li>
+</ol>
+<pre style="padding-left: 60px">private DatePickerWrapper selectedDate;</pre>
+<ol start="3">
+<li>You'll note that (by default) the <kbd>FloatingActionButton</kbd> object is wired up with a simple anonymous event handler that will look something like this:</li>
+</ol>
+<pre style="padding-left: 60px">fab.setOnClickListener(new View.OnClickListener() {<br/>  @Override<br/>  public void onClick(View view) {<br/>    Snackbar.make(<br/>        view,<br/>        "Replace with your own action",<br/>        Snackbar.LENGTH_LONG<br/>    ).setAction("Action", null).show();<br/>  }<br/>});</pre>
+<ol start="4">
+<li>This is how many once off events get wired up (as discussed earlier in this chapter), but it's not what we want to do here, so remove that entire block of code.</li>
+<li>At the end of the <kbd>onCreate</kbd> method instantiate the <kbd>DatePickerWrapper</kbd> object by searching for the <kbd>date</kbd> <kbd>TextView</kbd> you added to the layout:</li>
+</ol>
+<pre style="padding-left: 60px">selectedDate = new DatePickerWrapper((TextView) findViewById(R.id.date));</pre>
+<ol start="6">
+<li>You don't need to hold any other references to the <kbd>date</kbd> <kbd>TextView</kbd>, since you'll only ever need to access it through the <kbd>DatePickerWrapper</kbd> class. Try running your application now, and see how the date picker works.</li>
+</ol>
+<p>In <span>the application, y</span>ou'll note that you can select the category icons, and they will work exactly as expected. However, the <span>label</span> following them isn't wired up at all, and no labels will be displayed, leaving the user confused as to what they are actually selecting. To fix this, you'll need another event listener that sets the content of the label when the state of the <kbd>RadioButton</kbd> widgets is changed. This is another case where a specialized listener class will make sense; since it'll be usable anytime, you have a group of icon <kbd>RadioButton</kbd> widgets and a single label for all of them:</p>
+<ol>
+<li style="font-weight: 400">Right-click on the <kbd>ui</kbd> package and select <span class="packt_screen">New |</span> <span class="packt_screen">Java Class</span>.</li>
+<li style="font-weight: 400">Name the new class as <kbd>IconPickerWrapper</kbd>.</li>
+<li style="font-weight: 400">Add <kbd>android.widget.RadioGroup.OnCheckedChangeListener</kbd> to the interfaces box.</li>
+</ol>
+<ol start="4">
+<li style="font-weight: 400">Create a field for the <kbd>TextView</kbd> label, and a constructor to capture it:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">private final TextView label;<br/><br/>public IconPickerWrapper(final TextView label) {<br/>  this.label = label;<br/>}</pre>
+<ol start="5">
+<li>Add a method to set the label text content:</li>
+</ol>
+<pre style="padding-left: 60px">public void setLabelText(final CharSequence text) {<br/>  label.setText(text);<br/>}</pre>
+<ol start="6">
+<li>Complete the <kbd>onCheckedChange</kbd> method to set the label text from the <kbd>contentDescription</kbd> field of the <span>selected</span> <kbd>RadioButton</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public void onCheckedChanged(<br/>    final RadioGroup group,<br/>    final int checkedId) {<br/><br/>  final View selected = group.findViewById(checkedId);<br/>  setLabelText(view.getContentDescription());<br/>}</pre>
+<p>This is a very straightforward class, but it also potentially serves other purposes in your application, and it only makes two assumptions about the <kbd>RadioGroup</kbd> it will be connected to:</p>
+<ul>
+<li style="font-weight: 400">Every <kbd>RadioButton</kbd> has a valid ID</li>
+<li style="font-weight: 400">Every <kbd>RadioButton</kbd> has a <kbd>contentDescription</kbd> that will serve as a text label</li>
+</ul>
+<p>Going back to <kbd>CaptureClaimActivity</kbd>, you'll want to wire this new listener into the layout through the following steps:</p>
+<ol>
+<li>Before the <kbd>onCreate</kbd> method, create a new field to keep track of the <kbd>RadioGroup</kbd>, where the user can select the category icon:</li>
+</ol>
+<pre style="padding-left: 60px">private RadioGroup categories;</pre>
+<ol start="2">
+<li>Then, at the end of the <kbd>onCreate</kbd> method, you'll need to find this <kbd>RadioGroup</kbd> in the layout, and instantiate its event handler:</li>
+</ol>
+<pre style="padding-left: 60px">categories = (RadioGroup) findViewById(R.id.categories);<br/>categories.setOnCheckedChangeListener(<br/>  new IconPickerWrapper(<br/>      (TextView) findViewById(R.id.selected_category)<br/>  )<br/>);</pre>
+<ol start="3">
+<li>Finally, set the default selection to <kbd>other</kbd>; this action will also trigger the event handler before the screen is presented to the user. This means the label will also be populated when the user first sees the <span class="packt_screen">Capture Claim</span> screen:</li>
+</ol>
+<pre style="padding-left: 60px">categories.check(R.id.other);</pre>
+<p>Now if you run the application again, you'll see the labels defined to appear beneath the selected icons as you toggle through the category icons.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Handling events from other activities</h1>
+                </header>
+            
+            <article>
+                
+<p>On Android, you'll often find that you want to send your user to another <kbd>Activity</kbd> to do something, and then return them to your current <kbd>Activity</kbd> with the result of that action. Good examples are having the user pick a contact, or take a photo with the camera app. In these cases, Android uses a system of special events that are built into the <kbd>Activity</kbd> class. For capturing travel expense claims, your user needs to be able to go select a file to attach things such as photos or email attachments to their claim.</p>
+<p>In order to present them with a familiar file chooser (and avoid writing a file chooser ourselves), you'll need to use this mechanism. However, to read files from outside of your application's private space, you'll need it to ask the user for permissions. Anytime an application needs access to potentially sensitive data (public directories, the device's camera or microphones, contact list, and so on), you need permission from the user. In versions of Android prior to 6.0, this was done during installation; the application declared what permissions it needed, and the user could choose to not install it. However, this mechanism isn't very flexible to users, and was changed in 6.0 so that applications must now ask for permission at runtime.</p>
+<p>In order to access the user's files, the application will both declare that it requires the permission, and will also include the code to ask for permission while it's running (covering both cases):</p>
+<ol>
+<li>Open the <kbd>CaptureClaimActivity</kbd> class, and make the class implement the <kbd>View.OnClickListener</kbd> interface:</li>
+</ol>
+<pre style="padding-left: 60px">public class CaptureClaimActivity extends AppCompatActivity<br/>                                  implements View.OnClickListener {</pre>
+<ol start="2">
+<li>Create two new constants to hold the request codes. Anytime your user leaves your current <kbd>Activity</kbd>, and you are expecting a result, you need a request code:</li>
+</ol>
+<pre style="padding-left: 60px">private static final int REQUEST_ATTACH_FILE = 1;<br/>private static final int REQUEST_ATTACH_PERMISSION = 1001;</pre>
+<ol start="3">
+<li>In the <kbd>onCreate</kbd> method, find the line where the Android Studio template captures the <kbd>FloatingActionButton</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);</pre>
+<ol start="4">
+<li>Rename the button to <kbd>attach</kbd>, as follows (use the Android Studio refactoring to change the ID, and the ID in the layout file will be changed as well):</li>
+</ol>
+<pre style="padding-left: 60px">FloatingActionButton attach = (FloatingActionButton) findViewById(R.id.attach);</pre>
+<ol start="5">
+<li>Now, set <kbd>OnClickListener</kbd> for the <kbd>FloatingActionButton</kbd> to <kbd>Activity</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">attach.setOnClickListener(this);</pre>
+<ol start="6">
+<li>Now, at the end of the <kbd>CaptureClaimActivity</kbd>, implement the <kbd>onClick</kbd> method, and delegate the click from the <kbd>FloatingActionButton</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public void onClick(View v) {<br/>  switch (v.getId()){<br/>    case R.id.attach:<br/>      onAttachClick();<br/>      break;<br/>  }<br/>}</pre>
+<ol start="7">
+<li>Your application will need permission to read the content from outside its own private space. Open the <kbd>manifests</kbd> folder in the file browser, and open the <kbd>AndroidManifest.xml</kbd> file:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img height="83" width="313" src="assets/5210edbb-3122-4226-bd6d-1cddd9927762.png"/></div>
+<ol start="8">
+<li>At the top of the file within the <kbd>manifest</kbd> element, but before the application element, add the following permission declaration:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;manifest <br/>    package="com.packtpub.claim"&gt;<br/><br/><strong>    &lt;uses-permission</strong><br/><strong>        android:name="android.permission.READ_EXTERNAL_STORAGE"</strong><br/><strong>        android:maxSdkVersion="23" /&gt;</strong><br/><br/>    &lt;application<br/>        android:name=".ClaimApplication"</pre>
+<ol start="9">
+<li>The preceding permission only works for versions of Android where permissions were requested during installation; on Android 6.0 and newer, you need to check and request permissions at runtime. Doing this when the user taps on the <kbd>FloatingActionButton</kbd> to attach a file is the best time, as this is just before they actually choose a file that you will need permission to read. Implement the <kbd>onAttachClick</kbd> method, starting with a check for the permission, and request the permission if it's not already granted:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public void onAttachClick() {<br/>  final int permissionStatus = ContextCompat.checkSelfPermission(<br/>    this,<br/>    Manifest.permission.READ_EXTERNAL_STORAGE);<br/><br/>  if (permissionStatus != PackageManager.PERMISSION_GRANTED) {<br/>    ActivityCompat.requestPermissions(<br/>      this,<br/>      new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},<br/>      REQUEST_ATTACH_PERMISSION);<br/>    return;<br/>  }</pre>
+<ol start="10">
+<li>Now the app can request that the system start an <kbd>Activity</kbd>, allowing the user to choose any openable file. This is where the <kbd>REQUEST_ATTACH_FILE</kbd> constant you defined earlier starts getting used:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">  final Intent attach = new Intent(Intent.ACTION_GET_CONTENT)<br/>        .addCategory(Intent.CATEGORY_OPENABLE)<br/>        .setType("*/*");<br/><br/>  startActivityForResult(attach, REQUEST_ATTACH_FILE);<br/>}</pre>
+<ol start="11">
+<li>If we failed the preceding permission check, the system will have launched a dialog asking whether the user would grant permission to access external files. When the user returns from this dialog, a method named <kbd>onRequestPermissionsResult</kbd> will be invoked. Here, you need to check whether they granted your request, and if so, you can simply trigger the <kbd>onAttachClick()</kbd> method to continue the process smoothly:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">@Override<br/>public void onRequestPermissionsResult(<br/>      final int requestCode,<br/>      final String[] permissions,<br/>      final int[] grantResults) {<br/><br/>  switch (requestCode) {<br/>    case REQUEST_ATTACH_PERMISSION:<br/>      if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {<br/>        onAttachClick();<br/>      }<br/>      break;<br/>  }<br/>}</pre>
+<ol start="12">
+<li>Now when the system returns from the file chooser <kbd>Activity</kbd>, it will invoke a method called <kbd>onActivityResult</kbd>, which is very similar in structure to the <kbd>onRequestPermissionResult</kbd> method:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">@Override<br/>protected void onActivityResult(<br/>      final int requestCode,<br/>      final int resultCode,<br/>      final Intent data) {<br/><br/>  switch (requestCode) {<br/>    case REQUEST_ATTACH_FILE:<br/>      onAttachFileResult(resultCode, data);<br/>      break;<br/>  }<br/>}</pre>
+<ol start="13">
+<li>In the preceding <kbd>onActivityResult</kbd>, you simply check whether it's responding to your request to attach a file, and then delegate the rest to a method that will need to handle the resulting data:</li>
+</ol>
+<pre style="padding-left: 60px">public void onAttachFileResult(<br/>    final int resultCode, final Intent data) {</pre>
+<ol start="14">
+<li>Verify that the <kbd>resultCode</kbd> was okay and that the data is valid:</li>
+</ol>
+<pre style="padding-left: 60px">if (resultCode != RESULT_OK<br/>    || data == null<br/>    || data.getData() == null) {<br/>  return;<br/>}</pre>
+<ol start="15">
+<li>For now, you'll just want a <kbd>Toast</kbd> to pop up showing that this code has run; later, you can build the complete logic to attach the selected file. A <kbd>Toast</kbd> is a small message that appears and then disappears with no user interaction, perfect for temporary messages or debugging:</li>
+</ol>
+<pre style="padding-left: 60px">Toast.makeText(this, data.getDataString(), Toast.LENGTH_SHORT).show();</pre>
+<p>Now, if you run the application and tap on the floating action <em>attach</em> button, you'll be rewarded with a permission request (if you're running Android 6 or higher, on earlier versions the permission is granted as part of the installation), and then the option to select a file with whatever file selection systems you might have available on your emulator or device. Once you have chosen a file, you'll be returned to the <kbd>CaptureClaimActivity</kbd> and the selected <kbd>Uri</kbd> will be displayed in a <kbd>Toast</kbd> message on the screen:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="112" width="292" src="assets/2278ca49-4dbc-4f1a-8529-437fb5493b50.png"/></div>
+<p>This might not look like much, but it's all you need to access the file later on and attach it to the claim that the user is capturing. When you need to send your user to another Activity, you're hooking into Android's <kbd>Activity</kbd> to <kbd>Activity</kbd> messaging systems through methods such as <kbd>onActivityResult</kbd> and <kbd>onRequestPermissionsResult</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Making events quick</h1>
+                </header>
+            
+            <article>
+                
+<p>Android places very strict limits on the use of threads in applications: every application has a main thread, where all user-interface related code must run, but any long-running code will cause an error. Any attempt at networking on the main thread will result in a <kbd>NetworkOnMainThreadException</kbd> immediately, as networking by its very nature will block the main thread for too long, making the application unresponsive.</p>
+<p>This means most tasks that you will want to perform should take place on a background worker thread. This will also provide you with a form of isolation from the user interface, as typically you will capture the user interface state on the main thread, pass the state to the background thread, process the event and then, send the result back to the main thread where you will update the user interface. How do we know that the state we capture will be consistent? The answer is that because user interface code can only run on the main thread, while you read the state of the widgets, any events that would change their state are blocked until you are finished (because they must also occur on the main thread). The message queue and threading rules avoid the need for locks and other thread protection mechanisms by ensuring that only one unit of code (in the form of a message) is processed at a time.</p>
+<p>Android tasks that require larger amounts of background processing time are usually written using the <kbd>AsyncTask</kbd> class provided by the Android platform (or one of its child classes). <kbd>AsyncTask</kbd> has methods for running code on a background worker, and publishing status updates to the main thread (and receiving these update messages), along with several other utility structures. This makes it ideally suited to tasks such as downloading large files, where the user needs to be kept informed of the download's progress. However, most event handlers you will implement won't need anywhere near to this level of complexity.</p>
+<p>Most event handlers are relatively lightweight, but that doesn't mean that it will perform quickly on all devices in all situations. You can't control what else the user is busy doing with their device, and a simple database query can end up taking much longer than expected. As such, it's better to push event processing to background threads wherever the event is not purely a user-interface update (that is, showing a dialog or similar). Even fairly small tasks should be moved to a background thread so that the main thread can continue consuming the user's input; this will keep your application responsive. Here's the pattern you should try and follow when implementing event handlers:</p>
+<ul>
+<li style="font-weight: 400"><strong>On the Main Thread</strong>: First, capture any required parameters</li>
+<li style="font-weight: 400"><strong>On a Background Worker</strong>: Process the user's event and data</li>
+<li style="font-weight: 400"><strong>On the Main Thread</strong>: End by updating the user interface with the new state</li>
+</ul>
+<p>If you keep to this pattern, the application will always appear responsive to your users, since processing their data isn't stopping their events from being processed (events which may be them scrolling through a large list, for example). However, <kbd>AsyncTask</kbd> is not a great fit for these smaller events (such as attaching a file to a claim), so here's how to write a simple class (in a similar style to the command pattern) that will run first some code on the background and then pass the result of that code to another method on the main thread, perfect for carrying out smaller events:</p>
+<ol>
+<li style="font-weight: 400">Right-click on your root package (that is, <kbd>com.packtpub.claim</kbd>) and choose <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>.</li>
+<li style="font-weight: 400">Name the class <kbd>util.ActionCommand</kbd>.</li>
+<li style="font-weight: 400">Change the <span class="packt_screen">Modifiers</span> to make the new class <kbd>Abstract</kbd>.</li>
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new package (<kbd>util</kbd>) and class.</li>
+<li>Change the class definition to include generic parameters for a "parameter" and a "returned" type:</li>
+</ol>
+<pre style="padding-left: 60px">public abstract class ActionCommand&lt;P, R&gt; {</pre>
+<ol start="6">
+<li style="font-weight: 400">At the top of the new class, create a static constant that refers to the application main thread via an <kbd>android.os.Handler</kbd> object:</li>
+</ol>
+<pre style="padding-left: 60px">private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());</pre>
+<div class="packt_infobox">A <kbd>Handler</kbd> object is how you gain access to another thread's message-queue in Android. In this case, any message or <kbd>Runnable</kbd> object posted to this <kbd>Handler</kbd> will be run on the main thread as soon as possible. You can also post tasks to be run at specific times or after a specified delay. This is the preferred method of creating timers on Android.</div>
+<ol start="7">
+<li>Create three method declarations for running code on the background worker, the main thread, and one for handling errors (with a default implementation):</li>
+</ol>
+<pre style="padding-left: 60px">public abstract R onBackground(final P value) throws Exception;<br/>public abstract void onForeground(final R value);<br/><br/>public void onError(final Exception error) {<br/>  Log.e(<br/>      getClass().getSimpleName(),<br/>      "Error while processing data",<br/>      error<br/>  );<br/>}</pre>
+<ol start="8">
+<li>Then, create two variations of an exec method that will be used to start the <kbd>ActionCommand</kbd> objects. The first one uses the standard <kbd>Executor</kbd> provided by <kbd>AsyncTask</kbd> that uses a single background thread to process tasks (this is the most common behavior you will want in an application):</li>
+</ol>
+<pre style="padding-left: 60px">public void exec(final P parameter) {<br/>   exec(parameter, AsyncTask.SERIAL_EXECUTOR);<br/>}<br/><br/>public void exec(final P parameter, final Executor background) {<br/>   background.execute(new ActionCommandRunner(parameter, this));<br/>}</pre>
+<ol start="9">
+<li>In the preceding method, we submit an <kbd>ActionCommandRunner</kbd> object to the background <kbd>Executor</kbd> object; this is a <kbd>private</kbd> inner class that will carry the state between the background and main thread, which keeps the <kbd>ActionCommand</kbd> classes reusable and stateless:</li>
+</ol>
+<pre style="padding-left: 60px">private static class ActionCommandRunner implements Runnable {</pre>
+<ol start="10">
+<li><kbd>ActionCommandRunner</kbd> will be in one of the three possible states: background, foreground, or error. Declare three constants as names, and a field to keep track of which state the object is in:</li>
+</ol>
+<pre style="padding-left: 60px">private static final int STATE_BACKGROUND = 1;<br/>private static final int STATE_FOREGROUND = 2;<br/>private static final int STATE_ERROR = 3;<br/>private int state = STATE_BACKGROUND;</pre>
+<ol start="11">
+<li>Then, you'll need fields for the <kbd>ActionCommand</kbd> being run, and the current value. The <kbd>value</kbd> field is a catch-all in this class holding either the input parameter, the output from the background code, or the <kbd>Exception</kbd> thrown from the background code:</li>
+</ol>
+<pre style="padding-left: 60px">private final ActionCommand command;<br/>private Object value;<br/><br/>ActionCommandRunner(<br/>       final Object value,<br/>       final ActionCommand command) {<br/><br/>   this.value = value;<br/>   this.command = command;<br/>}</pre>
+<ol start="12">
+<li>Now, create methods to handle each of the <kbd>ActionCommandRunner</kbd> states:</li>
+</ol>
+<pre style="padding-left: 60px">void onBackground() {<br/>   try {<br/>       // our current "value" is the commands parameter<br/>       this.value = command.onBackground(value);<br/>       this.state = STATE_FOREGROUND;<br/>   } catch (final Exception error) {<br/>       this.value = error;<br/>       this.state = STATE_ERROR;<br/>   } finally {<br/>       MAIN_HANDLER.post(this);<br/>   }<br/>}<br/><br/>void onForeground() {<br/>   try {<br/>       command.onForeground(value);<br/>   } catch (final Exception error) {<br/>       this.value = error;<br/>       this.state = STATE_ERROR;<br/><br/>       // we go into an error state, and foreground to deliver it<br/>       MAIN_HANDLER.post(this);<br/>   }<br/>}<br/><br/>void onError() {<br/>   command.onError((Exception) value);<br/>}</pre>
+<ol start="13">
+<li>Finally, create the <kbd>run</kbd> method that will <span>call</span> the preceding <kbd>onBackground</kbd>, <kbd>onForeground</kbd> or <kbd>onError</kbd> method depending on the current execution state of <kbd>ActionCommandRunner</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public void run() {<br/>   switch (state) {<br/>       case STATE_BACKGROUND:<br/>           onBackground();<br/>           break;<br/>       case STATE_FOREGROUND:<br/>           onForeground();<br/>           break;<br/>       case STATE_ERROR:<br/>           onError();<br/>           break;<br/>   }<br/>}</pre>
+<p>This class makes it very easy to create and reuse small tasks, which can be extended, composed, mocked, and tested in isolation. It's a good idea whenever creating a new event handler to consider a command pattern or something similar so that the event isn't coupled to the widget or even the screen that you are busy with. This allows for better code reuse, and keeps code easier to test since you can test the event handler without the screen that it will be part of later. You can also make these classes even more modular by writing them as <kbd>abstract</kbd> classes with only their <kbd>onBackground</kbd> methods implemented, allowing the result to be processed in different ways by subclasses.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Multiple event listeners</h1>
+                </header>
+            
+            <article>
+                
+<p>Unlike many other event systems, however, many Android components only allow a single event listener of certain types; this diverges from platforms such as Java desktop, or JavaScript in the browser, where any number of <strong>click</strong> listeners can be attached to a single element. In Android, click listeners are almost always <strong>set</strong> rather than <strong>added</strong>.</p>
+<div class="packt_infobox">This is actually a clever tradeoff--having multiple listeners for each event means that you need at least an array of them; the array needs to be sized and copied when it runs out of space, while it's actually very seldom that multiple listeners are needed. Multiple listeners also means that the widgets must traverse the list every time they want to dispatch events, so sticking to a single listener simplifies the code, and reduces the amount of required memory.</div>
+<p>If you ever find yourself needing more than one listener for an event and widget that only provides a single listener slot, simply write a simple delegate class, like this:</p>
+<pre style="padding-left: 60px" class="mce-root">public class MultiOnClickListener implements View.OnClickListener {<br/>  private final List&lt;View.OnClickListener&gt; listeners =<br/>      new CopyOnWriteArrayList&lt;&gt;();<br/><br/>  public MultiOnClickListener(<br/>      final View.OnClickListener... listeners) {<br/>    this.listeners.addAll(Arrays.asList(listeners));<br/>  }<br/><br/>  @Override<br/>  public void onClick(View v) {<br/>    for (final View.OnClickListener listener : listeners)<br/>      listener.onClick(v);<br/>  }<br/><br/>  public void addOnClickListener(<br/>      final View.OnClickListener listener) {<br/>    if (listener == null) return;<br/>      listeners.add(listener);<br/>  }<br/><br/>  public void removeOnClickListener(<br/>      final View.OnClickListener listener) {<br/>    if (listener == null) return;<br/>    listeners.remove(listener);<br/>  }<br/>}</pre>
+<p>The preceding pattern allows compact and flexible multilistener delegation in the cases where you might need it. The <kbd>CopyOnWriteArrayList</kbd> class is an ideal listener container, as its internal array is only ever as large as the number of elements, so it remains compact (rather than having a buffer space like <kbd>ArrayList</kbd> and similar implementations).</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Test your knowledge</h1>
+                </header>
+            
+            <article>
+                
+<ol>
+<li>What's the best way to implement event handlers?
+<ul>
+<li>As an anonymous inner class</li>
+<li>By making the <kbd>Activity</kbd> a listener</li>
+<li>As a class per listener</li>
+<li>There isn't one</li>
+</ul>
+</li>
+</ol>
+<ol start="2">
+<li>What are the conditions for any methods that change the state of a user-interface widget?
+<ul>
+<li>They must be called from a background thread</li>
+<li>They must be thread-safe</li>
+<li>They must be called from the main thread</li>
+<li>They must be called from the graphics thread</li>
+</ul>
+</li>
+</ol>
+<ol start="3">
+<li>Code running as part of an event handler should fulfill which of the following conditions?
+<ul>
+<li>Be surrounded by a synchronized block</li>
+<li>Run as quickly as possible</li>
+<li>Only interact with the user interface</li>
+</ul>
+</li>
+</ol>
+<ol start="4">
+<li>When requesting data from another <kbd>Activity</kbd>, the data is returned through which of these?
+<ul>
+<li>An event listener you add to the <kbd>Activity</kbd> object</li>
+<li>A callback on your <kbd>Activity</kbd> object</li>
+<li>A message placed on your application's message queue</li>
+</ul>
+</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>Android uses several different mechanisms when delivering events within its applications, each one tailored to the type of event being delivered and the intended recipient of the event. Most user-interface events are delivered to a single listener registered to each widget, but that doesn't stop the same listener from handling multiple event types from different widgets. This sort of design will reduce the load on the system and the amount of memory used, and will often help in producing more reusable code.</p>
+<p>Event handlers are often written badly and become anonymous inner classes that, while starting life as a simple delegate to another method, eventually become bloated and unmaintainable blocks of code. It's often better to isolate the event handlers from their environment from the beginning as this encourages them to be reused, and makes them easier to test and maintain. Some event handler classes (such as <kbd>DatePickerWrapper</kbd>) handle different types of events in a way that is related, allowing for a single class to encapsulate a small, reusable bit of logic.</p>
+<p>In the next chapter, we'll explore more of how to build reusable and more easily testable user interfaces, by breaking <span>down</span> user interfaces into smaller components.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

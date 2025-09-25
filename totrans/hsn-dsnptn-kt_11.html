@@ -1,0 +1,486 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Reactive Microservices with Kotlin</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">In this chapter, we'll put the skills we've learned so far to use by building a microservice using the Kotlin programming language. We also want this microservice to be reactive, and to be as close to real life as possible. For that, we'll use Vert.x framework, the benefits of which we'll list in the next section.</p>
+<p class="calibre2">You're probably tired of creating to-do or shopping lists.</p>
+<p class="calibre2">So, instead, the microservice will be for a <em class="calibre14">cat shelter</em>. The microservice should be able to do the following:</p>
+<ul class="calibre11">
+<li class="calibre12">Supply an endpoint we can ping to check whether the service is up and running</li>
+<li class="calibre12">List cats currently in the shelter</li>
+<li class="calibre12">Provide us with a means to add new cats</li>
+</ul>
+<p class="calibre2">What you'll need to get started:</p>
+<ul class="calibre11">
+<li class="calibre12">JDK 1.8 or later</li>
+<li class="calibre12">IntelliJ IDEA</li>
+<li class="calibre12">Gradle 4.2 or later</li>
+<li class="calibre12">PostgreSQL 9.4 or later</li>
+</ul>
+<p class="calibre2">This chapter will assume that you have <kbd class="calibre13">PostgreSQL</kbd> already installed and that you have basic knowledge of working with it. If you don't, please refer to the official documentation: <a href="https://www.postgresql.org/docs/9.4/static/tutorial-install.html" class="calibre10">https://www.postgresql.org/docs/9.4/static/tutorial-install.html</a>.</p>
+<p class="calibre2">In this chapter, we will cover the following topics:</p>
+<ul class="calibre11">
+<li class="calibre12">Getting started with Vert.x</li>
+<li class="calibre12">Handling requests</li>
+<li class="calibre12">Testing</li>
+<li class="calibre12">Working with databases</li>
+<li class="calibre12">EventBus</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Getting started with Vert.x</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">The framework we'll be using for our microservice is called <strong class="calibre5">Vert.x</strong>. It's a reactive framework that shares much in common with <strong class="calibre5">reactive extensions</strong>, which we discussed in <a href="part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7" class="calibre10">Chapter 7</a>, <em class="calibre14"><span class="calibre7">Staying Reactive</span></em>. It's asynchronous and non-blocking.</p>
+<p class="calibre2">Let's understand what this means by using a concrete example.</p>
+<p class="calibre2">We'll start with a new Kotlin Gradle project. From your IntelliJ IDEA, open <span class="calibre7">File | New | Project</span>, and choose <span class="calibre7">Gradle | Kotlin</span> in the <span class="calibre7">New Project</span> wizard. Give your project a <kbd class="calibre13">GroupId</kbd> (I chose <kbd class="calibre13">me.soshin</kbd>) and an <kbd class="calibre13">ArtifactId</kbd> (<kbd class="calibre13">catsShelter</kbd> in my case).</p>
+<div class="packt_infobox"><span class="calibre23">Gradle is a build tool, similar to Maven and Ant. It has a nice syntax and compiles your projects in an optimised way. You can read about it more here:</span> <a href="https://gradle.org/" class="calibre19">https://gradle.org/</a><span class="calibre23">.</span></div>
+<p class="calibre2">On the next screen, choose <span class="calibre7">Use auto-import</span> and <span class="calibre7"><span class="calibre7">Create directories for empty content roots</span></span>, then click <span class="calibre7">Finish</span>.                                      </p>
+<p class="calibre2">Next, add the following dependencies to your <kbd class="calibre13">build.gradle</kbd>.</p>
+<pre class="calibre18">dependencies {<br class="title-page-name"/>    def $vertx_version = '3.5.1'<br class="title-page-name"/>    ...<span><br class="title-page-name"/></span><span>    </span>compile <span>group</span>: <span>'io.vertx'</span>, <span>name</span>: <span>'vertx-core'</span>, <span>version</span>: $vertx_version<span><br class="title-page-name"/></span><span>    </span>compile <span>group</span>: <span>'io.vertx'</span>, <span>name</span>: <span>'vertx-web'</span>, <span>version</span>: $vertx_version<span><br class="title-page-name"/></span><span>    </span>compile <span>group</span>: <span>'io.vertx'</span>, <span>name</span>: <span>'vertx-lang-kotlin'</span>, <span>version</span>: $vertx_version<span><br class="title-page-name"/></span><span>    </span>compile <span>group</span>: <span>'io.vertx'</span>, <span>name</span>: <span>'vertx-lang-kotlin-coroutines'</span>, <span>version</span>: $vertx_version<span><br class="title-page-name"/></span>}</pre>
+<p class="calibre2">The following is an explanation of each dependency:</p>
+<ul class="calibre11">
+<li class="calibre12"><kbd class="calibre13">vertx-core</kbd> is the core library</li>
+<li class="calibre12"><kbd class="calibre13">vertx-web</kbd> is needed, since we want our service to be REST based</li>
+<li class="calibre12"><kbd class="calibre13">vertx-lang-kotlin</kbd> provides idiomatic ways to write Kotlin code with Vert.x</li>
+<li class="calibre12">Finally, <kbd class="calibre13">vertx-lang-kotlin-coroutines</kbd> integrates with the coroutines we discussed in detail in <a href="part0215.html#6D18U0-6704093aa34748cfa77c54bdc1a20dc7" class="calibre10">Chapter 9</a>, <em class="calibre25">Designed for Concurrency</em></li>
+</ul>
+<p class="calibre2">Note that we defined a variable to specify which version of Vert.x we should use. The latest stable version to date is 3.5.1, but by the time you read this book, it will be 3.5.2 or even 3.6.0.</p>
+<p class="calibre2">As a general rule, all Vert.x libraries should be the same version, and that's when the variable becomes useful.</p>
+<p class="calibre2">Create a file called <kbd class="calibre13">Main.kt</kbd> in the <kbd class="calibre13">src/main/kotlin</kbd> folder with the following content:</p>
+<pre class="calibre18"><span>fun </span><span>main</span>(vararg args: String) {<br class="title-page-name"/>   <span>val </span>vertx = Vertx.vertx()<br class="title-page-name"/><br class="title-page-name"/>   vertx.createHttpServer().requestHandler{ req -&gt;<br class="title-page-name"/>            req.response().end("OK")<br class="title-page-name"/>        }.listen(8080)<br class="title-page-name"/>}</pre>
+<p class="calibre2">That's all you need to start a web server that will respond <em class="calibre14">OK</em> when you open <a href="http://localhost:8080" class="calibre10">http://localhost:8080</a> in your browser. </p>
+<p class="calibre2">Now let's understand what actually happens here. We create a Vert.x instance using the <strong class="calibre5">Factory Method</strong> from <a href="part0080.html#2C9D00-6704093aa34748cfa77c54bdc1a20dc7" class="calibre10">Chapter 3</a>, <em class="calibre14">Understanding Structural Patterns</em>. </p>
+<p class="calibre2"><strong class="calibre5">Handler</strong> is just a simple listener, or a subscriber. If you don't remember how it works, check <a href="part0112.html#3APV00-6704093aa34748cfa77c54bdc1a20dc7" class="calibre10">Chapter 4</a>, <span class="calibre7"><em class="calibre14">Getting Familiar with Behavioral Patterns</em>,</span> for an <strong class="calibre5">Observable</strong> design pattern. In our case, it will be called for each new request. That's the asynchronous nature of Vert.x in action. </p>
+<p class="calibre2">Notice that <kbd class="calibre13">requestHandler()</kbd> is a function that receives a block. Like any other idiomatic Kotlin code, you don't need the parentheses.</p>
+<p class="calibre2">If you are using an IDE such as IntelliJ IDEA, you can run it directly. An alternative would be to add the following lines to your <kbd class="calibre13">build.gradle</kbd>:</p>
+<pre class="calibre18">apply <span>plugin</span>: <span>'application'</span><span><br class="title-page-name"/></span><span>mainClassName </span>= <span>"com.gett.MainKt"</span></pre>
+<p class="calibre2">And then you can simply start it with the following: </p>
+<pre class="calibre18"><span>./gradlew run</span></pre>
+<p class="calibre2">Another option would be to use <kbd class="calibre13">VertxGradlePlugin</kbd> (<a href="https://github.com/jponge/vertx-gradle-plugin" class="calibre10">https://github.com/jponge/vertx-gradle-plugin</a>), which will do the same thing.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Routing</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">Notice that no matter which URL we specify, we always get the same result.</p>
+<p class="calibre2">Of course, that's not what we want to achieve. Let's start by adding the most basic endpoint, which will only tell us that the service is up and running. </p>
+<p class="calibre2">For that, we'll use <kbd class="calibre13">Router</kbd>:</p>
+<pre class="calibre18"><span>val vertx = Vertx.vertx() // Was here before<br class="title-page-name"/><strong class="calibre1">val </strong></span><strong class="calibre1">router = Router.router(<span>vertx</span>)</strong><br class="title-page-name"/>...</pre>
+<p class="calibre2"><kbd class="calibre13">Router</kbd> lets you specify handlers for different HTTP methods and URLs.</p>
+<p class="calibre2">But, by default, it doesn't support coroutines. Let's fix that by creating an extension function:</p>
+<pre class="calibre18"><span>fun </span>Route.<span>asyncHandler</span>(fn : <span>suspend </span>(RoutingContext) -&gt; Unit) {<br class="title-page-name"/>    handler <span>{ </span>ctx <span>-&gt;<br class="title-page-name"/></span><span>        </span><span>launch</span>(ctx.vertx().<span>dispatcher</span>()) <span>{<br class="title-page-name"/></span><span>            </span><span>try </span>{<br class="title-page-name"/>                fn(ctx)<br class="title-page-name"/>            } <span>catch</span>(e: Exception) {<br class="title-page-name"/>                ctx.fail(e)<br class="title-page-name"/>            }<br class="title-page-name"/>        <span>}<br class="title-page-name"/></span><span>    }<br class="title-page-name"/></span>}</pre>
+<p class="calibre2">If you are familiar with modern JavaScript, this is similar to <kbd class="calibre13">async() =&gt; {}</kbd>.</p>
+<p class="calibre2">Now we can use this new extension method:</p>
+<pre class="calibre18"><span>router</span>.get(<span>"/alive"</span>).<span>asyncHandler </span><span>{<br class="title-page-name"/></span><span>    // Some response comes here<br class="title-page-name"/></span>    // We now can use any suspending function in this context<br class="title-page-name"/><span>}</span></pre>
+<p class="calibre2">We saw how we return a flat text response in the very first example. So, let's return JSON instead. Most real-life applications use JSON for communication.</p>
+<p class="calibre2">Add the following lines to your handler:</p>
+<pre class="calibre18"><span>...<br class="title-page-name"/>val </span>json = <span>json </span><span>{<br class="title-page-name"/></span><span>    </span><span>obj </span>(<span><br class="title-page-name"/></span><span>       </span><span>"alive" </span><span>to </span><span>true</span><br class="title-page-name"/>    )<br class="title-page-name"/><span>}<br class="title-page-name"/></span><span>it</span>.<span>respond</span>(json.toString())<br class="title-page-name"/>...</pre>
+<p class="calibre2">Yet another extension function we declare is <kbd class="calibre13">respond()</kbd>. It looks as follows:</p>
+<pre class="calibre18">fun RoutingContext.respond(responseBody: String = "", status: Int = 200) {<br class="title-page-name"/>    this.response()<br class="title-page-name"/>            .setStatusCode(status)<br class="title-page-name"/>            .end(responseBody)<br class="title-page-name"/>}</pre>
+<p class="calibre2">Now connect your router to the server.</p>
+<p class="calibre2">You can do that by replacing the previous server instantiation with the following line:</p>
+<pre class="calibre18"><span>vertx</span>.createHttpServer().<br class="title-page-name"/>   requestHandler(<strong class="calibre1">router::accept</strong>).listen(<span>8080</span>)</pre>
+<p class="calibre2">Now all routing will be handled by <kbd class="calibre13">Router</kbd>. </p>
+<p class="calibre2">You can open <kbd class="calibre13">http://localhost:8080/alive</kbd> in your browser and make sure that you get <kbd class="calibre13">{"alive": true}</kbd> as a response.</p>
+<p class="calibre2">Congratulations! You've managed to create your first route that returns a JSON. From now on, whenever you're not sure whether your application is up and running, you can simply check it using this URL. This becomes even more important when you use a load balancer, which needs to know how many applications are available at any time.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Handling requests</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">Our next task is adding the first cat to our virtual shelter. </p>
+<p class="calibre2">It should be a <kbd class="calibre13">POST</kbd> request, where the body of the request may look something like this: <kbd class="calibre13">{"name": "Binky", "age": 4}</kbd>.</p>
+<p class="calibre2">If you are familiar with tools such as <strong class="calibre5">curl</strong> or <strong class="calibre5">Postman</strong> to issue <kbd class="calibre13">POST</kbd> requests, that's great. If not, we'll write a test in the next section that will check exactly that scenario.</p>
+<p class="calibre2">The first thing we'll need to do is add the following line after we initialize our router:</p>
+<pre class="calibre18"><span>router</span>.route().handler(BodyHandler.create())</pre>
+<p class="calibre2">This will tell Vert.x to parse the request body into JSON for any request. Another way would be to use <kbd class="calibre13">router.route("/*")</kbd>.</p>
+<p class="calibre2">Now, let's figure out what our URL should look like. It is good practice to have our API URLs versioned, so we would like it to be as follows:</p>
+<pre class="calibre18">api/v1/cats</pre>
+<p class="calibre2">So, we can assume the following:</p>
+<ul class="calibre11">
+<li class="calibre12"><kbd class="calibre13">GET api/v1/cats</kbd> will return all cats we have in our shelter</li>
+<li class="calibre12"><kbd class="calibre13">POST api/v1/cats</kbd> will add a new cat</li>
+<li class="calibre12"><kbd class="calibre13">GET api/v1/cats/34</kbd> will return a cat with <kbd class="calibre13">ID=34</kbd> if it exists or 404 otherwise</li>
+</ul>
+<p class="calibre2">Having figured that out, we can progress as follows:</p>
+<pre class="calibre18">router.post(<span>"/api/v1/cats"</span>).<span>asyncHandler </span><span>{ </span>ctx <span>-&gt;<br class="title-page-name"/></span><span>    // Some code of adding a cat comes here</span><br class="title-page-name"/><span>}<br class="title-page-name"/>router.get("/api/v1/cats").asyncHandler { ctx -&gt;<br class="title-page-name"/>    // Code for getting all the cats<br class="title-page-name"/>}<br class="title-page-name"/></span></pre>
+<p class="calibre2">The last endpoint will need to receive a path argument. We use semicolon notation for that:</p>
+<pre class="calibre18"><span>router.get("/api/v1/cats/<strong class="calibre1">:id</strong>").asyncHandler { ctx -&gt;<br class="title-page-name"/>    // Fetches specific cat<br class="title-page-name"/>}</span></pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Verticles</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">Now come across a problem, though. Our code resides in the <kbd class="calibre13">Main.kt</kbd> file, which grows bigger and bigger. We can start splitting it by using verticles.</p>
+<p class="calibre2">You can think of a verticle as a lightweight actor.  Let's see an example; look at the following code:</p>
+<pre class="calibre18"><span>class </span>ServerVerticle: CoroutineVerticle() {<br class="title-page-name"/><br class="title-page-name"/>    <span>override suspend fun </span><span>start</span>() {<br class="title-page-name"/>        <span>val </span>router = router()<br class="title-page-name"/>        <span>vertx</span>.createHttpServer().requestHandler(router::accept).listen(<span>8080</span>)<br class="title-page-name"/>    }<br class="title-page-name"/><br class="title-page-name"/>    private fun router(): Router {<br class="title-page-name"/>        val router = Router.router(vertx)<br class="title-page-name"/>        // Our router code comes here now<br class="title-page-name"/>        ...<br class="title-page-name"/>        return router<br class="title-page-name"/>    }<br class="title-page-name"/>}</pre>
+<p class="calibre2">Now we need to start this verticle. There are different ways of doing that, but the simplest way is to pass the instance of this class to the <kbd class="calibre13">deployVerticle()</kbd> method:</p>
+<pre class="calibre18"><span>vertx</span>.deployVerticle(ServerVerticle())</pre>
+<p class="calibre2">Now our code is split into two files, <kbd class="calibre13">ServerVerticle.kt</kbd> and <kbd class="calibre13">Main.kt</kbd>.</p>
+<p class="calibre2">Notice, though, how <kbd class="calibre13">/api/v1/cats/</kbd> is repeated every time. Isn't there a way to remove that redundancy? Actually, there is. And it's called <strong class="calibre5">subrouter</strong>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Subrouting</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">We'll leave the <kbd class="calibre13">/alive</kbd> endpoint as it is, but we'll extract all the other endpoints into a separate function:</p>
+<pre class="calibre18"><span>private fun </span><span>apiRouter</span>(): Router {<br class="title-page-name"/>    <span>val </span>router = Router.router(<span>vertx</span>)<br class="title-page-name"/><br class="title-page-name"/>    router.post(<span>"/cats"</span>).<span>asyncHandler </span><span>{ </span>ctx <span>-&gt;<br class="title-page-name"/></span><span>        ctx.respond(status=501)</span><br class="title-page-name"/>    <span>}<br class="title-page-name"/></span><span>    </span>router.get(<span>"/cats"</span>).<span>asyncHandler </span><span>{ </span>ctx <span>-&gt;<br class="title-page-name"/></span><span>        ...</span><span><br class="title-page-name"/></span><span>    }<br class="title-page-name"/></span><span>    router.get("/cats/:id").asyncHandler { ctx -&gt;<br class="title-page-name"/>        ...<br class="title-page-name"/>    }<br class="title-page-name"/></span><span>    </span><span>return </span>router<br class="title-page-name"/>}</pre>
+<p class="calibre2">There's a more fluent way to define it, but we left it that way as it is more readable.</p>
+<p class="calibre2">Much as we supplied our main router to the Vert.x server instance, we now supply our subrouter to the main router as follows:</p>
+<pre class="calibre18"><span>router</span>.mountSubRouter(<span>"/api/v1"</span><span>, </span>apiRouter())</pre>
+<p class="calibre2">Keeping our code clean and well separated is very important.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Testing</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">Before we continue to add our cats to the database, let's first write some tests to make sure that everything works correctly so far.</p>
+<p class="calibre2">For that, we'll use the <strong class="calibre5">TestNG</strong> test framework. You can also use <strong class="calibre5">JUnit</strong> or <strong class="calibre5">VertxUnit</strong> for the same purpose.</p>
+<p class="calibre2">Start by adding the following line to the <strong class="calibre5">dependencies</strong> part of your <kbd class="calibre13">build.gradle</kbd>:</p>
+<pre class="calibre18">testCompile <span>group</span>: <span>'org.testng'</span>, <span>name</span>: <span>'testng'</span>, <span>version</span>: <span>'6.11'</span></pre>
+<p class="calibre2">Now we'll create our first test. It should be located under <kbd class="calibre13">/src/test/kotlin/&lt;your_package&gt;</kbd>.</p>
+<p class="calibre2">The basic structure of all the integration tests looks something like this:</p>
+<pre class="calibre18"><span>class </span>ServerVerticleTest {<br class="title-page-name"/>    // Usually one instance of VertX is more than enough<br class="title-page-name"/>    val vertx = Vertx.vertx()<br class="title-page-name"/><br class="title-page-name"/>    @BeforeClass<br class="title-page-name"/>    fun setUp() {<br class="title-page-name"/>        // You want to start your server once<br class="title-page-name"/>        startServer()<br class="title-page-name"/>    }<br class="title-page-name"/><br class="title-page-name"/>    @AfterClass<br class="title-page-name"/>    fun tearDown() {<br class="title-page-name"/>        // And you want to stop your server once<br class="title-page-name"/>        vertx.close()<br class="title-page-name"/>    }<br class="title-page-name"/><br class="title-page-name"/>    @Test<br class="title-page-name"/>    fun testAlive() {<br class="title-page-name"/>        // Here you assert something<br class="title-page-name"/>    }<br class="title-page-name"/><br class="title-page-name"/>    // More tests come here<br class="title-page-name"/>    ...<br class="title-page-name"/>}</pre>
+<p class="calibre2">A good trick is to name your tests using Kotlin backtick notation. </p>
+<p class="calibre2">You could name your tests like this:</p>
+<pre class="calibre18"><span>@Test<br class="title-page-name"/></span><span>fun </span><span>testAlive</span>() {<br class="title-page-name"/>    ...<br class="title-page-name"/>}</pre>
+<p class="calibre2">But it is better to name your tests like this:</p>
+<pre class="calibre18"><span>@Test<br class="title-page-name"/></span><span>fun </span><span><strong class="calibre1">`</strong>Tests that alive works<strong class="calibre1">`</strong></span>() {<br class="title-page-name"/>    ...<br class="title-page-name"/>}</pre>
+<p class="calibre2">Now we want to issue an actual HTTP call to our <kbd class="calibre13">/alive</kbd> endpoint, for example, and check the response code. For that, we'll use the Vert.x web client. </p>
+<p class="calibre2">Add it to your <kbd class="calibre13">build.gradle</kbd> dependencies section:</p>
+<pre class="calibre18">compile <span>group</span>: <span>'io.vertx'</span>, <span>name</span>: <span>'vertx-web-client'</span>, <span>version</span>: $vertx_version</pre>
+<p class="calibre2">If you plan to use it only in tests, you can specify <kbd class="calibre13">testCompile</kbd> instead of <kbd class="calibre13">compile</kbd>. But <kbd class="calibre13">WebClient</kbd> is so useful you'll probably end up using it in your code anyway.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Helper methods</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">We'll create two helper functions in our test, called <kbd class="calibre13">get()</kbd> and <kbd class="calibre13">post()</kbd>, which will issue <kbd class="calibre13">GET</kbd> and <kbd class="calibre13">POST</kbd> requests to our test server. </p>
+<p class="calibre2">We'll start with <kbd class="calibre13">get()</kbd>:</p>
+<pre class="calibre18"><span>private fun </span><span>get</span>(path: String): HttpResponse&lt;Buffer&gt; {<br class="title-page-name"/>    <span>val </span>d1 = <span>CompletableDeferred</span>&lt;HttpResponse&lt;Buffer&gt;&gt;()<br class="title-page-name"/><br class="title-page-name"/>    <span>val </span>client = WebClient.create(<span>vertx</span>)<br class="title-page-name"/>    client.get(<span>8080</span><span>, </span><span>"localhost"</span><span>, </span>path).send <span>{<br class="title-page-name"/></span><span>        </span>d1.complete(<span>it</span>.result())<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span><span><br class="title-page-name"/></span><span>    </span><span>return </span><span>runBlocking </span><span>{<br class="title-page-name"/></span><span>        </span>d1.await()<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span>}</pre>
+<p class="calibre2">The second method, <kbd class="calibre13">post()</kbd>, will look very similar, but it will also have a request body parameter:</p>
+<pre class="calibre18"><br class="title-page-name"/><span>private fun </span><span>post</span>(path: String<span>, </span>body: String = <span>""</span>): HttpResponse&lt;Buffer&gt; {<br class="title-page-name"/>    <span>val </span>d1 = <span>CompletableDeferred</span>&lt;HttpResponse&lt;Buffer&gt;&gt;()<br class="title-page-name"/><br class="title-page-name"/>    <span>val </span>client = WebClient.create(<span>vertx</span>)<br class="title-page-name"/>    client.post(<span>8080</span><span>, </span><span>"localhost"</span><span>, </span>path).sendBuffer(Buffer.buffer(body)<span>, </span><span>{ </span>res <span>-&gt;<br class="title-page-name"/></span><span>        </span>d1.complete(res.result())<br class="title-page-name"/>    <span>}</span>)<br class="title-page-name"/><br class="title-page-name"/>    <span>return </span><span>runBlocking </span><span>{<br class="title-page-name"/></span><span>        </span>d1.await()<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span>}</pre>
+<p class="calibre2">Both of those functions use coroutines and the default parameter values Kotlin provides.</p>
+<p class="calibre2">You should write your own helper functions or alter those according to your needs. </p>
+<p class="calibre2">Another helper function that we'll need is <kbd class="calibre13">startServer()</kbd>, which we already mentioned in <kbd class="calibre13">@BeforeClass</kbd>. It should look something like this:</p>
+<pre class="calibre18"><span>private fun </span><span>startServer</span>() {<br class="title-page-name"/>    <span>val </span>d1 = <span>CompletableDeferred</span>&lt;String&gt;()<br class="title-page-name"/>    <span>vertx</span>.deployVerticle(ServerVerticle()<span>, </span><span>{<br class="title-page-name"/></span><span>        </span>d1.complete(<span>"OK"</span>)<br class="title-page-name"/>    <span>}</span>)<br class="title-page-name"/>    <span>runBlocking </span><span>{<br class="title-page-name"/></span><span>        </span><span>println</span>(<span>"Server started"</span>)<br class="title-page-name"/>        d1.await()<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span>}</pre>
+<p class="calibre2">We'll need two new extension functions for our convenience. Those functions will convert the server response to JSON:</p>
+<pre class="calibre18"><span>private fun </span>&lt;<span>T</span>&gt; HttpResponse&lt;<span>T</span>&gt;.<span>asJson</span>(): JsonNode {<br class="title-page-name"/>    <span>return this</span>.bodyAsBuffer().<span>asJson</span>()<br class="title-page-name"/>}<br class="title-page-name"/><br class="title-page-name"/><span>private fun </span>Buffer.<span>asJson</span>(): JsonNode {<br class="title-page-name"/>    <span>return </span>ObjectMapper().readTree(<span>this</span>.toString())<br class="title-page-name"/>}</pre>
+<p class="calibre2">Now we're all set to write our first test:</p>
+<pre class="calibre18"><span>@Test<br class="title-page-name"/></span><span>fun </span><span>`Tests that alive works`</span>() {<br class="title-page-name"/>    <span>val </span>response = get(<span>"/alive"</span>)<br class="title-page-name"/>    assertEquals(response.statusCode()<span>, </span><span>200</span>)<br class="title-page-name"/><br class="title-page-name"/>    <span>val </span>body = response.<span>asJson</span>()<br class="title-page-name"/>    assertEquals(body[<span>"alive"</span>].booleanValue()<span>, true</span>)<br class="title-page-name"/>}</pre>
+<p class="calibre2">Run <kbd class="calibre13">./gradlew test</kbd> to check that this test passes.</p>
+<p class="calibre2">Next, we'll write another test; this time for the cat's creation endpoint. </p>
+<p class="calibre2">At first, it will fail:</p>
+<pre class="calibre18"><span>@Test<br class="title-page-name"/></span><span>fun </span><span>`Makes sure cat can be created`</span>() {<br class="title-page-name"/>   val response = post("/api/v1/cats",<br class="title-page-name"/>                """<br class="title-page-name"/>                {<br class="title-page-name"/>                    "name": "Binky",<br class="title-page-name"/>                    "age": 5<br class="title-page-name"/>                }<br class="title-page-name"/>                """)<br class="title-page-name"/><br class="title-page-name"/>   assertEquals(response.statusCode(), 201)<br class="title-page-name"/>   val body = response.asJson()<br class="title-page-name"/><br class="title-page-name"/>   assertNotNull(body["id"])<br class="title-page-name"/>   assertEquals(body["name"].textValue(), "Binky")<br class="title-page-name"/>   assertEquals(body["age"].intValue(), 5)<br class="title-page-name"/>}</pre>
+<p class="calibre2">Note that our server returns the status code <kbd class="calibre13">501 Not Implemented</kbd>, and doesn't return the <kbd class="calibre13">cat</kbd> ID.</p>
+<p class="calibre2">We'll be fixing that in the next section when we discuss persistence in a database.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Working with databases</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">We won't be able to progress much further without the ability to save our objects, namely cats, into some kind of persistent storage. </p>
+<p class="calibre2">For that, we'll need to connect to the database first.</p>
+<p class="calibre2">Add the following two lines to your <kbd class="calibre13">build.gradle</kbd> dependencies section:</p>
+<pre class="calibre18">compile group: 'org.postgresql', name: 'postgresql', version: '42.2.2'<br class="title-page-name"/>compile <span>group</span>: <span>'io.vertx'</span>, <span>name</span>: <span>'vertx-jdbc-client'</span>, <span>version</span>: $vertx_version</pre>
+<p class="calibre2">The first line of code <span class="calibre7">fetches</span> the <kbd class="calibre13">PostgreSQL</kbd> driver. The second one adds the Vert.x JDBC client, which allows Vert.x, having the driver, to connect to any database that supports JDBC.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Managing configuration</h1>
+                
+            
+            <article>
+                
+<p class="calibre2"><span class="calibre7">Now we want to hold database configuration somewhere. For local development, it may be fine to have those configurations hardcoded. </span></p>
+<p class="calibre2">When we connect to the database, we need to specify the following parameters at the very least:</p>
+<ul class="calibre11">
+<li class="calibre12">Username</li>
+<li class="calibre12">Password</li>
+<li class="calibre12">Host</li>
+<li class="calibre12">Database name</li>
+</ul>
+<p class="calibre2">Where should we store them? </p>
+<p class="calibre2">One option is of course to hardcode those values. That would be fine for a local environment, but what about when deploying this service somewhere? </p>
+<p class="calibre2"><strong class="calibre5">You'll go, I cant come! XDSpringBoot</strong> do, or we could attempt to read them from the environment variables. Anyway, we'll need an object that would encapsulate this logic, as shown in the following code: </p>
+<pre class="calibre18"><span>object </span>Config {<br class="title-page-name"/>    <span>object </span>Db {<br class="title-page-name"/>        <span>val </span><span>username </span>= System.getenv(<span>"DATABASE</span><span>_USERNAME"</span>) ?: <span>"postgres"<br class="title-page-name"/></span><span>        </span><span>val </span><span>password </span>= System.getenv(<span>"DATABASE</span><span>_PASSWORD"</span>) ?: <span>""<br class="title-page-name"/></span><span>        </span><span>val </span><span>database </span>= System.getenv(<span>"</span><span>DATABASE_NAME"</span>) ?: <span>"cats_db"<br class="title-page-name"/></span><span>        </span><span>val </span><span>host </span>= System.getenv(<span>"DATABASE</span><span>_HOST"</span>) ?: <span>""<br class="title-page-name"/></span><span><br class="title-page-name"/></span><span>        </span><span>override fun </span><span>toString</span>(): String {<br class="title-page-name"/>            <span>return </span><span>mapOf</span>(<span>"username" </span><span>to </span><span>username</span><span>,<br class="title-page-name"/></span><span>                    </span><span>"password" </span><span>to </span><span>password</span><span>,<br class="title-page-name"/></span><span>                    </span><span>"database" </span><span>to </span><span>database</span><span>,<br class="title-page-name"/></span><span>                    </span><span>"host" </span><span>to </span><span>host</span>).toString()<br class="title-page-name"/>        }<br class="title-page-name"/>    }<br class="title-page-name"/>  <br class="title-page-name"/>    <span>override fun </span><span>toString</span>(): String {<br class="title-page-name"/>        <span>return </span><span>mapOf</span>(<span><br class="title-page-name"/></span><span>                </span><span>"Db" </span><span>to </span>Db<br class="title-page-name"/>        ).toString()<br class="title-page-name"/>    }<br class="title-page-name"/>}</pre>
+<p class="calibre2">That's of course only one approach you could take.</p>
+<p class="calibre2">We now will create <kbd class="calibre13">JDBCClient</kbd> by using this configuration code:</p>
+<pre class="calibre18"><span>fun </span>CoroutineVerticle.<span>getDbClient</span>(): JDBCClient {<br class="title-page-name"/>    <span>val </span>postgreSQLClientConfig = <span>JsonObject</span>(<br class="title-page-name"/>            <span>"url" </span><span>to </span><span>"jdbc:postgresql://</span><span>${</span>Config.Db.<span>host</span><span>}</span><span>:5432/</span><span>${</span>Config.Db.<span>database</span><span>}</span><span>"</span><span>,<br class="title-page-name"/></span><span>            </span><span>"username" </span><span>to </span>Config.Db.<span>username</span><span>,<br class="title-page-name"/></span><span>            </span><span>"password" </span><span>to </span>Config.Db.<span>password</span>)<br class="title-page-name"/>    <span>return </span>JDBCClient.createShared(<span>vertx</span><span>, </span>postgreSQLClientConfig)<br class="title-page-name"/>}</pre>
+<p class="calibre2">Here, we chose an extension function that will work on all <kbd class="calibre13">CoroutineVerticles</kbd>.</p>
+<p class="calibre2">To simplify working with the <kbd class="calibre13">JDBCClient</kbd>, we'll add a method called <kbd class="calibre13">query()</kbd> to it:</p>
+<pre class="calibre18"><span>fun </span>JDBCClient.<span>query</span>(q: String<span>, vararg </span>params: Any): Deferred&lt;JsonObject&gt; {<br class="title-page-name"/>    <span>val </span>deferred = <span>CompletableDeferred</span>&lt;JsonObject&gt;()<br class="title-page-name"/>    <span>this</span>.getConnection <span>{ </span>conn <span>-&gt;<br class="title-page-name"/></span><span>        </span>conn.<span>handle</span>(<span>{<br class="title-page-name"/></span><span>            </span>result().queryWithParams(q<span>, </span>params.<span>toJsonArray</span>()<span>, </span><span>{ </span>res <span>-&gt;<br class="title-page-name"/></span><span>                </span>res.<span>handle</span>(<span>{<br class="title-page-name"/></span><span>                    </span>deferred.complete(res.result().toJson())<br class="title-page-name"/>                <span>}</span><span>, </span><span>{<br class="title-page-name"/></span><span>                    </span>deferred.completeExceptionally(res.cause())<br class="title-page-name"/>                <span>}</span>)<br class="title-page-name"/>            <span>}</span>)<br class="title-page-name"/>        <span>}</span><span>, </span><span>{<br class="title-page-name"/></span><span>            </span>deferred.completeExceptionally(conn.cause())<br class="title-page-name"/>        <span>}</span>)<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span><span><br class="title-page-name"/></span><span>    </span><span>return </span>deferred<br class="title-page-name"/>}</pre>
+<p class="calibre2">We'll also add the <kbd class="calibre13">toJsonArray()</kbd> method since that's what our <kbd class="calibre13">JDBCClient</kbd> works with:</p>
+<pre class="calibre18"><span>private fun </span>&lt;<span>T</span>&gt; Array&lt;<span>T</span>&gt;.<span>toJsonArray</span>(): JsonArray {<br class="title-page-name"/>    <span>val </span>json = JsonArray()<br class="title-page-name"/><br class="title-page-name"/>    <span>for </span>(e <span>in this</span>) {<br class="title-page-name"/>        json.add(e)<br class="title-page-name"/>    }<br class="title-page-name"/><br class="title-page-name"/>    <span>return </span>json<br class="title-page-name"/>}</pre>
+<p class="calibre2">Note here how Kotlin generics are being used to simplify the conversion while <em class="calibre14">staying type-safe</em>.</p>
+<p class="calibre2">And we'll add a <kbd class="calibre13">handle()</kbd> function, which will provide us with a simple API to handle asynchronous errors:</p>
+<pre class="calibre18"><span>inline fun </span>&lt;<span>T</span>&gt; AsyncResult&lt;<span>T</span>&gt;.<span>handle</span>(success: AsyncResult&lt;<span>T</span>&gt;.() -&gt; Unit<span>, </span>failure: () -&gt; Unit) {<br class="title-page-name"/>    <span>if </span>(<span>this</span>.succeeded()) {<br class="title-page-name"/>        success()<br class="title-page-name"/>    }<br class="title-page-name"/>    <span>else </span>{<br class="title-page-name"/>        <span>this</span>.cause().printStackTrace()<br class="title-page-name"/>        failure()<br class="title-page-name"/>    }<br class="title-page-name"/>}</pre>
+<p class="calibre2">To make sure everything works correctly, we'll add a check to our <kbd class="calibre13">/alive</kbd> route:</p>
+<pre class="calibre18"><span>val </span>router = Router.router(<span>vertx</span>)<br class="title-page-name"/><strong class="calibre1"><span>val </span>dbClient = <span>getDbClient</span>()</strong><br class="title-page-name"/>...<br class="title-page-name"/>router.get(<span>"/alive"</span>).<span>asyncHandler </span><span>{<br class="title-page-name"/></span><span>    </span><strong class="calibre1"><span>val </span>dbAlive = dbClient.<span>query</span>(<span>"select true as alive"</span>)</strong><br class="title-page-name"/>    <span>val </span>json = <span>json </span><span>{<br class="title-page-name"/></span><span>        </span><span>obj </span>(<span><br class="title-page-name"/></span><span>                </span><span>"alive" </span><span>to </span><span>true,</span><span><br class="title-page-name"/></span><span>                </span><span>// This is JSON, but we can access it as an array<br class="title-page-name"/></span><span>                </span><strong class="calibre1"><span>"db" </span><span>to </span>dbAlive.await()[<span>"rows"</span>]</strong><br class="title-page-name"/>        )<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span><span>    it</span>.<span>respond</span>(json)<br class="title-page-name"/><span>}</span></pre>
+<p class="calibre2">The lines you need to add are marked in bold. </p>
+<p class="calibre2">After adding those lines and opening  <a href="http://localhost:8080/alive" class="calibre10">http://localhost:8080/alive</a> you should get the following JSON code:</p>
+<pre class="calibre18">{"alive":true, <strong class="calibre1">"db":[{"alive":true}]</strong>}</pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Managing the database</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">Of course, our test doesn't work. That's because we haven't created our database yet. Make sure you run the following line in your command line:</p>
+<pre class="calibre18"><span>$ createdb cats_db</span></pre>
+<p class="calibre2">After we have made sure that our database is up and running, let's implement our first real endpoint.</p>
+<p class="calibre2">We'll keep our SQL nicely separated from the actual code. Add this to your <kbd class="calibre13">ServerVerticle</kbd>:</p>
+<pre class="calibre18"><span>private val </span><span>insert </span>= <span>"""insert into cats (name, age</span><span>)<br class="title-page-name"/></span><span>            |values (?, ?::integer) RETURNING *"""</span>.<span>trimMargin</span>()</pre>
+<p class="calibre2">We use multiline strings here, with <kbd class="calibre13">|</kbd> and <kbd class="calibre13">trimMargin()</kbd> to re-align them.</p>
+<p class="calibre2">Now use the following code to call this query:</p>
+<pre class="calibre18">...<br class="title-page-name"/>val db = getDbClient()<br class="title-page-name"/>router.post(<span>"/cats"</span>).<span>asyncHandler </span><span>{ </span>ctx <span>-&gt;<br class="title-page-name"/></span><span>    db.queryWithParams(insert, ctx.bodyAsJson.toCat(), {<br class="title-page-name"/>       it.handle({<br class="title-page-name"/>          // We'll always have one result here, since it's our row<br class="title-page-name"/>          ctx.respond(it.result().rows[0].toString(), 201)<br class="title-page-name"/>       }, {<br class="title-page-name"/>          ctx.respond(status=500)<br class="title-page-name"/>       })<br class="title-page-name"/>   })</span><br class="title-page-name"/><span>}</span></pre>
+<p class="calibre2">Notice that we didn't print the error anywhere. That's because we defined the <kbd class="calibre13">handle()</kbd> function to do that.</p>
+<p class="calibre2">We also defined our own function that parses the request body, which is <kbd class="calibre13">JsonObject</kbd>, to <kbd class="calibre13">JsonArray</kbd>, which is expected by the <kbd class="calibre13">JDBCClient</kbd>:</p>
+<pre class="calibre18"><span>private fun </span>JsonObject.<span>toCat</span>() = JsonArray().apply {<br class="title-page-name"/>   add(this@toCat.getString("name"))<br class="title-page-name"/>   add(this@toCat.getInteger("age"))<br class="title-page-name"/>}</pre>
+<p class="calibre2">Notice that we have two different versions of <kbd class="calibre13">this</kbd> here. One refers to the inner scope of the <kbd class="calibre13">apply()</kbd> function. The other refers to the outer scope of the <kbd class="calibre13">toCat()</kbd> function. To refer to outer scopes, we use the <kbd class="calibre13">@scopeName</kbd> notation.</p>
+<p class="calibre2">As you can see, extension functions are extremely powerful tools for cleaning up your code.</p>
+<p class="calibre2">When you run our test again, you'll notice it still fails, but with a different error code now. That's because we didn't create our table yet. Let's do it now. There are a few ways to do this, but the most convenient way would be to simply run the following command:</p>
+<pre class="calibre18"><span>psql -c "create table cats (id bigserial primary key, name varchar(20), age integer)" cats_db</span></pre>
+<p class="calibre2">Run your test again to make sure it passes.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">EventBus</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">This is the second time we have stumbled upon the same problem: our classes get bigger and bigger, which we would usually like to avoid as much as possible. </p>
+<p class="calibre2">What if we split this creation of cats logic into a separate file yet again? Let's call it <kbd class="calibre13">CatVerticle.kt</kbd>.</p>
+<p class="calibre2">But then we need a way for <kbd class="calibre13">ServerVerticle</kbd> to communicate with <kbd class="calibre13">CatVerticle</kbd>. In frameworks such as <strong class="calibre5">SpringBoot</strong>, you would use <strong class="calibre5">dependency injection</strong> for that purpose. But what about reactive frameworks?</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Consumer</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">To solve communication problems, Vert.x uses <strong class="calibre5">EventBus</strong>. It's an implementation of the <strong class="calibre5">Observable</strong> design pattern we discussed in <a href="part0112.html#3APV00-6704093aa34748cfa77c54bdc1a20dc7" class="calibre10">Chapter 4</a>, <em class="calibre14"><span class="calibre7">Getting Familiar with Behavioral Patterns</span></em>. Any verticle can send a message over the event bus, choosing between these two modes:</p>
+<ul class="calibre11">
+<li class="calibre12"><kbd class="calibre13">send()</kbd> will send a message to only one subscriber</li>
+<li class="calibre12"><kbd class="calibre13">publish()</kbd> will send a message to all subscribers</li>
+</ul>
+<p class="calibre2">No matter which method is used to send the message, you subscribe to it using the <kbd class="calibre13">consumer()</kbd> method on the EventBus:</p>
+<pre class="calibre18"><span>const val CATS = "cats:get"<br class="title-page-name"/><br class="title-page-name"/>class CatVerticle</span> : CoroutineVerticle() {<br class="title-page-name"/>    <br class="title-page-name"/><span>    override suspend fun </span><span>start</span>() {<br class="title-page-name"/>        <span>val </span>db = <span>getDbClient</span>()<br class="title-page-name"/>        vertx.<strong class="calibre1">eventBus().consumer</strong>&lt;JsonObject&gt;(CATS) <span>{ </span>req <span>-&gt;<br class="title-page-name"/></span><span>            ...</span><br class="title-page-name"/>        <span>}<br class="title-page-name"/></span><span>    </span>}<br class="title-page-name"/>}</pre>
+<p class="calibre2">The type specifies which object we expect to receive our message. In this case, it's <kbd class="calibre13">JsonObject</kbd>. Constant <kbd class="calibre13">CATS</kbd> is the key we subscribe for. It can be any string. By using a namespace,  we ensure that there won't be a collision in the future. If we were to add dogs to our shelter, we would use another constant with another namespace. For example:</p>
+<pre class="calibre18">const val DOGS  = "dogs:get" // Just an example, don't copy it</pre>
+<p class="calibre2">Now we add the following two queries, which are just multiline string constants:</p>
+<pre class="calibre18"><span>private const val QUERY_ALL = """select * from cats"""<br class="title-page-name"/>class CatVerticle : CoroutineVerticle() {<br class="title-page-name"/>    <br class="title-page-name"/>    private val QUERY_WITH_ID = """select * from cats<br class="title-page-name"/>                     where id = ?::integer""".<strong class="calibre1">trimIndent()</strong><br class="title-page-name"/>...<br class="title-page-name"/>}</span></pre>
+<p class="calibre2">Why are we putting one inside the class and the other outside it?</p>
+<p class="calibre2"><kbd class="calibre13">QUERY_ALL</kbd> is a short query and it fits on one line. We can allow ourselves to make it a constant. On the other hand, <kbd class="calibre13">QUERY_WITH_ID</kbd> is a longer query and it requires some indentation. Since we remove the indentation only at runtime, we can't make it a constant. So, instead, we use a member value. In real-life projects, most of your queries will probably have to be private values. But it's important to know the difference between the two approaches.</p>
+<p class="calibre2">And we populate our consumer with the following code:</p>
+<pre class="calibre18"><span>...<br class="title-page-name"/>try </span>{<br class="title-page-name"/><span>    val </span>body = req.body()<br class="title-page-name"/>    <span>val </span>id: Int? = body[<span>"id"</span>]<span><br class="title-page-name"/></span><span>    val </span>result = <span>if </span>(id != <span>null</span>) {<br class="title-page-name"/>        db.<span>query</span>(<span>QUERY_WITH_ID</span><span>, id</span>)<br class="title-page-name"/>    } <span>else </span>{<br class="title-page-name"/>        db.<span>query</span>(<span>QUERY_ALL</span>)<br class="title-page-name"/>    }<br class="title-page-name"/><span>    launch </span><span>{<br class="title-page-name"/></span>        req.reply(result.await())<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span>}<br class="title-page-name"/><span>catch </span>(e: Exception) {<br class="title-page-name"/>    req.fail(<span>0</span><span>, </span>e.<span>message</span>)<br class="title-page-name"/>}<br class="title-page-name"/>...</pre>
+<p class="calibre2">If we got a cat ID in the request, we fetch this specific cat. Otherwise, we fetch all the cats that are available. </p>
+<p class="calibre2">We use <kbd class="calibre13">launch()</kbd> because we want to <kbd class="calibre13">await()</kbd> the result, and we don't have any return value. </p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Producer</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">What's left is only to call the cat from the <kbd class="calibre13">ServerVerticle</kbd>. For that, we'll add another method to our <kbd class="calibre13">CoroutineVerticle</kbd>:</p>
+<pre class="calibre18"><span>fun </span>&lt;<span>T</span>&gt; CoroutineVerticle.<span>send</span>(address: String<span>,<br class="title-page-name"/></span><span>                               </span>message: <span>T</span><span>,<br class="title-page-name"/></span><span>                               </span>callback: (AsyncResult&lt;Message&lt;<span>T</span>&gt;&gt;) -&gt; Unit) {<br class="title-page-name"/>    <span>this</span>.<span>vertx</span>.eventBus().send(address<span>, </span>message<span>, </span>callback)<br class="title-page-name"/>}</pre>
+<p class="calibre2">Then we can handle our request like this:</p>
+<pre class="calibre18"><span>...<br class="title-page-name"/></span>router.get(<span>"/cats"</span>).<span>asyncHandler </span><span>{ </span>ctx <span>-&gt;<br class="title-page-name"/></span><span>    </span><span>send</span>(<strong class="calibre1"><span>CATS</span></strong><span>, </span>ctx.queryParams().<span>toJson</span>()) <span>{<br class="title-page-name"/></span><span>        it</span>.<span>handle</span>(<span>{<br class="title-page-name"/></span><span>            </span><span>val </span>responseBody = <span>it</span>.result().body()<br class="title-page-name"/>            ctx.<span>respond</span>(responseBody.<span>get</span>&lt;JsonArray&gt;(<span>"rows"</span>).toString())<br class="title-page-name"/>        <span>}</span><span>, </span><span>{<br class="title-page-name"/></span><span>            </span>ctx.<span>respond</span>(<span>status=</span><span>500</span>)<br class="title-page-name"/>        <span>}</span>)<br class="title-page-name"/>    <span>}<br class="title-page-name"/></span><span>}<br class="title-page-name"/></span><span>...</span></pre>
+<p class="calibre2">Notice that we're reusing the same constant we defined earlier, called <kbd class="calibre13">CATS</kbd>.</p>
+<p class="calibre2">That way, we can easily check who can send this event and who consumes it. If it's successful, we'll return a JSON. Otherwise, we'll return an HTTP error code.</p>
+<p class="calibre2">Another method that we add is <kbd class="calibre13">toJson()</kbd> on <kbd class="calibre13">MultiMap</kbd>. <kbd class="calibre13">MultiMap</kbd> is an object that holds our query parameters:</p>
+<pre class="calibre18"><span>private fun </span>MultiMap.<span>toJson</span>(): JsonObject {<br class="title-page-name"/>    <span>val </span>json = JsonObject()<br class="title-page-name"/><br class="title-page-name"/>    <span>for </span>(k <span>in this</span>.names()) {<br class="title-page-name"/>        json.put(k<span>, this</span>[k])<br class="title-page-name"/>    }<br class="title-page-name"/><br class="title-page-name"/>    <span>return </span>json<br class="title-page-name"/>}</pre>
+<p class="calibre2">To make sure everything works as expected, let's create two more tests for our new endpoints.</p>
+<p class="calibre2">Just don't forget to add the following line to your <kbd class="calibre13">Main.kt</kbd> and to the <kbd class="calibre13">startServer()</kbd> function in your tests:</p>
+<pre class="calibre18">...<br class="title-page-name"/>vertx.deployVerticle(CatVerticle())<br class="title-page-name"/>...</pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">More testing</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">Now add the following basic test:</p>
+<pre class="calibre18"><span>@Test<br class="title-page-name"/></span><span>fun </span><span>`Make sure that all cats are returned`</span>() {<br class="title-page-name"/>    <span>val </span>response = get(<span>"/api/v1/cats"</span>)<br class="title-page-name"/>    assertEquals(response.statusCode()<span>, </span><span>200</span>)<br class="title-page-name"/><br class="title-page-name"/>    <span>val </span>body = response.<span>asJson</span>()<br class="title-page-name"/><br class="title-page-name"/>    assertTrue(body.size() &gt; <span>0</span>)<br class="title-page-name"/>}</pre>
+<p class="calibre2">To make sure you understand how everything works together, here are some more assignments you may wish to do:</p>
+<ol class="calibre15">
+<li value="1" class="calibre12">Move the logic of adding a new cat to the <kbd class="calibre13">CatVerticle</kbd>.</li>
+<li value="2" class="calibre12">Implement getting a single cat. Notice how the code is very similar to the one that gets all the cats? Refactor it to use a local function, a cool feature in Kotlin, which we have already discussed.</li>
+<li value="3" class="calibre12">Implement deletion and update the cat, following the same principles.</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    </header><h1 class="header-title" id="calibre_pb_0">Summary</h1>
+                
+            
+            <article>
+                
+<p class="calibre2">This chapter put together everything we've learned about Kotlin design patterns and idioms, to produce an extensible microservice.  And, thanks to Vert.x, it's also reactive, which makes it extremely scalable. It also has tested in place, as any real-world application should. </p>
+<p class="calibre2">In our application, classes are divided by domains, as opposed to layers, in the usual MVC architecture. A minimal unit of work in Vert.x is called a verticle, and verticles communicate using EventBus.</p>
+<p class="calibre2"><span class="calibre7">Our API follows all of REST's best practices: using HTTP verbs and meaningful paths to resources and consuming and producing JSON.</span></p>
+<p class="calibre2">You can apply the same principles to any other real application you're going to write, and we do hope you'll choose Vert.x and Kotlin to do so.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

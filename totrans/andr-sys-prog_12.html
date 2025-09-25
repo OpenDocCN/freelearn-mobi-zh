@@ -1,0 +1,613 @@
+<html><head></head><body>
+        <section>
+
+            <header>
+                <h1 class="header-title">Introducing Recovery</h1>
+            </header>
+
+            <article>
+                
+<p>In this book, we have completed two projects so far. With the first x86emu project, we learnt how to extend an existing device to support additional features. After that, we learnt how to create a new device using the second project, x86vbox. There is another important topic at the system-level programming of Android, which is how to patch or update a released system.</p>
+<p>In Android systems, the way to patch or update a released system is using a tool called <strong>recovery</strong>. In the next three chapters, we will learn how to build recovery on an x86vbox device. Since x86vbox is a built for VirtualBox, we will use VirtualBox as virtual hardware for this chapter to <a href="32a9d777-755e-4758-a38a-f4e11d8ca2e9.xhtml">Chapter 14</a>, <em>Creating OTA Update Packages</em>. We will also prepare and test a few update packages using the recovery that we build. In this chapter, we will cover the following topics:</p>
+<ul>
+<li>Recovery introduction</li>
+<li>Analyzing recovery source code</li>
+<li>Building recovery for x86vbox</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Recovery introduction</h1>
+            </header>
+
+            <article>
+                
+<p>In Android, recovery is a minimal Linux environment including a kernel and a dedicated ramdisk. When this minimal Linux environment boots up, it runs a binary tool, recovery, to enter the so-called recovery mode. The Linux kernel and ramdisk of recovery mode are usually stored in a dedicated bootable partition. In recovery mode, both the kernel and the root filesystem are in memory so it can manage other partitions without any dependencies.</p>
+<p>There are two ways to update devices in the field. The first method is to use fastboot protocol through bootloader. The devices can be reflashed using bootloader. In this case, you can boot your device in fastboot mode and flash your device using the fastboot tool from Android SDK. The second way to flash a device is to use the recovery mode. If you boot the devices into recovery mode, you can flash the device using an image file on the storage or providing an image through USB in sideload mode.</p>
+<p>The image files that can be used by bootloader and recovery are different. The image files from the AOSP build output can be used by bootloader directly. We can flash image files <kbd>system.img</kbd>, <kbd>userdata.img</kbd>, <kbd>boot.img</kbd> or <kbd>recovery.img</kbd> directly using the <kbd>fastboot</kbd> tool in bootloader. We cannot use these image files for recovery. We have to build image files for recovery specially using tools provided in AOSP. We will cover this topic in the next chapter.</p>
+<p>The key advantage of recovery mode over the fastboot protocol is the <strong>over-the-air</strong> (<strong>OTA</strong>) update support. If an update is available from the OTA servers, the users will receive a notification. The users can download the update to a cache or data partition. After the update package is verified using its signature, the users can respond to the update notification. After that, the device will reboot into recovery mode. In recovery mode, the recovery binary is started and it will use the command-line arguments stored in the <kbd>/cache/recovery/command</kbd> file to find the update package to update the system image.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Android device partitions</h1>
+            </header>
+
+            <article>
+                
+<p>To enable recovery on a device, we need to look at the device partitions again. In Android SDK, we have the following image files that can be used by the emulator:</p>
+<pre>
+<strong>$ ls system-images/android-25/default/x86</strong><br/><strong>build.prop   kernel-ranchu  ramdisk.img        system.img</strong><br/><strong>kernel-qemu  NOTICE.txt     source.properties  userdata.img</strong>  
+</pre>
+<p>After we boot up the emulator, we can see that the following partitions are mounted:</p>
+<pre>
+<strong>root@x86emu:/ # mount</strong><br/><strong>rootfs / rootfs ro,seclabel,relatime 0 0</strong><br/><strong>tmpfs /dev tmpfs rw,seclabel,nosuid,relatime,mode=755 0 0</strong><br/><strong>devpts /dev/pts devpts rw,seclabel,relatime,mode=600 0 0</strong><br/><strong>proc /proc proc rw,relatime 0 0</strong><br/><strong>sysfs /sys sysfs rw,seclabel,relatime 0 0</strong><br/><strong>selinuxfs /sys/fs/selinux selinuxfs rw,relatime 0 0</strong><br/><strong>debugfs /sys/kernel/debug debugfs rw,seclabel,relatime 0 0</strong><br/><strong>none /acct cgroup rw,relatime,cpuacct 0 0</strong><br/><strong>none /sys/fs/cgroup tmpfs rw,seclabel,relatime,mode=750,gid=1000 0 0</strong><br/><strong>tmpfs /mnt tmpfs rw,seclabel,relatime,mode=755,gid=1000 0 0</strong><br/><strong>none /dev/cpuctl cgroup rw,relatime,cpu 0 0</strong><br/><strong>/dev/block/vda /system ext4 ro,seclabel,relatime,data=ordered 0 0</strong><br/><strong>/dev/block/vdb /cache ext4 rw,seclabel,nosuid,nodev,noatime,errors=panic,data=ordered 0 0</strong><br/><strong>/dev/block/vdc /data ext4 rw,seclabel,nosuid,nodev,noatime,errors=panic,data=ordered 0 0</strong><br/><strong>...</strong>  
+</pre>
+<p>We can see that <kbd>system</kbd>, <kbd>data</kbd>, and <kbd>cache</kbd> partitions are mounted as virtio block devices. Since virtio is a virtualization standard for network and disk device drivers, the performance should be better than physical device drivers. With only these partitions, we won't be able to create a system that can use the recovery tool. In the following figure, these are the minimum partitions that we need to have on the storage device to support both fastboot and recovery:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="262" width="161" class=" image-border" src="assets/image_12_001.png"/></div>
+<div class="CDPAlignCenter CDPAlign packt_figref">Android device partitions</div>
+<ul>
+<li><strong>boot</strong>: This is the partition that contains the kernel and ramdisk image.</li>
+<li><strong>system</strong>: This is the partition that contains the Android system. It is usually mounted as read-only and can only be changed during an OTA update.</li>
+<li><strong>vendor</strong>: This is the partition that contains the private system files from the vendor. It is similar to the system partition, which is mounted as read-only and can only be changed during an OTA update.</li>
+<li><strong>userdata</strong>: This partition contains the data saved by applications installed by the user. This partition is usually not touched by the OTA update process.</li>
+<li><strong>cache</strong>: This partition holds temporary data. The OTA package installations can use it as a workspace.</li>
+<li><strong>recovery</strong>: This partition contains a Linux kernel and a ramdisk for recovery. It is similar to the boot partition except the ramdisk image is the one used by recovery mode only.</li>
+<li><strong>misc</strong>: This partition is used by recovery to store information across different boot sessions.</li>
+</ul>
+<p>In this chapter, we will build recovery for the x86vbox device. As we learnt from <a href="acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml">Chapter 8</a>, <em>Creating Your Own Device on VirtualBox</em>, to <a href="3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml">Chapter 11</a>, <em>Enabling VirtualBox-Specific Hardware Interfaces</em>, we use only one partition to store everything for the x86vbox device. We will extend the x86vbox device to use multiple partitions according to the preceding explanation in this chapter later.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Analyzing recovery</h1>
+            </header>
+
+            <article>
+                
+<p>Before we start to build recovery for our x86vbox device, we will analyze the code flow of recovery to understand how it works. There are two ways to enter recovery mode from the end user perspective. When users want to perform a factory reset or an OTA update is available, the main system can write a recovery command to the <strong>bootloader control block</strong> (<strong>BCB</strong>) and cache partition before resetting the system.</p>
+<p>The second way to enter recovery mode is to use a key combination manually. After turning off the phone, press a key combination at the same time to enter the recovery mode manually. The key combination is defined by the device manufacturing, for example, it can be a combination of volume down and power buttons.</p>
+<p>In both cases, entering the recovery mode is closely related to the implementation of bootloader. The Android system, recovery, and bootloader communicate with each other using two interfaces: the partitions <kbd>/cache</kbd> and <kbd>/misc</kbd>. We can depict the communication interfaces using the following diagram:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="336" width="622" class=" image-border" src="assets/image_12_002.png"/></div>
+<div class="packt_figure packt_figref CDPAlignCenter CDPAlign">Interfaces of the Android system, recovery, and bootloader</div>
+<p>In the preceding diagram, bootloader uses <strong>BCB</strong> in the <strong>/misc</strong> partition to communicate with the Android system and recovery. The Android system and recovery use the information in the <strong>/cache</strong> partition to talk to each other. Let's look into the details of these two communication channels.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">BCB</h1>
+            </header>
+
+            <article>
+                
+<p>BCB is the communication interface of bootloader to the main system and recovery.</p>
+<div class="packt_infobox">The Android system is also referred to as the main system in the recovery source code. We use the term main system as equivalent to Android system in this chapter.</div>
+<p>BCB is stored in the <kbd>/misc</kbd> partition in a raw partition format, which means this partition is used just like a binary file without any filesystem.</p>
+<p>Recovery uses a <kbd>recovery.fstab</kbd> file to mount all partitions in the system. If we look at the filesystem type of the <kbd>/misc</kbd> partition in <kbd>recovery.fstab</kbd>, it is <kbd>emmc</kbd> that is one of the raw filesystems used in recovery:</p>
+<pre>
+<strong>/dev/block/by-name/misc    /misc    emmc    defaults    defaults</strong>  
+</pre>
+<p>There are five supported filesystem types in recovery including two raw filesystems and three normal filesystems.</p>
+<p>The two supported raw filesystems are:</p>
+<ul>
+<li><kbd>mtd</kbd>: This is the partition used in old Android devices. These devices use NAND flash and MTD partitions.</li>
+<li><kbd>emmc</kbd>: This is a raw eMMC block device used in the recent Android devices.</li>
+</ul>
+<p>The partitions for <kbd>boot</kbd>, <kbd>recovery</kbd>, and <kbd>misc</kbd> can be the <kbd>mtd</kbd> or <kbd>emmc</kbd> filesystem types.</p>
+<p>The supported normal filesystem types are:</p>
+<ul>
+<li><kbd>yaffs2</kbd>: A <kbd>yaffs2</kbd> filesystem is usually used for MTD devices for <kbd>system</kbd>, <kbd>userdata</kbd>, or <kbd>cache</kbd> partitions. This is usually used in older Android devices.</li>
+<li><kbd>ext4</kbd>: In the latest Android devices, the eMMC block devices are used. The standard Linux <kbd>ext4</kbd> filesystem is usually used on top of eMMC block devices. The same as the <kbd>yaffs2</kbd> filesystem type, <kbd>system</kbd>, <kbd>userdata</kbd>, or <kbd>cache</kbd> partitions can use the <kbd>ext4</kbd> format.</li>
+<li><kbd>vfat</kbd> : This is the filesystem type used for external storage such as SD card or USB.</li>
+</ul>
+<p>Let's come back to the topic of BCB. BCB is defined as a data structure as follows in the <kbd>$AOSP/bootable/recovery/bootloader.h</kbd> file:</p>
+<pre>
+struct bootloader_message { <br/>    char command[32]; <br/>    char status[32]; <br/>    char recovery[768]; <br/>    char stage[32]; <br/>    char reserved[224]; <br/>}; 
+</pre>
+<p>The <kbd>command</kbd> field is used by the main system when it wants to reboot the device into recovery. This can be the case when users select factory reset from the settings or an OTA update is available. This field can be used by bootloader as well, when the bootloader completes the firmware update it may want to boot to recovery for any final clean up.</p>
+<p>The <kbd>status</kbd> field is updated by the bootloader after it completes the firmware update.</p>
+<p>The <kbd>recovery</kbd> field is used by the main system to send a message to recovery or the recovery may use this field to send a message to the main system.</p>
+<p>The <kbd>stage</kbd> field is used to indicate the stage of an update. In some cases, the installation of an update package may require restarting multiple times. The recovery UI can use this field to show the current stage of the installation:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="395" width="453" class=" image-border" src="assets/image_12_003.png"/></div>
+<p>In the preceding diagram, the bootloader logic related to the checking of key combination and BCB is shown. The implementation can be vendor specific as long as the bootloader processes BCB according to the AOSP recovery definition. Usually, the bootloader checks the key combination first to decide whether the users want to enter the recovery mode. If there is no key combination pressed, it checks the BCB to decide the boot path.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Cache partition</h1>
+            </header>
+
+            <article>
+                
+<p>There are three files in the cache partition, which can be used as the communication channels between the main system and recovery tool. These three files are:</p>
+<ul>
+<li><kbd>/cache/recovery/command</kbd>: This is a file for input parameters from the recovery point of view. There is one command per line in this file. The arguments that may be supplied in the file are:
+<ul>
+<li><kbd>-send_intent=anystring</kbd>: The main system may use this command to send a message back to itself after recovery exit</li>
+<li><kbd>-update_package=path</kbd> : This command specifies a path to install an OTA package file</li>
+<li><kbd>-wipe_data</kbd>: This command tells recovery to erase user data (and cache), and then reboot</li>
+<li><kbd>-wipe_cache</kbd>: This command tells recovery to wipe cache (but not user data), then reboot</li>
+<li><kbd>-set_encrypted_filesystem=on|off</kbd>: Enables/disables encrypted filesystems</li>
+<li><kbd>-just_exit</kbd>: Does nothing; exits and reboots </li>
+</ul>
+</li>
+<li><kbd>/cache/recovery/log</kbd>: The runtime log file of recovery is at <kbd>/tmp/recovery.log</kbd>. Before recovery exits, it will back up the old log file and move the current log file to <kbd>/cache/recovery/log</kbd>.</li>
+<li><kbd>/cache/recovery/intent</kbd>: Before recovery exits, it will check if there is any intent that needs to be sent to the main system using this file. The intent can be the message that the main system sends to recovery using the <kbd>-send_intent</kbd> command in the <kbd>/cache/recovery/command</kbd> file.</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Main flow of recovery</h1>
+            </header>
+
+            <article>
+                
+<p>After we have all the background knowledge about recovery and the components related to recovery, let's have a look at the main workflow of recovery. We will use the following diagram to explore the workflow of recovery:</p>
+<ol>
+<li>When recovery is started, it will set the log file to <kbd>/tmp/recovery.log</kbd> first.</li>
+<li>After that, it checks the <kbd>--adbd</kbd> option. If this option is specified, it will run a daemon for the sideloading using <kbd>adb</kbd>. You can refer to the source code at <kbd>$AOSP/bootable/recovery/adb_install.cpp</kbd> about how to launch recovery as <kbd>adb</kbd> daemon.</li>
+<li>It retrieves and processes the arguments from cache partition and BCB by calling the <kbd>get_args</kbd> function.</li>
+<li>Based on the commands retrieved from <kbd>get_args</kbd>, it may call the <kbd>install_package</kbd> function to install an update, or call the <kbd>wipe_data</kbd> or <kbd>wipe_cache</kbd> functions to erase user data or cache partition.</li>
+<li>If there is no command for either updating a package or erasing data, it will call the <kbd>prompt_and_wait</kbd> function to enter the recovery user interface. Based on the user input, it may call <kbd>apply_from_adb</kbd> or <kbd>apply_from_sdcard</kbd> to update packages from USB or SD card. It may call the <kbd>wipe_data</kbd> or <kbd>wipe_cache</kbd> functions to erase user data or cache partition, and so on.</li>
+</ol>
+<ol start="6">
+<li>After all the tasks are completed or the users select entries to exit from recovery, it will call the cleanup function, <kbd>finish_recovery</kbd>, to do the final clean up. After that, it will reboot or shut down the system:</li>
+</ol>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="559" width="348" class=" image-border" src="assets/image_12_004.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">Recovery workflow</div>
+<p>Based on the preceding flow analysis, we can look at the code snippet of the <kbd>main</kbd> function at <kbd>$AOSP/bootable/recovery/recovery.cpp</kbd> as follows:</p>
+<pre>
+int <br/>main(int argc, char **argv) { <br/>    time_t start = time(NULL); <br/><br/>    redirect_stdio(TEMPORARY_LOG_FILE); <br/><br/>    ... <br/>    if (argc == 2 &amp;&amp; strcmp(argv[1], "--adbd") == 0) { <br/>        adb_main(0, DEFAULT_ADB_PORT); <br/>        return 0; <br/>    } <br/><br/>    printf("Starting recovery (pid %d) on %s", getpid(), <br/>    ctime(&amp;start)); <br/><br/>    load_volume_table(); <br/>    get_args(&amp;argc, &amp;argv); <br/><br/>    ... <br/>    ui-&gt;Print("Supported API: %d\n", RECOVERY_API_VERSION); <br/><br/>    int status = INSTALL_SUCCESS; <br/><br/>    if (update_package != NULL) { <br/>        status = install_package(update_package, &amp;should_wipe_cache, <br/>        TEMPORARY_INSTALL_FILE, true); <br/>        if (status == INSTALL_SUCCESS &amp;&amp; should_wipe_cache) { <br/>            wipe_cache(false, device); <br/>        } <br/>    ... <br/>    } else if (should_wipe_data) { <br/>        if (!wipe_data(false, device)) { <br/>            status = INSTALL_ERROR; <br/>        } <br/>    } else if (should_wipe_cache) { <br/>        if (!wipe_cache(false, device)) { <br/>            status = INSTALL_ERROR; <br/>        } <br/>    } else if (sideload) { <br/>    ... <br/>    Device::BuiltinAction after = shutdown_after ? Device::SHUTDOWN : <br/>    Device::REBOOT; <br/>    if ((status != INSTALL_SUCCESS &amp;&amp; !sideload_auto_reboot) || ui-<br/>    &gt;IsTextVisible()) { <br/>        Device::BuiltinAction temp = prompt_and_wait(device, status); <br/>        if (temp != Device::NO_ACTION) { <br/>            after = temp; <br/>        } <br/>    } <br/><br/>    // Save logs and clean up before rebooting or shutting down. <br/>    finish_recovery(send_intent); <br/><br/>    switch (after) { <br/>        case Device::SHUTDOWN: <br/>            ui-&gt;Print("Shutting down...\n"); <br/>            property_set(ANDROID_RB_PROPERTY, "shutdown,"); <br/>            break; <br/><br/>        case Device::REBOOT_BOOTLOADER: <br/>            ui-&gt;Print("Rebooting to bootloader...\n"); <br/>            property_set(ANDROID_RB_PROPERTY, "reboot,bootloader"); <br/>            break; <br/><br/>        default: <br/>            ui-&gt;Print("Rebooting...\n"); <br/>            property_set(ANDROID_RB_PROPERTY, "reboot,"); <br/>            break; <br/>    } <br/>    sleep(5); // should reboot before this finishes <br/>    return EXIT_SUCCESS; <br/>} 
+</pre>
+<p>After we have an overview of the recovery workflow, we will look at how recovery retrieves arguments from either BCB or cache files in the <kbd>get_args</kbd> function. After that, we will look at the two important workflows, factory reset and OTA update, from the user's perspective.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Retrieving arguments from BCB and cache files</h1>
+            </header>
+
+            <article>
+                
+<p>As we can see in the main function of recovery, it calls to the <kbd>get_args</kbd> function to retrieve arguments from the main system or bootloader. The following is the flow diagram of <kbd>get_args</kbd>. It is in the same <kbd>$AOSP/bootable/recovery/recovery.cpp</kbd> file as the <kbd>main</kbd> function of recovery.</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="517" width="351" class=" image-border" src="assets/image_12_005.png"/></div>
+<div class="packt_figure packt_figref CDPAlignCenter CDPAlign">Flow diagram of get_args</div>
+<p>From the following code snippet, we can see that it calls to the <kbd>get_bootloader_message</kbd> function to get the BCB data structure, <kbd>boot</kbd>:</p>
+<pre>
+static void <br/>get_args(int *argc, char ***argv) { <br/>    struct bootloader_message boot; <br/>    memset(&amp;boot, 0, sizeof(boot)); <br/>    get_bootloader_message(&amp;boot);  // this may fail, leaving a zeroed <br/>                                    //structure <br/>    stage = strndup(boot.stage, sizeof(boot.stage)); <br/>    ... 
+</pre>
+<p>If there are no arguments, the value of <kbd>argc</kbd> will be less or equal to 1. It will try to get the arguments from BCB, as in the following code snippet. In the <kbd>recovery</kbd> field of BCB, the command will start with <kbd>recovery\n</kbd>. The content after <kbd>recovery\n</kbd> is the same format as the cache command file, <kbd>/cache/recovery/command</kbd>:</p>
+<pre>
+if (*argc &lt;= 1) { <br/>    boot.recovery[sizeof(boot.recovery) - 1] = '\0'; <br/>    const char *arg = strtok(boot.recovery, "\n"); <br/>    if (arg != NULL &amp;&amp; !strcmp(arg, "recovery")) { <br/>        *argv = (char **) malloc(sizeof(char *) * MAX_ARGS); <br/>        (*argv)[0] = strdup(arg); <br/>        for (*argc = 1; *argc &lt; MAX_ARGS; ++*argc) { <br/>            if ((arg = strtok(NULL, "\n")) == NULL) break; <br/>            (*argv)[*argc] = strdup(arg); <br/>        } <br/>        LOGI("Got arguments from boot message\n"); <br/>    } else if (boot.recovery[0] != 0 &amp;&amp; boot.recovery[0] != 255) { <br/>        LOGE("Bad boot message\n\"%.20s\"\n", boot.recovery); <br/>    } <br/>} 
+</pre>
+<p>If the arguments can be retrieved from BCB, it will skip the cache command file. Otherwise, it will try to read arguments from the cache command file as follows:</p>
+<pre>
+if (*argc &lt;= 1) { <br/>    FILE *fp = fopen_path(COMMAND_FILE, "r"); <br/>    if (fp != NULL) { <br/>        char *token; <br/>        char *argv0 = (*argv)[0]; <br/>        *argv = (char **) malloc(sizeof(char *) * MAX_ARGS); <br/>        (*argv)[0] = argv0;  // use the same program name <br/><br/>        char buf[MAX_ARG_LENGTH]; <br/>        for (*argc = 1; *argc &lt; MAX_ARGS; ++*argc) { <br/>            if (!fgets(buf, sizeof(buf), fp)) break; <br/>            token = strtok(buf, "\r\n"); <br/>            if (token != NULL) { <br/>                (*argv)[*argc] = strdup(token); <br/>            } else { <br/>                --*argc; <br/>            } <br/>        } <br/><br/>        check_and_fclose(fp, COMMAND_FILE); <br/>        LOGI("Got arguments from %s\n", COMMAND_FILE); <br/>    } <br/>} 
+</pre>
+<p>After processing both BCB and the cache command file, it will write the BCB block to the <kbd>/misc</kbd> partition so that if there is any error during the process of update or erase, the same process will continue after the reboot:</p>
+<pre>
+strlcpy(boot.command, "boot-recovery", sizeof(boot.command)); <br/>strlcpy(boot.recovery, "recovery\n", sizeof(boot.recovery)); <br/>int i; <br/>for (i = 1; i &lt; *argc; ++i) { <br/>    strlcat(boot.recovery, (*argv)[i], sizeof(boot.recovery)); <br/>    strlcat(boot.recovery, "\n", sizeof(boot.recovery)); <br/>} <br/>set_bootloader_message(&amp;boot); 
+</pre>
+<p>From the preceding code analysis, we can see that the cache command file is just a normal text file. It can be accessed by just using the standard C functions. To access the <kbd>/misc</kbd> partition for BCB data structure, the <kbd>get_bootloader_message</kbd> function is used to read BCB and the <kbd>set_bootloader_message</kbd> function is used to write BCB. The BCB data structure <kbd>bootloader_message</kbd> is defined in the <kbd>bootloader.h</kbd> file and related functions are implemented in the <kbd>bootloader.cpp</kbd> file.</p>
+<p>The <kbd>/misc</kbd> partition is a raw partition and it is used by the code in <kbd>bootloader.cpp</kbd> as a normal file instead of a filesystem volume.</p>
+<p>We can have a quick look at the <kbd>get_bootloader_message</kbd> function and its support function, <kbd>get_bootloader_message_block</kbd>, as follows:</p>
+<pre>
+int get_bootloader_message(struct bootloader_message *out) { <br/>    Volume* v = volume_for_path("/misc"); <br/>    if (v == NULL) { <br/>      LOGE("Cannot load volume /misc!\n"); <br/>      return -1; <br/>    } <br/>    if (strcmp(v-&gt;fs_type, "mtd") == 0) { <br/>        return get_bootloader_message_mtd(out, v); <br/>    } else if (strcmp(v-&gt;fs_type, "emmc") == 0) { <br/>        return get_bootloader_message_block(out, v); <br/>    } <br/>    LOGE("unknown misc partition fs_type \"%s\"\n", v-&gt;fs_type); <br/>    return -1; <br/>} 
+</pre>
+<p>In the <kbd>get_bootloader_message</kbd> function, it will call another function according to the type of partition, <kbd>/misc</kbd>. As we can see, the supported raw filesystem types are <kbd>mtd</kbd> and <kbd>emmc</kbd>. We can look at the <kbd>emmc</kbd> version, <kbd>get_bootloader_message_block</kbd>, as follows:</p>
+<pre>
+static int get_bootloader_message_block(struct bootloader_message *out, <br/>const Volume* v) { <br/>    wait_for_device(v-&gt;blk_device); <br/>    FILE* f = fopen(v-&gt;blk_device, "rb"); <br/>    if (f == NULL) { <br/>        LOGE("Can't open %s\n(%s)\n", v-&gt;blk_device, strerror(errno)); <br/>        return -1; <br/>    } <br/>    struct bootloader_message temp; <br/>    int count = fread(&amp;temp, sizeof(temp), 1, f); <br/>    if (count != 1) { <br/>        LOGE("Failed reading %s\n(%s)\n", v-&gt;blk_device, <br/>        strerror(errno)); <br/>        return -1; <br/>    } <br/>    if (fclose(f) != 0) { <br/>        LOGE("Failed closing %s\n(%s)\n", v-&gt;blk_device, <br/>        strerror(errno)); <br/>        return -1; <br/>    } <br/>    memcpy(out, &amp;temp, sizeof(temp)); <br/>    return 0; <br/>} 
+</pre>
+<p>As we can see, in the <kbd>get_bootloader_message_block</kbd> function, it accesses the <kbd>/misc</kbd> partition as a normal file using C functions <kbd>fopen</kbd>, <kbd>fread</kbd>, and <kbd>fclose</kbd>.</p>
+<p>Now we have done the analysis of BCB and cache file processing. We will look at the following two most important workflows of recovery in the next two sections:</p>
+<ul>
+<li>Factory data reset</li>
+<li>OTA update</li>
+</ul>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Factory data reset</h1>
+            </header>
+
+            <article>
+                
+<p>One of the major functions of recovery is to support factory data reset. The factory data reset can usually be selected by users from <span class="packt_screen">Settings</span> on the device, as shown in the following screenshot:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="462" width="269" class=" image-border" src="assets/image_12_006.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">Factory data reset</div>
+<p>The entire process can be divided into the following steps:</p>
+<ol start="1">
+<li>The user selects <span class="packt_screen">Factory data reset</span> from <span class="packt_screen">Settings</span>.</li>
+<li>Main system writes <kbd>--wipe_data</kbd> to <kbd>/cache/recovery/command</kbd>.</li>
+</ol>
+<ol start="3">
+<li>Main system reboots the device into recovery. We have done the analysis about this when we talked about BCB in the previous section.</li>
+<li>Recovery retrieves arguments from BCB or <kbd>/cache/recovery/command</kbd> in <kbd>get_args()</kbd>. After read arguments, recovery will write BCB with <kbd>boot-recovery</kbd> and <kbd>--wipe_data</kbd>.</li>
+<li>Recovery erases both <kbd>/data</kbd> and <kbd>/cache</kbd> partitions. After this point, any following reboots will continue this step until the erase can be completed or the user takes other actions from recovery user interfaces to exit from recovery.</li>
+<li>After erasing <kbd>/data</kbd> and <kbd>/cache</kbd> partitions, recovery calls to the <kbd>finish_recovery</kbd> function to erase BCB.</li>
+<li>Recovery reboots the device to the main system.</li>
+</ol>
+<p>We have analyzed most of the preceding steps except <kbd>finish_recovery</kbd>. Let's look at the <kbd>finish_recovery</kbd> function:</p>
+<pre>
+static void <br/>finish_recovery(const char *send_intent) { <br/>    // By this point, we're ready to return to the main system... <br/>    if (send_intent != NULL) { <br/>        FILE *fp = fopen_path(INTENT_FILE, "w"); <br/>        if (fp == NULL) { <br/>            LOGE("Can't open %s\n", INTENT_FILE); <br/>        } else { <br/>            fputs(send_intent, fp); <br/>            check_and_fclose(fp, INTENT_FILE); <br/>        } <br/>    } <br/><br/>    if (locale != NULL) { <br/>        LOGI("Saving locale \"%s\"\n", locale); <br/>        FILE* fp = fopen_path(LOCALE_FILE, "w"); <br/>        fwrite(locale, 1, strlen(locale), fp); <br/>        fflush(fp); <br/>        fsync(fileno(fp)); <br/>        check_and_fclose(fp, LOCALE_FILE); <br/>    } <br/><br/>    copy_logs(); <br/><br/>    struct bootloader_message boot; <br/>    memset(&amp;boot, 0, sizeof(boot)); <br/>    set_bootloader_message(&amp;boot); <br/><br/>    if (ensure_path_mounted(COMMAND_FILE) != 0 || <br/>        (unlink(COMMAND_FILE) &amp;&amp; errno != ENOENT)) { <br/>        LOGW("Can't unlink %s\n", COMMAND_FILE); <br/>    } <br/><br/>    ensure_path_unmounted(CACHE_ROOT); <br/>    sync();  // For good measure. <br/>} 
+</pre>
+<p>In the <kbd>finish_recovery</kbd> function, it writes the intent to <kbd>/cache/recovery/intent</kbd>. Then, it processes the local file and creates the log file backup. Finally, it erases BCB by calling <kbd>set_bootloader_message</kbd> and removes <kbd>/cache/recovery/command</kbd> to restore the normal boot process.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">OTA update</h1>
+            </header>
+
+            <article>
+                
+<p>OTA update is another major function of recovery. OTA packages can be updated using the recovery user interface after entering the recovery mode manually. It can also be updated automatically after an update notification is received. In both cases, the path of the update package may be different, but the installation process is the same. In this section, we will look at the flow after the device received an OTA update notification. Then, we will look into the details of the installation process:</p>
+<ol>
+<li>After an OTA update notification is received by the device, main system downloads the OTA package to <kbd>/cache/update.zip</kbd>.</li>
+<li>Main system writes a <kbd>--update_package=/cache/update.zip</kbd> command to <kbd>/cache/recovery/command</kbd>.</li>
+<li>Main system reboots the device into recovery.</li>
+<li>Recovery retrieves arguments from BCB or <kbd>/cache/recovery/command</kbd> in <kbd>get_args()</kbd>. After read arguments, recovery will write BCB with <kbd>boot-recovery</kbd> and <kbd>update_package=...</kbd>.</li>
+<li>Recovery calls <kbd>install_package</kbd> to install the update. At this step, any following reboots will continue this step until the installation can be completed.</li>
+<li>If the installation is failed, the <kbd>prompt_and_wait</kbd> function is called to show an error and wait for user action. If the installation completes successfully, it will move to the next step.</li>
+<li>Recovery calls to the <kbd>finish_recovery</kbd> function to erase BCB and remove the <kbd>/cache/recovery/command</kbd> file.</li>
+<li>Recovery reboots the device to the main system.</li>
+</ol>
+<p>Once the update package is downloaded, the installation is done by the <kbd>install_package</kbd> function:</p>
+<pre>
+int <br/>install_package(const char* path, bool* wipe_cache, const char* install_file, bool needs_mount) <br/>{ <br/>    modified_flash = true; <br/><br/>    FILE* install_log = fopen_path(install_file, "w"); <br/>    if (install_log) { <br/>        fputs(path, install_log); <br/>        fputc('\n', install_log); <br/>    } else { <br/>        LOGE("failed to open last_install: %s\n", strerror(errno)); <br/>    } <br/>    int result; <br/>    if (setup_install_mounts() != 0) { <br/>        LOGE("failed to set up expected mounts for install; <br/>        aborting\n"); <br/>        result = INSTALL_ERROR; <br/>    } else { <br/>        result = really_install_package(path, wipe_cache, needs_mount); <br/>    } <br/>    if (install_log) { <br/>        fputc(result == INSTALL_SUCCESS ? '1' : '0', install_log); <br/>        fputc('\n', install_log); <br/>        fclose(install_log); <br/>    } <br/>    return result; <br/>} 
+</pre>
+<p>In the <kbd>install_package</kbd> function, it sets the installation log file first. The log file path is <kbd>/tmp/last_install</kbd>. Then, it calls to <kbd>setup_install_mounts</kbd> to mount the relevant partitions. The actual installation is done in the <kbd>really_install_package</kbd> function, as shown in the following code snippet:</p>
+<pre>
+static int <br/>really_install_package(const char *path, bool* wipe_cache, bool needs_mount) <br/>{ <br/>    ui-&gt;SetBackground(RecoveryUI::INSTALLING_UPDATE); <br/>    ... <br/><br/>    MemMapping map; <br/>    if (sysMapFile(path, &amp;map) != 0) { <br/>        LOGE("failed to map file\n"); <br/>        return INSTALL_CORRUPT; <br/>    } <br/><br/>    int numKeys; <br/>    Certificate* loadedKeys = load_keys(PUBLIC_KEYS_FILE, &amp;numKeys); <br/>    if (loadedKeys == NULL) { <br/>        LOGE("Failed to load keys\n"); <br/>        return INSTALL_CORRUPT; <br/>    } <br/>    LOGI("%d key(s) loaded from %s\n", numKeys, PUBLIC_KEYS_FILE); <br/><br/>    ui-&gt;Print("Verifying update package...\n"); <br/><br/>    int err; <br/>    err = verify_file(map.addr, map.length, loadedKeys, numKeys); <br/>    free(loadedKeys); <br/>    LOGI("verify_file returned %d\n", err); <br/>    if (err != VERIFY_SUCCESS) { <br/>        LOGE("signature verification failed\n"); <br/>        sysReleaseMap(&amp;map); <br/>        return INSTALL_CORRUPT; <br/>    } <br/><br/>    /* Try to open the package. <br/>     */ <br/>    ZipArchive zip; <br/>    err = mzOpenZipArchive(map.addr, map.length, &amp;zip); <br/>    if (err != 0) { <br/>        LOGE("Can't open %s\n(%s)\n", path, err != -1 ? strerror(err) : <br/>        "bad"); <br/>        sysReleaseMap(&amp;map); <br/>        return INSTALL_CORRUPT; <br/>    } <br/><br/>    /* Verify and install the contents of the package. <br/>     */ <br/>    ui-&gt;Print("Installing update...\n"); <br/>    ui-&gt;SetEnableReboot(false); <br/>    int result = try_update_binary(path, &amp;zip, wipe_cache); <br/>    ui-&gt;SetEnableReboot(true); <br/>    ui-&gt;Print("\n"); <br/><br/>    sysReleaseMap(&amp;map); <br/><br/>    return result; <br/>} 
+</pre>
+<p>In the <kbd>really_install_package</kbd> function, it initializes the user interface and shows the package location on the screen. Then, it creates a memory map for the update package. This is needed by the <kbd>zip</kbd> functions. After that, it verifies the update package using its signature. Finally, it calls to another function, <kbd>try_update_binary,</kbd> to do the installation.</p>
+<p>The <kbd>try_update_binary</kbd> function performs three tasks:</p>
+<ol>
+<li>Extracts <kbd>update_binary</kbd> from the update package.</li>
+<li>Prepares the environment to execute <kbd>update_binary</kbd>.</li>
+<li>Monitors the progress of installation.</li>
+</ol>
+<p>Let's look into the details of these three tasks:</p>
+<pre>
+static int <br/>try_update_binary(const char* path, ZipArchive* zip, bool* wipe_cache) { <br/>    const ZipEntry* binary_entry = <br/>            mzFindZipEntry(zip, ASSUMED_UPDATE_BINARY_NAME); <br/>    if (binary_entry == NULL) { <br/>        mzCloseZipArchive(zip); <br/>        return INSTALL_CORRUPT; <br/>    } <br/><br/>    const char* binary = "/tmp/update_binary"; <br/>    unlink(binary); <br/>    int fd = creat(binary, 0755); <br/>    if (fd &lt; 0) { <br/>        mzCloseZipArchive(zip); <br/>        LOGE("Can't make %s\n", binary); <br/>        return INSTALL_ERROR; <br/>    } <br/>    bool ok = mzExtractZipEntryToFile(zip, binary_entry, fd); <br/>    close(fd); <br/>    mzCloseZipArchive(zip); <br/><br/>    if (!ok) { <br/>        LOGE("Can't copy %s\n", ASSUMED_UPDATE_BINARY_NAME); <br/>        return INSTALL_ERROR; <br/>    } 
+</pre>
+<p>It tries to extract <kbd>update_binary</kbd> from the update package. The path of  <kbd>update_binary</kbd> in the update package is predefined at <kbd>META-INF/com/google/android/update-binary</kbd>.</p>
+<p>If <kbd>update_binary</kbd> can be extracted successfully, it will be copied to <kbd>/tmp/update_binary</kbd>:</p>
+<pre>
+int pipefd[2]; <br/>pipe(pipefd); <br/>const char** args = (const char**)malloc(sizeof(char*) * 5); <br/>args[0] = binary; <br/>args[1] = EXPAND(RECOVERY_API_VERSION);   // defined in Android.mk <br/>char* temp = (char*)malloc(10); <br/>sprintf(temp, "%d", pipefd[1]); <br/>args[2] = temp; <br/>args[3] = (char*)path; <br/>args[4] = NULL; <br/><br/>pid_t pid = fork(); <br/>if (pid == 0) { <br/>    umask(022); <br/>    close(pipefd[0]); <br/>    execv(binary, (char* const*)args); <br/>    fprintf(stdout, "E:Can't run %s (%s)\n", binary, strerror(errno)); <br/>    _exit(-1); <br/>} 
+</pre>
+<p>As we can see from the preceding code snippet, after extracting <kbd>update_binary</kbd>, it will prepare the environment to execute <kbd>update_binary</kbd>. The installation of the update package is actually done by <kbd>update_binary</kbd> using a script. The following parameters are passed to <kbd>update_binary</kbd> for the execution:</p>
+<ul>
+<li>The path of <kbd>update_binary</kbd></li>
+<li>Recovery version</li>
+<li>A pipe for the communication between the parent and child processes</li>
+<li>The path of the update package</li>
+</ul>
+<p>After the environment is ready, it will fork a child process to run <kbd>update_binary</kbd>. The parent process will monitor the installation progress by talking to the child process through a pipe:</p>
+<pre>
+    close(pipefd[1]); <br/><br/>    *wipe_cache = false; <br/><br/>    char buffer[1024]; <br/>    FILE* from_child = fdopen(pipefd[0], "r"); <br/>    while (fgets(buffer, sizeof(buffer), from_child) != NULL) { <br/>        char* command = strtok(buffer, " \n"); <br/>        if (command == NULL) { <br/>            continue; <br/>        } else if (strcmp(command, "progress") == 0) { <br/>            char* fraction_s = strtok(NULL, " \n"); <br/>            char* seconds_s = strtok(NULL, " \n"); <br/><br/>            float fraction = strtof(fraction_s, NULL); <br/>            int seconds = strtol(seconds_s, NULL, 10); <br/><br/>            ui-&gt;ShowProgress(fraction * (1-VERIFICATION_PROGRESS_FRACTION), <br/>            seconds); <br/>        } else if (strcmp(command, "set_progress") == 0) { <br/>            char* fraction_s = strtok(NULL, " \n"); <br/>            float fraction = strtof(fraction_s, NULL); <br/>            ui-&gt;SetProgress(fraction); <br/>        } else if (strcmp(command, "ui_print") == 0) { <br/>            char* str = strtok(NULL, "\n"); <br/>            if (str) { <br/>                ui-&gt;Print("%s", str); <br/>            } else { <br/>                ui-&gt;Print("\n"); <br/>            } <br/>            fflush(stdout); <br/>        } else if (strcmp(command, "wipe_cache") == 0) { <br/>            *wipe_cache = true; <br/>        } else if (strcmp(command, "clear_display") == 0) { <br/>            ui-&gt;SetBackground(RecoveryUI::NONE); <br/>        } else if (strcmp(command, "enable_reboot") == 0) { <br/>            ui-&gt;SetEnableReboot(true); <br/>        } else { <br/>            LOGE("unknown command [%s]\n", command); <br/>       } <br/>    } <br/>    fclose(from_child); <br/><br/>    int status; <br/>    waitpid(pid, &amp;status, 0); <br/>    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) { <br/>       LOGE("Error in %s\n(Status %d)\n", path, WEXITSTATUS(status)); <br/>       return INSTALL_ERROR; <br/>    } 
+</pre>
+<p>As we can see from the preceding code snippet, the parent process will receive commands from the child process to show the progress, print out information to the screen, or set the clean up configuration after the installation.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Building recovery for x86vbox</h1>
+            </header>
+
+            <article>
+                
+<p>After analyzing the workflow and key elements in the recovery source code, we can now start to build it for our x86vbox device.</p>
+<p>The changes to support the recovery build include the changes to x86vbox devices and the changes to <kbd>recovery</kbd> and <kbd>newinstaller</kbd>.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Building configuration</h1>
+            </header>
+
+            <article>
+                
+<p>Before we look at the changes for this chapter, let's look at the configuration files first. As usual, we have a manifest file for each chapter. We make changes for this chapter based on the source code of <a href="3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml">Chapter 11</a>, <em>Enabling VirtualBox-Specific Hardware Interfaces</em>. The following are the projects that we are going to change:</p>
+<pre>
+&lt;?xml version="1.0" encoding="UTF-8"?&gt; <br/>&lt;manifest&gt; <br/><br/>  &lt;remote  name="github" <br/>           revision="refs/tags/android-7.1.1_r4_x86vbox_ch12_r1" <br/>           fetch="." /&gt; <br/><br/>  &lt;remote  name="aosp" <br/>           fetch="https://android.googlesource.com/" /&gt; <br/>  &lt;default revision="refs/tags/android-7.1.1_r4" <br/>           remote="aosp" <br/>           sync-c="true" <br/>           sync-j="1" /&gt; <br/><br/>  ... <br/>  &lt;project path="<strong>bootable/newinstaller</strong>" <br/>  name="platform_bootable_newinstaller" remote="github" /&gt; <br/>  &lt;project path="<strong>device/generic/common</strong>" name="device_generic_common" <br/>  groups="pdk" remote="github" /&gt; <br/>  &lt;project path="<strong>device/generic/x86vbox</strong>" name="x86vbox" remote="github" <br/>  /&gt; <br/>  &lt;project path="<strong>bootable/recovery</strong>" name="android_bootable_recovery" <br/>  remote="github" groups="pdk" /&gt; <br/>  ... 
+</pre>
+<p>We can see that we need to change four projects: <kbd>recovery</kbd>, <kbd>newinstaller</kbd>, <kbd>common</kbd>, and <kbd>x86vbox</kbd>. We use an <kbd>android-7.1.1_r4_x86vbox_ch12_r1</kbd> tag to baseline the source code in this chapter.</p>
+<p>We can get the source code from GitHub and AOSP using the following command:</p>
+<pre>
+<strong>$ repo init -u https://github.com/shugaoye/manifests -b android-7.1.1_r4_ch12_aosp</strong><br/><strong>$ repo sync</strong> 
+</pre>
+<p>After we get the source code for this chapter, we can set the environment and build the system as follows:</p>
+<pre>
+<strong>$ source build/envsetup.sh</strong><br/><strong>$ lunch x86vbox-eng</strong><br/><strong>$ make -j4</strong>
+</pre>
+<p>To build <kbd>initrd.img</kbd>, you can run the following command:</p>
+<pre>
+<strong>$ make initrd USE_SQUASHFS=0</strong> 
+</pre>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Changes to x86vbox</h1>
+            </header>
+
+            <article>
+                
+<p>For the x86vbox device, we need to change the Makefiles device first. Since we inherited x86vbox from the common Android-x86 device, we have only the following Makefiles:</p>
+<pre>
+<strong>$ ls *.mk</strong><br/><strong>AndroidProducts.mk  BoardConfig.mk  x86vbox.mk</strong>  
+</pre>
+<p><kbd>AndroidProducts.mk</kbd> is the entry of the Android build system, which includes our <kbd>x86vbox.mk</kbd> Makefile. In <kbd>x86vbox.mk</kbd>, we add the following recovery related files:</p>
+<pre>
+PRODUCT_COPY_FILES += \ <br/>... <br/>device/generic/x86vbox/recovery.fstab:recovery/root/etc/recovery.fstab \    device/generic/x86vbox/recovery/root/init.recovery.x86vbox.rc:root/init.recovery.x86vbox.rc \    device/generic/x86vbox/recovery/root/sbin/network_start.sh:recovery/root/sbin/network_start.sh \    device/generic/x86vbox/recovery/root/sbin/create_partitions.sh:recovery/root/sbin/create_partitions.sh \ <br/>... 
+</pre>
+<p>These changes include two parts. The first part is related to the environment setup specific for VirtualBox, since we run recovery on the virtual hardware of VirtualBox. The x86vbox specific init script, <kbd>init.recovery.x86vbox.rc</kbd>, will be executed by the init process during the system startup.</p>
+<p>The second part is related to the partitions of the storage device. As we discussed in previous chapters, we won't be able to use recovery with a single partition as we did in <a href="acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml">Chapter 8</a>, <em>Creating Your Own Device on VirtualBox</em>, to <a href="3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml">Chapter 11</a>, <em>Enabling VirtualBox-Specific Hardware Interfaces</em>. The partition table is defined in the <kbd>recovery.fstab</kbd> file. Let's look at the startup script, <kbd>init.recovery.x86vbox.rc</kbd>, first:</p>
+<pre>
+on init <br/>    exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh <br/><br/>service network_start /sbin/network_start.sh <br/>    user root <br/>    seclabel u:r:recovery:s0 <br/>    oneshot <br/><br/>service console /system/bin/sh <br/>    class core <br/>    console <br/>    disabled <br/>    user shell <br/>    group shell log <br/>    seclabel u:r:shell:s0 <br/><br/>on property:ro.debuggable=1 <br/>    start console 
+</pre>
+<p>As the init script of Android, recovery also has a device specific init script, <kbd>init.recovery.${ro.hardware}.rc</kbd>. In our case, it is <kbd>init.recovery.x86vbox.rc</kbd>. Inside <kbd>init.recovery.x86vbox.rc</kbd>, it calls to the Android-x86 HAL initialization script, <kbd>/system/etc/init.sh</kbd>. In the <span class="ChapterrefPACKT">HAL initialization during the Android start up</span> section of <a href="acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml">Chapter 8</a>, <em>Creating Your Own Device on VirtualBox</em>, we had a detailed explanation about the <kbd>/system/etc/init.sh</kbd> script.</p>
+<p>We added two services, <kbd>network_start</kbd> and <kbd>console</kbd>, in <kbd>init.recovery.x86vbox.rc</kbd>. With these two services, we are able to enable VirtualBox-specific network interfaces and we can also have a console after boot up. With this debug console, we are able to debug recovery much easier later in this book.</p>
+<p>Another important part in <kbd>x86vbox.mk</kbd> is we add a <kbd>recovery.fstab</kbd> partition table for recovery as follows:</p>
+<pre>
+/dev/block/sda1 /system  ext4  ro          wait <br/>/dev/block/sda2 /data    ext4  noatime,... wait <br/>/dev/block/sda3 /sdcard  vfat  defaults    voldmanaged=sdcard:auto <br/>/dev/block/sda5 /cache   ext4  noatime,... wait <br/>/dev/block/sda6 /misc    emmc  defaults    defaults <br/>/dev/block/sda7 /recovery emmc defaults    defaults 
+</pre>
+<p>As we can see, we have six partitions now. We don't really have a bootloader that can support fastboot protocol and recovery BCB now, so we don't really use <kbd>/boot</kbd> and <kbd>/recovery</kbd> partitions. However, we do have a two stage boot process from Android-x86 and we can have a workaround without bootloader support. We will see this in a moment when we look at the changes to <kbd>newinstaller</kbd> later in this chapter.</p>
+<p>The <kbd>recovery.fstab</kbd> partition table is used by recovery and we need to change the related partition table for the Android main system as well, which is the file at <kbd>device/generic/common/fstab.x86</kbd>.</p>
+<p>We need to add two entries in <kbd>device/generic/common/fstab.x86</kbd>, as follows:</p>
+<pre>
+/dev/block/sda3  /sdcard  vfat  defaults  voldmanaged=sdcard:auto <br/>/dev/block/sda5  /cache   ext4  noatime,... wait 
+</pre>
+<p>This <kbd>fstab.x86</kbd> file will be copied to the system image as <kbd>fstab.x86vbox</kbd> during the build process. The init process will process it to mount partitions. You may be wondering why we don't have <kbd>/system</kbd> and <kbd>/data</kbd> in the partition table. We use two stage boots and they are mounted in the first stage boot before Android starts. The source of both <kbd>/system</kbd> and <kbd>/data</kbd> can be configured through kernel parameters, as we discussed in previous chapters when we explained the two-stage boot process.</p>
+<p>Be aware that both recovery and main system should mount the same block device partitions. For example, if recovery and main system mount different partitions for <kbd>/cache</kbd>, they won't be able to communicate with each other using the command file at <kbd>/cache/recovery/command</kbd>.</p>
+<p>That's all about the changes to <kbd>x86vbox.mk</kbd>, so now let's look at another Makefile, <kbd>BoardConfig.mk</kbd>. To enable the build of recovery, we need to add the following two macros in <kbd>BoardConfig.mk</kbd>:</p>
+<pre>
+TARGET_NO_KERNEL := false <br/>TARGET_NO_RECOVERY := false 
+</pre>
+<p>The default values for both macros are set to true, which means both kernel and recovery are not built in the default configuration.</p>
+<p>We added another macro that is related to the changes of recovery source code and we will look at the source code changes later:</p>
+<pre>
+# Double buffer cannot work well on virtualbox <br/>RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER := true 
+</pre>
+<p>The <kbd>RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER</kbd> macro is borrowed from the latest code of <strong>Team Win Recovery Project</strong> (<strong>TWRP</strong>). With the changes to x86vbox Makefiles, we can actually build TWRP as well. This is a third-party recovery commonly used by many third-party ROMs, such as LineageOS/CyanogenMod, Omnirom, and so on.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Changes to recovery</h1>
+            </header>
+
+            <article>
+                
+<p>The AOSP recovery code can work quite well on VirtualBox. There is only an issue related to the display. To fix the display issue, we need to change two files in the recovery source code.</p>
+<p>We use the <kbd>RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER</kbd> macro as we mentioned earlier to configure the frame buffer changes. We need to add it to the recovery Makefile <kbd>minui/Android.mk</kbd> first as follows:</p>
+<pre>
+ifeq ($(RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER), true) <br/>LOCAL_CFLAGS += -DRECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER <br/>endif 
+</pre>
+<p>Since double buffer cannot work well on VirtualBox for the time being, we have to disable it as follows:</p>
+<pre>
+... <br/>    /* check if we can use double buffering */ <br/>#ifndef RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER <br/>    if (vi.yres * fi.line_length * 2 &lt;= fi.smem_len) { <br/>        double_buffered = true; <br/><br/>        memcpy(gr_framebuffer+1, gr_framebuffer, sizeof(GRSurface)); <br/>        gr_framebuffer[1].data = gr_framebuffer[0].data + <br/>            gr_framebuffer[0].height * gr_framebuffer[0].row_bytes; <br/><br/>        gr_draw = gr_framebuffer+1; <br/><br/>    } else { <br/>#else <br/>    { <br/>        printf("RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER := true\n"); <br/>#endif <br/>        double_buffered = false; <br/><br/>        gr_draw = (GRSurface*) malloc(sizeof(GRSurface)); <br/>        memcpy(gr_draw, gr_framebuffer, sizeof(GRSurface)); <br/>        gr_draw-&gt;data = (unsigned char*) malloc(gr_draw-&gt;height * <br/>        gr_draw-&gt;row_bytes); <br/>        if (!gr_draw-&gt;data) { <br/>            perror("failed to allocate in-memory surface"); <br/>            return NULL; <br/>        } <br/>    }  <br/>... 
+</pre>
+<div class="packt_infobox">With a similar change to TWRP, TWRP can be built for x86vbox as well. The branch for building TWRP is included in the source code at GitHub and you can try it yourself.</div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Changes to newinstaller</h1>
+            </header>
+
+            <article>
+                
+<p>As we discussed in the <span class="ChapterrefPACKT">BCB</span> section, bootloader decides the boot path according to the arguments stored in BCB. The recovery command stored in BCB is the same as the one in the <kbd>/cache</kbd> partition at <kbd>/cache/recovery/command</kbd>. We can actually move the same logic to the first stage boot in <kbd>initrd.img</kbd>. In this case, we can achieve the same result with the help of the first stage boot. The logic for factory data reset and OTA update will become the following steps:</p>
+<ol>
+<li>The user chooses factory data reset or an OTA update available.</li>
+<li>Main system writes a command <kbd>--wipe_data</kbd> or <kbd>--update_package=/cache/update.zip</kbd> to <kbd>/cache/recovery/command</kbd>.</li>
+<li>Main system reboots the device.</li>
+<li>In the first stage boot, the init script will check whether the <kbd>/cache/recovery/command</kbd> file exists in the <kbd>/cache</kbd> partition.</li>
+<li>If <kbd>/cache/recovery/command</kbd> exists, it will load <kbd>ramdisk-recovery.img</kbd>, otherwise, it will load <kbd>ramdisk.img</kbd>.</li>
+<li>The rest of the steps will be the same as the normal boot process or the recovery boot process.</li>
+</ol>
+<p>To implement the preceding logic, we added a shell function, <kbd>find_ramdisk</kbd>, to the <kbd>$AOSP/bootable/newinstaller/initrd/init</kbd> file as follows:</p>
+<pre>
+find_ramdisk() <br/>{ <br/>   busybox mount /dev/sda5 /hd <br/>   if [ ! -e /hd/recovery/command ]; then <br/>         busybox umount /hd <br/>         if [ "$RECOVERY" = "1" ]; then <br/>               RAMDISK=/mnt/$SRC/ramdisk-recovery.img <br/>         else <br/>               RAMDISK=/mnt/$SRC/ramdisk.img <br/>         fi <br/>   else <br/>         busybox umount /hd <br/>         RAMDISK=/mnt/$SRC/ramdisk-recovery.img <br/>         return <br/>   fi <br/>   echo boot using $RAMDISK ... <br/>} 
+</pre>
+<p>In this function, we mount the cache partition to <kbd>/hd</kbd> and check whether <kbd>/hd/recovery/command</kbd> exists or not. If it exists, we set the <kbd>RAMDISK</kbd> variable to <kbd>ramdisk-recovery.img</kbd>; otherwise, we set it to <kbd>ramdisk.img</kbd>. The init script will extract the ramdisk contained in the <kbd>RAMDISK</kbd> variable to the memory later as follows:</p>
+<pre>
+... <br/>   zcat $RAMDISK | cpio -id &gt; /dev/null  <br/>... 
+</pre>
+<p>There is another variable called <kbd>RECOVERY</kbd> that is defined in <kbd>find_ramdisk</kbd>, which can be passed to the init script from the kernel command line. With this variable, we can force to boot to recovery.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Testing recovery</h1>
+            </header>
+
+            <article>
+                
+<p>After we build the recovery and AOSP images, we can test them in VirtualBox. As we learnt from <span class="ChapterrefPACKT"><a href="c8d10155-cc8e-4b8c-a5e0-f359520c894a.xhtml">Chapter 9</a>, <em>Booting Up x86vbox using PXE/NFS</em></span>, we can use PXE boot to boot the system and use NFS to access the AOSP images. To test recovery, we can add an option in the <kbd>$HOME/.VirtualBox/TFTP/pxelinux.cfg/default</kbd> file to boot using <kbd>kernel</kbd> and <kbd>ramdisk/recovery.img</kbd>. Even though we can boot the system to recovery now, we won't be able to update the system using the recovery in this chapter. We will find out more in the next two chapters.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Summary</h1>
+            </header>
+
+            <article>
+                
+<p>We have done all the analysis and implementation of recovery for the x86vbox device. We have analyzed the workflow and key elements in the recovery source code in the first part of this chapter. In the second part of this chapter, we applied the knowledge that we gained in the first part to the implementation of the recovery for the x86vbox device. We changed the x86vbox device itself to add the recovery support. We also changed recovery source code to fix the display issue. Finally, we modified newinstaller so that we can have a complete boot flow for both main system and recovery.</p>
+<p>In the next chapter, we will discuss how to create a recovery package and explain what is inside a recovery package.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    </body></html>

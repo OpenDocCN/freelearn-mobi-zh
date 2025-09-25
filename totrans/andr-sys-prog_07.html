@@ -1,0 +1,558 @@
+<html><head></head><body>
+        <section>
+
+            <header>
+                <h1 class="header-title">Enabling Wi-Fi on the Android Emulator</h1>
+            </header>
+
+            <article>
+                
+<p>In the last three chapters, we have explored ways to customize and extend the Android emulator. In this chapter, we will pursue this topic to add Wi-Fi support in the Android emulator. If you are a developer using the Android emulator, you may notice that there is only data connection in the Android emulator. Some applications may be aware of the connection type and exhibit different behaviors according to the connection type. In this case, you cannot use an emulator to test your applications. In this chapter, we will cover the following topics:</p>
+<ul>
+<li>Introducing Wi-Fi architecture in Android</li>
+<li>Extending the x86emu device to support Wi-Fi connections</li>
+<li>Testing a Wi-Fi connection on the x86emu device</li>
+</ul>
+<p>The topics in this chapter are at an advanced level. We will analyze the Wi-Fi source code at the beginning of the chapter to help understand the Wi-Fi architecture. I recommend that you open a source code editor and locate the functions under discussion. This is a very efficient way to understand the source code analysis part in this chapter.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Wi-Fi on Android</h1>
+            </header>
+
+            <article>
+                
+<p>In <a href="e0f861c2-5832-402f-89d3-cfc75785e759.xhtml">Chapter 3</a>, <em><span class="ChapterrefPACKT">Discovering Kernel, HAL, and Virtual Hardware</span></em>, we discussed the porting layers related to the Android system, we used goldfish lights as an example to depict the calling sequence from an application to HAL to access the hardware. We will use a similar approach in this chapter to explore the Wi-Fi architecture of Android. Based on what we understand about Wi-Fi architecture, we will add Wi-Fi to the emulator later in this chapter.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">The Wi-Fi architecture</h1>
+            </header>
+
+            <article>
+                
+<p>As we know from previous chapters, Android applications use managers to access system services. The managers will use various system services to access <strong>Hardware Abstraction Layer</strong> (<strong>HAL</strong>). The Wi-Fi architecture also follows the same approach for applications to access Wi-Fi hardware.</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="416" width="283" class=" image-border" src="assets/image_07_001.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">Android Wi-Fi architecture</div>
+<p>As we can see from the preceding diagram showing Wi-Fi layers in the Android system, <strong>WifiSettings</strong> is the application in the default AOSP build used to control Wi-Fi connections. <strong>WifiSettings</strong> uses <strong>WifiManager</strong> to get access to Wi-Fi services.</p>
+<p><strong>WifiManager</strong> provides the following functionalities:</p>
+<ul>
+<li>Providing a list of configured networks--the attributes of individual entries can be modified.</li>
+<li>Monitoring the current active Wi-Fi network, if any. Connectivity can be established or torn down, and dynamic information about the state of the network can be queried.</li>
+<li>Providing the results of access point scans, containing enough information to make decisions about what access point to connect to.</li>
+<li>Defining the names of various intent actions that are broadcast upon any sort of change in the Wi-Fi state.</li>
+</ul>
+<p>When <kbd>WifiManager</kbd> is created, it gets an interface of <kbd>IWifiManager</kbd>, as shown in the following code snippet. This interface is implemented by <kbd>WifiService</kbd> through the binder mechanism:</p>
+<pre>
+public WifiManager(Context context, IWifiManager service, Looper looper) { <br/>    mContext = context; <br/>    mService = service; <br/>    mLooper = looper; <br/>    mTargetSdkVersion = context.getApplicationInfo().targetSdkVersion; <br/>} 
+</pre>
+<p><kbd>WifiManager</kbd> is defined in the <kbd>$AOSP/frameworks/base/wifi/java/android/net/wifi/WifiManager.java</kbd> file.</p>
+<p>In the <kbd>WifiService</kbd> implementation, it uses <kbd>WifiStateMachine</kbd> to manage Wi-Fi states:</p>
+<pre>
+public final class WifiServiceImpl extends IWifiManager.Stub { <br/>    private static final String TAG = "WifiService"; <br/>    private static final boolean DBG = true; <br/>    private static final boolean VDBG = false; <br/><br/>    final WifiStateMachine mWifiStateMachine; <br/>      private final Context mContext; <br/>... 
+</pre>
+<p><kbd>WifiServiceImpl</kbd> is defined in the <kbd>$AOSP/frameworks/opt/net/wifi/service/java/com/android/server/wifi/WifiServiceImpl.java</kbd> file.</p>
+<p>We can see how the Wi-Fi HAL is initialized through <kbd>WifiStateMachine</kbd> in the following sequence diagram:</p>
+<div class="packt_infobox">There is a very good Android source code cross-reference tool at <a href="http://xref.opersys.com/">http://xref.opersys.com/</a>.<br/>
+You can search the definition of functions and locate the location of source code using this cross reference tool.</div>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="420" width="666" class=" image-border" src="assets/image_07_002.png"/></div>
+<div class="packt_figure packt_figref CDPAlignCenter CDPAlign">Sequence diagram of Android Wi-Fi initialization</div>
+<p><kbd>WifiStateMachine</kbd> processes requests from <kbd>WifiManager</kbd>. When the system initializes Wi-Fi by sending a <kbd>CMD_START_SUPPLICANT</kbd> command, <kbd>WifiStateMachine</kbd> will call its <kbd>processMessage</kbd> method to handle this request as shown in the following code snippet:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="559" width="622" class=" image-border" src="assets/image_07_003.png"/></div>
+<p>The <kbd>processMessage</kbd> method calls to native methods through <kbd>WifiNative</kbd> to load the Wi-Fi driver (<kbd>loadDriver</kbd>) and start the Wi-Fi HAL (<kbd>startHAL</kbd>).</p>
+<p>Pay attention to the function calls <kbd>mWifiNative.loadDriver</kbd>, and <kbd>WifiNative.startHal</kbd>, as shown in the following flow diagram:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="415" width="150" class=" image-border" src="assets/image_07_004.png"/></div>
+<p>The <strong>WifiNative</strong> implementation includes the Java part and the native part. The Java implementation can be found at <kbd>$AOSP/frameworks/opt/net/wifi/service/java/com/android/server/wifi/WifiNative.java</kbd>.</p>
+<p>The native implementation can be found at <kbd>$AOSP/frameworks/opt/net/wifi/service/jni/com_android_server_wifi_WifiNative.cpp</kbd>.</p>
+<p>When the instance of the <kbd>WifiNative</kbd> class is created, it loads the Wi-Fi service shared library first and calls to a <kbd>registerNatives</kbd> function to register all native functions as follows:</p>
+<pre>
+public class WifiNative { <br/>... <br/>    static { <br/>        /* Native functions are defined in libwifi-service.so */ <br/>        System.loadLibrary("wifi-service"); <br/>        registerNatives(); <br/>    } <br/><br/>    private static native int registerNatives(); <br/><br/>    public native static boolean loadDriver(); <br/>... 
+</pre>
+<p>The native implementation of <kbd>registerNatives</kbd> is shown in the following snippet. It registers the native functions through a <kbd>gWifiMethods</kbd> global variable:</p>
+<pre>
+/* User to register native functions */ <br/>extern "C" <br/>jint Java_com_android_server_wifi_WifiNative_registerNatives(JNIEnv* env, jclass clazz) { <br/>    return AndroidRuntime::registerNativeMethods(env, <br/>            "com/android/server/wifi/WifiNative", gWifiMethods,  <br/>            NELEM(gWifiMethods)); <br/>} 
+</pre>
+<p>In this function, it calls to another framework function, <kbd>registerNativeMethods</kbd>, to register native methods at the Java layer so that the Java layer can call the functions implemented in <kbd>WifiNative</kbd>. You might know the function <kbd>registerNativeMethods</kbd>, if you have worked on Android NDK programming. We can look at the <kbd>gWifiMethods</kbd> global variable in the following snippet. The <kbd>gWifiMethods</kbd> global variable includes a list of native functions that are implemented in <kbd>WifiNative</kbd>, which should be exported as Java native methods of the <kbd>WifiNative</kbd> class. We can see that <kbd>loadDriver</kbd> and <kbd>startHalNative</kbd> are in the list:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="297" width="712" class=" image-border" src="assets/image_07_005.png"/></div>
+<p>The <kbd>loadDriver</kbd> method is implemented in the <kbd>android_net_wifi_loadDriver</kbd> function as follows:</p>
+<pre>
+static jboolean android_net_wifi_loadDriver(JNIEnv* env, jobject) <br/>{ <br/>    return (::wifi_load_driver() == 0); <br/>} 
+</pre>
+<p>It calls to a <kbd>wifi_load_driver</kbd> function, which is a part of Wi-Fi HAL at <kbd>$AOSP/hardware/libhardware_legacy/wifi/wifi.c</kbd>.</p>
+<pre>
+int wifi_load_driver() <br/>{ <br/>    char driver_status[PROPERTY_VALUE_MAX]; <br/>    #ifdef WIFI_DRIVER_MODULE_PATH <br/>    FILE *proc; <br/>    char line[sizeof(DRIVER_MODULE_TAG)+10]; <br/>    #endif <br/><br/>    if (!property_get(DRIVER_PROP_NAME, driver_status, NULL) <br/>    || strcmp(driver_status, "ok") != 0) { <br/>        return 0;  /* driver not loaded */ <br/>    } <br/>    #ifdef WIFI_DRIVER_MODULE_PATH <br/>    /* <br/>     * If the property says the driver is loaded, check to <br/>     * make sure that the property setting isn't just left <br/>     * over from a previous manual shutdown or a runtime <br/>     * crash. <br/>     */ <br/>    if ((proc = fopen(MODULE_FILE, "r")) == NULL) { <br/>        ALOGW("Could not open %s: %s", MODULE_FILE, strerror(errno)); <br/>        property_set(DRIVER_PROP_NAME, "unloaded"); <br/>        return 0; <br/>    } <br/>    while ((fgets(line, sizeof(line), proc)) != NULL) { <br/>        if (strncmp(line, DRIVER_MODULE_TAG, strlen(DRIVER_MODULE_TAG)) <br/>        == 0) <br/>        { <br/>            fclose(proc); <br/>            return 1; <br/>        } <br/>    } <br/>    fclose(proc); <br/>    property_set(DRIVER_PROP_NAME, "unloaded"); <br/>    return 0; <br/>    #else <br/>    return 1;  <br/>    #endif  <br/>} 
+</pre>
+<p>The <kbd>WIFI_DRIVER_MODULE_PATH</kbd> macro needs to be defined to specify the path of the driver module, if there is a specific Wi-Fi driver that needs to be used. After the driver has loaded successfully, a <kbd>wlan.driver.status</kbd> property is set to the value <kbd>ok</kbd>.</p>
+<p>Now we will look at another method, <kbd>startHalNative</kbd>. It is implemented in the <kbd>android_net_wifi_startHal</kbd> function:</p>
+<pre>
+static jboolean android_net_wifi_startHal(JNIEnv* env, jclass cls) { <br/>    JNIHelper helper(env); <br/>    wifi_handle halHandle = getWifiHandle(helper, cls); <br/>    if (halHandle == NULL) { <br/>        if(init_wifi_hal_func_table(&amp;hal_fn) != 0 ) { <br/>            ALOGD("Can not initialize the basic function pointer <br/>            table"); <br/>            return false; <br/>        } <br/><br/>        wifi_error res = init_wifi_vendor_hal_func_table(&amp;hal_fn); <br/>        if (res != WIFI_SUCCESS) { <br/>            ALOGD("Can not initialize the vendor function pointer <br/>            table"); <br/>            return false; <br/>        } <br/><br/>        int ret = set_iface_flags("wlan0", 1); <br/>        if(ret != 0) { <br/>            return false; <br/>        } <br/><br/>        res = hal_fn.wifi_initialize(&amp;halHandle); <br/>        if (res == WIFI_SUCCESS) { <br/>            helper.setStaticLongField(cls, WifiHandleVarName, <br/>            (jlong)halHandle); <br/>            ALOGD("Did set static halHandle = %p", halHandle); <br/>        } <br/>        env-&gt;GetJavaVM(&amp;mVM); <br/>        mCls = (jclass) env-&gt;NewGlobalRef(cls); <br/>        ALOGD("halHandle = %p, mVM = %p, mCls = %p", halHandle, mVM, <br/>        mCls); <br/>        return res == WIFI_SUCCESS; <br/>    } else { <br/>        return (set_iface_flags("wlan0", 1) == 0); <br/>    } <br/>} 
+</pre>
+<p>Wi-Fi chip vendors usually provide two components the Wi-Fi implementations. The first one is a kernel driver as we discussed in the <kbd>loadDriver</kbd> and the second one is a vendor HAL library. The <kbd>startHalNative</kbd> function is used to hook vendor-implemented functions to a pre-defined list of functions. As we can see in the preceding code snippet, the <kbd>init_wifi_hal_func_table</kbd> function is called to initialize the list of functions in <kbd>hal_fn</kbd>. After that, the <kbd>init_wifi_vendor_hal_func_table</kbd> function is called to initialize the function pointers in <kbd>hal_fn</kbd>. If this operation is successful, it will call to the vendor initialization function, <kbd>hal_fn.wifi_initialize</kbd>.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">QEMU networking and wpa_supplicant in Android</h1>
+            </header>
+
+            <article>
+                
+<p>At HAL, <kbd>wpa_supplicant</kbd> is used to support the authentication between the device and access point. It starts as a native daemon in the Android system. Control requests from the upper layer are sent to <kbd>wpa_supplicant</kbd> and <kbd>wpa_supplicant</kbd> deals with device drivers and kernel networking systems to provide the network connections.</p>
+<p>Since the Android emulator uses QEMU, the networking system is provided by the QEMU networking system. QEMU provides multiple network backends including TAP, VDE, socket, and SLIRP. The Android emulator uses user networking (SLIRP), which is the default networking backend of QEMU. Since SLIRP is a software implementation of TCP/IP networking stacks, it does not require root privileges to support networking functionalities. As a software implementation, it has the following limitations:</p>
+<ul>
+<li>Lot of overhead so the performance is poor</li>
+<li>In general, ICMP traffic does not work so you cannot use ping within a guest</li>
+<li>On Linux hosts, ping can work within the guest if the initial setup is done by root</li>
+<li>The guest is not directly accessible from the host or the external network</li>
+</ul>
+<p>The following is a typical diagram of what SLIRP networking looks like in the Android emulator:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="280" width="332" class=" image-border" src="assets/image_07_006.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">A QEMU SLIRP network</div>
+<p>In the preceding diagram, the client has an IP address of <strong>10.0.2.15</strong> and the gateway has an IP address of <strong>10.0.2.2</strong>. The default DNS IP address is <strong>10.0.2.3</strong>. It may support SMB, which is optional. If you start an Android emulator, the default network interface is <kbd>eth0</kbd> with an IP address of <strong>10.0.2.15</strong>. This is usually used to simulate a cellular data connection. To simulate a Wi-Fi connection, we can add one more network interface, <kbd>eth1</kbd>, using the following QEMU options:</p>
+<pre>
+-netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1 
+</pre>
+<p>With the <kbd>-device</kbd> QEMU option, we add a new network device, <kbd>mynet1</kbd>, which uses virtio network hardware. QEMU can simulate many existing network hardware types and we choose virtio network hardware in this chapter. You may choose others if you like.</p>
+<p>With the <kbd>-netdev</kbd> QEMU option, we specify the attributes of this network device by providing an IP address range and the starting address for DHCP protocol.</p>
+<p>Be aware that the previous option can only work with ranchu not goldfish. To start the Android emulator with the preceding QEMU option, we can run the following command:</p>
+<pre>
+<strong>$ emulator @a25x86 -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1</strong>  
+</pre>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Adding Wi-Fi to the emulator</h1>
+            </header>
+
+            <article>
+                
+<p>With the introduction of Wi-Fi architecture in Android, we can now extend the emulator to support Wi-Fi. To add Wi-Fi in the emulator, we need to build <kbd>wpa_supplicant</kbd> for the emulator and choose the right device driver for the <kbd>eth1</kbd> network interface.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Enabling wpa_supplicant in BoardConfig.mk</h1>
+            </header>
+
+            <article>
+                
+<p>In the default emulator build, <kbd>wpa_supplicant</kbd> is not built. To enable building <kbd>wpa_supplicant</kbd> for the emulator, we can add the following lines in our <kbd>BoardConfig.mk</kbd>:</p>
+<pre>
+BOARD_WPA_SUPPLICANT_DRIVER := WIRED <br/>WPA_SUPPLICANT_VERSION      := VER_0_8_X VER_2_1_DEVEL <br/>BOARD_WLAN_DEVICE           := eth1 
+</pre>
+<p>When <kbd>BOARD_WPA_SUPPLICANT_DRIVER</kbd> is defined, the following configuration in <kbd>external/wpa_supplicant_8/wpa_supplicant/Android.mk</kbd> will be changed to true:</p>
+<pre>
+ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),) <br/>  CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y <br/>endif 
+</pre>
+<p>The value of <kbd>BOARD_WPA_SUPPLICANT_DRIVER</kbd> tells which driver should be built. Since we use a wired Ethernet connection to simulate Wi-Fi, we will choose the <em>wired</em> driver, which can be found at <kbd>external/wpa_supplicant_8/src/drivers/driver_wired.c</kbd>.</p>
+<p>We also define the <kbd>wpa_supplicant</kbd> version to use and the wired Ethernet interface.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Providing a proper wpa_supplicant configuration</h1>
+            </header>
+
+            <article>
+                
+<p>To make <kbd>wpa_supplicant</kbd> work correctly, we need to prepare a <kbd>wpa_supplicant.conf</kbd> configuration file with the right permission. Wi-Fi-related configuration files are stored in the <kbd>/data/misc/wifi/</kbd> directory. This directory is owned by the <kbd>wifi</kbd> user, which is also the user that the <kbd>wpa_supplicant</kbd> runs as.</p>
+<p>The <kbd>wpa_supplicant.conf</kbd> configuration file for the <kbd>eth1</kbd> wired connection can be found in the following snippet:</p>
+<pre>
+ctrl_interface=eth1 <br/>ap_scan=2 <br/>update_config=1 <br/>device_name=x86emu <br/>manufacturer=unknown <br/>serial_number= <br/>device_type=10-0050F204-5 <br/>config_methods=physical_display virtual_push_button <br/>external_sim=1 <br/><br/>network={ <br/>   ssid="WiredSSID" <br/>   key_mgmt=NONE <br/>   engine=1 <br/>   priority=1 <br/>} 
+</pre>
+<p>In this configuration file, we defined the network SSID to be used and the authentication method to establish the connection. Since this is a predefined wired connection, we set the authentication method as <kbd>key_mgmt=NONE</kbd>, which means we don't need to use any authentication method for this case.</p>
+<p>To copy <kbd>wpa_supplicant.conf</kbd> to the <kbd>/data/misc/wifi/</kbd> directory with the right permission, we need to change <kbd>device.mk</kbd> as follows:</p>
+<pre>
+# Wi-Fi support <br/>PRODUCT_PROPERTY_OVERRIDES := \ <br/>    wifi.interface=eth1 <br/><br/>PRODUCT_PACKAGES += \ <br/>    libwpa_client \ <br/>    hostapd \ <br/>    dhcpcd.conf \ <br/>    wlutil \ <br/>    wpa_supplicant \ <br/>    wpa_supplicant.conf <br/><br/># These are the hardware-specific features <br/>PRODUCT_COPY_FILES += \    frameworks/native/data/etc/android.hardware.wifi.xml:system/etc/ <br/>permissions/android.hardware.wifi.xml <br/><br/># For android_filesystem_config.h <br/>PRODUCT_PACKAGES += \ <br/>   fs_config_files <br/><br/>PRODUCT_COPY_FILES += \    device/generic/x86emu/wpa_supplicant.conf:data/misc/wifi/<br/>wpa_supplicant.conf \  
+</pre>
+<p>In <kbd>device.mk</kbd>, we define the <kbd>wifi.interface</kbd> to <kbd>eth1</kbd> as we discussed previously. After that, we add all Wi-Fi-related modules to <kbd>PRODUCT_PACKAGES</kbd> so that they can be added to the system image. We copy the <kbd>wpa_supplicant.conf</kbd> configuration file to the <kbd>/data/misc/wifi</kbd> directory so that it can be accessed with read and write permissions by <kbd>wpa_supplicant</kbd>. This file is owned by the <kbd>wifi</kbd> user with permission <kbd>0555</kbd>.</p>
+<p>From the Android 6 release, the system permission for files from the vendor is defined in an <kbd>android_filesystem_config.h</kbd> file under the <kbd>device</kbd> folder. <kbd>PRODUCT_PACKAGES</kbd> must include <kbd>fs_config_dirs</kbd> and/or <kbd>fs_config_files</kbd> in order to install them to <kbd>/system/etc/fs_config_dirs</kbd> and <kbd>/system/etc/fs_config_files</kbd>, respectively. The generated <kbd>fs_config_dirs</kbd> and <kbd>fs_config_files</kbd> files are used to set the runtime permission. We can see the owner and permission defined in <kbd>android_filesystem_config.h</kbd> in the following snippet:</p>
+<pre>
+#include &lt;private/android_filesystem_config.h&gt; <br/><br/>#define NO_ANDROID_FILESYSTEM_CONFIG_DEVICE_DIRS <br/>/* static const struct fs_path_config android_device_dirs[] = { }; */ <br/><br/>/* Rules for files. <br/>** These rules are applied based on "first match", so they <br/>** should start with the most specific path and work their <br/>** way up to the root. Prefixes ending in * denotes wildcard <br/>** and will allow partial matches. <br/>*/ <br/>static const struct fs_path_config android_device_files[] = { <br/>    { 00555, AID_WIFI, AID_WIFI, 0, "data/misc/wifi/wpa_supplicant.conf" }, <br/>#ifdef NO_ANDROID_FILESYSTEM_CONFIG_DEVICE_DIRS <br/>    { 00000, AID_ROOT, AID_ROOT, 0, "system/etc/fs_config_dirs" }, <br/>#endif <br/>}; 
+</pre>
+<p>The last change in <kbd>device.mk</kbd> is related to the settings user interface. The Wi-Fi settings user interface is not available in the emulator build. To enable the Wi-Fi settings, we need to add <kbd>android.hardware.wifi.xml</kbd> to the <kbd>system/etc/permissions</kbd> folder.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Creating services in init scripts</h1>
+            </header>
+
+            <article>
+                
+<p>To initialize network interface <kbd>eth1</kbd> and start <kbd>wpa_supplicant</kbd>, we need to define related services in init scripts.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Initializing network interface eth1</h1>
+            </header>
+
+            <article>
+                
+<p>To initialize <kbd>eth1</kbd>, we can refer to the initialization of <kbd>eth0</kbd> in the emulator. The network interface <kbd>eth0</kbd> is initialized in the <kbd>system/etc/init.goldfish.sh</kbd> shell script as follows:</p>
+<pre>
+#!/system/bin/sh <br/><br/># Setup networking when boot starts <br/>ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up <br/>route add default gw 10.0.2.2 dev eth0 <br/>... 
+</pre>
+<p>As we can see, a fixed IP address <kbd>10.0.2.15</kbd> is assigned to the <kbd>eth0</kbd> interface. We can add the following commands to initialize the interface <kbd>eth1</kbd>:</p>
+<pre>
+<strong>ifconfig eth1 up <br/>dhcpcd -d eth1 <br/></strong>
+</pre>
+<p>In the preceding commands, we enable the interface <kbd>eth1</kbd> first using the <kbd>ifconfig</kbd> command. Then, instead of using a fixed IP address, we use the DHCP client to get the IP address for <kbd>eth1</kbd>.</p>
+<p>As we discussed when covering the init process of Android in <a href="b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml">Chapter 6</a>, <em>Debugging the Boot Up Process Using a Customized ramdisk</em>, the init process will process the <kbd>init.rc</kbd> script during the system startup. The <kbd>init.rc</kbd> script will include a hardware-specific init script, <kbd>init.${ro.hardware}.rc</kbd>. In our case, the <kbd>ro.hardware</kbd> is <kbd>ranchu</kbd>, so the hardware-specific init script is <kbd>init.ranchu.rc</kbd>.</p>
+<p>In the <kbd>init.ranchu.rc</kbd> init script, a service, as shown in the following snippet, is defined to run the <kbd>init.goldfish.sh</kbd> shell script:</p>
+<pre>
+... <br/>service goldfish-setup /system/etc/init.goldfish.sh <br/>    user root <br/>    group root <br/>    oneshot  <br/>... 
+</pre>
+<p>That's how the goldfish- or ranchu- related setup process is done in an emulator.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Starting up wpa_supplicant</h1>
+            </header>
+
+            <article>
+                
+<p>We can add a service in the <kbd>init.ranchu.rc</kbd> script to start <kbd>wpa_supplicant</kbd>. The following are the services that we added to the <kbd>init.ranchu.rc</kbd> script:</p>
+<pre>
+service wpa_supplicant /system/bin/wpa_supplicant -ieth1 -Dwired -c/data/misc/wifi/wpa_supplicant.conf -e/data/misc/wifi/entropy.bin -g@android:wpa_eth1 <br/>    class main <br/>    socket wpa_eth1 dgram 660 wifi wifi <br/>    disabled <br/>    oneshot 
+</pre>
+<p>This service is used to start or restart the <kbd>eth1</kbd> interface using the DHCP client. For the service of <kbd>wpa_supplicant</kbd>, we start it with the following options:</p>
+<ul>
+<li><kbd>-i</kbd>: Use the network interface <kbd>eth1</kbd> for Wi-Fi</li>
+<li><kbd>-D</kbd>: Use the wired driver for Wi-Fi on the interface <kbd>eth1</kbd></li>
+<li><kbd>-c</kbd>: Use the configuration file at <kbd>/data/misc/wifi/wpa_supplicant.conf</kbd></li>
+<li><kbd>-e</kbd>: Define the path of the entropy file</li>
+<li><kbd>-g</kbd>: Define the global <kbd>ctrl_interface</kbd> as <kbd>@android:wpa_eth1</kbd></li>
+</ul>
+<p>If we refer to the sequence diagram of Wi-Fi initialization earlier in this chapter, the <kbd>wpa_supplicant</kbd> start sequence can be explained using the following steps:</p>
+<ol>
+<li><kbd>WifiStateMachine</kbd> processes the <kbd>CMD_START_SUPPLICANT</kbd> command.</li>
+<li><kbd>WifiStateMachine</kbd> calls the <kbd>startSupplicant</kbd> method of <kbd>WifiNative</kbd>.</li>
+<li>The <kbd>startSupplicant</kbd> method is a native method implemented as the <kbd>android_net_wifi_startSupplicant</kbd> native function. This native function calls the <kbd>wifi_start_supplicant</kbd> function defined in Wi-Fi HAL <kbd>wifi.c</kbd>.</li>
+</ol>
+<p>The <kbd>wifi_start_supplicant</kbd> function starts the <kbd>wpa_supplicant</kbd> through setting the <kbd>ctl.start</kbd> system property. <kbd>ctl.start</kbd> and <kbd>ctl.stop</kbd> are two system properties implemented by the property service that can be used to start or stop a service defined in the init scripts:</p>
+<pre>
+int wifi_start_supplicant(int p2p_supported) <br/>{ <br/>    char supp_status[PROPERTY_VALUE_MAX] = {'\0'};  <br/>    ... <br/>    property_get("wlan.interface", primary_iface, WIFI_TEST_INTERFACE); <br/><br/>    property_set("ctl.start", supplicant_name); <br/>    sched_yield(); <br/>    ... <br/>} 
+</pre>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Building the source code</h1>
+            </header>
+
+            <article>
+                
+<p>We have made all the changes required to support Wi-Fi in emulators now. Let's build the AOSP source code for this chapter so that we can test the Wi-Fi connection.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Getting the source code</h1>
+            </header>
+
+            <article>
+                
+<p>As we have done in previous chapters, we will have a look at the projects that we have changed in this chapter. We can check this from the manifest file for this chapter:</p>
+<pre>
+&lt;?xml version="1.0" encoding="UTF-8"?&gt; <br/>&lt;manifest&gt; <br/><br/>  &lt;remote  name="github" <br/>           revision="refs/tags/android-7.1.1_r4_x86emu_ch07_r2" <br/>           fetch="." /&gt; <br/><br/>  &lt;remote  name="aosp" <br/>           fetch="https://android.googlesource.com/" /&gt; <br/>  &lt;default revision="refs/tags/android-7.1.1_r4" <br/>           remote="aosp" <br/>           sync-c="true" <br/>           sync-j="1" /&gt; <br/><br/>  &lt;!-- github/shugaoye --&gt; <br/>  &lt;project path="<strong>kernel</strong>" name="goldfish" remote="github" /&gt; <br/>  &lt;project path="device/generic/<strong>x86emu</strong>" name="x86emu" remote="github" /&gt; <br/>  &lt;project path="bootable/<strong>newinstaller</strong>"   <br/>  name="platform_bootable_newinstaller"  <br/>   remote="github" /&gt; <br/>  &lt;project path="device/generic/<strong>goldfish</strong>" <br/>  name="device_generic_goldfish" <br/>   remote="github" groups="pdk" /&gt; <br/><br/>  &lt;!-- aosp --&gt; <br/>  &lt;project path="build" name="platform/build" groups="pdk,tradefed" &gt; <br/>    &lt;copyfile src="core/root.mk" dest="Makefile" /&gt; <br/>  &lt;/project&gt; <br/><br/>  ... <br/>&lt;/manifest&gt; 
+</pre>
+<p>The preceding code is the <kbd>default.xml</kbd> file at <kbd><span class="URLPACKT">https://github.com/shugaoye/manifests/blob/android-7.1.1_r4_ch07_aosp/default.xml</span></kbd>.</p>
+<p>We can see that we have an <kbd>android-7.1.1_r4_x86emu_ch07_r2</kbd> tag for this chapter. In this chapter, we have our own projects, <kbd>kernel</kbd>, <kbd>x86emu</kbd>, <kbd>newinstaller</kbd>, and <kbd>goldfish</kbd>. We will use this manifest to download or update the source code for this chapter:</p>
+<pre>
+<strong>$ repo init https://github.com/shugaoye/manifests -b android-7.1.1_r4_x86emu_ch07_r2</strong><br/><strong>$ repo sync</strong>  
+</pre>
+<p>After we have the source code for this chapter, we can set the environment and build the system as follows:</p>
+<pre>
+<strong>$ . build/envsetup.sh</strong><br/><strong>$ lunch x86emu_x86-eng</strong><br/><strong>$ make -j4</strong>  
+</pre>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Enabling boot with initrd.img</h1>
+            </header>
+
+            <article>
+                
+<p>As we learnt in <a href="b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml">Chapter 6</a>, <em>Debugging the Boot Up Process Using a Customized ramdisk</em>, we can boot the emulator in two stages. This is very helpful to debug the init process and troubleshoot issues at system level. <span>in</span> <a href="b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml">Chapter 6</a><span>,</span> <em>Debugging the Boot Up Process Using a Customized ramdisk</em>, we create a separate disk image, <kbd>x86emu_x86.img</kbd>, to store all the necessary file images to support a first-stage boot up similar to Android-x86. The <kbd>x86emu_x86.img</kbd> image appears in the system as <kbd>/dev/sda</kbd> and includes all images: <kbd>system.img</kbd>, <kbd>install.img</kbd>, <kbd>initrd.img</kbd>, <kbd>ramdisk.img</kbd>, <kbd>kernel</kbd>, and so on.</p>
+<p>In this chapter, we will change the Android-x86 <kbd>newinstaller</kbd> further to support two-stages boot up just using <kbd>system.img</kbd> instead of creating a separate image. We will use the first stage boot to help our debugging of Wi-Fi initialization later in this chapter.</p>
+<p>In the first stage of boot-up, the init script in <kbd>initrd.img</kbd> will mount the system image and extract <kbd>ramdisk.img</kbd> to a filesystem in memory. Since we will use <kbd>system.img</kbd> directly, we need to put <kbd>ramdisk.img</kbd> inside the <kbd>system.img</kbd>. We do this using the <kbd>Makefile</kbd> in the x86emu device instead of changing the AOSP source code. The following is the build target that we add to <kbd>device/generic/x86emu/Makefile</kbd>:</p>
+<pre>
+qcow2_img: <br/>   mkdir -p ${OUT}/system/x86emu_ch07 <br/>   cp ${OUT}/ramdisk.img ${OUT}/system/x86emu_ch07 <br/>   cd ../../..;make qcow2_img USE_SQUASHFS=0 
+</pre>
+<p>In the <kbd>qcow2_img</kbd> build target, we create an <kbd>x86emu_ch07</kbd> folder in the system image and we copy <kbd>ramdisk.img</kbd> to this folder. After that, we build a system image in QCOW2 format.</p>
+<p>To build the system image in QCOW2 format, we need to change <kbd>Android.mk</kbd> in the <kbd>bootable/newinstaller</kbd> folder:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="273" width="694" class=" image-border" src="assets/image_07_007.png"/></div>
+<div class="packt_figure CDPAlignCenter CDPAlign packt_figref">diff in bootable/newinstaller/Android.mk</div>
+<p>From the preceding diff tool output, we can see that we changed the <kbd>VER</kbd> variable to <kbd>x86emu_ch07</kbd>. The init script of <kbd>initrd.img</kbd> uses this variable to find the folder of images. The second change is to add a build target to generate the <kbd>QCOW2</kbd> image using the <kbd>qemu-img</kbd> tool.</p>
+<p>Finally, we need to change the init script in <kbd>initrd.img</kbd> as follows to extract <kbd>ramdisk.img</kbd> inside <kbd>system.img</kbd>:</p>
+<pre>
+... <br/>check_root() <br/>{ <br/>   if [ "`dirname $1`" = "/dev" ]; then <br/>         [ -e $1 ] || return 1 <br/>         blk=`basename $1` <br/>         [ ! -e /dev/block/$blk ] &amp;&amp; ln $1 /dev/block <br/>         dev=/dev/block/$blk <br/>   else <br/>         dev=$1 <br/>   fi <br/>   try_mount ro $dev /mnt || return 1 <br/>   if [ -n "$iso" -a -e /mnt/$iso ]; then <br/>         mount --move /mnt /iso <br/>         mkdir /mnt/iso <br/>         mount -o loop /iso/$iso /mnt/iso <br/>         SRC=iso <br/>   elif [ ! -e /mnt/$SRC/ramdisk.img ]; then <br/>         return 1 <br/>   fi <br/>   zcat /mnt/$SRC/ramdisk.img | cpio -id &gt; /dev/null <br/>   if [ -e /mnt/$SRC/system.sfs ]; then <br/>         mount -o loop /mnt/$SRC/system.sfs /sfs <br/>         mount -o loop /sfs/system.img system <br/>   elif [ -e /mnt/$SRC/system.img ]; then <br/>         remount_rw <br/>         mount -o loop /mnt/$SRC/system.img system <br/>   elif [ -d /mnt/$SRC/system ]; then <br/>         remount_rw <br/>         mount --bind /mnt/$SRC/system system <br/>   else <br/><strong>        echo Moving mount point to /android/system</strong><strong>        <br/>        mount --move /mnt /android/system</strong> <br/>   fi <br/>   mkdir mnt <br/>   echo " found at $1" <br/>   rm /sbin/mke2fs <br/>   hash -r <br/>} <br/>... <br/><strong>echo -n Detecting x86emu...<br/></strong><strong>export DEBUG=2<br/></strong><strong>export SRC=x86emu_ch07</strong> <br/>... 
+</pre>
+<p>The original script will try to find the system image in <kbd>SQUASH</kbd> format (<kbd>system.sfs</kbd>) or a plain image (<kbd>system.img</kbd>). If none of the system images can be found, it will try to find a <kbd>system/</kbd> folder as the system image. After that, it will mount the image file or the folder to <kbd>/android/system</kbd>. In our case, the system image is already mounted at <kbd>/mnt</kbd>, so we just move the mount point from <kbd>/mnt</kbd> to <kbd>/android/system</kbd>.</p>
+<p>The second change to the init script is to define the <kbd>DEBUG</kbd> and <kbd>SRC</kbd> environment variables. These two variables are passed from the kernel command line in <a href="b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml">Chapter 6</a>, <em>Debugging the Boot Up Process Using a Customized ramdisk</em>. Here, we define them inside the script, so we don't need to worry about the kernel command line in our test script.</p>
+<p>Once we have done all these changes, we can build the <kbd>initrd.img</kbd> and system image as follows:</p>
+<pre>
+<strong>$ cd device/generic/x86emu</strong><br/><strong>$ make qcow2_img</strong><br/><strong>...</strong><br/><strong>Created filesystem with 1976/81920 inodes and 158476/327680 blocks</strong><br/><strong>Install system fs image: out/target/product/x86emu/system.img</strong><br/><strong>out/target/product/x86emu/system.img+ maxsize=1370278272 blocksize=2112 total=1342177280 reserve=13842048</strong><br/><strong>rm -rf out/target/product/x86emu/installer</strong><br/><strong>out/host/linux-x86/bin/acp -pr bootable/newinstaller/initrd out/target/product/x86emu/installer</strong><br/><strong>ln -s /bin/ld-linux.so.2 out/target/product/x86emu/installer/lib</strong><br/><strong>mkdir -p out/target/product/x86emu/installer/android out/target/product/x86emu/installer/iso out/target/product/x86emu/installer/mnt out/target/product/x86emu/installer/proc out/target/product/x86emu/installer/sys out/target/product/x86emu/installer/tmp out/target/product/x86emu/installer/sfs out/target/product/x86emu/installer/hd</strong><br/><strong>echo "VER=x86emu_ch07" &gt; out/target/product/x86emu/installer/scripts/00-ver</strong><br/><strong>out/host/linux-x86/bin/mkbootfs out/target/product/x86emu/installer | gzip -9 &gt; out/target/product/x86emu/initrd.img</strong><br/><strong>qemu-img convert -c -f raw -O qcow2 out/target/product/x86emu/system.img out/target/product/x86emu/system-qcow2.img</strong><br/><strong>make[1]: Leaving directory `/home/roger/src/android-6'</strong><br/><br/><strong>#### make completed successfully (03:30 (mm:ss)) ####</strong>
+</pre>
+<p>We can see from the preceding output that <kbd>initrd.img</kbd> is created and <kbd>system-qcow2.img</kbd> is generated from <kbd>system.img</kbd>.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Testing Wi-Fi on an emulator</h1>
+            </header>
+
+            <article>
+                
+<p>We have now prepared all the images that we need for the testing process. The prebuilt test images for this chapter can be downloaded from the following URL:</p>
+<p><a href="https://sourceforge.net/projects/android-system-programming/files/android-7/ch07/ch07.zip/download"><span class="URLPACKT">https://sourceforge.net/projects/android-system-programming/files/android-7/ch07/ch07.zip/download</span></a></p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Booting an Android emulator using initrd.img</h1>
+            </header>
+
+            <article>
+                
+<p>We can execute the following command to boot the system using <kbd>initrd.img</kbd> first:</p>
+<pre>
+<strong>$ cd $OUT <br/>$ emulator @a25x86 -ranchu -verbose -show-kernel -system ./system-qcow2.img -ramdisk ./initrd.img -initdata ./userdata-qcow2.img -kernel ./kernel -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1 <br/></strong>
+</pre>
+<p>In the preceding command, we use QCOW2-format images for both system and user data, since they are much smaller than the plain file images. We use <kbd>initrd.img</kbd> as the ramdisk so that we can debug the configuration in the first stage of boot up. We can also change this script to use <kbd>ramdisk.img</kbd> directly. In this case, it is the normal start up process of the emulator.</p>
+<p>Once we start the emulator using <kbd>initrd.img</kbd>, we can enter the debug console, in which we can check the configuration and make necessary changes before we move forward.</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="362" width="565" class=" image-border" src="assets/image_07_008.png"/></div>
+<p>From the output, we can see that the system image on the device, <kbd>/dev/block/vda</kbd>, is mounted to <kbd>/android/system</kbd>. At this point, we have an opportunity to check and change any start up scripts before we launch them. For example, we can edit <kbd>init.ranchu.rc</kbd> to increase the debug level of <kbd>wpa_supplicant</kbd> with the <kbd>-dd</kbd> option before we start the Android system.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Booting an Android emulator using ramdisk.img</h1>
+            </header>
+
+            <article>
+                
+<p>To boot the system using <kbd>ramdisk.img</kbd>, we can execute the following command:</p>
+<pre>
+<strong>$ cd $OUT</strong><br/><strong>$ emulator @a25x86 -ranchu -verbose -show-kernel -system ./system-qcow2.img <strong>-ramdisk ./ramdisk.img</strong> -initdata ./userdata-qcow2.img -kernel ./kernel -qemu -netdev user,id=mynet1,net=10.0.2.0/24,dhcpstart=10.0.2.50 -device virtio-net,netdev=mynet1</strong>
+</pre>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Debugging Wi-Fi start up processes</h1>
+            </header>
+
+            <article>
+                
+<p>Once the system starts, we can check the <kbd>wpa_supplicant</kbd> debug message using logcat as follows:</p>
+<pre>
+<strong>$ adb logcat -s "wpa_supplicant"</strong>  
+</pre>
+<div class="CDPAlignCenter CDPAlign"><img height="361" width="626" class=" image-border" src="assets/image_07_009.png"/></div>
+<p>We can see that <kbd>wpa_supplicant</kbd> started successfully using Ethernet <kbd>eth1</kbd> and global control socket <kbd>wpa_eth1</kbd>. This global control socket is specified in <kbd>init.ranchu.rc</kbd> as part of the <kbd>wpa_supplicant</kbd> service as follows:</p>
+<pre>
+service wpa_supplicant /system/bin/wpa_supplicant -ieth1 -Dwired -c/data/misc/wifi/wpa_supplicant.conf -e/data/misc/wifi/entropy.bin -g@android:wpa_eth1 -dd <br/>    class main <br/>    socket wpa_eth1 dgram 660 wifi wifi <br/>    disabled <br/>    oneshot 
+</pre>
+<p>We can also check the network status using the <kbd>ifconfig</kbd> command in the following snippet. We can see that <kbd>eth0</kbd> is assigned a fixed IP address, <kbd>10.0.2.15</kbd>, and <kbd>eth1</kbd> is assigned the IP address <kbd>10.0.2.50</kbd> through DHCP:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="372" width="580" class=" image-border" src="assets/image_07_010.png"/></div>
+<p>Once the system starts up, we can go to <span class="packt_screen">Settings</span> | <span class="packt_screen">Wi-Fi</span> and we will see the following screen. The access point SSID is <span class="packt_screen">WiredSSID</span> and we can turn Wi-Fi on or off as we expect:</p>
+<div class="packt_figure CDPAlignCenter CDPAlign"><img height="447" width="259" class=" image-border" src="assets/image_07_011.png"/></div>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    
+
+        <section>
+
+            <header>
+                <h1 class="header-title">Summary</h1>
+            </header>
+
+            <article>
+                
+<p>In this chapter, we introduced the Wi-Fi architecture in Android and we also did an analysis of the Wi-Fi initialization process. Based on that, we modified our x86emu device to support simulated Wi-Fi through a wired Ethernet interface <kbd>eth1</kbd>. We used the advanced features in QEMU to add the second network interface to the ranchu emulator. With all these changes to x86emu, we built and tested the image. In order to help with debugging, we reused the technique that we learnt from <a href="b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml">Chapter 6</a>, <em>Debugging the Boot Up Process Using a Customized ramdisk</em>, to boot the system using <kbd>initrd.img</kbd> so that we can get a debug console before the Android system is started.</p>
+<p>With all the knowledge from <a href="f69f330a-932c-4a32-bb78-e427c860b65e.xhtml">Chapter 4</a>, <em>Customizing the Android Emulator</em> to <a href="7ff9a111-96cb-44ed-b92d-435e73821306.xhtml">Chapter 7</a>, <em>Enabling Wi-Fi on the Android Emulator</em>, we learnt how to create a new device based on an existing one. We also learnt how to customize and extend the device to support new features. From the next chapter to <a href="3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml">Chapter 11</a>, <em>Enabling VirtualBox-Specific Hardware Interfaces</em>, we will take on a new challenge to support a new platform that is not supported by AOSP. We will create and build a new x86vbox device to explore more advanced topics in the Android system programming world.</p>
+
+
+            </article>
+
+            <footer style="margin-top: 5em;">
+                
+            </footer>
+
+        </section>
+    </body></html>

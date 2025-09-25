@@ -1,0 +1,378 @@
+<html><head></head><body>
+		<div id="_idContainer024">
+			<h1 id="_idParaDest-58"><em class="italic"><a id="_idTextAnchor062"/>Chapter 4</em>: Managing Dependencies in Android Applications</h1>
+			<p>In this chapter, we will analyze the concept of <strong class="bold">dependency injection</strong> (<strong class="bold">DI</strong>) and the benefits it provides and look at how this was done in the past in Android applications either through manual injection or using Dagger 2. We will go over some of the libraries used in Android applications, stopping and looking in more detail at the Hilt library and how it simplifies DI for an Android application.</p>
+			<p>In this chapter, we will cover the following topics:</p>
+			<ul>
+				<li>Introduction to DI</li>
+				<li>Using Dagger 2 to manage dependencies</li>
+				<li>Using Hilt to manage dependencies</li>
+			</ul>
+			<p>By the end of this chapter, you will be familiar with the DI pattern and libraries such as Dagger and Hilt, which can be used to manage dependencies in Android applications.</p>
+			<h1 id="_idParaDest-59"><a id="_idTextAnchor063"/>Technical requirements </h1>
+			<p>The hardware and software requirements are as follows:</p>
+			<ul>
+				<li>Android Studio Arctic Fox 2020.3.1 Patch 3</li>
+			</ul>
+			<p>The code files for this chapter can be found here: <a href="https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter4">https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter4</a>.</p>
+			<p>Check out the following video to see the Code in Action: <a href="https://bit.ly/38yFDHz">https://bit.ly/38yFDHz</a></p>
+			<h1 id="_idParaDest-60"><a id="_idTextAnchor064"/>Introduction to DI</h1>
+			<p>In this section, we will look at what DI is, the benefits it provides, and how this concept is applied to an <a id="_idIndexMarker331"/>Android application. We will then look at some DI libraries and how they work.</p>
+			<p>When a class depends on functionality from another class, a dependency is created between the two classes. To invoke the functionality on the class you depend on, you will need to instantiate it, as in the following example:</p>
+			<p class="source-code"> class ClassA() {</p>
+			<p class="source-code">    private val b: ClassB = ClassB()</p>
+			<p class="source-code">    fun executeA() {</p>
+			<p class="source-code">        b.executeB()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB() {</p>
+			<p class="source-code">    fun executeB() {</p>
+			<p class="source-code">        </p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>In this example, <strong class="source-inline">ClassA</strong> creates a new instance of <strong class="source-inline">ClassB</strong>, and then when <strong class="source-inline">executeA</strong> is invoked, it will invoke <strong class="source-inline">executeB</strong>. This poses a problem because <strong class="source-inline">ClassA</strong> will have the extra responsibility of creating <strong class="source-inline">ClassB</strong>. Let's see what happens if <strong class="source-inline">ClassB</strong> needs to change to something such as the following:</p>
+			<p class="source-code">class ClassB(private val myFlag: Boolean) {</p>
+			<p class="source-code">    </p>
+			<p class="source-code">    fun executeB() {</p>
+			<p class="source-code">        if (myFlag) {</p>
+			<p class="source-code">            // Do something</p>
+			<p class="source-code">        } else {</p>
+			<p class="source-code">            // Do something else</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we added the <strong class="source-inline">myFlag</strong> variable to <strong class="source-inline">ClassB</strong>, which is used in the <strong class="source-inline">executeB</strong> method. This <a id="_idIndexMarker332"/>change would cause a compile error because now <strong class="source-inline">ClassA</strong> will need to be modified to make the code compile.</p>
+			<p class="source-code">class ClassA() {</p>
+			<p class="source-code">    <strong class="bold">private val b: ClassB = ClassB(true)</strong></p>
+			<p class="source-code">    fun executeA() {</p>
+			<p class="source-code">        b.executeB()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we will need to supply a Boolean value when we create <strong class="source-inline">ClassB</strong>. </p>
+			<p>Making these types of changes to an application as its code base increases will make it hard to maintain. A solution to this problem is to separate how we use dependencies and how we create them and delegate the creation to a different object. Continuing from the preceding example, we can rewrite <strong class="source-inline">ClassA</strong> as the following:</p>
+			<p class="source-code">class ClassA(<strong class="bold">private val b: ClassB</strong>) {</p>
+			<p class="source-code">    fun executeA() {</p>
+			<p class="source-code">        b.executeB()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we removed the instantiation of <strong class="source-inline">ClassB</strong> and moved the variable in the constructor of <strong class="source-inline">ClassA</strong>. Now, we can create a class that will be responsible for creating the instances of both classes that looks like the following:</p>
+			<p class="source-code">class Injector() {</p>
+			<p class="source-code">    fun createA(b: ClassB) = ClassA(b)</p>
+			<p class="source-code">    fun createB() = ClassB(true)</p>
+			<p class="source-code">}</p>
+			<p>Here, we have a new class that will create an instance of <strong class="source-inline">ClassA</strong> with <strong class="source-inline">ClassB</strong> as a parameter and a separate method for creating an instance of <strong class="source-inline">ClassB</strong>. Ideally, when the program <a id="_idIndexMarker333"/>is initialized, we would need to initialize all the dependencies and pass them appropriately:</p>
+			<p class="source-code">fun main(args : Array&lt;String&gt;) {</p>
+			<p class="source-code">    val injector = Injector()</p>
+			<p class="source-code">    val b = injector.createB()</p>
+			<p class="source-code">    val a = injector.createA(b)</p>
+			<p class="source-code">}</p>
+			<p>Here, we created <strong class="source-inline">Injector</strong>, which is responsible for creating our instances, and then invoked the appropriate methods on <strong class="source-inline">Injector</strong> to retrieve the appropriate instances of each class. What we have done here is called DI. Instead of <strong class="source-inline">ClassA</strong> creating the instance of <strong class="source-inline">ClassB</strong>, it will <a id="_idIndexMarker334"/>have an instance of <strong class="source-inline">ClassB</strong> injected through the constructor, also known as <em class="italic">constructor injection</em>.</p>
+			<p>In <strong class="source-inline">ClassB</strong>, we have an <strong class="source-inline">if-else</strong> statement in the <strong class="source-inline">executeB</strong> method. We can introduce an <a id="_idIndexMarker335"/>abstraction there, so we split the <strong class="source-inline">if-else</strong> statement into two separate implementations:</p>
+			<p class="source-code">class ClassA(private val b: ClassB) {</p>
+			<p class="source-code">    fun executeA() {</p>
+			<p class="source-code">        b.executeB()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">interface ClassB {</p>
+			<p class="source-code">    fun executeB()</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB1() : ClassB {</p>
+			<p class="source-code">    override fun executeB() {</p>
+			<p class="source-code">        // Do something</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB2() : ClassB {</p>
+			<p class="source-code">    override fun executeB() {</p>
+			<p class="source-code">        // Do something else</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, <strong class="source-inline">ClassA</strong> remains the same and <strong class="source-inline">ClassB</strong> has become an interface with two implementations, called <strong class="source-inline">ClassB1</strong> and <strong class="source-inline">ClassB2</strong>, representing the implementations of the <strong class="source-inline">if-else</strong> branch. Here, we can use the <strong class="source-inline">Injector</strong> class as well to inject one of the two implementations without requiring any change on <strong class="source-inline">ClassA</strong>:</p>
+			<p class="source-code">class Injector() {</p>
+			<p class="source-code">    fun createA(b: ClassB) = ClassA(b)</p>
+			<p class="source-code">    fun createB() = ClassB1()</p>
+			<p class="source-code">}</p>
+			<p>In the <strong class="source-inline">createB</strong> method, we return an instance of <strong class="source-inline">ClassB1</strong>, which will then be later injected into <strong class="source-inline">ClassA</strong>. This represents another benefit of DI, where we can make our code depend on <a id="_idIndexMarker336"/>abstractions rather than concretions and provide different concretions for different purposes. Based on this, we can define the following roles when it comes to DI:</p>
+			<ul>
+				<li><strong class="bold">Service</strong>: Represents the object that contains useful functionality (<strong class="source-inline">ClassB1</strong> and <strong class="source-inline">ClassB2</strong> in our example)</li>
+				<li><strong class="bold">Interface</strong>: Represents the service abstraction (<strong class="source-inline">ClassB</strong> in our example)</li>
+				<li><strong class="bold">Client</strong>: Represents the object that depends on the service (<strong class="source-inline">ClassA</strong> in our example)</li>
+				<li><strong class="bold">Injector</strong>: Represents the object responsible for constructing the services and injecting them into the client (<strong class="source-inline">Injector</strong> in our example)</li>
+			</ul>
+			<div>
+				<div id="_idContainer021" class="IMG---Figure">
+					<img src="image/Figure_4.01_B18320.jpg" alt="Figure 4.1 – DI class diagram&#13;&#10;"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 4.1 – DI class diagram</p>
+			<p>The preceding figure shows the class diagram of our example and the DI pattern. We can observe how the <strong class="source-inline">Injector</strong> class is responsible for creating and injecting the dependencies, <strong class="source-inline">ClassA</strong> is the client <a id="_idIndexMarker337"/>receiving <a id="_idIndexMarker338"/>a dependency to <strong class="source-inline">ClassB</strong>, which is the interface, and <strong class="source-inline">ClassB1</strong> and <strong class="source-inline">ClassB2</strong> represent the services.</p>
+			<p>There are multiple classifications of the types of DI, and they mainly revolve around two ways of injecting dependencies:</p>
+			<ul>
+				<li><strong class="bold">Constructor injection</strong>: Where <a id="_idIndexMarker339"/>dependencies are passed through the constructor.</li>
+				<li><strong class="bold">Field injection</strong>: Where <a id="_idIndexMarker340"/>dependencies are passed through setter methods or by changing the instance variables. This can also be referred to as <strong class="bold">setter injection</strong> and it can <a id="_idIndexMarker341"/>also be expanded to <strong class="bold">interface injection</strong> in which the <a id="_idIndexMarker342"/>setter method is abstracted to an interface.</li>
+			</ul>
+			<p>Another benefit of DI is the fact that it makes the code more testable. When dependencies are <a id="_idIndexMarker343"/>injected into an object, it makes the class easier to test, because in the test code, we can inject objects that allow us to mimic various behaviors, called <strong class="bold">mocks</strong>. </p>
+			<p>In this section, we have introduced the DI pattern, how it works, and the problems it is solving. Developers can manage an application's dependencies and injection manually, by setting up injectors. But as an application grows, it becomes hard to maintain, especially when <a id="_idIndexMarker344"/>we want certain objects to live only as long as other objects and not as long as the application, or handle different instances of the same class. There are various DI frameworks and libraries that can manage all these cases and in Android, one of the most commonly used ones is Dagger 2.</p>
+			<h1 id="_idParaDest-61"><a id="_idTextAnchor065"/>Using Dagger 2 to manage dependencies</h1>
+			<p>In this section, we <a id="_idIndexMarker345"/>will analyze the Dagger 2 library, how <a id="_idIndexMarker346"/>it handles DI, how it works, how it is integrated into an Android application, and what issues it might create. </p>
+			<p>The Dagger 2 library relies on code generation based on annotation processing, which will generate the boilerplate code that is required to perform DI. The library is written in Java, and it is used for various projects outside of Android applications. Because it is written in Java, it provides compatibility for apps written in Java, Kotlin, or both. The library is built using <strong class="bold">Java Specification Requests</strong> (<strong class="bold">JSR</strong>) <strong class="bold">330</strong>, which provide a set of useful <a id="_idIndexMarker347"/>annotations for DI (<strong class="source-inline">@Inject</strong>, <strong class="source-inline">@Named</strong>, <strong class="source-inline">@Qualifier</strong>, <strong class="source-inline">@Scope</strong>, and <strong class="source-inline">@Singleton</strong>). </p>
+			<p>When integrating Dagger 2, there are three main concepts that we will need to consider:</p>
+			<ul>
+				<li><strong class="bold">Provider</strong>: This is represented by the classes responsible for providing the dependencies, using the <strong class="source-inline">@Module</strong> annotation for the classes and <strong class="source-inline">@Provides</strong> for the methods. To avoid many <strong class="source-inline">@Module</strong> definitions, we can use the <strong class="source-inline">@Inject</strong> annotation on a constructor, which will provide the object as a dependency.</li>
+				<li><strong class="bold">Consumer</strong>: This is represented by the classes where the dependencies are required using the <strong class="source-inline">@Inject</strong> annotation.</li>
+				<li><strong class="bold">Connector</strong>: This is represented by the classes that connect the providers with the consumers and is annotated with the <strong class="source-inline">@Component</strong> annotation.</li>
+			</ul>
+			<p>In order to add <a id="_idIndexMarker348"/>Dagger 2 to an Android application, you will <a id="_idIndexMarker349"/>first need to add the Kotlin annotation processor plugin to the <strong class="source-inline">build.gradle</strong> file of the module in which Dagger 2 is used: </p>
+			<p class="source-code">plugins {</p>
+			<p class="source-code">    … </p>
+			<p class="source-code">    id 'kotlin-kapt'</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>Here, we added the <strong class="source-inline">kotlin-kapt</strong> plugin to allow Dagger 2 to generate the code necessary for DI. Next, we will need the Dagger 2 dependencies:</p>
+			<p class="source-code">dependencies {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    implementation 'com.google.dagger:dagger:2.40.5'</p>
+			<p class="source-code">    kapt 'com.google.dagger:dagger-compiler:2.40.5'</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>Here, we are adding a dependency to the Dagger 2 library and a dependency to the annotation processing library, which has the role of code generation. The library version should ideally be the latest stable one available in the library repository.</p>
+			<p>Let's now <a id="_idIndexMarker350"/>re-introduce the example from the <a id="_idIndexMarker351"/>previous section:</p>
+			<p class="source-code">class ClassA(private val b: ClassB) {</p>
+			<p class="source-code">    fun executeA() {</p>
+			<p class="source-code">        b.executeB()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">interface ClassB {</p>
+			<p class="source-code">    fun executeB()</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB1() : ClassB {</p>
+			<p class="source-code">    override fun executeB() {</p>
+			<p class="source-code">        // Do something</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB2() : ClassB {</p>
+			<p class="source-code">    override fun executeB() {</p>
+			<p class="source-code">        // Do something else</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we have the same classes with the same dependencies. Instead of defining an <strong class="source-inline">Injector</strong> class, we can use Dagger 2 to define an <strong class="source-inline">@Module</strong>:</p>
+			<p class="source-code">@Module</p>
+			<p class="source-code">class ApplicationModule {</p>
+			<p class="source-code">    @Provides</p>
+			<p class="source-code">    fun provideClassA(b: ClassB): ClassA = ClassA(b)</p>
+			<p class="source-code">    @Provides</p>
+			<p class="source-code">    fun provideClassB(): ClassB = ClassB1()</p>
+			<p class="source-code">}</p>
+			<p>Here, we annotated <a id="_idIndexMarker352"/>the class with <strong class="source-inline">@Module</strong> and for <a id="_idIndexMarker353"/>each instance, we used the <strong class="source-inline">@Provides</strong> annotation. We can further simplify this with the <strong class="source-inline">@Inject</strong> annotation and delete the <strong class="source-inline">@Provides</strong> methods from <strong class="source-inline">ApplicationModule</strong>:</p>
+			<p class="source-code">class ClassA @Inject constructor(private val b: ClassB) {</p>
+			<p class="source-code">   …</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB1 @Inject constructor() : ClassB {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB2 @Inject constructor() : ClassB {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>In the preceding code, we have added <strong class="source-inline">@Inject</strong> for each constructor. In the case of <strong class="source-inline">ClassA</strong>, it will have both the role of injecting <strong class="source-inline">ClassB</strong> and providing <strong class="source-inline">ClassA</strong> to other objects as a <a id="_idIndexMarker354"/>dependency. There is, however, an issue <a id="_idIndexMarker355"/>because <strong class="source-inline">ClassA</strong> has a dependency on the abstraction rather than the concretion, so Dagger will not know which instance to provide to <strong class="source-inline">ClassA</strong>. We can now add an <strong class="source-inline">@Binds</strong> annotated method to <strong class="source-inline">ApplicationModule</strong>, which will connect the abstraction with the implementation:</p>
+			<p class="source-code">@Module</p>
+			<p class="source-code">abstract class ApplicationModule {</p>
+			<p class="source-code">    @Binds</p>
+			<p class="source-code">    abstract fun bindClassB(b: ClassB1): ClassB</p>
+			<p class="source-code">}</p>
+			<p>Here, we added the <strong class="source-inline">bindClassB</strong> abstract method, which is annotated with <strong class="source-inline">@Binds</strong>. This method will tell Dagger 2 to connect the <strong class="source-inline">ClassB1</strong> implementation with the <strong class="source-inline">ClassB</strong> abstraction. To avoid large <strong class="source-inline">@Provides</strong> annotations, we should try to use the annotation for dependencies where we cannot modify the code and instead rely on <strong class="source-inline">@Inject</strong> on the constructors and using <strong class="source-inline">@Binds</strong> where possible.</p>
+			<p>Now, we will need to create the connector:</p>
+			<p class="source-code">@Singleton</p>
+			<p class="source-code">@Component(modules = [ApplicationModule::class])</p>
+			<p class="source-code">interface ApplicationComponent</p>
+			<p>Here, we are defining an <strong class="source-inline">@Component</strong> in which we specify the module the application will use. The <strong class="source-inline">@Singleton</strong> annotation tells Dagger that all the dependencies in this component will live as long as the application. At this point, we should trigger a build on the application. This will trigger the compilation, which will generate a <strong class="source-inline">DaggerApplicationComponent</strong> class. This is an implementation of <strong class="source-inline">ApplicationComponent</strong> that Dagger 2 will handle. This class will be used to create the entire dependency graph. In Android, we need an entry point for this, which is represented by the <strong class="source-inline">Application</strong> class:</p>
+			<p class="source-code">class MyApplication : Application() {</p>
+			<p class="source-code">    lateinit var component: ApplicationComponent</p>
+			<p class="source-code">    override fun onCreate() {</p>
+			<p class="source-code">        super.onCreate()</p>
+			<p class="source-code">        component = DaggerApplicationComponent.create()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, in the <strong class="source-inline">MyApplication</strong> class, we are using <strong class="source-inline">DaggerApplicationComponent</strong> and creating the dependency graph. This will go over all the modules in <a id="_idIndexMarker356"/>the graph and invoke all the <strong class="source-inline">@Provides</strong> methods. The <strong class="source-inline">@Component</strong> annotation has another role, which is to define <a id="_idIndexMarker357"/>member injection when constructor injection is not possible. In Android, this situation occurs when dealing with life cycle components such as activities and fragments, because we are not allowed to modify the default constructors of these classes. To do this, we can do the following:</p>
+			<p class="source-code">@Singleton</p>
+			<p class="source-code">@Component(modules = [ApplicationModule::class])</p>
+			<p class="source-code">interface ApplicationComponent {</p>
+			<p class="source-code">    <strong class="bold">fun inject(mainActivity: MainActivity)</strong></p>
+			<p class="source-code">}</p>
+			<p>In <strong class="source-inline">ApplicationComponent</strong>, we add a method called <strong class="source-inline">inject</strong> and the <strong class="source-inline">Activity</strong> where we want the injection to be performed. In the <strong class="source-inline">MainActivity</strong> class, we will need to do the following:</p>
+			<p class="source-code">class MainActivity : AppCompatActivity() {</p>
+			<p class="source-code">    @Inject</p>
+			<p class="source-code">    lateinit var a: ClassA</p>
+			<p class="source-code">    override fun onCreate(savedInstanceState: Bundle?) {</p>
+			<p class="source-code">        super.onCreate(savedInstanceState)</p>
+			<p class="source-code">        setContentView(R.layout.activity_main)</p>
+			<p class="source-code">        (application as </p>
+			<p class="source-code">             MyApplication).component.inject(this)</p>
+			<p class="source-code">        a.executeA()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we will need to access the <strong class="source-inline">ApplicationComponent</strong> instance created in <strong class="source-inline">MyApplication</strong> and then invoke the <strong class="source-inline">inject</strong> method from <strong class="source-inline">ApplicationComponent</strong>. This will then initialize variable <strong class="source-inline">a</strong> with the instance Dagger 2 created. This approach has a problem, however, because all the dependencies will live as long <a id="_idIndexMarker358"/>as the application. This means that Dagger 2 <a id="_idIndexMarker359"/>will need to keep dependencies in memory when they are not required. Dagger 2 offers a solution for this in the form of scopes and subcomponents. We can create a new Scope, which will tell Dagger 2 to only keep certain dependencies as long as an Activity is alive, and then apply this Scope to a Subcomponent, which will handle a smaller graph of dependencies. </p>
+			<p class="source-code">@Scope</p>
+			<p class="source-code">@MustBeDocumented</p>
+			<p class="source-code">@kotlin.annotation.Retention(AnnotationRetention.RUNTIME)</p>
+			<p class="source-code">annotation class ActivityScope</p>
+			<p>Here, we created a new <strong class="source-inline">@Scope</strong> annotation, which will indicate that dependencies will live as long as activities. We will next use <strong class="source-inline">@ActivityScope</strong> to create an <strong class="source-inline">@Subcomponent</strong> annotated class:</p>
+			<p class="source-code">@ActivityScope</p>
+			<p class="source-code">@Subcomponent(modules = [ApplicationModule::class])</p>
+			<p class="source-code">interface MainSubcomponent {</p>
+			<p class="source-code">    fun inject(mainActivity: MainActivity)</p>
+			<p class="source-code">} </p>
+			<p>Here, we have <a id="_idIndexMarker360"/>defined a subcomponent <a id="_idIndexMarker361"/>that will use <strong class="source-inline">ApplicationModule</strong> and has an <strong class="source-inline">inject</strong> method for field injection into <strong class="source-inline">MainActivity</strong>. After that, we will need to tell Dagger 2 to create <strong class="source-inline">MainSubcomponent</strong>, by modifying <strong class="source-inline">ApplicationComponent</strong>:</p>
+			<p class="source-code">@Singleton</p>
+			<p class="source-code">@Component</p>
+			<p class="source-code">interface ApplicationComponent {</p>
+			<p class="source-code">    fun createMainSubcomponent(): MainSubcomponent</p>
+			<p class="source-code">}</p>
+			<p>Here, we have removed <strong class="source-inline">ApplicationModule</strong> from <strong class="source-inline">@Component</strong> and replaced the <strong class="source-inline">inject</strong> method with a <strong class="source-inline">createMainSubcomponent</strong> method, which will allow Dagger to create <strong class="source-inline">MainSubcomponent</strong>. Finally, we will need to access <strong class="source-inline">MainSubcomponent</strong> in <strong class="source-inline">MainActivity</strong> and inject the <strong class="source-inline">ClassA</strong> dependency:</p>
+			<p class="source-code">class MainActivity : AppCompatActivity() {</p>
+			<p class="source-code">    @Inject</p>
+			<p class="source-code">    lateinit var a: ClassA</p>
+			<p class="source-code">    override fun onCreate(savedInstanceState: Bundle?) {</p>
+			<p class="source-code">        super.onCreate(savedInstanceState)</p>
+			<p class="source-code">        setContentView(R.layout.activity_main)</p>
+			<p class="source-code">        (application as MyApplication).component.</p>
+			<p class="source-code">            createMainSubcomponent().inject(this)</p>
+			<p class="source-code">        a.executeA()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we <a id="_idIndexMarker362"/>access the <strong class="source-inline">ApplicationComponent</strong> instance from <strong class="source-inline">MyApplication</strong>, then create <strong class="source-inline">MainSubcomponent</strong> and <a id="_idIndexMarker363"/>then inject the <strong class="source-inline">ClassA</strong> dependency into the <strong class="source-inline">a</strong> variable. The code generated by Dagger 2 can be seen in the <strong class="source-inline">{module}/build/generated/source/kapt/{build type}</strong> folder and will look something similar to the following figure:</p>
+			<div>
+				<div id="_idContainer022" class="IMG---Figure">
+					<img src="image/Figure_4.02_B18320.jpg" alt="Figure 4.2 – Generated Dagger Classes&#13;&#10;"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 4.2 – Generated Dagger Classes</p>
+			<p>In the preceding figure, we can see Dagger will generate the implementation for the <strong class="source-inline">ApplicationComponent</strong> interface as well as the <strong class="source-inline">MainSubcomponent</strong> implementation. For <a id="_idIndexMarker364"/>dependencies that will need to <a id="_idIndexMarker365"/>be injected, it will generate a <strong class="source-inline">Factory</strong> class to create the dependency. Where we are injecting through the members, it will create an <strong class="source-inline">Injector</strong> class, which will be responsible for setting the value on the member variable, like the <strong class="source-inline">MainActivity</strong> class. </p>
+			<p>In this section, we have discussed the Dagger 2 library and how it can be used to provide and inject dependencies. Because it is a library used in other frameworks other than Android, it requires specific workarounds for injecting in activities and fragments, using member injectors and Subcomponents. An attempt at fixing this was through the introduction of the Dagger Android library, which handled the creation of <strong class="source-inline">@Subcomponent</strong> annotated classes and introduced new annotations to indicate how Subcomponents should be created. More recently, the introduction of the Hilt library was more <a id="_idIndexMarker366"/>effective at solving these problems by further <a id="_idIndexMarker367"/>simplifying the amount of code developers needed to write and providing better compatibility with components such as ViewModel. In the section that follows, we will look at the Hilt library and how it solves these problems.</p>
+			<h1 id="_idParaDest-62"><a id="_idTextAnchor066"/>Using Hilt to manage dependencies</h1>
+			<p>In this section, we <a id="_idIndexMarker368"/>will discuss the Hilt DI library, how <a id="_idIndexMarker369"/>we can use it in an Android application, and the extra features it provides on top of the Dagger 2 library.</p>
+			<p>Hilt is a library built on top of Dagger 2 with a specific focus on Android applications. This is to remove the extra boilerplate code that was required to use Dagger 2 in an application. Hilt removes the need to use <strong class="source-inline">@Component</strong> and <strong class="source-inline">@Subcomponent</strong> annotated classes and in turn offers new annotations:</p>
+			<ul>
+				<li>When injecting dependencies in Android classes, we can use <strong class="source-inline">@HiltAndroidApp</strong> for <strong class="source-inline">Application</strong> classes, <strong class="source-inline">@AndroidEntryPoint</strong> for activities, fragments, services, broadcast receivers, and views, and <strong class="source-inline">@HiltViewModel</strong> for <strong class="source-inline">ViewModels</strong>.</li>
+				<li>When using the <strong class="source-inline">@Module</strong> annotation, we now have the option to use <strong class="source-inline">@InstallIn</strong> and specify an <strong class="source-inline">@DefineComponent</strong> annotated class, which represents the component the module will be added to. Hilt provides a set of useful components to install modules in: <ul><li><strong class="source-inline">@SingletonComponent</strong>: This will make the dependencies live as long as the application.</li><li><strong class="source-inline">@ViewModelComponent</strong>: This will make the dependencies live as long as a <strong class="source-inline">ViewModel</strong>.</li><li><strong class="source-inline">@ActivityComponent</strong>: This will make the dependencies live as long as an <strong class="source-inline">Activity</strong>.</li><li><strong class="source-inline">@FragmentComponent</strong>: This will make the dependencies live as long as a <strong class="source-inline">Fragment</strong>.</li><li><strong class="source-inline">@ServiceComponent</strong>: This will make the dependencies live as long as a <strong class="source-inline">Service</strong>.</li></ul></li>
+			</ul>
+			<p>In order to <a id="_idIndexMarker370"/>use Hilt in a project, it will require a Gradle plugin, which <a id="_idIndexMarker371"/>will need to be added as a dependency to the root <strong class="source-inline">build.gradle</strong> file in the project:</p>
+			<p class="source-code">buildscript {</p>
+			<p class="source-code">    repositories {</p>
+			<p class="source-code">        …</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    dependencies {</p>
+			<p class="source-code">        …</p>
+			<p class="source-code">        <strong class="bold">classpath 'com.google.dagger:hilt-android-gradle-</strong></p>
+			<p class="source-code"><strong class="bold">            plugin:2.40.5'</strong></p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>We will then need to add the annotation processor plugin and the Hilt plugin to the <strong class="source-inline">build.gradle</strong> file of the Gradle module that we want to use the Hilt library in:</p>
+			<p class="source-code">plugins {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    id 'kotlin-kapt'</p>
+			<p class="source-code">    id 'dagger.hilt.android.plugin'</p>
+			<p class="source-code">}</p>
+			<p>The combination of these two plugins is what allows Hilt to generate the necessary source <a id="_idIndexMarker372"/>code for injecting the dependencies. Finally, we <a id="_idIndexMarker373"/>will need to add the dependency to the Hilt library:</p>
+			<p class="source-code">dependencies {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    implementation 'com.google.dagger:hilt-android:2.40.5'</p>
+			<p class="source-code">    kapt 'com.google.dagger:hilt-compiler:2.40.5'</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>Here, we need the dependency on the library itself and a dependency on the annotation processor like how it was necessary for Dagger 2.</p>
+			<p>Let's now re-introduce the example from the previous section:</p>
+			<p class="source-code">class ClassA <strong class="bold">@Inject</strong> constructor(private val b: ClassB) {</p>
+			<p class="source-code">    fun executeA() {</p>
+			<p class="source-code">        b.executeB()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">interface ClassB {</p>
+			<p class="source-code">    fun executeB()</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB1 <strong class="bold">@Inject</strong> constructor() : ClassB {</p>
+			<p class="source-code">    override fun executeB() {</p>
+			<p class="source-code">        // Do something</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p class="source-code">class ClassB2 <strong class="bold">@Inject</strong> constructor() : ClassB {</p>
+			<p class="source-code">    override fun executeB() {</p>
+			<p class="source-code">        // Do something else</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we <a id="_idIndexMarker374"/>can keep the same structure of our classes and <a id="_idIndexMarker375"/>use the <strong class="source-inline">@Inject</strong> annotation like previously. The <strong class="source-inline">@Module</strong> annotated class that will provide these dependencies will look similar to a Dagger 2 Module:</p>
+			<p class="source-code">@Module</p>
+			<p class="source-code"><strong class="bold">@InstallIn(SingletonComponent::class)</strong></p>
+			<p class="source-code">abstract class ApplicationModule {</p>
+			<p class="source-code">    @Binds</p>
+			<p class="source-code">    abstract fun bindClassB(b: ClassB1): ClassB</p>
+			<p class="source-code">}</p>
+			<p>In the <strong class="source-inline">ApplicationModule</strong> class, we keep the same implementation as before but now we have added the <strong class="source-inline">@InstallIn</strong> annotation, which will make the dependencies provided by this module live as long as the application will. Next, we will need to trigger the generation of components:</p>
+			<p class="source-code"><strong class="bold">@HiltAndroidApp</strong></p>
+			<p class="source-code">class MyApplication : Application()</p>
+			<p>Here, we no longer need to use <strong class="source-inline">DaggerApplicationComponent</strong> to manually trigger the <a id="_idIndexMarker376"/>creation of the dependency graph and instead <a id="_idIndexMarker377"/>use <strong class="source-inline">@HiltAndroidApp</strong>, which will do this for us, as well as providing the ability to inject dependencies into the <strong class="source-inline">MyApplication</strong> class. Finally, we will need to inject the dependencies into an <strong class="source-inline">Activity</strong>:</p>
+			<p class="source-code"><strong class="bold">@AndroidEntryPoint</strong></p>
+			<p class="source-code">class MainActivity : AppCompatActivity() {</p>
+			<p class="source-code">    @Inject</p>
+			<p class="source-code">    lateinit var a: ClassA</p>
+			<p class="source-code">    override fun onCreate(savedInstanceState: Bundle?) {</p>
+			<p class="source-code">        super.onCreate(savedInstanceState)</p>
+			<p class="source-code">        setContentView(R.layout.activity_main)</p>
+			<p class="source-code">        a.executeA()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we use the <strong class="source-inline">@AndroidEntry</strong> point to inform Hilt that we want to inject a dependency into an Activity and then use the <strong class="source-inline">@Inject</strong> annotation like how it worked in Dagger 2. The code generated by Hilt will look similar to the following figure and can be found in <strong class="source-inline">{module}/build/generated/source/kapt/{build type}</strong>:</p>
+			<div>
+				<div id="_idContainer023" class="IMG---Figure">
+					<img src="image/Figure_4.03_B18320.jpg" alt="Figure 4.3 – Generated Hilt Classes&#13;&#10;"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 4.3 – Generated Hilt Classes</p>
+			<p>In the preceding figure, we can see <strong class="source-inline">Factory</strong> classes like the ones that Dagger 2 generates, but <a id="_idIndexMarker378"/>extra classes that Hilt will generate to <a id="_idIndexMarker379"/>handle the boilerplate work that was required to work with Dagger 2, such as handling the injection into activities and fragments or creating the dependency graph in the <strong class="source-inline">Application</strong> class.</p>
+			<p>In this section, we discussed the Hilt library, how we can use it to manage dependencies in an Android application, and how it removes boilerplate code that Dagger 2 required. In the following section, we will look at an exercise on integrating Hilt into an application together with other libraries.</p>
+			<h2 id="_idParaDest-63"><a id="_idTextAnchor067"/>Exercise 04.01 – Using Hilt to manage dependencies</h2>
+			<p>Modify <em class="italic">Exercise 03.02 – navigating using Jetpack Compose</em> from <a href="B18320_03_ePub.xhtml#_idTextAnchor055"><em class="italic">Chapter 3</em></a><em class="italic">, Understanding Data Presentation on Android</em>, so that it will use Hilt to manage the dependencies across the application.</p>
+			<p>To complete <a id="_idIndexMarker380"/>the exercise, you will need to do the <a id="_idIndexMarker381"/>following:</p>
+			<ol>
+				<li>Add the Hilt library to the project.</li>
+				<li>Create a <strong class="source-inline">NetworkModule</strong> class that will provide the Retrofit dependencies.</li>
+				<li>Create a <strong class="source-inline">PersistenceModule</strong> class that will provide the Room and Data Store dependencies.</li>
+				<li>Clean up the <strong class="source-inline">MyApplication</strong> class, delete the <strong class="source-inline">MainViewModelFactory</strong> class, and instead use the <strong class="source-inline">@HiltViewModel</strong> annotation.</li>
+				<li>Modify <strong class="source-inline">MainActivity</strong> to instead obtain an instance of the <strong class="source-inline">MainView</strong> model from the Hilt Compose Navigation library.</li>
+			</ol>
+			<p>Follow these steps to complete the exercise:</p>
+			<ol>
+				<li value="1">Add the Hilt Gradle plugin to the root project <strong class="source-inline">build.gradle</strong> file:<p class="source-code">buildscript {</p><p class="source-code">    repositories {</p><p class="source-code">        …</p><p class="source-code">    }</p><p class="source-code">    dependencies {</p><p class="source-code">        …</p><p class="source-code">        <strong class="bold">classpath 'com.google.dagger:hilt-android-</strong></p><p class="source-code"><strong class="bold">            gradle-plugin:2.40.5'</strong></p><p class="source-code">    }</p><p class="source-code">}</p></li>
+				<li>Apply the <a id="_idIndexMarker382"/>Gradle plugin to the <strong class="source-inline">build.gradle</strong> file in <a id="_idIndexMarker383"/>the app module:<p class="source-code">plugins {</p><p class="source-code">    …</p><p class="source-code">    id 'dagger.hilt.android.plugin'</p><p class="source-code">}</p></li>
+				<li>Add the Hilt library dependency to the app module's <strong class="source-inline">build.gradle</strong> file:<p class="source-code">dependencies {</p><p class="source-code">    …</p><p class="source-code">    implementation 'com.google.dagger:hilt-android</p><p class="source-code">        :2.40.5'</p><p class="source-code">    kapt 'com.google.dagger:hilt-compiler:2.40.5'</p><p class="source-code">    implementation 'androidx.hilt:hilt-navigation-</p><p class="source-code">        compose:1.0.0-rc01'</p><p class="source-code">    …</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we added a dependency that allows Hilt to work with the Jetpack Compose Navigation library.</p>
+			<ol>
+				<li value="4">Create a <strong class="source-inline">NetworkModule</strong> class in which the networking dependencies are provided:<p class="source-code">@Module</p><p class="source-code">@InstallIn(SingletonComponent::class)</p><p class="source-code">class NetworkModule {</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideOkHttpClient(): OkHttpClient = </p><p class="source-code">        OkHttpClient</p><p class="source-code">        .Builder()</p><p class="source-code">        .readTimeout(15, TimeUnit.SECONDS)</p><p class="source-code">        .connectTimeout(15, TimeUnit.SECONDS)</p><p class="source-code">        .build()</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideMoshi(): Moshi = Moshi.Builder().</p><p class="source-code">        add(KotlinJsonAdapterFactory()).build()</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideRetrofit(okHttpClient: OkHttpClient, </p><p class="source-code">        moshi: Moshi): Retrofit = Retrofit.Builder()</p><p class="source-code">        .baseUrl("https://jsonplaceholder.typicode.com/")</p><p class="source-code">        .client(okHttpClient)</p><p class="source-code">        .addConverterFactory(MoshiConverterFactory.create</p><p class="source-code">    (moshi))</p><p class="source-code">        .build()</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideUserService(retrofit: Retrofit): </p><p class="source-code">        UserService =</p><p class="source-code">            retrofit.create(UserService::class.java)</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we have <a id="_idIndexMarker384"/>moved all the dependencies <a id="_idIndexMarker385"/>for networking and split them into separate methods for <strong class="source-inline">OkHttplClient</strong>, <strong class="source-inline">Moshi</strong>, <strong class="source-inline">Retrofit</strong>, and finally, the <strong class="source-inline">UserService</strong> class.</p>
+			<ol>
+				<li value="5">Next, create a <strong class="source-inline">PersistenceModule</strong> class, which will return all the persistence-related dependencies:<p class="source-code">val Context.dataStore: DataStore&lt;Preferences&gt; by preferencesDataStore(name = "my_preferences")</p><p class="source-code">@Module</p><p class="source-code">@InstallIn(SingletonComponent::class)</p><p class="source-code">class PersistenceModule {</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideAppDatabase(@ApplicationContext </p><p class="source-code">        context: Context): AppDatabase =</p><p class="source-code">        Room.databaseBuilder(</p><p class="source-code">            context,</p><p class="source-code">            AppDatabase::class.java, "my-database"</p><p class="source-code">        ).build()</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideUserDao(appDatabase: AppDatabase): </p><p class="source-code">        UserDao = appDatabase.userDao()</p><p class="source-code">    @Provides</p><p class="source-code">    fun provideAppDataStore(@ApplicationContext </p><p class="source-code">        context: Context) = AppDataStore</p><p class="source-code">            (context.dataStore)</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we have moved all the Room-related classes and the Data Store classes. For <strong class="source-inline">DataStore</strong>, we are required to declare the <strong class="source-inline">Context.dataStore</strong> file at the top level <a id="_idIndexMarker386"/>of the file, so we will need to keep <a id="_idIndexMarker387"/>it here. The usage of <strong class="source-inline">@ApplicationContext</strong> is meant to denote that the <strong class="source-inline">Context</strong> object is represented by context of the application and not other Context objects such as an <strong class="source-inline">Activity</strong> object or <strong class="source-inline">Service</strong> object. The annotation is a <strong class="source-inline">Qualifier</strong>, which is meant to distinguish between different instances of the same class (in this case, it's to distinguish between the application context and activity context).</p>
+			<ol>
+				<li value="6">Add the <strong class="source-inline">@Inject</strong> annotation to the constructor of the <strong class="source-inline">MainTextFormatter</strong> class:<p class="source-code">class MainTextFormatter <strong class="bold">@Inject constructor(@ApplicationContext</strong> private val applicationContext: Context) {</p><p class="source-code">    fun getCounterText(count: Int) =</p><p class="source-code">        applicationContext.getString(R.string.total_</p><p class="source-code">            request_count, count)</p><p class="source-code">}</p></li>
+			</ol>
+			<p>This will let Hilt provide a new instance of <strong class="source-inline">MainTextFormatter</strong> every time it will be used as a dependency. Here, again, we will need to use the <strong class="source-inline">@ApplicationContext</strong> annotation to use the application <strong class="source-inline">Context</strong> object.</p>
+			<ol>
+				<li value="7">Delete all <a id="_idIndexMarker388"/>the dependencies in the <strong class="source-inline">MyApplication</strong> class <a id="_idIndexMarker389"/>and add the <strong class="source-inline">@HiltAndroidApp</strong> annotation:<p class="source-code">@HiltAndroidApp</p><p class="source-code">class MyApplication : Application()</p></li>
+				<li>Delete the <strong class="source-inline">MainViewModelFactory</strong> class.</li>
+				<li>Add the <strong class="source-inline">@HiltViewModel</strong> annotation to the <strong class="source-inline">MainViewModel</strong> class and <strong class="source-inline">@Inject</strong> to the constructor:<p class="source-code"><strong class="bold">@HiltViewModel</strong></p><p class="source-code">class MainViewModel <strong class="bold">@Inject constructor</strong>(</p><p class="source-code">    private val userService: UserService,</p><p class="source-code">    private val userDao: UserDao,</p><p class="source-code">    private val appDataStore: AppDataStore,</p><p class="source-code">    private val mainTextFormatter: MainTextFormatter</p><p class="source-code">) : ViewModel() {</p><p class="source-code">   …</p><p class="source-code">}</p></li>
+				<li>Delete the reference to <strong class="source-inline">MainViewModelFactory</strong> in the <strong class="source-inline">Users</strong> <strong class="source-inline">@Composable</strong> method in <strong class="source-inline">MainActivity</strong>:<p class="source-code">@Composable</p><p class="source-code">fun Users(</p><p class="source-code">    navController: NavController,</p><p class="source-code">    viewModel: MainViewModel</p><p class="source-code">) {</p><p class="source-code">    …</p><p class="source-code">}</p></li>
+				<li>Change <a id="_idIndexMarker390"/>the <strong class="source-inline">@Composable</strong> <strong class="source-inline">App</strong> method <a id="_idIndexMarker391"/>in <strong class="source-inline">MainActivity</strong> so that it provides a <strong class="source-inline">MainViewModel</strong> instance when it invokes the <strong class="source-inline">Users</strong> method:<p class="source-code">@Composable</p><p class="source-code">fun App(navController: NavHostController) {</p><p class="source-code">    NavHost(navController, startDestination = AppNavigation.Users.route) {</p><p class="source-code">        composable(route = AppNavigation.Users.route) {</p><p class="source-code">            Users(navController, <strong class="bold">hiltViewModel()</strong>)</p><p class="source-code">        }</p><p class="source-code">        composable(</p><p class="source-code">            route = AppNavigation.User.route,</p><p class="source-code">            arguments = listOf(navArgument</p><p class="source-code">                (AppNavigation.User.argumentName) {</p><p class="source-code">                type = NavType.StringType</p><p class="source-code">            })</p><p class="source-code">        ) {</p><p class="source-code">            User(it.arguments?.getString(AppNavigation.User.</p><p class="source-code">    argumentName).orEmpty())</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we are using the <strong class="source-inline">hiltViewModel</strong> method, which is from the Hilt compatibility library with the Navigation library. </p>
+			<ol>
+				<li value="12">Add the <strong class="source-inline">@AndroidEntryPoint</strong> annotation to <strong class="source-inline">MainActivity</strong>:<p class="source-code">@AndroidEntryPoint</p><p class="source-code">class MainActivity : ComponentActivity() {</p><p class="source-code">    …</p><p class="source-code">}</p></li>
+				<li>If you <a id="_idIndexMarker392"/>encounter a <strong class="source-inline">Records requires ASM8</strong> error <a id="_idIndexMarker393"/>when building the application, then add the following to the root project's <strong class="source-inline">gradle.properties</strong> file:<p class="source-code">android.jetifier.ignorelist=moshi-1.13.0</p></li>
+			</ol>
+			<p>This error is caused by an incompatibility that currently exists in the Android build tools and should be resolved when later updates are available.</p>
+			<p>If we run the application covered in this exercise, the functionality and user interface should remain the same as before. The role of Hilt here was to simplify how we manage dependencies, shown by how we have simplified the <strong class="source-inline">MyApplication</strong> class, leaving it with a simple annotation, and the fact that we have removed <strong class="source-inline">MainViewModelFactory</strong>, which itself had to depend on the <strong class="source-inline">MyApplication</strong> class. We can also see how easy it is to integrate Hilt with the rest of the libraries we used in the exercise.</p>
+			<h1 id="_idParaDest-64"><a id="_idTextAnchor068"/>Summary</h1>
+			<p>In this chapter, we looked at the DI pattern and some of the more popular libraries that are available to apply this pattern to an Android application. We looked initially at Dagger 2 and how it can be integrated into an application, and then we analyzed the Hilt library, which is built on top of Dagger 2 and solves further problems that are specific to Android development.</p>
+			<p>There are other libraries that can be used to manage dependencies, such as Koin, which uses the Service Locator pattern (in which a registry is created and dependencies can be obtained) and is developed for Kotlin development. The exercise in this chapter showed how Hilt can be integrated with other libraries into an Android application. The problem is that the application still has no shape; there isn't anything we can point to that indicates what the use cases are. In the chapters that follow, we will look further into how we can structure our code to give it a shape using the Clean Architecture principles, starting with defining entities and use cases.</p>
+		</div>
+	</body></html>

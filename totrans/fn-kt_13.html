@@ -1,0 +1,607 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Arrow Types</h1>
+                </header>
+            
+            <article>
+                
+<p class="mce-root">Arrow contains many implementations of conventional functional types such as <kbd>Option</kbd>, <kbd>Either</kbd>, and <kbd>Try</kbd>, as well many other types classes, such as functor and monad.</p>
+<p>In this chapter, we'll cover the following topics:</p>
+<ul>
+<li>Using <kbd>Option</kbd> to manage null</li>
+<li><kbd>Either</kbd> and <kbd>Try</kbd> to manage errors</li>
+<li>Combinations and transformers</li>
+<li><kbd>State</kbd> to manage application state</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Option</h1>
+                </header>
+            
+            <article>
+                
+<p>The <kbd>Option&lt;T&gt;</kbd> datatype is the representation of a presence or absence of a value <kbd>T</kbd>. In Arrow, <kbd>Option&lt;T&gt;</kbd> is a sealed class with two sub-types, <kbd>Some&lt;T&gt;</kbd>, a data class that represents the presence of value <kbd>T</kbd> and <kbd>None</kbd>, and an object that represents the absence of value. Defined as a sealed class, <kbd>Option&lt;T&gt;</kbd> can't have any other sub-types; therefore the compiler can check <span>clauses</span> exhaustively, if both cases, <kbd>Some&lt;T&gt;</kbd> and <kbd>None</kbd> are covered.</p>
+<p>I know (or I pretend to know) what you're thinking at this very moment—why do I need <kbd>Option&lt;T&gt;</kbd> to represent the presence or absence of <kbd>T</kbd>, if in Kotlin we already have <kbd>T</kbd> for presence and <kbd>T?</kbd> for absence?</p>
+<p>And you are right. But <kbd>Option</kbd> provides a lot more value than nullable types, let's jump directly to an example:</p>
+<pre>fun divide(num: Int, den: Int): Int? {<br/>    return if (num % den != 0) {<br/>        null<br/>    } else {<br/>        num / den<br/>    }<br/>}<br/><br/>fun division(a: Int, b: Int, den: Int): Pair&lt;Int, Int&gt;? {<br/>    val aDiv = divide(a, den)<br/>    return when (aDiv) {<br/>        is Int -&gt; {<br/>            val bDiv = divide(b, den)<br/>            when (bDiv) {<br/>                is Int -&gt; aDiv to bDiv<br/>                else -&gt; null<br/>            }<br/>        }<br/>        else -&gt; null<br/>    }<br/>}</pre>
+<p>The <kbd>division</kbd> <span>function</span><span> </span><span>takes three parameters—two integers (</span><kbd>a</kbd><span>,</span> <kbd>b</kbd><span>) and a denominator (</span><kbd>den</kbd><span>) and returns a</span> <kbd>Pair&lt;Int, Int&gt;</kbd>, <span>if both numbers are divisible by</span> <kbd>den</kbd> <span>or</span> <kbd>null</kbd> <span>otherwise.</span></p>
+<p>We can express the same algorithm with <kbd>Option</kbd>:</p>
+<pre><span>import arrow.core.*<br/>import arrow.syntax.option.toOption<br/><br/>fun </span><span>optionDivide</span><span>(</span>num: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Option</span><span>&lt;</span><span>Int</span><span>&gt; = </span><span>divide</span><span>(</span>num<span>, </span>den<span>).</span><span>toOption</span><span>()<br/></span><span><br/></span><span>fun </span><span>optionDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Option</span><span>&lt;</span><span>Pair</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>val </span>aDiv <span>= </span><span>optionDivide</span><span>(</span>a<span>, </span>den<span>)<br/></span><span>   </span><span>return when </span><span>(</span>aDiv<span>) {<br/></span><span>      </span><span>is </span><span>Some </span><span>-&gt; {<br/></span><span>         </span><span>val </span>bDiv <span>= </span><span>optionDivide</span><span>(</span>b<span>, </span>den<span>)<br/></span><span>         </span><span>when </span><span>(</span>bDiv<span>) {<br/></span><span>            </span><span>is </span><span>Some </span><span>-&gt; </span><span>Some</span><span>(</span>aDiv<span>.</span>t <span>to </span>bDiv<span>.</span>t<span>)<br/></span><span>            </span><span>else </span><span>-&gt; </span><span>None<br/></span><span>         </span><span>}<br/></span><span>      }<br/></span><span>      </span><span>else </span><span>-&gt; </span><span>None<br/></span><span>   </span><span>}<br/></span><span>}</span></pre>
+<p>The function, <kbd>optionDivide</kbd> takes the nullable result from divide and returns it as an <kbd>Option</kbd>, using the <kbd>toOption()</kbd> extension function.</p>
+<p>There are no major changes on <kbd>optionDivision</kbd> compared to <kbd>division</kbd>, it is the same algorithm expressed with different types. If we stop here, then <kbd>Option&lt;T&gt;</kbd> doesn't provide extra value on top of nullables. Luckily, that isn't the case; there are more ways to use <kbd>Option</kbd>:</p>
+<pre><span>fun </span><span>flatMapDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Option</span><span>&lt;</span><span>Pair</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>optionDivide</span><span>(</span>a<span>, </span>den<span>).</span><span>flatMap </span><span>{ </span>aDiv: <span>Int </span><span>-&gt;<br/></span><span>      </span><span>optionDivide</span><span>(</span>b<span>, </span>den<span>).</span><span>flatMap </span><span>{ </span>bDiv: <span>Int </span><span>-&gt;<br/></span><span>         </span><span>Some</span><span>(</span>aDiv <span>to </span>bDiv<span>)<br/></span><span>      </span><span>}<br/></span><span>   }<br/></span><span>}</span></pre>
+<p><kbd>Option</kbd> provides several functions to process its internal value, in this case, <kbd>flatMap</kbd> (as a monad) and now our code looks a lot shorter.</p>
+<p>Take a look at the following short list with some of the <kbd>Option&lt;T&gt;</kbd> functions:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Function</strong></p>
+</td>
+<td>
+<p><strong>Description</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>exists(p :Predicate&lt;T&gt;): Boolean</kbd></p>
+</td>
+<td>
+<p>Returns predicate <kbd>p</kbd> result if value <kbd>T</kbd> exists, otherwise null.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>filter(p: Predicate&lt;T&gt;): Option&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>Some&lt;T&gt;</kbd> if the value <kbd>T</kbd> exists and fulfills the predicate <kbd>p</kbd>, otherwise <kbd>None</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p> <kbd>flatMap(f: (T) -&gt; Option&lt;T&gt;): Option&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>A <kbd>flatMap</kbd> transform function (like monad).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>&lt;R&gt; fold(ifEmpty: () -&gt; R, some: (T) -&gt; R): R&lt;R&gt;</kbd></p>
+</td>
+<td>
+<p>Returns value transformed as <kbd>R</kbd>, invoking <kbd>ifEmpty</kbd> for <kbd>None</kbd> and some for <kbd>Some&lt;T&gt;</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>getOrElse(default:() -&gt; T): T</kbd></p>
+</td>
+<td>
+<p>Returns value <kbd>T</kbd> if exists, otherwise returns <kbd>default</kbd> result.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>&lt;R&gt; map(f: (T) -&gt; R):Option&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>A transform function (like <kbd>functor</kbd>).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>orNull(): T?</kbd></p>
+</td>
+<td>
+<p>Returns the value <kbd>T</kbd> as a nullable <kbd>T?</kbd>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="mce-root">The last implementation of division will use comprehensions:</p>
+<pre><span>import arrow.typeclasses.binding<br/><br/>fun </span><span>comprehensionDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Option</span><span>&lt;</span><span>Pair</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>Option</span><span>.</span><span>monad</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>aDiv: <span>Int </span><span>= </span><span>optionDivide</span><span>(</span><span>a</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span><span>val </span>bDiv: <span>Int </span><span>= </span><span>optionDivide</span><span>(</span><span>b</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span>aDiv <span>to </span>bDiv<span><br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span>}</span></pre>
+<p>Comprehension is a technique to compute sequentially over any type (such as <kbd>Option</kbd>, <kbd>List</kbd>, and others) that contains a <kbd>flatMap</kbd> function and can provide an instance of monad (more on this later).</p>
+<p>In Arrow, comprehensions use coroutines. Yes, coroutines are useful outside the asynchronous execution domain.</p>
+<p>If we outline the continuations from our previous example it will look like this (which is a helpful mental model to understand coroutines)</p>
+<pre><span>fun </span><span>comprehensionDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Option</span><span>&lt;</span><span>Pair</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>Option</span><span>.</span><span>monad</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>aDiv: <span>Int </span><span>= </span><span>optionDivide</span><span>(</span><span>a</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span><span><strong>// start continuation 1</strong><br/></span><span>         </span><span>val </span>bDiv: <span>Int </span><span>= </span><span>optionDivide</span><span>(</span><span>b</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>          </span><span><strong>//start continuation 2</strong><br/></span><span>            </span>aDiv <span>to </span>bDiv<span><br/></span><span>         </span><span><strong>//end continuation 2</strong><br/></span><span><strong>      // end continuation 1</strong><br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span>}</span></pre>
+<p><kbd>Option.monad().binding</kbd> is a coroutine builder and the <kbd>bind()</kbd> function is a suspended function. If you recall correctly from our coroutines chapter, a continuation is a representation of any code after a suspension point (that is, when a suspended function is invoked). In our example, we have two suspension points and two continuations, when we return (in the last block line) we are in the second continuation, and we have access to both values, <kbd>aDiv</kbd> and <kbd>bDiv</kbd>.</p>
+<p>Reading this algorithm as continuations is very similar to our <kbd>flatMapDivision</kbd> function. Behind the scenes, <kbd>Option.monad().binding</kbd> uses <kbd>Option.flatMap</kbd> with continuations to create the comprehension; once compiled, both <kbd>comprehensionDivision</kbd> and <kbd>flatMapDivision</kbd> are equivalent, roughly speaking.</p>
+<p>The <kbd>ev()</kbd> <span>method </span>will be explained in the next section.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Arrow's type hierarchy</h1>
+                </header>
+            
+            <article>
+                
+<p>There is a limitation in Kotlin's types system—it doesn't support <strong>Higher-Kinded Types</strong> (<strong>HKT</strong>). Without getting too much into type theory, an HKT is a type that declares other generic values as type parameters:</p>
+<pre>class MyClass&lt;T&gt;() //Valid Kotlin code<br/><br/>class MyHigherKindedClass&lt;K&lt;T&gt;&gt;() //Not valid kotlin code</pre>
+<p>Lacking HKT is not great for Kotlin concerning functional programming, as many advanced functional constructs and patterns use them.</p>
+<div class="packt_infobox">The Arrow team is working on <strong>Kotlin Evolution and Enhancement Process</strong> (<strong>KEEP</strong>)—the community process for adding new language features, called Type Classes as extensions in Kotlin (<a href="https://github.com/Kotlin/KEEP/pull/87">https://github.com/Kotlin/KEEP/pull/87</a>) to support HKT and other features. At this very moment, it isn't clear if this KEEP (coded as <em>KEEP-87</em>) will be included anytime soon in Kotlin, but right now is the most commented proposal and has attracted a lot of attention. Details aren't clear now as it is still a work in progress, but there is a glimpse of hope. </div>
+<p>Arrow's solution to this problem is to simulate HKT through a technique called evidence-based HKTs.</p>
+<p>Let's have a look at an <kbd>Option&lt;T&gt;</kbd> declaration:</p>
+<div>
+<pre style="padding-left: 30px"><span>package </span>arrow<span>.</span>core<br/><br/><span>import </span>arrow<span>.</span><span>higherkind<br/></span><span>import </span>java<span>.</span>util<span>.</span><span>*<br/></span><span><br/></span><span>/**<br/></span><span> * Represents optional values. Instances of `Option`<br/></span><span> * are either an instance of $some or the object $none.<br/></span><span> */<br/></span><span>@higherkind<br/></span><span>sealed class </span><span>Option</span><span>&lt;out </span><span>A</span><span>&gt; </span>: OptionKind<span>&lt;</span><span>A</span><span>&gt; </span><span>{<br/>  //more code goes here<br/></span></pre>
+<p><kbd>Option&lt;A&gt;</kbd> is annotated with <kbd>@higherkind</kbd> which is similar to <kbd>@lenses</kbd> from our previous chapter; this annotation is used to generate code to support evidence-based HKTs. <kbd>Option&lt;A&gt;</kbd> extends from <kbd>OptionKind&lt;A&gt;</kbd>:<span><br/></span></p>
+</div>
+<pre style="padding-left: 30px"><span>package </span>arrow<span>.</span>core<br/><br/><span>class </span><span>OptionHK </span><span>private constructor</span><span>()<br/></span><span>typealias </span>OptionKind<span>&lt;</span><span>A</span><span>&gt; = </span>arrow<span>.</span><span>HK</span><span>&lt;</span><span>OptionHK</span><span>, </span><span>A</span><span>&gt;<br/></span><span><br/></span><span>@Suppress</span><span>(</span><span>"UNCHECKED_CAST"</span><span>, </span><span>"NOTHING_TO_INLINE"</span><span>)<br/></span><span>inline fun &lt;</span><span>A</span><span>&gt; </span>OptionKind<span>&lt;</span><span>A</span><span>&gt;</span><span>.</span><span>ev</span><span>()</span>: <span>Option</span><span>&lt;</span><span>A</span><span>&gt; =<br/></span><span>  this as </span><span>Option</span><span>&lt;</span><span>A</span><span>&gt;</span></pre>
+<p><kbd>OptionKind&lt;A&gt;</kbd> is a type alias for <kbd>HK&lt;OptionHK, A&gt;</kbd>, all this code is generated using the <kbd>@higherkind</kbd> annotation processor. <kbd>OptionHK</kbd> is an uninstanciable class that is used as a unique tag name for <kbd>HK</kbd> and <kbd>OptionKind</kbd> is a kind of intermediate representation of HKT. <kbd>Option.monad().binding</kbd> returns <kbd>OptionKind&lt;T&gt;</kbd>, that is why we need to call <kbd>ev()</kbd> at the end to return a proper <kbd>Option&lt;T&gt;</kbd>:</p>
+<pre><span>package </span>arrow<br/><br/><span>interface </span><span>HK</span><span>&lt;out </span><span>F</span><span>, </span><span>out </span><span>A</span><span>&gt;<br/></span><span><br/></span><span>typealias </span>HK2<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>&gt; = </span><span>HK</span><span>&lt;</span><span>HK</span><span>&lt;</span><span>F</span><span>, </span><span>A</span><span>&gt;</span><span>, </span><span>B</span><span>&gt;<br/></span><span><br/></span><span>typealias </span>HK3<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>, </span><span>C</span><span>&gt; = </span><span>HK</span><span>&lt;</span>HK2<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>&gt;</span><span>, </span><span>C</span><span>&gt;<br/></span><span><br/></span><span>typealias </span>HK4<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>, </span><span>C</span><span>, </span><span>D</span><span>&gt; = </span><span>HK</span><span>&lt;</span>HK3<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>, </span><span>C</span><span>&gt;</span><span>, </span><span>D</span><span>&gt;<br/></span><span><br/></span><span>typealias </span>HK5<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>, </span><span>C</span><span>, </span><span>D</span><span>, </span><span>E</span><span>&gt; = </span><span>HK</span><span>&lt;</span>HK4<span>&lt;</span><span>F</span><span>, </span><span>A</span><span>, </span><span>B</span><span>, </span><span>C</span><span>, </span><span>D</span><span>&gt;</span><span>, </span><span>E</span><span>&gt;<br/></span></pre>
+<p><kbd>HK</kbd> interface (short-hand for <strong>higher-kinded</strong>) is used to represent an HKT of arity one up to <kbd>HK5</kbd> for arity 5. On <kbd>HK&lt;F, A&gt;</kbd>, <kbd>F</kbd> represents the type and <kbd>A</kbd> the generic parameter, so <kbd>Option&lt;Int&gt;</kbd> is <kbd>OptionKind&lt;Int&gt;</kbd> value which is <kbd>HK&lt;OptionHK, Int&gt;</kbd>.</p>
+<p>Let's have a look now at <kbd>Functor&lt;F&gt;</kbd>:</p>
+<pre><span>package </span>arrow<span>.</span>typeclasses<br/><br/><span>import </span>arrow<span>.</span><span>*</span><span><br/></span><span><br/></span><span>@typeclass<br/></span><span>interface </span><span>Functor</span><span>&lt;</span><span>F</span><span>&gt; </span>: <span>TC </span><span>{<br/></span><span><br/></span><span>    </span><span>fun &lt;</span><span>A</span><span>, </span><span>B</span><span>&gt; </span><span>map</span><span>(</span>fa: <span>HK</span><span>&lt;</span><span>F</span><span>, </span><span>A</span><span>&gt;</span><span>, </span>f: <span>(</span><span>A</span><span>) -&gt; </span><span>B</span><span>)</span>: <span>HK</span><span>&lt;</span><span>F</span><span>, </span><span>B</span><span>&gt;<br/><br/>}<br/></span></pre>
+<p><kbd>Functor&lt;F&gt;</kbd> extends <kbd>TC</kbd>, a marker interface and, as you can guess, it has a <kbd>map</kbd> function. The <kbd>map</kbd> function receives <kbd>HK&lt;F, A&gt;</kbd> as the first parameter and a lambda <kbd>(A) -&gt; B</kbd> to transform the value of <kbd>A</kbd> into <kbd>B</kbd> and transform it into <kbd>HK&lt;F, B&gt;.</kbd></p>
+<p>Let's create our basic datatype <kbd>Mappable</kbd> that can provide instances for the <kbd>Functor</kbd> type class:</p>
+<pre><span>import </span>arrow<span>.</span><span>higherkind</span><br/><br/><span>@higherkind<br/></span><span>class </span><span>Mappable</span><span>&lt;</span><span>T</span><span>&gt;</span><span>(</span><span>val </span>t: <span>T</span><span>) </span>: MappableKind<span>&lt;</span><span>T</span><span>&gt; </span><span>{<br/></span><span>   </span><span>fun &lt;</span><span>R</span><span>&gt; </span><span>map</span><span>(</span>f: <span>(</span><span>T</span><span>) -&gt; </span><span>R</span><span>)</span>: <span>Mappable</span><span>&lt;</span><span>R</span><span>&gt; = </span><span>Mappable</span><span>(</span><span>f</span><span>(</span>t<span>))<br/></span><span><br/></span><span>   </span><span>override fun </span><span>toString</span><span>()</span>: <span>String </span><span>= </span><span>"Mappable(t=</span><span>$</span>t<span>)"<br/></span><span><br/></span><span>   </span><span>companion object<br/></span><span>}</span></pre>
+<p>Our class, <kbd>Mappable&lt;T&gt;</kbd> is annotated with <kbd>@higherkind</kbd> and extends <kbd>MappableKind&lt;T&gt;</kbd> and must have a companion object, it doesn't matter if is empty or not.</p>
+<p>Now, we need to create our implementation of <kbd>Functor&lt;F&gt;</kbd>:</p>
+<pre><span>import arrow.instance<br/>import arrow.typeclasses.Functor<br/><br/>@instance</span><span>(</span><span>Mappable</span>::<span>class</span><span>)<br/></span><span>interface </span><span>MappableFunctorInstance </span>: <span>Functor</span><span>&lt;</span><span>MappableHK</span><span>&gt; </span><span>{<br/></span><span>   </span><span>override fun &lt;</span><span>A</span><span>, </span><span>B</span><span>&gt; </span><span>map</span><span>(</span>fa: MappableKind<span>&lt;</span><span>A</span><span>&gt;</span><span>, </span>f: <span>(</span><span>A</span><span>) -&gt; </span><span>B</span><span>)</span>: <span>Mappable</span><span>&lt;</span><span>B</span><span>&gt; </span><span>{<br/></span><span>      </span><span>return </span>fa<span>.</span><span>ev</span><span>().</span><span>map</span><span>(</span>f<span>)<br/></span><span>   }<br/></span><span>}</span></pre>
+<p>Our <kbd>MappableFunctorInstance</kbd> <span>interface </span>extends <kbd>Functor&lt;MappableHK&gt;</kbd> and is annotated with <kbd>@instance(Mappable::class)</kbd>. Inside the <kbd>map</kbd> function, we use the first parameter, <kbd>MappableKind&lt;A&gt;</kbd> and use its <kbd>map</kbd> function.</p>
+<p>The <kbd>@instance</kbd> annotation will generate an object extending the interface, <kbd>MappableFunctorInstance</kbd>. It will create an <kbd>Mappable.Companion.functor()</kbd> <span>extension function </span>to get the object implementing <kbd>MappableFunctorInstance</kbd> using <kbd>Mappable.functor()</kbd> (which is how we can use <kbd>Option.monad()</kbd>).</p>
+<p>Another alternative is to let Arrow-derived instances automatically provided that your datatypes have the right functions:</p>
+<pre><span>import arrow.deriving <br/><br/>@higherkind<br/></span><span>@deriving</span><span>(</span><span>Functor</span>::<span>class</span><span>)<br/></span><span>class </span><span>DerivedMappable</span><span>&lt;</span><span>T</span><span>&gt;</span><span>(</span><span>val </span>t: <span>T</span><span>) </span>: DerivedMappableKind<span>&lt;</span><span>T</span><span>&gt; </span><span>{<br/></span><span>   </span><span>fun &lt;</span><span>R</span><span>&gt; </span><span>map</span><span>(</span>f: <span>(</span><span>T</span><span>) -&gt; </span><span>R</span><span>)</span>: <span>DerivedMappable</span><span>&lt;</span><span>R</span><span>&gt; = </span><span>DerivedMappable</span><span>(</span><span>f</span><span>(</span>t<span>))<br/></span><span><br/></span><span>   </span><span>override fun </span><span>toString</span><span>()</span>: <span>String </span><span>= </span><span>"DerivedMappable(t=</span><span>$</span>t<span>)"<br/></span><span><br/></span><span>   </span><span>companion object<br/></span><span>}</span></pre>
+<p>The <kbd>@deriving</kbd> annotation will generate <kbd>DerivedMappableFunctorInstance</kbd> that normally you will write manually.</p>
+<p>Now, we can create a generic function to use our <kbd>Mappable</kbd> functor:</p>
+<pre><span>import arrow.typeclasses.functor<br/><br/>inline fun &lt;reified </span><span>F</span><span>&gt; </span><span>buildBicycle</span><span>(</span>mapper: <span>HK</span><span>&lt;</span><span>F</span><span>, </span><span>Int</span><span>&gt;</span><span>,<br/></span><span>                           </span><span>noinline </span>f: <span>(</span><span>Int</span><span>) -&gt; </span><span>Bicycle</span><span>,<br/></span><span>                           </span>FR: <span>Functor</span><span>&lt;</span><span>F</span><span>&gt; = </span><span>functor</span><span>())</span>: <span>HK</span><span>&lt;</span><span>F</span><span>, </span><span>Bicycle</span><span>&gt; = </span>FR<span>.</span><span>map</span><span>(</span>mapper<span>, </span>f<span>)</span></pre>
+<p>The <kbd>buildBicycle</kbd> function will take as parameter any <kbd>HK&lt;F, Int&gt;</kbd> and apply the function <kbd>f</kbd> using its <kbd>Functor</kbd> implementation, returned by the function <kbd>arrow.typeclasses.functor</kbd> and returns <kbd>HK&lt;F, Bicycle&gt;</kbd>.</p>
+<p>The function <kbd>arrow.typeclass.functor</kbd> resolves at runtime, instances that adhere to the <kbd>Functor&lt;MappableHK&gt;</kbd> requirement:</p>
+<pre><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span><br/></span><span>   </span><span>val </span>mappable: <span>Mappable</span><span>&lt;</span><span>Bicycle</span><span>&gt; = </span><span>buildBicycle</span><span>(</span><span>Mappable</span><span>(</span><span>3</span><span>), </span>::<span>Bicycle</span><span>).</span><span>ev</span><span>()<br/></span><span>   </span><span>println</span><span>(</span><span>"mappable = </span><span>$</span>mappable<span>"</span><span>) //Mappable(t=Bicycle(gears=3))<br/></span><span><br/></span><span>   </span><span>val </span>option: <span>Option</span><span>&lt;</span><span>Bicycle</span><span>&gt; = </span><span>buildBicycle</span><span>(</span><span>Some</span><span>(</span><span>2</span><span>), </span>::<span>Bicycle</span><span>).</span><span>ev</span><span>()<br/></span><span>   </span><span>println</span><span>(</span><span>"option = </span><span>$</span>option<span>"</span><span>) //Some(Bicycle(gears=2))<br/></span><span><br/></span><span>   </span><span>val </span>none: <span>Option</span><span>&lt;</span><span>Bicycle</span><span>&gt; = </span><span>buildBicycle</span><span>(</span><span>None</span><span>, </span>::<span>Bicycle</span><span>).</span><span>ev</span><span>()<br/></span><span>   </span><span>println</span><span>(</span><span>"none = </span><span>$</span>none<span>"</span><span>) //None<br/></span><span><br/></span><span>}</span></pre>
+<p>We can use <kbd>buildBicycle</kbd> with <kbd>Mappeable&lt;Int&gt;</kbd>, or any other HKT class such as <kbd>Option&lt;T&gt;</kbd>.</p>
+<p>One problem with the Arrows approach to HKTs is that it must resolve its instances at runtime. This is because Kotlin does not have support for implicits or can solve type class instances at compile time, leaving Arrow with this only alternative until <em>KEEP-87</em> is approved and included in the language:</p>
+<pre><span>@higherkind<br/></span><span>class </span><span>NotAFunctor</span><span>&lt;</span><span>T</span><span>&gt;</span><span>(</span><span>val </span>t: <span>T</span><span>) </span>: NotAFunctorKind<span>&lt;</span><span>T</span><span>&gt; </span><span>{<br/></span><span>   </span><span>fun &lt;</span><span>R</span><span>&gt; </span><span>map</span><span>(</span>f: <span>(</span><span>T</span><span>) -&gt; </span><span>R</span><span>)</span>: <span>NotAFunctor</span><span>&lt;</span><span>R</span><span>&gt; = </span><span>NotAFunctor</span><span>(</span><span>f</span><span>(</span>t<span>))<br/></span><span><br/></span><span>   </span><span>override fun </span><span>toString</span><span>()</span>: <span>String </span><span>= </span><span>"NotAFunctor(t=</span><span>$</span>t<span>)"<br/></span><span>}</span></pre>
+<p>So, you can have an HKT that has a <kbd>map</kbd> function but without an instance of <kbd>Functor</kbd> can't be used, yet isn't a compilation error:</p>
+<pre><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {</span><span><br/><br/></span><span>   </span><span>val </span>not: <span>NotAFunctor</span><span>&lt;</span><span>Bicycle</span><span>&gt; = </span><span>buildBicycle</span><span>(</span><span>NotAFunctor</span><span>(</span><span>4</span><span>), </span>::<span>Bicycle</span><span>).</span><span>ev</span><span>()<br/></span><span>   </span><span>println</span><span>(</span><span>"not = </span><span>$</span>not<span>"</span><span>)<br/></span><span><br/></span><span>}</span></pre>
+<p>Calling <kbd>buildBicycle</kbd> with a <kbd>NotAFunctor&lt;T&gt;</kbd> function compiles, but it will throw a <kbd>ClassNotFoundException</kbd> exception at runtime.</p>
+<p>Now that we understand how Arrow's hierarchy works, we can cover other classes.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Either</h1>
+                </header>
+            
+            <article>
+                
+<p><kbd>Either&lt;L, R&gt;</kbd> is a representation of one of two possible values <kbd>L</kbd> or <kbd>R</kbd>, but not both at the same time. <kbd>Either</kbd> is a sealed class (similar to <kbd>Option</kbd>) with two subtypes <kbd>Left&lt;L&gt;</kbd> and <kbd>Right&lt;R&gt;</kbd>. Usually <kbd>Either</kbd> is used to represent results that can fail, using the left side to represent the error and the right side to represent a successful result. Because representing operations that can fail is a common scenario, Arrow's <kbd>Either</kbd> is right biased, in other words, unless it is documented otherwise all operations run on the right side.</p>
+<p>Let's translate our division example from <kbd>Option</kbd> to <kbd>Either</kbd>:</p>
+<pre><span>import arrow.core.Either<br/>import arrow.core.Either.Right<br/>import arrow.core.Either.Left<br/><br/>fun </span><span>eitherDivide</span><span>(</span>num: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Int</span><span>&gt; </span><span>{<br/></span><span>   </span><span>val </span>option <span>= </span><span>optionDivide</span><span>(</span>num<span>, </span>den<span>)<br/></span><span>   </span><span>return when </span><span>(</span>option<span>) {<br/></span><span>      </span><span>is </span><span>Some </span><span>-&gt; </span><span>Right</span><span>(</span>option<span>.</span>t<span>)<br/></span><span>      </span><span>None </span><span>-&gt; </span><span>Left</span><span>(</span><span>"</span><span>$</span>num<span> isn't divisible by </span><span>$</span>den<span>"</span><span>)<br/></span><span>   }<br/></span><span>}</span></pre>
+<p>Now instead of returning a <kbd>None</kbd> value, we're returning valuable information to our user:</p>
+<pre><span>import arrow.core.Tuple2<br/><br/>fun </span><span>eitherDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>val </span>aDiv <span>= </span><span>eitherDivide</span><span>(</span>a<span>, </span>den<span>)<br/></span><span>   </span><span>return when </span><span>(</span>aDiv<span>) {<br/></span><span>      </span><span>is </span><span>Right </span><span>-&gt; {<br/></span><span>         </span><span>val </span>bDiv <span>= </span><span>eitherDivide</span><span>(</span>b<span>, </span>den<span>)<br/></span><span>         </span><span>when </span><span>(</span>bDiv<span>) {<br/></span><span>            </span><span>is </span><span>Right </span><span>-&gt; </span><span>Right</span><span>(</span>aDiv<span>.</span><span>getOrElse </span><span>{ </span><span>0 </span><span>} </span><span>toT </span>bDiv<span>.</span><span>getOrElse </span><span>{ </span><span>0 </span><span>}</span><span>)<br/></span><span>            </span><span>is </span><span>Left </span><span>-&gt; </span>bDiv <span>as </span><span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Nothing</span><span>&gt;<br/></span><span>         </span><span>}<br/></span><span>      }<br/></span><span>      </span><span>is </span><span>Left </span><span>-&gt; </span>aDiv <span>as </span><span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Nothing</span><span>&gt;<br/></span><span>   </span><span>}<br/></span><span>}</span></pre>
+<p>In <kbd>eitherDivision</kbd>, we're using Arrow's <kbd>Tuple&lt;A, B&gt;</kbd> instead of Kotlin's <kbd>Pair&lt;A, B&gt;</kbd>. Tuples provide more features than Pair/Triple, and from now on we'll use it. To create a <kbd>Tuple2</kbd>, you can use the extension <kbd>infix</kbd> function, <kbd>toT</kbd>.</p>
+<p>Next, a short list of the <kbd>Either&lt;L, R&gt;</kbd> functions:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Function</strong></p>
+</td>
+<td>
+<p><strong>Description</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>bimap(fa:(L) -&gt; T, fb:(R) -&gt; X): Either&lt;T, X&gt;</kbd></p>
+</td>
+<td>
+<p>Transform using <kbd>fa</kbd> on <kbd>Left</kbd> and <kbd>fb</kbd> on <kbd>Right</kbd> to return <kbd>Either&lt;T, X&gt;</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>contains(elem:R): Boolean</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>true</kbd> if the <kbd>Right</kbd> value is the same as <kbd>elem</kbd> parameter, <kbd>false</kbd> for <kbd>Left</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>exists(p:Predicate&lt;R&gt;):Boolean</kbd></p>
+</td>
+<td>
+<p>If <kbd>Right</kbd>, returns Predicate <kbd>p</kbd> result, always <kbd>false</kbd> for <kbd>Left</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>flatMap(f: (R) -&gt; Either&lt;L, T&gt;): Either&lt;L, T&gt;</kbd></p>
+</td>
+<td>
+<p>A <kbd>flatMap</kbd> function as in <kbd>Monad</kbd>, using the value of  <kbd>Right</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>fold(fa: (L) -&gt; T, fb: (R) -&gt; T): T</kbd></p>
+</td>
+<td>
+<p>Returns a <kbd>T</kbd> value executing <kbd>fa</kbd> for <kbd>Left</kbd> and <kbd>fb</kbd> for <kbd>Right</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>getOrElse(default:(L) -&gt; R): R</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>Right</kbd> value, or results from the <kbd>default</kbd> function.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>isLeft(): Boolean</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>true</kbd> if is an instance of <kbd>Left</kbd> and <kbd>false</kbd> for <kbd>Right</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>isRight(): Boolean</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>true</kbd> if is an instance of <kbd>Right</kbd> and <kbd>false</kbd> for <kbd>Left</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>map(f: (R) -&gt; T): Either&lt;L, T&gt;</kbd></p>
+</td>
+<td>
+<p>A <kbd>map</kbd> function as in <kbd>Functor</kbd>, if <kbd>Right</kbd>, uses function <kbd>f</kbd> to transform it to <kbd>Right&lt;T&gt;</kbd>, if <kbd>Left</kbd>, returns same value without transformation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>mapLeft(f: (L) -&gt; T): Either&lt;T, R&gt;</kbd></p>
+</td>
+<td>
+<p>A <kbd>map</kbd> function as in <kbd>Functor</kbd>, if <kbd>Left</kbd>, uses function <kbd>f</kbd> to transform it to <kbd>Left&lt;T&gt;</kbd>, if <kbd>Right</kbd>, returns same value without transformation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>swap(): Either&lt;R, L&gt;</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>Either</kbd> with its types and value swapped.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>toOption(): Option&lt;R&gt;</kbd></p>
+</td>
+<td>
+<p><kbd>Some&lt;T&gt;</kbd> for <kbd>Right</kbd> and <kbd>None</kbd> for <kbd>Left</kbd>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="mce-root">The <kbd>flatMap</kbd> version looks as expected:</p>
+<pre><span>fun </span><span>flatMapEitherDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>eitherDivide</span><span>(</span>a<span>, </span><span>den</span><span>).</span><span>flatMap </span><span>{ </span>aDiv <span>-&gt;<br/></span><span>      </span><span>eitherDivide</span><span>(</span><span>b</span><span>, </span><span>den</span><span>).</span><span>flatMap </span><span>{ </span>bDiv <span>-&gt;<br/></span><span>         </span><span>Right</span><span>(</span><span>aDiv </span><span>toT </span>bDiv<span>)<br/></span><span>      </span><span>}<br/></span><span>   }<br/></span><span>}</span></pre>
+<p><kbd>Either</kbd> has a monad implementation, so we can invoke the binding function:</p>
+<pre><span>fun </span><span>comprehensionEitherDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>Either</span><span>.</span><span>monad</span><span>&lt;</span><span>String</span><span>&gt;</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>aDiv <span>= </span><span>eitherDivide</span><span>(</span><span>a</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span><span>val </span>bDiv <span>= </span><span>eitherDivide</span><span>(</span><span>b</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span><br/></span><span>      </span>aDiv <span>toT </span>bDiv<span><br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()</span></pre>
+<p>Pay attention to <kbd>Either.monad&lt;L&gt;()</kbd>; for <kbd>Either&lt;L, R&gt;</kbd> it must define the <kbd>L</kbd> type:</p>
+<pre><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>   </span><span>eitherDivision</span><span>(</span><span>3</span><span>, </span><span>2</span><span>, </span><span>4</span><span>).</span><span>fold</span><span>(</span>::println<span>, </span>::println<span>) //3 isn't divisible by 4<br/></span><span>}<br/></span></pre>
+<p>In our next section, we'll learn about monad transformers.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Monad transformers</h1>
+                </header>
+            
+            <article>
+                
+<p><kbd>Either</kbd> and <kbd>Option</kbd> are simple to use, but what happens if we combine both?</p>
+<pre><span>object </span><span>UserService </span><span>{<br/></span><span> </span><span> </span><span><br/></span><span>   </span><span>fun </span><span>findAge</span><span>(</span>user: <span>String</span><span>)</span>: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span> </span><span>      //Magic  <br/></span><span>   }<br/></span><span>}</span></pre>
+<p><kbd>UserService.findAge</kbd> returns <kbd>Either&lt;String, Option&lt;Int&gt;&gt;</kbd>; <kbd>Left&lt;String&gt;</kbd> for errors accessing the database or any other infrastructure, <kbd>Right&lt;None&gt;</kbd> for no value found on the database, and <kbd>Right&lt;Some&lt;Int&gt;&gt;</kbd> for a value found:</p>
+<pre><span>import </span>arrow<span>.</span>core<span>.</span><span>*<br/></span><span>import </span>arrow<span>.</span>syntax<span>.</span>function<span>.</span>pipe<br/><br/><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span> </span><span>val </span>anakinAge: Either&lt;String, Option&lt;Int&gt;&gt; <span>= </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Anakin"</span><span>)<br/></span><span><br/></span><span> </span>anakinAge<span>.</span><span>fold</span><span>(</span>::identity<span>, </span><span>{ </span>op <span>-&gt;<br/></span><span>         </span>op<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not found" </span><span>}</span><span>, </span><span>Int</span>::toString<span>)<br/></span><span>     </span><span>}</span><span>) </span><span>pipe </span>::println <br/><span>}</span></pre>
+<p>To print an age, we need two nested folds, nothing too complicated. Problems arrive when we need to do operations accessing multiple values:</p>
+<pre><span>import </span>arrow<span>.</span>core<span>.</span><span>*<br/></span><span>import </span>arrow<span>.</span>syntax<span>.</span>function<span>.</span>pipe<span><br/></span><span>import </span>kotlin<span>.</span>math<span>.</span>absoluteValue<br/><span><br/></span><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>   </span><span>val </span>anakinAge: Either&lt;String, Option&lt;Int&gt;&gt; <span>= </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Anakin"</span><span>)<br/></span><span>   </span><span>val </span>padmeAge: Either&lt;String, Option&lt;Int&gt;&gt; <span>= </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Padme"</span><span>)<br/></span><span><br/></span><span>   </span><span>val </span>difference: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt;&gt;&gt; = </span>anakinAge<span>.</span><span>map </span><span>{ </span>aOp <span>-&gt;<br/></span><span>      </span>aOp<span>.</span><span>map </span><span>{ </span>a <span>-&gt;<br/></span><span>         </span>padmeAge<span>.</span><span>map </span><span>{ </span>pOp <span>-&gt;<br/></span><span>            </span>pOp<span>.</span><span>map </span><span>{ </span>p <span>-&gt;<br/></span><span>               </span><span>(</span>a <span>- </span>p<span>).</span><span>absoluteValue<br/></span><span>            </span><span>}<br/></span><span>         }<br/></span><span>      }<br/></span><span>   }<br/></span><span><br/></span><span>   </span>difference<span>.</span><span>fold</span><span>(</span>::identity<span>, </span><span>{ </span>op1 <span>-&gt;<br/></span><span>      </span>op1<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not Found" </span><span>}</span><span>, </span><span>{ </span>either <span>-&gt;<br/></span><span>         </span>either<span>.</span><span>fold</span><span>(</span>::identity<span>, </span><span>{ </span>op2 <span>-&gt; <br/></span><span>            </span>op2<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not Found" </span><span>}</span><span>, </span><span>Int</span>::toString<span>) </span><span>}</span><span>)<br/></span><span>      </span><span>}</span><span>)<br/></span><span>   </span><span>}</span><span>) </span><span>pipe </span>::println<br/><span>}</span></pre>
+<p>Monads don't compose, making these operations grow in complexity, very quickly. But, we can always count on comprehensions, can't we? Now, let's look at the following codes:</p>
+<pre><span>import </span>arrow<span>.</span>core<span>.</span><span>*<br/></span><span>import </span>arrow<span>.</span>syntax<span>.</span>function<span>.</span>pipe<br/><span>import </span>arrow<span>.</span>typeclasses<span>.</span>binding<span><br/></span><span>import </span>kotlin<span>.</span>math<span>.</span>absoluteValue<br/><span><br/></span><span><br/></span><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>   </span><span>val </span>anakinAge: Either&lt;String, Option&lt;Int&gt;&gt; <span>= </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Anakin"</span><span>)<br/></span><span>   </span><span>val </span>padmeAge: Either&lt;String, Option&lt;Int&gt;&gt; <span>= </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Padme"</span><span>)<br/></span><span><br/></span><span>   </span><span>val </span>difference: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt;&gt; = </span><span>Either</span><span>.</span><span>monad</span><span>&lt;</span><span>String</span><span>&gt;</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>aOp: Option&lt;Int&gt; <span>= </span><span>anakinAge</span><span>.</span><span>bind</span><span>()<br/></span><span>      </span><span>val </span>pOp: Option&lt;Int&gt; <span>= </span><span>padmeAge</span><span>.</span><span>bind</span><span>()<br/></span><span>      </span>aOp<span>.</span><span>map </span><span>{ </span>a <span>-&gt;<br/></span><span>         </span>pOp<span>.</span><span>map </span><span>{ </span>p <span>-&gt;<br/></span><span>            </span><span>(</span>a <span>- </span>p<span>).</span><span>absoluteValue<br/></span><span>         </span><span>}<br/></span><span>      }</span><span><br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span><br/></span><span>   </span>difference<span>.</span><span>fold</span><span>(</span>::identity<span>, </span><span>{ </span>op1 <span>-&gt;<br/></span><span>      </span>op1<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not found" </span><span>}</span><span>, </span><span>{ </span>op2 <span>-&gt;<br/></span><span>         </span>op2<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not found" </span><span>}</span><span>, </span><span>Int</span>::toString<span>) </span><span>}</span><span>) </span><span>}</span><span>) </span><span>pipe </span>::println<br/><span>}</span></pre>
+<p> This is better, the returning type is not that long, and <kbd>fold</kbd> is more manageable. Let's take a look at the nested comprehensions in the following code snippet:</p>
+<pre><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>   </span><span>val </span>anakinAge: Either&lt;String, Option&lt;Int&gt;&gt; <span>= </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Anakin"</span><span>)<br/></span><span>   </span><span>val </span>padmeAge: <span> Either&lt;String, Option&lt;Int&gt;&gt; = </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Padme"</span><span>)<br/></span><span><br/></span><span>   </span><span>val </span>difference: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt; = </span><span>Either</span><span>.</span><span>monad</span><span>&lt;</span><span>String</span><span>&gt;</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>aOp: <span>Option</span><span>&lt;</span><span>Int</span><span>&gt; = </span><span>anakinAge</span><span>.</span><span>bind</span><span>()<br/></span><span>      </span><span>val </span>pOp: <span>Option</span><span>&lt;</span><span>Int</span><span>&gt; = </span><span>padmeAge</span><span>.</span><span>bind</span><span>()<br/></span><span>      </span><span>Option</span><span>.</span><span>monad</span><span>().</span><span>binding </span><span>{<br/></span><span>         </span><span>val </span>a: <span>Int </span><span>= </span><span>aOp</span><span>.</span><span>bind</span><span>()<br/></span><span>         </span><span>val </span>p: <span>Int </span><span>= </span><span>pOp</span><span>.</span><span>bind</span><span>()<br/></span><span>         </span><span>(</span>a <span>- </span>p<span>).</span><span>absoluteValue</span><span><br/></span><span>      </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span><br/></span><span>   </span>difference<span>.</span><span>fold</span><span>(</span>::identity<span>, </span><span>{ </span>op <span>-&gt;<br/></span><span>      </span>op<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not found" </span><span>}</span><span>, </span><span>Int</span>::toString<span>)<br/></span><span>   </span><span>}</span><span>) </span><span>pipe </span>::println<br/><span>}</span></pre>
+<p>Now, we have the same type of both values and result. But we still have another option, monad transformers.</p>
+<p>A <strong>monad transformer</strong> is a combination of two monads that can be executed as one. For our example, we will use <kbd>OptionT</kbd>, (shorthand for <strong>Option Transformer</strong>) as <kbd>Option</kbd> is the monad type that is nested inside <kbd>Either</kbd>:</p>
+<pre><span>import </span>arrow<span>.</span>core<span>.</span><span>*<br/></span><span>import </span>arrow<span>.</span>data<span>.</span><span>OptionT<br/></span><span>import </span>arrow<span>.</span>data<span>.</span>monad<br/><span>import </span>arrow<span>.</span>data<span>.</span>value<br/><span>import </span>arrow<span>.</span>syntax<span>.</span>function<span>.</span>pipe<br/><span>import </span>arrow<span>.</span>typeclasses<span>.</span>binding<span><br/></span><span>import </span>kotlin<span>.</span>math<span>.</span>absoluteValue<br/><br/><span><br/></span><span>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>   </span><span>val </span>anakinAge: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt; = </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Anakin"</span><span>)<br/></span><span>   </span><span>val </span>padmeAge: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt; = </span><span>UserService</span><span>.</span><span>findAge</span><span>(</span><span>"Padme"</span><span>)<br/></span><span><br/></span><span>   </span><span>val </span>difference: <span>Either</span><span>&lt;</span><span>String</span><span>, </span><span>Option</span><span>&lt;</span><span>Int</span><span>&gt;&gt; = </span><span>OptionT</span><span>.</span><span>monad</span><span>&lt;</span>EitherKindPartial<span>&lt;</span><span>String</span><span>&gt;&gt;</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>a: Int <span>= </span><span>OptionT</span><span>(</span><span>anakinAge</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span><span>val </span>p: Int <span>= </span><span>OptionT</span><span>(</span><span>padmeAge</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span><span>(</span>a <span>- </span>p<span>).</span><span>absoluteValue</span><span><br/></span><span>   </span><span>}</span><span>.</span><span>value</span><span>().</span><span>ev</span><span>()<br/></span><span><br/></span><span>   </span>difference<span>.</span><span>fold</span><span>(</span>::identity<span>, </span><span>{ </span>op <span>-&gt;<br/></span><span>      </span>op<span>.</span><span>fold</span><span>(</span><span>{ </span><span>"Not found" </span><span>}</span><span>, </span><span>Int</span>::toString<span>)<br/></span><span>   </span><span>}</span><span>) </span><span>pipe </span>::println<br/><span>}</span></pre>
+<p>We use <kbd>OptionT.monad&lt;EitherKindPartial&lt;String&gt;&gt;().binding</kbd>. The <kbd>EitherKindPartial&lt;String&gt;</kbd> monad means that the wrapper type is an <kbd>Either&lt;String, Option&lt;T&gt;&gt;</kbd>.</p>
+<p>Inside the <kbd>binding</kbd> block, we use <kbd>OptionT</kbd> on values of type <kbd>Either&lt;String, Option&lt;T&gt;&gt;</kbd> (technically on values of type <kbd>HK&lt;HK&lt;EitherHK, String&gt;, Option&lt;T&gt;&gt;</kbd>) to call <kbd>bind(): T</kbd>, in our case <kbd>T</kbd>, is <kbd>Int</kbd>.</p>
+<p>Previously we used just the <kbd>ev()</kbd> <span>method,</span> but now we need to use the <kbd>value()</kbd> <span>method </span>to extract the <kbd>OptionT</kbd> internal value.</p>
+<p>In our next section, we'll learn about the <kbd>Try</kbd> type.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Try</h1>
+                </header>
+            
+            <article>
+                
+<p><strong>Try</strong> is a representation of a computation that may or may not fail. <kbd>Try&lt;A&gt;</kbd> is a sealed class with two possibles sub-classes—<kbd>Failure&lt;A&gt;</kbd>, representing a fail and <kbd>Success&lt;T&gt;</kbd> representing a successful operation.</p>
+<p>Let's write our division example with <kbd>Try</kbd>:</p>
+<pre><span>import arrow.data.Try<br/><br/>fun </span><span>tryDivide</span><span>(</span>num: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Try</span><span>&lt;</span><span>Int</span><span>&gt; = </span><span>Try </span><span>{ </span><span>divide</span><span>(</span>num<span>, </span>den<span>)</span><span>!! </span><span>}</span></pre>
+<p> The easiest way to create a <kbd>Try</kbd> instance is to use the <kbd>Try.invoke</kbd> operator. If the block inside throws an exception, it will return <kbd>Failure</kbd>; if everything goes well, <kbd>Success&lt;Int&gt;</kbd>, for example, the <kbd>!!</kbd> <span>operator</span> will throw <kbd>NPE</kbd> if divide returns a null:</p>
+<pre><span>fun </span><span>tryDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Try</span><span>&lt;</span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>val </span>aDiv <span>= </span><span>tryDivide</span><span>(</span>a<span>, </span>den<span>)<br/></span><span>   </span><span>return when </span><span>(</span>aDiv<span>) {<br/></span><span>      </span><span>is </span><span>Success </span><span>-&gt; {<br/></span><span>         </span><span>val </span>bDiv <span>= </span><span>tryDivide</span><span>(</span>b<span>, </span>den<span>)<br/></span><span>         </span><span>when </span><span>(</span>bDiv<span>) {<br/></span><span>            </span><span>is </span><span>Success </span><span>-&gt; {<br/></span><span>               </span><span>Try </span><span>{ </span>aDiv<span>.</span>value <span>toT </span>bDiv<span>.</span>value <span>}<br/></span><span>            </span><span>}</span><span><br/></span><span>            </span><span>is </span>Failure <span>-&gt; </span><span>Failure</span><span>(</span>bDiv<span>.</span>exception<span>)<br/></span><span>         }<br/></span><span>      }<br/></span><span>      </span><span>is </span>Failure <span>-&gt; </span><span>Failure</span><span>(</span>aDiv<span>.</span>exception<span>)<br/></span><span>   }<br/></span><span>}</span></pre>
+<p>Let's take a look at a short list of the <kbd>Try&lt;T&gt;</kbd> functions:</p>
+<table>
+<tbody>
+<tr>
+<td>
+<p><strong>Function</strong></p>
+</td>
+<td>
+<p><strong>Description</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>exists(p: Predicate&lt;T&gt;): Boolean</kbd></p>
+</td>
+<td>
+<p>If <kbd>Success&lt;T&gt;</kbd> returns <kbd>p</kbd> result, on <kbd>Failure</kbd> always return <kbd>false</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>filter(p:  Predicate&lt;T&gt;): Try&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>Success&lt;T&gt;</kbd> if operation is successful and pass predicate <kbd>p</kbd>, otherwise <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>&lt;R&gt; flatMap(f: (T) -&gt; Try&lt;R&gt;): Try&lt;R&gt;</kbd></p>
+</td>
+<td>
+<p><kbd>flatMap</kbd> function as in monad.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>&lt;R&gt; fold(fa: (Throwable) -&gt; R, fb:(T) -&gt; R): R</kbd></p>
+</td>
+<td>
+<p>Returns value transformed as <kbd>R</kbd>, invoking <kbd>fa</kbd> if <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>getOrDefault(default: () -&gt; T): T</kbd></p>
+</td>
+<td>
+<p>Returns value <kbd>T</kbd>, invoking default if <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>getOrElse(default: (Throwable) -&gt; T): T</kbd></p>
+</td>
+<td>
+<p>Returns value <kbd>T</kbd>, invoking default if <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>isFailure(): Boolean</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>true</kbd> if <kbd>Failure</kbd>, otherwise <kbd>false</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>isSuccess(): Boolean</kbd></p>
+</td>
+<td>
+<p>Returns <kbd>true</kbd> if <kbd>Success</kbd>, otherwise <kbd>false</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>&lt;R&gt; map(f: (T) -&gt; R): Try&lt;R&gt;</kbd></p>
+</td>
+<td>
+<p>Transforming function as in functor.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>onFailure(f: (Throwable) -&gt; Unit): Try&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Act on <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>onSuccess(f: (T) -&gt; Unit): Try&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Act on <kbd>Success</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>orElse(f: () -&gt; Try&lt;T&gt;): Try&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Returns itself on <kbd>Success</kbd> or <kbd>f</kbd> result on <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>recover(f: (Throwable) -&gt; T): Try&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Transform <kbd>map</kbd> function for <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>recoverWith(f: (Throwable) -&gt; Try&lt;T&gt;): Try&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Transform <kbd>flatMap</kbd> function for <kbd>Failure</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>toEither() : Either&lt;Throwable, T&gt;</kbd></p>
+</td>
+<td>
+<p>Transform into <kbd>Either</kbd>—<kbd>Failure</kbd> to <kbd>Left&lt;Throwable&gt;</kbd> and <kbd>Success&lt;T&gt;</kbd> to <kbd>Right&lt;T&gt;</kbd>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><kbd>toOption(): Option&lt;T&gt;</kbd></p>
+</td>
+<td>
+<p>Transform into <kbd>Option</kbd>—<kbd>Failure</kbd> to <kbd>None</kbd> and <kbd>Success&lt;T&gt;</kbd> to <kbd>Some&lt;T&gt;</kbd>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p class="mce-root">The <kbd>flatMap</kbd> implementation is very similar to <kbd>Either</kbd> and <kbd>Option</kbd> and shows the value of having a common set of name and behavior conventions:</p>
+<pre><span>fun </span><span>flatMapTryDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Try</span><span>&lt;</span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>tryDivide</span><span>(</span>a<span>, </span>den<span>).</span><span>flatMap </span><span>{ </span>aDiv <span>-&gt;<br/></span><span>      </span><span>tryDivide</span><span>(</span>b<span>, </span>den<span>).</span><span>flatMap </span><span>{ </span>bDiv <span>-&gt;<br/></span><span>         </span><span>Try </span><span>{ </span>aDiv <span>toT </span>bDiv <span>}<br/></span><span>      }<br/></span><span>   }<br/></span><span>}</span></pre>
+<p>Monadic comprehensions are available for <kbd>Try</kbd> too:</p>
+<pre><span>fun </span><span>comprehensionTryDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Try</span><span>&lt;</span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>Try</span><span>.</span><span>monad</span><span>().</span><span>binding </span><span>{<br/></span><span>      </span><span>val </span>aDiv <span>= </span><span>tryDivide</span><span>(</span><span>a</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span><span>val </span>bDiv <span>= </span><span>tryDivide</span><span>(</span><span>b</span><span>, </span><span>den</span><span>).</span><span>bind</span><span>()<br/></span><span>      </span>aDiv <span>toT </span>bDiv<span><br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span>}</span></pre>
+<p>There is another kind of monadic comprehension using an instance of <kbd>MonadError</kbd>:</p>
+<pre><span>fun </span><span>monadErrorTryDivision</span><span>(</span>a: <span>Int</span><span>, </span>b: <span>Int</span><span>, </span>den: <span>Int</span><span>)</span>: <span>Try</span><span>&lt;</span><span>Tuple2</span><span>&lt;</span><span>Int</span><span>, </span><span>Int</span><span>&gt;&gt; </span><span>{<br/></span><span>   </span><span>return </span><span>Try</span><span>.</span><span>monadError</span><span>().</span><span>bindingCatch </span><span>{<br/></span><span>      </span><span>val </span>aDiv <span>= </span><span>divide</span><span>(</span><span>a</span><span>, </span><span>den</span><span>)</span><span>!!<br/></span><span>      val </span>bDiv <span>= </span><span>divide</span><span>(</span><span>b</span><span>, </span><span>den</span><span>)</span><span>!!<br/></span><span>      </span>aDiv <span>toT </span>bDiv<span><br/></span><span>   </span><span>}</span><span>.</span><span>ev</span><span>()<br/></span><span>}</span></pre>
+<p>With <kbd>monadError.bindingCatch</kbd> any operation that throws an exception is lifted to <kbd>Failure</kbd>, at the end the returns is wrapped into <kbd>Try&lt;T&gt;</kbd>. <kbd>MonadError</kbd> is also available for <kbd>Option</kbd> and <kbd>Either</kbd>.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">State</h1>
+                </header>
+            
+            <article>
+                
+<p><strong>State</strong> is a structure that provides a functional approach for handling application state. <kbd>State&lt;S, A&gt;</kbd> is an abstraction over <kbd>S -&gt; Tuple2&lt;S, A&gt;</kbd>. <strong>S</strong> represents the state type, and <kbd>Tuple2&lt;S, A&gt;</kbd> is the result, with <kbd>S</kbd> for the newly updated state and <kbd>A</kbd> for the function return.</p>
+<p>We can start with a simple example, a function that returns two things, a price and the steps to calculate it. To calculate a price, we need to add  <kbd>VAT</kbd> of 20% and apply a discount if the <kbd>price</kbd> value goes above some threshold:</p>
+<pre><span>import </span>arrow<span>.</span>core<span>.</span><span>Tuple2<br/></span><span>import </span>arrow<span>.</span>core<span>.</span>toT<br/><span>import </span>arrow<span>.</span>data<span>.</span><span>State<br/></span><br/><span>typealias </span>PriceLog <span>= </span><span>MutableList</span><span>&lt;</span><span>Tuple2</span><span>&lt;</span><span>String</span><span>, </span><span>Double</span><span>&gt;&gt;<br/></span><span><br/></span><span>fun </span><span>addVat</span><span>()</span>: State<span>&lt;</span>PriceLog<span>, </span><span>Unit</span><span>&gt; = </span><span>State </span><span>{ </span>log: PriceLog <span>-&gt;<br/></span><span>    </span><span>val </span><span>(</span>_<span>, </span>price<span>) </span><span>= </span>log<span>.</span><span>last</span><span>()<br/></span><span>    </span><span>val </span>vat <span>= </span>price <span>* </span><span>0.2<br/></span><span>    </span>log<span>.</span><span>add</span><span>(</span><span>"Add VAT: </span><span>$</span>vat<span>" </span><span>toT </span>price <span>+ </span>vat<span>)<br/></span><span>    </span>log <span>toT </span><span>Unit<br/></span><span>}</span></pre>
+<p>We have a type alias <kbd>PriceLog</kbd> for <kbd>MutableList&lt;Tuple2&lt;String, Double&gt;&gt;</kbd>. <kbd>PriceLog</kbd> will be our <kbd>State</kbd> representation; each step represented with <kbd>Tuple2&lt;String, Double&gt;</kbd>.</p>
+<p>Our first function, <kbd>addVat(): State&lt;PriceLog, Unit&gt;</kbd> represents the first step. We write the function using a <kbd>State</kbd> builder that receives <kbd>PriceLog</kbd>, the state before applying any step and must return a <kbd>Tuple2&lt;PriceLog, Unit&gt;</kbd>, we use <kbd>Unit</kbd> because we don't need the price at this point:</p>
+<pre><span>fun </span><span>applyDiscount</span><span>(</span>threshold: <span>Double</span><span>, </span>discount: <span>Double</span><span>)</span>: State<span>&lt;</span>PriceLog<span>, </span><span>Unit</span><span>&gt; = </span><span>State </span><span>{ </span>log <span>-&gt;<br/></span><span>    </span><span>val </span><span>(</span>_<span>, </span>price<span>) </span><span>= </span>log<span>.</span><span>last</span><span>()<br/></span><span>    </span><span>if </span><span>(</span>price <span>&gt; </span><span>threshold</span><span>) {<br/></span><span>        </span>log<span>.</span><span>add</span><span>(</span><span>"Applying -</span><span>$</span><span>discount</span><span>" </span><span>toT </span>price <span>- </span><span>discount</span><span>)<br/></span><span>    } </span><span>else </span><span>{<br/></span><span>        </span>log<span>.</span><span>add</span><span>(</span><span>"No discount applied" </span><span>toT </span>price<span>)<br/></span><span>    }<br/></span><span>    </span>log <span>toT </span><span>Unit<br/></span><span>}</span></pre>
+<p>The <kbd>applyDiscount</kbd> <span>function </span>is our second step. The only new element that we introduce here are two parameters, one for <kbd>threshold</kbd> and the other for <kbd>discount</kbd>:</p>
+<pre><span>fun </span><span>finalPrice</span><span>()</span>: State<span>&lt;</span>PriceLog<span>, </span><span>Double</span><span>&gt; = </span><span>State </span><span>{ </span>log <span>-&gt;<br/></span><span>    </span><span>val </span><span>(</span>_<span>, </span>price<span>) </span><span>= </span>log<span>.</span><span>last</span><span>()<br/></span><span>    </span>log<span>.</span><span>add</span><span>(</span><span>"Final Price" </span><span>toT </span>price<span>)<br/></span><span>    </span>log <span>toT </span>price<br/><span>}</span></pre>
+<p>The last step is represented by the function <kbd>finalPrice()</kbd>, and now we return <kbd>Double</kbd> instead of <kbd>Unit</kbd>:</p>
+<pre><span>import </span>arrow<span>.</span>data<span>.</span>ev<br/><span>import </span>arrow<span>.</span>instances<span>.</span>monad<br/><span>import </span>arrow<span>.</span>typeclasses<span>.</span>binding<br/><br/><span>fun </span><span>calculatePrice</span><span>(</span>threshold: <span>Double</span><span>, </span>discount: <span>Double</span><span>) </span><span>= </span><span>State</span><span>().</span><span>monad</span><span>&lt;</span>PriceLog<span>&gt;</span><span>().</span><span>binding </span><span>{<br/></span><span>    </span><span>addVat</span><span>().</span><span>bind</span><span>() </span><span>//Unit<br/></span><span>    </span><span>applyDiscount</span><span>(</span><span>threshold</span><span>, </span><span>discount</span><span>).</span><span>bind</span><span>() </span><span>//Unit<br/></span><span>    </span><span>val </span>price: <span>Double </span><span>= </span><span>finalPrice</span><span>().</span><span>bind</span><span>()<br/></span><span>    </span>price<span><br/></span><span>}</span><span>.</span><span>ev</span><span>()</span></pre>
+<p>To represent the sequence of steps, we use a monad comprehension and use the <kbd>State</kbd> functions sequentially. From one function to the next one, the <kbd>PriceLog</kbd> state is flowing implicitly (is just some coroutine continuations magic). At the end, we yield the final price. Adding new steps or switching existing ones is as easy as adding or moving lines:</p>
+<pre><span>import arrow.data.run<br/>import arrow.data.runA<br/><br/>fun </span><span>main</span><span>(</span>args: <span>Array</span><span>&lt;</span><span>String</span><span>&gt;</span><span>) {<br/></span><span>    </span><span>val </span><span>(</span>history: PriceLog<span>, </span>price: <span>Double</span><span>) </span><span>= </span><span>calculatePrice</span><span>(</span><span>100.0</span><span>, </span><span>2.0</span><span>).</span><span>run</span><span>(</span><span>mutableListOf</span><span>(</span><span>"Init" </span><span>toT </span><span>15.0</span><span>))<br/></span><span>    </span><span>println</span><span>(</span><span>"Price: </span><span>$</span>price<span>"</span><span>)<br/></span><span>    </span><span>println</span><span>(</span><span>"::History::"</span><span>)<br/></span><span>    </span>history<br/>            <span>.</span><span>map </span><span>{ </span><span>(</span>text<span>, </span>value<span>) </span><span>-&gt; </span><span>"</span><span>$</span>text<span>\t</span><span>|</span><span>\t$</span>value<span>" </span><span>}<br/></span><span>            </span><span>.</span><span>forEach</span><span>(</span>::println<span>)<br/></span><span><br/></span><span>    </span><span>val </span>bigPrice: <span>Double </span><span>= </span><span>calculatePrice</span><span>(</span><span>100.0</span><span>, </span><span>2.0</span><span>).</span><span>runA</span><span>(</span><span>mutableListOf</span><span>(</span><span>"Init" </span><span>toT </span><span>1000.0</span><span>))<br/></span><span>    </span><span>println</span><span>(</span><span>"bigPrice = </span><span>$</span>bigPrice<span>"</span><span>)<br/></span><span>}</span></pre>
+<p>To use the <kbd>calculatePrice</kbd> function, you must provide the threshold and discount values and then invoke the extension function <kbd>run</kbd> with an initial state. If you're interested just in the price, you can use <kbd>runA</kbd> or for just the history, <kbd>runS</kbd>.</p>
+<div class="packt_tip">Avoid problems using <kbd>State</kbd>. Don't confuse the extension function <kbd>arrow.data.run</kbd> with the extension function, <kbd>kotlin.run</kbd> (imported by default).</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Corecursion with State</h1>
+                </header>
+            
+            <article>
+                
+<p><kbd>State</kbd> is beneficial on corecursion; we can rewrite our old examples with <kbd>State</kbd>:</p>
+<div>
+<pre><span>fun &lt;</span><span>T</span><span>, </span><span>S</span><span>&gt; unfold</span><span>(</span>s: <span>S</span><span>, </span>f: <span>(</span><span>S</span><span>) -&gt; </span><span>Pair</span><span>&lt;</span><span>T</span><span>, </span><span>S</span><span>&gt;</span>?<span>)</span>: <span>Sequence</span><span>&lt;</span><span>T</span><span>&gt; </span><span>{<br/></span><span>   </span><span>val </span>result <span>= </span><span>f</span><span>(</span>s<span>)<br/></span><span>   </span><span>return if </span><span>(</span>result <span>!= null</span><span>) {<br/></span><span>      </span><span>sequenceOf</span><span>(</span>result<span>.</span>first<span>) </span><span>+ </span><span>unfold</span><span>(</span>result<span>.</span>second<span>, </span>f<span>)<br/></span><span>   } </span><span>else </span><span>{<br/></span><span>      </span><span>sequenceOf</span><span>()<br/></span><span>   }<br/></span><span>}</span></pre></div>
+<p>Our original <kbd>unfold</kbd> function use a function, <kbd>f: (S) -&gt; Pair&lt;T,S&gt;?</kbd> which is very similar to <kbd>State&lt;S, T&gt;</kbd>:</p>
+<div>
+<pre><span>fun &lt;</span><span>T</span><span>, </span><span>S</span><span>&gt; </span><span>unfold</span><span>(</span>s: <span>S</span><span>, </span>state: State<span>&lt;</span><span>S</span><span>, </span><span>Option</span><span>&lt;</span><span>T</span><span>&gt;&gt;</span><span>)</span>: <span>Sequence</span><span>&lt;</span><span>T</span><span>&gt; </span><span>{<br/></span><span>    </span><span>val </span><span>(</span>actualState: <span>S</span><span>, </span>value: <span>Option</span><span>&lt;</span><span>T</span><span>&gt;</span><span>) </span><span>= </span>state<span>.</span><span>run</span><span>(</span>s<span>)<br/></span><span>    </span><span>return </span>value<span>.</span><span>fold</span><span>(<br/></span><span>            </span><span>{ </span><span>sequenceOf</span><span>() </span><span>}</span><span>,<br/></span><span>            </span><span>{ </span>t <span>-&gt;<br/></span><span>                </span><span>sequenceOf</span><span>(</span>t<span>) </span><span>+ </span><span>unfold</span><span>(</span>actualState<span>, </span>state<span>)<br/></span><span>            </span><span>}</span><span>)<br/></span><span>}</span></pre></div>
+<p>Instead of having a lambda <kbd>(S) -&gt; Pair&lt;T, S&gt;?</kbd>, we use <kbd>State&lt;S, Option&lt;T&gt;&gt;</kbd> and we use the function fold from <kbd>Option</kbd>, with an empty <kbd>Sequence</kbd> for <kbd>None</kbd> or a recursive call for <kbd>Some&lt;T&gt;</kbd>:</p>
+<pre>fun factorial(size: Int): Sequence&lt;Long&gt; {<br/>   return sequenceOf(1L) + unfold(1L to 1) { (acc, n) -&gt;<br/>      if (size &gt; n) {<br/>         val x = n * acc<br/>         (x) to (x to n + 1)<br/>      } else<br/>         null<br/>   }<br/>}</pre>
+<p>Our old factorial function uses <kbd>unfold</kbd> with <kbd>Pair&lt;Long, Int&gt;</kbd> and a lambda—<kbd>(Pair&lt;Long, Int&gt;) -&gt; Pair&lt;Long, Pair&lt;Long, Int&gt;&gt;?</kbd>:</p>
+<pre>import arrow.syntax.option.some<br/><br/>fun factorial(size: Int): Sequence&lt;Long&gt; {<br/>    return sequenceOf(1L) + unfold(1L toT 1, State { (acc, n) -&gt;<br/>        if (size &gt; n) {<br/>            val x = n * acc<br/>            (x toT n + 1) toT x.some()<br/>        } else {<br/>            (0L toT 0) toT None<br/>        }<br/>    })<br/>}</pre>
+<p>The refactored factorial uses <kbd>State&lt;Tuple&lt;Long, Int&gt;, Option&lt;Long&gt;&gt;</kbd> but internal logic is almost the same, although our new factorial doesn't use null, which is a significant improvement:</p>
+<pre>fun fib(size: Int): Sequence&lt;Long&gt; {<br/>   return sequenceOf(1L) + unfold(Triple(0L, 1L, 1)) { (cur, next, n) -&gt;<br/>      if (size &gt; n) {<br/>         val x = cur + next<br/>         (x) to Triple(next, x, n + 1)<br/>      }<br/>      else<br/>         null<br/>   }<br/>}<br/><br/></pre>
+<p>Similarly, <kbd>fib</kbd> uses unfold with <kbd>Triple&lt;Long, Long, Int&gt;</kbd> and a lambda <kbd>(Triple&lt;Long, Long. Int&gt;) -&gt; Pair&lt;Long, Triple&lt;Long, Long, Int&gt;&gt;?</kbd>:</p>
+<pre>import arrow.syntax.tuples.plus<br/><br/>fun fib(size: Int): Sequence&lt;Long&gt; {<br/>    return sequenceOf(1L) + unfold((0L toT 1L) + 1, State { (cur, next, n) -&gt;<br/>        if (size &gt; n) {<br/>            val x = cur + next<br/>            ((next toT x) + (n + 1)) toT x.some()<br/>        } else {<br/>            ((0L toT 0L) + 0) toT None<br/>        }<br/>    })<br/>}</pre>
+<p>And the refactored <kbd>fib</kbd> uses <kbd>State&lt;Tuple3&lt;Long, Long, Int&gt;, Option&lt;Long&gt;&gt;</kbd>. Pay close attention to the extension operator function <kbd>plus</kbd>, used with <kbd>Tuple2&lt;A, B&gt;</kbd> and <kbd>C</kbd> will return <kbd>Tuple3&lt;A, B, C&gt;</kbd>:</p>
+<pre>fun main(args: Array&lt;String&gt;) {<br/>    factorial(10).forEach(::println)<br/>    fib(10).forEach(::println)<br/>}</pre>
+<p>And now, we can use our corecursive functions to generate sequences. There are many other uses for <kbd>State</kbd> that we can't cover here, such as <em>Message History</em> from <em>Enterprise Integration Patterns</em> (<a href="http://www.enterpriseintegrationpatterns.com/patterns/messaging/MessageHistory.html">http://www.enterpriseintegrationpatterns.com/patterns/messaging/MessageHistory.html</a>) or navigation on forms with multiple steps such as plane checking or long registration forms.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>Arrow provides many datatypes and type classes that reduce significantly complex tasks and provide a standard set of idioms and expressions. In this chapter, we learned how to abstract over null values with <kbd>Option</kbd> and to express computations with <kbd>Either</kbd> and <kbd>Try</kbd>. We created a datatype class, and we also learned about monadic comprehensions and transformations. Last but not least, we used <kbd>State</kbd> to represent the application state.</p>
+<p>And with this chapter, we reach the final of this journey, but rest assured, this isn't the end of your journey learning functional programming. As we learned in the first chapters, functional programming is all about using functions as building blocks to create complex programs. In the same way, with all the concepts that you learn here, now you can understand and master new, exciting and more powerful ideas. </p>
+<p>Now a new learning journey begins for you.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

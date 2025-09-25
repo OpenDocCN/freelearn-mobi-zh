@@ -1,0 +1,569 @@
+<html><head></head><body><div id="book-content"><div id="sbo-rt-content"><div id="_idContainer089">
+			<h1 id="_idParaDest-213" class="chapter-number"><a id="_idTextAnchor307"/>9</h1>
+			<h1 id="_idParaDest-214"><a id="_idTextAnchor308"/>Event Sourcing and CQRS</h1>
+			<p>The previous chapter, on <strong class="bold">Domain-Driven Design</strong> (<strong class="bold">DDD</strong>), laid the foundation for us to dive into two <a id="_idIndexMarker741"/>powerful architectural patterns that answer to the demand for<a id="_idIndexMarker742"/> scalable, responsive, and<a id="_idIndexMarker743"/> maintainable applications: <strong class="bold">Event Sourcing</strong> and <strong class="bold">Command-Query Responsibility </strong><span class="No-Break"><strong class="bold">Segregation</strong></span><span class="No-Break"> (</span><span class="No-Break"><strong class="bold">CQRS</strong></span><span class="No-Break">).</span></p>
+			<p>Firstly, we will explore the foundation of Event Sourcing. We will discuss how we can use Event Sourcing to model our domain, how to persist the state of your domain, and how to reconstruct the current state from the persisted events. We will explore the benefits of <span class="No-Break">this approach.</span></p>
+			<p>Next, we will turn our attention to CQRS, examining how it separates the responsibilities of commands (write) and queries (read). We will discuss the key components of a CQRS architecture, including the command and query handlers, the domain model, and the event store. We will delve into the benefits of <span class="No-Break">this separation.</span></p>
+			<p>As we delve deeper, we will examine the practical considerations of implementing CQRS and Event Sourcing together, including data modeling, event schema design, and handling eventual consistency. We will also discuss strategies for integrating these patterns into your existing software ecosystem, ensuring a seamless and <span class="No-Break">scalable transition.</span></p>
+			<p>Through real-world examples and best practices, you will gain a comprehensive understanding of how CQRS and Event Sourcing can transform the way you approach software design and development. By the end of this chapter, you will be equipped with the knowledge and tools to harness the power of these patterns and unlock the full potential of <span class="No-Break">your applications.</span></p>
+			<p>We will go through the main topics in the <span class="No-Break">following order:</span></p>
+			<ul>
+				<li><span class="No-Break">Event Sourcing</span></li>
+				<li>Command-Query Responsibility <span class="No-Break">Segregation (CQRS)</span></li>
+				<li>Combining CQRS and <span class="No-Break">Event Sourcing</span></li>
+			</ul>
+			<h1 id="_idParaDest-215"><a id="_idTextAnchor309"/>Technical requirements</h1>
+			<p>You can find all the code files used in this chapter on <span class="No-Break">GitHub:</span><span class="No-Break"> </span><a href="https://github.com/PacktPublishing/Software-Architecture-with-Kotlin/tree/main/chapter-9"><span class="No-Break">https://github.com/PacktPublishing/Software-Architecture-with-Kotlin/tree/main/chapter-9</span></a></p>
+			<h1 id="_idParaDest-216"><a id="_idTextAnchor310"/>Event Sourcing</h1>
+			<p><strong class="bold">Event Sourcing</strong> is a data<a id="_idIndexMarker744"/> management pattern, and its origin can be traced back to the 1990s, when engineers recognized the limitations of traditional data <a id="_idIndexMarker745"/>storage <strong class="bold">Create, Read, Update, and Delete</strong> (<strong class="bold">CRUD</strong>), particularly in the context of building complex and <span class="No-Break">event-driven systems.</span></p>
+			<p>Event Sourcing has its roots in the<a id="_idIndexMarker746"/> principles of <strong class="bold">Domain-Driven Design</strong> (<strong class="bold">DDD</strong>), as covered in <a href="B21737_08.xhtml#_idTextAnchor289"><span class="No-Break"><em class="italic">Chapter 8</em></span></a>. DDD introduced the concept of an <strong class="bold">Aggregate</strong> as a<a id="_idIndexMarker747"/> fundamental building block of the domain model, and Aggregates usually need to be persisted in <span class="No-Break">data storage.</span></p>
+			<h2 id="_idParaDest-217"><a id="_idTextAnchor311"/>The classic CRUD approach and its limitations</h2>
+			<p>The classic CRUD <a id="_idIndexMarker748"/>approach is<a id="_idIndexMarker749"/> sufficient for capturing the latest snapshot of an Aggregate by CRUD operations, usually with the use of a relational database. There are, however, limitations to <span class="No-Break">this approach:</span></p>
+			<ul>
+				<li><strong class="bold">History, auditability, and traceability</strong>: While the CRUD approach can capture the current snapshot of an Aggregate, its ability to keep audit trails of all changes made to the Aggregate over time <span class="No-Break">is limited.</span><p class="list-inset">This is usually overcome by custom data persistence code to keep historical records, or with the assistance of database update triggers. This can make it challenging to track the history of changes, understand how the system reached a particular state, and comply with <span class="No-Break">regulatory requirements.</span></p></li>
+				<li><strong class="bold">Modeling complex domains</strong>: CRUD-based systems work well with simple and straightforward data models, but they can struggle to effectively represent and manage the evolution of complex domain models <span class="No-Break">over time.</span><p class="list-inset">Traditionally, with the use of relational databases, a complex Aggregate object results in convoluted database schemas, complex data persistence operations, and difficulties in maintaining and evolving <span class="No-Break">the system.</span></p></li>
+				<li><strong class="bold">Event-driven capabilities</strong>: The CRUD approach has no support for event-driven architectures, where the system needs to react to and propagate changes in a decoupled, <span class="No-Break">scalable manner.</span></li>
+				<li><strong class="bold">Concurrency and consistency</strong>: CRUD-based systems often rely on traditional locking mechanisms to ensure data consistency, which often leads to performance bottlenecks in distributed, concurrent, and <span class="No-Break">high-load environments.</span><p class="list-inset">Maintaining strong consistency in the face of concurrent updates can be a significant challenge in <span class="No-Break">CRUD systems.</span></p></li>
+				<li><strong class="bold">Versioning and evolution</strong>: Updating and evolving CRUD-based systems can be problematic, as changes to the data model or business logic may require complex migrations and <span class="No-Break">data transformations.</span><p class="list-inset">Versioning and handling historical data can also be more complicated in a <span class="No-Break">CRUD-centric approach.</span></p></li>
+				<li><strong class="bold">Analytics and reporting</strong>: CRUD systems focus on the current snapshot of Aggregates, which can make it challenging to analyze, generate reports, or derive insights<a id="_idIndexMarker750"/> from the historical data <span class="No-Break">of Aggregates.</span></li>
+			</ul>
+			<p>In the face of <a id="_idIndexMarker751"/>these challenges, the idea of capturing the full history of Aggregate changes began to <span class="No-Break">gain traction.</span></p>
+			<h2 id="_idParaDest-218"><a id="_idTextAnchor312"/>Events as first-class citizens</h2>
+			<p>Event Sourcing <a id="_idIndexMarker752"/>aims to solve these challenges by making events first-class citizens. The term <em class="italic">event</em> here entails the same concept as the <em class="italic">event</em> in DDD mentioned in <a href="B21737_08.xhtml#_idTextAnchor289"><span class="No-Break"><em class="italic">Chapter 8</em></span></a>. An event captures the change in an aggregate, making it a key element in <span class="No-Break">this framework.</span></p>
+			<p>Event Sourcing persists all the events of aggregates in an event store. There are no update or delete operations to an event because an event represents a change that has already happened to an aggregate. In other words, events are immutable and are stored as a journal in chronological order. Event stores are often not relational databases; they can be NoSQL databases or <span class="No-Break">persistent queues.</span></p>
+			<p>In contrast to CRUD, in which the latest snapshot of an aggregate is a first-class citizen, Event Sourcing derives the latest snapshot of an aggregate by replaying the events from the aggregate from the first to the last event. As a result, the full history of an aggregate is preserved and no custom code is required to provide an audit trail of <span class="No-Break">the aggregate.</span></p>
+			<p>Moreover, the history of an aggregate is captured as a linear timeline and naturally eliminates the challenge of keeping strong consistency with concurrent updates. There should be, however, version validation before a request to mutate an aggregate is accepted and <a id="_idIndexMarker753"/>eventually generates an event. This is to <a id="_idIndexMarker754"/>prevent the <strong class="bold">Lost Update</strong> problem, where concurrent updates of the same aggregate overwrite each <span class="No-Break">other unknowingly.</span></p>
+			<h2 id="_idParaDest-219"><a id="_idTextAnchor313"/>Functional representations of Event Sourcing</h2>
+			<p>The idea of<a id="_idIndexMarker755"/> representing the state of a system as a sequence of immutable events aligns well with the functional programming paradigm. Aggregates and events are immutable. Each change is performed by creating a new version of an aggregate from an event through stateless functions. This can be expressed through two basic functions written as <span class="No-Break">Kotlin lambdas:</span></p>
+			<pre class="source-code">
+(CreatedEvent) -&gt; Aggregate
+(UpdatedEvent, Aggregate) -&gt; Aggregate</pre>			<p>The first function creates an initial aggregate. Subsequently, the update functions take the current version of the aggregate and create a <span class="No-Break">new version.</span></p>
+			<h2 id="_idParaDest-220"><a id="_idTextAnchor314"/>An example of how a request is handled with Event Sourcing</h2>
+			<p>Suppose there is <a id="_idIndexMarker756"/>a request to update an existing aggregate. The service that receives the request would need to get the latest version of the aggregate to validate the request. So, the service gets all the events for the aggregate from the <span class="No-Break">event store.</span></p>
+			<p>All the events are replayed to recreate the latest snapshot of the aggregate. Assuming the request is all good, the service creates a new event. The service then plays this event on the current aggregate and creates an updated version of <span class="No-Break">the aggregate.</span></p>
+			<p>The transaction is committed by appending the new event in the event store. The updated version of the aggregate can be used as a response to the <span class="No-Break">original requester.</span></p>
+			<p>The whole interaction is illustrated as a sequence diagram, as shown in <span class="No-Break"><em class="italic">Figure 9</em></span><span class="No-Break"><em class="italic">.1</em></span><span class="No-Break">:</span></p>
+			<div>
+				<div id="_idContainer083" class="IMG---Figure">
+					<img src="image/B21737_09_1.jpg" alt="Figure 9.1 – An example of Event Sourcing" width="1091" height="973"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 9.1 – An example of Event Sourcing</p>
+			<p>It is important to point out that the aggregate is not directly updated by the service. It is achieved by the <a id="_idIndexMarker757"/>handling of the new event. Also, the event store is responsible for distributing the new event to subscribers that are interested in <span class="No-Break">these events.</span></p>
+			<h2 id="_idParaDest-221"><a id="_idTextAnchor315"/>Benefits of Event Sourcing</h2>
+			<p>The benefits of<a id="_idIndexMarker758"/> Event Sourcing come from the persistence of full audit trails of <span class="No-Break">an Aggregate:</span></p>
+			<ul>
+				<li><strong class="bold">Full audit trails with intents</strong>: Not only are the full audit trails of an aggregate preserved, but also the intent of each change is captured. The name of each event of the aggregate ideally should come from the ubiquitous language so it becomes a business-aware and <span class="No-Break">user-friendly history.</span></li>
+				<li><strong class="bold">Time travel</strong>: With the full history captured as a linear sequence of events, it is possible to travel back in time to construct a historical representation of the aggregate. It helps engineers to reproduce a scenario that happened in the past for investigation and troubleshooting purposes. It also enables users to see the historical aggregate as <span class="No-Break">a feature.</span></li>
+				<li><strong class="bold">Creation of read models</strong>: Having multiple consumers of the same event of an Aggregate opens the door to multiple read models. Each read model consumes the same event but transforms it to meet its specific requirements. This approach<a id="_idIndexMarker759"/> provides diverse views tailored for particular <span class="No-Break">business purposes.</span></li>
+			</ul>
+			<h2 id="_idParaDest-222"><a id="_idTextAnchor316"/>Deciding whether Event Sourcing should be used</h2>
+			<p>Choosing Event Sourcing <a id="_idIndexMarker760"/>as the way to store aggregates and their audit trails should not be taken lightly. It is a fundamental shift in how we reason about data, and it requires noticeable effort to make <span class="No-Break">it work.</span></p>
+			<p>From the <em class="italic">YAGNI</em> principle we covered in <a href="B21737_01.xhtml#_idTextAnchor013"><span class="No-Break"><em class="italic">Chapter 1</em></span></a>, engineers should build the simplest things that work. When there is more than one solution, the simplest solution should <span class="No-Break">be chosen.</span></p>
+			<p class="callout-heading">A simple solution is different from an easy solution</p>
+			<p class="callout">Simple solutions are not complicated or are straightforward to reason about. Easy solutions require less effort to make. Take the example of capturing a new field. If we believe that the field should belong to a new entity, then creating a new entity that has the field is the most intuitive and straightforward approach. However, a new entity may mean adding new database tables, new validations, and new exposed APIs. On the other hand, if we attach the new field to an existing entity, we only need to enhance the existing entity, database table, and APIs. There is less effort involved in coding and testing, even though the field does not belong to the existing entity. This is an easy solution as less effort is required, but it is not simple because it is not intuitive and is instead confusing to see the field in an entity to which it does <span class="No-Break">not belong.</span></p>
+			<p>An decision tree to determine if an aggregate should use Event Sourcing is shown in <span class="No-Break"><em class="italic">Figure 9</em></span><span class="No-Break"><em class="italic">.2</em></span><span class="No-Break">:</span></p>
+			<div>
+				<div id="_idContainer084" class="IMG---Figure">
+					<img src="image/B21737_09_2.jpg" alt="Figure 9.2 – A decision tree whether to use Event Sourcing" width="1273" height="1035"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 9.2 – A decision tree whether to use Event Sourcing</p>
+			<p>The most <a id="_idIndexMarker761"/>decisive factor is whether the aggregate being considered to use Event Sourcing belongs to a Generic subdomain or not. In <a href="B21737_08.xhtml#_idTextAnchor289"><span class="No-Break"><em class="italic">Chapter 8</em></span></a>, we identified Core domains, Supporting subdomains, and Generic subdomains. A Generic subdomain has a high likelihood of being fully replaced by off-the-shelf software products, which makes the benefits of using Event Sourcing <span class="No-Break">not significant.</span></p>
+			<p>If the aggregate involved belongs to either a Core domain or a Supporting subdomain, the next step in the consideration is whether it is required to keep the full audit trails of the aggregate. Full audit trails can be used for regulatory reporting, replaying events to get a particular historical state of the aggregate, or performing time-series data analysis. It is a powerful feature of Event Sourcing, but not all aggregates need <span class="No-Break">such power.</span></p>
+			<p>Another hint that helps when considering Event Sourcing is if there are multiple read models for the Aggregate. The definition of a read model here is the same as the read models that can be discovered <a id="_idIndexMarker762"/>during <strong class="bold">Event Storming</strong>, which was also covered in <a href="B21737_08.xhtml#_idTextAnchor289"><span class="No-Break"><em class="italic">Chapter 8</em></span></a><span class="No-Break">.</span></p>
+			<p>An aggregate that requires multiple read models can benefit from Event Sourcing. Each read model can consume the same event of the aggregate, but it transforms the data to its unique representation of the aggregate as a materialized view. Sometimes, a read model might even combine data from other aggregates <span class="No-Break">or entities.</span></p>
+			<p>Event Sourcing uses events extensively for each change in an aggregate, and events are often processed asynchronously. If the operations for the aggregate are predominately synchronous, it imposes challenges in implementing Event Sourcing for the aggregate. There are techniques to synchronously process events to update aggregates, and the implementation has <span class="No-Break">a cost.</span></p>
+			<p>It is important to <a id="_idIndexMarker763"/>reiterate that this is just an example decision tree. Each organization may have other factors in its decision-making. Sometimes, it may even make a different decision given the <span class="No-Break">same question.</span></p>
+			<h2 id="_idParaDest-223"><a id="_idTextAnchor317"/>Usage of Event Sourcing with a real-life example</h2>
+			<p>Let’s revisit <a id="_idIndexMarker764"/>the real-life example of villagers exchanging services, with the three bounded contexts identified in <a href="B21737_08.xhtml#_idTextAnchor289"><span class="No-Break"><em class="italic">Chapter 8</em></span></a><span class="No-Break">:</span></p>
+			<ul>
+				<li>Core domains: <span class="No-Break"><strong class="bold">Contract Service</strong></span></li>
+				<li>Supporting subdomain: <span class="No-Break"><strong class="bold">Household Service</strong></span></li>
+				<li>Generic subdomain: <span class="No-Break"><strong class="bold">Notification Service</strong></span></li>
+			</ul>
+			<p>Walking through the decision tree (see <span class="No-Break"><em class="italic">Figure 9</em></span><em class="italic">.2</em>) mentioned in the previous section, Notification Service, as a Generic subdomain, can be safely ruled out from using <span class="No-Break">Event Sourcing.</span></p>
+			<p>Household as an aggregate in Household Service does not need to keep full audit trails because only the latest states of households are needed for business cases. The CRUD approach <span class="No-Break">is sufficient.</span></p>
+			<p>Contract as an aggregate in Contract Service may need to keep full audit trails because disputes are likely to arise between households on the agreements in <span class="No-Break">the contract.</span></p>
+			<p>There are also multiple read models involving contracts. The primary read model of a contract is the one that specifies the details of the contract between <span class="No-Break">two households.</span></p>
+			<p>There can also be a unilateral read model for each household. It contains a list of services that the household should provide and to which household. There is another list of services that the household expects to receive and from <span class="No-Break">which household.</span></p>
+			<p>In addition, there is potential read model that aims to highlight the most wanted services in the village and the most active households in <span class="No-Break">exchanging services.</span></p>
+			<p>The negotiation process of a contract involves multiple rounds of amendments until both households agree. When a contract is drafted by one household, an email is sent to another household <a id="_idIndexMarker765"/>asynchronously. During the negotiation process, any change made by one household results in an email notification to the other household involved. There are also multiple messages between two households in providing the services as per the contract. This asynchronous nature of communication suggests that a contract is a suitable candidate for using Event Sourcing in the <span class="No-Break">Contract Service.</span></p>
+			<p>In this example, we are going to focus on using Event Sourcing to capture the full history of the aggregate contract in <span class="No-Break">Contract Service.</span></p>
+			<p>Let’s revisit the aggregate contract as a <span class="No-Break">data class:</span></p>
+			<pre class="source-code">
+data class Contract(
+    val id: UUID,
+    val draftedAt: Instant,
+    val updatedAt: Instant? = null,
+    val version: Int,
+    val partyA: Party,
+    val partyB: Party,
+)
+data class Party(
+    val householdName: String,
+    val serviceProvided: String,
+    val agreedAt: Instant? = null
+)</pre>			<p>The <strong class="source-inline">Contract</strong> data class contains an <strong class="source-inline">id</strong> field, which uniquely identifies this aggregate. There is also a field named <strong class="source-inline">version</strong>, which is a monotonic increasing integer that shows how many events have been played for <span class="No-Break">this aggregate.</span></p>
+			<p>The basic construct of a <strong class="source-inline">ContractEvent</strong> should have the unique identifier of the aggregate <a id="_idIndexMarker766"/>and the time when the <span class="No-Break">event happened:</span></p>
+			<pre class="source-code">
+interface ContractEvent {
+    val contractId: UUID
+    val targetVersion: Int
+    val time: Instant
+}</pre>			<p>It also has a target version, which is the version of the aggregate after the event <span class="No-Break">is applied.</span></p>
+			<p>In this example, we are using a simple in-memory event store. It has two basic functions. The <strong class="source-inline">append</strong> function adds a new event at the tail of the sequence by the aggregate ID, and the <strong class="source-inline">get</strong> function returns a chronological sequence of events given the <span class="No-Break">aggregate ID:</span></p>
+			<pre class="source-code">
+class EventStore&lt;KEY, AGGREGATE&gt; {
+    private val aggregatesByKey = mutableMapOf&lt;KEY, List&lt;AGGREGATE&gt;&gt;()
+    fun append(id: KEY, payload: AGGREGATE) {
+        aggregatesByKey.merge(id, listOf(payload)) { t1, t2 -&gt; t1 + t2 }
+    }
+    fun get(id: KEY): List&lt;AGGREGATE&gt;? = aggregatesByKey[id]
+}</pre>			<p>If this is a real system, reputable event store middleware should be used to make it durable, highly available, <span class="No-Break">and resilient.</span></p>
+			<p>The creation of the aggregate contract starts with a household that has drafted a contract, and it <a id="_idIndexMarker767"/>should contain all the information required to create the first version of <span class="No-Break">the aggregate:</span></p>
+			<pre class="source-code">
+data class ContractDraftedEvent(
+    override val contractId: UUID,
+    override val targetVersion: Int = 0,
+    override val time: Instant,
+    val draftedByHousehold: String,
+    val counterpartyHousehold: String,
+    val serviceProvided: String,
+    val serviceReceived: String,
+) : ContractEvent</pre>			<p>The <strong class="source-inline">Contract Drafted Event</strong> class should provide a function to create the aggregate. It is a simple function that puts the values into the <span class="No-Break">appropriate structure:</span></p>
+			<pre class="source-code">
+fun ContractDraftedEvent.play(): Contract = Contract(
+    id = contractId,
+    draftedAt = time,
+    version = targetVersion,
+    partyA = Party(
+        householdName = draftedByHousehold,
+        serviceProvided = serviceProvided
+    ),
+    partyB = Party(
+        householdName = counterpartyHousehold,
+        serviceProvided = serviceReceived
+    )
+)</pre>			<p>Any subsequent event must take a parameter of the current version of the aggregate to generate a new version. For instance, an event that captures when a household amends and agrees to<a id="_idIndexMarker768"/> a drafted contract could look <span class="No-Break">like this:</span></p>
+			<pre class="source-code">
+data class ContractAmendedEvent(
+    override val contractId: UUID,
+    override val targetVersion: Int,
+    override val time: Instant,
+    val amendedByHousehold: String,
+    val serviceProvidedUpdate: String?,
+    val serviceReceivedUpdate: String?,
+) : ContractEvent
+data class ContractAgreedEvent(
+    override val contractId: UUID,
+    override val targetVersion: Int,
+    override val time: Instant,
+    val agreedByHousehold: String,
+) : ContractEvent</pre>			<p>Note that this event does not necessarily follow the data structure of the aggregate. The key point is to keep the event lean and simple. So, this event only mentions one household, and it relies on the corresponding <strong class="source-inline">play</strong> function to apply the change correctly. Note that the <strong class="source-inline">play</strong> function takes a parameter of the <span class="No-Break">current aggregate:</span></p>
+			<pre class="source-code">
+fun ContractAmendedEvent.play(current: Contract): Contract {
+    validate(current, amendedByHousehold)
+    return if (amendedByHousehold == current.partyA.householdName) {
+        current.copy(
+            version = targetVersion,
+            updatedAt = time,
+            partyA = current.partyA.copy(
+                serviceProvided = serviceProvidedUpdate ?: current.partyA.serviceProvided
+            ),
+            partyB = current.partyB.copy(
+                serviceProvided = serviceReceivedUpdate ?: current.partyB.serviceProvided
+            )
+        )
+    } else {
+        current.copy(
+            version = targetVersion,
+            updatedAt = time,
+            partyA = current.partyA.copy(
+                serviceProvided = serviceReceivedUpdate ?: current.partyA.serviceProvided
+            ),
+            partyB = current.partyB.copy(
+                serviceProvided = serviceProvidedUpdate ?: current.partyB.serviceProvided
+            )
+        )
+    }
+}
+fun ContractAgreedEvent.play(current: Contract): Contract {
+    validate(current, agreedByHousehold)
+    return if (agreedByHousehold == current.partyA.householdName) {
+        current.copy(
+            version = targetVersion,
+            updatedAt = time,
+            partyA = current.partyA.copy(agreedAt = time),
+        )
+    } else {
+        current.copy(
+            version = targetVersion,
+            updatedAt = time,
+            partyB = current.partyB.copy(agreedAt = time)
+        )
+    }
+}</pre>			<p>You will notice<a id="_idIndexMarker769"/> there is a <strong class="source-inline">validate</strong> function, which is important for ensuring <span class="No-Break">data integrity:</span></p>
+			<pre class="source-code">
+fun &lt;T : ContractEvent&gt; T.validate(current: Contract, expectedHouseholdName: String): T {
+    require(contractId == current.id) {
+        "Aggregate ID mismatch - expected: $contractId, was ${current.id}"
+    }
+    require(targetVersion == current.version + 1) {
+        "Unexpected version - expected: ${targetVersion - 1}, was ${current.version}"
+    }
+    require(
+        expectedHouseholdName == current.partyA.householdName ||
+            expectedHouseholdName == current.partyB.householdName
+    ) {
+        "Unexpected household - expected: ${expectedHouseholdName}, was ${
+            listOf(current.partyA.householdName, current.partyB.householdName)
+        }"
+    }
+    return this
+}</pre>			<p>This <strong class="source-inline">validate</strong> function asserts that the event refers to the aggregate in the parameter. Then, it asserts that the current aggregate is one version lower than the target version of<a id="_idIndexMarker770"/> the event. Finally, it asserts that the involved household is mentioned in the <span class="No-Break">aggregate contract.</span></p>
+			<p>There should be an iterative function that takes a list of <strong class="source-inline">Contract Events</strong> and eventually returns a <span class="No-Break"><strong class="source-inline">Contract</strong></span><span class="No-Break"> object:</span></p>
+			<pre class="source-code">
+fun List&lt;ContractEvent&gt;.play(): Contract? {
+    if (isEmpty()) return null
+    var current: Contract = (first() as ContractDraftedEvent).play()
+    var index = 1
+    while (index &lt; size) {
+        val event = get(index++)
+        current = when (event) {
+            is ContractAmendedEvent -&gt; event.play(current)
+            is ContractAgreedEvent -&gt; event.play((current))
+            else -&gt; throw IllegalArgumentException("Unsupported event")
+        }
+    }
+    return current
+}</pre>			<p>The function uses a <strong class="source-inline">List</strong> of contract events as the receiver. The return type is nullable in the case of an empty list. It assumes the first event is <strong class="source-inline">ContractCreatedEvent</strong>, which sets up the initial snapshot of the <strong class="source-inline">Contract</strong>. It loops from the second event to the last, generates a new version of the <strong class="source-inline">Contract</strong>, sets it as <strong class="source-inline">current</strong> to pass to the next event, and at the end returns the <strong class="source-inline">Contract</strong> object. An example of its usage is as follows. A list <a id="_idIndexMarker771"/>of events of the same aggregate is ordered and is <span class="No-Break">played sequentially:</span></p>
+			<pre class="source-code">
+    val contractId = UUID.randomUUID()
+    val eventStore = EventStore&lt;UUID, ContractEvent&gt;()
+    val createdEvent = ContractDraftedEvent(
+        contractId = contractId,
+        time = Instant.now(),
+        draftedByHousehold = "HouseholdA",
+        counterpartyHousehold = "HouseholdB",
+        serviceProvided = "Cleaning",
+        serviceReceived = "Babysitting"
+    )
+    val amendedEvent = ContractAmendedEvent(
+        contractId = contractId,
+        targetVersion = 1,
+        time = Instant.now(),
+        amendedByHousehold = "HouseholdB",
+        serviceReceivedUpdate = "Dish washing",
+        serviceProvidedUpdate = null
+    )
+    val agreedEventByHouseholdA = ContractAgreedEvent(
+        contractId = contractId,
+        targetVersion = 2,
+        time = Instant.now(),
+        agreedByHousehold = "HouseholdA"
+    )
+    val agreedEventByHouseholdB = ContractAgreedEvent(
+        contractId = contractId,
+        targetVersion = 3,
+        time = Instant.now(),
+        agreedByHousehold = "HouseholdB"
+    )
+    listOf(
+        createdEvent,
+        amendedEvent,
+        agreedEventByHouseholdA,
+        agreedEventByHouseholdB
+    ).forEach { eventStore.append(contractId, it) }
+    val aggregate = eventStore.get(contractId)?.play()
+    println("Aggregate is of version: ${aggregate?.version}")</pre>			<p>The code does not directly update the aggregate. Instead, it creates a few events and lets them play through. Eventually, the version should be <strong class="source-inline">3</strong> because the first version is <strong class="source-inline">0</strong>. The following should be printed to the console when the previous code <span class="No-Break">is executed:</span></p>
+			<pre class="console">
+Aggregate is of version: 3</pre>			<p>This example illustrates a simple form of Event Sourcing where each event generates a new version of the aggregate. These events should be persisted to an event store as permanent storage and be received by subscribers so other read models can be <span class="No-Break">built upon.</span></p>
+			<p>In complex systems, processing an event could produce a list of events as reactions, and that would require a recursive function to walk through the processing. It may also require grouping related events as one transaction due to the <span class="No-Break">chained reactions.</span></p>
+			<p>Although the <a id="_idIndexMarker772"/>example here is simple, there are many ways Event Sourcing can go wrong. We are going to discuss some best practices that should be considered in <span class="No-Break">the implementation.</span></p>
+			<h2 id="_idParaDest-224"><a id="_idTextAnchor318"/>Event Sourcing best practices</h2>
+			<p>Event Sourcing <a id="_idIndexMarker773"/>is a different way to reason about an aggregate in a domain from the classic CRUD approach. It only works if we design and architect our system with the mindset of events being first-class citizens. Otherwise, it could become an anti-pattern and undo all the benefits that it brings. Here are some of the fundamental <span class="No-Break">best practices.</span></p>
+			<h3>Randomization and idempotence</h3>
+			<p>It is important that <a id="_idIndexMarker774"/>replaying the same sequence of events for an aggregate generates the same snapshot of the aggregate every time. In other words, the processing of events must be idempotent. There are two major factors that could violate this behavior: time <span class="No-Break">and randomization.</span></p>
+			<p>If the event processing contains logic that makes use of the time the event is processed, then it will generate different results depending on the time of processing. For example, the following <strong class="source-inline">expire</strong> variable would have different Boolean values based on the <span class="No-Break">system clock:</span></p>
+			<pre class="source-code">
+val expire = If (event.time &lt; System.currentMillis()) true else false</pre>			<p>Any information related to the system clock should be stamped on the event instead. In this way, the result has been determined and will not change over time. Any time-based trigger or schedule job should obtain the system time and have the value captured in <span class="No-Break">the events.</span></p>
+			<p>Any randomization at the time of event processing will also generate different outcomes for each iteration. Values generated from randomization should be captured in the event payload, and there is no randomization involved in the event processing. If identifiers must be generated during the processing, they can be unique values within the scope of the event. Externally, they are used together with the event identifiers as composite keys. Here is <span class="No-Break">an example:</span></p>
+			<pre class="source-code">
+val externalValueId = "${event.id}-${event.value.id}"</pre>			<p>The value inside <a id="_idIndexMarker775"/>the event can be identified externally by concatenation of the event ID and the value ID inside the event, delimited by <span class="No-Break">a hyphen.</span></p>
+			<h3>Event design</h3>
+			<p>An event should have <a id="_idIndexMarker776"/>one and only one aggregate. Mixing multiple aggregates, whether they are of the same or different types, results in unnecessary coupling between aggregates. The coupling created by mixed aggregates in one event makes it difficult to scale events and <span class="No-Break">their topics.</span></p>
+			<p>There could be business cases where multiple aggregates are affected. In this scenario, multiple events should be created as a result, and each event describes what happened to <span class="No-Break">each aggregate.</span></p>
+			<p>Each event should capture the intent of the change in an aggregate. For example, <strong class="source-inline">ContractCreatedEvent</strong> is a bad name because it does not describe why the aggregate contract is created. A better name would be in line with ubiquitous language, such <span class="No-Break">as </span><span class="No-Break"><strong class="source-inline">ContractDraftedEvent</strong></span><span class="No-Break">.</span></p>
+			<h3>Event topologies</h3>
+			<p>Events are published<a id="_idIndexMarker777"/> for subscribers to receive and can be <a id="_idIndexMarker778"/>logically grouped as <strong class="bold">topics</strong>. A topic here is not to be mistaken for the topic in traditional pub-sub messaging, in which messages are no longer in a topic once all subscribers acknowledge receipt. In Event Sourcing, events are meant to be kept permanently as an append-only and sequential log of events. For example, a Kafka topic with an infinite retention period can be used to keep events, and each topic represents a logical grouping <span class="No-Break">of events.</span></p>
+			<p>All events of one aggregate should only go to one topic only. This is to simplify creating and reading the linear history of <span class="No-Break">an aggregate.</span></p>
+			<p>Spreading the events of an aggregate to multiple topics imposes difficulties in recreating the full history of an aggregate. It is also more difficult to scale performance and increase throughput, which<a id="_idIndexMarker779"/> are separate concerns from the <span class="No-Break">event design.</span></p>
+			<h3>Event schema compatibility</h3>
+			<p>As Event Sourcing<a id="_idIndexMarker780"/> intends to keep all historical events, it is important that all events are backward compatible; in other words, old events can still be read and processed when the event <span class="No-Break">schema evolves.</span></p>
+			<p>Maintaining backward compatibility is a big topic in itself. There are many things that can keep or break backward compatibility. Here are <span class="No-Break">some examples:</span></p>
+			<ul>
+				<li><span class="No-Break"><strong class="bold">Keep</strong></span><span class="No-Break">:</span><ul><li>Adding an <span class="No-Break">optional field</span></li><li>Adding more enum values to <span class="No-Break">a type</span></li><li>Reducing the constraints of <span class="No-Break">a field</span></li></ul></li>
+				<li><span class="No-Break"><strong class="bold">Break</strong></span><span class="No-Break">:</span><ul><li>Adding a <span class="No-Break">mandatory field</span></li><li>Renaming <span class="No-Break">a field</span></li><li>Changing the data type of <span class="No-Break">a field</span></li><li>Removing <span class="No-Break">a field</span></li><li>Increasing the constraints of <span class="No-Break">a field</span></li></ul></li>
+			</ul>
+			<p>In the context of Event Sourcing, a backward-compatible event schema ensures that the system can always <a id="_idIndexMarker781"/>read the full history of an aggregate to re-create the latest snapshot of <span class="No-Break">the aggregate.</span></p>
+			<p class="callout-heading">Forward and full compatibility</p>
+			<p class="callout">Forward compatibility means that an old consumer can read and process events of a new schema. A fully compatible schema means it is both backward and <span class="No-Break">forward compatible.</span></p>
+			<h2 id="_idParaDest-225"><a id="_idTextAnchor319"/>Performance and Memento</h2>
+			<p>While the current <a id="_idIndexMarker782"/>version of an aggregate can always be derived from all the events of that aggregate from the beginning of time, it is not always ideal to have to play these events if a current snapshot <span class="No-Break">is requested.</span></p>
+			<p>A performance optimization is to persist the latest version of the aggregate as a derived record. This pattern is<a id="_idIndexMarker783"/> called <strong class="bold">Memento</strong>. The usage of this pattern can be justified if current snapshots are <span class="No-Break">frequently requested.</span></p>
+			<p>In the case of using events to recover the latest state of an aggregate, it may also be justified to use the Memento pattern. The reason for this is that the number of events will keep growing, and therefore the total time to replay all events will become longer and longer. Applying the Memento pattern changes the total time used for recovery versus number of events from linear to constant for a <span class="No-Break">given aggregate.</span></p>
+			<h2 id="_idParaDest-226"><a id="_idTextAnchor320"/>Migration from CRUD</h2>
+			<p>Migrating an aggregate<a id="_idIndexMarker784"/> from CRUD to Event Sourcing <a id="_idIndexMarker785"/>is interesting in that usually, CRUD does not have full audit trails to allow a complete history to be rebuilt as events. Instead, the latest snapshots of aggregates are treated as the first versions, and then subsequent events <span class="No-Break">are persisted.</span></p>
+			<p>In this case, something like <strong class="source-inline">ContractMigratedEvent</strong> would be the <span class="No-Break">first event.</span></p>
+			<p>Moreover, the mutation of an aggregate will be done through the playing of events, not a direct update to the aggregate. As a result, any code that directly updates the aggregate will need to <span class="No-Break">be deprecated.</span></p>
+			<p>We have covered the basics of Event Sourcing with a real-life example and source code. There is another architectural pattern that works with Event Sourcing and is also based on DDD. We <a id="_idIndexMarker786"/>are <a id="_idIndexMarker787"/>going to cover this <span class="No-Break">pattern now.</span></p>
+			<h1 id="_idParaDest-227"><a id="_idTextAnchor321"/>Command-Query Responsibility Segregation (CQRS)</h1>
+			<p>The origin of <a id="_idIndexMarker788"/>CQRS can be traced back to another design pattern<a id="_idIndexMarker789"/> called <strong class="bold">Command Query Separation</strong> (<strong class="bold">CQS</strong>). CQS is the core concept that defines two types of operations handled in a system: a command that executes a task, and a query that returns information, and there should never be one function that does <span class="No-Break">both jobs.</span></p>
+			<p>The term CQS was created by Bertrand Meyer in his book <em class="italic">Object-Oriented Software Construction</em> in 1988. He created it as part of his work on the Eiffel <span class="No-Break">programming language.</span></p>
+			<p>CQRS takes the defining principle of CQS and extends it to specific objects within a system, one retrieving data and one modifying data. CQRS is a broader architectural pattern, and CQS is the general principle <span class="No-Break">of behavior.</span></p>
+			<p>The term CQRS was coined by Greg Young in 2010. Since then, CQRS has gained traction, and various frameworks and libraries have been developed to support the pattern’s implementation in popular languages such as Java <span class="No-Break">and .NET.</span></p>
+			<p>There are four basic elements in CQRS: <strong class="bold">aggregate</strong>, <strong class="bold">query</strong>, <strong class="bold">command</strong>, <span class="No-Break">and </span><span class="No-Break"><strong class="bold">event</strong></span><span class="No-Break">.</span></p>
+			<h2 id="_idParaDest-228"><a id="_idTextAnchor322"/>Aggregate</h2>
+			<p>Aggregate in <a id="_idIndexMarker790"/>CQRS has the same meaning as in Event Sourcing and DDD. It is an aggregated entity that represents the current state of the domain model. The aggregate contains a basket of other entities and value objects to represent a domain concept as defined in <span class="No-Break">ubiquitous language.</span></p>
+			<h2 id="_idParaDest-229"><a id="_idTextAnchor323"/>Query</h2>
+			<p>A query is a request from <a id="_idIndexMarker791"/>clients to retrieve a representation of the state of the domain model. Handling queries is a read-only operation and does not change the state of any aggregate. However, queries may be targeted to a certain read model related to <span class="No-Break">an aggregate.</span></p>
+			<h2 id="_idParaDest-230"><a id="_idTextAnchor324"/>Command</h2>
+			<p>A command is a<a id="_idIndexMarker792"/> request from clients intending to change the state of an aggregate in the domain model. The intention is handled to determine whether the state should be changed and how. A command may only contain the necessary information for the change, and not the whole aggregate in <span class="No-Break">the request.</span></p>
+			<h2 id="_idParaDest-231"><a id="_idTextAnchor325"/>Event</h2>
+			<p>An event is a confirmed<a id="_idIndexMarker793"/> and immutable change of the state of an aggregate. An event can be created because of a command, or because of the handling of another event. This is the same as the concept of events in DDD and <span class="No-Break">Event Sourcing.</span></p>
+			<h2 id="_idParaDest-232"><a id="_idTextAnchor326"/>How CQRS breaks down CRUD</h2>
+			<p>CQRS has broken down<a id="_idIndexMarker794"/> the classic CRUD into many small queries, commands, and events. Each of them carries a precise meaning of what is happening, to the point that it matches the <span class="No-Break">ubiquitous language.</span></p>
+			<p>Take the real-life example of the negotiation process of a service contract between two households. Both households can amend the contract and eventually agree <span class="No-Break">to it.</span></p>
+			<div>
+				<div id="_idContainer085" class="IMG---Figure">
+					<img src="image/B21737_09_3.jpg" alt="Figure 9.3 – CRUD versus CQRS – update versus command" width="1554" height="687"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 9.3 – CRUD versus CQRS – update versus command</p>
+			<p>In CRUD style, both amendments to and agreement of a contract result in a request to update the contract, and the difference is the content of the contract. In CQRS style, amendments and agreements have dedicated commands to capture not only what needs to be updated, but also the intent and business context of <span class="No-Break">the update.</span></p>
+			<p>The CQRS style <a id="_idIndexMarker795"/>results in the amendment and agreement operations being separated. This leads to a cleaner and more modular design. The separation also allows independent scaling and the optimization <span class="No-Break">of commands.</span></p>
+			<p>On the query side, as shown in the following figure, households A and B can get the contract between them by using a CRUD read request, and the responses will be the same for both households. However, the CQRS query allows multiple read models, and in this case, it can return a custom read model depending on which household makes <span class="No-Break">the query.</span></p>
+			<div>
+				<div id="_idContainer086" class="IMG---Figure">
+					<img src="image/B21737_09_4.jpg" alt="Figure 9.4 – CRUD versus CQRS – read versus query" width="1524" height="742"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 9.4 – CRUD versus CQRS – read versus query</p>
+			<p>The CQRS style can build a materialized view for each household as a read model by consuming the events produced when a command is accepted. In CRUD style, these custom views are typically implemented using SQL commands and the custom views do <span class="No-Break">not materialize.</span></p>
+			<p>A materialized read model can scale independently without concerns for commands. For example, if the read-write ratio of the aggregate contract heavily tilts towards reading, then it is sensible to consider materializing the corresponding read model in a separate data store infrastructure, so the writing is not affected even under a heavy load of <span class="No-Break">query operations.</span></p>
+			<p>As read models are materialized by consuming events via asynchronous messaging, changes in the aggregates may not be immediately reflected in the read models but will eventually <span class="No-Break">be synchronized.</span></p>
+			<p>It is important<a id="_idIndexMarker796"/> to point out that handling commands does need some existing information for validation, integrity checks, and concurrency control. These read operations are necessary for handling commands, but not for <span class="No-Break">serving requests.</span></p>
+			<h2 id="_idParaDest-233"><a id="_idTextAnchor327"/>When should CQRS be considered?</h2>
+			<p>Like Event Sourcing, CQRS<a id="_idIndexMarker797"/> should be considered when a couple of prerequisites are met and there are legitimate problems that can be solved by CQRS. CQRS is a paradigm shift in how we reason about a system, and significant effort is required to implement it correctly. Applying CQRS to the wrong system increases the complexity with <span class="No-Break">no benefits.</span></p>
+			<p>CQRS is an architectural pattern built upon DDD. If the current system has no concept of DDD, bounded contexts, or aggregates, then it is a non-starter. Even if the system includes bounded contexts, using CQRS may not be necessary for generic subdomains due to their limited complexity. CQRS is most likely beneficial only for core domains, where the domain itself is complex enough to warrant <span class="No-Break">its use.</span></p>
+			<p>There are, however, a few signs that CQRS can be considered in <span class="No-Break">the domain:</span></p>
+			<ul>
+				<li>Multiple actors working on the same aggregate. This usually means not all actors are concerned with everything in an aggregate. Some actors may work on a part of an aggregate but not all <span class="No-Break">of it.</span></li>
+				<li>Multiple use cases of updating the aggregate. There are specific use cases in which only a part of the aggregate should <span class="No-Break">be updated.</span></li>
+				<li>Multiple views of the same aggregate. There are alternate views of the same aggregate, and sometimes there may even be a view combining multiple entities that deviate from <span class="No-Break">the aggregate.</span></li>
+				<li>Imbalanced read-write ratio. If either read or write operations are significantly more frequent than the other, read and write would need to be scaled differently as their needs <span class="No-Break">are different.</span></li>
+			</ul>
+			<h2 id="_idParaDest-234"><a id="_idTextAnchor328"/>Benefits and costs of CQRS</h2>
+			<p>CQRS separates the<a id="_idIndexMarker798"/> concerns of read (query) and write (command) operations so their requirements can be met in isolation. This leads to smaller code footprints per function or per class, but there will be more functions or classes due to <span class="No-Break">the separation.</span></p>
+			<p>This separation drives the code toward the <strong class="bold">Single Responsibility Principle</strong> (<strong class="bold">SRP</strong>), as mentioned in <a href="B21737_02.xhtml#_idTextAnchor045"><span class="No-Break"><em class="italic">Chapter 2</em></span></a>, where there should be one and only one reason to change a class. Each use case for each actor has its own class, either as a query or as <span class="No-Break">a command.</span></p>
+			<p>The separation of queries and commands enables independent performance optimization, resulting in improved system performance and scalability overall. For example, queries can be optimized for faster execution due to the dedicated read models, and commands can be optimized for high throughput and consistency. However, this also results in more moving parts in the system and thus increases <span class="No-Break">its complexity.</span></p>
+			<p>Queries and commands are broken down into their own functions or classes. This means that extending functionality is unlikely to need to change existing queries and commands, and therefore it is easier than in CRUD, where there is a big repository class that contains all the <span class="No-Break">CRUD operations.</span></p>
+			<p>Dedicated queries and commands for each business case eliminate the need for clients to deal with unrelated fields and details about an aggregate, or to create a CRUD-style update or read request. This is in line with the <strong class="bold">Interface Segregation Principle</strong> (<strong class="bold">ISP</strong>), as mentioned in <a href="B21737_02.xhtml#_idTextAnchor045"><span class="No-Break"><em class="italic">Chapter 2</em></span></a>, where a client is not forced to depend on fields and functions it does <span class="No-Break">not use.</span></p>
+			<p>Supporting multiple <a id="_idIndexMarker799"/>read models using CRUD is challenging. It often requires complicated SQL statements to join relevant data together. Moreover, it is difficult to optimize performance as different read models have different needs. Quite often, compromises are made so that different read models have reasonably <span class="No-Break">acceptable performance.</span></p>
+			<p>Using CQRS, read models are materialized by consuming the events of aggregates. They have their own storage so they can scale and optimize performance that is unique to the non-functional requirements. This comes at the cost of the replication of data in various forms, and more storage is needed to keep these read models. Also, each read model requires its own code to transform the event and persist data that’s relevant to its <span class="No-Break">data structure.</span></p>
+			<p>You may recognize <a id="_idIndexMarker800"/>the synergy between CQRS and Event Sourcing at this point. We are going to illustrate how they work together with a <span class="No-Break">concrete example.</span></p>
+			<h1 id="_idParaDest-235"><a id="_idTextAnchor329"/>Combining CQRS and Event Sourcing</h1>
+			<p>CQRS and Event Sourcing are <a id="_idIndexMarker801"/>complementary patterns that work well together in building robust, scalable, and maintainable <span class="No-Break">distributed systems.</span></p>
+			<p>The <strong class="bold">command handler</strong> in the CQRS<a id="_idIndexMarker802"/> architecture is responsible for validating write requests. If a command is valid, an event is persisted to an event store, which is the core of the Event Sourcing pattern. An example of how the CQRS command and Event Sourcing integrate is shown in <span class="No-Break"><em class="italic">Figure 9</em></span><span class="No-Break"><em class="italic">.5</em></span><span class="No-Break">:</span></p>
+			<div>
+				<div id="_idContainer087" class="IMG---Figure">
+					<img src="image/B21737_09_5.jpg" alt="Figure 9.5 – CQRS command and Event Sourcing" width="1360" height="1096"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 9.5 – CQRS command and Event Sourcing</p>
+			<p>The <strong class="bold">service</strong> receives a command from the <strong class="bold">requester</strong>. The <strong class="bold">service</strong> requires the current state of the aggregate, which is rebuilt by replaying events retrieved from the <strong class="bold">Event Store</strong>. The <strong class="bold">command</strong> passes the validation, so a new event is generated. The new event is played on the aggregate to generate a new state. The new event is appended to the <strong class="bold">Event Store</strong> and the updated aggregate is returned to <span class="No-Break">the </span><span class="No-Break"><strong class="bold">requester</strong></span><span class="No-Break">.</span></p>
+			<p>Event Sourcing answered the question from CQRS of how to update an aggregate and inform subscribers of the changes to an aggregate. CQRS answered the question from Event Sourcing of how an event <span class="No-Break">was created.</span></p>
+			<p>The query, in turn, rebuilds the current state of the application by replaying the events stored in the event store. Also, multiple read models are rebuilt by transforming the event payloads to build their unique data structures. An example of how CQRS query and Event Sourcing <a id="_idIndexMarker803"/>integrate is shown in <span class="No-Break"><em class="italic">Figure 9</em></span><span class="No-Break"><em class="italic">.6</em></span><span class="No-Break">:</span></p>
+			<div>
+				<div id="_idContainer088" class="IMG---Figure">
+					<img src="image/B21737_09_6.jpg" alt="Figure 9.6 – CQRS query and Event Sourcing" width="1121" height="627"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 9.6 – CQRS query and Event Sourcing</p>
+			<p>Event Sourcing provides a way for a CQRS query to rebuild a snapshot of a given aggregate. It enables the query to build any given read model as per the request. It also permits building a historical view of the aggregate from a <span class="No-Break">given timestamp.</span></p>
+			<p>This separation of <a id="_idIndexMarker804"/>concerns between the command and query models, combined with the event-driven nature of Event Sourcing, allows highly scalable, flexible, and maintainable systems that can easily adapt to changing <span class="No-Break">business requirements.</span></p>
+			<h2 id="_idParaDest-236"><a id="_idTextAnchor330"/>Using CQRS and Event Sourcing together</h2>
+			<p>Extending from the <a id="_idIndexMarker805"/>previous example of Event Sourcing, adding CQRS would require a couple of command and query classes to be created. We will need a class to capture the query of the current state of a contract among households and a class to capture the command for drafting a contract. The corresponding code is <span class="No-Break">shown here:</span></p>
+			<pre class="source-code">
+data class CurrentContractQuery(
+    val contractId: UUID
+)
+data class DraftContractCommand(
+    val draftedByHousehold: String,
+    val counterpartyHousehold: String,
+    val serviceProvided: String,
+    val serviceReceived: String,
+)
+data class AgreeContractCommand(
+    val contractId: UUID,
+    val agreedByHousehold: String,
+)</pre>			<p>You will find these command classes look quite like the event classes. The differences are <span class="No-Break">as follows:</span></p>
+			<ul>
+				<li>The command that creates the aggregate does not contain the <span class="No-Break">aggregate ID</span></li>
+				<li>The command does not contain the aggregate version or <span class="No-Break">the timestamp</span></li>
+			</ul>
+			<p>This is because the aggregate ID, version, and timestamp are populated when handling the commands. In this example, command handling is not idempotent. It uses randomization for aggregate IDs and a system clock to <span class="No-Break">stamp timestamps.</span></p>
+			<p>There could be various implementations that supply random values and system timestamps to make command handling idempotent. Both approaches can be justified if they are consistent and <span class="No-Break">well understood.</span></p>
+			<p>In this example, the handling of every command has two potential outcomes. A successful outcome creates an event, and this event needs to be persisted. A failure outcome will inform the callers of the cause, and no event will be created. It is necessary to have a class to<a id="_idIndexMarker806"/> encapsulate the information for a <span class="No-Break">failure outcome:</span></p>
+			<pre class="source-code">
+data class Failure&lt;T&gt;(
+    val request: T,
+    val message: String? = null,
+    val error: Throwable? = null
+)</pre>			<p>The <strong class="source-inline">Failure</strong> class contains the original request, an optional message, and an optional <span class="No-Break"><strong class="source-inline">Throwable</strong></span><span class="No-Break"> object.</span></p>
+			<p>Each query and command requires a handler. Taking advantage of the <strong class="source-inline">EventStore</strong> class in the example of Event Sourcing, the query handler is straightforward with the use of Kotlin extensions and the event store as <span class="No-Break">a parameter:</span></p>
+			<pre class="source-code">
+fun CurrentContractQuery.handle(
+    eventStore: EventStore&lt;UUID, ContractEvent&gt;
+): Contract? = eventStore.get(contractId)?.play()</pre>			<p>The query handler simply gets all the events for the given <strong class="source-inline">contractId</strong> and then plays all events to re-create the latest version of <strong class="source-inline">Contract</strong> as the <span class="No-Break">return value.</span></p>
+			<p>The command handler has two main styles: creating and updating. The handler for the creation command generates a <a id="_idIndexMarker807"/>random <strong class="bold">Universally unique identifier</strong> (<strong class="bold">UUID</strong>) and the timestamp. These fields are captured in the <span class="No-Break">creation event:</span></p>
+			<pre class="source-code">
+fun DraftContractCommand.handle(
+    eventStore: EventStore&lt;UUID, ContractEvent&gt;,
+    onSuccess: (ContractDraftedEvent) -&gt; Unit,
+    onFailure: (Failure&lt;DraftContractCommand&gt;) -&gt; Unit
+) {
+    if (draftedByHousehold == counterpartyHousehold) {
+        onFailure(Failure(this, "Same household is not allowed: $draftedByHousehold"))
+    } else {
+        ContractDraftedEvent(
+            contractId = UUID.randomUUID(),
+            time = Instant.now(),
+            draftedByHousehold = draftedByHousehold,
+            counterpartyHousehold = counterpartyHousehold,
+            serviceReceived = serviceReceived,
+            serviceProvided = serviceProvided
+        ).also{
+            eventStore.append(it.contractId, it)
+        }.also(onSuccess)
+    }
+}</pre>			<p>The command handler <a id="_idIndexMarker808"/>requires two callback functions, one for success and one for failure. Only one of the callback functions is invoked during the execution. If the command fails validation (in this case, when the same household is used for the draft contract), no event is created and the failure callback function is invoked. Otherwise, an event is created to capture the randomized contract ID, the time of the event, and the rest of the fields. The event is persisted to the event store. The event is then passed to the success <span class="No-Break">callback function.</span></p>
+			<p>The handler for the update command requires validation of whether the aggregate exists, and whether the same aggregate ID is retained. The rest of the implementation is the handler for the <span class="No-Break">create command:</span></p>
+			<pre class="source-code">
+fun AgreeContractCommand.handle(
+    eventStore: EventStore&lt;UUID, ContractEvent&gt;,
+    onSuccess: (ContractAgreedEvent) -&gt; Unit,
+    onFailure: (Failure&lt;AgreeContractCommand&gt;) -&gt; Unit) {
+    validate(
+        eventStore = eventStore,
+        contractId = contractId,
+        householdName = agreedByHousehold,
+        onSuccess = { contract -&gt;
+            ContractAgreedEvent(
+                contractId = contractId,
+                targetVersion = contract.version + 1,
+                time = Instant.now(),
+                agreedByHousehold
+            ).also { eventStore.append(contractId, it)
+            }.also(onSuccess)
+        },
+        onFailure = { onFailure(it)}
+    )
+}</pre>			<p>There is a <strong class="source-inline">validate</strong> function<a id="_idIndexMarker809"/> that is meant to be shared with other update <span class="No-Break">command handlers:</span></p>
+			<pre class="source-code">
+fun &lt;T&gt; T.<strong class="bold">validate</strong>(
+    eventStore: EventStore&lt;UUID, ContractEvent&gt;,
+    contractId: UUID,
+    householdName: String,
+    onSuccess: (Contract) -&gt; Unit,
+    onFailure: (Failure&lt;T&gt;) -&gt; Unit) {
+    val events = eventStore.get(contractId)
+    if (events == null) {
+        onFailure(Failure(this, "Contract not found: $contractId"))
+    } else {
+        val contract = events.play()
+        if (contract == null) {
+            onFailure(Failure(this, "Failed to reconstruct Contract: $contractId"))
+        } else if (contractId != contract.id) {
+            onFailure(Failure(this, "Contract ID mismatched. Expected: $contractId, was: ${contract.id}"))
+        } else if (householdName != contract.partyA.householdName
+            &amp;&amp; householdName != contract.partyB.householdName) {
+            onFailure(Failure(this, "Household not found in contract: $householdName"))
+        } else {
+            onSuccess(contract)
+        }
+    }
+}</pre>			<p>The success callback <a id="_idIndexMarker810"/>function will have the <strong class="source-inline">Contract</strong> passed in because the latest version of the aggregate has been found and re-created. The failure callback function will have the <strong class="source-inline">Failure</strong> object passed in <span class="No-Break">for delegation.</span></p>
+			<p>Finally, when using this example of CQRS and Event Sourcing, the client only needs to create a command and pass it in the event store to start with. Then, the extension <strong class="source-inline">handle</strong> function <span class="No-Break">is invoked:</span></p>
+			<pre class="source-code">
+    var contractId: UUID? = null
+    val eventStore = EventStore&lt;UUID, ContractEvent&gt;()
+    <strong class="bold">DraftContractCommand</strong>(
+        draftedByHousehold = "HouseholdA",
+        counterpartyHousehold = "HouseholdB",
+        serviceProvided = "Cleaning",
+        serviceReceived = "Babysitting"
+    ).handle(
+        eventStore = eventStore,
+        onSuccess = { contractId = it.contractId
+            println("Contract drafted: $contractId") },
+        onFailure = { "Failed to draft contract: $it"}
+    )
+    <strong class="bold">AmendContractCommand</strong>(
+        contractId = contractId!!,
+        amendedByHousehold = "HouseholdB",
+        serviceReceivedUpdate = "Dish washing",
+        serviceProvidedUpdate = null
+    ).handle(eventStore = eventStore,
+        onSuccess = { println("Contract amended: $contractId") },
+        onFailure = { println("Failed to amend contract: $contractId")}
+    )</pre>			<p>The success<a id="_idIndexMarker811"/> callback function captures <strong class="source-inline">contractId</strong> for future updates. To update the aggregate, an update command needs to be created and the contract ID needs to be specified. Afterwards, the <strong class="source-inline">handle</strong> extension function <span class="No-Break">is invoked:</span></p>
+			<pre class="source-code">
+    <strong class="bold">AgreeContractCommand</strong>(
+        contractId = contractId!!,
+        agreedByHousehold = "HouseholdA"
+    ).handle(eventStore = eventStore,
+        onSuccess = { println("Contract agreed: $contractId") },
+        onFailure = { println("Failed to amend contract: $contractId")}
+    )
+    <strong class="bold">AgreeContractCommand</strong>(
+        contractId = contractId!!,
+        agreedByHousehold = "HouseholdB"
+    ).handle(eventStore = eventStore,
+        onSuccess = { println("Contract agreed: $contractId") },
+        onFailure = { println("Failed to amend contract: $contractId")}
+    )</pre>			<p>After all these updates, we can query the latest <strong class="source-inline">Contract</strong> and see if all these updates have <a id="_idIndexMarker812"/>accumulated. A query is created with the captured contract ID. The <strong class="source-inline">handle</strong> extension function is invoked, and the event store is <span class="No-Break">passed in:</span></p>
+			<pre class="source-code">
+    val aggregate = CurrentContractQuery(contractId!!).handle(eventStore)
+    println("Aggregate is of version: ${aggregate?.version}")</pre>			<p>Because the event store keeps on capturing events as commands are handled, it already has the full history of the aggregate. This is the console output you get after executing all the commands <span class="No-Break">and queries:</span></p>
+			<pre class="console">
+Contract drafted: 3a25642c-fc9b-4024-b862-daf10fc645a6
+Contract amended: 3a25642c-fc9b-4024-b862-daf10fc645a6
+Contract agreed: 3a25642c-fc9b-4024-b862-daf10fc645a6
+Contract agreed: 3a25642c-fc9b-4024-b862-daf10fc645a6
+Aggregate is of version: 3</pre>			<p>This example has illustrated the powerful combination of CQRS and Event Sourcing at work. They complement each other and work together seamlessly. It has also demonstrated that each command and query has its own class and functions. This breaks down the traditional CRUD approach, where there are usually repository classes that contain all<a id="_idIndexMarker813"/> four types of operations in a <span class="No-Break">big file.</span></p>
+			<h2 id="_idParaDest-237"><a id="_idTextAnchor331"/>Outbox pattern</h2>
+			<p>It is worth pointing <a id="_idIndexMarker814"/>out that in real systems, there is a trend to<a id="_idIndexMarker815"/> also apply the <strong class="bold">Outbox</strong> pattern to manage the delivery of events in a reliable and fault-tolerant manner. This is implemented by having an outbox of messages in persistent storage, such as a relational <span class="No-Break">database table.</span></p>
+			<p>There is a separate process that reads the unsent outbox messages and delivers them to the target destinations. If a message is delivered, the corresponding record is considered sent and will <span class="No-Break">be deleted.</span></p>
+			<p>If the event store is unavailable, this delivery process will retry delivery automatically until the event store is operational again. The delivery process can also scale independently and potentially deliver messages to different destinations <span class="No-Break">in parallel.</span></p>
+			<p>A similar pattern to the Outbox <a id="_idIndexMarker816"/>pattern is the <strong class="bold">Change Data Capture</strong> (<strong class="bold">CDC</strong>) pattern. CDC detects changes to records by database triggers, transaction logs, or change trackers and creates an event. The created event eventually goes into the event stream or topic. While events are created before the Outbox process, events are retrospectively created in CDC. That means that CDC is less intuitive in capturing the intent of <span class="No-Break">the event.</span></p>
+			<p>Traditional relational databases provide strong consistency and transactional guarantees. This means we can have one transaction for normal database operations and event delivery as database records for either Outbox or CDC, achieving the all-or-none <span class="No-Break">transactional behavior.</span></p>
+			<p>By storing the Outbox messages in relational databases, the reliability, fault tolerance, consistency, and <a id="_idIndexMarker817"/>scalability <a id="_idIndexMarker818"/>of event sending are <span class="No-Break">also improved.</span></p>
+			<h1 id="_idParaDest-238"><a id="_idTextAnchor332"/>Popular frameworks and infrastructure for CQRS and Event Sourcing</h1>
+			<p>CQRS and Event Sourcing are<a id="_idIndexMarker819"/> architecture concepts that do not rely on a particular technology or framework. They are also agnostic to programming languages. However, there are frameworks and infrastructure that aim to support CQRS or <span class="No-Break">Event Sourcing.</span></p>
+			<ul>
+				<li>CQRS / Event <span class="No-Break">Sourcing frameworks:</span><ul><li>Axon <span class="No-Break">framework (</span><a href="https://www.axoniq.io/products/axon-framework"><span class="No-Break">https://www.axoniq.io/products/axon-framework</span></a><span class="No-Break">)</span></li><li><span class="No-Break">Akka (</span><a href="https://akka.io/"><span class="No-Break">https://akka.io/</span></a><span class="No-Break">)</span></li></ul></li>
+				<li><span class="No-Break">Event stores:</span><ul><li><span class="No-Break">EventStore (</span><a href="https://www.eventstore.com/"><span class="No-Break">https://www.eventstore.com/</span></a><span class="No-Break">)</span></li><li>Apache <span class="No-Break">Cassandra (</span><a href="https://cassandra.apache.org/"><span class="No-Break">https://cassandra.apache.org/</span></a><span class="No-Break">)</span></li><li><span class="No-Break">MongoDB (</span><a href="https://www.mongodb.com/"><span class="No-Break">https://www.mongodb.com/</span></a><span class="No-Break">)</span></li></ul></li>
+				<li><span class="No-Break">Messaging infrastructure:</span><ul><li>RabbitMQ <span class="No-Break">streams (</span><a href="https://www.rabbitmq.com/docs/streams"><span class="No-Break">https://www.rabbitmq.com/docs/streams</span></a><span class="No-Break">)</span></li><li>Apache <span class="No-Break">Kafka (</span><a href="https://kafka.apache.org/"><span class="No-Break">https://kafka.apache.org/</span></a><span class="No-Break">)</span></li></ul></li>
+			</ul>
+			<p>It is important to mention that using these tools does not automatically make CQRS or Event Sourcing work in your system. Your current framework and infrastructure may already be ready <a id="_idIndexMarker820"/>for these architecture styles, as long as the team implements the system using the semantics of CQRS and <span class="No-Break">Event Sourcing.</span></p>
+			<h1 id="_idParaDest-239"><a id="_idTextAnchor333"/>Summary</h1>
+			<p>We began by covering the classic CRUD architecture and its limitations. Then, we introduced Event Sourcing as an alternative approach to managing data and explored its history. We delved into how a team can decide whether Event Sourcing should be considered in <span class="No-Break">their systems.</span></p>
+			<p>We used the real-life example of villagers exchanging services to demonstrate how Event Sourcing can be implemented. We also briefly laid out a plan for how a CRUD system can migrate to <span class="No-Break">Event Sourcing.</span></p>
+			<p>Afterward, we moved to the topic of CQRS architecture. We discussed using commands as write operations and queries as read operations. We mentioned the basic constructs of CQRS and how they relate to the DDD and Event Sourcing architectures. We saw a side-by-side comparison of CRUD and CQRS in breaking down multiple <span class="No-Break">update operations.</span></p>
+			<p>We then discussed using both CQRS and Event Sourcing. We described how these two architectures complement each other with the extension of the <span class="No-Break">real-life example.</span></p>
+			<p>Lastly, we briefly covered using the Outbox pattern with CQRS and <span class="No-Break">Event Sourcing.</span></p>
+			<p>In the next chapter, we are going to discuss the idempotence, replication, and recovery aspects of <span class="No-Break">distributed systems.</span></p>
+		</div>
+	</div></div></body></html>

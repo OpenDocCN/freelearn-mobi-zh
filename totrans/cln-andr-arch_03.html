@@ -1,0 +1,585 @@
+<html><head></head><body>
+		<div id="_idContainer013">
+			<h1 id="_idParaDest-37"><em class="italic"><a id="_idTextAnchor038"/>Chapter 2</em>: Deep Diving into Data Sources</h1>
+			<p>In this chapter, we will study some of the popular libraries and frameworks used for retrieving and managing data on Android and how to do this without blocking the main thread of an application. We will start by going over how multithreading should be handled in an Android application and the available technologies we now have to easily handle this. We will then move on to implement loading data from the internet using libraries such as Retrofit and OkHttp, after which we will look at how we can persist data on a device using libraries such as Room and DataStore.</p>
+			<p>In this chapter, we will cover the following main topics:</p>
+			<ul>
+				<li>Understanding Kotlin coroutines and flows</li>
+				<li>Using OkHttp and Retrofit for networking</li>
+				<li>Using the Room library for data persistence</li>
+				<li>Understanding and using the DataStore library</li>
+			</ul>
+			<p>By the end of this chapter, you will have become familiar with how we can load, manage, and persist data in an Android application.</p>
+			<h1 id="_idParaDest-38"><a id="_idTextAnchor039"/>Technical requirements </h1>
+			<p>This chapter has the following hardware and software requirements:</p>
+			<ul>
+				<li>Android Studio Arctic Fox 2020.3.1 Patch 3</li>
+			</ul>
+			<p>The code files for this chapter can be found here: </p>
+			<p><a href="https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter2">https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter2</a></p>
+			<p>Check out the following video to see the Code in Action: <a href="https://bit.ly/38uecPi">https://bit.ly/38uecPi</a></p>
+			<h1 id="_idParaDest-39"><a id="_idTextAnchor040"/>Understanding Kotlin coroutines and Flows</h1>
+			<p>In this section, we<a id="_idIndexMarker125"/> will look at how threading works in the Android <a id="_idIndexMarker126"/>ecosystem and what applications must do to ensure that long-running operations do not block the user from using an application. We will then look at what available options we have available to execute operations in the background, with a focus on coroutines. Finally, we will look over Kotlin flows, which we can use to handle asynchronous work using a reactive and functional approach.</p>
+			<p>Android applications normally run in a single process on a user's device. When the operating system starts the application's process, it will allocate memory resources for the process to be executed. This process, when started, will have one thread of execution running within. This thread is referred to as the "main thread" or "<strong class="bold">user interface</strong> (<strong class="bold">UI</strong>) thread". In<a id="_idIndexMarker127"/> Android, this concept is very important because it is the thread that deals with user interaction. This imposes certain limitations for developers when dealing with it, as outlined here: </p>
+			<ul>
+				<li>The main thread must not be <a id="_idIndexMarker128"/>blocked by long-running or <strong class="bold">input/output</strong> (<strong class="bold">I/O</strong>) operations.</li>
+				<li>All updates to the UI must be done on the main thread.</li>
+			</ul>
+			<p>The idea is that the user should still be able to interact with an application as much as possible even if the application is doing some work. Every time we want to load and save data from or to the internet, local storage, content providers, and so on, we should use another thread or use multiple threads. The way the device's processor deals with multiple threads is by assigning a core for each thread. When there are more threads than cores, it will jump back and forth between every single instruction from each thread. Having too<a id="_idIndexMarker129"/> many threads being executed simultaneously will end up creating a bad <strong class="bold">user experience</strong> (<strong class="bold">UX</strong>) because the processor will now need to jump between the main thread and the rest of the threads being executed at the same time, so we will need to be mindful of how many threads are being executed concurrently.</p>
+			<p>In Java, a thread can be created using the <strong class="source-inline">Thread</strong> class; however, creating a new thread for every asynchronous operation is a very resource-expensive operation. Java also offers the concept of <strong class="source-inline">ThreadPool</strong> or <strong class="source-inline">Executor</strong>. These typically manage fixed a collection of threads that will be reused for different operations. Because of the Android restriction regarding updating the UI on the main thread, classes such as <strong class="source-inline">Handler</strong> and <strong class="source-inline">Looper</strong> were introduced, whereby you can submit the result of an operation performed on a background thread back on the main thread. An example of this is provided here:</p>
+			<p class="source-code">class MyClass {</p>
+			<p class="source-code">    fun asyncSum(a: Int, b: Int, callback: (Int) -&gt; Unit) {</p>
+			<p class="source-code">        val handler = Handler(Looper.getMainLooper())</p>
+			<p class="source-code">        Thread(Runnable {</p>
+			<p class="source-code">            val result = a + b</p>
+			<p class="source-code">            handler.post(Runnable {</p>
+			<p class="source-code">                callback(result)</p>
+			<p class="source-code">            })</p>
+			<p class="source-code">        }).start()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>In the <a id="_idIndexMarker130"/>preceding<a id="_idIndexMarker131"/> code snippet, the sum of two numbers will be performed on a new thread, and the result will then be posted back using the <strong class="source-inline">Handler</strong> object that is connected to the main <strong class="source-inline">Looper</strong> object, which itself will loop the main t<a id="_idTextAnchor041"/>hread.</p>
+			<p>The repeated usage of <strong class="source-inline">Handler</strong> and <strong class="source-inline">Looper</strong> gave birth to <strong class="source-inline">AsyncTask</strong>, which offers the possibility of moving the necessary operations on a background thread and receiving the result on the main thread. <strong class="source-inline">AsyncTask</strong> worked with the same principle as the preceding example, only instead of creating a new thread for every new operation, it would by default use the same thread (although this later became configurable), which means that if two <strong class="source-inline">AsyncTask</strong> instances were executed at the same time, one would wait after the other. An example of the same sum operations might look like this:</p>
+			<p class="source-code">    fun asyncSum(a: Int, b: Int, callback: (Int) -&gt; Unit) {</p>
+			<p class="source-code">        object : AsyncTask&lt;Nothing, Nothing, Int&gt;() {</p>
+			<p class="source-code">            override fun doInBackground(vararg params: </p>
+			<p class="source-code">                Nothing?): Int {</p>
+			<p class="source-code">                return a+b</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">            override fun onPostExecute(result: Int) {</p>
+			<p class="source-code">                super.onPostExecute(result)</p>
+			<p class="source-code">                callback(result)</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">        }.execute()</p>
+			<p class="source-code">    }</p>
+			<p>In the<a id="_idIndexMarker132"/> preceding<a id="_idIndexMarker133"/> example, the sum is done in the <strong class="source-inline">doInBackground</strong> method, which is executed on a separate thread, and the <strong class="source-inline">onPostExecute</strong> method would be executed on the main thread.</p>
+			<p>Let's now imagine that we want to chain these sums and apply them multiple times, as follows:</p>
+			<p class="source-code">    fun asyncComplicatedSum(a: Int, b: Int, c: Int) {</p>
+			<p class="source-code">        asyncSum(a, b) { tempSum -&gt;</p>
+			<p class="source-code">            asyncSum(tempSum, c) { finalSum -&gt;</p>
+			<p class="source-code">                Log.d(this.javaClass.name, "Final sum </p>
+			<p class="source-code">                    $finalSum")</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p>In the preceding example, we try to sum two numbers and add the result to number <strong class="source-inline">c</strong>. As you can see, we need to use the callback and wait for <strong class="source-inline">a</strong> and <strong class="source-inline">b</strong> to finish and then apply the same function to the result of <strong class="source-inline">a+b</strong> and the number <strong class="source-inline">c</strong>. </p>
+			<p>Let's imagine what an application might look like when having to deal with loading data from multiple data sources, merging them together, handling errors, and stopping the asynchronous execution if the user leaves the current activity or fragment. The RxJava library tries to tackle all these problems through an event-driven approach. It introduces the concepts of streams and flows of data that can be observed, transformed, merged with other data streams, and executed on different threads. The sum of two numbers in RxJava <a id="_idIndexMarker134"/>might<a id="_idIndexMarker135"/> look something like this:</p>
+			<p class="source-code">fun asyncSum(a: Int, b: Int): Single&lt;Int&gt; {</p>
+			<p class="source-code">        return Single.create&lt;Int&gt; {</p>
+			<p class="source-code">            it.onSuccess(a + b)</p>
+			<p class="source-code">        }.subscribeOn(Schedulers.io())</p>
+			<p class="source-code">            .observeOn(AndroidSchedulers.mainThread())</p>
+			<p class="source-code">    }</p>
+			<p>In the preceding example, we create a <strong class="source-inline">Single</strong> instance, which is a stream that emits only one value (for emitting multiple values, we have the <strong class="source-inline">Flowable</strong> and <strong class="source-inline">Observable</strong> options). The value emitted is the sum of the two numbers. The usage of <strong class="source-inline">subscribeOn</strong> is for executing the upstream (the sum) on an I/O thread managed by RxJava internally, and the usage of <strong class="source-inline">observeOn</strong> is to have everything downstream (all the commands that will follow) to get the result on the main thread.</p>
+			<p>If we want to chain multiple sums, then we would have something like this:</p>
+			<p class="source-code">fun asyncComplicatedSum(a: Int, b: Int, c: Int) {</p>
+			<p class="source-code">        val disposable = asyncSum(a, b)</p>
+			<p class="source-code">            .flatMap {</p>
+			<p class="source-code">                asyncSum(it, c)</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">            .subscribe ({</p>
+			<p class="source-code">                Log.d(this.javaClass.name, "Final sum $it")</p>
+			<p class="source-code">            },{</p>
+			<p class="source-code">                Log.d(this.javaClass.name, "Something went </p>
+			<p class="source-code">                    wrong")</p>
+			<p class="source-code">          <a id="_idTextAnchor042"/>  })</p>
+			<p class="source-code">    }</p>
+			<p>In the preceding example, the sum of <strong class="source-inline">a</strong> and <strong class="source-inline">b</strong> is executed, then through the <strong class="source-inline">flatMap</strong> operator, we add <strong class="source-inline">c</strong> to that result. The usage of <strong class="source-inline">subscribe</strong> method is for triggering sums and listening for the results. This is because the <strong class="source-inline">Single</strong> instance used is a cold observable; it will only be executed only when <strong class="source-inline">subscribe</strong> is called. There is also the concept of hot observables, which will emit whether there are subscribers or not. The result of the <strong class="source-inline">subscribe</strong> operator will return a <strong class="source-inline">Disposable</strong> instance that offers a <strong class="source-inline">dispose</strong> method that can be called when we want to stop listening for data from the stream. This<a id="_idIndexMarker136"/> is <a id="_idIndexMarker137"/>useful in situations where our activities and fragments are destroyed, and we don't want to update our UI to avoid context leaks.</p>
+			<h2 id="_idParaDest-40"><a id="_idTextAnchor043"/>Kotlin coroutines</h2>
+			<p>So far, we <a id="_idIndexMarker138"/>have analyzed technologies that revolve around the Java and Android frameworks. With the adoption of Kotlin, other technologies have emerged that deal with multithreading and are Kotlin-specific. One of these is the concept of coroutines. Coroutines simplify the way we write asynchronous code. Instead of dealing with callbacks, coroutines introduce the concept of scopes where we can specify which threads our blocks of code will execute in. The scopes can also connect to lifecycle-aware components that help us unsubscribe from the results of asynchronous work when our lifecycle-aware components terminate. Let's look at the following example of coroutines for the same sum:</p>
+			<p class="source-code">   suspend fun asyncSum(a: Int, b: Int): Int {</p>
+			<p class="source-code">        return withContext(Dispatchers.IO) {</p>
+			<p class="source-code">            a + b</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p>In the preceding example, the <strong class="source-inline">withContext</strong> method will execute the block of code inside it in the threads managed by the I/O dispatcher. The number of threads associated with this dispatcher is managed internally by the Kotlin framework and is associated with the number of cores the processor of the device has. This often means that we don't have to worry about the performance of our applications when multiple asynchronous operations are executed concurrently. Another interesting thing to note in the example is the usage of the <strong class="source-inline">suspend</strong> keyword. This is to alert the caller of this method that it will be executed using coroutines on a separate thread.</p>
+			<p>Now, let's see what things will look like when we want to invoke this method. Have a look at the <a id="_idIndexMarker139"/>following code snippet: </p>
+			<p class="source-code">class MyClass : CoroutineScope {</p>
+			<p class="source-code">    override val coroutineContext: CoroutineContext</p>
+			<p class="source-code">        get() = Dispatchers.Main + job</p>
+			<p class="source-code">    private lateinit var job: Job</p>
+			<p class="source-code">    fun asyncComplicatedSum(a: Int, b: Int, c: Int) {</p>
+			<p class="source-code">        launch {</p>
+			<p class="source-code">            try {</p>
+			<p class="source-code">                val tempSum = asyncSum(a, b)</p>
+			<p class="source-code">                val finalSum = asyncSum(tempSum, c)</p>
+			<p class="source-code">                Log.d(this.javaClass.name, "Final sum </p>
+			<p class="source-code">                    $finalSum")</p>
+			<p class="source-code">            } catch (e: Exception) {</p>
+			<p class="source-code">                Log.d(this.javaClass.name, "Something went </p>
+			<p class="source-code">                    wrong")</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    fun create() {</p>
+			<p class="source-code">        job = Job()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    fun destroy() {</p>
+			<p class="source-code">        job.cancel()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>In <strong class="source-inline">asyncComplicatedSum</strong>, we use the <strong class="source-inline">launch</strong> method. This method is associated with the <strong class="source-inline">CoroutineContext</strong> object defined in this class. The context is defined using the <strong class="source-inline">Main</strong> dispatcher <a id="_idIndexMarker140"/>combined with the <strong class="source-inline">Job</strong> object that will be associated with the lifecycle of this object. If the <strong class="source-inline">destroy</strong> method is called while we are waiting for the result of the sum, then the execution of the sum will stop and we will stop getting the result of the sum. The code will execute each of the sums on the I/O thread and then execute log statements on the main thread if the job is still alive.</p>
+			<p>In Android, we already have a few <strong class="source-inline">CoroutineScope</strong> objects already defined and associated with our lifecycle-aware classes. One that will be relevant to us is the one defined for <strong class="source-inline">ViewModels</strong>. This can be found in the <strong class="source-inline">org.jetbrains.kotlinx:kotlinx-coroutines-android</strong> library and will look something like this:</p>
+			<p class="source-code">class MyViewModel: ViewModel() {</p>
+			<p class="source-code">    init {</p>
+			<p class="source-code">        viewModelScope.launch {  }</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">viewModelScope</strong> is a Kotlin extension created for <strong class="source-inline">ViewModel</strong> instances that will execute if the <strong class="source-inline">ViewModel</strong> instance is alive. If <strong class="source-inline">onCleared</strong> is called on the <strong class="source-inline">ViewModel</strong> instance, then it will stop listening to the remaining code to be executed in the <strong class="source-inline">launch</strong> block.</p>
+			<p>In this section, we've analyzed how Kotlin coroutines work and how we can use them to handle asynchronous operations in an Android application. In the next section, we will create an Android <a id="_idIndexMarker141"/>application that will use Kotlin coroutines for a simple asynchronous operation.</p>
+			<h2 id="_idParaDest-41"><a id="_idTextAnchor044"/>Exercise 02.01 – Using Kotlin coroutines</h2>
+			<p>Create an <a id="_idIndexMarker142"/>application that will display two input fields, one text field, and a button. The input fields will be limited to numbers only, and when the user presses the button, then the text field will display the sum of the two numbers after 5 seconds. The sum and waiting will be implemented using coroutines.</p>
+			<p>To complete the exercise, you will need to build the following:</p>
+			<ul>
+				<li>A class that will perform the addition of the two numbers</li>
+				<li>A <strong class="source-inline">ViewModel</strong> class that will invoke the addition</li>
+				<li>The UI using Compose that will use the following function:<p class="source-code">@Composable</p><p class="source-code">fun Calculator(</p><p class="source-code">    a: String,</p><p class="source-code">    onAChanged: (String) -&gt; Unit,</p><p class="source-code">    b: String,</p><p class="source-code">    onBChanged: (String) -&gt; Unit,</p><p class="source-code">    result: String,</p><p class="source-code">    onButtonClick: () -&gt; Unit</p><p class="source-code">) {</p><p class="source-code">    Column(modifier = Modifier.padding(16.dp)) {</p><p class="source-code">        OutlinedTextField(</p><p class="source-code">            value = a,</p><p class="source-code">            onValueChange = onAChanged,</p><p class="source-code">            keyboardOptions = KeyboardOptions</p><p class="source-code">                (keyboardType = KeyboardType.Number),</p><p class="source-code">            label = { Text("a") }</p><p class="source-code">        )</p><p class="source-code">        OutlinedTextField(</p><p class="source-code">            value = b,</p><p class="source-code">            onValueChange = onBChanged,</p><p class="source-code">            keyboardOptions = KeyboardOptions</p><p class="source-code">                (keyboardType = KeyboardType.Number),</p><p class="source-code">            label = { Text("b") }</p><p class="source-code">        )</p><p class="source-code">        Text(text = result)</p><p class="source-code">        Button(onClick = onButtonClick) {</p><p class="source-code">            Text(text = "Calculate")</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ul>
+			<p>Follow these <a id="_idIndexMarker143"/>steps to complete the exercise:</p>
+			<ol>
+				<li>Create a new project in Android Studio using an <strong class="bold">Empty Compose Activity</strong>.</li>
+				<li>At the top level of the <strong class="source-inline">build.gradle</strong> file, define the Compose library version as follows:<p class="source-code">buildscript {</p><p class="source-code">    ext {</p><p class="source-code">        compose_version = '1.0.5'</p><p class="source-code">    }</p><p class="source-code">    … </p><p class="source-code">}</p></li>
+				<li>In<a id="_idIndexMarker144"/> the <strong class="source-inline">app/build.gradle</strong> file, we need to add the following dependencies:<p class="source-code">dependencies {</p><p class="source-code">    implementation 'androidx.core:core-ktx:1.7.0'</p><p class="source-code">    implementation 'androidx.appcompat:appcompat:1.4.0'</p><p class="source-code">    implementation 'com.google.android.material:material:1.4.0'</p><p class="source-code">    implementation "androidx.compose.ui:ui:$compose_version"</p><p class="source-code">    implementation "androidx.compose.material:material:$compose_version"</p><p class="source-code">    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"</p><p class="source-code">    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'</p><p class="source-code">    implementation 'androidx.activity:activity-compose:1.4.0'</p><p class="source-code">    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0'</p><p class="source-code">    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"</p><p class="source-code">    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.4.0"</p><p class="source-code">    testImplementation 'junit:junit:4.13.2'</p><p class="source-code">    androidTestImplementation 'androidx.test.ext:junit:1.1.3'</p><p class="source-code">    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'</p><p class="source-code">    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"</p><p class="source-code">    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.0"</p><p class="source-code">    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"</p><p class="source-code">}</p></li>
+				<li>Start by<a id="_idIndexMarker145"/> creating a <strong class="source-inline">NumberAdder</strong> class and define an <strong class="source-inline">add</strong> operation and a delay, as follows:<p class="source-code">private const val DELAY = 5000</p><p class="source-code">class NumberAdder(</p><p class="source-code">    private val dispatcher: CoroutineDispatcher = </p><p class="source-code">        Dispatchers.IO,</p><p class="source-code">    private val delay: Int = DELAY</p><p class="source-code">) {</p><p class="source-code">    suspend fun add(a: Int, b: Int): Int {</p><p class="source-code">        return withContext(dispatcher) {</p><p class="source-code">            delay(delay.toLong())</p><p class="source-code">            a + b</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>In this class, we will add our 5-second delay before performing the sum of the two numbers. This is to highlight the asynchronous operation more. <strong class="source-inline">CoroutineDispatcher</strong> and the amount we want to delay by will be injected through the constructor. This is because we want to unit-test this class.</p>
+			<ol>
+				<li value="5">Next, we will need to unit-test this class. Before we write the test, create a test rule so that <a id="_idIndexMarker146"/>we can reuse it for coroutines, as follows:<p class="source-code">class DispatcherTestRule : TestRule {</p><p class="source-code">    @ExperimentalCoroutinesApi</p><p class="source-code">    val testDispatcher = TestCoroutineDispatcher()</p><p class="source-code">    @ExperimentalCoroutinesApi</p><p class="source-code">    override fun apply(base: Statement?, description: </p><p class="source-code">        Description?): Statement {</p><p class="source-code">        try {</p><p class="source-code">            Dispatchers.setMain(testDispatcher)</p><p class="source-code">            base?.evaluate()</p><p class="source-code">        } catch (e: Exception) {</p><p class="source-code">        } finally {</p><p class="source-code">            Dispatchers.resetMain()</p><p class="source-code">            testDispatcher.cleanupTestCoroutines()</p><p class="source-code">        }</p><p class="source-code">        return base!!</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>In this class, we create a <strong class="source-inline">TestCoroutineDispatcher</strong> instance that will later be injected into the unit test so that the test can execute the sum in a synchronous way. <strong class="source-inline">@ExperimentalCoroutinesApi</strong> suggests that the usage of <strong class="source-inline">TestCoroutineDispatcher</strong> is still in an experimental state and will be moved to a stable version in the future.</p>
+			<ol>
+				<li value="6">Now, write <a id="_idIndexMarker147"/>the unit test for the class, in the form of <strong class="source-inline">NumberAdderTest</strong>, as follows:<p class="source-code">class NumberAdderTest {</p><p class="source-code">    @get:Rule</p><p class="source-code">    val dispatcherTestRule = DispatcherTestRule()</p><p class="source-code">    @ExperimentalCoroutinesApi</p><p class="source-code">    @Test</p><p class="source-code">    fun testAdd() = runBlockingTest {</p><p class="source-code">        val adder = NumberAdder(dispatcherTestRule.</p><p class="source-code">            testDispatcher, 0)</p><p class="source-code">        assertEquals(5, adder.add(1, 4))</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we inject the <strong class="source-inline">testDispatcher</strong> object we created in  <strong class="source-inline">DispatcherTestRule</strong> into <strong class="source-inline">NumberAdder</strong>, and we then invoke the <strong class="source-inline">add</strong> function. The entire test is executed in a special <strong class="source-inline">CoroutineScope</strong> block called <strong class="source-inline">runBlockingTest</strong>, that will ensure all the coroutines launched must complete.</p>
+			<ol>
+				<li value="7">Next, go ahead and<a id="_idIndexMarker148"/> create a <strong class="source-inline">ViewModel</strong> class, like this:<p class="source-code">class MainViewModel(private val adder: NumberAdder = NumberAdder()) : ViewModel() {</p><p class="source-code">    var resultState by mutableStateOf("0")</p><p class="source-code">        private set</p><p class="source-code">    fun add(a: String, b: String) {</p><p class="source-code">        viewModelScope.launch {</p><p class="source-code">            val result = adder.add(a.toInt(), </p><p class="source-code">                b.toInt())</p><p class="source-code">            resultState = result.toString()</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we use a Compose state that will retain the result of the addition, and a method that will trigger the addition into <strong class="source-inline">viewModelScope</strong>.</p>
+			<ol>
+				<li value="8">After the <strong class="source-inline">ViewModel</strong> class has been created, go ahead and create an activity class, as follows: <p class="source-code">class MainActivity : ComponentActivity() {</p><p class="source-code">    override fun onCreate(savedInstanceState: Bundle?) {</p><p class="source-code">        super.onCreate(savedInstanceState)</p><p class="source-code">        setContent {</p><p class="source-code">            Exercise201Theme {</p><p class="source-code">                Surface {</p><p class="source-code">                    Screen()</p><p class="source-code">                }</p><p class="source-code">            }</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we initialize our activity with the content. <strong class="source-inline">Exercise201Theme</strong> should be replaced with the theme generated by Android Studio when the project was created. Typically, this<a id="_idIndexMarker149"/> should be in a <strong class="source-inline">Theme</strong> file and should be a <strong class="source-inline">@Composable</strong> function that has the application name followed by the <strong class="source-inline">Theme</strong> suffix. If that is not available, you can use <strong class="source-inline">MaterialTheme</strong> instead for the purpose of the exercise.</p>
+			<ol>
+				<li value="9">Next, create a <strong class="source-inline">Screen</strong> function, as follows:<p class="source-code">@Composable</p><p class="source-code">fun Screen(viewModel: MainViewModel = viewModel()) {</p><p class="source-code">    var a by remember { mutableStateOf("") }</p><p class="source-code">    var b by remember { mutableStateOf("") }</p><p class="source-code">    Calculator(</p><p class="source-code">        a = a,</p><p class="source-code">        onAChanged = {</p><p class="source-code">            a = it</p><p class="source-code">        },</p><p class="source-code">        b = b,</p><p class="source-code">        onBChanged = {</p><p class="source-code">            b = it</p><p class="source-code">        },</p><p class="source-code">        result = viewModel.resultState,</p><p class="source-code">        onButtonClick = {</p><p class="source-code">            viewModel.add(a, b)</p><p class="source-code">        })</p><p class="source-code">}</p></li>
+			</ol>
+			<p>In this method, we define variables for our text fields, then we pass the result of the addition of the numbers from the ViewModel, and finally, we invoke the ViewModel to perform the addition.</p>
+			<ol>
+				<li value="10">And finally, add the <strong class="source-inline">Calculator</strong> function from the exercise definition to the <strong class="source-inline">MainActivity</strong> file.</li>
+			</ol>
+			<p>If we run the preceding example, we should see our UI elements, and after inserting the numbers and clicking the button, we will get our result. One thing to notice is that the user will be able to interact with the UI while the <strong class="source-inline">add</strong> method is executed, and clicking multiple times for different numbers will get the results 5 seconds after each button press. </p>
+			<p>Using coroutines can improve the quality of an Android application, especially when combined with Android extensions for the <strong class="source-inline">ViewModel</strong> class and lifecycle-aware components. Coroutines <a id="_idIndexMarker150"/>simplify the code we write for asynchronous operations, and the addition of the <strong class="source-inline">suspend</strong> keyword can enforce more rigor when dealing with these operations.</p>
+			<h2 id="_idParaDest-42"><a id="_idTextAnchor045"/>Kotlin Flows</h2>
+			<p>Coroutines offer a <a id="_idIndexMarker151"/>good solution for dealing with asynchronous operations; however, they do not offer a good ability to handle multiple streams of data in the same way RxJava does. Flows represent an extension to coroutines, which is meant to solve this problem. When dealing with flows, there are three entities to consider, as outlined here:</p>
+			<ul>
+				<li><strong class="bold">Producer</strong>: This <a id="_idIndexMarker152"/>entity is responsible for emitting the data.</li>
+				<li><strong class="bold">Intermediary</strong>: This entity deals with the transformation or manipulation of the data.</li>
+				<li><strong class="bold">Consumer</strong>: This entity consumes the data in the stream.</li>
+			</ul>
+			<p>Let's look at the<a id="_idIndexMarker153"/> following example of adding two numbers and how it might look like using Kotlin flows:</p>
+			<p class="source-code">fun asyncSum(a: Int, b: Int): Flow&lt;Int&gt; {</p>
+			<p class="source-code">        return flow {</p>
+			<p class="source-code">            this.emit(a + b)</p>
+			<p class="source-code">        }.flowOn(Dispatchers.IO)</p>
+			<p class="source-code">    }</p>
+			<p>Here, we create a <strong class="source-inline">Flow</strong> object that will emit the result of <strong class="source-inline">a + b</strong> on a stream. The <strong class="source-inline">flowOn</strong> method will move the execution of the upstream on an I/O thread. Here, we note the similarity to RxJava in the concept of how <strong class="source-inline">Flows</strong> work, but we also notice that it's an extension of coroutines because of the use of <strong class="source-inline">Dispatchers</strong>. Let's now look at how flows look on the consumer side, as follows:</p>
+			<p class="source-code">class MyClass : CoroutineScope {</p>
+			<p class="source-code">    override val coroutineContext: CoroutineContext</p>
+			<p class="source-code">        get() = Dispatchers.Main + job</p>
+			<p class="source-code">    private lateinit var job: Job</p>
+			<p class="source-code">    @FlowPreview</p>
+			<p class="source-code">    fun asyncComplicatedSum(a: Int, b: Int, c: Int) {</p>
+			<p class="source-code">        launch {</p>
+			<p class="source-code">            asyncSum(a, b)</p>
+			<p class="source-code">                .flatMapConcat {</p>
+			<p class="source-code">                    asyncSum(it, c)</p>
+			<p class="source-code">                }</p>
+			<p class="source-code">                .catch {</p>
+			<p class="source-code">                    Log.d(this.javaClass.name, "Something </p>
+			<p class="source-code">                         went wrong")</p>
+			<p class="source-code">                }</p>
+			<p class="source-code">                .collect {</p>
+			<p class="source-code">                    Log.d(this.javaClass.name, "Final sum </p>
+			<p class="source-code">                        $it")</p>
+			<p class="source-code">                }</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Here, we also notice <a id="_idIndexMarker154"/>similarities to RxJava—that is, when we try to manipulate the stream to perform the addition to number <strong class="source-inline">c</strong> and when it comes to error handling due to the <strong class="source-inline">catch</strong> method. The <strong class="source-inline">collect</strong> method, however, is closer to coroutines, and it requires a <strong class="source-inline">CoroutineScope</strong> to be used or to declare the calling method as a suspend one. </p>
+			<p>Flows offer a couple of specialized classes for particular use cases: <strong class="source-inline">StateFlow</strong> and <strong class="source-inline">SharedFlow</strong>. The <strong class="source-inline">StateFlow</strong> class is useful because it will offer subscribers the last value stored when they subscribe, like how <strong class="source-inline">LiveData</strong> works. Flows can also be cold and hot, and <strong class="source-inline">SharedFlow</strong> is a specialized implementation of a hot flow. <strong class="source-inline">SharedFlow</strong> will emit items if it is kept in memory if there are any consumers or not. When a consumer subscribes to <strong class="source-inline">SharedFlow</strong>, it will also emit the last value stored to the consumer, as with <strong class="source-inline">StateFlow</strong>.</p>
+			<p>In this section, we have looked at Kotlin flows and the benefits they provide when it comes to handling asynchronous operations. Next, we will look at how we can use Kotlin flows in an Android application through a simple exercise.</p>
+			<h2 id="_idParaDest-43"><a id="_idTextAnchor046"/>Exercise 02.02 – Using Kotlin Flows</h2>
+			<p>Modify the <a id="_idIndexMarker155"/>application from <em class="italic">Exercise 02.01</em> so that the addition of the two numbers will return a Flow instead of a suspended function.</p>
+			<p>To complete the exercise, you will need to do the following:</p>
+			<ul>
+				<li>Rewrite the <strong class="source-inline">add</strong> function in <strong class="source-inline">NumberAdder</strong> to return a Flow.</li>
+				<li>Change how the <strong class="source-inline">ViewModel</strong> invokes the <strong class="source-inline">add</strong> function.</li>
+			</ul>
+			<p>Follow these steps to complete the exercise:</p>
+			<ol>
+				<li value="1">Modify the <strong class="source-inline">add</strong> function in <strong class="source-inline">NumberAdder</strong> to return a Flow, as follows:<p class="source-code">private const val DELAY = 5000</p><p class="source-code">class NumberAdder(</p><p class="source-code">    private val dispatcher: CoroutineDispatcher = </p><p class="source-code">        Dispatchers.IO,</p><p class="source-code">    private val delay: Int = DELAY</p><p class="source-code">) {</p><p class="source-code">    suspend fun add(a: Int, b: Int): Flow&lt;Int&gt; {</p><p class="source-code">        return flow {</p><p class="source-code">            emit(a + b)</p><p class="source-code">        }.onEach {</p><p class="source-code">            delay(delay.toLong())</p><p class="source-code">        }.flowOn(dispatcher)</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we create a new Flow where we emit the sum of <strong class="source-inline">a</strong> and <strong class="source-inline">b</strong>, after which we put a delay on each item emitted in the stream, and finally, we specify the <strong class="source-inline">CoroutineDispatcher</strong> instance we wish to execute the sum on.</p>
+			<ol>
+				<li value="2">Next, let's <a id="_idIndexMarker156"/>modify the unit test for the sum, as follows:<p class="source-code">class NumberAdderTest {</p><p class="source-code">    @get:Rule</p><p class="source-code">    val dispatcherTestRule = DispatcherTestRule()</p><p class="source-code">    @ExperimentalCoroutinesApi</p><p class="source-code">    @Test</p><p class="source-code">    fun testAdd() = runBlockingTest {</p><p class="source-code">        val adder = NumberAdder</p><p class="source-code">            (dispatcherTestRule.testDispatcher, 0)</p><p class="source-code">        val result = adder.add(1, 4).first()</p><p class="source-code">        assertEquals(5, result)</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Because the <strong class="source-inline">add</strong> method returns a <strong class="source-inline">Flow</strong> object, we must now find the first item emitted in the flow and assert the value of that item against our expected result.</p>
+			<ol>
+				<li value="3">Modify the <strong class="source-inline">MainViewModel</strong> class to consume the <strong class="source-inline">add</strong> operation, as follows: <p class="source-code">class MainViewModel(private val adder: NumberAdder = NumberAdder()) : ViewModel() {</p><p class="source-code">    var resultState by mutableStateOf("0")</p><p class="source-code">        private set</p><p class="source-code">    fun add(a: String, b: String) {</p><p class="source-code">        viewModelScope.launch {</p><p class="source-code">            adder.add(a.toInt(), b.toInt())</p><p class="source-code">                .collect {</p><p class="source-code">                    resultState = it.toString()</p><p class="source-code">                }</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, the <strong class="source-inline">add</strong> method will still use the same <strong class="source-inline">CoroutineScope</strong> instance to launch the <strong class="source-inline">add</strong> method, which will now use the <strong class="source-inline">collect</strong> method to get the result of the sum.</p>
+			<p>If we launch the<a id="_idIndexMarker157"/> application after following the steps from the exercise, the behavior will be the same as for <em class="italic">Exercise 02.01</em>, and we can see how Kotlin flows extend the functionality of coroutines by introducing concepts from RxJava to simplify how we can handle multiple streams of data.</p>
+			<p>In this section, we've seen how handling asynchronous operations has evolved over time and how much our applications benefit from concepts such as coroutines and flows that provide management for background threads, simplify how we execute asynchronous operations, manage multiple streams of data, and can connect to the lifecycle of Android components. In the following section, we will look at tools we can use to fetch data from the network and how they can be integrated with Kotlin coroutines and flows.</p>
+			<h1 id="_idParaDest-44"><a id="_idTextAnchor047"/>Using OkHttp and Retrofit for networking</h1>
+			<p>In this<a id="_idIndexMarker158"/> section, we <a id="_idIndexMarker159"/>will look <a id="_idIndexMarker160"/>at<a id="_idIndexMarker161"/> how we can use the Retrofit library to perform networking operations and the benefits it provides.</p>
+			<p>Many Android applications require the internet to access data stored on various servers. Often, this is done through <a id="_idIndexMarker162"/>the <strong class="bold">HyperText Transfer Protocol</strong> (<strong class="bold">HTTP</strong>) protocol in which data is exchanged between the applications and the servers. The data is often represented in <strong class="bold">JavaScript Object Notation</strong> (<strong class="bold">JSON</strong>) format. In<a id="_idIndexMarker163"/> the past, these types of exchanges were implemented either with <strong class="source-inline">HttpURLConnection</strong> or Apache HttpClient. Working with either of these components meant that developers would need to manually handle the conversion from <strong class="bold">plain old Java objects</strong> (<strong class="bold">POJOs</strong>) to JSON, handle <a id="_idIndexMarker164"/>various network configurations, and deal with backward compatibility.</p>
+			<p>The OkHttp library will address some of these issues through an <strong class="source-inline">OkHttpClient</strong> class that will handle various network configurations and that provides other features such as caching. The Retrofit library, which can be placed on top of the OkHttp library, is meant to ensure type safety when dealing with various data formats. It's very configurable and allows the<a id="_idIndexMarker165"/> possibility to plug in various converter libraries for POJO-to-JSON conversion or <strong class="bold">Extensible Markup Language</strong> (<strong class="bold">XML</strong>) or other types of formats. </p>
+			<p>In order to add Retrofit and OkHttp to the project, we will add the following dependencies to the <strong class="source-inline">build.gradle</strong> file:</p>
+			<p class="source-code">dependencies {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    implementation "com.squareup.okhttp3:okhttp:4.9.0"</p>
+			<p class="source-code">    implementation "com.squareup.retrofit2:retrofit:2.9.0"</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>Next, we will need to determine which converters we will need to use for the data. Because JSON is a common format, we will use a JSON converter and the Moshi library to do so, so we will need to add dependencies to these two libraries, as follows:</p>
+			<p class="source-code">dependencies {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    implementation "com.squareup.okhttp3:okhttp:4.9.0"</p>
+			<p class="source-code">    implementation "com.squareup.retrofit2:retrofit:2.9.0"</p>
+			<p class="source-code">    implementation "com.squareup.retrofit2:converter-moshi:2.9.0"</p>
+			<p class="source-code">    implementation "com.squareup.moshi:moshi:1.13.0"</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>Here, the Moshi library will be responsible for converting POJOs into JSON, and the converter library will plug into the Retrofit library and trigger this conversion when data is<a id="_idIndexMarker166"/> exchanged<a id="_idIndexMarker167"/> between <a id="_idIndexMarker168"/>the<a id="_idIndexMarker169"/> Android application and the server. </p>
+			<p>Let's assume we will need to fetch data from a server in a JSON format. We can use the <a href="https://jsonplaceholder.typicode.com/">https://jsonplaceholder.typicode.com/</a> service as an example. If we want to fetch a list of users, we <a id="_idIndexMarker170"/>can use the <a href="https://jsonplaceholder.typicode.com/users">https://jsonplaceholder.typicode.com/users</a> <strong class="bold">Uniform Resource Locator</strong> (<strong class="bold">URL</strong>). A user's JSON representation looks like this:</p>
+			<p class="source-code">{</p>
+			<p class="source-code">"id": 1,</p>
+			<p class="source-code">    "name": "Leanne Graham",</p>
+			<p class="source-code">    "username": "Bret",</p>
+			<p class="source-code">    "email": "Sincere@april.biz",</p>
+			<p class="source-code">    "address": {</p>
+			<p class="source-code">      "street": "Kulas Light",</p>
+			<p class="source-code">      "suite": "Apt. 556",</p>
+			<p class="source-code">      "city": "Gwenborough",</p>
+			<p class="source-code">      "zipcode": "92998-3874",</p>
+			<p class="source-code">      "geo": {</p>
+			<p class="source-code">        "lat": "-37.3159",</p>
+			<p class="source-code">        "lng": "81.1496"</p>
+			<p class="source-code">      }</p>
+			<p class="source-code">    },</p>
+			<p class="source-code">    "phone": "1-770-736-8031 x56442",</p>
+			<p class="source-code">    "website": "hildegard.org",</p>
+			<p class="source-code">    "company": {</p>
+			<p class="source-code">      "name": "Romaguera-Crona",</p>
+			<p class="source-code">      "catchPhrase": "Multi-layered client-server neural-</p>
+			<p class="source-code">          net",</p>
+			<p class="source-code">      "bs": "harness real-time e-markets"</p>
+			<p class="source-code">    }</p>
+			<p>We can see<a id="_idIndexMarker171"/> in <a id="_idIndexMarker172"/>the<a id="_idIndexMarker173"/> JSON<a id="_idIndexMarker174"/> representation that the user has an <strong class="source-inline">id</strong>, a <strong class="source-inline">username</strong>, an <strong class="source-inline">email</strong> value, and so on. In Kotlin, we can create a representation of this, and we can exclude properties that the application doesn't need, such as <strong class="source-inline">email</strong>, <strong class="source-inline">address</strong>, <strong class="source-inline">phone</strong>, <strong class="source-inline">website</strong>, and <strong class="source-inline">company</strong>, as follows:</p>
+			<p class="source-code">    data class User(</p>
+			<p class="source-code">        @Json(name = "id") val id: Long,</p>
+			<p class="source-code">        @Json(name = "name") val name: String,</p>
+			<p class="source-code">        @Json(name = "username") val username: String</p>
+			<p class="source-code">    )</p>
+			<p>Here, we are using Moshi to map the property from a JSON to a Kotlin type, and we only kept three of the fields present in the initial JSON. Now, let's look at how we can initialize our networking libraries. The code to accomplish this is shown in the following snippet:</p>
+			<p class="source-code">  fun createOkHttpClient() =  OkHttpClient</p>
+			<p class="source-code">        .Builder()</p>
+			<p class="source-code">        .readTimeout(15, TimeUnit.SECONDS)</p>
+			<p class="source-code">        .connectTimeout(15, TimeUnit.SECONDS)</p>
+			<p class="source-code">        .build()</p>
+			<p>For OkHttp, we use a <strong class="source-inline">Builder</strong> method to create a new <strong class="source-inline">OkHttpClient</strong> instance, and we can provide certain configurations for it. We will now use the <strong class="source-inline">OkHttpClient</strong> instance<a id="_idIndexMarker175"/> created<a id="_idIndexMarker176"/> previously<a id="_idIndexMarker177"/> to <a id="_idIndexMarker178"/>create a <strong class="source-inline">Retrofit</strong> instance, as follows:</p>
+			<p class="source-code">fun createRetrofit(</p>
+			<p class="source-code">        okHttpClient: OkHttpClient</p>
+			<p class="source-code">    ): Retrofit {</p>
+			<p class="source-code">        return Retrofit.Builder()</p>
+			<p class="source-code">            .baseUrl("https://jsonplaceholder.typicode.com/")</p>
+			<p class="source-code">            .client(okHttpClient)</p>
+			<p class="source-code">            .build()</p>
+			<p class="source-code">    }</p>
+			<p>Here, we create a new <strong class="source-inline">Retrofit</strong> instance that will have the base URL set to <a href="https://jsonplaceholder.typicode.com/">https://jsonplaceholder.typicode.com/</a>. Changing the base URL comes in handy during development. Many teams will have a development URL used internally to test the development and integration of features and will have a production URL where the actual user data is set. Now, we will need to connect the Moshi JSON serialization to the <strong class="source-inline">Retrofit</strong> instance, as follows:</p>
+			<p class="source-code">Fun createConverterFactory(): MoshiConverterFactory = MoshiConverterFactory.create()</p>
+			<p>Here, we create <strong class="source-inline">MoshiConverterFactory</strong>, which is a Retrofit converter designed to connect <strong class="source-inline">Retrofit</strong> to the JSON serialization done by Moshi. We will now need to change our <strong class="source-inline">Retrofit</strong> initialization to what follows:</p>
+			<p class="source-code">fun createRetrofit(</p>
+			<p class="source-code">        okHttpClient: OkHttpClient,</p>
+			<p class="source-code">        gsonConverterFactory: MoshiConverterFactory</p>
+			<p class="source-code">    ): Retrofit {</p>
+			<p class="source-code">        return Retrofit.Builder()</p>
+			<p class="source-code">.baseUrl("https://jsonplaceholder.typicode.com/")</p>
+			<p class="source-code">            .client(okHttpClient)</p>
+			<p class="source-code">            .addConverterFactory(gsonConverterFactory)</p>
+			<p class="source-code">            .build()</p>
+			<p class="source-code">    }</p>
+			<p>Here, we <a id="_idIndexMarker179"/>add <a id="_idIndexMarker180"/>the <strong class="source-inline">MoshiConverterFactory</strong> converter<a id="_idIndexMarker181"/> to<a id="_idIndexMarker182"/> the Retrofit <strong class="source-inline">Builder</strong> method to allow the two components to work together. Finally, we can create a Retrofit interface that will have templates for the HTTP request, as follows:</p>
+			<p class="source-code">interface UserService {</p>
+			<p class="source-code">        @GET("/users")</p>
+			<p class="source-code">        fun getUsers(): Call&lt;List&lt;User&gt;&gt;</p>
+			<p class="source-code">        @GET("/users/{userId}")</p>
+			<p class="source-code">        fun getUser(@Path("userId") userId: Int): </p>
+			<p class="source-code">            Call&lt;User&gt;</p>
+			<p class="source-code">        @POST("/users")</p>
+			<p class="source-code">        fun createUser(@Body user: User): Call&lt;User&gt;</p>
+			<p class="source-code">        @PUT("/users/{userId}")</p>
+			<p class="source-code">        fun updateUser(@Path("userId") userId: Int, @Body </p>
+			<p class="source-code">            user: User): Call&lt;User&gt;   </p>
+			<p class="source-code">    }</p>
+			<p>This interface contains an example of various methods for getting, creating, updating, and deleting data on servers. Note that the return type of these methods is a <strong class="source-inline">Call</strong> object that offers the ability to execute HTTP requests synchronously or asynchronously. One of the things that makes Retrofit more appealing to developers is the fact that it can be integrated with other asynchronous libraries such as RxJava and coroutines. Translating<a id="_idIndexMarker183"/> the <a id="_idIndexMarker184"/>preceding <a id="_idIndexMarker185"/>example <a id="_idIndexMarker186"/>to coroutines will look something like this:</p>
+			<p class="source-code">interface UserService {</p>
+			<p class="source-code">        @GET("/users")</p>
+			<p class="source-code">        suspend fun getUsers(): List&lt;User&gt;</p>
+			<p class="source-code">        @GET("/users/{userId}")</p>
+			<p class="source-code">        suspend fun getUser(@Path("userId") userId: Int): </p>
+			<p class="source-code">            User</p>
+			<p class="source-code">        @POST("/users")</p>
+			<p class="source-code">        suspend fun createUser(@Body user: User): User</p>
+			<p class="source-code">        @PUT("/users/{userId}")</p>
+			<p class="source-code">        suspend fun updateUser(@Path("userId") userId: Int, </p>
+			<p class="source-code">            @Body user: User): User</p>
+			<p class="source-code">    }</p>
+			<p>In the preceding example, we add the <strong class="source-inline">suspend</strong> keyword to each method and we remove the dependency to the <strong class="source-inline">Call</strong> class. This allows us to execute these methods using coroutines. To create an instance of this class, we need to do the following:</p>
+			<p class="source-code">fun createUserService(retrofit: Retrofit) = retrofit.create(UserService::class.java)</p>
+			<p>Here, we use the <strong class="source-inline">Retrofit</strong> instance created previously to create a new instance of <strong class="source-inline">UserService</strong>.</p>
+			<p>In this section, we have analyzed how we can use OkHttp and Retrofit to load data from the internet and the benefits these libraries provide, especially when combined with Kotlin <a id="_idIndexMarker187"/>coroutines <a id="_idIndexMarker188"/>and<a id="_idIndexMarker189"/> flows. In <a id="_idIndexMarker190"/>the next section, we will create an Android application that will use these libraries to fetch and display data on the UI.</p>
+			<h2 id="_idParaDest-45"><a id="_idTextAnchor048"/>Exercise 02.03 – Using OkHttp and Retrofit</h2>
+			<p>Create an<a id="_idIndexMarker191"/> Android <a id="_idIndexMarker192"/>application that connects to <a href="https://jsonplaceholder.typicode.com/">https://jsonplaceholder.typicode.com/</a> and displays a list of users using OkHttp, Retrofit, and Moshi. For each user, we will display the name, username, and email.</p>
+			<p>To complete the exercise, you will need to do the following:</p>
+			<ul>
+				<li>Create a <strong class="source-inline">User</strong> data class that will map the JSON representation of the user.</li>
+				<li>Create a <strong class="source-inline">UserService</strong> class that will have a method to retrieve a list of users.</li>
+				<li>Create a <strong class="source-inline">ViewModel</strong> class that will use <strong class="source-inline">UserService</strong> to retrieve a list of users.</li>
+				<li>Implement an <strong class="source-inline">Activity</strong> class that will display a list of users.</li>
+			</ul>
+			<p>A UI list will be created using the following method:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun UserList(users: List&lt;User&gt;) {</p>
+			<p class="source-code">    LazyColumn(modifier = Modifier.padding(16.dp)) {</p>
+			<p class="source-code">        items(users) {</p>
+			<p class="source-code">            Column(modifier = Modifier.padding(16.dp)) {</p>
+			<p class="source-code">                Text(text = it.name)</p>
+			<p class="source-code">                Text(text = it.username)</p>
+			<p class="source-code">                Text(text = it.email)</p>
+			<p class="source-code">            }</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>Follow<a id="_idIndexMarker193"/> these<a id="_idIndexMarker194"/> steps to complete the exercise:</p>
+			<ol>
+				<li value="1">Create an Android application with an <strong class="bold">Empty Compose Activity</strong>.</li>
+				<li>At the top level of the <strong class="source-inline">build.gradle</strong> file, define the Compose library version, as follows:<p class="source-code">buildscript {</p><p class="source-code">    ext {</p><p class="source-code">        compose_version = '1.0.5'</p><p class="source-code">    }</p><p class="source-code">    … </p><p class="source-code">}</p></li>
+				<li>In the <strong class="source-inline">app/build.gradle</strong> file, add<a id="_idIndexMarker195"/> the<a id="_idIndexMarker196"/> following dependencies:<p class="source-code">dependencies {</p><p class="source-code">    implementation 'androidx.core:core-ktx:1.7.0'</p><p class="source-code">    implementation 'androidx.appcompat:appcompat:1.4.0'</p><p class="source-code">    implementation 'com.google.android.material:material:1.4.0'</p><p class="source-code">    implementation "androidx.compose.ui:ui:$compose_version"</p><p class="source-code">    implementation "androidx.compose.material:material:$compose_version"</p><p class="source-code">    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"</p><p class="source-code">    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.0'</p><p class="source-code">    implementation 'androidx.activity:activity-compose:1.4.0'</p><p class="source-code">    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0'</p><p class="source-code">    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"</p><p class="source-code">    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.4.0"</p><p class="source-code">    implementation "com.squareup.okhttp3:okhttp:4.9.0"</p><p class="source-code">    implementation "com.squareup.retrofit2:retrofit:2.9.0"</p><p class="source-code">    implementation "com.squareup.retrofit2:converter-moshi:2.9.0"</p><p class="source-code">    implementation "com.squareup.moshi:moshi:1.13.0"</p><p class="source-code">    implementation "com.squareup.moshi:moshi-kotlin:1.13.0"</p><p class="source-code">    testImplementation 'junit:junit:4.13.2'</p><p class="source-code">    androidTestImplementation 'androidx.test.ext:junit:1.1.3'</p><p class="source-code">    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'</p><p class="source-code">    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"</p><p class="source-code">    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.0"</p><p class="source-code">    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"</p><p class="source-code">}</p></li>
+				<li>Now, add<a id="_idIndexMarker197"/> a <a id="_idIndexMarker198"/>permission for internet access to the <strong class="source-inline">AndroidManifest.xml</strong> file, as follows: <p class="source-code">&lt;uses-permission android:name="android.permission.INTERNET"/&gt;</p></li>
+				<li>Now move on and create a class that will hold the user information, as follows:<p class="source-code">@JsonClass(generateAdapter = true)</p><p class="source-code">data class User(</p><p class="source-code">    @Json(name = "id") val id: Long,</p><p class="source-code">    @Json(name = "name") val name: String,</p><p class="source-code">    @Json(name = "username") val username: String,</p><p class="source-code">    @Json(name = "email") val email: String</p><p class="source-code">)</p></li>
+			</ol>
+			<p>Here, we will hold the <strong class="source-inline">id</strong> field, which is generally a relevant field for distinguishing between different users and fields that we are required to display.</p>
+			<ol>
+				<li value="6">Next, create a <strong class="source-inline">UserService</strong> class that will fetch the user data, as follows:<p class="source-code">interface UserService {</p><p class="source-code">    @GET("/users")</p><p class="source-code">    suspend fun getUsers(): List&lt;User&gt;</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we will <a id="_idIndexMarker199"/>only<a id="_idIndexMarker200"/> have one method that will get a list of users from the <strong class="source-inline">/users</strong> path.</p>
+			<ol>
+				<li value="7">Now, we initialize<a id="_idIndexMarker201"/> the networking objects. Because we aren't using any <strong class="bold">dependency injection</strong> (<strong class="bold">DI</strong>) frameworks and we only need to create one instance of each, we will hold the objects in the <strong class="source-inline">MainApplication</strong> class, as follows:<p class="source-code">class MyApplication : Application() {</p><p class="source-code">    companion object {</p><p class="source-code">        <strong class="bold">lateinit var userService: UserService</strong></p><p class="source-code">    }</p><p class="source-code">    override fun onCreate() {</p><p class="source-code">        super.onCreate()</p><p class="source-code">        val okHttpClient = OkHttpClient</p><p class="source-code">            .Builder()</p><p class="source-code">            .readTimeout(15, TimeUnit.SECONDS)</p><p class="source-code">            .connectTimeout(15, TimeUnit.SECONDS)</p><p class="source-code">            .build()</p><p class="source-code">        val moshi = Moshi.Builder().</p><p class="source-code">            add(KotlinJsonAdapterFactory()).build()</p><p class="source-code">        val retrofit = Retrofit.Builder()</p><p class="source-code">            .baseUrl("https://jsonplaceholder.typicode.com/")</p><p class="source-code">            .client(okHttpClient)</p><p class="source-code">            .addConverterFactory(MoshiConverterFactory.create(moshi))</p><p class="source-code">            .build()</p><p class="source-code">        userService = retrofit.create(UserService::class.java)</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we<a id="_idIndexMarker202"/> are<a id="_idIndexMarker203"/> initializing our networking libraries and the <strong class="source-inline">UserService</strong> object. Currently, we are holding a static reference to this object, which is not a good idea in general. Normally, we would rely on DI frameworks to manage these networking dependencies. </p>
+			<ol>
+				<li value="8">In the <strong class="source-inline">AndroidManifest.xml</strong> file, add the following c<a id="_idTextAnchor049"/>ode:<p class="source-code">  &lt;application</p><p class="source-code">        …</p><p class="source-code">        android:name=".MyApplication"</p><p class="source-code">        …&gt;</p></li>
+			</ol>
+			<p>Given that we are inheriting from the <strong class="source-inline">Application</strong> class, we will need to add this class to the manifest.</p>
+			<ol>
+				<li value="9">Next, go ahead<a id="_idIndexMarker204"/> and<a id="_idIndexMarker205"/> create a <strong class="source-inline">MainViewModel</strong> class, as follows: <p class="source-code">class MainViewModel(private val userService: </p><p class="source-code">    UserService) : ViewModel() {</p><p class="source-code">    var resultState by mutableStateOf</p><p class="source-code">        &lt;List&lt;User&gt;&gt;(emptyList())</p><p class="source-code">        private set</p><p class="source-code">    init {</p><p class="source-code">        viewModelScope.launch {</p><p class="source-code">                val users = userService.getUsers()</p><p class="source-code">                resultState = users</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p><p class="source-code">class MainViewModelFactory : ViewModelProvider.Factory {</p><p class="source-code">    override fun &lt;T : ViewModel&gt; create(modelClass: </p><p class="source-code">        Class&lt;T&gt;): T =</p><p class="source-code">        MainViewModel(MyApplication.userService) as T</p><p class="source-code">}</p></li>
+			</ol>
+			<p>The <strong class="source-inline">MainViewModel</strong> class will depend on the <strong class="source-inline">UserService</strong> class to get a list of <strong class="source-inline">Users</strong> and store them in a Compose state that will be used in the UI. Here, we are also creating a <strong class="source-inline">MainViewModelFactory</strong> class that will be responsible for injecting the <strong class="source-inline">UserService</strong> class into the <strong class="source-inline">MainViewModel</strong> class.</p>
+			<ol>
+				<li value="10">Now, we move<a id="_idIndexMarker206"/> on<a id="_idIndexMarker207"/> and create a <strong class="source-inline">MainActivity</strong> class, as follows:<p class="source-code">class MainActivity : ComponentActivity() {</p><p class="source-code">    override fun onCreate(savedInstanceState: Bundle?) {</p><p class="source-code">        super.onCreate(savedInstanceState)</p><p class="source-code">        setContent {</p><p class="source-code">            Exercise0203Theme {</p><p class="source-code">                Surface {</p><p class="source-code">                    Screen()</p><p class="source-code">                }</p><p class="source-code">            }</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we initialize our activity with the content. The <strong class="source-inline">Exercise203Theme</strong> theme should be replaced with the theme generated by Android Studio when the project was created. Typically, this should be in a <strong class="source-inline">Theme</strong> file and should be a <strong class="source-inline">@Composable</strong> function that has the application name followed by the <strong class="source-inline">Theme</strong> suffix. If that is not available, you can use <strong class="source-inline">MaterialTheme</strong> instead for the purpose of the exercise.</p>
+			<ol>
+				<li value="11">Create a <strong class="source-inline">Screen</strong> method in which we will grab a list of users from the <strong class="source-inline">MainViewModel</strong> class and draw a list of items, as follows:<p class="source-code">@Composable</p><p class="source-code">fun Screen(viewModel: MainViewModel = viewModel</p><p class="source-code">    (factory = MainViewModelFactory())) {</p><p class="source-code">    UserList(users = viewModel.resultState)</p><p class="source-code">}</p></li>
+				<li>And finally, add the <strong class="source-inline">UserList</strong> function from the exercise definition into the <strong class="source-inline">MainActivity</strong> file.</li>
+			</ol>
+			<p>If we launch the application after following the steps from the exercise, we should be able to see a list of users being loaded if the device has internet access.</p>
+			<p>In this section, we have seen how we can typically retrieve data from the internet in an Android application. We have looked at libraries such as OkHttp and Retrofit and seen how straightforward it is to make HTTP calls in a type-safe way without converting JSON files to data classes<a id="_idIndexMarker208"/> manually. We have also observed the potential of these libraries<a id="_idIndexMarker209"/> due to their integration with asynchronous technologies such as RxJava and coroutines. In the following section, we will look at libraries used for persisting data and how we can integrate them with networking libraries as well as coroutines and flows.</p>
+			<h1 id="_idParaDest-46"><a id="_idTextAnchor050"/>Using the Room library for data persistence</h1>
+			<p>In this <a id="_idIndexMarker210"/>section, we will discuss how to persist data in <a id="_idIndexMarker211"/>Android applications and how we can use the Room library to do this.</p>
+			<p>Android offers many ways for persisting data on an Android device, mostly involving files. Some of these files have a specialized approach to persisting data. One of these approaches is in the form of SQLite. SQLite is a special type of file in which structured data can be <a id="_idIndexMarker212"/>stored using <strong class="bold">Structured Query Language</strong> (<strong class="bold">SQL</strong>) queries, as with other types of databases such as MySQL and Oracle. </p>
+			<p>In the past, if developers wanted to persist data in SQLite, they were required to manually define tables, write queries, and transform objects containing this data into the appropriate formats for<a id="_idIndexMarker213"/> performing <strong class="bold">create, read, update, and delete</strong> (<strong class="bold">CRUD</strong>) operations. This type of work involved a load of boilerplate code that was susceptible to bugs. Room is the answer to that by providing an abstraction layer on top of the SQLite operations. </p>
+			<p>In order to add Room to an application, we will need to add the following libraries in <strong class="source-inline">build.gradle</strong>:</p>
+			<p class="source-code">dependencies {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    implementation "androidx.room:room-runtime:2.4.0"</p>
+			<p class="source-code">    kapt "androidx.room:room-compiler:2.4.0"</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">}</p>
+			<p>The reason<a id="_idIndexMarker214"/> for<a id="_idIndexMarker215"/> the <strong class="source-inline">kapt</strong> usage is that Room uses annotations that will generate the code required for the interaction with the SQLite layer. In order to use the <strong class="source-inline">kapt</strong> feature, we will need to add the plugin to the <strong class="source-inline">build.gradle</strong> file, as follows:</p>
+			<p class="source-code">plugins {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    id 'kotlin-kapt'</p>
+			<p class="source-code">}</p>
+			<p>This will allow the build system to analyze annotations across the project that require code generation and generate the necessary classes based on the provided annotations.</p>
+			<p>The data we want to store is annotated with the <strong class="source-inline">@Entity</strong> annotation, as illustrated in the following code snippet:</p>
+			<p class="source-code">@Entity(tableName = "user")class UserEntity(</p>
+			<p class="source-code">    @PrimaryKey @ColumnInfo(name = "id") val id: Long,</p>
+			<p class="source-code">    @ColumnInfo(name = "name") val name: String,</p>
+			<p class="source-code">    @ColumnInfo(name = "username") val username: String</p>
+			<p class="source-code">)</p>
+			<p>Here, we have defined a Room entity named <strong class="source-inline">UserEntity</strong> that will represent a table named <strong class="source-inline">user</strong> and<a id="_idIndexMarker216"/> has the <strong class="bold">primary key</strong> (<strong class="bold">PK</strong>) set to be the <strong class="bold">identifier</strong> (<strong class="bold">ID</strong>) of the user. The <strong class="source-inline">@ColumnInfo</strong> annotation is for the name the column will have in the database.</p>
+			<p>A typical set of <a id="_idIndexMarker217"/>CRUD <a id="_idIndexMarker218"/>operations might look like this:</p>
+			<p class="source-code">@Dao</p>
+			<p class="source-code">interface UserDao {</p>
+			<p class="source-code">    @Query("SELECT * FROM user")</p>
+			<p class="source-code">    fun getAll(): List&lt;UserEntity&gt;</p>
+			<p class="source-code">    @Query("SELECT * FROM user WHERE id IN (:userIds)")</p>
+			<p class="source-code">    fun loadAllByIds(userIds: IntArray): List&lt;UserEntity&gt;</p>
+			<p class="source-code">    @Insert</p>
+			<p class="source-code">    fun insert(vararg users: User)</p>
+			<p class="source-code">    @Update</p>
+			<p class="source-code">    fun update(vararg users: User)</p>
+			<p class="source-code">    @Delete</p>
+			<p class="source-code">    fun delete(user: User)</p>
+			<p class="source-code">}</p>
+			<p>Just as how we defined in Retrofit a service interface to communicate with the server, we also define a similar interface for Room that we annotate with <strong class="source-inline">@Dao</strong>, for <strong class="bold">data access object</strong> (<strong class="bold">DAO</strong>). In this<a id="_idIndexMarker219"/> example, we have defined a set of functions for getting all users stored in a table, finding users, inserting new users, updating a user, and deleting a user.</p>
+			<p>As with Retrofit, Room also provides integrations with coroutines, as illustrated in the following <a id="_idIndexMarker220"/>code<a id="_idIndexMarker221"/> snippet:</p>
+			<p class="source-code">@Dao</p>
+			<p class="source-code">interface UserDao {</p>
+			<p class="source-code">    @Query("SELECT * FROM user")</p>
+			<p class="source-code">    suspend fun getAll(): List&lt;UserEntity&gt;</p>
+			<p class="source-code">    @Query("SELECT * FROM user WHERE id IN (:userIds)")</p>
+			<p class="source-code">    suspend fun loadAllByIds(userIds: IntArray): </p>
+			<p class="source-code">        List&lt;UserEntity&gt;</p>
+			<p class="source-code">    @Insert</p>
+			<p class="source-code">    suspend fun insert(vararg users: User)</p>
+			<p class="source-code">    @Update</p>
+			<p class="source-code">    suspend fun update(vararg users: User)</p>
+			<p class="source-code">    @Delete</p>
+			<p class="source-code">    suspend fun delete(user: User)</p>
+			<p class="source-code">}</p>
+			<p>In the preceding example, we add the <strong class="source-inline">suspend</strong> keyword, which makes the Room library easy to integrate and execute as part of a coroutine.</p>
+			<p>On top of coroutines, the Room library also can integrate with Kotlin flows. This is useful for queries that will emit events every time a particular table has changed. This integration will look something like this:</p>
+			<p class="source-code">@Dao</p>
+			<p class="source-code">interface UserDao {</p>
+			<p class="source-code">    @Query("SELECT * FROM user")</p>
+			<p class="source-code">    fun getAll(): Flow&lt;List&lt;UserEntity&gt;&gt;</p>
+			<p class="source-code">    @Query("SELECT * FROM user WHERE id IN (:userIds)")</p>
+			<p class="source-code">    fun loadAllByIds(userIds: IntArray): </p>
+			<p class="source-code">        Flow&lt;List&lt;UserEntity&gt;&gt;</p>
+			<p class="source-code">}</p>
+			<p>In the <a id="_idIndexMarker222"/>preceding <a id="_idIndexMarker223"/>example, we have changed the <strong class="source-inline">@Query</strong> functions to return a <strong class="source-inline">Flow</strong> object. If a change occurs in the user table, then the queries will be re-triggered and a new list of users will be emitted.</p>
+			<p>We will now need to set up the database, as follows:</p>
+			<p class="source-code">@Database(entities = [UserEntity::class], version = 1)</p>
+			<p class="source-code">abstract class AppDatabase : RoomDatabase() {</p>
+			<p class="source-code">    abstract fun userDao(): UserDao</p>
+			<p class="source-code">}</p>
+			<p>In the preceding snippet, we define a new class that extends from the <strong class="source-inline">RoomDatabase</strong> class and use the <strong class="source-inline">@Database</strong> annotation to declare our entities and the current version. This version is used to keep track of migrations when the structure of the database changes in between new releases of our application.</p>
+			<p>To initialize the database, we will need to execute the following code:</p>
+			<p class="source-code">val db = Room.databaseBuilder(</p>
+			<p class="source-code">            applicationContext,</p>
+			<p class="source-code">            AppDatabase::class.java, "name"</p>
+			<p class="source-code">        ).build()</p>
+			<p>This will create our SQLite database and will return an instance of <strong class="source-inline">AppDatabase</strong> where we can access the DAO objects we have defined and invoke their methods to process the data.</p>
+			<p>In this section, we have looked at how we can persist data using Room and how it can be integrated with coroutines and flows. In the next section, we will create an Android application that <a id="_idIndexMarker224"/>will <a id="_idIndexMarker225"/>use Room to persist data and look at how it can be integrated with Retrofit and OkHttp.</p>
+			<h2 id="_idParaDest-47"><a id="_idTextAnchor051"/>Exercise 02.04 – Using Room to persist data</h2>
+			<p>Integrate Room into <em class="italic">Exercise 02.03</em> so that when the users are loaded from Retrofit, they will be stored in the database and then displayed on the UI.</p>
+			<p>To complete the exercise, you will need to do the following:</p>
+			<ol>
+				<li value="1">Create a <strong class="source-inline">UserEntity</strong> class that will be a Room entity.</li>
+				<li>Create a <strong class="source-inline">UserDao</strong> class that will contain methods for inserting users and querying all the users as flows.</li>
+				<li>Create an <strong class="source-inline">AppDatabase</strong> class that will represent the application's database.</li>
+				<li>Modify the <strong class="source-inline">MainViewModel</strong> class to fetch users from the <strong class="source-inline">UserService</strong> class and then insert them into the <strong class="source-inline">UserDao</strong> class.</li>
+				<li>Modify the <strong class="source-inline">MainActivity</strong> class to use a list of <strong class="source-inline">UserEntity</strong> objects instead of <strong class="source-inline">User</strong> objects.</li>
+			</ol>
+			<p>Follow these steps to complete the exercise:</p>
+			<ol>
+				<li value="1">Add the <strong class="source-inline">kapt</strong> plugin to the <strong class="source-inline">app/build.gradle</strong> file, as follows:<p class="source-code">plugins {</p><p class="source-code">    …</p><p class="source-code">    id 'kotlin-kapt'</p><p class="source-code">}</p></li>
+				<li>Add Room dependencies to <strong class="source-inline">app/build.gradle</strong>, as follows:<p class="source-code">dependencies {</p><p class="source-code">    … </p><p class="source-code">    implementation "androidx.room:room-runtime:2.4.0"</p><p class="source-code">    implementation "androidx.room:room-ktx:2.4.0"</p><p class="source-code">    kapt "androidx.room:room-compiler:2.4.0"</p><p class="source-code">    …</p><p class="source-code">}</p></li>
+				<li>Create<a id="_idIndexMarker226"/> a <strong class="source-inline">UserEntity</strong> class, as<a id="_idIndexMarker227"/> follows:<p class="source-code">@Entity(tableName = "user")</p><p class="source-code">class UserEntity(</p><p class="source-code">    @PrimaryKey @ColumnInfo(name = "id") val id: Long,</p><p class="source-code">    @ColumnInfo(name = "name") val name: String,</p><p class="source-code">    @ColumnInfo(name = "username") val username:</p><p class="source-code">        String,</p><p class="source-code">    @ColumnInfo(name = "email") val email: String</p><p class="source-code">)</p></li>
+			</ol>
+			<p>The <strong class="source-inline">UserEntity</strong> class has the same fields as the <strong class="source-inline">User</strong> class, and it contains the Room annotations for the table name and the names of each column.</p>
+			<ol>
+				<li value="4"> Next, create a <strong class="source-inline">UserDao</strong> class, as follows:<p class="source-code">@Dao</p><p class="source-code">interface UserDao {</p><p class="source-code">    @Query("SELECT * FROM user")</p><p class="source-code">    fun getUsers(): Flow&lt;List&lt;UserEntity&gt;&gt;</p><p class="source-code">    @Insert(onConflict = OnConflictStrategy.REPLACE)</p><p class="source-code">    fun insertUsers(users: List&lt;UserEntity&gt;)</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we are using flows to return a list of users, and we use the <strong class="source-inline">OnConflictStrategy.REPLACE</strong> option so that if the same user is inserted multiple times, then it will be replaced with the one that will be inserted. Other options include <strong class="source-inline">OnConflictStrategy.ABORT</strong>, which will drop the entire transaction if a conflict occurs, or <strong class="source-inline">OnConflictStrategy.IGNORE</strong>, which will<a id="_idIndexMarker228"/> skip <a id="_idIndexMarker229"/>inserting rows where a conflict occurs.</p>
+			<ol>
+				<li value="5">Now, go ahead and create an <strong class="source-inline">AppDatabase</strong> class, as follows:<p class="source-code">@Database(entities = [UserEntity::class], version = 1)</p><p class="source-code">abstract class AppDatabase : RoomDatabase() {</p><p class="source-code">    abstract fun userDao(): UserDao</p><p class="source-code">} </p></li>
+			</ol>
+			<p>In <strong class="source-inline">AppDatabase</strong>, we provide the <strong class="source-inline">UserDao</strong> class to be accessed and we use the <strong class="source-inline">UserEntity</strong> class for the users' table.</p>
+			<ol>
+				<li value="6">Next, we will need to initialize the <strong class="source-inline">AppDatabase</strong> object, as follows:<p class="source-code">class MyApplication : Application() {</p><p class="source-code">    companion object {</p><p class="source-code">        …</p><p class="source-code">        lateinit var userDao: UserDao </p><p class="source-code">        …</p><p class="source-code">    }</p><p class="source-code">    override fun onCreate() {</p><p class="source-code">        super.onCreate()</p><p class="source-code">        …</p><p class="source-code">        val db = Room.databaseBuilder(</p><p class="source-code">            applicationContext,</p><p class="source-code">            AppDatabase::class.java, "my-database"</p><p class="source-code">        ).build()</p><p class="source-code">        userDao = db.userDao()</p><p class="source-code">        …</p><p class="source-code">    }</p><p class="source-code">} </p></li>
+			</ol>
+			<p>Here, we are having the same issues that we had for Retrofit, so we will follow the <a id="_idIndexMarker230"/>same<a id="_idIndexMarker231"/> approach and use the <strong class="source-inline">Application</strong> class. Just as with Retrofit, a DI framework will help us solve this problem.</p>
+			<ol>
+				<li value="7">Now, let's integrate Room into the <strong class="source-inline">MainViewModel</strong> class, as follows:<p class="source-code">class MainViewModel(</p><p class="source-code">    private val userService: UserService,</p><p class="source-code">    <strong class="bold">private val userDao: UserDao</strong></p><p class="source-code">) : ViewModel() {</p><p class="source-code">    var resultState by mutableStateOf&lt;List&lt;<strong class="bold">UserEntity</strong>&gt;&gt;(emptyList())</p><p class="source-code">        private set</p><p class="source-code">    init {</p><p class="source-code">        viewModelScope.launch {</p><p class="source-code"><strong class="bold">            flow { emit(userService.getUsers()) }</strong></p><p class="source-code"><strong class="bold">                .onEach {</strong></p><p class="source-code"><strong class="bold">                val userEntities =</strong></p><p class="source-code"><strong class="bold">                    it.map { user -&gt; UserEntity</strong></p><p class="source-code"><strong class="bold">                        (user.id, user.name, </strong></p><p class="source-code"><strong class="bold">                         user.username, user.email) }</strong></p><p class="source-code"><strong class="bold">                userDao.insertUsers(userEntities)</strong></p><p class="source-code"><strong class="bold">            }.flatMapConcat { userDao.getUsers() }</strong></p><p class="source-code"><strong class="bold">                .catch { emitAll(userDao.getUsers()) }</strong></p><p class="source-code"><strong class="bold">                .flowOn(Dispatchers.IO)</strong></p><p class="source-code"><strong class="bold">                .collect {</strong></p><p class="source-code"><strong class="bold">                    resultState = it</strong></p><p class="source-code"><strong class="bold">                }</strong></p><p class="source-code"><strong class="bold">        }</strong></p><p class="source-code">    } </p><p class="source-code">}</p><p class="source-code">class MainViewModelFactory : ViewModelProvider.Factory {</p><p class="source-code">    override fun &lt;T : ViewModel&gt; create(modelClass: Class&lt;T&gt;): T =</p><p class="source-code">        MainViewModel(MyApplication.userService, <strong class="bold">MyApplication.userDao</strong>) as T</p><p class="source-code">} </p></li>
+			</ol>
+			<p>The <strong class="source-inline">MainViewModel</strong> class now has a new dependency on the <strong class="source-inline">UserDao</strong> class. In the <strong class="source-inline">init</strong> block, we now create a flow in which we emit a list of users obtained from Retrofit that is then converted into <strong class="source-inline">UserEntity</strong> and inserted into the database. After this, we will query the <strong class="source-inline">UserEntities</strong> instances and return them in a stream that will be the result. If we have an error, we will return the current stored users.</p>
+			<ol>
+				<li value="8">Finally, update<a id="_idIndexMarker232"/> the type of users in the <strong class="source-inline">MainActivity</strong> class, as <a id="_idIndexMarker233"/>follows:<p class="source-code">class MainActivity : ComponentActivity() {</p><p class="source-code">…</p><p class="source-code">@Composable</p><p class="source-code">fun UserList(users: List&lt;<strong class="bold">UserEntity</strong>&gt;) {</p><p class="source-code">…</p><p class="source-code">    }</p><p class="source-code">} </p></li>
+			</ol>
+			<p>Here, we just change the dependency to now rely on the <strong class="source-inline">UserEntity</strong> class.</p>
+			<p>If we run the application after following the steps from the exercise, we will see the same output as for <em class="italic">Exercise 02.03</em>. However, if we close the application, turn on Airplane mode on the device, and reopen the app, we will still see the previously displayed information.</p>
+			<p>In this section, we have<a id="_idIndexMarker234"/> analyzed how we can persist structured data on a <a id="_idIndexMarker235"/>device and used the Room library to do so. We have also observed the interaction between Room and other libraries such as Retrofit and flows and how we can use flows to combine data streams from Room and Retrofit in a very straightforward way. In the next section, we will look at how we can persist simple data in key-value pairs.</p>
+			<h1 id="_idParaDest-48"><a id="_idTextAnchor052"/>Understanding and using the DataStore library</h1>
+			<p>In this section, we <a id="_idIndexMarker236"/>will <a id="_idIndexMarker237"/>discuss how we can persist key-value pairs of data and how we can use the DataStore library for this. In Android, we have the possibility of persisting primitives and strings in key-value pairs. In the past, this was done through the <strong class="source-inline">SharedPreferences</strong> class, which was part of the Android framework. The keys and values would ultimately be saved inside an XML file on the device. Because this deals with I/O operations, it evolved over time to give the possibility to save data asynchronously and to keep an in-memory cache for quick access to data. There were, however, some inconsistencies with this, especially when the <strong class="source-inline">SharedPreferences</strong> object was initialized. DataStore is designed to address these issues because it's integrated with coroutines and flows. </p>
+			<p>To add DataStore to a project, we will need the following dependency:</p>
+			<p class="source-code">dependencies {</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">    implementation "androidx.datastore:datastore-preferences:1.0.0"</p>
+			<p class="source-code">    …</p>
+			<p class="source-code">} </p>
+			<p>Using DataStore will look something like this:</p>
+			<p class="source-code">private val KEY_TEXT = stringPreferencesKey("key_text")</p>
+			<p class="source-code">class AppDataStore(private val dataStore: </p>
+			<p class="source-code">    DataStore&lt;Preferences&gt;) {</p>
+			<p class="source-code">    val savedText: Flow&lt;String&gt; = dataStore.data</p>
+			<p class="source-code">        .map { preferences -&gt;</p>
+			<p class="source-code">            preferences[KEY_TEXT].orEmpty()</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    suspend fun saveText(text: String) {</p>
+			<p class="source-code">        dataStore.edit { preferences -&gt;</p>
+			<p class="source-code">            preferences[KEY_TEXT] = text</p>
+			<p class="source-code">        }</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">}</p>
+			<p>The <strong class="source-inline">KEY_TEXT</strong> field will represent a key that will be used to store some text. <strong class="source-inline">DataStore&lt;Preferences&gt;</strong> is responsible for obtaining and writing the data to <strong class="source-inline">SharedPreferences</strong>. The <strong class="source-inline">savedText</strong> field will monitor changes in the preferences and will emit a new value for each change in a <strong class="source-inline">Flow</strong> object. To write data in an asynchronous way, we will need to edit the current data store and set the value associated with the key.</p>
+			<p>To initialize the DataStore library, we will need to declare the following as a top-level declaration:</p>
+			<p class="source-code">val Context.dataStore: DataStore&lt;Preferences&gt; by preferencesDataStore(name = "my_preferences")</p>
+			<p>This will allow us to access the DataStore library in the rest of the application.</p>
+			<p>When we want to initialize <strong class="source-inline">AppDataStore</strong>, we can use the following code:</p>
+			<p class="source-code">val appDataStore = AppDataStore(dataStore) </p>
+			<p>This allows us to wrap the <strong class="source-inline">DataStore</strong> class and avoid exposing the dependencies to other places in the application.</p>
+			<p>In this<a id="_idIndexMarker238"/> section, we<a id="_idIndexMarker239"/> have looked at how we can persist data in key-value pairs and how we can use the DataStore library to do this. In the next section, we will create an Android application that will use DataStore and integrate it with Kotlin flows and coroutines.</p>
+			<h2 id="_idParaDest-49"><a id="_idTextAnchor053"/>Exercise 02.05 – Using DataStore to persist data</h2>
+			<p>Modify <em class="italic">Exercise 02.04</em> and<a id="_idIndexMarker240"/> introduce the DataStore library, which <a id="_idIndexMarker241"/>will persist the number of executed requests to get the user and display this number above the list of items.</p>
+			<p>To complete the exercise, you will need to do the following:</p>
+			<ul>
+				<li>Create a class named <strong class="source-inline">AppDataStore</strong> that will manage interaction with the DataStore library.</li>
+				<li>Modify the <strong class="source-inline">MainViewModel</strong> class so that the <strong class="source-inline">AppDataStore</strong> dependency is injected and used to retrieve the current number of requests and increment the number of requests.</li>
+				<li>Modify the <strong class="source-inline">MainActivity</strong> class to add a new <strong class="source-inline">Text</strong> object that will display the count of requests.</li>
+			</ul>
+			<p>Follow these steps <a id="_idIndexMarker242"/>to<a id="_idIndexMarker243"/> complete the exercise:</p>
+			<ol>
+				<li value="1">Add the following dependency to the <strong class="source-inline">app/build.gradle</strong> file:<p class="source-code">dependencies {</p><p class="source-code">    …</p><p class="source-code">    implementation "androidx.datastore:datastore-</p><p class="source-code">        preferences:1.0.0"</p><p class="source-code">    …</p><p class="source-code">}</p></li>
+				<li>Create an <strong class="source-inline">AppDataStore</strong> class, as follows:<p class="source-code">private val KEY_COUNT = intPreferencesKey("key_count")</p><p class="source-code">class AppDataStore(private val dataStore: </p><p class="source-code">    DataStore&lt;Preferences&gt;) {</p><p class="source-code">    val savedCount: Flow&lt;Int&gt; = dataStore.data</p><p class="source-code">        .map { preferences -&gt;</p><p class="source-code">            preferences[KEY_COUNT] ?: 0</p><p class="source-code">        }</p><p class="source-code">    suspend fun incrementCount() {</p><p class="source-code">        dataStore.edit { preferences -&gt;</p><p class="source-code">            val currentValue = preferences[KEY_COUNT] </p><p class="source-code">                ?: 0</p><p class="source-code">            preferences[KEY_COUNT] = currentValue.</p><p class="source-code">                inc()</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}}</p></li>
+			</ol>
+			<p>Here, <strong class="source-inline">KEY_COUNT</strong> represents the key used by the DataStore library to store the number of requests. The <strong class="source-inline">saveCount</strong> field will emit a new count value every time<a id="_idIndexMarker244"/> it <a id="_idIndexMarker245"/>changes, and <strong class="source-inline">incrementCount</strong> will be increment the current saved number by 1.</p>
+			<ol>
+				<li value="3">Now, set up the <strong class="source-inline">AppDataStore</strong> dependency, just like how we handled the Retrofit and Room dependencies. The code is illustrated in the following snippet:<p class="source-code">val Context.dataStore: DataStore&lt;Preferences&gt; by preferencesDataStore(name = "my_preferences")</p><p class="source-code">class MyApplication : Application() {</p><p class="source-code">    companion object {</p><p class="source-code">        …</p><p class="source-code">        lateinit var appDataStore: AppDataStore</p><p class="source-code">    }</p><p class="source-code">    override fun onCreate() {</p><p class="source-code">        super.onCreate()</p><p class="source-code">        …</p><p class="source-code">        appDataStore = AppDataStore(dataStore)</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we initialize the <strong class="source-inline">DataStore</strong> object and then inject it into the <strong class="source-inline">AppDataStore</strong> class.</p>
+			<ol>
+				<li value="4">Next, modify<a id="_idIndexMarker246"/> the <strong class="source-inline">MainViewModel</strong> class, as<a id="_idIndexMarker247"/> follows:<p class="source-code">class MainViewModel(</p><p class="source-code">    private val userService: UserService,</p><p class="source-code">    private val userDao: UserDao,</p><p class="source-code">    <strong class="bold">private val appDataStore: AppDataStore</strong></p><p class="source-code">) : ViewModel() {</p><p class="source-code">    var resultState by mutableStateOf(<strong class="bold">UiState()</strong>)</p><p class="source-code">        private set</p><p class="source-code">    init {</p><p class="source-code">        viewModelScope.launch {</p><p class="source-code">            flow { emit(userService.getUsers()) }</p><p class="source-code">                .onEach {</p><p class="source-code">                    val userEntities =</p><p class="source-code">                        it.map { user -&gt; UserEntity</p><p class="source-code">                            (user.id, user.name, user.</p><p class="source-code">                             username, user.email) }</p><p class="source-code">                    userDao.insertUsers(userEntities)</p><p class="source-code">                    <strong class="bold">appDataStore.incrementCount()</strong></p><p class="source-code">                }.flatMapConcat { userDao.getUsers() }</p><p class="source-code">                .catch { emitAll(userDao.getUsers()) }</p><p class="source-code"><strong class="bold">                .flatMapConcat { users -&gt;</strong></p><p class="source-code"><strong class="bold">                    appDataStore.savedCount.map { </strong></p><p class="source-code"><strong class="bold">                        count -&gt; UiState(users,  </strong></p><p class="source-code"><strong class="bold">                            count.toString()) }</strong></p><p class="source-code"><strong class="bold">                }</strong></p><p class="source-code">                .flowOn(Dispatchers.IO)</p><p class="source-code">                .collect {</p><p class="source-code">                    resultState = it</p><p class="source-code">                }</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we<a id="_idIndexMarker248"/> add <a id="_idIndexMarker249"/>a new dependency to <strong class="source-inline">AppDataStore</strong>, then we call <strong class="source-inline">incrementCount</strong> from <strong class="source-inline">AppDataStore</strong> after the users from Retrofit are inserted, and then we will insert <strong class="source-inline">savedCount</strong> from <strong class="source-inline">AppDataStore</strong> into the existing flow and create a new <strong class="source-inline">UiState</strong> object that contains a list of users and the count, which will be collected in the <strong class="source-inline">resultState</strong> object.</p>
+			<ol>
+				<li value="5">The <strong class="source-inline">UiState</strong> class will look something like this:<p class="source-code">data class UiState(</p><p class="source-code">    val userList: List&lt;UserEntity&gt; = listOf(),</p><p class="source-code">    val count: String = ""</p><p class="source-code">)</p></li>
+			</ol>
+			<p>This class will hold information from both of our persistent data sources.</p>
+			<ol>
+				<li value="6">Next, change<a id="_idIndexMarker250"/> <strong class="source-inline">MainViewModelFactory</strong>, as <a id="_idIndexMarker251"/>follows:<p class="source-code">class MainViewModelFactory : ViewModelProvider.Factory {</p><p class="source-code">    override fun &lt;T : ViewModel&gt; create(modelClass: </p><p class="source-code">        Class&lt;T&gt;): T =</p><p class="source-code">        MainViewModel(</p><p class="source-code">            MyApplication.userService,</p><p class="source-code">            MyApplication.userDao,</p><p class="source-code">            <strong class="bold">MyApplication.appDataStore</strong></p><p class="source-code">        ) as T</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we will inject a new dependency to <strong class="source-inline">AppDataStore</strong> into the <strong class="source-inline">MainViewModel</strong> class.</p>
+			<ol>
+				<li value="7">Finally, modify the <strong class="source-inline">MainActivity</strong> class, as follows:<p class="source-code">@Composable</p><p class="source-code">fun UserList(uiState: UiState) {</p><p class="source-code">    LazyColumn(modifier = Modifier.padding(16.dp)) {</p><p class="source-code">        item(uiState.count) {</p><p class="source-code">            Column(modifier = Modifier.padding(16.dp)) {</p><p class="source-code">                Text(text = uiState.count)</p><p class="source-code">            }</p><p class="source-code">        }</p><p class="source-code">        items(uiState.userList) {</p><p class="source-code">            Column(modifier = Modifier.padding(16.dp)) {</p><p class="source-code">                Text(text = it.name)</p><p class="source-code">                Text(text = it.username)</p><p class="source-code">                Text(text = it.email)</p><p class="source-code">            }</p><p class="source-code">        }</p><p class="source-code">    }</p><p class="source-code">}</p></li>
+			</ol>
+			<p>Here, we <a id="_idIndexMarker252"/>replaced<a id="_idIndexMarker253"/> the list of <strong class="source-inline">UserEntity</strong> with the <strong class="source-inline">UiState</strong> dependency and added a new row in a list of items that will indicate the count of requests.</p>
+			<p>If we run the application, we will see at the top the current count of requests made to the server. If we kill and reopen the application, then we will see that count increase, which shows how it will survive the application being stopped by the user or killed by the operating system.</p>
+			<p>In this section, we have analyzed another common way of persisting data on an Android device through the DataStore library. We also observed how easy it is for the DataStore library to be integrated with flows and other libraries such as Room and Retrofit. </p>
+			<h1 id="_idParaDest-50"><a id="_idTextAnchor054"/>Summary</h1>
+			<p>In this chapter, we have looked at how we can load and persist data in Android and the rules we must follow for threading. We first analyzed how we can load data asynchronously and focused on coroutines and flows, for which we have done simple exercises for performing asynchronous operations on different threads and updating the UI on the main thread. We then studied how to load data from the internet using OkHttp and Retrofit, and followed this up with how to persist data using Room and DataStore and how we can integrate all of these with coroutines and flows. We highlighted the usage of these libraries in exercises, and we also showed how they can be integrated with coroutines and flows. The integration of different flows of data was combined in the <strong class="source-inline">ViewModel</strong> class, in which we loaded the network data and inserted it into the local database. This is generally not a good approach, and we will expand on how we can improve this in future chapters.</p>
+			<p>In the next chapter, we will look at how we can present data to the user and the libraries and frameworks we can use to achieve this.</p>
+		</div>
+	</body></html>

@@ -1,0 +1,467 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Binding Data to Widgets</h1>
+                </header>
+            
+            <article>
+                
+<p>So far, you've been copying the data from your data model into your presentation layer by hand, and then copying it back as well. This shifting data back and forth between stateful widgets is something that you always need to do at some level. Where and how the data is copied can change, but it has to be done to make applications work. In this chapter, we'll look at a system provided by Android called data binding. <strong>Data binding</strong> provides an alternative to the copying back and forth of data, but also opens several other design opportunities to allow more reuse of code.</p>
+<p>Data binding offers you a way to dramatically reduce the amount of boiler-plate code in your application, while remaining type-safe and providing excellent performance. The data binding engine allows you to provide user interface logic that is clearly separated from the layout resources, and can be easily reused by many screens in the application, while reducing the complexity of both the application code and the layout resource files.</p>
+<p>In this chapter, we'll look at the following topics:</p>
+<ul>
+<li style="font-weight: 400">Why data binding exists</li>
+<li style="font-weight: 400">How to write data-bound layouts</li>
+<li style="font-weight: 400">How to use data binding in an MVP design</li>
+<li style="font-weight: 400">Reactive programming and your data model</li>
+<li style="font-weight: 400">How to use data binding in Activities, Fragments, and widgets</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Exploring data models and widgets</h1>
+                </header>
+            
+            <article>
+                
+<p>In theory, the widgets can directly reference the memory that they are manipulating by holding points to the data, rather than copying the data back and forth, but more often than not, it doesn't make sense to use the same data format for storage and for editing.</p>
+<p>Take strings of text for example; the best way to store a string is as a character array; whenever you need to send the text anywhere, over the network or to a display, you can simply read from the first character until the last one, and each one can be transmitted as-is. For example, "Hello World" can be stored as the string length followed by each of the characters:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="65" width="307" src="assets/0ddc7071-e47a-498d-8e0c-fb1680324ca4.jpg"/></div>
+<p>This is not a good way to store a string that is being edited; however, for editing, it's best to have some buffer space around the cursor to avoid having to copy large amounts of data back and forth as the user types and corrects themselves. For example, if the user places their cursor right after the word "Hello", the same array might look like this:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="83" width="385" src="assets/fdc672fc-3230-4556-852b-443d2c376cb1.jpg"/></div>
+<p>This tension between how data should be stored when it'll only be read, and how it should be edited, is an important part of why modern user-interface widgets tend to be complex pieces of machinery in their own right. They don't just need to look pretty; they need to be fast, and for that, they need to internally represent the data in a way that suits their implementation best. As a result, instead of being able to have an <kbd>EditText</kbd> widget just manipulate an array of characters, we're forced to copy the strings in and out of its internal structures, as you've been doing so by hand thus far.</p>
+<p>The data binding system in Android allows you to reference your object model directly from your layout files, and then generate all the Java code required to wire the object model to the widgets. This system is called data-binding, and its core classes can be found in the <kbd>android.databinding</kbd> package. The data binding system also allows for <em>reactive programming</em>; when the data model is changed, it can directly reflect in the user interface widgets, allowing the application to keep what is on the screen up to date without having to explicitly update the widgets. The data binding system is also completely type-safe, because it generates all the code when your application is compiled, so any type errors are produced then and there, rather than possibly at runtime, where your users might see them.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">The Observer pattern</h1>
+                </header>
+            
+            <article>
+                
+<p>The data binding framework in Android makes use of the <strong>Observer pattern</strong> to allow for <em>reactive programming</em>. Any object that is referenced by a layout file that implements the <kbd>Observable</kbd> interface is watched, and when it signals that it has changed, the user interface updates accordingly. As the data binding system can be used on any attribute or setter of any widget, this means that you can control far more than just the content or state of the user interface. You can control whether widgets are visible or invisible, and you can control which image is used for the background of a widget. At its core, the Observer pattern looks like this:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="102" width="349" src="assets/2941af8c-4d23-493f-971f-51385c6399cd.jpg"/></div>
+<p>In the Android Observer pattern, the data model classes expose themselves as Observable by implementing the <kbd>android.databinding.Observable</kbd> interface and notifying a list of event-listeners (observers) of any changes to their state. Android provides several convenience classes that make implementing this pattern much easier. There are three ways in which you can implement this pattern for Android:</p>
+<ul>
+<li style="font-weight: 400">Implement Observable in your object model</li>
+<li style="font-weight: 400">Implement an Observable model on top of your object model</li>
+<li style="font-weight: 400">Implement Observable in a presentation layer</li>
+</ul>
+<p>Let's take a look at these three ways in detail:</p>
+<ul>
+<li><strong>Implementing Observable directly in your object model</strong> is common, but has the side effect of polluting your object model with the Observable pattern and Android classes that will effectively stop you from using the same code base in other parts of the system (for example, on the server side). This is a good approach when your object model code will only ever be used by your Android application.</li>
+<li><strong>Implementing an Observable layer on top of the object model</strong> is sometimes a better option, but can also lead to complications; every object referenced through the observable layer also needs to be wrapped in an Observable object. This leads to much greater complexity in the model implementation, and doesn't cover changes made outside of the Observable layer. This approach is useful when you are generating the code for your object model with a tool, or need an additional application-specific layer for your Android application code.</li>
+<li><strong>Implementing the Observer pattern at the presentation layer</strong> means that the root references held by the data binding layer are themselves Observable, but the object model is not. This will technically allow you to have an immutable data model if you wanted to. The data binding engine will never see the changes to the individual fields in the data model, but instead is notified that the whole model has changed. This can also be a very expensive model, as the data binding layer will reevaluate every part of the data model for every change made to it. However, this is a good approach when your application tends to update several fields in a model simultaneously, or is heavily multithreaded.</li>
+</ul>
+<p>None of these options are always better than the others; rather, it's worth considering each of them when it comes to ensuring that your user interface will stay in-sync with the application's overall state. In some screens, this reactive behavior may even be undesirable, since it can easily disrupt the user. In these cases, it's worth using data binding just to populate the screen.</p>
+<div class="packt_infobox">The data binding system is not bidirectional; changes in the model reflect in the user interface, but input in the user interface widgets are not pushed into the model automatically. This means that your application must still handle events and capture the changes in the user interface, as shown earlier.</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Enabling data binding</h1>
+                </header>
+            
+            <article>
+                
+<p>By default in an Android project, the data binding capabilities are turned off. You'll need to enable them in your project's <kbd>build.gradle</kbd> file by hand. Follow these quick steps to enable the data binding system:</p>
+<ol>
+<li>Start by locating the <kbd>build.gradle</kbd> file for your application module in the Android panel in Android Studio:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img height="239" width="395" src="assets/e7bfab0a-4ee0-4099-bf6e-91e87c3b20a6.png"/></div>
+<ol start="2">
+<li>Open this file and locate the <kbd>android</kbd> block:</li>
+</ol>
+<pre style="padding-left: 60px">android {<br/>  compileSdkVersion 26<br/>  // ...<br/>}</pre>
+<ol start="3">
+<li>At the end of the <kbd>android</kbd> block, add the following snippet to enable data binding:</li>
+</ol>
+<pre style="padding-left: 60px">android {<br/> compileSdkVersion 26<br/>   // ...<br/><strong>   dataBinding {</strong><br/><strong>      enabled = true</strong><br/><strong>   }</strong><br/>}</pre>
+<ol start="4">
+<li style="font-weight: 400">Once you save this file, Android Studio will open a banner at the top of the file, telling you that it needs to sync the project. Click on the <span class="packt_screen">Sync Now</span> link on the right-hand side of the banner and wait for the sync to complete.</li>
+</ol>
+<p>Congratulations! You've just enabled the data binding framework on your project. Now you can get started, making use of the data binding system in your layout files, which will simplify the application and open doors to new ways to reuse your code base.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Data binding a layout file</h1>
+                </header>
+            
+            <article>
+                
+<p>Data binding works primarily through code generation, and there is very little in the way of runtime overhead. It permits you to use a special expression language in your layout XML files, which gets converted into Java code before your application is compiled. These expressions can call methods, access properties, and are even useful for triggering events. They do have a few restrictions, however: they cannot directly reference the widgets in your user interface, and they cannot create any new objects (they have no <kbd>new</kbd> operator). As a result, you'll need to provide your layout files with some utility methods in order to keep things simple, and there are a few guidelines to follow when working with expressions:</p>
+<ul>
+<li style="font-weight: 400"><strong>Keep the expressions simple</strong>: Don't write application logic into the expressions; rather, create a utility method that can be reused</li>
+<li style="font-weight: 400"><strong>Avoid manipulating data directly</strong>: As tempting as it might be, ensure that your data is always ready for presentation before it's given to the layout binding. Keep default values in your model, <kbd>Activity</kbd>, or <kbd>Fragment</kbd> classes, and not in the layout XML files</li>
+<li style="font-weight: 400"><strong>Use presenter objects</strong>: When you have simple transformations that need to be done on the data (such as formatting a date or number), put these into objects. The expression language can reference static methods, but presenter objects are much more powerful and flexible</li>
+<li style="font-weight: 400"><strong>Pass events in</strong>: Avoid using the expressions language for more than a method call when you're writing events, and try to pass the events into the layout as objects, either as a presenter, or as command objects. This keeps the events flexible and reusable</li>
+</ul>
+<p>By sticking to these guidelines, you'll find that working with the data binding system not only frees you from some of the most common user interface boilerplate code, but also improves the quality of your layouts and overall application. By using objects in your layout files rather than static methods, you'll end up with modular classes that can be easily reused throughout your application.</p>
+<p>Now that your app can capture people's expenses as claims, it's time to start thinking about how the information will be displayed. There are two major components to this: the list of claim items the user has created, and their overall travel allowance that they're supposed to keep to. So far, you have the capture screen, and while in many ways it's the most important screen in the app, it's not the first one that the user will see--that will be the overview screen.</p>
+<p>The overview screen's main job is to display the claim items in order, from most recent to the oldest. However, to keep the user's life simple, we'll also display a summary card at the top of the screen, which will help them stay on track with their spending. For this example, we'll assume that the allowance is specified as an amount per day that they are traveling.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Creating an Observable model</h1>
+                </header>
+            
+            <article>
+                
+<p>To get things started on this part of the project, you'll need a new model class to encapsulate the allowance and spending of the user. We'll call the new class <kbd>Allowance</kbd>, and build in some utility methods to fetch useful information (such as how much the user spent between two dates). Most importantly, this new model needs to tell us when it changes. This can technically be done in several ways: through an event-bus, or specialized listeners, but for this example, we'll go with an Observer pattern. To make this work, the <kbd>Allowance</kbd> class will extend from <kbd>BaseObservable</kbd>, a convenience class that is part of the data binding API. Whenever the <kbd>Allowance</kbd> class changes, it'll emit events notifying its observers of the change. Let's get started building the <kbd>Allowance</kbd> class:</p>
+<ol>
+<li style="font-weight: 400">Right-click on the <kbd>model</kbd> package and select <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>.</li>
+<li style="font-weight: 400">Name the new class <kbd>Allowance</kbd>.</li>
+<li style="font-weight: 400">Change the <span class="packt_screen">Superclass</span> to <kbd>android.databinding.BaseObservable</kbd>.</li>
+<li style="font-weight: 400">Add <kbd>android.os.Parcelable</kbd> to the <span class="packt_screen">Interfaces</span> field.</li>
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new class.</li>
+</ol>
+<ol start="6">
+<li style="font-weight: 400">At the top of the class, declare the following fields and constructors, and a getter method for the <kbd>amountPerDay</kbd>, which represents the allowance the user is aiming for:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">private int amountPerDay;<br/>private final List&lt;ClaimItem&gt; items = new ArrayList&lt;&gt;();<br/><br/>public Allowance(final int amountPerDay) {<br/>    this.amountPerDay = amountPerDay;<br/>}<br/><br/>protected Allowance(final Parcel in) {<br/>    amountPerDay = in.readInt();<br/>    in.readTypedList(items, ClaimItem.CREATOR);<br/>}<br/><br/>public int getAmountPerDay() { return amountPerDay; }</pre>
+<ol start="7">
+<li>Now comes the first bit of the Observable implementation; when we change the <kbd>amountPerDay</kbd> field, we need to notify any Observers that the <kbd>Allowance</kbd> object has changed:</li>
+</ol>
+<pre style="padding-left: 60px">public void setAmountPerDay(final int amountPerDay) {<br/>    this.amountPerDay = amountPerDay;<br/>    notifyChange();<br/>}</pre>
+<ol start="8">
+<li>The <kbd>Allowance</kbd> class will always ensure that all the <kbd>ClaimItem</kbd> objects are sorted from the newest to the oldest; knowing this, we can add some convenience methods to find the <em>start</em> and <em>end</em> dates for the <kbd>Allowance</kbd> object:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public Date getStartDate() {<br/>  return items.get(items.size() - 1).getTimestamp();<br/>}<br/>public Date getEndDate() {<br/>  return items.get(0).getTimestamp();<br/>}</pre>
+<ol start="9">
+<li>Now, create a simple calculation method to determine how much has been spent in total for this <kbd>Allowance</kbd>. This method simply adds up all the amounts in all the <kbd>ClaimItem</kbd> objects:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public double getTotalSpent() {<br/>    double total = 0;<br/><br/>    for (final ClaimItem item : items)<br/>        total += item.getAmount();<br/><br/>    return total;<br/>}</pre>
+<ol start="10">
+<li>Then, add another calculation method to calculate the amount spent between two dates. This can be used to find out how much was spent on a specific day, week, month, and so on:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public double getAmountSpent(final Date from, final Date to) {<br/>   double spent = 0;<br/>    for (int i = 0; i &lt; items.size(); i++) {<br/>        final ClaimItem item = items.get(i);<br/>        if (item.getTimestamp().compareTo(from) &gt;= 0<br/>                &amp;&amp; item.getTimestamp().compareTo(to) &lt;= 0) {<br/>            spent += item.getAmount();<br/>        }<br/>    }<br/><br/>    return spent;<br/>}</pre>
+<ol start="11">
+<li>Now, you'll need a method to add a <kbd>ClaimItem</kbd> to the <kbd>Allowance</kbd>. The <kbd>Allowance</kbd> always maintains the list of <kbd>ClaimItem</kbd> objects sorted from newest to oldest, so this method simply sorts the list each time an item is added, and then notifies observers that the <kbd>Allowance</kbd> has changed:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">public void addClaimItem(final ClaimItem item) {<br/>   items.add(item);<br/>   Collections.sort(<br/>     items,<br/>     Collections.reverseOrder(new Comparator&lt;ClaimItem&gt;() {<br/>       @Override<br/>       public int compare(final ClaimItem o1, final ClaimItem o2) {<br/>         return o1.getTimestamp().compareTo(o2.getTimestamp());<br/>       }<br/>     })<br/>   );<br/><br/>   notifyChange();<br/>}</pre>
+<div class="packt_tip">Sorting a list like this is a very poor implementation, but very simple to write. In practice, you should binary-search for the correct position to add the <kbd>ClaimItem</kbd>. Android provides classes to help with this, which we'll explore later in the book.</div>
+<ol start="12">
+<li>We also need to be able to remove <kbd>ClaimItem</kbd> objects from the <kbd>Allowance</kbd>. This is also a mutative operation, so we notify any observers when it's done:</li>
+</ol>
+<pre style="padding-left: 60px">public void removeClaimItem(final ClaimItem item) {<br/>  items.remove(item);<br/>  notifyChange()<br/>}</pre>
+<ol start="13">
+<li>Add the accessor methods for the <kbd>ClaimItem</kbd> objects:</li>
+</ol>
+<pre style="padding-left: 60px">public int getClaimItemCount() {<br/>  return items.size();<br/>}<br/>public ClaimItem getClaimItem(final int index) {<br/>  return items.get(index);<br/>}<br/>public boolean isEmpty() {<br/>  return items.isEmpty();<br/>}</pre>
+<ol start="14">
+<li>Finish the <kbd>Allowance</kbd> class by writing its <kbd>Parcelable</kbd> implementation:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public void writeToParcel(Parcel dest, int flags) {<br/>  dest.writeInt(amountPerDay);<br/>  dest.writeTypedList(items);<br/>}<br/><br/>@Override<br/>public int describeContents() { return 0; }<br/><br/>public static final Creator&lt;Allowance&gt; CREATOR = new Creator&lt;Allowance&gt;() {<br/>  @Override<br/>  public Allowance createFromParcel(Parcel in) {<br/>    return new Allowance(in);<br/>  }<br/><br/>  @Override<br/>  public Allowance[] newArray(int size) {<br/>    return new Allowance[size];<br/>  }<br/>};</pre>
+<p>The <kbd>Allowance</kbd> class is the first (and currently, the only) part of your object model that needs to be observed, as you can see; building an <kbd>Observable</kbd> model is not difficult, and being able to watch your model state for changes opens some fantastic opportunities, such as automatic network synchronization or statistics aggregation.</p>
+<div class="packt_tip">If you have an event bus in your application, pushing object model changes through there rather than direct observation is often a better option as it will offer better decoupling. There are a large number of event-bus APIs compatible with Android, and it's worth checking them out. A well-known API with an Event Bus implementation is Google's Guava API (<a href="https://github.com/google/guava" target="_blank">https://github.com/google/guava</a>).</div>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Establishing the AllowanceOverviewFragment</h1>
+                </header>
+            
+            <article>
+                
+<p>The allowance overview will be presented as a card at the top of an overview screen. The overview card will be populated by a new <kbd>Fragment</kbd> class that will encapsulate the first part of the data binding. The <kbd>AllowanceOverviewFragment</kbd> will depend on the data binding system to do most of the heavy lifting, and will provide the layout binding with a special <kbd>AllowanceOverviewPresenter</kbd> object that can be queried for statistics and data. The <kbd>AllowanceOverviewPresenter</kbd> will, in turn, reference the <kbd>Allowance</kbd> object, and listen for any changes on it in order to update and cache the statistics data. The relationship between these entities can be best explained with the following diagram:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="211" width="359" src="assets/3245c549-f1eb-415b-99cc-2aabe02a972f.jpg"/></div>
+<p>Encapsulating the statistics in a <kbd>Fragment</kbd> means that it's easier to include in other layouts that might include different information to the overview screen. Follow these quick steps to create the <kbd>AllowanceOverviewFragment</kbd> and <kbd>AllowanceOverviewPresenter</kbd> skeleton:</p>
+<ol>
+<li style="font-weight: 400">Right-click on the <kbd>ui</kbd> package and select <span class="packt_screen">New |</span> <span class="packt_screen">Fragment |</span><span class="packt_screen">Fragment (Blank)</span>.</li>
+<li style="font-weight: 400">Name the Fragment <kbd>AllowanceOverviewFragment</kbd>.</li>
+<li style="font-weight: 400">Turn off the <span class="packt_screen">Include fragment factory methods?</span> and <span class="packt_screen">Include interface callbacks?</span> options:</li>
+</ol>
+<div class="CDPAlignCenter CDPAlign"><img height="225" width="442" src="assets/02627d0a-6201-4c2d-9d07-38982df1a481.png"/></div>
+<ol start="4">
+<li style="font-weight: 400">Click on <span class="packt_screen">Finish</span> to create the new <kbd>Fragment</kbd> and its default layout file.</li>
+<li style="font-weight: 400">Right-click on the <kbd>ui</kbd> package again and select <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>.</li>
+<li style="font-weight: 400">Name the new class <kbd>presenters.AllowanceOverviewPresenter</kbd>.</li>
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new package and class.</li>
+<li style="font-weight: 400">The first thing the <kbd>AllowanceOverviewPresenter</kbd> needs is an inner class to hold the cached spending statistics that will be displayed to the user. This will be an immutable structure; when the statistics change, we refresh all of them at the same time:</li>
+</ol>
+<pre style="padding-left: 60px">public static class SpendingStats {<br/>   public final int total;<br/>   public final int today;<br/>   public final int thisWeek;<br/>   SpendingStats(<br/>           final int total,<br/>           final int today,<br/>           final int thisWeek) {<br/>       this.total = total;<br/>       this.today = today;<br/>       this.thisWeek = thisWeek;<br/>   }<br/>}</pre>
+<div class="packt_tip">You'll note that the fields in the <kbd>SpendingStats</kbd> class are <kbd>public final</kbd>, and have no getters. When dealing with data binding, the coupling is typically very tight, so introducing getter methods can actually create more complexity. It's better to avoid getter methods until they're needed.</div>
+<ol start="9">
+<li>We need to expose the <kbd>SpendingStats</kbd> outside of the class in such a way that the data binding will watch for changes. Android data binding, again, has a helper class; when you have a field that needs to be observed, you can use the <kbd>ObservableField</kbd> class. When an expression in the data binding layout file references one of these, it will automatically listen for changes and reevaluate when the field is changed:</li>
+</ol>
+<pre style="padding-left: 60px">public final ObservableField&lt;SpendingStats&gt; spendingStats = new ObservableField&lt;&gt;();</pre>
+<div class="packt_infobox">When using <kbd>ObservableField</kbd> (and its cousins: <kbd>OvservableString</kbd>, <kbd>ObservableInt</kbd>, and such), it's best to declare them as <kbd>final</kbd> and initialized. The data binding system can't watch for changes on the field itself, but instead, will attach a listener to the <kbd>ObservableField</kbd> object.</div>
+<ol start="10">
+<li>The <kbd>AllowanceOverviewPresenter</kbd> also requires an <kbd>Allowance</kbd> object that it will encapsulate, and a constructor:</li>
+</ol>
+<pre>public final Allowance allowance;<br/>public AllowanceOverviewPresenter(final Allowance allowance) {<br/>   this.allowance = allowance;<br/>}</pre>
+<ol start="11">
+<li>Finally, the <kbd>AllowanceOverviewPresenter</kbd> needs a method to allow the user to update the amount they're permitted to spend each day. In this case, the presenter acts as a helper to keep some of the logic out of the layout files; the <kbd>EditText</kbd> widget will provide a number as a <kbd>CharSequence</kbd>, so <kbd>AllowanceOverviewPresenter</kbd> needs to parse it and handle any errors if it's invalid in some way:</li>
+</ol>
+<pre style="padding-left: 60px">public void updateAllowance(final CharSequence newAllowance) {<br/>  try {<br/>    allowance.setAmountPerDay(<br/>        Integer.parseInt(newAllowance.toString()));<br/>  } catch (final RuntimeException ex) {<br/>    //ignore<br/>    allowance.setAmountPerDay(0);<br/>  }<br/>}</pre>
+<p>The <kbd>AllowanceOverviewPresenter</kbd> class will serve as an intermediary system between the raw data-bound layout file, and the raw object model. This allows you to keep any rendering logic out of the object model, while also keeping the data model requirements out of the layout XML file.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Creating the AllowanceOverview layout</h1>
+                </header>
+            
+            <article>
+                
+<p>Now, it's time to create the layout file and bind it to the <kbd>AllowanceOverviewPresenter</kbd> class. A data-bound layout file is a little different from a normal Android layout. As each layout XML file results in its own binding class, they have a root element of <kbd>layout</kbd>, followed by a <kbd>data</kbd> section that declares the variables that they will bind to. Each variable is named and typed with its Java class, because during compilation, these are all turned into Java variables in a generated binding class. Ultimately, you want to create a layout that will look like this at the top of the overview screen:</p>
+<div class="CDPAlignCenter CDPAlign"><img height="75" width="287" src="assets/1bed86f5-8506-4873-ad01-1162e9b6b0be.png"/></div>
+<p>The <span class="packt_screen">Daily Allowance</span> field will allow the user to directly edit how much they are allocated per day, while the labels to the right will display their spending today, this week, and in total. Follow these steps to construct the preceding layout; unlike previous examples, these steps don't use the <span class="packt_screen">Design</span> view for editing, and the layout is built from right to left:</p>
+<ol>
+<li style="font-weight: 400">Open the <kbd>fragment_allowance_overview.xml</kbd> layout file.</li>
+<li style="font-weight: 400">Change the editor to <span class="packt_screen">Text</span> mode.</li>
+<li style="font-weight: 400">Change the root element from <kbd>FrameLayout</kbd> to layout, and remove the contents:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;layout <br/>   <br/>   android:layout_width="match_parent"<br/>   android:layout_height="match_parent"<br/>   tools:context="com.packtpub.claim.ui.AllowanceOverviewFragment"&gt;<br/>&lt;/layout&gt;</pre>
+<ol start="4">
+<li>Now, declare a data section within the <kbd>layout</kbd> and declare a presenter variable for the <kbd>AllowanceOverviewPresenter</kbd> class:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;layout <br/>    <br/>    android:layout_width="match_parent"<br/>    android:layout_height="match_parent"<br/>    tools:context="com.packtpub.claim.ui.AllowanceOverviewFragment"&gt;<br/><br/>  <strong>&lt;data&gt;</strong><br/><strong>    &lt;variable</strong><br/><strong>        name="presenter"</strong><br/><strong>        type="com.packtpub.claim.ui.<br/>              presenters.AllowanceOverviewPresenter" /&gt;</strong><br/><strong>  &lt;/data&gt;</strong><br/>&lt;/layout&gt;</pre>
+<ol start="5">
+<li>Unlike the <kbd>data</kbd> section, the widget elements have no special root, so directly after the <kbd>data</kbd> section (and still nested within the <kbd>layout</kbd> element), declare the root element of this layout, which will be a <kbd>ConstraintLayout</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;android.support.constraint.ConstraintLayout<br/>   android:layout_width="match_parent"<br/>   android:layout_height="match_parent"&gt;<br/>&lt;/android.support.constraint.ConstraintLayout&gt;</pre>
+<ol start="6">
+<li>Within the <kbd>ConstraintLayout</kbd>, create a <kbd>TextView</kbd> that will serve as the label with the word <kbd>Total</kbd> in it:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;TextView<br/>   android:id="@+id/totalLabel"<br/>   android:layout_width="0dp"<br/>   android:layout_height="wrap_content"<br/>   android:layout_marginTop="@dimen/grid_spacer1"<br/>   android:gravity="center"<br/>   <strong>android:text="@string/label_total"</strong><br/><strong>   android:minWidth="@dimen/allowance_overview_label_min_width"</strong><br/>   android:textAppearance="@style/TextAppearance.AppCompat.Caption"<br/>   app:layout_constraintEnd_toEndOf="@+id/total"<br/>   app:layout_constraintStart_toStartOf="@+id/total"<br/>   app:layout_constraintTop_toTopOf="parent" /&gt;</pre>
+<ol start="7">
+<li>On the line specifying the <kbd>android:text</kbd> attribute, Android Studio will complain that the <kbd>@string/label_total</kbd> resource doesn't exist. Use the code assistance (usually <em>Alt</em> + <em>Enter</em>), and select <span class="packt_screen">Create string value resource</span> <span class="packt_screen">'label_total'</span>.</li>
+</ol>
+<ol start="8">
+<li style="font-weight: 400">A dialog will open, prompting you for the resource value; enter <kbd>Total</kbd> and click on the <span class="packt_screen">OK</span> button.</li>
+<li style="font-weight: 400">Use the same code assistance to create a dimension resource on the following line, specifying the minimum width. Give the new <kbd>allowance_overview_label_min_width</kbd> resource a value of <kbd>50dp</kbd> and click <span class="packt_screen">OK</span>.</li>
+<li style="font-weight: 400">Below the <span class="packt_screen">Total</span> label widget, create a <kbd>TextView</kbd> that will contain the actual amount of money the user has spent in their <kbd>Allowance</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;TextView<br/>   android:id="@+id/total"<br/>   android:layout_width="wrap_content"<br/>   android:layout_height="wrap_content"<br/>   android:layout_marginEnd="@dimen/grid_spacer1"<br/>   android:layout_marginTop="@dimen/grid_spacer1"<br/>   android:gravity="center"<br/>   android:minWidth="@dimen/allowance_overview_label_min_width"<br/>   android:textAppearance="@style/TextAppearance.AppCompat.Display1"<br/>   app:layout_constraintEnd_toEndOf="parent"<br/>   app:layout_constraintTop_toBottomOf="@+id/totalLabel" /&gt;</pre>
+<ol start="11">
+<li>Note that here, you haven't specified an <kbd>android:text</kbd> attribute. This will be the first data-bound attribute in the layout file, and we want to display the total field of the <kbd>SpendingStats</kbd> object from the presenter. Write this <kbd>android:text</kbd> attribute into the <kbd>TextView</kbd> above the <kbd>app:layout_constraintEnd_toEndOf</kbd> attribute:</li>
+</ol>
+<pre style="padding-left: 60px">android:text='<strong>@{Integer.toString(presenter.spendingStats.total) ?? "0"}</strong>'</pre>
+<p style="padding-left: 60px" class="mce-root">Data-bound expressions are all wrapped in <kbd>@{..}</kbd> to signal their difference from normal attributes. The code looks like Java, but it's not. Note the <kbd>??</kbd> operator; it's a very useful "null-safe" operator. If any part of the left-hand side is null, the right-hand side (in this case, the <kbd>"0"</kbd> string) will be used instead (like a very specific ternary operator). Also, make note of the single quotes around the <kbd>android:text</kbd> attribute; data-bound layouts must still be a valid XML file, and the preceding code needs to specify a Java string that uses double quotes. Rather than escaping the Java string as <kbd>&amp;quot;0&amp;quot;</kbd>, it's cleaner to use single quotes for the XML attribute.</p>
+<p style="padding-left: 60px" class="mce-root">Another important factor is how you need to use <kbd>Integer.toString</kbd> to ensure that the correct method is invoked on the <kbd>TextView</kbd>. Leaving it as an <kbd>int</kbd> will cause <kbd>TextView.setText(int)</kbd> to be invoked, and this expects a string-resource identifier.</p>
+<ol start="12">
+<li>Next, you'll need to declare very similar <kbd>TextView</kbd> elements for the weekly label and amount display. These are virtually identical to the total <kbd>TextView</kbd> elements, except for their labels, IDs, and constraints. You'll also need to create a <kbd>label_week</kbd> string resource with a value of <kbd>Week</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;TextView<br/>   <strong>android:id="@+id/weekLabel"</strong><br/>   android:layout_width="wrap_content"<br/>   android:layout_height="wrap_content"<br/>   android:layout_marginEnd="0dp"<br/>   android:layout_marginTop="@dimen/grid_spacer1"<br/>   android:gravity="center"<br/>   android:minWidth="@dimen/allowance_overview_label_min_width"<br/>   <strong>android:text="@string/label_week"</strong><br/>   android:textAppearance="@style/TextAppearance.AppCompat.Caption"<br/>   <strong>app:layout_constraintEnd_toEndOf="@+id/week"</strong><br/><strong>   app:layout_constraintStart_toStartOf="@+id/week"</strong><br/>   app:layout_constraintTop_toTopOf="parent" /&gt;<br/><br/>&lt;TextView<br/>   <strong>android:id="@+id/week"</strong><br/>   android:layout_width="wrap_content"<br/>   android:layout_height="wrap_content"<br/>   android:layout_marginEnd="@dimen/grid_spacer1"<br/>   android:layout_marginTop="@dimen/grid_spacer1"<br/>   android:gravity="center"<br/>   android:minWidth="@dimen/allowance_overview_label_min_width"<br/>   android:text='<strong>@{Integer.toString(presenter.spendingStats.thisWeek) ?? "0"}</strong>'<br/>   android:textAppearance="@style/TextAppearance.AppCompat.Display1"<br/>   <strong>app:layout_constraintEnd_toStartOf="@+id/total"</strong><br/><strong>   app:layout_constraintTop_toBottomOf="@+id/weekLabel"</strong> /&gt;</pre>
+<ol start="13">
+<li>You'll need to repeat the same for the <span class="packt_screen">Today</span> numbers. Again, you'll want to change the labels, IDs, and constraints, and create a <kbd>label_today</kbd> string resource with a value of <kbd>Today</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px" class="mce-root">&lt;TextView<br/>   <strong>android:id="@+id/todayLabel"</strong><br/>   android:layout_width="wrap_content"<br/>   android:layout_height="wrap_content"<br/>   android:layout_marginEnd="0dp"<br/>   android:layout_marginTop="@dimen/grid_spacer1"<br/>   android:gravity="center"<br/>   android:minWidth="@dimen/allowance_overview_label_min_width"<br/>   <strong>android:text="@string/label_today"</strong><br/>   android:textAppearance="@style/TextAppearance.AppCompat.Caption"<br/>   <strong>app:layout_constraintEnd_toEndOf="@+id/today"</strong><br/><strong>   app:layout_constraintStart_toStartOf="@+id/today"</strong><br/>   app:layout_constraintTop_toTopOf="parent" /&gt;<br/><br/>&lt;TextView<br/>   <strong>android:id="@+id/today"</strong><br/>   android:layout_width="wrap_content"<br/>   android:layout_height="wrap_content"<br/>   android:layout_marginEnd="@dimen/grid_spacer1"<br/>   android:layout_marginTop="@dimen/grid_spacer1"<br/>   android:gravity="center"<br/>   android:minWidth="@dimen/allowance_overview_label_min_width"<br/>   android:text='<strong>@{Integer.toString(presenter.spendingStats.today) ?? "0"}</strong>'<br/>   android:textAppearance="@style/TextAppearance.AppCompat.Display1"<br/>   <strong>app:layout_constraintEnd_toStartOf="@+id/week"</strong><br/><strong>   app:layout_constraintTop_toBottomOf="@+id/todayLabel"</strong> /&gt;</pre>
+<ol start="14">
+<li>The last element of this card is the daily allowance input area, where the user can enter how much they are allowed to spend each day. It consists of a <kbd>TextInputLayout</kbd> and a <kbd>TextInputEditText</kbd> widget bound to the amount per day. In this element, you'll also be binding the <kbd>TextInputEditText</kbd> widget to an event handler, which looks a lot like a Java lambda, but like all the binding expressions, it's not. However, it is translated into Java:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;android.support.design.widget.TextInputLayout<br/>  android:id="@+id/textInputLayout"<br/>  android:layout_width="0dp"<br/>  android:layout_height="0dp"<br/>  android:layout_marginEnd="@dimen/grid_spacer1"<br/>  android:layout_marginStart="@dimen/grid_spacer1"<br/>  android:layout_marginTop="@dimen/grid_spacer1"<br/>  app:layout_constraintBottom_toBottomOf="@+id/today"<br/>  app:layout_constraintEnd_toStartOf="@+id/today"<br/>  app:layout_constraintStart_toStartOf="parent"<br/>  app:layout_constraintTop_toTopOf="parent"&gt;<br/><br/>  &lt;android.support.design.widget.TextInputEditText<br/>    android:layout_width="match_parent"<br/>    android:layout_height="wrap_content"<br/>    android:hint="@string/label_daily_allowance"<br/>    android:inputType="number"<br/>    android:onTextChanged=<br/>           "<strong>@{(text, start, before, end)<br/>              -&gt; presenter.updateAllowance(text)}</strong>"<br/>    android:text='<strong>@{presenter.allowance.amountPerDay &gt; 0 ?</strong><br/><strong>           Integer.toString(presenter.allowance.amountPerDay) : ""}</strong>' /&gt;<br/>  <br/>  &lt;/android.support.design.widget.TextInputLayout&gt;<br/>&lt;/android.support.constraint.ConstraintLayout&gt;</pre>
+<ol start="15">
+<li>Use the Android Studio code assistant to create the <kbd>label_daily_allowance</kbd> string resource with a value of <kbd>Daily Allowance</kbd>.</li>
+</ol>
+<p>Now, if you go back to the <span class="packt_screen">Design</span> mode, you'll be able to see what your new fragment will look like on the screen of the user's device. The event-handler is hooked up and will be triggered every time the user changes any text in the <span class="packt_screen">Daily Allowance</span> input box. The event trigger will invoke the <kbd>presenter.updateAllowance</kbd> method, which in turn will attempt to parse the value and set it on the <kbd>Allowance</kbd> object (assuming that it can be parsed as an integer).</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Updating the SpendingStats class</h1>
+                </header>
+            
+            <article>
+                
+<p>You've already created the <kbd>SpendingStats</kbd> class and bound it to your layout, but it won't ever have any data in it because it's never actually created, and the <kbd>ObservableField&lt;SpendingStats&gt;</kbd> field in the <kbd>AllowanceOverviewPresenter</kbd> is never populated. There's a good reason for that--the stats take time to calculate. Even if we had a database to do the heavy lifting, there is potentially a substantial overhead to calculate these three numbers before you can put them on the screen, while you can directly invoke the <kbd>Allowance.getTotalSpent()</kbd> method as part of your layout XML that will block the main thread for the entire time it took to calculate that number. That's not a good idea, as that time delay can quickly add up and lead to degraded user experience or even <span class="packt_screen">Application Not Responding</span> errors.</p>
+<p>The answer is to listen for changes to the <kbd>Allowance</kbd> object, and recalculate the values on a worker thread before updating the <kbd>SpendingStats</kbd> field in the <kbd>AllowanceOverviewPresenter</kbd>. The data binding system will take care of the rest and populate the values on the screen. There are two structures that are needed for this part of the example: an observer to watch for any changes on the <kbd>Allowance</kbd> object, and an <kbd>ActionCommand</kbd> to calculate and update the <kbd>SpendingStats</kbd> in the <kbd>AllowanceOverviewPresenter</kbd>. Let's create them:</p>
+<ol>
+<li>Open the <kbd>AllowanceOverviewPresenter</kbd> source file in Android Studio.</li>
+<li>At the bottom of the <kbd>AllowanceOverviewPresenter</kbd> class, start a new <kbd>ActionCommand</kbd> inner class to update the <kbd>SpendingStats</kbd>, named <kbd>UpdateSpendingStatsCommand</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">private class UpdateSpendingStatsCommand<br/>    extends ActionCommand&lt;Allowance, SpendingStats&gt; {</pre>
+<ol start="3">
+<li>The <kbd>UpdateSpendingStatsCommand</kbd> will need two utility methods to calculate the date ranges for <em>this week</em>, and <em>today</em>. Unfortunately, Android doesn't support the new Java 8 time APIs; you'll need to use the <kbd>Calendar</kbd> class. On the other hand, Android provides a very useful utility class named <kbd>Pair</kbd>, that is perfect for defining a date range:</li>
+</ol>
+<pre style="padding-left: 60px">Pair&lt;Date, Date&gt; getThisWeek() {<br/>  final GregorianCalendar today = new GregorianCalendar();<br/>  today.set(<br/>      Calendar.HOUR_OF_DAY,<br/>      today.getActualMaximum(Calendar.HOUR_OF_DAY));<br/>  today.set(<br/>      Calendar.MINUTE,<br/>      today.getActualMaximum(Calendar.MINUTE));<br/>  today.set(<br/>      Calendar.SECOND,<br/>      today.getActualMaximum(Calendar.SECOND));<br/>  today.set(<br/>      Calendar.MILLISECOND,<br/>      today.getActualMaximum(Calendar.MILLISECOND));<br/><br/>  final Date end = today.getTime();<br/><br/>  today.add(<br/>      Calendar.DATE,<br/>      -(today.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY));<br/><br/>  today.set(Calendar.HOUR_OF_DAY, 0);<br/>  today.set(Calendar.MINUTE, 0);<br/>  today.set(Calendar.SECOND, 0);<br/>  today.set(Calendar.MILLISECOND, 0);<br/><br/>  return new Pair&lt;&gt;(today.getTime(), end);<br/>}<br/><br/>Pair&lt;Date, Date&gt; getToday() {<br/>  final GregorianCalendar today = new GregorianCalendar();<br/>  today.set(<br/>      Calendar.HOUR_OF_DAY,<br/>      today.getActualMaximum(Calendar.HOUR_OF_DAY));<br/>  today.set(<br/>      Calendar.MINUTE,<br/>      today.getActualMaximum(Calendar.MINUTE));<br/>  today.set(<br/>      Calendar.SECOND,<br/>      today.getActualMaximum(Calendar.SECOND));<br/>  today.set(<br/>      Calendar.MILLISECOND,<br/>      today.getActualMaximum(Calendar.MILLISECOND));<br/><br/>  final Date end = today.getTime();<br/><br/>  today.add(Calendar.DATE, -1);<br/>  today.set(Calendar.HOUR_OF_DAY, 0);<br/>  today.set(Calendar.MINUTE, 0);<br/>  today.set(Calendar.SECOND, 0);<br/>  today.set(Calendar.MILLISECOND, 0);<br/><br/>  return new Pair&lt;&gt;(today.getTime(), end);<br/>}</pre>
+<div class="packt_tip">You'll find that there are two different <kbd>Pair</kbd> implementations available to your application. One is part of the core Android platform (<kbd>android.util.Pair</kbd>), and the other is provided by the support packages (<kbd>android.support.v4.util.Pair</kbd>). The support implementation is intended for applications targeting API version 4 and lower, and your application is targeting API version 16 and higher; so, you should use the platform (<kbd>android.util.Pair</kbd>) implementation.</div>
+<ol start="4">
+<li>Then, you need to implement the <kbd>onBackground</kbd> method to process the data in the <kbd>Allowance</kbd> object into the <kbd>SpendingStats</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">public SpendingStats onBackground(final Allowance allowance)<br/>      throws Exception {<br/>  final Pair&lt;Date, Date&gt; today = getToday();<br/>  final Pair&lt;Date, Date&gt; thisWeek = getThisWeek();<br/>  // for stats we round everything to integers<br/>  return new SpendingStats(<br/>      (int) allowance.getTotalSpent(),<br/>      (int) allowance.getAmountSpent(today.first, today.second),<br/>      (int) allowance.getAmountSpent(thisWeek.first, thisWeek.second)<br/>  );<br/>}</pre>
+<ol start="5">
+<li>Then, the <kbd>UpdateSpendingStatsCommand</kbd> needs its <kbd>onForeground</kbd> to set the <kbd>SpendingStats</kbd> field on the <kbd>AllowanceOverviewPresenter</kbd>, which will cause the user interface to update with the new data:</li>
+</ol>
+<pre style="padding-left: 60px">public void onForeground(final SpendingStats newStats) {<br/>   spendingStats.set(newStats);<br/>}</pre>
+<ol start="6">
+<li>That completes the <kbd>UpdateSpendingStatsCommand</kbd>; now, in the <kbd>AllowanceOverviewPresenter</kbd> class, you'll need an instance of the <kbd>UpdateSpendingStatsCommand</kbd> that you can invoke when the <kbd>Allowance</kbd> object changes:</li>
+</ol>
+<pre style="padding-left: 60px">private final UpdateSpendingStatsCommand updateSpendStatsCommand<br/>                                = new UpdateSpendingStatsCommand();</pre>
+<ol start="7">
+<li>Then, you need <kbd>AllowanceOverviewPresenter</kbd> to be able to watch for changes to the <kbd>Allowance</kbd> object. This will involve an observer that Android's data binding API calls an <kbd>OnPropertyChangedCallback</kbd>. The problem is that <kbd>OnPropertyChangedCallback</kbd> is a class and not an interface, so for the <kbd>AllowanceOverviewPresenter</kbd>, use an anonymous-inner class for the <kbd>OnPropertyChangedCallback</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">private final Observable.OnPropertyChangedCallback<br/>    allowanceObserver = new Observable.OnPropertyChangedCallback() {<br/><br/>   public void onPropertyChanged(<br/>       final Observable observable,<br/>       final int propertyId) {<br/>     updateSpendStatsCommand.exec(allowance);<br/>   }<br/>};</pre>
+<ol start="8">
+<li>The <kbd>AllowanceOverviewPresenter</kbd> needs to connect the observer to the <kbd>Allowance</kbd> object in its constructor:</li>
+</ol>
+<pre style="padding-left: 60px">public AllowanceOverviewPresenter(final Allowance allowance) {<br/>   this.allowance = allowance;<br/>   this.allowance.addOnPropertyChangedCallback(allowanceObserver);<br/>}</pre>
+<ol start="9">
+<li>References held by <kbd>Observable</kbd> objects to their observers are strong references, so if care isn't taken, you can find yourself with memory leaks. To avoid that, it's a good idea to detach the listener when the <kbd>AllowanceOverviewPresenter</kbd> will no longer be needed; however, this will need to be done from outside:</li>
+</ol>
+<pre style="padding-left: 60px">public void detach() {<br/>   allowance.removeOnPropertyChangedCallback(allowanceObserver);<br/>}</pre>
+<p>Most of the code for the <kbd>UpdateSpendingStatsCommand</kbd> is taken up by the date-range calculations; it's otherwise a very simple class. The important aspects are that it both encapsulates the calculations, and runs them on a background worker thread that keeps the user interface running smoothly while it adds up the numbers.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Data binding and fragments</h1>
+                </header>
+            
+            <article>
+                
+<p>When working with the data binding framework, it's important to put some additional thought into where to encapsulate the various parts of your user interface. As you can hook the logic directly into the layout files, it will often be a better idea to use classes similar to the <kbd>DatePickerWrapper</kbd> you wrote in <a href="75335d7f-3cda-4985-b992-965f46adc335.xhtml" target="_blank">Chapter 3</a>, <em>Taking Actions</em>, with an <kbd>&lt;include&gt;</kbd> and <kbd>&lt;merge&gt;</kbd> tag, rather that wrapping groups of components in classes. Data-bound layouts that are included in other layouts still have variables, and it's the responsibility of the outer layout to pass those variables downward, into the included layout file. For example, a layout including a date picker might look something like this:</p>
+<pre style="padding-left: 60px" class="mce-root">&lt;include layout="@layout/merge_date_picker"<br/>         app:date="@{user.dateOfBirth}"<br/>         android:layout_width="match_parent"<br/>         android:layout_height="wrap_content"/&gt;</pre>
+<p class="mce-root">As long as either <kbd>user</kbd> or its <kbd>dateOfBirth</kbd> is <kbd>Observable</kbd>, the layout will automatically reflect any changes to it. This pattern allows you to not only modularize your layouts, but also ensure that they only receive the data that they actually require in order to work. The other advantage is that using it with <kbd>&lt;merge&gt;</kbd> elements plays very nicely with the <kbd>ConstraintLayout</kbd>, allowing you to build complex and reusable layout elements that nest in your code, but are flat (not nested) in the component hierarchy. Flat layouts using <kbd>ConstraintLayout</kbd> are often easier to build, are typically faster to render, and allow for more flexible animations than deeply nested layouts. They can be harder to modularize for reuse; data-binding makes this much easier.</p>
+<p class="mce-root">If you're wondering whether it's a good idea to still introduce fragments and widget classes, look at logical boundaries, where you will be forced to nest your components. An excellent example of a good boundary is a <kbd>CardView</kbd>. A <kbd>CardView</kbd> requires a nested layout, so its contents are perfect candidates for a widget or fragment, which can further help with encapsulation of your layout and logic.</p>
+<p>It's also important to consider your "presenter" classes and objects when you build them. A single layout can have any number of variables, and the presenter classes don't have to be shallow structures. It's common to build presenter classes in levels by inheritance, where you might build an application level presenter with global rules (how to format dates and numbers), with children for things like displaying dialogs; remember that some of the logic might not be used directly by the layout, but rather by an event handler method. Breaking the presenter classes up in this way allows you to further confine logic to where it's needed, and improve your code reusability.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Test your knowledge</h1>
+                </header>
+            
+            <article>
+                
+<ol>
+<li class="mce-root">Android's data binding framework follows what sort of binding?
+<ul>
+<li class="mce-root">Model-View View-Model (bidirectional) binding</li>
+<li class="mce-root">Model-View-Presenter pattern</li>
+<li class="mce-root">Model-View (unidirectional) binding</li>
+</ul>
+</li>
+<li class="mce-root">Data Bound Layouts have variables that must be which of the following?
+<ul>
+<li class="mce-root">Any Java Object</li>
+<li class="mce-root">Observable by the data binding framework</li>
+<li class="mce-root">Presenter objects</li>
+<li class="mce-root">Model objects</li>
+</ul>
+</li>
+</ol>
+<ol start="3">
+<li class="mce-root">Which of the following features belongs to data binding expressions?
+<ul>
+<li class="mce-root">They must be written in single quotes</li>
+<li class="mce-root">They are Java expressions</li>
+<li class="mce-root">They are a special expression language</li>
+<li class="mce-root">They're only evaluated at runtime</li>
+</ul>
+</li>
+<li class="mce-root">To trigger an update of a data-bound user interface, you must do which of these?
+<ul>
+<li class="mce-root">Listen for object model changes with an event bus</li>
+<li class="mce-root">Extend the <kbd>PropertyChangeCallback</kbd> class</li>
+<li class="mce-root">Call refresh on the generated <kbd>Binding</kbd> object</li>
+<li class="mce-root">Make a change that the <kbd>Binding</kbd> object can observe</li>
+</ul>
+</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>Data binding can not only massively reduce the amount of boilerplate code required to write a user interface, but can actively improve your code base and increase how much code you can reuse. By avoiding complex binding expressions and encapsulating the display logic in your presenter classes<span>,</span> you can build highly modular layouts that are fast, type-safe, and reusable.</p>
+<p>It's sometimes useful to think of the data-bound layout files as Java classes in their own right; after all, they will each result in a generated Binding class. It's useful to keep in mind that the Binding classes themselves are also observable, so any changes to them through their generated setter methods will automatically trigger an update in the user interface as well. Also, remember that when you include a data-bound layout in another, you need to pass all of its variables downward, which is just like specifying arguments on a constructor, and those variables don't need to be directly contained within the parent layout.</p>
+<p>So far, you've been building an in-memory data model, but this means that when your application is terminated, all the data is lost. In the next chapter, we'll take a look at long-term data storage on Android, and find out how to integrate it with your user interface without degrading the user experience and perceived performance.</p>
+<p class="mce-root"/>
+<p class="mce-root"/>
+<p class="mce-root"/>
+<p class="mce-root"/>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>

@@ -1,0 +1,508 @@
+<html><head></head><body><div id="book-content"><div id="sbo-rt-content"><div id="_idContainer034">
+			<h1 id="_idParaDest-63" class="chapter-number"><a id="_idTextAnchor067"/>3</h1>
+			<h1 id="_idParaDest-64"><a id="_idTextAnchor068"/>Polymorphism and Alternatives</h1>
+			<p>In this chapter, we are going to take a real-life example and solve the problem by implementing various solutions using different approaches. We will use <strong class="bold">polymorphism</strong> as a<a id="_idIndexMarker206"/> baseline for the solution. Afterward, we will use other approaches that are powered by the Kotlin language. Finally, we will compare them and try to understand which one is suitable under <span class="No-Break">which circumstances.</span></p>
+			<p>We will cover the following topics in <span class="No-Break">this chapter:</span></p>
+			<ul>
+				<li><span class="No-Break">Why Kotlin?</span></li>
+				<li>Real-life example – <span class="No-Break">revisited</span></li>
+				<li><span class="No-Break">Polymorphic solution</span></li>
+				<li>Sealed <span class="No-Break">class solution</span></li>
+				<li><span class="No-Break">Delegation solution</span></li>
+				<li><span class="No-Break">Functional solution</span></li>
+				<li>Comparison <span class="No-Break">and summary</span></li>
+			</ul>
+			<h1 id="_idParaDest-65"><a id="_idTextAnchor069"/>Technical requirements</h1>
+			<p>You can find all the code files used in this chapter on <span class="No-Break">GitHub: </span><a href="https://github.com/PacktPublishing/Software-Architecture-with-Kotlin/tree/main/chapter-3"><span class="No-Break">https://github.com/PacktPublishing/Software-Architecture-with-Kotlin/tree/main/chapter-3</span></a></p>
+			<h1 id="_idParaDest-66"><a id="_idTextAnchor070"/>Why Kotlin?</h1>
+			<p>Kotlin is chosen <a id="_idIndexMarker207"/>to be the primary programming language for all the examples in this book. There are several reasons for <span class="No-Break">this choice:</span></p>
+			<ul>
+				<li>Kotlin has gained significant popularity since it was released <span class="No-Break">in 2011</span></li>
+				<li>It can be used for both frontend and backend applications, which allows for a wide range of architecture topics to be illustrated with the <span class="No-Break">same language</span></li>
+				<li>It has a concise, readable, and expressive syntax that helps us understand the implementation without a deep understanding of <span class="No-Break">the language</span></li>
+				<li>It is interoperable with Java so code examples can leverage existing numerous libraries in both Java and Kotlin <span class="No-Break">if applicable</span></li>
+			</ul>
+			<h1 id="_idParaDest-67"><a id="_idTextAnchor071"/>Real-life example – revisited</h1>
+			<p>We are using the<a id="_idIndexMarker208"/> same real-life example as in <em class="italic">Chapters 1</em> and <em class="italic">2</em>. This example is as follows. In a village, households provide services to and receive services from other households. To provide clarity to the exchange of services among households, software was created to keep records of the contract for exchanged services (<span class="No-Break">the “contract”).</span></p>
+			<p>After both households have agreed on the services to be exchanged in the contract, each household will need to perform the service. Here are a <span class="No-Break">few examples:</span></p>
+			<ul>
+				<li>Repairing a piece <span class="No-Break">of furniture</span></li>
+				<li>Making <span class="No-Break">a dress</span></li>
+				<li>Babysitting a toddler for <span class="No-Break"><em class="italic">x</em></span><span class="No-Break"> hours</span></li>
+				<li>Performing a trick at <span class="No-Break">a party</span></li>
+				<li>Donating a used piece <span class="No-Break">of clothing</span></li>
+				<li>Providing food <span class="No-Break">and drinks</span></li>
+				<li>Cleaning <em class="italic">n</em> rooms in <span class="No-Break">the house</span></li>
+			</ul>
+			<p>We need to be able to capture the details of these services and to be able to verify that the service has been performed. Once both services in a contract have been performed, the contract is concluded and reaches its terminal state. Let us focus on one scenario, in which Household A performed a service for Household B and Household B confirmed that Household A performed the service as per the contract. The sequence of interactions can be briefly described in the following UML <span class="No-Break">sequence diagram:</span></p>
+			<div>
+				<div id="_idContainer028" class="IMG---Figure">
+					<img src="image/B21737_03_1.jpg" alt="Figure 3.1 – Revisiting the real-time example" width="1360" height="1022"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 3.1 – Revisiting the real-time example</p>
+			<p>Inside the <strong class="bold">Exchange Service</strong>, we need to provide two functions. One function is provided for a household performing a service for the other household. Another function is provided for a household to confirm that the service was performed by the other household as per the contract. The problem is that distinct types of services would require different ways to claim and <span class="No-Break">confirm completion.</span></p>
+			<p>For example, if the<a id="_idIndexMarker209"/> service is to repair an item, then it only takes the repairer household to acknowledge that the item has been repaired. The receiver household would confirm that the item was repaired. If the service is to babysit a toddler, then the babysitter household may instead log the hours spent babysitting to confirm that the service was performed. Sometimes, the service is an aggregation of <span class="No-Break">multiple sub-services.</span></p>
+			<p>Minimally, there should be two functions to perform a service and to check whether a service <span class="No-Break">was performed:</span></p>
+			<pre class="source-code">
+interface Service {
+    fun performService(time: Instant)
+    fun wasServicePerformed(): Boolean
+}</pre>			<p>For this exercise, let us assume that we need to support three types of services: plumbing, babysitting, and <span class="No-Break">room cleaning:</span></p>
+			<ul>
+				<li>The plumbing service requires the plumber household to report the service as started and completed; the other household then <span class="No-Break">confirms this</span></li>
+				<li>The babysitting service requires the babysitter household to log the start of the session and track it until the other household picks up the toddler and logs the total duration of <span class="No-Break">the service</span></li>
+				<li>The room cleaning service requires the cleaner household to log the start of the service and the rooms cleaned, then the other household to confirm that all rooms, as per<a id="_idIndexMarker210"/> the contract, have <span class="No-Break">been cleaned</span></li>
+			</ul>
+			<p>Let us start by solving this exercise with a <span class="No-Break">polymorphic approach.</span></p>
+			<h1 id="_idParaDest-68"><a id="_idTextAnchor072"/>Polymorphic solution</h1>
+			<p>In object-oriented <a id="_idIndexMarker211"/>programming, polymorphism provides a powerful way to abstract an interface of many forms. Polymorphism literally means <em class="italic">many forms</em> <span class="No-Break">in Greek.</span></p>
+			<p>The common interface of the households contains a function called <strong class="source-inline">performService</strong> to signal the start of the service, as well as a function called <strong class="source-inline">wasServicePerformed</strong> to return true if the service was performed as per <span class="No-Break">the agreement:</span></p>
+			<pre class="source-code">
+interface Service {
+    fun performService(time: Instant)
+    fun wasServicePerformed(): Boolean
+}</pre>			<p>This solution can be illustrated in the following UML <span class="No-Break">class diagram:</span></p>
+			<div>
+				<div id="_idContainer029" class="IMG---Figure">
+					<img src="image/B21737_03_2.jpg" alt="Figure 3.2 – Polymorphic solution" width="966" height="751"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 3.2 – Polymorphic solution</p>
+			<p>The <strong class="source-inline">Plumbing</strong> class is relatively simple. It provides a function for the household to start the service, a function to report the service completed, and a function for the other household to <a id="_idIndexMarker212"/>confirm that the service has been performed. Meanwhile, timestamps are recorded that indicate when the service was performed, completed, <span class="No-Break">and confirmed:</span></p>
+			<pre class="source-code">
+class Plumbing : Service {
+    var startedAt: Instant? = null
+    var completedAt: Instant? = null
+    var confirmedAt: Instant? = null
+    override fun performService(time: Instant) {
+        startedAt = time
+    }
+    fun completeService(time: Instant) {
+        completedAt = time
+    }
+    fun confirmService(time: Instant) {
+        confirmedAt = time
+    }
+    override fun wasServicePerformed(): Boolean {
+        return startedAt != null &amp;&amp; completedAt != null &amp;&amp; confirmedAt != null
+    }
+}</pre>			<p>The <strong class="source-inline">Babysitting</strong> class is different because the completion criterion is based on the duration of the service. The class’s constructor takes an agreed number of hours to determine whether the service has been completed. There is one function for the babysitter household <a id="_idIndexMarker213"/>to start the job and another for the other household to confirm the end of the job. If the duration is the same as or longer than the agreed hours, the service is <span class="No-Break">considered performed:</span></p>
+			<pre class="source-code">
+class Babysitting(val agreedHours: Int) : Service {
+    var startedAt: Instant? = null
+    var endedAt: Instant? = null
+    override fun performService(time: Instant) {
+        startedAt = time
+    }
+    fun endService(time: Instant) {
+        endedAt = time
+    }
+    override fun wasServicePerformed(): Boolean {
+        return if (startedAt == null || endedAt == null) {
+            false
+        } else {
+            Duration.between(startedAt, endedAt).toHours() &gt;= agreedHours
+        }
+    }
+}</pre>			<p>The <strong class="source-inline">RoomCleaning</strong> class has performed the service when all the rooms in agreement have been cleaned. The constructor takes a <strong class="source-inline">Set</strong> of room names, which is later used to check whether all of the rooms in the agreement have been cleaned. It has one function for the cleaner to start the job and another for the other household to confirm whether each room has<a id="_idIndexMarker214"/> <span class="No-Break">been cleaned:</span></p>
+			<pre class="source-code">
+class RoomCleaning(val agreedRooms: Set&lt;String&gt;) : Service {
+    var startedAt: Instant? = null
+    val roomCleaned: MutableSet&lt;String&gt; = mutableSetOf()
+    var endedAt: Instant? = null
+    override fun performService(time: Instant) {
+        startedAt = time
+    }
+    fun cleaned(
+        time: Instant,
+        room: String,
+    ) {
+        roomCleaned.add(room)
+        if (allAgreedRoomsCleaned()) {
+            endedAt = time
+        }
+    }
+    private fun allAgreedRoomsCleaned() = roomCleaned.containsAll(agreedRooms)
+    override fun wasServicePerformed(): Boolean = allAgreedRoomsCleaned()
+}</pre>			<p>There is a <strong class="source-inline">main</strong> function to<a id="_idIndexMarker215"/> have all these households perform the service and the results <span class="No-Break">are printed:</span></p>
+			<pre class="source-code">
+fun main() {
+    val now = Instant.now()
+    val plumbing = Plumbing()
+    plumbing.performService(now)
+    plumbing.completeService(now.plus(2, HOURS))
+    plumbing.confirmService(now.plus(2, HOURS).plus(3, MINUTES))
+    println("Was plumbing service performed? ${plumbing.wasServicePerformed()}")
+    val babysitting = Babysitting(3)
+    babysitting.performService(now)
+    babysitting.endService(now.plus(3, HOURS))
+    println("Was babysitting service performed? ${babysitting.wasServicePerformed()}")
+    val roomCleaning = RoomCleaning(setOf("Kitchen", "Bathroom"))
+    roomCleaning.performService(now)
+    roomCleaning.cleaned(now.plus(3, HOURS), "Kitchen")
+    println("Was room cleaning service performed? ${roomCleaning.wasServicePerformed()}")
+}</pre>			<p>The program should print something <span class="No-Break">like this:</span></p>
+			<pre class="console">
+Was plumbing service performed? true
+Was babysitting service performed? true
+Was room cleaning service performed? false</pre>			<p>The plumbing service starts with a timestamp. Then it is completed with a timestamp after two hours. After three minutes, it is then confirmed as complete with a timestamp. Since all three timestamps exist, the service has <span class="No-Break">been performed.</span></p>
+			<p>The babysitting service has a duration of three hours in the agreement. It started with a timestamp and ended time with a timestamp three hours later. The duration is exactly three hours. This matches the agreed hours, so the service has <span class="No-Break">been performed.</span></p>
+			<p>The room-cleaning service lists both the kitchen and the bathroom in the agreement. Only the kitchen was reported to be cleaned with a timestamp, so the service has not been <span class="No-Break">performed yet.</span></p>
+			<p>This approach results <a id="_idIndexMarker216"/>in a homogeneous yet polymorphic style and facilitates three different services that have certain <span class="No-Break">shared behaviors.</span></p>
+			<h1 id="_idParaDest-69"><a id="_idTextAnchor073"/>Sealed class solution</h1>
+			<p>The Kotlin language <a id="_idIndexMarker217"/>has a feature called <strong class="bold">sealed class</strong>, which<a id="_idIndexMarker218"/> restricts the class hierarchy and requires that all subclasses be defined at compile time. All subclasses need to be in the same package and module where the sealed class is defined. This also means that no third-party classes can be inherited from <span class="No-Break">sealed classes.</span></p>
+			<p>Here are a few observations from the polymorphic solution mentioned previously. Firstly, all subclasses have a <strong class="source-inline">startedAt</strong> field and an implementation of the <strong class="source-inline">performService</strong> function that sets the <strong class="source-inline">startedAt</strong> field. So, the sealed class solution can be modified from the polymorphic solution. The interface can be changed to a sealed class with the <strong class="source-inline">startedAt</strong> field and the <span class="No-Break"><strong class="source-inline">performService</strong></span><span class="No-Break"> function:</span></p>
+			<pre class="source-code">
+sealed class Service {
+    var startedAt: Instant? = null
+    fun performService(time: Instant) {
+        startedAt = time
+    }
+    abstract fun wasServicePerformed(): Boolean
+}</pre>			<p>The subclasses can be simplified by using the sealed class implementation <span class="No-Break">as follows:</span></p>
+			<pre class="source-code">
+class Plumbing : Service() {
+    var completedAt: Instant? = null
+    var confirmedAt: Instant? = null
+    fun completeService(time: Instant) {
+        completedAt = time
+    }
+    fun confirmService(time: Instant) {
+        confirmedAt = time
+    }
+    override fun wasServicePerformed(): Boolean {
+        return startedAt != null &amp;&amp; completedAt != null &amp;&amp; confirmedAt != null
+    }
+}</pre>			<p>The <strong class="source-inline">performService</strong> function <a id="_idIndexMarker219"/>has been implemented by the <strong class="source-inline">Service</strong> superclass, so<a id="_idIndexMarker220"/> there is no need to implement it in <span class="No-Break">the subclasses:</span></p>
+			<pre class="source-code">
+class Babysitting(val agreedHours: Int) : Service() {
+    var endedAt: Instant? = null
+    fun endService(time: Instant) {
+        endedAt = time
+    }
+    override fun wasServicePerformed(): Boolean {
+        return if (startedAt == null || endedAt == null) {
+            false
+        } else {
+            Duration.between(startedAt, endedAt).toHours() &gt;= agreedHours
+        }
+    }
+}</pre>			<p>The same <a id="_idIndexMarker221"/>simplification<a id="_idIndexMarker222"/> applies to the <span class="No-Break"><strong class="source-inline">RoomCleaning</strong></span><span class="No-Break"> subclass:</span></p>
+			<pre class="source-code">
+class RoomCleaning(val agreedRooms: Set&lt;String&gt;) : Service() {
+    val roomCleaned: MutableSet&lt;String&gt; = mutableSetOf()
+    var endedAt: Instant? = null
+    fun cleaned(
+        time: Instant,
+        room: String,
+    ) {
+        roomCleaned.add(room)
+        if (allAgreedRoomsCleaned()) {
+            endedAt = time
+        }
+    }
+    private fun allAgreedRoomsCleaned() = roomCleaned.containsAll(agreedRooms)
+    override fun wasServicePerformed(): Boolean = allAgreedRoomsCleaned()
+}</pre>			<p>The sealed <strong class="source-inline">Service</strong> class has the <strong class="source-inline">startedAt</strong> field and the <strong class="source-inline">performService</strong> function to facilitate the starting of the service, while the subclasses have their own variations to <span class="No-Break">complete it.</span></p>
+			<p>The power of the Kotlin sealed classes is not the restriction of having all subclasses known at compile time. The power lies in what the compiler does with the restriction. If we use the <strong class="source-inline">when</strong> construct together with sealed classes, we can reduce our program to be <span class="No-Break">as follows:</span></p>
+			<pre class="source-code">
+sealed class Service {
+    var startedAt: Instant? = null
+    fun performService(time: Instant) {
+        startedAt = time
+    }
+    fun wasServicePerformed(): Boolean {
+        return when (this) {
+            is Babysitting -&gt; durationCoversAgreedHours()
+            is Plumbing -&gt; areAllDatesPresent()
+            is RoomCleaning -&gt; allAgreedRoomsCleaned()
+        }
+    }
+}</pre>			<p>As the <strong class="source-inline">Service</strong> class<a id="_idIndexMarker223"/> has <a id="_idIndexMarker224"/>the implementation of the <strong class="source-inline">wasServicePerformed</strong> function using the <strong class="source-inline">when</strong> construct, the subclasses do not need to implement this function <span class="No-Break">at all:</span></p>
+			<pre class="source-code">
+class Plumbing : Service() {
+    var completedAt: Instant? = null
+    var confirmedAt: Instant? = null
+    fun completeService(time: Instant) {
+        completedAt = time
+    }
+    fun confirmService(time: Instant) {
+        confirmedAt = time
+    }
+    internal fun areAllDatesPresent(): Boolean {
+        return startedAt != null &amp;&amp; completedAt != null &amp;&amp; confirmedAt != null
+    }
+}</pre>			<p>Like the <strong class="source-inline">Plumbing</strong> subclass, other subclasses will now only contain the body of functions related to<a id="_idIndexMarker225"/> completing the service in <span class="No-Break">various </span><span class="No-Break"><a id="_idIndexMarker226"/></span><span class="No-Break">forms:</span></p>
+			<pre class="source-code">
+class Babysitting(val agreedHours: Int) : Service() {
+    var endedAt: Instant? = null
+    fun endService(time: Instant) {
+        endedAt = time
+    }
+    internal fun durationCoversAgreedHours(): Boolean {
+        return if (startedAt == null || endedAt == null) {
+            false
+        } else {
+            Duration.between(startedAt, endedAt).toHours() &gt;= agreedHours
+        }
+    }
+}
+class RoomCleaning(val agreedRooms: Set&lt;String&gt;) : Service() {
+    val roomCleaned: MutableSet&lt;String&gt; = mutableSetOf()
+    var endedAt: Instant? = null
+    fun cleaned(
+        time: Instant,
+        room: String,
+    ) {
+        roomCleaned.add(room)
+        if (allAgreedRoomsCleaned()) {
+            endedAt = time
+        }
+    }
+    internal fun allAgreedRoomsCleaned() = roomCleaned.containsAll(agreedRooms)
+}</pre>			<p>The compiler enforces that all subclasses are included in branches of the <strong class="source-inline">when</strong> construct. If they are not, it will not compile. In addition, the <strong class="source-inline">this</strong> instance is automatically <a id="_idIndexMarker227"/>cast (<strong class="bold">smart cast</strong>) to the specific subclass<a id="_idIndexMarker228"/> in each branch, so we can directly access the fields defined<a id="_idIndexMarker229"/> in <span class="No-Break">the subclass.</span></p>
+			<p>In this implementation, all variations of the check for services performed are grouped together in the <strong class="source-inline">when</strong> construct as branches. It is better than an <strong class="source-inline">enum</strong> implementation because you will not overlook a subclass, given that we do not use <strong class="source-inline">else</strong> as <span class="No-Break">a branch.</span></p>
+			<p>Also, as these are subclasses of a sealed class, all the subclasses are known and we can easily compare the variations in a <span class="No-Break">single function.</span></p>
+			<p>However, this pattern <a id="_idIndexMarker230"/>is useful only when there are a small number<a id="_idIndexMarker231"/> of subclasses and they have similar implementations. Also, this pattern does not support the extension of functionality outside <span class="No-Break">the package.</span></p>
+			<h1 id="_idParaDest-70"><a id="_idTextAnchor074"/>Delegation solution</h1>
+			<p><strong class="bold">Delegation</strong> is often<a id="_idIndexMarker232"/> considered an alternative to the polymorphic<a id="_idIndexMarker233"/> solution. In this approach, an extension of a function is implemented by delegating part of the responsibility to other classes and then extending its behaviors. As a result, there is no mandatory requirement to create a subclass. There are several reasons <span class="No-Break">for that:</span></p>
+			<ul>
+				<li>Loose coupling and <span class="No-Break">high cohesion</span></li>
+				<li>Separation <span class="No-Break">of concerns</span></li>
+				<li><span class="No-Break">Easy substitution</span></li>
+				<li>Refactoring to the <span class="No-Break">delegation solution</span></li>
+			</ul>
+			<h2 id="_idParaDest-71"><a id="_idTextAnchor075"/>Loose coupling and high cohesion</h2>
+			<p>Using delegation, code<a id="_idIndexMarker234"/> can be reused and composed only for the parts that are needed. It is more flexible than inheriting a class that is likely to give the subclasses more than it needs. This results in looser coupling to the reused code while still maintaining high cohesion within <span class="No-Break">the class.</span></p>
+			<h2 id="_idParaDest-72"><a id="_idTextAnchor076"/>Separation of concerns</h2>
+			<p>With the use of <a id="_idIndexMarker235"/>delegation, classes can be broken into small classes (sub-classes) that only have a single responsibility. These classes are only delegated on demand. As a result, each class has a clear focus and responsibility. Classes are therefore easier to maintain, test, <span class="No-Break">and understand.</span></p>
+			<p>We are also able to break away from any change of superclass in unrelated implementation that may cause unintended changes in behaviors. We simply separate unrelated implementations from what is <span class="No-Break">really needed.</span></p>
+			<h2 id="_idParaDest-73"><a id="_idTextAnchor077"/>Easy substitution</h2>
+			<p>If we need to<a id="_idIndexMarker236"/> have a different behavior, it is easier to swap the delegate object than to swap an inherited superclass. Not only are there fewer functions to implement in delegate objects than a different superclass but it is also possible to swap to delegate objects at <span class="No-Break">runtime dynamically.</span></p>
+			<p>As long as the subclasses conform<a id="_idIndexMarker237"/> to the <strong class="bold">Liskov Substitution Principle</strong> (<strong class="bold">LSP</strong>), there is no behavioral<a id="_idIndexMarker238"/> change in <span class="No-Break">substituting subclasses.</span></p>
+			<h2 id="_idParaDest-74"><a id="_idTextAnchor078"/>Refactoring to the delegation solution</h2>
+			<p>To refactor to <a id="_idIndexMarker239"/>the delegation solution, we will break down responsibilities into smaller interfaces. We will have an interface that starts a service and another interface that checks whether a service <span class="No-Break">was performed:</span></p>
+			<pre class="source-code">
+interface ServiceStarter {
+  fun start(time: Instant)
+}
+interface ServiceChecker {
+  fun wasServicePerformed(): Boolean
+}
+class Started : ServiceStarter {
+  var startedAt: Instant? = null
+  override fun start(time: Instant) {
+    startedAt = time
+  }
+}</pre>			<p>Plumbing, babysitting, and room cleaning are three services that are completed <span class="No-Break">very differently.</span></p>
+			<p>The plumbing service has three phases: <em class="italic">Started</em>, <em class="italic">Completed</em>, <span class="No-Break">and </span><span class="No-Break"><em class="italic">Confirmed</em></span><span class="No-Break">.</span></p>
+			<div>
+				<div id="_idContainer030" class="IMG---Figure">
+					<img src="image/B21737_03_3.jpg" alt="Figure 3.3 – A three-phase service" width="1379" height="217"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 3.3 – A three-phase service</p>
+			<p>It can be expressed as a <strong class="source-inline">ThreePhaseService</strong> that is also a <strong class="source-inline">ServiceStarter</strong> and <strong class="source-inline">ServiceChecker</strong>. However, we already have the concrete <strong class="source-inline">Started</strong> class as an implementation of <strong class="source-inline">ServiceStarter</strong>, so we can use the Kotlin delegation feature to specify that the implementation of <strong class="source-inline">ServiceStarter</strong> is realized by the <strong class="source-inline">started</strong> field provided in<a id="_idIndexMarker240"/> the constructor with a <strong class="source-inline">Started</strong> <span class="No-Break">default value:</span></p>
+			<pre class="source-code">
+interface ThreePhaseService : S<a id="_idTextAnchor079"/>erviceStarter, ServiceChecker <a id="_idTextAnchor080"/>{
+  fun complete(time: Instant)<a id="_idTextAnchor081"/>
+  fun confirm(time: Instant)
+}
+class ThreePhaseServiceImpl(val started: Started = Started()) :
+    ThreePhaseService, ServiceStarter by started {
+  var completedAt: Instant? = null
+  v<a id="_idTextAnchor082"/>ar confirmedAt: Instant? = null
+  override fun complete(time: Instan<a id="_idTextAnchor083"/>t) {
+    completedAt = time
+  }
+  override fun confirm(time: Instant) {
+    confirmedAt = time
+  }
+  override fun w<a id="_idTextAnchor084"/>asServicePerformed(): Boolean {
+    return started.startedAt != null &amp;&amp; completedAt != null &amp;&amp; confirmedAt != null
+  }
+}</pre>			<p>Then, <strong class="source-inline">Plumbing</strong> is merely a specialization of <strong class="source-inline">ThreePhaseServiceImpl</strong> that we can define as a one-liner by <span class="No-Break">Kotlin delegation:</span></p>
+			<pre class="source-code">
+class Plumbing : ThreePhaseService by ThreePhaseServiceImpl()</pre>			<p>The babysitting service has only two phases: <em class="italic">Started</em> and <em class="italic">Ended</em>. The duration, or the amount of time between the start and end times, determines whether the service has been performed. Here is a simple UML state diagram to capture the <span class="No-Break">phase transition.</span></p>
+			<div>
+				<div id="_idContainer031" class="IMG---Figure">
+					<img src="image/B21737_03_4.jpg" alt="Figure 3.4 – Hourly service phase transition" width="926" height="190"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 3.4 – Hourly service phase transition</p>
+			<p>It can be<a id="_idIndexMarker241"/> expressed as an <strong class="source-inline">HourlyService</strong>. Again, we can make use of the Kotlin delegation to avoid <span class="No-Break">code duplication:</span></p>
+			<pre class="source-code">
+interface HourlyService : S<a id="_idTextAnchor085"/>erviceStarter, ServiceCheck<a id="_idTextAnchor086"/>er {
+  fun end(time: Instant)
+}
+class HourlyServiceImpl(val agreedHours: Int, val started: Started = Started()) :
+    HourlyService, ServiceStarter by started {<a id="_idTextAnchor087"/>
+  var endedAt: Instant? = null
+  override fun end(time: Instant) {
+    endedAt = time
+  }
+  override fun wasServicePerformed(): Boolean =
+    if (started.startedAt == null || endedAt == null) {
+      false
+    } else {
+       Duration.between(started.startedAt, endedAt).toHours() &gt;= agreedHours
+    }
+}</pre>			<p>After that, <strong class="source-inline">Babysitting</strong> is declared as a one-liner <span class="No-Break">delegated class:</span></p>
+			<pre class="source-code">
+class Babysitting(agreedHours: Int) : HourlyService by HourlyServiceImpl(agreedHours)</pre>			<p>Lastly, the room<a id="_idIndexMarker242"/> cleaning service is repeated in a loop until all agreed items have been completed. Here is a simple UML state diagram to capture the <span class="No-Break">phase transition.</span></p>
+			<div>
+				<div id="_idContainer032" class="IMG---Figure">
+					<img src="image/B21737_03_5.jpg" alt="Figure 3.5 – Itemized service phase transition" width="817" height="862"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 3.5 – Itemized service phase transition</p>
+			<p>We can treat<a id="_idIndexMarker243"/> each room as an item that is completed individually in the name of <strong class="source-inline">ItemizedService</strong>. We also use the gen<a id="_idTextAnchor088"/>eric <strong class="source-inline">T</strong> type to make <span class="No-Break">it flexible:</span></p>
+			<pre class="source-code">
+interface ItemizedService&lt;T&gt; : <a id="_idTextAnchor089"/>ServiceStarter, ServiceChecker {
+  fun co<a id="_idTextAnchor090"/>mplete(time: Instant, item: T)
+}
+class ItemizedServiceImpl&lt;T&gt;(val agreed: Set&lt;T&gt;) : ItemizedService&lt;T&gt;, ServiceStarter by Started() {
+  val completed: MutableSet&lt;T&gt; = mutableSetOf(<a id="_idTextAnchor091"/>)
+  var endedAt: Instant? = null
+  override fun complete(time: Instant, item: T) {
+    completed.add(item)
+    if (allAgreedItemsCleaned()) {
+      endedAt = time
+    }
+  }
+  private fun allAgreedItemsCleaned() = completed.containsAll(agreed)
+  override fun wasServicePerformed(): Boolean = allAgreedItemsCleaned()
+}</pre>			<p><strong class="source-inline">RoomCleaning</strong> can<a id="_idIndexMarker244"/> now be defined <span class="No-Break">as follows:</span></p>
+			<pre class="source-code">
+class RoomCleaning(agreedRooms: Set&lt;String&gt;) :
+    ItemizedService&lt;String&gt; by ItemizedServiceImpl(agreedRooms)</pre>			<p>This example of a delegation solution can be illustrated by the following UML <span class="No-Break">class diagram:</span></p>
+			<div>
+				<div id="_idContainer033" class="IMG---Figure">
+					<img src="image/B21737_03_6.jpg" alt="Figure 3.6 – A delegation solution" width="1633" height="1286"/>
+				</div>
+			</div>
+			<p class="IMG---Caption" lang="en-US" xml:lang="en-US">Figure 3.6 – A delegation solution</p>
+			<p>Putting them all <a id="_idIndexMarker245"/>together, we need to modify a bit of the <strong class="source-inline">main</strong> function only because the function names are different. The program behaves in the <span class="No-Break">same way:</span></p>
+			<pre class="source-code">
+fun main() {
+    val now = Instant.now()
+    val plumbing = Plumbing()
+    plumbing.start(now)
+    plumbing.complete(now.plus(2, HOURS))
+    plumbing.confirm(now.plus(2, HOURS).plus(3, MINUTES))
+    println("Was plumbing service performed? ${plumbing.wasServicePerformed()}")
+    val babysitting = Babysitting(3)
+    babysitting.start(now)
+    babysitting.end(now.plus(3, HOURS))
+    println("Was babysitting service performed? ${babysitting.wasServicePerformed()}")
+    val roomCleaning = RoomCleaning(setOf("Kitchen", "Bathroom"))
+    roomCleaning.start(now)
+    roomCleaning.complete(now.plus(10, MINUTES), "Kitchen")
+    println("Was room cleaning service performed? ${roomCleaning.wasServicePerformed()}")
+}</pre>			<p>From this example, we can see how easy it is to reuse the code. For example, if there is another service that needs to run for an agreed hour, we can reuse the <strong class="source-inline">HourlyService</strong> using delegation without the need to implement the same logic again. We also need not write the <span class="No-Break">same test.</span></p>
+			<p>This pattern reduces duplicated code and testing. It also promotes each class to be more specific and focused<a id="_idIndexMarker246"/> on its responsibility. It makes any extension of existing features easier, since it does not impose inheriting a <span class="No-Break">concrete superclass.</span></p>
+			<h1 id="_idParaDest-75"><a id="_idTextAnchor092"/>Functional solution</h1>
+			<p><strong class="bold">Functional programming</strong> uses a <a id="_idIndexMarker247"/>completely different<a id="_idIndexMarker248"/> mindset in approaching the problem. The fundamental elements can be categorized into <strong class="bold">immutable data structures</strong> and <span class="No-Break"><strong class="bold">pure functions</strong></span><span class="No-Break">.</span></p>
+			<h2 id="_idParaDest-76"><a id="_idTextAnchor093"/>Immutable data structures</h2>
+			<p>An immutable<a id="_idIndexMarker249"/> data <a id="_idIndexMarker250"/>structure cannot be changed once it has been created. If a new value is needed to capture a change, new data structure instances are created and usually transformed from the existing ones. This approach makes data reliable <span class="No-Break">and thread-safe.</span></p>
+			<p>Kotlin provides the <strong class="bold">data class</strong> construct<a id="_idIndexMarker251"/> that comes with standard functions such as <strong class="source-inline">toString</strong>, <strong class="source-inline">hashcode</strong>, and <strong class="source-inline">equals</strong> for free. Combined with the use of the <strong class="source-inline">val</strong> keyword and exclusive refereces to other immutable data, we can easily create an immutable <span class="No-Break">data structure.</span></p>
+			<p>Here are the <a id="_idIndexMarker252"/>equivalent data structures for <a id="_idIndexMarker253"/><span class="No-Break">the example:</span></p>
+			<pre class="source-code">
+data class Plumbing(
+    val startedAt: Instant? = null,
+    val completedAt: Instant? = null,
+    val confirmedAt: Instant? = null,
+)
+data class Babysitting(
+    val agreedHours: Int,
+    val startedAt: Instant? = null,
+    val endedAt: Instant? = null,
+)
+data class RoomCleaning(
+    val agreedRooms: Set&lt;String&gt;,
+    val startedAt: Instant? = null,
+    val completed: Set&lt;String&gt; = emptySet(),
+    val endedAt: Instant? = null,
+)</pre>			<p>It is worth noting that all fields are declared with <strong class="source-inline">val</strong>, so the references cannot be changed. Also, the <strong class="source-inline">Instant</strong> class that is used in many fields is <span class="No-Break">also immutable.</span></p>
+			<p>The <strong class="source-inline">Set</strong> interface has no mutable functions declared. Although a mutable concrete implementation could be injected that makes the data class not strictly immutable, if we only use the functions declared in the interface and the concrete implementation conforms to the LSP, there should be no <span class="No-Break">behavioral change.</span></p>
+			<p>Also, the fields that may have a different value in another instance come with either a nullable declaration (?) or default values. Kotlin constructors can provide these values if they are not specified <span class="No-Break">during invocation.</span></p>
+			<p>Kotlin provides a <strong class="source-inline">copy</strong> function for data classes to be mutable as a separate instance. For example, a plumbing service can be starte<a id="_idTextAnchor094"/>d by the <span class="No-Break">following code:</span></p>
+			<pre class="source-code">
+  val plumbing = Plumbing()
+  val started = plumbing.copy(started = Instant.now())</pre>			<p>However, merely using the <strong class="source-inline">copy</strong> function may seem too low-level and does not help communicate the intent of the code. It may be better to have a function with a better name such <a id="_idIndexMarker254"/>as <strong class="source-inline">start</strong> that invokes <strong class="source-inline">copy</strong> to make <a id="_idIndexMarker255"/>the <span class="No-Break">intent obvious.</span></p>
+			<h2 id="_idParaDest-77"><a id="_idTextAnchor095"/>Pure functions</h2>
+			<p>Functions are said to <a id="_idIndexMarker256"/>be pure if, when they are given the<a id="_idIndexMarker257"/> same input, they always produce the same output and have no side effects. To achieve this, the function does not mutate any external data or state. It does not use any randomization or system clock functions either. It does not invoke any function that creates side effects, such as making a database update or calling an external system remotely. It is deterministic, predictable, testable, <span class="No-Break">and thread-safe.</span></p>
+			<p>In the real-life example of the households used in this chapter, all three services need to start the service despite all of them having different forms. Also, we want to have a better function name to <a id="_idIndexMarker258"/>communicate intent. Kotlin supports <strong class="bold">parametric polymorphism</strong> through generics so that our <strong class="source-inline">start</strong> function can work with multiple types. In <a id="_idIndexMarker259"/>addition, we use <strong class="bold">lambda expressions</strong> so that each type can specify its own way to create a new instance of <span class="No-Break">new values.</span></p>
+			<p>The <strong class="source-inline">sta<a id="_idTextAnchor096"/>rt</strong> function looks something like <span class="No-Break">the following:</span></p>
+			<pre class="source-code">
+fun &lt;T&gt; T.start(time: Instant, transform: T.(Instant) -&gt; T): T = transform(time)</pre>			<p>It declares a generic <strong class="source-inline">T</strong> type as the function receiver so we can invoke the function in the style of <strong class="source-inline">T.start</strong> as an <strong class="bold">extension function</strong>. The<a id="_idIndexMarker260"/> function also requires a transform lambda expression in order to transform the <strong class="source-inline">T</strong> type to create a new instance of <strong class="source-inline">T</strong> with the <strong class="source-inline">startAt</strong> time. This is an <a id="_idTextAnchor097"/>example of the invocation of the <span class="No-Break"><strong class="source-inline">start</strong></span><span class="No-Break"> function:</span></p>
+			<pre class="source-code">
+Plumbing().sta<a id="_idTextAnchor098"/>rt(now) { startedAt -&gt; copy(startedAt = startedAt) }</pre>			<p><strong class="source-inline">Plumbing()</strong> creates a new instance of <strong class="source-inline">Plumbing</strong> without a <strong class="source-inline">startAt</strong> time. Then the <strong class="source-inline">start</strong> function is invoked by supplying an <strong class="source-inline">Instant</strong> object and a lambda expression specifying <a id="_idIndexMarker261"/>the creation of a new <strong class="source-inline">Plumbing</strong> instance<a id="_idIndexMarker262"/> with a <strong class="source-inline">startedAt</strong> field set using the <span class="No-Break"><strong class="source-inline">copy</strong></span><span class="No-Break"> function.</span></p>
+			<h2 id="_idParaDest-78"><a id="_idTextAnchor099"/>The rest of the functions</h2>
+			<p>Other functions that<a id="_idIndexMarker263"/> are specific to the types of services can be <span class="No-Break">declared separately:</span></p>
+			<pre class="source-code">
+fun Plumbing.complete(time: Instant): Plumbing = copy(completedAt = time)
+fun Plumbing.confirm(time: Instant): Plumbing = copy(confirmedAt = time)
+fun Babysitting.end(time: Instant): Babysitting = copy(endedAt = time)
+fun RoomCleaning.complete(
+    time: Instant,
+    room: String,
+): RoomCleaning {
+    val newCleaned = completed + room
+    val newEnded = if (completed.containsAll(agreedRooms)) time else endedAt
+    return copy(completed = newCleaned, endedAt = newEnded)
+}</pre>			<p>Note that it is not mandatory to use extension functions for the preceding functions. They can be declared inside the body of their corresponding data classes. Declaring them as extension functions, however, does provide flexibility in that they can be in a different package than the <span class="No-Break">data classes.</span></p>
+			<p>The functions to determine whether the service was performed are also different for each type <span class="No-Break">of service.</span></p>
+			<pre class="source-code">
+fun Plumbing.wasServicePerformed(): Boolean = startedAt != null &amp;&amp; completedAt != null &amp;&amp; confirmedAt != null
+fun Babysitting.wasServicePerformed(): Boolean =
+    if (startedAt == null || endedAt == null) {
+        false
+    } else {
+        Duration.between(startedAt, endedAt).toHours() &gt;= agreedHours
+    }
+fun RoomCleaning.wasServicePerformed(): Boolean = endedAt != null</pre>			<p>Lastly, the <strong class="source-inline">main</strong> function <a id="_idIndexMarker264"/>looks different from other solutions, mainly because every change in the service would end up in a new instance when using the <span class="No-Break">main function:</span></p>
+			<pre class="source-code">
+fun main() {
+    val now = Instant.now()
+    val plumbing =
+        Plumbing()
+            .start(now) { startedAt -&gt; copy(startedAt = startedAt) }
+            .complete(now.plus(2, HOURS))
+            .confirm(now.plus(2, HOURS).plus(3, MINUTES))
+    println("Was plumbing service performed? ${plumbing.wasServicePerformed()}")
+    val babysitting =
+        Babysitting(3)
+            .start(now) { startedAt -&gt; copy(startedAt = startedAt) }
+            .end(now.plus(3, HOURS))
+    println("Was babysitting service performed? ${babysitting.wasServicePerformed()}")
+    val roomCleaning =
+        RoomCleaning(setOf("Kitchen", "Bathroom"))
+            .start(now) { startedAt -&gt; copy(startedAt = startedAt) }
+            .complete(now.plus(10, MINUTES), "Kitchen")
+    println("Was room cleaning service performed? ${roomCleaning.wasServicePerformed()}")
+}</pre>			<p>Since every function uses the data class or the generic type as the receiver, the calls can be chained in the sense that the output of the current function is the input of <span class="No-Break">the next.</span></p>
+			<p>The code could end up <a id="_idIndexMarker265"/>like the <strong class="bold">Domain-Specific Language</strong> (<strong class="bold">DSL</strong>) style of expression. DSL is a specialized language designed only for a specific domain or problem. It is different from general programming languages like Kotlin or Python, which are designed to solve a wide range of problems. Powered by Kotlin’s concise and expressive syntax, it is possible to produce DSL code that is close to natural language. For example, the<a id="_idIndexMarker266"/> construction of the <strong class="source-inline">Babysitting</strong> object can be refactored to look like <span class="No-Break">the following:</span></p>
+			<pre class="source-code">
+    val babysitting = Babysitting()
+        .withAgreedHoursOf(3)
+        .startAt(startTime)
+        .endAt(endTime)</pre>			<h1 id="_idParaDest-79"><a id="_idTextAnchor100"/>Comparing all the solutions</h1>
+			<p>All these solutions are <a id="_idIndexMarker267"/>valid, though their styles vary a lot. It is important to understand the pros and cons of each approach so we can make an informed decision to apply the solution <span class="No-Break">wherever appropriate:</span></p>
+			<ul>
+				<li><span class="No-Break"><strong class="bold">Extensibility</strong></span><span class="No-Break">:</span><ul><li><strong class="bold">Polymorphic</strong>: Extensible outside package <span class="No-Break">and module</span></li><li><strong class="bold">Sealed classes</strong>: Not extensible outside package <span class="No-Break">or module</span></li><li><strong class="bold">Delegation</strong>: Extensible outside package <span class="No-Break">and module</span></li><li><strong class="bold">Functional</strong>: Extensible outside package <span class="No-Break">and module</span></li></ul></li>
+				<li><strong class="bold">Readability and </strong><span class="No-Break"><strong class="bold">code cleanness</strong></span><span class="No-Break">:</span><ul><li><strong class="bold">Polymorphic</strong>: Subclasses may inherit unnecessary features from superclasses, creating noise while reading code; classes can <span class="No-Break">be big</span></li><li><strong class="bold">Sealed classes</strong>: All subclasses are known at compile time; no missing branches; not suitable for too <span class="No-Break">many subclasses</span></li><li><strong class="bold">Delegation</strong>: Small interfaces; multiple behavioral delegations can be complicated; promotes single responsibility per interface; only delegates behaviors <span class="No-Break">on demand</span></li><li><strong class="bold">Functional</strong>: Small classes and functions; easy to reason about immutable data and pure functions; not so easy readable when it uses recursion, monads, and <span class="No-Break">higher-level abstractions</span></li></ul></li>
+				<li><span class="No-Break"><strong class="bold">Testability</strong></span><span class="No-Break">:</span><ul><li><strong class="bold">Polymorphic</strong>: Each subclass would require testing of all behaviors to ensure it behaves like its superclass, that is, that it conforms to the LSP; also, each subclass would require testing on <span class="No-Break">subclass-specific logic</span></li><li><strong class="bold">Sealed classes</strong>: Behaviors implemented in superclass only need to be tested once; any when clause and subclass-specific logic need to <span class="No-Break">be tested</span></li><li><strong class="bold">Delegation</strong>: Each small behavioral unit can be tested individually and need not repeat in <span class="No-Break">its delegation</span></li><li><strong class="bold">Functional</strong>: All small classes and functions can be tested individually without the need for repetition; each test would only need to verify the output given <span class="No-Break">the input</span></li></ul></li>
+				<li><span class="No-Break"><strong class="bold">Thread safety</strong></span><span class="No-Break">:</span><ul><li><strong class="bold">Polymorphic</strong>: Not thread-safe <span class="No-Break">by nature</span></li><li><strong class="bold">Sealed classes</strong>: Not thread-safe <span class="No-Break">by nature</span></li><li><strong class="bold">Delegation</strong>: Not thread-safe <span class="No-Break">by nature</span></li><li><strong class="bold">Functional</strong>: Thread-safe <a id="_idIndexMarker268"/>due to immutable data classes and <span class="No-Break">pure functions</span></li></ul></li>
+			</ul>
+			<h1 id="_idParaDest-80"><a id="_idTextAnchor101"/>Summary</h1>
+			<p>We used the example of three types of services (plumbing, babysitting, and room cleaning) that households can perform for each other, focusing on the start, completion, confirmation, and checks for whether the service <span class="No-Break">was performed.</span></p>
+			<p>We presented a solution that uses traditional polymorphism in object-oriented programming. An interface was defined and implemented by three subclasses, one for each type of service. The <strong class="source-inline">main</strong> function uses these subclasses in a homogeneous yet <span class="No-Break">polymorphic manner.</span></p>
+			<p>We then used the Kotlin sealed class feature to restrict all subclasses to be known. A further variation was that the sealed class was used together with the <strong class="source-inline">when</strong> construct to handle all branches within the <strong class="source-inline">when</strong> block. It resulted in a function containing all variations of the service check behaviors suitable for a small and fixed number of subclasses in <span class="No-Break">a package.</span></p>
+			<p>We presented an alternative solution that uses Kotlin delegation over polymorphism. We defined smaller interfaces for each responsibility and identified a service starter class. Then we created three classes that use the service starter class by delegation. Plumbing, babysitting, and room cleaning services were then declared as one-liners using delegation. This style allowed us to reuse code without inheriting a superclass that might have provided more than the <span class="No-Break">subclasses needed.</span></p>
+			<p>Then we used the functional approach to create immutable data classes for each type of service. We used parametric polymorphism and lambda expressions to create a <strong class="source-inline">start</strong> function for shared behavior among the three types of services. We declared several extension functions with the service as the receiver to enable chains of calls in the <span class="No-Break"><strong class="source-inline">main</strong></span><span class="No-Break"> function.</span></p>
+			<p>Lastly, we compared all the solutions in terms of extensibility, code readability, testability, and thread safety. We also briefly mentioned when a particular solution is suitable and when it <span class="No-Break">is not.</span></p>
+			<p>In the coming chapters, we will go through several architectural patterns commonly used in today’s industry. We will group similar patterns together and compare them so you will be able to customize them to solve <span class="No-Break">real-life problems.</span></p>
+		</div>
+	</div></div></body></html>

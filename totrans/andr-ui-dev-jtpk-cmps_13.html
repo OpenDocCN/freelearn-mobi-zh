@@ -1,0 +1,374 @@
+<html><head></head><body><div id="sbo-rt-content"><div id="_idContainer063">
+			<h1 id="_idParaDest-128"><a id="_idTextAnchor159"/>Chapter 10: Testing and Debugging Compose Apps</h1>
+			<p>Programming is a very creative process. Implementing great-looking <strong class="bold">user interfaces</strong> (<strong class="bold">UIs</strong>) with slick animations is pure fun with Jetpack Compose. However, making an outstanding app involves more than just writing code. Testing and debugging are equally as important because no matter how carefully you design and implement your app, bugs and glitches are inevitable, at least in non-trivial programs. Yet there is nothing to fear, as there are powerful tools you can wield to check if your code is acting as intended.</p>
+			<p>This chapter introduces you to these tools. Its main sections are listed here:</p>
+			<ul>
+				<li>Setting up and writing tests</li>
+				<li><a id="_idTextAnchor160"/>Understanding semantics</li>
+				<li>Debugging Compose apps</li>
+			</ul>
+			<p>In the first main section, I will walk you through important terms and techniques regarding testing. We will set up the infrastructure, write a simple unit test, and then turn to Compose specifics—for example, <strong class="source-inline">createComposeRule()</strong> and <strong class="source-inline">createAndroidComposeRule()</strong>.</p>
+			<p>The <em class="italic">Understanding semantics</em> section builds on these foundations. We look at how composable functions are selected—or found—in a test, and why making your app accessible also helps to write better tests. You will also learn about actions and assertions.</p>
+			<p>Failing tests often hint at bugs unless, of course, the failure is intentional. If you suspect the code being checked by a test is buggy, a debugging session is due. The final main section, <em class="italic">Debugging Compose apps</em>, explains how to examine your Compose code. We will be revisiting the semantics tree, discussed in the <em class="italic">Understanding semantics</em> section. Finally, I will show you how to take advantage of <strong class="source-inline">InspectorInfo</strong> and <strong class="source-inline">InspectorValueInfo</strong>.</p>
+			<h1 id="_idParaDest-129"><a id="_idTextAnchor161"/>Technical requirements</h1>
+			<p>This chapter is based on the <strong class="source-inline">TestingAndDebuggingDemo</strong> sample. Please refer to <em class="italic">Technical requirements</em> section of <a href="B17505_01_ePub.xhtml#_idTextAnchor014"><em class="italic">Chapter 1</em></a>, <em class="italic">Building Your First Compose App</em>, for information about how to install and set up Android Studio and how to get the repository accompanying this book.</p>
+			<p>All the code files for this chapter can be found on GitHub at <a href="https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_10">https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_10</a>.</p>
+			<h1 id="_idParaDest-130"><a id="_idTextAnchor162"/>Setting up and writing tests</h1>
+			<p>As a software developer, you probably enjoy writing code. Seeing an app gain functionality feels very rewarding, probably more than writing tests—or worse, finding bugs—yet testing and debugging are essential. Eventually, your code will contain bugs, because all non-trivial programs do. To make your developer life easier, you need to familiarize yourself with writing tests and with debugging your own and others' code. Testing an app has various facets that correspond to different types of tests, as outlined here:</p>
+			<ul>
+				<li><strong class="bold">Unit test</strong>: You<a id="_idIndexMarker356"/> need to make sure that the business logic works as expected. This, for example, means that formulae and calculations always produce correct results. </li>
+				<li><strong class="bold">Integration tests</strong>: Are <a id="_idIndexMarker357"/>all building blocks of the app properly integrated? Depending on what the app does, this may include accessing remote services, talking to a database, or reading and writing files on the device. </li>
+				<li><strong class="bold">UI tests</strong>: Is th<a id="_idIndexMarker358"/>e UI accurate? Are all UI elements visible on all supported screen sizes? Do they always show the right values? Do interactions such as button clicks or slider movements trigger the intended function? And something very important: are all parts of the app accessible?</li>
+			</ul>
+			<p>The number of <a id="_idIndexMarker359"/>tests varies among types. It has long been claimed that, ideally, most of your tests should be unit tests, followed by integration tests. This leads to the perception of a <strong class="bold">test pyramid</strong>, with <a id="_idIndexMarker360"/>unit tests being its foundation and UI tests the tip. As with all metaphors, the test pyramid has seen both support and harsh criticism. If you want to learn more about it, and testing strategies in<a id="_idIndexMarker361"/> general, please refer to the <em class="italic">Further reading</em> section at the end of this chapter. Jetpack Compose tests are UI tests. So, while you likely write many corresponding test cases, testing the underlying business logic using unit tests may well be even more important.</p>
+			<p>To make testing reliable, comprehensible, and reproducible, automation is used. In the next section, I will show you how to write unit tests using the <em class="italic">JUnit 4</em> testing framework.</p>
+			<h2 id="_idParaDest-131"><a id="_idTextAnchor163"/>Implementing unit tests</h2>
+			<p>Units are small, isolated <a id="_idIndexMarker362"/>pieces of code—usually a function, method, subroutine, or property, depending on the programming language. Let's look at a simple Kotlin function in the following code snippet:</p>
+			<p class="source-code">fun isEven(num: Int): Boolean {</p>
+			<p class="source-code">  val div2 = num / 2</p>
+			<p class="source-code">  return (div2 * 2) == num</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">isEven()</strong> determines if the passed <strong class="source-inline">Int</strong> value is even. If this is the case, the function returns <strong class="source-inline">true</strong>; otherwise, it returns <strong class="source-inline">false</strong>. The algorithm is based on the fact that only even <strong class="source-inline">Int</strong> values can be divided by <strong class="source-inline">2</strong> without a remainder. Assuming we use the function often, we certainly want to make sure that the result is always correct. But how do we do that (how do we test that)? To verify <strong class="source-inline">isEven()</strong> exhaustively, we would need to check every possible input value, ranging from <strong class="source-inline">Int.MIN_VALUE</strong> to <strong class="source-inline">Int.MAX_VALUE</strong>. Even on fast computers, this may take some time. Part of the art of writing good unit tests is to identify all the important boundaries and transitions. Regarding <strong class="source-inline">isEven()</strong>, these might be the following ones:</p>
+			<ul>
+				<li><strong class="source-inline">Int.MIN_VALUE</strong> and <strong class="source-inline">Int.MAX_VALUE</strong></li>
+				<li>One negative even and one negative odd <strong class="source-inline">Int</strong> value</li>
+				<li>One positive even and one positive odd <strong class="source-inline">Int</strong> value</li>
+			</ul>
+			<p>To write and execute unit tests, you should add the following dependencies to your module-level <strong class="source-inline">build.gradle</strong> properties file:</p>
+			<p class="source-code">androidTestImplementation "androidx.test.ext:junit:1.1.3"</p>
+			<p class="source-code">androidTestImplementation "androidx.compose.ui:ui-test-</p>
+			<p class="source-code">  junit4:$compose_version"</p>
+			<p class="source-code">debugImplementation "androidx.compose.ui:ui-test-</p>
+			<p class="source-code">  manifest:$compose_version"</p>
+			<p class="source-code">testImplementation 'junit:junit:4.13.2'</p>
+			<p class="source-code">androidTestImplementation "androidx.test.espresso:espresso-</p>
+			<p class="source-code">  core:3.4.0"</p>
+			<p>Depending on which<a id="_idIndexMarker363"/> types of tests you will be adding to your app project, some of the preceding dependencies will be optional. For example, <strong class="source-inline">androidx.test.espresso</strong> is needed only if your app also contains old-fashioned Views you wish to test (such as in interoperability scenarios).</p>
+			<p>Unit tests are executed on your development machine. Test classes are placed inside the <strong class="source-inline">app/src/test/java</strong> directory and are available through the <strong class="bold">Project</strong> tool window, as illustrated in the following screenshot. The Android Studio project assistant configures your projects accordingly and creates a test class, which I have renamed  <strong class="source-inline">SimpleUnitTest</strong>:</p>
+			<div>
+				<div id="_idContainer056" class="IMG---Figure">
+					<img src="Images/B17075_10_1.jpg" alt="Figure 10.1 – Unit tests in the Android Studio Project tool window&#13;&#10;" width="647" height="271"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.1 – Unit tests in the Android Studio Project tool window</p>
+			<p>Let's look at the<a id="_idIndexMarker364"/> class in the following code snippet:</p>
+			<p class="source-code">Package</p>
+			<p class="source-code">  eu.thomaskuenneth.composebook.testinganddebuggingdemo</p>
+			<p class="source-code">import org.junit.*</p>
+			<p class="source-code">import org.junit.Assert.assertEquals</p>
+			<p class="source-code">class SimpleUnitTest {</p>
+			<p class="source-code">  companion object {</p>
+			<p class="source-code">    @BeforeClass</p>
+			<p class="source-code">    @JvmStatic</p>
+			<p class="source-code">    fun setupAll() {</p>
+			<p class="source-code">      println("Setting things up")</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  @Before</p>
+			<p class="source-code">  fun setup() {</p>
+			<p class="source-code">    println("Setup test")</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  @After</p>
+			<p class="source-code">  fun teardown() {</p>
+			<p class="source-code">    println("Clean up test")</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  @Test</p>
+			<p class="source-code">  fun testListOfInts() {</p>
+			<p class="source-code">    val nums = listOf(Int.MIN_VALUE, -3, -2, 2, 3,</p>
+			<p class="source-code">                      Int.MAX_VALUE)</p>
+			<p class="source-code">    val results = listOf(true, false, true, true, false,</p>
+			<p class="source-code">                         false)</p>
+			<p class="source-code">    nums.forEachIndexed { index, num -&gt;</p>
+			<p class="source-code">      val result = isEven(num)</p>
+			<p class="source-code">      println("isEven($num) returns $result")</p>
+			<p class="source-code">      assertEquals(result, results[index])</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>A test class contains<a id="_idIndexMarker365"/> one or more tests. A <strong class="bold">test</strong> (also called a <strong class="bold">test case</strong>) is an ordinary <a id="_idIndexMarker366"/>Kotlin function, annotated with <strong class="source-inline">@Test</strong>. It checks certain<a id="_idIndexMarker367"/> well-defined situations, conditions, or criteria. Tests should be isolated, which means they should not rely on previous ones. My example tests if <strong class="source-inline">isEven()</strong> returns correct results for six input values. Such checks are based on <strong class="bold">assertions</strong>. An assertion<a id="_idIndexMarker368"/> formulates expected behavior. If an assertion is not met, the test fails.</p>
+			<p>If you need something to be done before or after each test, you can implement functions and annotate them with <strong class="source-inline">@Before</strong> or <strong class="source-inline">@After</strong>. You can achieve something similar using <strong class="source-inline">@Rule</strong>. We will be looking at this in the following section. To run code before all tests, you need to implement a companion object with a function annotated with <strong class="source-inline">@BeforeClass</strong> and <strong class="source-inline">@JvmStatic</strong>. <strong class="source-inline">@AfterClass</strong> is useful for cleanup purposes after all tests hav<a id="_idTextAnchor164"/>e been run.</p>
+			<p>You can run a unit test by right-clicking on the test class in the <strong class="bold">Project</strong> tool window and choosing <strong class="bold">Run '…'</strong>. Once a launch configuration for the test class has been created, you can also run the tests using the menu bar and the toolbar. Test results are presented in the <strong class="bold">Run</strong> tool window, as illustrated in the following screenshot: </p>
+			<div>
+				<div id="_idContainer057" class="IMG---Figure">
+					<img src="Images/B17075_10_2.jpg" alt="Figure 10.2 – Test results in the Android Studio Run tool window&#13;&#10;" width="1027" height="433"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.2 – Test results in the Android Studio Run tool window</p>
+			<p>Although the test <a id="_idIndexMarker369"/>passes, my implementation of <strong class="source-inline">isEven()</strong> may still not be flawless. While the test checks the upper and lower bounds, it leaves the transition between negative and positive numbers untested. Let's correct this and add another test, as follows:</p>
+			<p class="source-code">@Test</p>
+			<p class="source-code">fun testIsEvenZero() {</p>
+			<p class="source-code">  assertEquals(true, isEven(0))</p>
+			<p class="source-code">}</p>
+			<p>Fortunately, this test passes, too. </p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout">Pay close attention to the parameters a unit receives and the result it produces. Always test boundaries and transitions. Make sure to cover all code paths (if possible) and watch for pitfalls such as exceptions due to invalid arguments (for example, division by zero or wrong number formats).</p>
+			<p>Please remember that composable functions are top-level Kotlin functions, so they are prime candidates for unit tests. Let's see how this works. In the next section, you will learn to test a simple Compose UI.</p>
+			<h2 id="_idParaDest-132"><a id="_idTextAnchor165"/>Testing composable functions</h2>
+			<p>The <strong class="source-inline">SimpleButtonDemo()</strong> composable (which belongs to the <strong class="source-inline">TestingAndDebuggingDemo</strong> sample) shows<a id="_idIndexMarker370"/> a box with a button centered inside. Clicking the button for the first time changes its text from <strong class="bold">A</strong> to <strong class="bold">B</strong>. Subsequent clicks toggle between <strong class="bold">B</strong> and <strong class="bold">A</strong>. The code is illustrated in the following snippet:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun SimpleButtonDemo() {</p>
+			<p class="source-code">  val a = stringResource(id = R.string.a)</p>
+			<p class="source-code">  val b = stringResource(id = R.string.b)</p>
+			<p class="source-code">  var text by remember { mutableStateOf(a) }</p>
+			<p class="source-code">  Box(</p>
+			<p class="source-code">    modifier = Modifier.fillMaxSize(),</p>
+			<p class="source-code">    contentAlignment = Alignment.Center</p>
+			<p class="source-code">  ) {</p>
+			<p class="source-code">    Button(onClick = {</p>
+			<p class="source-code">      text = if (text == a) b else a</p>
+			<p class="source-code">    }) {</p>
+			<p class="source-code">      Text(text = text)</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>The text is stored as a mutable <strong class="source-inline">String</strong> state. It is changed inside the <strong class="source-inline">onClick</strong> block and used as a parameter for the <strong class="source-inline">Text()</strong> composable. If we want to test <strong class="source-inline">SimpleButtonDemo()</strong>, some aspects we likely need to check are these:</p>
+			<ul>
+				<li><strong class="bold">Initial state of the UI</strong>: Is the initial button text <strong class="bold">A</strong>?</li>
+				<li><strong class="bold">Behavior</strong>: Does the first button click change the text to <strong class="bold">B</strong>? <p>Do subsequent clicks toggle between <strong class="bold">B</strong> and <strong class="bold">A</strong>?</p></li>
+			</ul>
+			<p>Here's what<a id="_idIndexMarker371"/> a simple test class looks like:</p>
+			<p class="source-code">@RunWith(AndroidJUnit4::class)</p>
+			<p class="source-code">class SimpleInstrumentedTest {</p>
+			<p class="source-code">  @get:Rule</p>
+			<p class="source-code">  val rule = createComposeRule()</p>
+			<p class="source-code">  @Before</p>
+			<p class="source-code">  fun setup() {</p>
+			<p class="source-code">    rule.setContent {</p>
+			<p class="source-code">      SimpleButtonDemo()</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  @Test</p>
+			<p class="source-code">  fun testInitialLetterIsA() {</p>
+			<p class="source-code">    rule.onNodeWithText("A").assertExists()</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>Unlike the <strong class="source-inline">SimpleUnitTest</strong> class from the <em class="italic">Implementing unit tests</em> section, its source code is stored inside the <strong class="source-inline">app/src/androidTest/java</strong> directory (contrary to <strong class="source-inline">…/test/…</strong> for ordinary unit tests). <strong class="source-inline">SimpleInstrumentedTest</strong> is an <strong class="bold">instrumented test</strong>. Contrary to <a id="_idIndexMarker372"/>plain unit tests, they are not executed locally on the development machine, but on the Android Emulator or a real device, because they need Android-specific functionality to run. Instrumented tests are available through the <strong class="bold">Project</strong> tool window, as<a id="_idIndexMarker373"/> illustrated in the following screenshot: </p>
+			<div>
+				<div id="_idContainer058" class="IMG---Figure">
+					<img src="Images/B17075_10_3.jpg" alt="Figure 10.3 – Instrumented tests in the Android Studio Project tool window&#13;&#10;" width="635" height="181"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.3 – Instrumented tests in the Android Studio Project tool window</p>
+			<p>You can run an instrumented test by right-clicking on the test class in the <strong class="bold">Project</strong> tool window and choosing <strong class="bold">Run '…'</strong>. Once a launch configuration for the test class has been created, you can also run the tests using the menu bar and the toolbar. Test results are presented in the <strong class="bold">Run</strong> tool window, as illustrated in the following screenshot:</p>
+			<div>
+				<div id="_idContainer059" class="IMG---Figure">
+					<img src="Images/B17075_10_4.jpg" alt="Figure 10.4 – Instrumented test results in the Android Studio Run tool window&#13;&#10;" width="1650" height="386"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.4 – Instrumented test results in the Android Studio Run tool window</p>
+			<p>JUnit <strong class="bold">rules</strong> allow you <a id="_idIndexMarker374"/>to run some code alongside a test case. In a way, this is like having <strong class="source-inline">@Before</strong> and <strong class="source-inline">@After</strong> annotations in your test class. There are several predefined rules—for example, the <strong class="source-inline">TestName</strong> rule can provide the current test name inside a test method, as follows:</p>
+			<p class="source-code">@get:Rule</p>
+			<p class="source-code">var name = TestName()</p>
+			<p class="source-code">...</p>
+			<p class="source-code">@Test</p>
+			<p class="source-code">fun testPrintMethodName() {</p>
+			<p class="source-code">  println(name.methodName)</p>
+			<p class="source-code">}</p>
+			<p>When the <strong class="source-inline">testPrintMethodName()</strong> function runs, it prints its name. You can see the output <a id="_idIndexMarker375"/>in <strong class="bold">Logcat</strong>. Please remember—you need to apply the <strong class="source-inline">@Rule</strong> annotation to the property getter by adding <strong class="source-inline">get:</strong>. Failing to do so will result in a <strong class="source-inline">ValidationError</strong> (<strong class="source-inline">The @Rule '…' must be public</strong>) message during execution.</p>
+			<p>Compose tests are based on rules. <strong class="source-inline">createComposeRule()</strong> returns an implementation of the <strong class="source-inline">ComposeContentTestRule</strong> interface, which extends <strong class="source-inline">ComposeTestRule</strong>. This interface in turn extends <strong class="source-inline">org.junit.rules.TestRule</strong>. Each <strong class="source-inline">TestRule</strong> instance implements <strong class="source-inline">apply()</strong>. This method receives <strong class="source-inline">Statement</strong> and returns the same, a modified, or completely new <strong class="source-inline">Statement</strong>. However, writing your own test rules is beyond the scope of this book. To learn more, please refer to the <em class="italic">Further reading</em> section at the end of this chapter.</p>
+			<p>Which implementation of the <strong class="source-inline">ComposeContentTestRule</strong> interface <strong class="source-inline">createComposeRule()</strong> returns depends on the platform. It is <strong class="source-inline">AndroidComposeTestRule&lt;ComponentActivity&gt;</strong> on Android. That is why you should add a dependency to <strong class="source-inline">androidx.compose.ui:ui-test-manifest</strong> in the module-level <strong class="source-inline">build.gradle</strong> file. Otherwise, you may need to manually add a reference to <strong class="source-inline">ComponentActivity</strong> in the manifest file.</p>
+			<p><strong class="source-inline">createAndroidComposeRule()</strong> allows you to create <strong class="source-inline">AndroidComposeTestRule</strong> for activity classes other than <strong class="source-inline">ComponentActivity</strong>. This is useful if you require the functionality of this activity in a test. On Compose for Desktop or Web, <strong class="source-inline">createComposeRule()</strong> may return different implementations of <strong class="source-inline">ComposeContentTestRule</strong>, depending on where the Compose UI is hosted. To help make your tests platform-independent, use <strong class="source-inline">createComposeRule()</strong> whenever possible.</p>
+			<p>Your test cases use (among others) methods provided by <strong class="source-inline">ComposeContentTestRule</strong> implementations. For example, <strong class="source-inline">setContent()</strong> sets the composable function to act as the content of the current screen—that is, the UI to be tested. <strong class="source-inline">setContent()</strong> should be called exactly once per test. To achieve this, just invoke it in a <a id="_idIndexMarker376"/>function annotated with <strong class="source-inline">@Before</strong>.</p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout">If you want to reuse your tests among platforms, try to rely only on methods defined in the <strong class="source-inline">ComposeContentTestRule</strong>, <strong class="source-inline">ComposeContentTestRule</strong>, and <strong class="source-inline">TestRule</strong> interfaces. Avoid calling functions from the implementation.</p>
+			<p>Next, let's look at <strong class="source-inline">testInitialLetterIsA()</strong>. This test case checks if the initial button text is <strong class="bold">A</strong>. To do so, the test must find the button, get its text, and compare it to <strong class="source-inline">"A"</strong>. This comparison is done with an <strong class="source-inline">assertExists()</strong> <strong class="bold">assertion</strong>. <strong class="source-inline">onNodeWithText()</strong> is called<a id="_idIndexMarker377"/> a <strong class="bold">finder</strong>. Finders work on <strong class="bold">semantics nodes</strong>, and you <a id="_idIndexMarker378"/>will learn more about these in the <em class="italic">Understanding semantics</em> section. But first: why do we need to <em class="italic">find</em> the composable to be tested anyway?</p>
+			<p>Unlike the traditional View system, Jetpack Compose does not use references to identify individual UI elements. Please remember that such references are needed in an imperative approach to modify the component tree during runtime. But this is not how Compose works—instead, we declare how the UI should look based on state. Yet, to test if a particular composable looks and behaves as expected, we need to find it among all other children of a Compose hierarchy.</p>
+			<p>This is where the <strong class="bold">semantics tree</strong> comes <a id="_idIndexMarker379"/>into play. As the name implies, <em class="italic">semantics</em> give meaning to a UI element or element hierarchies. The semantics tree is generated alongside the UI hierarchy, which it describes using attributes such as <strong class="source-inline">Role</strong>, <strong class="source-inline">Text</strong>, and <strong class="source-inline">Actions</strong>. It is used for accessibility and testing.</p>
+			<p>Before we move on, let's briefly recap: <strong class="source-inline">onNodeWithText()</strong> tries to find a composable (to be, more precisely, a semantics node) with a given text. <strong class="source-inline">assertExists()</strong> checks if a matching node is present in the current UI. If so, the test passes. Otherwise, it fails.</p>
+			<h1 id="_idParaDest-133"><a id="_idTextAnchor166"/>Understanding semantics</h1>
+			<p>In the previous section, I showed you a simple test case that checks if a button text matches a given string. Here is another test case. It performs a click on the button to see if the button text<a id="_idIndexMarker380"/> changes as expected:</p>
+			<p class="source-code">@Test</p>
+			<p class="source-code">fun testLetterAfterButtonClickIsB() {</p>
+			<p class="source-code">  rule.onNodeWithText("A")</p>
+			<p class="source-code">    .performClick()</p>
+			<p class="source-code">    .assert(hasText("B"))</p>
+			<p class="source-code">}</p>
+			<p>Again, we start by finding the button. <strong class="source-inline">performClick()</strong> (this is called an <strong class="bold">action</strong>) clicks it. <strong class="source-inline">Assert(hasText("B"))</strong> checks if the button text is <strong class="bold">B</strong> afterward. Assertions determine if a test passes or fails.</p>
+			<p><strong class="source-inline">onNodeWithText()</strong> (an extension function of <strong class="source-inline">SemanticsNodeInteractions Provider</strong>) returns a <strong class="source-inline">SemanticsNodeInteraction</strong> semantics node. The <strong class="source-inline">SemanticsNodeInteractionsProvider</strong> interface is the main entry point into testing and is typically implemented by a test rule. It defines two methods, as follows:</p>
+			<ul>
+				<li><strong class="source-inline">onNode()</strong> finds and returns a semantics node (<strong class="source-inline">SemanticsNodeInteraction</strong>) that matches the given condition.</li>
+				<li><strong class="source-inline">onAllNodes()</strong> finds all semantics nodes that match the given condition. It returns a <strong class="source-inline">SemanticsNodeInteractionCollection</strong> instance.</li>
+			</ul>
+			<p>Both are called <strong class="bold">finders</strong> because <a id="_idIndexMarker381"/>they return (<em class="italic">find</em>) semantics nodes matching certain conditions.</p>
+			<h2 id="_idParaDest-134"><a id="_idTextAnchor167"/>Working with semantics nodes</h2>
+			<p>To see what the <a id="_idIndexMarker382"/>semantics node we tested with <strong class="source-inline">testLetterAfterButtonClickIsB()</strong> from the previous section looks like, you can add the following expression after <strong class="source-inline">.assert(…)</strong>:</p>
+			<p class="source-code">.printToLog("SimpleInstrumentedTest")</p>
+			<p>The result is visible in <strong class="bold">Logcat</strong>, as illustrated in the following screenshot:</p>
+			<div>
+				<div id="_idContainer060" class="IMG---Figure">
+					<img src="Images/B17075_10_5.jpg" alt="Figure 10.5 – A semantics node in Logcat&#13;&#10;" width="1103" height="310"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.5 – A semantics node in Logcat</p>
+			<p><strong class="source-inline">SemanticsNodeInteraction</strong> represents a semantics node. You can interact with a node by <a id="_idIndexMarker383"/>performing actions such as <strong class="source-inline">performClick()</strong> or assertions such as <strong class="source-inline">assertHasClickAction()</strong>, or you can navigate to other nodes such as <strong class="source-inline">onChildren()</strong>. Such functions are extension functions of <strong class="source-inline">SemanticsNodeInteraction</strong>. <strong class="source-inline">SemanticsNodeInteractionCollection</strong> is a collection of semantics nodes. </p>
+			<p>Let's look at another finder function, <strong class="source-inline">onNodeWithContentDescription()</strong>. We will be using it to test if <strong class="source-inline">Image()</strong> is part of the current UI. The code is illustrated in the following snippet:</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun ImageDemo() {</p>
+			<p class="source-code">  Image(</p>
+			<p class="source-code">    painter = painterResource(id =</p>
+			<p class="source-code">        R.drawable.ic_baseline_airport_shuttle_24),</p>
+			<p class="source-code">    contentDescription = stringResource(id =</p>
+			<p class="source-code">        R.string.airport_shuttle),</p>
+			<p class="source-code">    contentScale = ContentScale.FillBounds,</p>
+			<p class="source-code">    modifier = Modifier</p>
+			<p class="source-code">      .size(width = 128.dp, height = 128.dp)</p>
+			<p class="source-code">      .background(Color.Blue)</p>
+			<p class="source-code">  )</p>
+			<p class="source-code">}</p>
+			<p>If the UI of your app contains images, you should add content descriptions for them in most cases. Content descriptions are used, for example, by accessibility software to describe to visually impaired people what is currently presented on screen. So, by adding them, you greatly enhance the usability. Additionally, content descriptions help in finding <a id="_idIndexMarker384"/>composables. You can see these being used in the following code snippet:</p>
+			<p class="source-code">@RunWith(AndroidJUnit4::class)</p>
+			<p class="source-code">class AnotherInstrumentedTest {</p>
+			<p class="source-code">  @get:Rule</p>
+			<p class="source-code">  val rule = createComposeRule()</p>
+			<p class="source-code">  @Test</p>
+			<p class="source-code">  fun testImage() {</p>
+			<p class="source-code">    var contentDescription = ""</p>
+			<p class="source-code">    rule.setContent {</p>
+			<p class="source-code">      ImageDemo()</p>
+			<p class="source-code">      contentDescription = stringResource(id =</p>
+			<p class="source-code">          R.string.airport_shuttle)</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">    rule.onNodeWithContentDescription(contentDescription)</p>
+			<p class="source-code">      .assertWidthIsEqualTo(128.dp)</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">testImage()</strong> first sets the content (<strong class="source-inline">ImageDemo()</strong>). It then finds a semantics node with the given content description. Finally, <strong class="source-inline">assertWidthIsEqualTo()</strong> checks if the width of the UI element represented by this node is 128 density-independent pixels wide.</p>
+			<p class="callout-heading">Tip</p>
+			<p class="callout">Have you noticed that I used <strong class="source-inline">stringResource()</strong> to obtain the content description? Hardcoded values can lead to subtle bugs in tests (for example, spelling errors or typos). To avoid them, try to write your tests in a way that they access the same values as the code being tested. But please keep in mind that under the hood, <strong class="source-inline">stringResource()</strong> relies on Android resources. So, the test case is platform-specific.</p>
+			<p>Using <strong class="source-inline">onNodeWithText()</strong> and <strong class="source-inline">onNodeWithContentDescription()</strong> makes it easy to <a id="_idIndexMarker385"/>find composable functions that contain texts and images. But what if you need to find the semantics node for something else—for example, a <strong class="source-inline">Box()</strong>? The following example, <strong class="source-inline">BoxButtonDemo()</strong>, shows a <strong class="source-inline">Box()</strong> with a <strong class="source-inline">Button()</strong> centered inside. Clicking the button toggles the background color of the box from white to light gray and back:</p>
+			<p class="source-code">val COLOR1 = Color.White</p>
+			<p class="source-code">val COLOR2 = Color.LightGray</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun BoxButtonDemo() {</p>
+			<p class="source-code">  var color by remember { mutableStateOf(COLOR1) }</p>
+			<p class="source-code">  Box(</p>
+			<p class="source-code">    modifier = Modifier</p>
+			<p class="source-code">      .fillMaxSize()</p>
+			<p class="source-code">      .background(color = color),</p>
+			<p class="source-code">    contentAlignment = Alignment.Center</p>
+			<p class="source-code">  ) {</p>
+			<p class="source-code">    Button(onClick = {</p>
+			<p class="source-code">      color = if (color == COLOR1)</p>
+			<p class="source-code">        COLOR2</p>
+			<p class="source-code">      else</p>
+			<p class="source-code">        COLOR1</p>
+			<p class="source-code">    }) {</p>
+			<p class="source-code">      Text(text = stringResource(id = R.string.toggle))</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>Testing <strong class="source-inline">BoxButtonDemo()</strong> means <a id="_idIndexMarker386"/>finding the box, checking its initial background color, clicking the button, and checking the color again. To be able to find the box, we tag it using the <strong class="source-inline">testTag()</strong> modifier, as illustrated in the following code snippet. Applying a tag allows us to find the modified element in tests:</p>
+			<p class="source-code">val TAG1 = "BoxButtonDemo"</p>
+			<p class="source-code">Box(</p>
+			<p class="source-code">  modifier = ...</p>
+			<p class="source-code">    .testTag(TAG1)</p>
+			<p class="source-code">    ...</p>
+			<p>We can check if the box is present, as follows:</p>
+			<p class="source-code">@Test</p>
+			<p class="source-code">fun testBoxInitialBackgroundColorIsColor1() {</p>
+			<p class="source-code">  rule.setContent {</p>
+			<p class="source-code">    BoxButtonDemo()</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  rule.onNode(hasTestTag(TAG1)).assertExists()</p>
+			<p class="source-code">}</p>
+			<p>The <strong class="source-inline">onNode()</strong> finder receives a <strong class="source-inline">hasTestTag()</strong> <strong class="bold">matcher</strong>. Matchers<a id="_idIndexMarker387"/> find nodes that meet certain<a id="_idIndexMarker388"/> criteria. <strong class="source-inline">hasTestTag()</strong> finds a node with the given test tag. There are several predefined matchers. For example, <strong class="source-inline">isEnabled()</strong> returns whether the node is enabled, and <strong class="source-inline">isToggleable()</strong> returns <strong class="source-inline">true</strong> if the node can be toggled.</p>
+			<p class="callout-heading">Tip</p>
+			<p class="callout">Google provides a testing cheat sheet at <a href="https://developer.android.com/jetpack/compose/testing-cheatsheet">https://developer.android.com/jetpack/compose/testing-cheatsheet</a>. It nicely groups finders, matchers, actions, and assertions.</p>
+			<p>To complete the code for the test, we need to check the background color of the box. But how do we do that? Following previous examples, you may expect a <strong class="source-inline">hasBackgroundColor()</strong> matcher. Unfortunately, there currently is none. Tests can rely only on what is available through the semantics tree, yet if it does not contain the information we need, we can easily add it. I will show you ho<a id="_idTextAnchor168"/>w in the following section.</p>
+			<h2 id="_idParaDest-135"><a id="_idTextAnchor169"/>Adding custom semantics properties</h2>
+			<p>If you want to expose <a id="_idIndexMarker389"/>additional information to tests, you can create custom semantics properties. This requires the following:</p>
+			<ul>
+				<li>Defining <strong class="source-inline">SemanticsPropertyKey</strong></li>
+				<li>Making it available using <strong class="source-inline">SemanticsPropertyReceiver</strong></li>
+			</ul>
+			<p>You can see these in use in the following code snippet:</p>
+			<p class="source-code">val BackgroundColorKey =</p>
+			<p class="source-code">        SemanticsPropertyKey&lt;Color&gt;("BackgroundColor")</p>
+			<p class="source-code">var SemanticsPropertyReceiver.backgroundColor by</p>
+			<p class="source-code"> BackgroundColorKey</p>
+			<p class="source-code">@Composable</p>
+			<p class="source-code">fun BoxButtonDemo() {</p>
+			<p class="source-code">  ...</p>
+			<p class="source-code">  Box(</p>
+			<p class="source-code">    modifier = ...</p>
+			<p class="source-code">      .semantics { backgroundColor = color }</p>
+			<p class="source-code">      .background(color = color),</p>
+			<p class="source-code">      ...</p>
+			<p>With <strong class="source-inline">SemanticsPropertyKey</strong>, you can set key-value pairs in semantics blocks in a type-safe way. Each key has one statically defined value type—in my example, this is <strong class="source-inline">Color</strong>. <strong class="source-inline">SemanticsPropertyReceiver</strong> is the scope provided by <strong class="source-inline">semantics {}</strong> blocks. It is intended for <a id="_idIndexMarker390"/>setting key-value pairs via extension functions.</p>
+			<p>Here's how to access the custom semantic property in a test case:</p>
+			<p class="source-code">@Test</p>
+			<p class="source-code">fun testBoxInitialBackgroundColorIsColor1() {</p>
+			<p class="source-code">  rule.setContent {</p>
+			<p class="source-code">    BoxButtonDemo()</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">  rule.onNode(SemanticsMatcher.expectValue</p>
+			<p class="source-code">             (BackgroundColorKey,COLOR1))</p>
+			<p class="source-code">     .assertExists()</p>
+			<p class="source-code">}</p>
+			<p><strong class="source-inline">expectValue()</strong> checks whether the value of the given key is equal to the expected value.</p>
+			<p>Adding custom values to the semantics tree can be of great help when writing tests. However, please carefully consider if you really need to rely on <strong class="source-inline">SemanticsPropertyKey</strong>. The semantics tree is also used by the accessibility framework and tools, so it is vital to not pollute the semantics tree with irrelevant information. A solution is to <a id="_idIndexMarker391"/>rethink the testing strategy. Instead of testing <em class="italic">if the initial background color of the box is white</em>, we may just test if the value we pass to the <strong class="source-inline">background()</strong> function represents white.</p>
+			<p>This concludes the sections on testing composable functions. In the following section, we look at debugging Compose apps.</p>
+			<h1 id="_idParaDest-136"><a id="_idTextAnchor170"/>Debugging Compose apps</h1>
+			<p>The title of this section, <em class="italic">Debugging Compose apps</em>, may indicate major differences to debugging traditional <a id="_idIndexMarker392"/>View-based apps. Fortunately, this is not the case. On Android, all composable hierarchies are wrapped inside <strong class="source-inline">androidx.compose.ui.platform.ComposeView</strong>. This happens indirectly if you invoke the <strong class="source-inline">setContent {}</strong> extension function of <strong class="source-inline">ComponentActivity</strong>, or if you deliberately include a composable hierarchy inside a layout (see <a href="B17505_09_ePub.xhtml#_idTextAnchor148"><em class="italic">Chapter 9</em></a>, <em class="italic">Exploring Interoperability APIs</em>). Either way, in the end, <strong class="source-inline">ComposeView</strong> is displayed on screen—for example, inside an Activity or a Fragment. Therefore, all aspects regarding the basic building blocks of an Android app (Activities, Fragments, Services, Broadcast Receiver, Intents, and Content Provider) remain the same.</p>
+			<p>Of course, any UI framework advocates specific debugging habits. For example, the View system requires watching for <strong class="source-inline">null</strong> references. Also, you need to make sure that changes in state reliably trigger updates of the component tree. Fortunately, neither is relevant for Jetpack Compose. As composables are Kotlin functions, you can follow the creation of the composable hierarchy by stepping through the code and examining <strong class="source-inline">State</strong> when needed.</p>
+			<p>To closely examine the visual representation of your composable functions during runtime, you can use the <strong class="bold">Layout Inspector</strong> of Android Studio, as illustrated in the following screenshot. Once you have deployed your app on the Emulator or a real device, open the tool with <strong class="bold">Layout Inspector</strong> in the <strong class="bold">Tools</strong> menu:</p>
+			<div>
+				<div id="_idContainer061" class="IMG---Figure">
+					<img src="Images/B17075_10_6.jpg" alt="Figure 10.6 – The Layout Inspector in Android Studio&#13;&#10;" width="1464" height="567"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.6 – The Layout Inspector in Android Studio</p>
+			<p>You can select<a id="_idIndexMarker393"/> the composable to inspect using the tree on the left-hand side of the Android Studio main window. Important attributes are presented on the right. The center of the tool window contains a configurable, zoomable preview. You can also enable a <strong class="bold">three-dimensional</strong> (<strong class="bold">3D</strong>) mode. This allows you to visually inspect the hierarchy by clicking and dragging to rotate the layout.</p>
+			<p>If you want to log important values of a composable for debugging purposes, you can easily achieve this with modifiers. The following section shows you how to do this.</p>
+			<h2 id="_idParaDest-137"><a id="_idTextAnchor171"/>Using custom modifiers for logging and debugging</h2>
+			<p>As I explained in the <em class="italic">Modifying behavior</em> section of <a href="B17505_03_ePub.xhtml#_idTextAnchor054"><em class="italic">Chapter 3</em></a>, <em class="italic">Exploring the Key Principles of Compose</em>, a modifier is an ordered, immutable collection of modifier elements. Modifiers can<a id="_idIndexMarker394"/> change the look and behavior of Compose UI<a id="_idIndexMarker395"/> elements. You create custom modifiers by implementing an extension function of <strong class="source-inline">Modifier</strong>. The following code snippet uses the <strong class="source-inline">DrawScope</strong> interface to print the size of a composable:</p>
+			<p class="source-code">fun Modifier.simpleDebug() = then(object : DrawModifier {</p>
+			<p class="source-code">  override fun ContentDrawScope.draw() {</p>
+			<p class="source-code">    println("width=${size.width}, height=${size.height}")</p>
+			<p class="source-code">    drawContent()</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">})</p>
+			<p>Depending on which interface you choose, you can log different aspects. Using <strong class="source-inline">LayoutModifier</strong> you could, for example, access layout-related information.</p>
+			<p class="callout-heading">Important Note</p>
+			<p class="callout">While this may be a clever trick, it is certainly not the primary use case for modifiers. Therefore, if you implement a custom modifier merely for debugging purposes, you should add it to the modifier chain only when debugging.</p>
+			<p>There is also a built-in<a id="_idIndexMarker396"/> feature to provide additional information for<a id="_idIndexMarker397"/> debugging purposes. Several modifiers can receive an <strong class="source-inline">inspectorInfo</strong> parameter, which is an extension function of <strong class="source-inline">InspectorInfo</strong>. This class is a builder for an <strong class="source-inline">InspectableValue</strong> interface (this interface defines a value that is inspectable by tools, giving access to private parts of a value). <strong class="source-inline">InspectorInfo</strong> has three properties, as follows:</p>
+			<ul>
+				<li><strong class="source-inline">name</strong> (provides <strong class="source-inline">nameFallback</strong> for <strong class="source-inline">InspectableValue</strong>)</li>
+				<li><strong class="source-inline">value</strong> (provides <strong class="source-inline">valueOverride</strong> for <strong class="source-inline">InspectableValue</strong>)</li>
+				<li><strong class="source-inline">properties</strong> (provides <strong class="source-inline">inspectableElements</strong> for <strong class="source-inline">InspectableValue</strong>)</li>
+			</ul>
+			<p>To understand how <strong class="source-inline">inspectorInfo</strong> is used, let's look in the following screenshot at the implementation of the <strong class="source-inline">semantics {}</strong> modifier, which adds semantics key-value pairs for testing and accessibility. Please refer to the <em class="italic">Adding custom semantics properties</em> section for details:</p>
+			<div>
+				<div id="_idContainer062" class="IMG---Figure">
+					<img src="Images/B17075_10_7.jpg" alt="Figure 10.7 – Source code of the semantics {} modifier&#13;&#10;" width="983" height="343"/>
+				</div>
+			</div>
+			<p class="figure-caption">Figure 10.7 – Source code of the semantics {} modifier</p>
+			<p><strong class="source-inline">semantics {}</strong> invokes the <strong class="source-inline">composed {}</strong> modifier, which receives two parameters, <strong class="source-inline">inspectorInfo</strong> and <strong class="source-inline">factory</strong> (the modifier to be composed). The <strong class="source-inline">inspectorInfo</strong> parameter gets the result of the <strong class="source-inline">debugInspectorInfo {}</strong> factory method (which receives a <strong class="source-inline">name</strong> instance and two elements for <strong class="source-inline">properties</strong> as parameters).</p>
+			<p><strong class="source-inline">composed {}</strong> adds a <strong class="source-inline">ComposedModifier</strong> class<a id="_idIndexMarker398"/> to the modifier chain. This private class implements the <strong class="source-inline">Modifier.Element</strong> interface and extends <strong class="source-inline">InspectorValueInfo</strong>, which in <a id="_idIndexMarker399"/>turn implements <strong class="source-inline">InspectorValueInfo</strong>. The <strong class="source-inline">inspectableElements</strong> property keeps <strong class="source-inline">Sequence</strong> of <strong class="source-inline">ValueElements</strong>.</p>
+			<p>To turn on debug inspector information, you must set the <strong class="source-inline">isDebugInspectorInfoEnabled</strong> global top-level variable in the <strong class="source-inline">androidx.compose.ui.platform</strong> package to <strong class="source-inline">true</strong>. Then, you can access and print debug inspector information using reflection. Here's the code you'll need:</p>
+			<p class="source-code">.semantics { backgroundColor = color }.also {</p>
+			<p class="source-code">  (it as CombinedModifier).run {</p>
+			<p class="source-code">    val inner = this.javaClass.getDeclaredField("inner")</p>
+			<p class="source-code">    inner.isAccessible = true</p>
+			<p class="source-code">    val value = inner.get(this) as InspectorValueInfo</p>
+			<p class="source-code">    value.inspectableElements.forEach {</p>
+			<p class="source-code">      println(it)</p>
+			<p class="source-code">    }</p>
+			<p class="source-code">  }</p>
+			<p class="source-code">}</p>
+			<p>The modifier <a id="_idIndexMarker400"/>returned by <strong class="source-inline">semantics {}</strong> is of type <strong class="source-inline">CombinedModifier</strong> because <strong class="source-inline">composed {}</strong> invokes <strong class="source-inline">then()</strong>, which uses <strong class="source-inline">CombinedModifier</strong> under the<a id="_idIndexMarker401"/> hood. Instead of just printing the raw inspectable element, you can customize the output to your needs.</p>
+			<h1 id="_idParaDest-138"><a id="_idTextAnchor172"/>Summary</h1>
+			<p>In this chapter, we looked at important terms and techniques regarding testing. In the first main section, we set up the infrastructure, wrote and ran a simple unit test locally on the development machine, and then turned to Compose specifics. I introduced you to <strong class="source-inline">createComposeRule()</strong> and <strong class="source-inline">createAndroidComposeRule()</strong>.</p>
+			<p>Next, we looked at how composable functions are found in a Compose hierarchy, and why making your app accessible also helps in writing better tests. You also learned about actions and assertions. Finally, we added custom entries to the semantics tree.</p>
+			<p>The final main section explained how to debug a Compose app. We revisited the semantics tree, and I showed you how to take advantage of <strong class="source-inline">InspectorInfo</strong> and <strong class="source-inline">InspectorValueInfo</strong> to debug custom modifiers.</p>
+			<p><a href="B17505_11_ePub.xhtml#_idTextAnchor174"><em class="italic">Chapter 11</em></a>, <em class="italic">Conclusion and Next Steps,</em> concludes this book. We look in the crystal ball to see what future versions of Jetpack Compose may add. For example, we preview Material 3 for Compose, which brings <em class="italic">Material You</em> design concepts to Compose apps. And we look beyond Android and examine Compose on other platforms.</p>
+			<h1 id="_idParaDest-139"><a id="_idTextAnchor173"/>Further reading</h1>
+			<ul>
+				<li>This book assumes a basic understanding of how to test Android apps. To learn more, please refer to <em class="italic">Test apps on Android</em> at <a href="https://developer.android.com/training/testing">https://developer.android.com/training/testing</a>.</li>
+				<li><em class="italic">JUnit in Action</em> by <em class="italic">Catalin Tudose</em> (<em class="italic">Manning Publications</em>, <em class="italic">2020</em>, <em class="italic">ISBN 978-1617297045</em>) is a thorough introduction to the latest version of the JUnit testing framework.</li>
+				<li>If you want to learn more about test automation, you may want to look at <em class="italic">Complete Guide to Test Automation: Techniques, Practices, and Patterns for Building and Maintaining Effective Software Projects</em> by <em class="italic">Arnon Axelrod</em> (<em class="italic">Apress</em>, <em class="italic">2018</em>, <em class="italic">ISBN 978-1484238318</em>).</li>
+				<li>To get an insight into the test pyramid metaphor, you may want to refer to <em class="italic">The Practical Test Pyramid</em> by <em class="italic">Ham Vocke</em>, available at <a href="https://martinfowler.com/articles/practical-test-pyramid.html">https://martinfowler.com/articles/practical-test-pyramid.html</a>.</li>
+			</ul>
+		</div>
+	</div></body></html>

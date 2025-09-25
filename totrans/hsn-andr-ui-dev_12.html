@@ -1,0 +1,379 @@
+<html><head></head><body>
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Customizing Widgets and Layouts</h1>
+                </header>
+            
+            <article>
+                
+<p>In everyday development on Android, you'll find that the core platform and support libraries offer a wide range of widgets and layouts for you to build your application. There are also a wealth of open source and third-party widgets available on the internet. The <em>Android Arsenal</em> website (<a href="https://android-arsenal.com/" target="_blank">https://android-arsenal.com/</a>) is a well-cataloged list of APIs available for Android, and it is an excellent starting point when you need some functionality that is not available in the platform or support libraries. Even with this massive wealth of available widgets and libraries, you'll sometimes find yourself wanting a widget that hasn't already been built.</p>
+<p>Creating your own widgets on any platform is a sizable undertaking. Widgets need to be able to render themselves to look as native as possible using graphics primitives such as lines, arcs, circles, and polygons. Many Android widgets (such as <kbd>Button</kbd>) avoid having to do this using the excellent <kbd>Drawable</kbd> class and resources. This enables you to customize the look of widgets simply by changing the drawable resources they use to a stateful drawable (as you did with the <kbd>RadioButton</kbd> widgets in <a href="6ed5cfcb-b233-4bf0-b6fd-012432897224.xhtml" target="_blank">Chapter 2</a>, <em>Designing Form Screens</em>).</p>
+<p>In this chapter, we'll take a look at how to build custom widgets and layout components. We'll take a look at the best practices to use when building your own <kbd>View</kbd> implementations, and how to render 2D graphics using the Android graphics APIs. Specifically, we'll explore the following:</p>
+<ul>
+<li style="font-weight: 400">Creating a completely custom <kbd>View</kbd> class</li>
+<li style="font-weight: 400">Rendering 2D graphics using graphics primitives</li>
+<li style="font-weight: 400">How to create a custom <kbd>ViewGroup</kbd> to produce custom layout effects</li>
+<li>Rendering animations using <kbd>Drawable</kbd> objects</li>
+<li style="font-weight: 400">Creating <kbd>View</kbd> classes that self-animate</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Creating custom view implementations</h1>
+                </header>
+            
+            <article>
+                
+<p>Sometimes, the existing widgets just aren't enough, no matter how much you customize them. Sometimes, you need to display something that simply isn't supported by the platform. In these cases, you might find yourself needing to implement your own custom widget. The <kbd>View</kbd> class can be easily extended to produce many different effects, but there are a few things that are worth knowing before you tackle it:</p>
+<ul>
+<li style="font-weight: 400">The rendering for a <kbd>View</kbd> is expected to happen in the <kbd>onDraw</kbd> method.</li>
+<li style="font-weight: 400">When rendering the graphics for the <kbd>View</kbd>, you'll use a <kbd>Canvas</kbd> to send the drawing instructions.</li>
+<li style="font-weight: 400">Each <kbd>View</kbd> is responsible for calculating the offsets for its padding, and by default, the graphics will be clipped to these dimensions.</li>
+<li style="font-weight: 400">You should avoid any object allocation (including arrays, if possible) in the <kbd>onDraw</kbd> method. The <kbd>onDraw</kbd> methods are probably the most time-sensitive method calls in any application, and need to produce as little garbage as possible. Any object allocations should be done in other methods and just used in the <kbd>onDraw</kbd> implementation.</li>
+</ul>
+<p>In the travel claims example, it will be really nice if the user can see a simple overview graph of their spending for the last few days. To do this, we'll need to write a class that can draw this graph for them. It's useful to be able to change some of the <kbd>View</kbd> attributes (specifically, the size and color of the line graph) using the layout XML file. For this, you'll need to specify the attribute names and their type information for the layout resource compiler. Follow these instructions to write a simple line-graph <kbd>View</kbd> implementation:</p>
+<ol>
+<li style="font-weight: 400">Right-click on the <kbd>res/values</kbd> resource directory in the travel claim app and select <span class="packt_screen">New|</span> <span class="packt_screen">Values resource file</span>.</li>
+<li style="font-weight: 400">Name the new file <kbd>attrs_spending_graph_view</kbd>.</li>
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new resource file.</li>
+<li style="font-weight: 400">You'll use this file to declare some new XML attributes for the resource compiler that can be used in your layout XML files when dealing with your new graph <kbd>View</kbd> class. These XML attributes are given type information (in the form of a <kbd>format</kbd> attribute), which affects how the resource compiler handles them in the layout XML:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;resources&gt;<br/>  &lt;declare-styleable name="SpendingGraphView"&gt;<br/>    &lt;attr name="strokeColor" format="color" /&gt;<br/>    &lt;attr name="strokeWidth" format="dimension" /&gt;<br/>  &lt;/declare-styleable&gt;<br/>&lt;/resources&gt;</pre>
+<ol start="5">
+<li style="font-weight: 400">Now, right-click on the widget package and select <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>.</li>
+<li style="font-weight: 400">Name the new class <kbd>SpendingGraphView</kbd>.</li>
+<li style="font-weight: 400">Change the <kbd>Superclass</kbd> to <kbd>android.view.View</kbd>.</li>
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new class.</li>
+<li style="font-weight: 400">In the <kbd>SpendingGraphView</kbd>, declare variables to hold the values that can be specified in the layout XML files. These should typically reflect the names used in the XML file, and should be initialized with sensible default values:</li>
+</ol>
+<pre style="padding-left: 60px">private int strokeColor = Color.GREEN;<br/>private int strokeWidth = 2;</pre>
+<ol start="10">
+<li>Next, declare an array for the data points to be rendered into the graph. In this implementation, we'll assume that each data point is the amount spent on an unspecified day:</li>
+</ol>
+<pre style="padding-left: 60px">private double[] spendingPerDay;</pre>
+<ol start="11">
+<li>As mentioned earlier, the <kbd>onDraw</kbd> implementation should have to do as little work as possible. In this graph implementation, it means that the entire graph is actually calculated ahead of time, and cached in local variables to be drawn in the <kbd>onDraw</kbd> method. The Android graphics APIs provide a <kbd>Path</kbd> class to define any abstract group of connected lines, and the <kbd>Paint</kbd> class that defines the colors, stroke size (pen), fill-style, and so on. You'll need to declare one of each of these to be calculated and rendered:</li>
+</ol>
+<pre style="padding-left: 60px">private Path path = null;<br/>private Paint paint = null;</pre>
+<div class="packt_infobox">Storing the widget's rendering state on a field in the class might seem to go against everything you know about where you should store and pass state, but a widget is a form of state container. Its job is to present its state to the user and to capture events to trigger state changes. Keeping the construction of the graphics primitives out of the <kbd>onDraw</kbd> implementation means that the graphics pipeline isn't slowed by recalculating the graphics state from the graph data for every frame.</div>
+<ol start="12">
+<li>Now, implement the standard constructors for a <kbd>View</kbd> class. You'll want all of these constructors to invoke a single <kbd>init()</kbd> method to handle the actual initialization of the widget, which in this case, will also need to fetch and read the attributes given in the layout XML:</li>
+</ol>
+<pre style="padding-left: 60px">public SpendingGraphView(final Context context) {<br/>  super(context);<br/>  init(null, 0);<br/>}<br/><br/>public SpendingGraphView(<br/>    final Context context,<br/>    final AttributeSet attrs) {<br/>  super(context, attrs);<br/>  init(attrs, 0);<br/>}<br/><br/>public SpendingGraphView(<br/>    final Context context,<br/>    final AttributeSet attrs,<br/>    final int defStyle) {<br/>  super(context, attrs, defStyle);<br/>  init(attrs, defStyle);<br/>}</pre>
+<ol start="13">
+<li>Now, implement the <kbd>init</kbd> method and use the <kbd>Context</kbd> to convert the <kbd>AttributeSet</kbd> object and its data into a <kbd>TypedArray</kbd> object. This is where all the style information is merged in from the current <kbd>Theme</kbd> of the application. When you are finished with a <kbd>TypedArray</kbd>, you need to recycle them, handing them back to the platform to be reused. This helps the performance of the <kbd>obtainStyledAttributes</kbd> method:</li>
+</ol>
+<pre style="padding-left: 60px">private void init(final AttributeSet attrs, final int defStyle) {<br/>  final TypedArray a = getContext().obtainStyledAttributes(<br/>          attrs, R.styleable.SpendingGraphView, defStyle, 0);<br/><br/>  strokeColor = a.getColor(<br/>          R.styleable.SpendingGraphView_strokeColor,<br/>          strokeColor);<br/><br/>  strokeWidth = a.getDimensionPixelSize(<br/>          R.styleable.SpendingGraphView_strokeWidth,<br/>          strokeWidth<br/>  );<br/><br/>  a.recycle();<br/>}</pre>
+<ol start="14">
+<li>In order to paint the graph correctly, you'll need a utility method to help find the scale of the vertical axis. This involves finding the maximum value that the graph will have, and unfortunately, the Android platform doesn't expose a method to do this directly, so you'll need to implement it yourself:</li>
+</ol>
+<pre style="padding-left: 60px">protected static double getMaximum(final double[] numbers) {<br/>  double max = 0;<br/><br/>  for (final double n : numbers) {<br/>    max = Math.max(max, n);<br/>  }<br/><br/>  return max;<br/>}</pre>
+<ol start="15">
+<li>The next step is to implement the actual rendering method for the graph data. This method will be invoked on the main thread, but won't be invoked as part of the rendering loop. Instead, you'll calculate all the values and plot the graph using a <kbd>Path</kbd> object (a vector graphics primitive). Then, this method will store the plotted line and the <kbd>Paint</kbd> to use in the path and paint fields you declared, and signal that the <kbd>View</kbd> is <em>invalid</em> and needs to have its <kbd>onDraw</kbd> method called as soon as possible:</li>
+</ol>
+<pre style="padding-left: 60px">protected void invalidateGraph() {<br/>  if (spendingPerDay == null || spendingPerDay.length &lt;= 1) {<br/>    path = null;<br/>    paint = null;<br/>    invalidate();<br/><br/>    return;<br/>  }<br/><br/>  final int paddingLeft = getPaddingLeft();<br/>  final int paddingTop = getPaddingTop();<br/>  final int paddingRight = getPaddingRight();<br/>  final int paddingBottom = getPaddingBottom();<br/><br/>  final int contentWidth =<br/>        getWidth() - paddingLeft - paddingRight;<br/>  final int contentHeight =<br/>        getHeight() - paddingTop - paddingBottom;<br/>  final int graphHeight =<br/>        contentHeight - strokeWidth * 2;<br/><br/>  final double graphMaximum = getMaximum(spendingPerDay);<br/><br/>  final double stepSize = (double) contentWidth / (double) (spendingPerDay.length - 1);<br/>  final double scale = (double) graphHeight / graphMaximum;<br/><br/>  path = new Path();<br/>  path.moveTo(paddingLeft, paddingTop);<br/><br/>  paint = new Paint();<br/>  paint.setStrokeWidth(strokeWidth);<br/>  paint.setColor(strokeColor);<br/>  paint.setFlags(Paint.ANTI_ALIAS_FLAG);<br/>  paint.setStyle(Paint.Style.STROKE);<br/><br/>  path.moveTo(<br/>      paddingLeft,<br/>      contentHeight - (float) (scale * spendingPerDay[0]));<br/><br/>  for (int i = 1; i &lt; spendingPerDay.length; i++) {<br/>    path.lineTo(<br/>          (float) (i * stepSize) + paddingLeft,<br/>          contentHeight - (float) (scale * spendingPerDay[i]));<br/>  }<br/><br/>  invalidate();<br/>}</pre>
+<div class="packt_tip">It would actually be quite possible to encapsulate this code in an <kbd>ActionCommand</kbd> or <kbd>AsyncTask</kbd>, so that these calculations don't block the main thread. You will need to invoke the <kbd>invalidate()</kbd> method in <kbd>onForeground()</kbd>, or use the <kbd>postInvalidate()</kbd> method instead (which posts the <kbd>invalidate()</kbd> signal to the main thread). Moving such complexity to a background thread is good practice if the amount of data the graph is expected to present became very large.</div>
+<ol start="16">
+<li>Now, you're ready to override the <kbd>onDraw</kbd> method and actually paint the graph onto the <kbd>Canvas</kbd> provided by the platform. This <kbd>onDraw</kbd> implementation simply verifies that the graph has been rendered, and then paints the fields onto the screen:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>protected void onDraw(final Canvas canvas) {<br/>  if (path == null || paint == null) {<br/>    return;<br/>  }<br/><br/>  canvas.drawPath(path, paint);<br/>}</pre>
+<div class="packt_tip"><span>It's useful to know that you can construct a</span> <kbd>Canvas</kbd> <span>yourself by having it paint to an offscreen</span> <kbd>Bitmap</kbd> <span>object, allowing you to capture <em>screenshots</em> of widgets by invoking their</span> <kbd>onDraw</kbd> <span>method yourself.</span></div>
+<ol start="17">
+<li>Now, you just need a few getter and setter methods to allow your application to specify the data to be rendered, and a programmatic way to change and fetch the XML attribute values. The setter methods also need to invoke the <kbd>invalidateGraph()</kbd> method to cause the data to be recalculated and rendered:</li>
+</ol>
+<pre style="padding-left: 60px">public void setSpendingPerDay(final double[] spendingPerDay) {<br/>  this.spendingPerDay = spendingPerDay;<br/>  invalidateGraph();<br/>}<br/><br/>public int getStrokeColor() {<br/>  return strokeColor;<br/>}<br/><br/>public void setStrokeColor(final int strokeColor) {<br/>  this.strokeColor = strokeColor;<br/>  invalidateGraph();<br/>}<br/><br/>public int getStrokeWidth() {<br/>  return strokeWidth;<br/>}<br/><br/>public void setStrokeWidth(final int strokeWidth) {<br/>  this.strokeWidth = strokeWidth;<br/>  invalidateGraph();<br/>}</pre>
+<p>The <kbd>SpendingGraphView</kbd> requires that its actual data is delivered programmatically using the <kbd>setSpendingPerDay</kbd> method. This can, fortunately, be done easily using the data-binding system, which will also keep the data up to date when the data changes.</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Integrating the SpendingGraphView</h1>
+                </header>
+            
+            <article>
+                
+<p>Integrating the <kbd>SpendingGraphView</kbd> into an application is as simple as declaring it in your layout XML file, and providing it with some data points to render:</p>
+<pre>&lt;com.packtpub.claim.widget.SpendingGraphView<br/>    android:id="@+id/spendingGraphView"<br/>    android:layout_width="match_parent"<br/>    android:layout_height="?attr/actionBarSize"<br/>    <strong>app:strokeWidth="2dp"</strong><br/>    <strong>app:strokeColor="@color/colorAccent"</strong><br/><strong>    app:spendingPerDay="@{dataSource.spendingPerDay}"</strong>/&gt;</pre>
+<p>You can also programmatically find the <kbd>SpendingGraphView</kbd> using <kbd>findViewById</kbd>, and invoke the <kbd>setSpendingPerDay</kbd> method from your Java code. Integrating the <kbd>SpendingGraphView</kbd> into the travel claim example is a little more complex. The graph belongs on the overview screen, since it gives the user a quick visual indication of what their last few days of spending have looked like. If the user starts scrolling, the graph needs to scroll off the screen so that there is more screen space for the claim items. A nice way to do this is to leverage the <kbd>DisplayItem</kbd> class you wrote to handle the spacers, and simply add one at the beginning of the overview. Let's integrate the new <kbd>SpendingGraphView</kbd> with the overview screen:</p>
+<ol>
+<li style="font-weight: 400">Right-click on the <span class="packt_screen">res/layout</span> directory and select <span class="packt_screen">New|</span> <span class="packt_screen">Layout resource file</span>.</li>
+<li style="font-weight: 400">Name the new resource file <kbd>card_spending_graph</kbd>.</li>
+<li style="font-weight: 400">Change the <span class="packt_screen">Root element</span> to be <kbd>layout</kbd>.</li>
+<li style="font-weight: 400">Click <span class="packt_screen">OK</span> to create the new resource file.</li>
+<li style="font-weight: 400">This layout resource will be used with the <kbd>DataBoundViewHolder</kbd>, and we'll be passing the spending-per-day indirectly as the <kbd>item</kbd> variable. It's also worth noting that the XML namespace for your custom attributes on the <kbd>SpendingGraphView</kbd> (<kbd>strokeColor</kbd> and <kbd>strokeWidth</kbd>) is the <kbd>app</kbd> namespace. This is what the layout resource should look like:</li>
+</ol>
+<pre style="padding-left: 60px">&lt;?xml version="1.0" encoding="utf-8"?&gt;<br/>&lt;layout&gt;<br/>    &lt;data&gt;<br/>        &lt;variable<br/>            name="item"<br/>            type="double[]" /&gt;<br/>    &lt;/data&gt;<br/><br/>    &lt;android.support.v7.widget.CardView<br/>        <br/>        <br/>        android:layout_width="match_parent"<br/>        android:layout_height="wrap_content"<br/>        app:contentPadding="@dimen/grid_spacer1"&gt;<br/><br/>        &lt;com.packtpub.claim.widget.SpendingGraphView<br/>            android:id="@+id/spendingGraphView"<br/>            android:layout_width="match_parent"<br/>            <strong>android:layout_height="@dimen/spending_graph_height"</strong><br/>            app:spendingPerDay="@{item}"<br/>            app:strokeColor="@color/colorAccent"<br/>            app:strokeWidth="2dp" /&gt;<br/>    &lt;/android.support.v7.widget.CardView&gt;<br/>&lt;/layout&gt;</pre>
+<ol start="6">
+<li>Use the Code Assistant on the <kbd>layout_height</kbd> attribute to create a new dimension value named <kbd>spending_graph_height</kbd> (as was just highlighted) in your <kbd>dimens.xml</kbd> values resource file:</li>
+</ol>
+<pre style="padding-left: 60px">    &lt;dimen name="app_bar_height"&gt;180dp&lt;/dimen&gt;<br/>    <strong>&lt;dimen name="spending_graph_height"&gt;80dp&lt;/dimen&gt;</strong><br/>&lt;/resources&gt;</pre>
+<ol start="7">
+<li style="font-weight: 400">Open the <kbd>ClaimItemAdapter</kbd> source file.</li>
+<li style="font-weight: 400">Most of the changes will be in the <kbd>CreateDisplayListCommand</kbd> inner class. You'll need to calculate the user's spending for a selection of recent days. To do this, you'll need to know how many days ago each claim was, so that you can add its amount to the correct day. This method simply counts backward one day at a time, until it reaches the given timestamp:</li>
+</ol>
+<pre style="padding-left: 60px">int countDays(final Date timestamp) {<br/>  final Calendar calendar = Calendar.getInstance();<br/>  calendar.setTime(timestamp);<br/><br/>  final Calendar counterCalendar = Calendar.getInstance();<br/>  counterCalendar.clear(Calendar.HOUR_OF_DAY);<br/>  counterCalendar.clear(Calendar.MINUTE);<br/>  counterCalendar.clear(Calendar.SECOND);<br/>  counterCalendar.clear(Calendar.MILLISECOND);<br/><br/>  int days = 0;<br/>  while (calendar.before(counterCalendar)) {<br/>    days++;<br/>    counterCalendar.add(Calendar.DAY_OF_YEAR, -1);<br/>  }<br/><br/>  return days;<br/>}</pre>
+<div class="packt_tip">Time APIs such as JODA time (<a href="http://www.joda.org/joda-time/" target="_blank">http://www.joda.org/joda-time/</a>) and the Java 8 time APIs offer methods specifically for calculating the difference between two instants in time (in various different time units). However, the use of these APIs is beyond the scope of this book.</div>
+<ol start="9">
+<li>Next, you'll need another method in the <kbd>CreateDisplayListCommand</kbd> to create the array of amounts representing the user's spending over the last few days. To keep the implementation simple and quick, we limit this to ten days by default. The <kbd>getSpendingPerDay</kbd> method creates a double for each of these days, and adds the amounts to each double for the <kbd>ClaimItem</kbd> objects filed on each day:</li>
+</ol>
+<pre style="padding-left: 60px">double[] getSpendingPerDay(final List&lt;ClaimItem&gt; claimItems) {<br/>  final double[] daysSpending = new double[10];<br/>  final int lastItem = daysSpending.length - 1;<br/>  Arrays.fill(daysSpending, 0);<br/><br/>  for (final ClaimItem item : claimItems) {<br/>    final int distance = countDays(item.getTimestamp());<br/><br/>    // the ClaimItems are in timestamp order<br/>    if (distance &gt; lastItem) {<br/>      break;<br/>    }<br/><br/>    daysSpending[lastItem - distance] += item.getAmount();<br/>  }<br/><br/>  return daysSpending;<br/>}</pre>
+<ol start="10">
+<li>The final thing to do in the <kbd>CreateDisplayListCommand</kbd>, is to create a <kbd>DisplayItem</kbd> as the first item in the list:</li>
+</ol>
+<pre style="padding-left: 60px">public List&lt;DisplayItem&gt; onBackground(<br/>    final List&lt;ClaimItem&gt; claimItems)<br/>    throws Exception {<br/><br/>  final List&lt;DisplayItem&gt; output = new ArrayList&lt;&gt;();<br/>  <strong>output.add(new DisplayItem(</strong><br/><strong>        R.layout.card_spending_graph,</strong><br/><strong>        getSpendingPerDay(claimItems)));</strong><br/><br/>  for (int i = 0; i &lt; claimItems.size(); i++) {</pre>
+<ol start="11">
+<li>You'll also need to add some new code to the <kbd>UpdateDisplayListCommand</kbd> inner class, because it doesn't know how to compare the spending graph for the <kbd>DiffUtil</kbd>. In the implementation of the <kbd>areItemsTheSame</kbd> method in the <kbd>DiffUtil.Callback</kbd>, you can treat the <kbd>card_spending_graph</kbd> layout resources exactly the same as the separators, because there is only one of them in the list:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public boolean areItemsTheSame(<br/>    final int oldItemPosition,<br/>    final int newItemPosition) {<br/>  // ...<br/><br/>  switch (newItem.layout) {<br/>    case R.layout.card_claim_item:<br/>        final ClaimItem oldClaimItem = (ClaimItem) oldItem.value;<br/>        final ClaimItem newClaimItem = (ClaimItem) newItem.value;<br/>        return oldClaimItem != null<br/>             &amp;&amp; newClaimItem != null<br/>             &amp;&amp; oldClaimItem.id == newClaimItem.id;<br/>    case R.layout.widget_divider:<br/>    <strong>case R.layout.card_spending_graph:</strong><br/>        return true;<br/>  }<br/><br/>  return false;<br/>}</pre>
+<ol start="12">
+<li>However, you also need the <kbd>DiffUtil</kbd> to detect that the graph data may have changed. In this case, we simply assume that the data has changed, and force the <kbd>RecyclerView</kbd> to bind the new data points to the existing <kbd>SpendingGraphView</kbd>:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public boolean areContentsTheSame(<br/>    final int oldItemPosition,<br/>    final int newItemPosition) {<br/>  final DisplayItem oldItem = oldDisplay.get(oldItemPosition);<br/>  final DisplayItem newItem = newDisplay.get(newItemPosition);<br/><br/>  switch (newItem.layout) {<br/>    case R.layout.card_claim_item:<br/>        final ClaimItem oldClaimItem = (ClaimItem) oldItem.value;<br/>        final ClaimItem newClaimItem = (ClaimItem) newItem.value;<br/>        return oldClaimItem != null<br/>             &amp;&amp; newClaimItem != null<br/>             &amp;&amp; oldClaimItem.equals(newClaimItem);<br/>    case R.layout.widget_divider:<br/>        return true;<br/>    <strong>case R.layout.card_spending_graph:</strong><br/><strong>        return false;</strong><br/>  }<br/><br/>  return false;<br/>}</pre>
+<ol start="13">
+<li>The one last thing to ensure is that the user can't swipe the <kbd>SpendingGraphView</kbd> to delete it from the <kbd>RecyclerView</kbd>, as this will be a huge surprise for the user. Open the <kbd>OverviewActivity</kbd> source file and locate the <kbd>SwipeToDeleteCallback</kbd> inner class.</li>
+<li>We need to tell the <kbd>ItemTouchHelper</kbd> that the first item in the list cannot be swiped or moved. We do this by overriding the default <kbd>getMovementFlags</kbd> method. This method usually just returns the flags that you passed into the constructor, but you now want these flags to change for just one item:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>public int getMovementFlags(<br/>    final RecyclerView recyclerView,<br/>    final RecyclerView.ViewHolder viewHolder) {<br/><br/>  if (viewHolder.getAdapterPosition() == 0) {<br/>    return 0;<br/>  }<br/><br/>  return super.getMovementFlags(recyclerView, viewHolder);<br/>}</pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Creating a layout implementation</h1>
+                </header>
+            
+            <article>
+                
+<p>In most applications, you'll find that a combination of the <kbd>ConstraintLayout</kbd>, <kbd>CoordinatorLayout</kbd>, and some of the more primitive layout classes (such as <kbd>LinearLayout</kbd> and <kbd>FrameLayout)</kbd>) are more than enough to achieve any layout requirements you can dream up for your user interface. Every now and again though, you'll find yourself needing a custom layout manager to achieve an effect required for the application.</p>
+<p class="mce-root">Layout classes extend from the <kbd>ViewGroup</kbd> class, and their job is to tell their child widgets where to position themselves, and how large they should be. They do this in two phases: the measurement phase and the layout phase.</p>
+<p class="mce-root">All <kbd>View</kbd> implementations are expected to provide measurements for their actual size according to specifications. These measurements are then used by the <kbd>View</kbd> widget's parent <kbd>ViewGroup</kbd> to allocate the amount of space the widget will consume on the screen. For example, a <kbd>View</kbd> might be told to consume, at most, the screen width. The <kbd>View</kbd> must then determine how much of that space it actually requires, and records that size in its <strong>measured dimensions</strong>. The measured dimensions are then used by the parent <kbd>ViewGroup</kbd> during the layout process.</p>
+<p class="mce-root">The second phase is the layout phase, and it is conducted by the <kbd>ViewGroup</kbd> parent of each <kbd>View</kbd> widget. This phase positions the <kbd>View</kbd> on the screen, relative to its parent <kbd>ViewGroup</kbd> location, and specifies the actual size that the widget will consume on the screen (typically based on the measured size calculated in the measurement phase).</p>
+<p class="mce-root">When you implement your own <kbd>ViewGroup</kbd>, you'll need to ensure that all of your child <kbd>View</kbd> widgets are given a chance to measure themselves before you perform the actual layout operations.</p>
+<p class="mce-root">Let's build a layout class to arrange its children in a circle. To keep the implementation simple, we'll assume that all the child widgets are the same size (for example, if they were all icons):</p>
+<ol>
+<li>Right-click on the <kbd>widget</kbd> package in the travel claim example app, and select <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>.</li>
+<li>Name the new class <kbd>CircleLayout</kbd>.</li>
+<li>Change the <span class="packt_screen">Superclass</span> to <kbd>android.view.ViewGroup</kbd>.</li>
+<li>Click <span class="packt_screen">OK</span> to create the new class.</li>
+<li>Declare the standard <kbd>ViewGroup</kbd> constructors:</li>
+</ol>
+<pre style="padding-left: 60px">public CircleLayout(final Context context) {<br/>  super(context);<br/>}<br/><br/>public CircleLayout(<br/>    final Context context,<br/>    final AttributeSet attrs) {<br/>  super(context, attrs);<br/>}<br/><br/>public CircleLayout(<br/>      final Context context,<br/>      final AttributeSet attrs,<br/>      final int defStyleAttr) {<br/><br/>  super(context, attrs, defStyleAttr);<br/>}</pre>
+<ol start="6">
+<li>Override the <kbd>onMeasure</kbd> method to calculate the size of the <kbd>CircleLayout</kbd> and all of its child <kbd>View</kbd> widgets. The measurement specifications are passed in as <kbd>int</kbd> values, which are interpreted using the <kbd>static</kbd> methods in the <kbd>MeaureSpec</kbd> class. Measurement specifications come in two flavors: <em>at most</em> and <em>exactly</em>, and each has a <em>size</em> value attached. In this particular layout, we always measure the <kbd>CircleLayout</kbd> as the size given in the specification. This means that the <kbd>CircleLayout</kbd> will always consume the maximum amount of space available. It also expects all of its children to be able to specify sizes without the <kbd>match_parent</kbd> attribute (as this will cause each child to take up all the available space):</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>protected void onMeasure(<br/>    final int widthMeasureSpec,<br/>    final int heightMeasureSpec) {<br/>  super.onMeasure(widthMeasureSpec, heightMeasureSpec);<br/>  measureChildren(widthMeasureSpec, heightMeasureSpec);<br/><br/>  setMeasuredDimension(<br/>        MeasureSpec.getSize(widthMeasureSpec),<br/>        MeasureSpec.getSize(heightMeasureSpec));<br/>}</pre>
+<ol start="7">
+<li>The next method to implement is the <kbd>onLayout</kbd> method. This performs the actual arrangement of the child <kbd>View</kbd> widget within the <kbd>CircleLayout</kbd>, by invoking their <kbd>layout</kbd> method. The <kbd>layout</kbd> method should never be overridden, because it's closely tied to the platform and performs several other important actions (such as notifying layout listeners). Instead, you should override <kbd>onLayout</kbd>, but invoking <kbd>layout.CircleLayout</kbd> assumes that all the child <kbd>View</kbd> widgets are of the same size (and forces this as part of the <kbd>onLayout</kbd> implementation). This <kbd>onLayout</kbd> method simply calculates the available space, and then positions the child <kbd>View</kbd> widgets in a circle around the outside edge:</li>
+</ol>
+<pre style="padding-left: 60px">protected void onLayout(<br/>    final boolean changed,<br/>    final int left,<br/>    final int top,<br/>    final int right,<br/>    final int bottom) {<br/><br/>  final int childCount = getChildCount();<br/><br/>  if (childCount == 0) {<br/>    return;<br/>  }<br/><br/>  final int width = right - left;<br/>  final int height = bottom - top;<br/><br/>  // if we have children, we assume they're all the same size<br/>  final int childrenWidth = getChildAt(0).getMeasuredWidth();<br/>  final int childrenHeight = getChildAt(0).getMeasuredHeight();<br/><br/>  final int boxSize = Math.min(<br/>      width - childrenWidth,<br/>      height - childrenHeight);<br/><br/>  for (int i = 0; i &lt; childCount; i++) {<br/>    final View child = getChildAt(i);<br/>    final int childWidth = child.getMeasuredWidth();<br/>    final int childHeight = child.getMeasuredHeight();<br/><br/>    final double x = Math.sin((Math.PI * 2.0)<br/>          * ((double) i / (double) childCount));<br/>    final double y = -Math.cos((Math.PI * 2.0)<br/>          * ((double) i / (double) childCount));<br/><br/>    final int childLeft = (int) (x * (boxSize / 2))<br/>          + (width / 2) - (childWidth / 2);<br/>    final int childTop = (int) (y * (boxSize / 2))<br/>          + (height / 2) - (childHeight / 2);<br/>    final int childRight = childLeft + childWidth;<br/>    final int childBottom = childTop + childHeight;<br/><br/>    child.layout(childLeft, childTop, childRight, childBottom);<br/>  }<br/>}</pre>
+<p>Although the implementation of the <kbd>onLayout</kbd> method is quite long, it's also relatively simple. Most of the code is concerned with determining the desired position of the child <kbd>View</kbd> widgets. Layout code needs to execute as quickly as possible, and should avoid allocating any objects during the <kbd>onMeasure</kbd> and <kbd>onLayout</kbd> methods (similar to the rules of <kbd>onDraw</kbd>). Layout is a critical part of building the screen from a performance standpoint, because no rendering can actually occur without the layout being completed. The layout will also be rerun every time the layout changes its structure. For example, if you add or remove any child <kbd>View</kbd> widgets, or change the size or position of the <kbd>ViewGroup</kbd>. Changing the size of a <kbd>ViewGroup</kbd> might happen on every frame if you use a <kbd>CoordinatorLayout</kbd>, where the <kbd>ViewGroup</kbd> is being collapsed (or if you change its size as part of a property-animation).</p>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Creating animated views</h1>
+                </header>
+            
+            <article>
+                
+<p>Most widget animation can be taken care of using the animation APIs in Android. The standard animation APIs are designed to take care of animations with a defined start and end, or animations that form a simple loop. Some animations, however, don't fit into this mold; a good example would be a game. A game has many animations running continuously, and you can even think about the entire game screen as a single, continuous animation.</p>
+<p class="mce-root">There are a number of widgets that need to be continuously animated, and your standard Android animation API won't work. In these cases, you'll need a <kbd>View</kbd> that can continuously animate and update itself as long as it's visible to the user. In these cases, a slightly different design is called for, as the widget will always be changing.</p>
+<p class="mce-root">To illustrate how to write a widget that has a continuous animation, let's write a <kbd>View</kbd> class that animates some number of bouncing <kbd>Drawable</kbd> objects. Each <kbd>Drawable</kbd> will be tracked separately, and when it reaches a side, it will "bounce off", and head in the other direction. This class is unrelated to the travel claim example code, so you can add it to a new project if you like. Follow these steps to write a <kbd>BouncingDrawablesView</kbd>:</p>
+<ol>
+<li style="font-weight: 400">On your default package, select <span class="packt_screen">New|</span> <span class="packt_screen">Java Class</span>.</li>
+<li style="font-weight: 400">Name the class <kbd>widget.BouncingDrawablesView</kbd>.</li>
+<li style="font-weight: 400">Make the <span class="packt_screen">Superclass</span> <kbd>android.view.View</kbd>.</li>
+<li style="font-weight: 400">Click on <span class="packt_screen">OK</span> to create the new class.</li>
+</ol>
+<ol start="5">
+<li style="font-weight: 400">You'll have some number of bouncing objects in the scene, and you'll need to track both their position and speed vector. For this, you'll want to encapsulate each bouncing <kbd>Drawable</kbd> in a <kbd>Bouncer</kbd> object; we'll write this as an inner class:</li>
+</ol>
+<pre style="padding-left: 60px">public static class Bouncer {<br/>  final Drawable drawable;<br/>  final Rect bounds;<br/>  int speedX;<br/>  int speedY;<br/><br/>  public Bouncer(<br/>        final Drawable drawable,<br/>        final int speedX,<br/>        final int speedY) {<br/><br/>    this.drawable = drawable;<br/>    this.bounds = drawable.copyBounds();<br/>    this.speedX = speedX;<br/>    this.speedY = speedY;<br/>  }</pre>
+<ol start="6">
+<li>The next thing to do in the <kbd>Bouncer</kbd> inner class is to create a single <kbd>step</kbd> method, which will set up the <kbd>Bouncer</kbd> for the next animation frame to be rendered. This method will take a parameter that represents the boundaries of the <em>field</em> it's being rendered on. If the next position collides with any of the edges of the field, the <kbd>Bouncer</kbd> will avoid crossing the edge and will reverse direction on the axis it would have collided with:</li>
+</ol>
+<pre style="padding-left: 60px">void step(final Rect boundary) {<br/>  final int width = bounds.width();<br/>  final int height = bounds.height();<br/><br/>  int nextLeft = bounds.left + speedX;<br/>  int nextTop = bounds.top + speedY;<br/><br/>  if (nextLeft + width &gt;= boundary.right) {<br/>    speedX = -speedX;<br/>    nextLeft = boundary.right - width;<br/>  } else if (nextLeft &lt; boundary.left) {<br/>    speedX = -speedX;<br/>    nextLeft = boundary.left;<br/>  }<br/><br/>  if (nextTop + height &gt;= boundary.bottom) {<br/>    speedY = -speedY;<br/>    nextTop = boundary.bottom - height;<br/>  } else if (nextTop &lt; boundary.top) {<br/>    speedY = -speedY;<br/>    nextTop = boundary.top;<br/>  }<br/><br/>  bounds.set(<br/>       nextLeft,<br/>       nextTop,<br/>       nextLeft + width,<br/>       nextTop + height<br/>  );<br/>}</pre>
+<ol start="7">
+<li>The <kbd>Bouncer</kbd> class also needs a convenient draw method that will update the boundaries of the <kbd>Drawable</kbd>, before rendering it to a given <kbd>Canvas</kbd> object. The <kbd>Bouncer</kbd> keeps track of its own boundaries, so that all the <kbd>Bouncer</kbd> instances can actually share the same <kbd>Drawable</kbd> instance, and simply paint it at different locations on the field:</li>
+</ol>
+<pre style="padding-left: 60px">  void draw(final Canvas canvas) {<br/>    drawable.setBounds(bounds);<br/>    drawable.draw(canvas);<br/>  }<br/>} // end of Bouncer inner class</pre>
+<ol start="8">
+<li>Now, in the <kbd>BouncingDrawablesView</kbd>, declare an array of <kbd>Bouncer</kbd> objects that will be contained and animated by the <kbd>View</kbd> implementation:</li>
+</ol>
+<pre style="padding-left: 60px">private Bouncer[] bouncers = null;</pre>
+<ol start="9">
+<li>The <kbd>BouncingDrawableView</kbd> also needs a status field to track whether it should be animating or not:</li>
+</ol>
+<pre style="padding-left: 60px">private boolean running = false;</pre>
+<ol start="10">
+<li>Next, declare the standard <kbd>View</kbd> implementation constructors:</li>
+</ol>
+<pre style="padding-left: 60px">public BouncingDrawablesView(<br/>    final Context context) {<br/>  super(context);<br/>}<br/><br/>public BouncingDrawablesView(<br/>    final Context context,<br/>    final AttributeSet attrs) {<br/>  super(context, attrs);<br/>}<br/><br/>public BouncingDrawablesView(<br/>    final Context context,<br/>    final AttributeSet attrs,<br/>    final int defStyleAttr) {<br/>  super(context, attrs, defStyleAttr);<br/>}</pre>
+<ol start="11">
+<li>Implement the <kbd>onDraw</kbd> method by simply telling each of the <kbd>Bouncer</kbd> objects to paint themselves:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>protected void onDraw(final Canvas canvas) {<br/>  super.onDraw(canvas);<br/><br/>  if (bouncers == null) {<br/>    return;<br/>  }<br/><br/>  for (final Bouncer bouncer : bouncers) {<br/>    bouncer.draw(canvas);<br/>  }<br/>}</pre>
+<ol start="12">
+<li>Next, you'll need to implement that actual logic to animate each frame. Do this by creating an <kbd>onNextFrame</kbd> method that first checks whether the animation should still be running (if it's not running, we stop the animation), and then tells each <kbd>Bouncer</kbd> to move one step in the animation. After you've set up the next animation frame, you'll need to tell the platform to repaint the <kbd>BouncingDrawablesView</kbd>, by calling the <kbd>invalidate()</kbd> method. Once the <kbd>onNextFrame()</kbd> method is complete, we schedule it to be invoked again in 16 milliseconds time (scheduling just under 60 frames per second):</li>
+</ol>
+<pre style="padding-left: 60px">private final Runnable postNextFrame = new Runnable() {<br/>  @Override<br/>  public void run() {<br/>    onNextFrame();<br/>  }<br/>};<br/><br/><br/>void onNextFrame() {<br/>  if (bouncers == null || !running) {<br/>    return;<br/>  }<br/><br/>  final Rect boundary = new Rect(<br/>       getPaddingLeft(),<br/>       getPaddingTop(),<br/>       getWidth() - getPaddingLeft() - getPaddingRight(),<br/>       getHeight() - getPaddingTop() - getPaddingBottom()<br/>  );<br/><br/>  for (final Bouncer bouncer : bouncers) {<br/>    bouncer.step(boundary);<br/>  }<br/><br/>  invalidate();<br/>  getHandler().postDelayed(postNextFrame, 16);<br/>}</pre>
+<ol start="13">
+<li>In order to automatically start the animation when the <kbd>BouncingDrawablesView</kbd> becomes visible and make it stop when it's invisible, you need to know when the <kbd>BouncingDrawablesView</kbd> is attached to the <kbd>Window</kbd> (when it's attached to the screen components). To do this, you'll need to override <kbd>onAttachedToWindow</kbd> and invoke <kbd>onNextFrame()</kbd>. However, <kbd>onAttachedToWindow</kbd> is invoked before the layout is executed, so you'll schedule <kbd>onNextFrame()</kbd> to be run at the end of the current event queue:</li>
+</ol>
+<pre style="padding-left: 60px">@Override<br/>protected void onAttachedToWindow() {<br/>  super.onAttachedToWindow();<br/>  running = true;<br/><br/>  post(postNextFrame);<br/>}<br/><br/>@Override<br/>protected void onDetachedFromWindow() {<br/>  super.onDetachedFromWindow();<br/>  running = false;<br/>}</pre>
+<ol start="14">
+<li style="font-weight: 400">Finally, write a setter and getter for the <kbd>Bouncer</kbd> objects:</li>
+</ol>
+<pre style="padding-left: 60px">public void setBouncers(final Bouncer[] bouncers) {<br/>  this.bouncers = bouncers;<br/>}<br/><br/>public Bouncer[] getBouncers() {<br/>  return bouncers;<br/>}</pre>
+<p>Setting up the <kbd>BouncingDrawablesView</kbd> is a very simple process. An <kbd>Activity</kbd> will need to create an array of <kbd>Bouncer</kbd> objects with some random positions and speeds, and then hand them over to the <kbd>BouncingDrawablesView</kbd> instance to take care of them. As soon as the <kbd>BouncingDrawablesView</kbd> becomes visible on the screen, it will start animating the <kbd>Drawable</kbd> objects around the screen. A simple example setup of the <kbd>BouncingDrawableView</kbd> might look something like this:</p>
+<pre style="padding-left: 60px">final BouncingDrawablesView bouncingDrawablesView = (BouncingDrawablesView) findViewById(R.id.bouncing_view);<br/>final BouncingDrawablesView.Bouncer[] bouncers = new BouncingDrawablesView.Bouncer[10];<br/>final Random random = new Random();<br/>final Resources res = getResources();<br/><br/>final Drawable icon = res.getDrawable(R.drawable.ic_other_black);<br/>final int iconSize = res.getDimensionPixelSize(R.dimen.bouncing_icon_size);<br/>for (int i = 0; i &lt; bouncers.length; i++) {<br/>  final Rect bounds = new Rect();<br/>  bounds.top = random.nextInt(400);<br/>  bounds.left = random.nextInt(600);<br/>  bounds.right = bounds.left + iconSize;<br/>  bounds.bottom = bounds.top + iconSize;<br/>  icon.setBounds(bounds);<br/><br/>  bouncers[i] = new BouncingDrawablesView.Bouncer(<br/>        icon,<br/>        random.nextBoolean() ? 6 : -6,<br/>        random.nextBoolean() ? 6 : -6<br/>  );<br/>}<br/><br/>bouncingDrawablesView.setBouncers(bouncers);</pre>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Test your knowledge</h1>
+                </header>
+            
+            <article>
+                
+<ol>
+<li>When rendering specialized graphics for a custom widget, you need to do which of these?
+<ul>
+<li>Buffer all the rendering in an offscreen <kbd>Bitmap</kbd></li>
+<li>Set a custom background <kbd>Drawable</kbd></li>
+<li>Override the <kbd>onDraw</kbd> <span>method</span></li>
+</ul>
+</li>
+</ol>
+<ol start="2">
+<li class="mce-root">Where should you create instances of graphics primitives such as <kbd>Drawable</kbd>, <kbd>Paint</kbd> and <kbd>Path</kbd> for rendering in <kbd>onDraw</kbd>?
+<ul>
+<li class="mce-root">On the main thread</li>
+<li class="mce-root">In the <kbd>onDraw</kbd> <span>method</span></li>
+<li class="mce-root">Anywhere that doesn't affect <kbd>onDraw</kbd> <span>directly</span></li>
+</ul>
+</li>
+<li class="mce-root">What are the two phases involved in the layout process?
+<ul>
+<li class="mce-root">Layout and then measurement</li>
+<li class="mce-root">Measurement and then layout</li>
+<li class="mce-root">Measurement and then rendering</li>
+</ul>
+</li>
+<li class="mce-root">When painting a <kbd>Drawable</kbd> object, you need to do which of the following?
+<ul>
+<li class="mce-root">Pass it a valid <kbd>Canvas</kbd> <span>object</span></li>
+<li class="mce-root">Use <kbd>Canvas.paintDrawable</kbd></li>
+<li class="mce-root">Invoke its <kbd>onDraw</kbd> <span>method</span></li>
+</ul>
+</li>
+<li class="mce-root">To tell the platform that a widget needs to repaint itself (from the main thread), you use which of these?
+<ul>
+<li class="mce-root"><kbd>View.redraw()</kbd></li>
+<li class="mce-root"><kbd>View.invalidate()</kbd></li>
+<li class="mce-root"><kbd>View.repaint()</kbd></li>
+</ul>
+</li>
+</ol>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Apply your knowledge</h1>
+                </header>
+            
+            <article>
+                
+<p>Most of what has been covered in this book is a mix of theory (how to go about designing a screen) and hard practical knowledge (writing the code to produce that screen). When you combine a good theoretical base with practical knowledge of the platform you're working on, you have a powerful combination. Being about to write great applications isn't just about being able to write code (very little in programming is about being able to <em>just</em> write code). It's about having an eye for detail in the user interface, and always thinking about your users.</p>
+<p>Android is an amazingly powerful platform when used correctly. In this book, you've learned to use APIs such as data binding, the Room data storage system, and <kbd>LiveData</kbd>. This mix of APIs on the Android Platform doesn't just allow you to rapidly develop excellent applications, but it also provides an excellent separation between different areas of your code base. They also don't, in any way, reduce the power you can leverage from the underlying platforms and systems (such as SQLite).</p>
+<p>The Android community is massive, and there is plenty to find and work with outside of the core platform that can make development even easier. Here are a few links to resources, documentation, and APIs, that are especially useful:</p>
+<ul>
+<li>The official Android platform reference:<br/>
+<a href="https://developer.android.com/reference/packages.html" target="_blank">https://developer.android.com/reference/packages.html</a></li>
+<li>Firebase (handles hosting, push-notifications, database synchronization, authentication, and much more):<br/>
+<a href="https://firebase.google.com/" target="_blank">https://firebase.google.com/</a></li>
+<li>The Android Arsenal, an unofficial list of third-party APIs and widgets:<br/>
+<a href="https://android-arsenal.com/" target="_blank">https://android-arsenal.com/</a></li>
+<li>Joda-Time API, the de-facto standard time API before Java 8 on the core Java platform, still useful on Android, though:<br/>
+<a href="http://www.joda.org/joda-time/" target="_blank">http://www.joda.org/joda-time/</a></li>
+<li>The official SQLite website:<br/>
+<a href="https://sqlite.org/" target="_blank">https://sqlite.org/</a></li>
+</ul>
+<p>Finally, here are some fun ideas for projects that you might want to try implementing once you've finished this book:</p>
+<ul>
+<li>Try expanding the travel claim example to allow for multiple trips.</li>
+<li>Write a simple expense tracker to allow your user to enter and track their spending.</li>
+<li>A packing/moving organizer app, allowing the user to photograph the contents of boxes and record their contents for when they are moving their house.</li>
+<li>A to-do list application, allowing the user to create various lists of things they need to do and check them off when done. To make this more interesting, you can add reminders and deadlines (items that must be completed by a certain date and time).</li>
+<li>A real-time chat application, which is a bit more complex; use the Firebase Real-time database to store and synchronize the chat messages.</li>
+</ul>
+
+
+            </article>
+
+            
+        </section>
+    
+
+        <section>
+
+                            <header>
+                    <h1 class="header-title">Summary</h1>
+                </header>
+            
+            <article>
+                
+<p>Building your own custom components can be a lot of work, but can also be extremely rewarding. Having complete control over the measurement, layout, and rendering cycle provides you with an amazing amount of power to <span>virtually</span> build any widget that you can imagine. Android also has some excellent defaults defined, allowing you to focus on how your widget should look and work, rather than getting stuck on the intricacies of the rendering pipeline.</p>
+<p><span>The</span> <kbd>Drawable</kbd> <span>class is one of the most powerful graphics primitives Android has. It's difficult to call it a primitive due to how powerful they actually are. Wherever possible, use them instead of a</span> <kbd>Bitmap</kbd> <span>or</span> <kbd>Path</kbd><span>, as they make future improvements much simpler, and easily integrate with the resources system.</span></p>
+<p class="mce-root">Using the <kbd>Handler</kbd> class to animate a widget is also a very powerful and low-level mechanism. It's often a good idea to introduce a sense of real time into these sorts of animations so that frames that take slightly longer, or shorter, to render don't affect the overall feel of the application. This can be done simply by using the timestamp in each frame and moving values according to that, instead of having fixed values. In this case, the speed of the <kbd>Bouncer</kbd> will become the number of <kbd>pixels/time</kbd> instead of a fixed number of pixels per frame.</p>
+<p>Before building your own widgets or layouts, you should always look around on the internet to see whether there is an existing project that does what you are looking for. Knowing how widgets are actually built and fit together is useful knowledge, and should give you the confidence to not just create your own, but also help others build theirs.</p>
+
+
+            </article>
+
+            
+        </section>
+    </body></html>
