@@ -1,0 +1,1289 @@
+- en: Chapter 12. Real-time Shadows and Particle System
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating shadows with shadow mapping
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Softening the shadow edges using PCF
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using variance shadow mapping
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Simulating the particle system
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Transform feedback particle system with sync objects and fences
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Shadows play an important role in real-time rendering; they add depths to a
+    rendering scene. The perceived light information on the 3D object looks much more
+    realistic when rendered with shadows. Overall, shadows improve the realism of
+    the rendering scene and provide a spatial relationship among objects. Rendering
+    smooth and realistic shadows is a great topic of research in the field of computer
+    graphics. The rendering process consumes a large performance. Therefore, the approach
+    to render it must be a balanced trade-off between quality and performance. This
+    even becomes more challenging on the embedded-side due to limited constraints
+    on the memory and performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will implement shadows using shadow mapping. This technique
+    is relatively cheap as far as performance is considered and produces good results
+    on embedded devices. We will make these shadows appear smoother using another
+    technique called percentile closer filtering (PCF). In another technique called
+    variance shadow mapping, we will improve the performance and quality of the generated
+    real-time shadow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter will also help us understand the basics of particle rendering.
+    We will implement two techniques to render the particle system. The first technique
+    is bound to the CPU, whereas particles are updated and processed on the CPU-side
+    and sent to the GPU only for rendering purposes. The second technique is implemented
+    with a new feature of OpenGL ES 3.0 called transform feedback. This feature allows
+    you to capture the vertex shader output to feedback again to the GPU for next
+    frame rendering. The particle system is processed and rendered on the GPU-side.
+    This way, it avoids the CPU intervention and makes the rendering process highly
+    efficient.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating shadows with shadow mapping
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this recipe, we will bring more realism to scenes with shadows using a simple
+    and widely accepted shadowing technique called shadow mapping to produce real-time
+    shadows. This technique is called shadow mapping because it uses the depth information
+    of the scene stored or mapped to a dynamically created depth buffer to produce
+    real-time shadows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This technique works in two passes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**First pass**: During the first pass, a scene is rendered from the perspective
+    of light. Here, the scene is viewed from the position of light in the 3D space.
+    In this way, it''s clear to figure out what objects fall under the path of light.
+    In other words, it provides the information of objects that are directly visible
+    from the perspective of light. The scene''s depth information is recorded in a
+    FBO texture; this texture is called the shadow map. Certainly, if a light ray
+    from the position of light passes through one or more objects, the object with
+    the higher depth (behind the first object) from the perspective of light will
+    be in the shadow. This technique heavily relies on the depth information captured
+    in the shadow map; it stores the distance or depth of visible objects from the
+    light position.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Second pass**: In the second pass, the scene is rendered from the intended
+    camera position. Here, first the depth of each fragment is compared with the depth
+    stored in the shadow map. This comparison checks whether or not the incoming fragment
+    is under the light or not. If the fragment does not fall under the light, then
+    fragment is colored with the ambient shadow color.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following image shows the rendering of shadows as a result of the shadow
+    mapping technique:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating shadows with shadow mapping](img/5527OT_12_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This section provides a high-level overview on how to implement shadow mapping:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Create cameras**: This creates two cameras, one is placed at the light source
+    position called light camera and another is placed for normal scene rendering.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Shadow map**: This creates a FBO with depth texture, as we are only interested
+    in recording the depth and do not require any color buffer here. The dimension
+    of the depth texture is user-defined as per application requirements. In the current
+    recipe, we have used dimensions similar to the render buffer, which is same as
+    viewport dimensions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Render from light''s view**: This attaches the FBO as a current framebuffer
+    and renders the scene from the perspective of light using the first pass and records
+    the depth information in the shadow map. As we are only interested in the depth
+    value, we can avoid the rasterization process in the first pass.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Render normal scene**: This again renders the scene, but this time from the
+    normal camera view and shares the produced shadow map with the fragment shader
+    during the second pass.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Vertex transformation**: During the second pass, vertex coordinates are transformed
+    twice in the vertex shader to produce the following:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Normal scene''s eye coordinates**: The MVP matrix of the normal scene is
+    used to produce eye coordinates to be used in `gl_position`.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Eye coordinates from light''s perspective**: Use the MVP matrix from the
+    perspective of light (use light''s camera) to produce eye coordinates, which is
+    exactly the same as the one stored in the shadow map. These eye coordinates are
+    called as shadow coordinates.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Homogeneous to texture coordinates**: Shadow coordinates are in the normalize
+    coordinate system [-1, 1]. These are converted to the texture coordinate space
+    [0, 1]. This is done by using premultiplied-based matrix in which a unit matrix
+    is scaled by a factor of half and displaced by half-logical dimensions in the
+    positive direction:![Creating shadows with shadow mapping](img/5527OT_12_02.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Depth comparison**: This transformed shadow coordinate is shared with the
+    fragment shader, where the current fragment determines whether it falls under
+    the shadow or not using the `textureProj` API.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following image on the left-hand side of the following image shows the
+    rendering of the scene from the light''s perspective, which produces the shadow
+    map represented by the right-hand side image. The shadow map contains the depth
+    information on a scale of 0.0 to 1.0\. The values closer to 0.0 represents nearby
+    objects. On the grayscale image, objects appearing darker are closer to the light
+    camera:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating shadows with shadow mapping](img/5527OT_12_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Unlike previous recipes, this recipe contains two custom classes for scene and
+    model called `CustomScene` and `CustomModel`. The custom model contains other
+    mesh models, which makes handling of model rendering very easy in the `NativeTemplate.cpp`.
+    Similarly, the custom scene class simplifies the job of the scene, it's responsible
+    for creating the shadow map, managing the light and normal view camera, and performing
+    rendering in a two pass way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This recipe uses Phong shading. There are two new uniform variables added:
+    `LightCoordMatrix` and `ModelMatrix`. The former contains the product of the bias
+    matrix, projection matrix and the view matrix from the perspective of light, whereas
+    the latter contains model transformations. The product of these two variables
+    are stored in `shadowCoord` and shared with the fragment shader. The `isLightPerspectivePass`
+    uniform variable tells the fragment shader if it''s in the first or second pass.
+    The fragment shader contains the shadow map in `ShadowMap`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here are the steps to implement shadow mapping:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Make the following changes in the Phong vertex shader. Here, shadow coordinates
+    are calculated in the `shadowCoord` variable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Similarly, implement the Phong fragment shader as follows. Here, fragments
+    are colored based on their displace from the light and scene perspective:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `CustomScene` function''s constructor, create the shadow map buffer.
+    For this, use the `FrameBufferObjectSurface` class to create an FBO with the depth
+    texture. This is a high-level FBO class that encapsulates the creation of FBO:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Initialize light and normal view cameras in the `initializeScene()` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Render the scene to the first pass using the perspective of light and the second
+    pass as normal:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In shadow mapping, a scene is constructed in the `CustomScene` class. This
+    class creates an offscreen surface (FBO) to record the depth information of the
+    scene. During the initialization (`InitializeScene`) phase, two camera objects
+    are created (`lightPerspective` and `viewersPerspective`). The former camera is
+    placed at the global light position from where the scene is lighted and the latter
+    camera is placed at the viewer''s position. The scene is rendered using two passes:
+    one from the perspective of light and another from the perspective of a viewer.
+    In order to let the rendering objects know about the current pass, the `ObjLoader::setLightPass`
+    function is used; this function ensures that the object level states under these
+    two passes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The given scene is first rendered using the light's perspective pass, where
+    it's bound to a FBO containing the depth buffer (`depthTexture`). The depth buffer
+    captures the z-level or depth information of all rendering objects from the view
+    generated by the camera placed in the light position. During this pass, front
+    faces need to be culled and the polygon offset filling must be enabled in order
+    to avoid the shadows acnes artefact. For more information, refer to *There's more…*
+    section at the end of this recipe. In the vertex shader, eye coordinates positions
+    are calculated in `gl_position` and captured in the depth buffer. This shader
+    also contains calculations of shadow coordinates that are not necessary for the
+    first pass and can be avoided. We consider this as an optimization and leave it
+    to our reader to implement it. As the first pass only captures the depth information,
+    any fragment shading operation will be unnecessary, therefore rasterization can
+    be avoided here; we used a uniform variable (`isLightPerspectivePass`) to bypass
+    rendering of the fragment shader. However, users can also use the `glEnable` (`GL_RASTERIZER_DISCARD`)
+    API. This API turns off the rasterization process. For more information on the
+    working of this API please refer to *Transform feedback particle system with sync
+    objects and fences* recipe later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the second pass, the viewer's camera is used to render the scene. This
+    scene is rendered normally with back face culled and disabled polygon offset filling.
+    The scene shares the captured depth information from the first pass to the fragment
+    shader in the `sampler2DShadow ShadowMap` uniform variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `sampler2DShadow` is a special type of sampler. A sampler in a program represents
+    a single texture of a specific type. The `sampler2DShadow` is used to represent
+    the depth texture type, which contains the depth information of scene objects.
+    It's very important to use the correct sampler; using a normal texture with the
+    shadow map may give unpredictable results as the lookup function is different
+    in this case. Each sampler has a different lookup function that is responsible
+    for computing results based on input texture coordinates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During this pass, normalize coordinates from the light (already contains projection
+    and view info) are converted to the texture coordinate space using a premultiplied
+    bias matrix, as mentioned in the introduction of this recipe. This coordinate
+    is fed to the `textureProj` API, which performs a texture lookup with projection.
+    Texture coordinates consumed from `shadowCoord` are in the texture coordinate
+    form. In the `textureProj` API, these are converted to a homogenous form, where
+    `shadowCoord.xyz` is divided by the last component, namely `shadowCoord.w`. The
+    resulting third component (z) of `shadowCoord` in the shadow forms is used as
+    the depth reference. After these values are computed, the texture lookup proceeds
+    as in texture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the z value is greater than the value stored in the shadow map at a given
+    position (x, y), the object is considered to be behind some surface. In this case,
+    it renders to the shadow color (ambient); otherwise, it's rendered in the respective
+    Phong shading.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This section will describe some important aspects and limitations of shadow
+    mapping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The shadow map resolution
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The quality of the shadow generated is highly dependent on the resolution of
+    the texture to which the shadow map is constructed. The choice of the resolution
+    depends on various factors. For example, a low-spec hardware may have limited
+    memory or slow process power, choosing a high resolution shadow map may degrade
+    the performance. In another case, the requirement is of higher quality in which
+    only the high resolution shadow map makes sense. The following image shows the
+    quality of shadows generated using various screen resolutions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The shadow map resolution](img/5527OT_12_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Aliasing affects
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The shadow mapping technique suffers from an aliasing effect, which can be easily
+    notified in various given images in this recipe. The reason for this aliasing
+    is the sharp transition from the object color to ambient shadow color. There are
+    various ways to reduce aliasing effects, such as increasing the resolution of
+    the shadow map. See the preceding image. The quality of the shadow degrades as
+    the resolution becomes low. The downside here is decrease in the performance as
+    more samplings are taking place. The other effective and popular technique to
+    fix aliasing artefacts is called **percentage closer filtering** (**PCF**). In
+    this technique, edges soften by means of sampling. For more information, refer
+    to the next recipe *Softening the shadow edges using PCF*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shadow acne
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A very common problem that arises as a result of implementing the current technique
+    is called shadow acne. The following image shows how the acne effect looks. This
+    is caused when the first pass is executed with the back face culling enabled.
+    The recorded depth texture stores the z value of the front face, which later when
+    compared with the second pass produces large differences in depth values. These
+    large differences are responsible for the shadow acne effect. This can be eliminated
+    by rendering only back faces, which will result in more accurate depth comparison.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Therefore, the first pass must be performed using the front face culling. The
+    depth texture formed using the front face culling in the first pass may still
+    not be the same or close enough that are generated with the second pass. As a
+    consequence of this, it results in rendering artefacts in which faces show the
+    fade in and out effect. This visual unpleasantness can be eliminated by using
+    the (`glEnable( GL_POLYGON_OFFSET_FILL)`) polygon offset. This polygon offset
+    adds an appropriate offset (`glPolygonOffset(2.5f, 20.0f)`) to force resultant
+    z values (in pass 1) to be closer enough (to pass 2) to mitigate the problem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Shadow acne](img/5527OT_12_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Phong shading – the per-vertex shading technique* recipe in [Chapter
+    5](ch05.html "Chapter 5. Light and Materials"), *Light and Materials*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Transform feedback particle system with sync objects and fences*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Softening the shadow edges using PCF
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: PCF stands for percentage-closer filtering. It is a well-known and simple technique
+    to produce smooth shadow edges. The shadow mapping technique implemented in the
+    previous recipe shows very sharp transitions among light and shadow pixels, thereby
+    producing aliasing effects. The PCF technique averages these sharp transitions
+    and results in smoother shadows. Unlike the other texture that provides the capability
+    for texture filtering, which is basically a smoothening method to determine the
+    color of a texture-mapped pixel, unfortunately, such filtering techniques cannot
+    be applied to shadow mapping. Alternatively, multiple comparisons are made per
+    pixels and averaged together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the PCF name depicts, it samples the shadow map using the current fragment
+    and compares it with surrounding samples. The rule is to give more weightage to
+    samples closer to the light source. In order words, it calculates the percentage
+    of the area closer to the illuminated surface and not in the shadow. This is how
+    the technique got its name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Softening the shadow edges using PCF](img/5527OT_12_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'For this recipe, we have reused the shadow mapping. The following steps provide
+    a high-level overview on how to implement this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The prefiltered shadow map**: This shadow map needs to be prefiltered before
+    using it in the PCF. Therefore, apply the linear texture filtering for texture
+    minification and magnification. In the previous recipe, this corresponds to step
+    two of the same section. This time, the 2D depth texture is created using the
+    `GL_LINEAR` filter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Depth comparison with PCF**: Shared transformed shadow coordinates in the
+    fragment shader are used to produce multiple samples based on the filter size;
+    multiple samples are always surrounded by the current fragment. Calculate the
+    average result of all samples and use this value to scale the intensity of diffuse
+    and specular components computed from Phong shading in the present recipe.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**The filter size**: The choice of dimension of the kernel filter makes a great
+    impact on the quality of the anti-aliased edge, but this comes at the cost of
+    performance. Bigger the filter size, better the quality and slower will be the
+    performance. For embedded platforms, the processing capability is a considerable
+    factor. Therefore, based on our needs, the present recipe produces acceptable
+    results with 2 x 2 filter (four samples).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As this technique is based on the shadow map, we will advise you to reuse previous
+    recipes and add a few changes addressed in this section. Here are the steps to
+    implement the shadow mapping source:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `CustomScene` constructor, create the depth texture with linear filtering
+    this time; the last recipe uses the nearest option. This linear filtering samples
+    depth values in an interpolated manner, which reduces the sharpness of the stored
+    values based on the sampling of nearby depth samples:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Take the average of neighboring shadow coordinates. Make the following changes
+    in the main function under `PhongFragment.glsl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the percentile close filtering technique for each incoming fragment, a set
+    of samples are obtained from the filtering region. Each of these samples are projected
+    to a shadow map with the reference depth to obtain binary depth results from the
+    underlying lookup function. The shadow map texture contains the closest fragments
+    from the light source. These depth comparisons are combined to compute the percentage
+    of texels in the filtered region that are closer to the reference path. This percentage
+    is used to attenuate the light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Using variance shadow mapping*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using variance shadow mapping
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous recipe, we understood the implementation of PCF. It produces
+    good quality soft shadows. The problem with PCF is that it requires more samples
+    to produce better quality results. In addition, like standard textures, it's impossible
+    to use prefiltered mipmapping to boost the process. Therefore, we must sample
+    multiple texels to average out the resultant to compute the light attenuation
+    on the current texel. The overall process to render the shadow can be slow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Such drawbacks of PCF can be overcome by using variance shadow mapping. This
+    technique relies on Chebyshev Probabilist Prediction, which makes use of mean
+    and variation. The mean can be simply get from the shadow map texture and the
+    (**σ²**) variance can be calculated from the average value (**E(x)**) and the
+    average square value (**E(x²)**):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using variance shadow mapping](img/5527OT_12_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To implement this recipe, we will reuse our first recipe on shadow mapping.
+    The following guidelines will help you to understand the overall concept of variance
+    shadow mapping:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the color buffer. In contrast to generic shadow mapping, this recipe
+    uses the color buffer instead of the depth buffer. Therefore, the FBO now contains
+    the color buffer instead of the depth buffer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This is the pass one phase, where the depth of the scene will be recorded in
+    the color buffer, which will store the **E(x)** and **E(x²)** values.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Compute variance and quantity. Use the preceding equation and calculate the
+    variance and quantity for pass two.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In this recipe, we will create a new shader to record the depth information.
+    Here are the steps to implement the shadow mapping source:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `CustomScene` class, define a new `Texture` variable called `colorTexture`
+    for the color buffer. In the constructor, create a color buffer with a linear
+    filtering of 16-bit floating precision. The format type must be in the RGB format:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new vertex shader called `VSMDepthVertex.glsl` and share the computed
+    vertex positions with the fragment shader:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Similarly, create a fragment shader called `VSMDepthFragment.glsl` and store
+    the depth square information in the first two coordinates of the output fragment:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Execute pass one and render the scene to FBO. This will use the preceding shaders
+    and the depth value from the color buffer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Modify the existing `PhongFragment.glsl` as follows. This time, instead of
+    `sampler2DShadow`, we will use sample 2D as we will use the color buffer to store
+    the depth information:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The variance shadow mapping overcomes the limitation of PCF by providing the
+    depth data in a form where it can be filtered linearly and can be used with algorithms
+    and modern graphics hardware that support linear data. Like our first recipe,
+    the overall algorithm is the same apart from the fact that now, we will use two
+    component depth and its square to store it in the 16-bit precession color buffer.
+    During the first pass, this color buffer stores the M1 and M2 moments sampled
+    in the depth distribution of the filtered region. This computation takes place
+    in the `VSMDepthFragment.glsl` fragment shader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the second pass, the color buffer is shared with the `phongFragment.glsl`
+    fragment shader as a sample 2D uniform. Incoming shadow coordinates are converted
+    to the homogenous form before performing any texture lookup. The z component of
+    this transform coordinate gives the depth from the fragment from light's perspective.
+    This depth value is used in the `chebyshevComputeQuantity` function to look up
+    the texture. Lookup values are used to find the variance as per the previously
+    mentioned equations, that is, equation 3\. Finally, equation 5 is used to find
+    the quantity that is exactly the same quantity we wish to compute in order to
+    perform percentile close filtering. The returned quantity or weight value from
+    this function is used to produce shadows as per the shadow mapping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Creating shadows with shadow mapping*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Softening the shadow edges using PCF*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Simulating the particle system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In computer graphics, the simulating particle system is a simulation of the
+    natural phenomena, such as dust, smoke, rain, fireworks, and so on. This particle
+    system contains large number of tiny particles, which can vary from few hundreds
+    to millions in numbers. Each of the unit particles possess the same characteristics,
+    such as velocity, color, lifespan, and so on. These particles are updated once
+    every frame. During the update, the respective characteristics of particles are
+    computed and updated. As a result, it makes them move or appear to change its
+    color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this recipe, we will implement the particle systems. Each particle is made
+    up of a quad and textured with translucent texture. Each particle possesses a
+    specific color that changes with the update of time. Let''s take an overview of
+    this recipe to understand the implementation of the simulation of the particle
+    system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Define particle attributes**: This creates the data structure, which contains
+    the important attributes of the vertex that includes particle position, color,
+    and so on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Particle geometry**: This defines the geometry of a single particle. It''s
+    represented by four vertices in the shape of a perfect square and contains respective
+    texture coordinates. This particle object is used in conjunction with the view-projection
+    matrix to produce several instances of particle in the 3D space.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Initialization**: This allocates the space for each particle''s respective
+    attribute and loads the texture. Compile the vertex and fragment shader.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Update**: This updates particles on each frame, calculates the new position
+    of the particles and the remaining life of each, spawns new particle on each frame
+    as the older particles dies'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Render**: This renders the updated particles:![Simulating the particle system](img/5527OT_12_08.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe uses the following data structures to manage particle properties
+    and geometries:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Particle` data structure:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`pos`: This represents the current particle position.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vel`: This contains the current velocity of the particle.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`life`: This represents the remaining life of the particle.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`transform`: This contains the transformation information.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `Vertex` data structure:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`pos`: This contains the vertex position in the 3D space.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`texCoord`: This is the texture coordinate that corresponds to `pos`.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `MeshParticle` data structure:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vertices`: This contains the list of vertex objects.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vertexCount`: This represents the number of vertices in the list.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here are the steps to implement the particle system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a class called `ParticleSystem` derived from the `Model` class. In the
+    constructor, load the texture image that needs to be textured on the particle
+    quad surface. All the particles will share the same texture image:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the `ParticleVertex.glsl` vertex shader. This shader is responsible
+    for updating vertice positions with the transformation information and sharing
+    the remaining lifetime and texture coordinate information with the fragment shader:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the `ParticleFragment.glsl` fragment shader. This shader renders the
+    textured quad. In addition, it uses a lifetime to control the opacity of the particle.
+    The particle diminishes as it reaches its end:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'During the initialization of the particle system, compile and link the shader
+    program using `DrawShader()`. Also, initialize particles with `InitParticles()`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `DrawShader` function; this function compiles and links the shader.
+    It loads necessary uniform variables from the vertex and fragment shader program:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `InitParticles` function defines the geometry of particles. There is no
+    need to create `N` number of geometries for `N` particles. We will create one
+    and reuse it for all the particles. Additionally, this function also initializes
+    all the particles. It provides random velocities to each particle, which varies
+    from `-2` to `2` units per microsecond in the horizontal direction and `4` to
+    `8` in the vertical direction:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Define the geometry of the particle in the `CreateQuadrilateral` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `Update()` function, calculate the relative difference between the current
+    and last frame. This time, the difference is used by the `EmitParticles` function
+    to update new position of a given particles based on its velocity:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `EmitParticles()` function, as given in the following code. This
+    function is responsible for updating particles. This function iterates each and
+    every particle and updates its position and reduces the life span. As the life
+    span of a particle becomes zero or less, it''s considered to be dead. In the event
+    of particles death, new particles are respawned:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `RenderParticles()`. This function first updates the particles
+    before rendering:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `ParticleSystem` class manages the life cycle of the particle system. During
+    the initialization of the program, each particle is given a specific position,
+    velocity, life time, and color. The particles in the system are stored as an array
+    format, forming a data pool. The CPU is responsible for updating the particle
+    information and is sent across the updated information to the GPU to render them
+    onscreen. This is not a very efficient mechanism because the CPU is very busy
+    in processing particles and sending them to the GPU. In the next recipe, you will
+    learn an efficient way of how to render the particle system with the transform
+    feedback. Here, we will also implement particles using point sprites instead of
+    treating them as textured quadrilaterals:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_12_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: During the initialization process, all particles are distributed with random
+    velocities along the `X-Y` direction in the range of `[-2 2]` and `[4 8]` respectively.
+    The next position of the particle is updated by adding the current position with
+    the product of the delta time (difference with respect to the last time the particle
+    was updated) and its respective velocity. Blue arrows show the random distribution
+    of velocity vectors in the 2D space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each particle's life span get condensed every time it's updated and finally
+    reaches to its extinct point where the particles are no more active or visible
+    onscreen. The dead particles still remains in the data pool and can be reinitiated
+    again. This way, we reuse the same memory efficiently instead of allocating a
+    new one. In this recipe, we respawn 10 particles in a go while rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The size of particles are made to scale as they rise up in the `Y` direction.
+    This information is gathered from the *y* component of the current position of
+    the particle. We have used some adjustments in the code with some constants to
+    control the scaling in a controlled manner mechanism. Finally, as the positions
+    are updated and transformations are applied, particles can be sent to the GPU-side
+    for rendering purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to *Applying texture with UV mapping* recipe [Chapter 7](ch07.html "Chapter 7. Textures
+    and Mapping Techniques"), *Textures and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Transform feedback particle system with sync objects and fences
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous example of the particle system demonstrated that the animation
+    of the particles with highly CPU bounded operations. Typically, the core parameters
+    of the vertex, such as color, position, and velocity are always computed on the
+    CPU-side. The vertex information flows in the forward direction. In this, the
+    data information is always sent from the CPU to the GPU and is repeated for subsequent
+    frames. This fashion incurs delays as one has to pay for the latency it takes
+    from the CPU to the GPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, it will be wonderful if the vertices got processed on the GPU and reused
+    in the next frame. This is where the new OpenGL ES 3.0 feature called transform
+    feedback comes into play. It's the process to capture the output from the vertex
+    shader and feedback again to the GPU for the next frame. This way, it avoids the
+    CPU intervention and makes the rendering efficient by vast GPU parallel processing.
+    Typically, in this process, a VBO buffer acts as a special buffer and is connected
+    to the vertex shader and collects the transformed primitives' vertices in it.
+    In addition, we can also decide whether the primitives will continue their regular
+    route to the rasterizer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this recipe, we will implement the particle system using the transform feedback
+    feature where vertex parameters, such as velocity, life time, acceleration, and
+    so on are computed on the vertex shader. The translated parameters are stored
+    in the GPU memory and are fed to the next frame iteration. In addition, we will
+    make it more efficient by using point sprites instead of quads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This recipe also implements another new feature of OpenGL ES 3.0 called Sync
+    Object and Fences. Fence is a mechanism by which an application informs the GPU
+    to wait until a certain OpenGL ES specific operation is not completed. This way,
+    the GPU can be prevented to pile up more operation into the command queues. A
+    fence command can be inserted into the GL command stream like any other command.
+    It needs to be associated with the sync object to be waited on. Sync objects are
+    highly efficient as they allow you to wait on partial completion of GL commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This section provides a high-level overview on how to implement the particle
+    system using the transform feedback:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are two shaders required: `Update` and `Draw`. The former updates or
+    processes the data for the particle emission and the latter uses the updated data
+    to render particles.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: At the initialization process, allocate two buffer objects to hold the particle
+    data. It includes position, size, velocity, color, and life time. These buffers
+    will be used in a ping-pong fashion, where one output of one buffer becomes the
+    input of other in the next cycle or frame and vice versa.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: While rendering, use one VBO as the input and the other as the output by bounding
+    the former as `GL_ARRAY_BUFFER` and latter as `GL_TRANSFORM_FEEDBACK`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Prohibits the drawing of fragments by disabling `GL_RASTERIZER_DISCARD`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Executes the update shader with point primitives (`GL_POINTS`). Each particle
+    is represented as a point. The vertex shader takes input from the first VBO and
+    sends the processed data to the second VBO, which acts as a transform feedback
+    output buffer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This enables `GL_RASTERIZER_DISCARD` for fragments draw.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This uses the second VBO, which contains the processed data and sends it to
+    draw shader by bounding as `GL_ARRAY_BUFFER`, render the particles.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finally, once the frame is rendered, swap the two VBOs.![Getting ready](img/5527OT_12_11.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here are the steps to implement the transform feedback recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create the update vertex shader called `TFUpdateVert.glsl` with the following
+    code. This shader defines various attributes used for particle system; each attribute
+    is given a specific location. This shader is responsible for receiving the attributes
+    data and update them. The updated attributes are sent to the next stage using
+    out variables:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the update fragment shader called `TFUpdateFrag.glsl`. This shader is
+    only a place holder for fragment shading so that the compilation of shader can
+    be performed. This shader never comes into picture as the rasterization is turned
+    off during the update:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a vertex shader called `TFDrawVert.glsl` for the render phase. This
+    shader is responsible for rendering the updated data onscreen:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Shade the fragment while rendering to `TFDrawFrag.glsl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create `ParticleSystem.h`/`.cpp` derived from the `Model` base class and implement
+    the `EmitShader()` function. This function will compile the `TFUpdateVert.glsl`
+    and `TFUpdateFrag.glsl` shader files:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'After the shader is compiled, specify the attribute that you want to capture
+    in the transform feedback using the `glTransformFeedbackVaryings` API:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Syntax**:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '| Variable | Description |'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `program` | This is the handle of the program object. |'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `count` | This specifies the number of the vertex output variable used in
+    the transform feedback process. |'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `varying` | This is an array of count zero-terminated strings that specifies
+    the names of varying variables to be used for the transform feedback. |'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `bufferMode` | This specifies the mode under which vertex the output variable
+    data is captured when the transform feedback is active. This variable can accept
+    two enum: `GL_INTERLEAVED_ATTRIBS` or `GL_SEPARATE_ATTRIBS`. The former specifies
+    how to capture the output variables in a single buffer. However, the latter captures
+    each vertex variable output in its own buffer. |'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_TB
+- en: 'We are interested in capturing five vertex output variables: `position`, `velocity`,
+    `size`, `currentTime`, and `lifeTime` in the transform feedback.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `glTransformFeedbackVarying` is always called before linking the program.
+    Therefore, it's necessary to link the program object using `glLinkProgram`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the same file, implement the `DrawShader()` function. This function will
+    compile `TFDrawVert.glsl` and `TFDrawFrag.glsl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Initialize the particle system in `ParticleSystem::InitParticles()`. This function
+    initializes the array of particle object containing various particle properties.
+    After initialization, these objects are stored in two different VBO buffer objects
+    particle VBOs. These buffers are used by the transform feedback to update elements
+    in VBOs in a ping-pong fashion, as mentioned in the preceding code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In `InitModel`, initialize the system as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the time and update the particle system in the `Emitparticles()` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `Emitparticles()` function flips the two VBO buffers each time the frame
+    is rendered. This way, one VBO becomes the input (called source VBO) to the update
+    shader. However, the other captures the processed output variables (called the
+    destination VBO) and vice versa. Use the updated shader program and send the source
+    VBO data and set up the destination VBO as the transform feedback buffer to capture
+    results with the `glBindBuffer` API using `GL_TRANSFORM_FEEDBACK` and `glBindBufferBase`
+    to bound to and index in the destination VBO.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'During the update phase, we are only interested in computing the particle data.
+    Therefore, we can disable the rasterization process:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The transform feedback can begin and end with the help of the following APIs
+    syntax:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '| Variable | Description |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `primitiveMode` | This specifies the type of the primitive that needs to
+    be captured in the transform feedback attached buffer. The acceptable parameters
+    are `GL_POINT`, `GL_LINES`, and `GL_TRIANGLES`. |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: It's very important to ensure that vertex output variables are written in the
+    transform feedback attached buffers, so that the drawing command can use it safely.
+    This requirement to ensure consistency between the update and drawing operation
+    can be achieved by creating fences. A fence is created just after the transform
+    feedback operation is activated. This fence is associated with a sync object,
+    which waits in the rendering routine until the transform feedback operation is
+    not completed.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The `RenderParticles()` function performs the drawing job. It waits for the
+    sync object to ensure the successful completion of the transform feedback operation.
+    Once done, the sync object is deleted and the drawing API are called to render
+    the scene with the particle system:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The transform feedback is a special stage in the OpenGL ES programmable pipeline.
+    It exists right after the vertex shader, as shown in the following image. When
+    the transform feedback is activated, it diverts the output from the vertex shader
+    to the transform feedback. The transform feedback is registered with all the vertex
+    output variables in which it needs to be captured. Data variables are captured
+    in the special ping-pong VBO buffers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_12_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: During the initialization process, two vertex buffer objects are created and
+    set with the necessary particle data in it. These VBOs are attached to the transformed
+    feedback and swapped with each frame. In this manner, one VBO contains the input
+    data and captures processed variables and vice versa.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each time the transform feedback is executed, a corresponding fence is created
+    to acknowledge the completion of the transform feedback. This fence is associated
+    with a sync object, which waits in the rendering function for the fence. When
+    the fence is signaled, the wait is finished and the rendering commands are executed
+    to render the particle system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Particles are represented with `GL_POINTS`, where each point represents a tiny
+    square. This command tells the GPU to draw each vertex as a square. The size of
+    the point can be adjusted using `gl_PointSize`. Compared to the previous recipe,
+    the sprite approach reduces the number of vertices required to represent a quad
+    from four to one. A point sprite is a GPU built-in feature, where each point (representing
+    a square) faces the camera. These can be textured with images without supplying
+    texture coordinates explicitly, making it highly efficient for particle rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Procedural texture shading with texture coordinates* recipe in
+    [Chapter 6](ch06.html "Chapter 6. Working with Shaders"), *Working with Shaders*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the *Introduction* section in [Chapter 3](ch03.html "Chapter 3. New
+    Features of OpenGL ES 3.0"), *New features of OpenGL ES 3.0*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the *Swizzling* recipe *in* [Appendix](apa.html "Appendix A. Supplementary
+    Information on OpenGL ES 3.0"), *Supplementary Information on OpenGL ES 3.0*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

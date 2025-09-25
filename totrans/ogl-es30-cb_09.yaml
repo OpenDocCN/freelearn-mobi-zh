@@ -1,0 +1,1374 @@
+- en: Chapter 9. Postscreen Processing and Image Effects
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detecting scene edges with the Sobel operator
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Making the scene blur with the Gaussian blur equation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Making a scene glow real time with the bloom effect
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Painting the scene like a cartoon shading
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating an embossed scene
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing grayscale and CMYK conversions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing fisheye with barrel distortion
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing the binocular view with procedural texturing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Twirling the image
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sphere illusion with textured quadrilateral
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter will unfold the endless possibilities of a scene and its image-based
+    effects, which are widely used in the field of data visualization and after effects.
+    Practically, objects are represented as a set of vertices in the 3D space. As
+    the number of vertices go higher, the time complexity of the scene increases.
+    Moreover, representing the object in terms of an image has a time complexity proportional
+    to the number of fragments in the scene. Additionally, many effects can only be
+    efficiently possible in the image space rather than implementing in the vertex
+    space, such as blurring, blooming, cloud rendering, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The term post screen processing is a texel manipulation technique applied on
+    an OpenGL ES scene once it's rendered. To be more specific, the scene is first
+    rendered to an offscreen surface where effects are applied. Then, this manipulated
+    offscreen texture is rendered back to the screen surface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In post processing, the outcome of a given texel is affected by its surrounding
+    texels. Such techniques cannot be applied on live scenes because the vertex and
+    fragment shader works locally. This means a vertex shader is only aware of the
+    current vertex and the fragment shader about the current fragment; they cannot
+    use elements information of their neighbors. This limitation can be fixed easily
+    by rendering the scene into a texture, which allows the fragment shader to read
+    any texel information present in the texture. After the scene is rendered to a
+    texture, the image/texture-based techniques are applied to the texture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The image-based effects are applied to an image texture using the fragment shader.
+    During the post-processing implementation, the rendered scene goes through a number
+    of passes, depending on the complexity of the effect. At each pass, it saves the
+    processed output in a texture and then passes it on to next pass as an input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The post screen processing execution model for post processing can be majorly
+    divided into four sections:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Creation of the framebuffer**: The first stage requires creation of an offline
+    texture to render the scene into it. This is achieved by creating the **Frame
+    Buffer Objects** (FBO). Depending on the requirements of the scene, various textures
+    or buffers, such as color, stencil, and depth are attached to the FBO.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Render the scene to texture**: By default, the OpenGL ES scene renders to
+    a default framebuffer. As a prerequisite of post processing, this rendering must
+    be diverted to an offline texture (the FBO texture) by binding the FBO handle
+    to the current rendering pipeline. This ensures that rendering must happen on
+    the FBO texture rather than the default framebuffer.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Apply texture effects**: After the scene is rendered into the texture, it''s
+    like an image in the memory where various image effects can be applied. Depending
+    on the post processing complexities, you may require multiple passes to process
+    the desired effect. In the multipass post processing, we may require two or more
+    FBO''s in order to hold the intermediate processed result of the current pass
+    in it and to be used in the next or later passes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Render to the default framebuffer**: Finally, the post processed textured
+    scene is rendered back to the default framebuffer, which becomes visible on the
+    scene. The following figure shows an edge detection example, in which various
+    stages of the post screen processing are illustrated:![Introduction](img/5527OT_09_01.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Detecting scene edges with the Sobel operator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Edge detection is an image-processing technique used to detect boundaries in
+    an image. It is widely used in the field of computer vision, data visualization,
+    and surface topology. For example, the pencil sketch effect of an image is nothing,
+    but an application of edge detection algorithm. This recipe will demonstrate the
+    edge detection technique using the Sobel operator or filter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Sobel filter measures the change in the gradient of an image in which it recognizes
+    the regions of an image where the frequency of the color transition is higher.
+    These higher transition regions shows sharp changes in the gradient that eventually
+    correspond to the edges. The Sobel operator uses convolution kernels to detect
+    the edge portions in the image. A convolution kernel is a matrix that contains
+    predefined weights that formulate the calculation of the current pixel based on
+    the neighboring pixels intensity and weights contained in the convolution matrix
+    itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A Sobel filter uses two 3 x 3 convolution kernels for edge detection processing;
+    one operates on the neighboring pixels in the horizontal direction to the current
+    pixel. Similarly, the other operates on the vertical neighboring pixels. The following
+    image shows two convolution kernels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting scene edges with the Sobel operator](img/5527OT_09_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Now, we know very well that the Sobel filter approximates the gradient of an
+    image. Therefore, the RGB information of the image must be brought to some gradient
+    form and the best way is to calculate the brightness or luminance of the image.
+    An RGB color represents a 3D space of color in the R, G, and B direction. These
+    colors must bring in 1D gradient space using the brightness information of the
+    image. The brightness of an image is represented by gradient colors between white
+    and black:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting scene edges with the Sobel operator](img/5527OT_09_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Post-processing techniques heavily rely on texturing basics and FBO. Therefore,
+    as a prerequisite for this chapter, you must understand these concepts. We have
+    covered these concepts very well in [Chapter 7](ch07.html "Chapter 7. Textures
+    and Mapping Techniques"), *Textures and Mapping Techniques*. For more information,
+    refer to the *See also* subsection in this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The texture filtering technique must be `GL_NEAREST` to detect more edges and
+    darker appearances. Unlike the `GL_LINEAR` filtering, which uses the weighted
+    average of the four surrounding pixels closest to texture coordinates, the `GL_NEAREST`
+    filtering uses the pixel color that is closest to texture coordinates, therefore
+    resulting gradients with higher chances of sharp changes in frequency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Perform the following step-by-step guidelines to understand the programming
+    procedure. Make sure that you refer to the *See also* section for dependencies
+    before you read this section. This recipe reuses the FBO recipe from textures
+    and renames the class from `DemoFBO` to `EdgeDetection`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the constructor, load the `SimpleTexture` and `ObjLoader` class. The former
+    class renders the polka dot pattern mesh and the latter class is used to render
+    the FBO texture.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In this class, create two variables called `DefaultFBO` and `FboId` to hold
+    the handles of the default framebuffer and FBO respectively. Create two more variables:
+    `textureId` and `depthTextureId` to hold the handles of the color texture and
+    the depth texture in the FBO.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create the FBO in the `initModel()` with user-defined dimensions (width and
+    height) as per the application requirement. This recipe uses the same dimension
+    as the render buffer dimension. The framebuffer is created in the `GenerateFBO()`
+    function, which creates a color buffer and a depth buffer to store the scene color
+    and depth information:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Render the scene using the `RenderObj()` function. The scene is rendered to
+    the perspective projection system using `SetUpPerspectiveProjection()`, which
+    is called before `RenderObj()`. FBO must be bound before drawing a scene. This
+    will render the color information of scenes to FBO's color texture and depth information
+    to FBO's depth texture.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Set the model-view matrix and draw a scene. Make sure to restore the default
+    framebuffer at last after the scene is rendered to the FBO:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, we are good to go with edge detection with the help of the `SimpleTexture`
+    class. This class will take the saved texture from the FBO and apply the edge
+    detection shader to it. For more information on how the `SimpleTexture` class
+    works, refer to the *Applying texture with the UV mapping* recipe in [Chapter
+    7](ch07.html "Chapter 7. Textures and Mapping Techniques"), *Textures and Mapping
+    Techniques*.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The FBO texture is rendered to a quad of size two. This quad fits to the complete
+    viewport. This is why the orthographic projection system must also be defined
+    with the same dimensions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `EdgeDetect()` function applies the Sobel filter using the `SimpleTexture`
+    class. This sets the required `pixelSize` uniform in the edge detection shader:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the following `EdgeDetectionFragment.glsl` fragment shader for edge
+    detection. There is no change required in the vertex shader. Use `SimpleTexture::InitModel()`
+    to load this shader:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Edge detection is implemented in the `EdgeDetection` class. This class contains
+    two objects of the `ObjLoader` and `SimpleTexture` class. The former class renders
+    the 3D mesh and the latter renders the texture on the HUD. First, the scene is
+    rendered to a frame buffer object. This allows you to capture the current scene
+    in the texture form in the color buffer of the frame buffer object. This texture
+    is then applied to the Sobel operator convolution filter, which detects edges.
+    Finally, the process texture is rendered back to the HUD using the object of the
+    `SimpleTexture` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s understand its functioning in detail. The `EdgeDetection` class first
+    initializes the `ObjLoader` and `SimpleTexture` class objects in the constructor.
+    In the `initModel()` function, it calls `GenerateFBO` to create an offline rendering
+    buffer (FBO) with the same dimensions as the render buffer. In the render function,
+    this FBO is attached to the drawing pipeline so that all drawing commands are
+    diverted to our FBO, rather than going to the default buffer. The `ObjLoader`
+    class renders the scene to this FBO''s texture (with `textureId`). The graphics
+    pipeline again binds back to the default framebuffer so that the output is visible
+    on the screen. Now, the `SimpleTexture` class handles the remaining job of finding
+    the scene edges through the `EdgeDetectionFragment.glsl` shader. This shader implements
+    the Sobel operator and accepts a texture as an input. This texture must be the
+    FBO''s color texture (`textureId`). In the fragment shader program, each time
+    a current fragment is processed, it retrieves a 3 x 3 fragment matrix around it.
+    This matrix is then multiplied by the convolution kernel along the horizontal
+    and vertical direction to result `px` and `py`. This result is used in calculating
+    the intensity (`distance`) and compared with the given threshold (`GradientThreshold`).
+    If the comparison is greater, then the fragment is colored black; otherwise, it''s
+    colored with white color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Implementing render to texture with Frame Buffer Objects* recipe
+    in [Chapter 7](ch07.html "Chapter 7. Textures and Mapping Techniques"), *Textures
+    and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Implementing grayscale and CMYK conversions*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the *Generating the polka dot pattern* recipe in [Chapter 6](ch06.html
+    "Chapter 6. Working with Shaders"), *Working with Shaders*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Making the scene blur with the Gaussian blur equation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The blur effect is an image processing technique that softens an image or makes
+    it hazy. As a result, the image appears smoother like viewing it through a translucent
+    mirror. It reduces the overall sharpness of the image by decreasing the image
+    noise. It's used in many applications, such as blooming effect, depth-of-field,
+    fuzzy glass, and heat haze effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The blurring effect in this recipe is implemented using the Gaussian blur equation.
+    Like other image processing techniques, the Gaussian blur equation also makes
+    use of the convolution filter to process image pixels. Bigger the size of the
+    convolution filter, better and dense is the blur effect. The working principle
+    of the Gaussian blur algorithm is very simple. Basically, each pixel's color is
+    mixed with the neighboring pixel's color. This mixing is performed on the basis
+    of a weight system. Closer pixels are given more weight as compared to farther
+    ones.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The math behind the Gaussian blur equation**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Gaussian blur equation makes use of the Gaussion function. The mathematical
+    form of the equation and graphical representation of this function in one and
+    two-dimensional space, as shown in the left-hand side of the following figure.
+    This recipe uses the 2D form of this function, where *σ* is the standard deviation
+    of the distribution, *x* and *y* are the texel distance in the horizontal and
+    vertical axis from the current texel on which the convolution filter works. The
+    Gaussian function is very useful in making high frequency values smoother:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Making the scene blur with the Gaussian blur equation](img/5527OT_09_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Working principle**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Gaussian filter is applied on each and every texel. As a result, the change
+    in its original value is based on the neighboring pixels. The number of the neighboring
+    pixels depends on the size of the convolution kernel. For a 9 x 9 kernel, the
+    number of computations required are *9 * 9 = 81*. These can be reduced by performing
+    the Gaussian blur in two passes, wherein the first pass is applied on each texel
+    in the horizontal direction (*s* axis), as shown in the upper-right corner image
+    by label (1), and the second pass is applied in the vertical direction (*t* axis)
+    represented by label (2). This requires 18 computations and the result is the
+    same as 81 calculations. The final output of the Gaussian blur is represented
+    by label 3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are five steps required to implement the Gaussian blur:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filter size**: This depends on many things, such as the processing time,
+    image size, output quality, and so on. Bigger the filter size, more the processing
+    time, and better the results. For this recipe, we will use the 9 x 9 convolution
+    filter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**FBO**: This creates two FBO''s, the first one with the color and depth information
+    and the second one only with the color information.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Render to texture**: This renders the scene to the first FBO''s color texture.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Horizontal pass**: This uses the color buffer of the first FBO and applies
+    the horizontal Gaussian blur pass.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Vertical pass**: This reuses the first FBO''s color buffer and applies the
+    vertical pass.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe makes use of the first recipe on edge detection. We renamed the
+    class from `EdgeDetection` to `GaussianBlur`. The steps to understand the required
+    changes are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a new vertex shader called `Vertex.glsl`, as shown in the following
+    code. This vertex shader will be shared by horizontal and vertical Gaussian blur
+    passes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new fragment shader called `BlurHorizontal.glsl` and add the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Similarly, create another new fragment shader called `BlurVertical.glsl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Compile and link these shaders in the `SimpleTexture::InitModel()`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Calculate the Gaussian weight using `GaussianEquation()`. We assumed sigma
+    (*σ*) as 10.0\. The parameter value contains the texel distance along the horizontal
+    or vertical direction, and the σ is the variance or standard deviation of the
+    Gaussian distribution:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Calculate the weights for the horizontal and vertical Gaussian fragment shader,
+    as given in the following code using the `GaussianEquation` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Create two FBO's within the `Gaussian::InitModel` with `GenerateBlurFBO1` (with
+    the color and depth texture) and `GenerateBlurFBO2` (only the color buffer). These
+    create two FBO's with the `blurFboId1` and `blurFboId2` handles respectively.
+    The first FBO uses an additional buffer for depth because we want depth testing
+    to be performed so that the correct image will be rendered to the color texture
+    of this FBO.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Render the scene with the perspective projection system to the first FBO (`blurFboId1`
+    color texture). This will render the scene image to the color texture of this
+    FBO:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, set the second FBO (with the `blurFboId2` handle) as a render destination,
+    reuse the color texture from the first FBO (which contains the scene image), and
+    pass it on to the horizontal blur pass (pass 1) with the `RenderHorizontalBlur()`
+    function. This will produce the horizontal blur scene image on the (`textureId2`)
+    color buffer of the second FBO. Note that the project system should be orthographic
+    before the second FBO is set:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, use the default framebuffer and apply the pass 2 (vertical blur) using
+    the `RenderVerticalBlur` function in the second FBO''s texture (`textureId2`):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The basic idea behind the Gaussian blur is to create a new texel of an image
+    by taking a weighted average of the texels around it. Weights are applied using
+    the Gaussian distribution function. For each texel, we need to create a square
+    around the centered pixel. For instance, for a given texel, a square kernel of
+    five texel contributes 25 texels weighted average to get the middle texel. Now,
+    as the diameter of the kernel grows, the operation becomes expensive because it
+    needs to read more texels to contribute. This expense is not linear fashioned
+    because a 9 x 9 kernel requires 81 texels to read, which is almost four times
+    the previous kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, the Gaussian blur can be optimized to read less texels and yet achieve
+    the same results. This can be done by dividing the kernel operation into two passes
+    as the horizontal and vertical pass. In the former, only row-wise elements of
+    the kernel are used for weighted average to calculate the middle texel of the
+    row. Similarly, for the latter case, columnwise elements are considered. This
+    way, it requires 18 (9 + 9) pixels to read instead of 81.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's understand the working of this recipe. The Gaussian blur is applied
+    in two phases. Each phase works on one-dimensional row and column. The first phase
+    is a horizontal pass, where texels in the horizontal direction are considered
+    by the Gaussian kernel. This phase is called pass 1, which is performed using
+    `BlurHorizontal.glsl`. Similarly, the second phase for pass 2 is carried within
+    the `BlurVertical.glsl` fragment shader. Both these fragment shaders share a common
+    vertex shader called `Vertex.glsl` and these shaders are managed by the `SimpleTexture`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the `GaussianBlur` class is initialized, it creates two FBO's. The first
+    FBO requires the color and depth information to render the scene. However, the
+    second FBO does not require any depth texture information because it works on
+    the first FBO's color texture, which is already taken the depth of the scene into
+    consideration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The scene is rendered to the color texture of the first FBO. This color texture
+    is shared with the `SimpleTexture` class where the first pass (horizontal blur)
+    is applied to it. During the second pass, the second FBO is used and provided
+    with the horizontal, blurred color texture (from the first FBO) as an input. This
+    texture (horizontal blurred) processes the vertical blur shader and stores the
+    processed texture in the color buffer of the second FBO. Finally, the scene is
+    attached to the default framebuffer, and the color buffer from the second FBO
+    is rendered on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Detecting the scene edges with the Sobel operator*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Making a scene glow real time with the bloom effect
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Blooming is a very useful post screen processing technique that makes a real-time
+    scene glow. With this effect, certain parts of the scene appear highly brighter
+    and give an illusion of emitting scattered light in the atmosphere. This technique
+    is widely used in gaming and cinematic effects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The working principle of the bloom effect is very simple. The following image
+    shows a pictorial representation of the working model, which is used in the current
+    recipe. First, the scene is rendered to an offline framebuffer or texture (label
+    **1**), where its texture is used as an input in the next stage that detects the
+    bright portions in the scene and writes in a new texture (label **2**). This texture
+    is then passed on to the horizontal (label **3**) and vertical blur (label **4**),
+    which applies the Gaussian blurring effect to make it blurred and scattered a
+    bit. This output (label **4**) is then finally combined on top of the original
+    rendered scene (label **1**), which produces a glow-like effect:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Making a scene glow real time with the bloom effect](img/5527OT_09_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe reuses our previous recipe on Gaussian blur. We rename the class
+    from `GaussianBlur` to `Bloom`. Here are the steps to implement this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a new fragment shader called `Bloom.glsl`. This fragment shader need
+    to be compiled and linked within the `SimpleTexture` class. This shader is responsible
+    for locating the bright portions of the scene:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'There is no change required in the `BlurHorizontal.glsl`. However, in the `BlurVertical.glsl`,
+    add the following code. This code is responsible for mixing the blurred bright
+    portions of the scene with the original scene (unchanged) preserved in the `RenderTex`
+    texture:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Create three FBO's in `Bloom::InitModel` with `GenerateSceneFBO()` (using the
+    color and depth texture), `GenerateBloomFBO()` (using only the color buffer),
+    and `GenerateBlurFBO2()` (using only the color buffer). These functions will create
+    three FBO's with the `SceneFbo`, `BloomFbo`, and `BlurFbo` handles respectively.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Render the bloom recipe under `Bloom::Render()`. In this function, render the
+    scene with the perspective projection system, process the textures under the orthographic
+    projection system, and store the handle of the default framebuffer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Render different phases for the bloom effect using `RenderObj()`, `RenderBloom()`,
+    `RenderHorizontalBlur()`, and `RenderVerticalBlur()`. All of these functions accept
+    four arguments. The first argument (`BindTexture`) specifies the input color texture/buffer,
+    the second argument (`Framebuffer`) specifies the handle of the framebuffer to
+    which the scene should be attached, the third argument (`ColorBuf`), and the fourth
+    argument (`DepthBuf`) specifies the color and depth buffer to which the scene
+    writes. If any of the argument is not required, send `NULL` as an argument:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `RenderObj()` will render the scene to the `SceneFbo` framebuffer in the
+    `SceneTexture` and `DepthTexture`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Similarly, the `RenderBloom()` uses `SceneTexture`. Now, apply the `BlurHorizontal.glsl`
+    shader to it, which will render the scene to `BlurTexture`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finally, `RenderVerticalBlur()` uses `BlurTexture` and `SceneTexture` as an
+    input and applies the `BlurVertical.glsl` shader on it, which will apply the vertical
+    blur pass and mix it in the scene texture.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now, use the `blurFboId2` FBO and reuse the first FBO's texture and pass it
+    on to pass 1 (the horizontal blur) using the `RenderHorizontaBlur()` function.
+    This will store the processing result of pass 2 in `textureId2`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now, use the default framebuffer and apply the pass 2 (the vertical blur) to
+    the second FBO's texture (`textureId2`).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The working principle of the bloom effect is very similar to the previous recipe.
+    Instead, a new stage for blooming is added. First, the scene is rendered to a
+    nondefault framebuffer called `SceneFBO`, where it's written in the `SceneTexture`.
+    The next stage called blooming is also performed on an offline framebuffer (`BloomFBO`).
+    In this, the texture from the previous stage is used as an input and applied to
+    the bloom fragment shader. The bloom shader converts a color image to luminance,
+    which stores the image information in the linear gradient form. This provides
+    the brightness information of the image, where the bright portions are detected
+    by comparing the gradient value to the required threshold. The brightest portions
+    are then written in the `BloomTexture` and provided to the Gaussian blur stage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this stage, the input stored in the `BloomTexture` from the previous stage
+    is processed using the horizontal Gaussian blur pass where it''s stored in `BlurTexture`
+    and applied to the vertical pass. During the vertical blur pass, the blurred bright
+    portion is mixed with the original scene using `SceneTexture`. This way, the image
+    is mixed with the bright scattered glowing light on the scene:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Detecting the scene edges with the Sobel operator*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Making the scene blur with the Gaussian blur equation*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Painting the scene like a cartoon shading
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Among various different kinds of shaders, the toon shader is well known for
+    producing cartoon-shaded scenes. The cartoon shading technique is implemented
+    in the fragment shader. The fundamental basis of this shader is the quantization
+    of colors. In this, a range of colors are represented by a single type of color.
+    Mathematically, color values are constrained from a continuous set of values (in
+    floating numbers) to a relatively small discrete color set (represented by integer
+    values). In addition to the quantization of color, the edges of the geometry are
+    also highlighted using the Sobel operator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following image shows a screenshot from the current recipe, where quantization
+    can be easily seen in various shades of green color. In conjunction, the Sobel
+    operator renders thick black edges:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Painting the scene like a cartoon shading](img/5527OT_09_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe is an extension of our edge detection recipe. With very little changes
+    in the fragment shader, we can create a scene that looks like a painted cartoon.
+    For this recipe, you are advised to thoroughly understand our first recipe in
+    this chapter. This recipe will cover the changes we added to the existing edge
+    detection's fragment shader for implementing the cartoon shader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We reused the `EdgeDetectionFragment.glsl` and renamed it to `ToonShader.glsl`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the cartoon shading, each incoming fragment is first passed through the Sobel
+    operation to check whether it belongs to an edge or not. If it does, the current
+    fragment is rendered with a black edge color; otherwise, it's shaded with the
+    cartoon shading effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the cartoon shading effect, each fragment color is multiplied by a `quantizationFactor`
+    (which is 2.0 in the present case). This is used in the process of the image quantization.
+    In computer graphics, image quantization is a process of limiting a large set
+    of colors to fewer ones. In other words, it groups similar colors as one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The obtained color components are added with 0.5 to enhance the chances of producing
+    values greater than 1.0\. This is helpful for the next step, where the floating
+    point color space is converted to the integer type. During this process, the decimal
+    part of the color component is chopped off.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the effect of the `quantizationFactor` multiplication is nullified
+    (we applied this at the beginning), by dividing the integer space color components
+    by `quantizationFactor`. The resultant value is applied on the fragment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Detecting the scene edges with the Sobel operator*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating an embossed scene
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Embossing is a technique in which the scene appears raised or highlighted with
+    some 3D depth. The working logic of the emboss shader is similar to the edge detection
+    technique. Here, the detected edges are used to highlight the image based on edge
+    angles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For this recipe, we will reuse any of the previous post screen processing recipe
+    implemented in this chapter. This recipe will directly jump to the shader part
+    with an assumption that the reader has understood the fundamental logics of the
+    post processing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new fragment shader called `EmbossFrag.glsl`, as shown in the following
+    code. There are no changes required for the vertex shader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In this recipe, edges are detected by taking the difference between two consecutive
+    texels in any arbitrary direction. The difference of these two results in a new
+    color intensity, where each component (RGB) are compared among themselves to find
+    the greater magnitude component (max). This component is then used to clamp between
+    low (0.0) and high (1.0). This operation results in three color intensities: white
+    (derived from low), black (derived from high) 1.0, and emboss (derived from the
+    max component). The result of the emboss shader is shown in the following image.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, the scene is rendered to a FBO where it''s stored in the color buffer.
+    This color buffer is then sent to the emboss shader in the `Tex1` variable. The
+    `p00` and `p01` are represented as two consecutive texels, which are sampled from
+    `Tex1` for the current fragment position. The difference is stored in the diff
+    variable. The diff variable is checked to find the maximum magnitude among RGB
+    components, which is stored in the max variable. The max value is clamped using
+    the `clamp()` function. The result is finally used as an RGB component of the
+    current fragment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The clamping operation we used in this recipe is performed using the `clamp()`
+    GLSL function. This function takes three values: original, lower, and higher range
+    value. If the original value lies between the minimum and maximum range, it returns
+    the original value; otherwise, it returns the minimum range value if the value
+    is smaller than the minimum one and vice versa.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Syntax**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: '| Variable | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `x` | This specifies the value to constrain |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `minVal` | This specifies the lower end of the range to constrain `x` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `maxVal` | This specifies the upper end of the range to constrain `x` |'
+  prefs: []
+  type: TYPE_TB
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Implementing grayscale and CMYK conversions*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing grayscale and CMYK conversions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The grayscale or luminance is an important topic that digital image processing
+    is incomplete without discussing its practical implementation. Luminance is widely
+    used in various applications of image processing. Edge detection, cartoon shading,
+    and emboss effect are examples that we implemented in this chapter, which make
+    use of luminance. In this recipe, you will learn how to covert an RGB color space
+    to luminance and CMYK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Numerically, a grayscale is a linear interpolation between black and white,
+    depending on the color depth. A depth of 8 bits represent 256 varying shades from
+    white to black. However, with four, only 16 shades can be represented. The black
+    color is the darkest possible shade, which is the total absence of transmitted
+    or reflected light. The lightest possible shade is white, which is the total transmission
+    or reflection of light at all visible. Intermediate shades of gray are represented
+    by equal levels of three primary colors (red, green, and blue) to transmit light
+    or equal amounts of three primary pigments (cyan, magenta, and yellow) for reflected
+    light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The ITU-R BT.709 standard provides the weight of these components as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*RGB luminance value = 0.2125*(Red) + 0.7154*(Green) + 0.0721*(Blue)*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe onwards, we will discuss various image processing techniques that
+    was implemented in this chapter. For these recipes, we have reused the *Applying
+    texture with UV mapping* recipe from [Chapter 7](ch07.html "Chapter 7. Textures
+    and Mapping Techniques"), *Textures and Mapping Techniques*. For the current image
+    processing recipe, we only need to make changes in the fragment shader. Proceed
+    to the next section to understand the changes that need to be made to implement
+    grayscale and CMYK conversions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Reuse the simple texture recipe, as mentioned previously, and make the following
+    changes in the fragment shader to implement the grayscale and CMYK recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Grayscale recipe**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Declare a `luminanceWeight` variable that contains the weight of RGB components
+    as per the ITU-R BT.709 standard. Use the incoming texture coordinate and sample
+    the corresponding texel from the texture in the `rgb` variable. Take the dot product
+    between the luminanceWeight and rgb variable to produce the grayscale image (stored
+    in the luminance variable). The grayscale image output of the current recipe is
+    shown in the following right hand-side image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Images are represented in the RGB color space on color computer monitors. However,
+    when these images are published using the standard printing process, these need
+    to be converted to the CMYK color space. The RGB model is created by adding color
+    components to the black color. This is based on emissive colors. In contrast,
+    the CMYK color is transmissive. Here, the colors are created by subtracting color
+    components from white. In an RGB to CMYK conversion, the red component changes
+    to cyan, green to magenta, blue to yellow, and black. The publishing print press
+    uses the CMYK color format, where the RGB space image is converted to four separate
+    single color images, which are used to create four separate printing plates to
+    the printing process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The CMYK color space can be calculated from RGB using the following formula:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_09_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'However, this simple conversion does not truly match the desired results one
+    would expect after conversion. The following approximation from Adobe Photoshop
+    produces very satisfactory results. The under color removal (**ucr**) and black
+    generation (**bg**) function is given as follows, where *Sk=0.1*, *K0 = 0.3*,
+    and *Kmax = 0.9*. These are the constant values used in the formula:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_09_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Under color removal** (**ucr**) is the process of eliminating the overlapped
+    yellow, magenta, and cyan color components that would be added to produce a dark
+    neutral black color, replacing them with black ink called full black. This results
+    in less ink and greater depth in shadows.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Black generation** (**bg**) is the process of producing a black channel or
+    color. This affects color channels, when color conversation is performed from
+    the RGB to CMYK color space.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following image shows the color version and four separated versions of
+    CMYK in grayscale. The grayscale representation of each component shows the amount
+    of ink required for each darker values, indicating high consumption of ink:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_09_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Here is the fragment shader code for the CMYK separation from an RGB color
+    space:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Applying texture with UV mapping* recipe in [Chapter 7](ch07.html
+    "Chapter 7. Textures and Mapping Techniques"), *Textures and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing fisheye with barrel distortion
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Fisheye is an effect in which a scene looks sphered. As a result, edges in the
+    scene look curved and bowed around the center of this virtual sphere. This effect
+    makes the scene look like wrapped around a curved surface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The barrel distortion technique is used to achieve the present effect, which
+    can be applied to fragments or vertices. This recipe will implement the barrel
+    distortion on the fragment shader first and then apply it to the vertex shader.
+    The difference between the two is this; in the former shader, the geometry does
+    not distort. However, texture coordinates are distorted, resulting in a magnifying
+    lens effect or a fisheye lens effect. In the latter technique, the geometry is
+    displaced and creates different amusing distorted shapes. Note that this is not
+    a post processing technique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'For this recipe, we can reuse our first recipe and replace the edge detection
+    logic with the current barrel distortion fragment shader: `BarrelDistFishEyeFragment.glsl`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Modify the `BarrelDistFishEyeFragment.glsl`, as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe first renders the scene to a FBO's color texture, which is then
+    shared with the `SimpleTexture` class and applied to the quad geometry with texture
+    coordinates ranging from (0.0, 0.0) to (1.0, 1.0). The quad vertex and texture
+    information are provided to the vertex and fragment shader to process the geometry
+    and fragment information. The barrel distortion technique is implemented in the
+    fragment shader, where each incoming texture coordinate is temporarily converted
+    to the polar coordinate to produce the fisheye effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Texture coordinates are first translated in the center (0.5, 0.5) and the distance
+    of these translated texture coordinates is computed from the center. If the translated
+    texture coordinates (`xy`) falls outside the given threshold of 0.35 radius, then
+    unaltered texture coordinates (`TexCoord`) are used to fetch the sample from `Tex1`;
+    otherwise, this coordinate (`xy`) is applied to the barrel distortion with the
+    `BarrelDistortion` function. The following image shows the radius of the red circle.
+    The `BarrelDistortion` function first calculates the length of the texture coordinate
+    with respect to the center of the logical circle. This obtained length is altered
+    using the barrel power, which shrinks or expands the length. The following image
+    shows different results obtained from various barrel powers (1.0, 0.5, 0.3, and
+    2.0).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This altered length is then multiplied by the slope of texture coordinates
+    along the S (horizontal) and T (vertical) components, which will result in a new
+    set of translated texture coordinates. These texture coordinates are retranslated
+    into their old origin (bottom, left). Finally, this retranslated texture coordinate
+    is used to calculate the sampled texture from the input texture coordinate:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'When the barrel distortion is applied to the geometry, it distorts the physical
+    shape of the geometry. The following images show the application of the barrel
+    distortion on different meshes. You can explore this recipe using the `BarrelDistortion_Vtx_Shdr`
+    source code provided in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_09_16.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The working logic of this recipe is similar to the previous one except the fact
+    that it's now implemented in the vertex shader. Here, we do not need to translate
+    the texture coordinate from the center because, by default, the origin always
+    is the center of the Cartesian coordinate system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Use the following code in the vertex shader to apply barrel distortion on the
+    vertex shader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Generating the polka dot pattern* recipe in [Chapter 6](ch06.html
+    "Chapter 6. Working with Shaders"), *Working with Shaders*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing the binocular view with procedural texturing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe implements a binocular view effect, where a scene is rendered as
+    if it's visualized from the binocular itself. We will implement this effect by
+    programing a procedural shader. Alternatively, in another technique, the alpha-mapped
+    texture is used instead. In this approach, an alpha-masked texture containing
+    a binocular view image is superimposed on top of the scene. This way, only those
+    parts of the scene are visible that belong to the nonmasked texture region.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The procedural textured approach is also relatively simpler. Here, the scene
+    is programmed in the fragment shader where the binocular view effect is created
+    using texture coordinates of the vertices. Texture coordinates are used to create
+    a logical circular region on the rendered image. The fragment that belongs outside
+    the circumference of this circular region are rendered with an opaque color (say
+    black). This opacity reduces as the distance shrinks toward the center point of
+    this circular region. The tapped point (the single tap gesture) on the device
+    screen is used as a center point of the circular region; this way, the lens can
+    be moved around the screen using touch gestures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Use any of the existing image processing recipes and replace the following
+    code in the fragment shader. This fragment shader accepts a few inputs from the
+    OpenGL ES program. The image texture is stored in the `Tex1`; the tapped point
+    must be provided in the center variable, which will be treated as the center of
+    the circle. We also require the `horizontalAspectRatio` and `verticalAspectRatio`
+    aspect ratios so that with different screen resolutions, a circle remains as a
+    circle and not turned to any elliptical shape. Finally, we need the inner and
+    outer radius (`LensInnerRadius`, `LensOuterRadius`) to define the width of the
+    circular region. The color (`BorderColor`) will be used for the mask painting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The incoming texture coordinates is subtracted by the center position and are
+    translated into new logical coordinates, where transformed texture coordinates
+    or positional vectors (dx, dy) are stored with reference to the center point (`center`).
+    This coordinate must be multiplied by the `aspectRatio` in the horizontal and
+    vertical directions to eliminate any shape distortion due to the difference in
+    the horizontal and vertical device screen resolution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The distance of each positional vector is calculated with the vector length
+    formula *P (x, y) = √(x2 + y2)* and fed into the smoothstep GLSL API. The smooth
+    step API accepts three arguments (**edge1**, **edge2**, and **x**). The first
+    two arguments are two outbound values and the third is the weight. Refer to the
+    following left-hand side image to understand its functioning. This API returns
+    an interpolated value between two edges, based on the weight provided. The output
+    of the smoothstep is used as a weight to feed into another GLSL API called mix.
+    The mix API mixes the border color with the current texture using a weighted value
+    provided by the smoothstep function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_17.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Applying texture with UV mapping* recipe in [Chapter 7](ch07.html
+    "Chapter 7. Textures and Mapping Techniques"), *Textures and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Twirling the image
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Twirling is a very common effect used in animations. When applied to a rendered
+    scene or image, it distorts the appearance within the circular region and produces
+    a radial circular motion of the texels where these are moved around the center
+    of the circular region, producing a whirlpool-like effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Programmatically, for a given image, an arbitrary texel is chosen as a center.
+    A fixed distance from the center of the circle defines a locus of the circumference.
+    All the texels falling under this circumference are being applied to the rotation.
+    The rotation of the texels within the circle decreases with the distance from
+    the center and diminishes at the circumference edge. The following image shows
+    how the twirl effect looks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Twirling the image](img/5527OT_09_18.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Use the following code in the fragment shader to implement the twirl effect:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The twirling effect requires a center point around which the whirlpool effect
+    is produced, this center point is provided by the OpenGL ES program in the center
+    variable. Additionally, we need the size of the image (`imageHeight` and `imageWidth`),
+    which is used to control the region of animation within the image boundaries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each incoming texture coordinate is converted to its corresponding texel position
+    by multiplying it with the image size and is then translated with respect to the
+    center. The translated coordinates represent the position vector, which is used
+    to calculating the distance from the center point. If the distance is within a
+    given radius threshold, the texels are rotated around the center with an arbitrary
+    angle specified in the degree. The angle of rotation increases as the distance
+    between the center and the translated coordinate decreases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Implementing the binocular view with procedural texturing*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sphere illusion with textured quadrilateral
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe will demonstrate a performance efficient technique, which makes
+    use of the procedural texture to produce the illusion of a real 3D object. In
+    the Gouraud shading, fragments are painted with light shadings based on the direction
+    of the light source and the geometry shape. For instance, in [Chapter 5](ch05.html
+    "Chapter 5. Light and Materials"), *Light and Materials*, we implemented the diffuse
+    light on a spherical model, which contains a very high number of vertices. This
+    recipe technique renders the same diffused sphere, but using only four vertices.
+    It fakes the light shading in such a way that the difference between the two becomes
+    indistinguishable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The performance is directly proportional to the number of fragments it renders
+    to the screen. For example, the surface area covered by a single fullscreen rendering
+    sphere is equivalent to several tiny spheres covering up the same surface area
+    on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Use the following steps to implement sphere with textured quadrilateral:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new class called `TextureQuadSphere` derived from the `Model` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Declare the necessary vertex information for the quad, which will have the
+    sphere rendered in:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following `TexQuadSphereVertex.glsl` vertex shader:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'There is no change required in the `TexQuadSphereFragment.glsl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This technique uses a square geometry with four texture coordinates for each
+    vertex. Texture coordinates are shared by the vertex shader in the `TexCoord`
+    variable with the fragment shader. Texture coordinates are in the range from 0.0
+    to 1.0\. These are subtracted by half dimensions to calculate the positional vector
+    (`position`) with respect to the center of the circle. The radius of the circle
+    and the arbitrary position vector from the center of the circle is used to calculate
+    the elevation at each given position.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This elevation is used with the positional coordinate to produce a normal vector;
+    this normal vector provides the angle it made with incidence light rays. The cosine
+    of this angle is used on the color intensity to produce the diffuse shading effect
+    of light on the logical hemisphere. The incident light ray is calculated with
+    the tap coordinates on the fly using the screen resolution and tapped coordinates
+    *x* and *y* positions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following figure shows the pictorial representation of the previous described
+    working logic. P (x, y, 0.0) represents the position vector (`position`), C is
+    the center, and Q is the point on the hemisphere which will be calculated using
+    *CQ = CP + PQ*, as shown in the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_09_19.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Implementing the per-vertex diffuse light component* recipe in
+    [Chapter 5](ch05.html "Chapter 5. Light and Materials"), *Light and Materials*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

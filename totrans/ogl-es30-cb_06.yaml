@@ -1,0 +1,1005 @@
+- en: Chapter 6. Working with Shaders
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the wobble and ripple effect
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Procedural texture shading with object coordinates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating the circular pattern and making them revolve
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating the brick pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating the polka dot pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Discarding fragments
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Procedural texture shading with texture coordinates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter will give you an in-depth understanding of the shaders programming
+    technique. It discusses various techniques that can be implemented by using the
+    vertex and fragment shaders, revealing their capabilities. We will begin this
+    chapter by understanding the role of shaders in the OpenGL ES 3.0 programmable
+    pipeline. You will also learn how the vertex shader and fragment shaders process
+    information on GPU Multicores.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You will learn how to deform the geometry shape by using the vertex shader;
+    this will produce a wobble effect on 3D mesh models. With a little modification,
+    we will use the same deforming concept to implement the pond water ripple effect.
+    Further, we will understand the difference between the procedural and image texturing.
+    With the help of model coordinates, we will implement our first simple procedural
+    texturing recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing a circle-shaped geometry by using vertices may be too expensive to render
+    because it requires too many vertices to form smoother edges; the circle shader
+    recipe demonstrates an efficient way of rendering a circle that uses procedural
+    texturing. The brick shader recipe demonstrates how to render a pattern of bricks
+    on the surface of an object. Using the knowledge from the circle pattern, we will
+    program how to render polka dots on 3D mesh objects. We will extend the same recipe
+    to show an interesting feature of the GL shading language that allows us to produce
+    holes in the 3D geometries by using discarded fragments. Finally, you will learn
+    how to use texture coordinates to program procedural textures. With this knowledge,
+    we will create a grid or cage like geometry on a 3D cube mesh object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Shader role and responsibilities: The following figure illustrates the role
+    of vertex and fragment shaders on two overlapped models to produce the final image
+    on the screen; the expected output is marked as label 1\. The graphics engine
+    is provided with a rectangle-shaped model (four vertices) and a triangle-shaped
+    model (three vertices). These models are first sent to the vertex shader. The
+    vertex and fragment shader program has syntax, such as C programming language;
+    the program''s entry point always starts from the `main()` function.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The vertex shader is compiled and executed at runtime; it's invoked once for
+    every vertex in the geometry, as shown in the following figure with labels **2**
+    and **3**. Shader programs are executed on the multiprocessors GPUs, which allows
+    manipulation of several vertices at the same time. The vertex shader is always
+    executed first before the fragment shader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are mainly two goals of a vertex shader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calculating the transformation of the vertex coordinates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Calculating any per-vertex calculations required by the fragment shader![Introduction](img/5527OT_06_01.jpg)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A fragment shader is always executed after the vertex shader. Unlike vertex
+    shaders, the fragment shader also contains a `main()` function as its entry point.
+    The fragment shader is also compiled and executed at runtime for every single
+    fragment; label **4** and label **5** shows the execution of the fragment shader
+    on each fragment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The image with label **6** shows the generated fragments after the rasterization
+    process; the pixel is shown in the red box. Each fragment may or may not correspond
+    to a single pixel in the primitive. A pixel in the framebuffer can be composed
+    of one or more than one fragment, as shown in the following figure; using the
+    fragment shader, these generated fragments can be controlled programmatically
+    to assign color, texture, and other attribute information; each fragment has position,
+    depth, and color associated with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main goal of the fragment shader is to compute the color information for
+    each fragment or discard the fragment according to the programing decision.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A fragment has the ability to perform the following tasks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Color interpolation or computation of every fragment
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Texture coordinates computation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Texture assignment to every pixel
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Normal interpolation for each pixel
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Calculation of light information for every pixel
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Animation effects computation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The shaders concurrent execution model: The modern graphics engine architecture
+    is capable of rendering high performance state-of-the-art graphics. Thanks to
+    modern graphic processors that allow fast and parallel processing of large datasets
+    at an incredible speed, this capability requires computation of a large dataset
+    in a fraction of micro seconds. **Graphics** **Processor Units** (**GPUs**) are
+    special dedicated processors made to fulfill these requirements; these processors
+    are multicore where parallel processing can be achieved.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the major requirements of modern graphics is that it needs efficient
+    floating-point calculations and fast polygon transformation operations. The GPU
+    is optimized exclusively for these types of requirements; they provide a bunch
+    of capabilities. Among these, it includes the fast trigonometric function, which
+    is considered to be expensive on the CPU architecture. The number of processor
+    cores in GPU can go from a few hundreds to thousands in number.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following figure shows the concurrent execution on the GPUs for the vertex
+    and fragment shader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction](img/5527OT_06_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Each core of the GPU is capable of running an instance of the vertex or fragment
+    shader; each core processes the vertices first and then the fragments, as shown
+    in the preceding figure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the wobble and ripple effect
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This is a first simple yet effective vertex shader technique that produces a
+    wobbling effect on the object's geometry. This shader produces animation effects
+    on the geometric shape like a sine wave; this effect is implemented within the
+    vertex shader. This recipe also demonstrates another animation technique that
+    produces a water pond ripple effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For this recipe, we will reuse the existing Phong shading recipe from the previous
+    chapter. Rename the shader files with a name of your choice; for this recipe,
+    we will rename these to `WobbleVertex.glsl` and `WobbleFragment.glsl`. The wobble
+    and ripple shader are both vertex shader-based recipes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This section will provide the changes required to implement the vertex shader
+    in order to produce the wobble effect. Modify the `WobbleVertex.glsl` as per the
+    following code; there is no change required for the fragment shader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A sine wave has a mathematical property of producing a smooth repetitive oscillation.
+    The following figure shows the sine wave; the amplitude of sine wave defines the
+    height or depth of the wave trough or crest, respectively. The wobble vertex shader
+    displaces the Y component of each object vertex V (V[x], V[y], and V[z]) to produce
+    the wobbling effect; the displacement is done using the sine function whose value
+    always range between -1.0 and 1.0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_06_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The uniform `Time` attribute variable is used for clock ticks. When these clock
+    ticks are fed to the GLSL `sin()` function, it generates values ranging from -1.0
+    to 1.0\. Each vertex''s Y component (V[y]) is added to this sine value (*VertexCoord.y
+    += sin(Time)*) to produce a hopping effect animation. Try this equation, it will
+    make the object hop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_06_29.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Further, in order to produce the wobble animation, take the X (V[x]) or Z (V[z])
+    component of each vertex into consideration to produce a wave like oscillation
+    animation using (*VertexCoord.y += sin(VertexCoord.x + Time)*). Multiplying the
+    Y (V[y]) component of the resultant with `AMPLITUDE` will affect the height of
+    the wobbling wave animation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_06_26.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: With the new Y (V[y]) component of each vertex, the clip coordinates of the
+    vertex are calculated by multiplying it with the `ModelViewProjection` matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_06_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The wobble shader recipe also exhibits a pond water ripple animation, as shown
+    in the preceding image in this section. Mathematically, the sine wave as a function
+    of time is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_06_27.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Where *t* is the time, *A* is the amplitude of the wave, and *f* is the frequency.
+    Using this formula, the ripple effect can be programmed as follows. The change
+    in phase (*φ*) is assumed to be *t* here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_06_28.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Modify the existing vertex shader according to the instructions given in the
+    following code snippet, highlighted in bold:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The distance variable is used to calculate distances of each variable from its
+    origin; this distance is calculated using the OpenGL ES shading language `length()`
+    API. Finally, the clipped coordinates are calculated by taking product between
+    the `VertexCoord` and `ModelViewProjection` matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_06_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Phong shading – the per-fragment shading technique* recipe in
+    [Chapter 5](ch05.html "Chapter 5. Light and Materials"), *Light and Materials*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Procedural texture shading with object coordinates
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this recipe, you will learn how to produce a texture pattern on the surface
+    of the 3D geometry with the help of procedural textures. Basically, texturing
+    on a 2D/3D mesh object can be divided into two categories:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Procedural texturing**: A procedure texture is an image or a texture produced
+    mathematically using an algorithm; such algorithms use various attributes of a
+    2D/3D object to create an image; this type of texturing is highly controllable.
+    Procedural texturing is used to create patterns, such as clouds, marble, wood,
+    blending, noise, musgrave, voronoi, and so on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Image texturing**: In this type of texture, a static image is wrapped on
+    the object; this image could be distorted on affine scaling transformation because
+    this is a raster type of image. You will learn more about image texturing in the
+    next chapter called textures.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In this chapter, we will produce a number of procedural textures, with the help
+    of object and texture coordinates. The current recipe makes use of object coordinates
+    to demonstrate how it can be used to control fragment colors on a 3D model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An object coordinate is a coordinate system in which the original shape of
+    the object is defined. For example, the square in the following image is a 2 x
+    2 unit along the *x-z* plane; the origin is located in the middle of the square.
+    The *x* axis and *z* axis divides the square into four quadrants around the origin.
+    This recipe uses this logic to logically divide the mesh''s 3D space into four
+    quadrants, with each quadrant colored with a different color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Procedural texture shading with object coordinates](img/5527OT_06_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Perform the following steps to implement this simple recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create the `SimpleVertexShader.glsl` and add it to the following code snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Modify the `SimpleFragmentShader.glsl` as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it...](img/5527OT_06_08.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: The preceding figure shows the result of our simple procedural shader The models
+    are divided into four quadrants along the *x-z* plane , with each quadrant shown
+    in a different color. Use the single tap on the screen in order to switch between
+    these models.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The shader job starts from the vertex shader where object coordinates are received
+    by the vertex program as a vertex attribute in the `VertexPosition` variable;
+    this variable contains the vertex position in the local 3D space in which the
+    object was defined. This value is stored in the `ObjectCoord` and passed on to
+    the fragment shader. In the fragment shader, the object coordinate value is checked
+    with the origin in order to test the quadrant to which it belongs to in the *x-z*
+    plane. Depending on the quadrant outcome, a color is assigned to the fragment.
+    The following image shows the division of 3D space into four quadrants using object
+    coordinates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_06_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The shader program does not provide any print statements that can be used for
+    debugging purposes; one of the easiest solutions to debug coordinate values in
+    the shader is to assign colors to fragments. If you are interested to deal with
+    a coordinate range of a model in the 3D space, you can assign various colors using
+    conditional statements. For example, if the previous fragment shader is replaced
+    with the following code, it will render strips with various colors depending on
+    the coordinate range:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![There''s more...](img/5527OT_06_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Each unique color specifies a range of object coordinates along *x* or *z*
+    axes. The following image shows that each color represents a band of 0.1 logical
+    units from 0.5 to 1.0 units along the *x-z* plane:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_06_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Applying texture with UV mapping* recipe in [Chapter 7](ch07.html
+    "Chapter 7. Textures and Mapping Techniques"), *Textures and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating the circular pattern and making them revolve
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This procedural texture recipe will make use of fragment coordinates to demonstrate
+    a circular pattern using `gl_FragCoord`. The `gl_FragCoord` is a keyword available
+    in the fragment shader that is responsible to store the window position of the
+    current fragment in *x* and *y* coordinates; the *z* coordinate stores the depth
+    of the fragment in the range `[0, 1]`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These coordinates are always relative to the OpenGL ES surface window; the
+    `gl_FragCoords` is a result of a fixed functionality in which primitive are interpolated
+    after the vertex processing stage to generate fragments. By default, the `gl_FragCoord`
+    assumes the lower-left corner of the OpenGL ES rendering surface window as the
+    origin. The following image shows the origin in the OpenGL ES surface window with
+    different dimensions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating the circular pattern and making them revolve](img/5527OT_06_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The light shading technique for this recipe will remain similar to the previous
+    recipe; for more information, refer to the *Phong shading – the per-fragment shading
+    technique* recipe in [Chapter 5](ch05.html "Chapter 5. Light and Materials"),
+    *Light and Materials*. Create the `CircleVertexShader.glsl` vertex shader and
+    reuse the code from previous recipe; for the `CircleFragmentShader.glsl` fragment
+    shader, make the following changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following image shows the output of this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/5527OT_06_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'For each fragment''s window position received from `gl_Fragcoord`, it''s manipulated
+    by shifting the bottom-left coordinate to the center of the imaginary square region;
+    this square region is used to inscribe a circle in it. The following code is responsible
+    for displacing each coordinate relative to the center of the logical square, as
+    shown in the following image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![How it works...](img/5527OT_06_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As the `position` is relative to the center of the imaginary square, we can
+    calculate the distance of each coordinate from the center using the standard length
+    formula in vector graphics. This length is used to render the fragment with the
+    color of the circle, which is specified using the `DotColor`; if the length is
+    smaller than the `DotSize`, then the body color is rendered using the `ModelColor`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Mathematically, a circle is the locus of a point, which is always equidistant
+    from a given point; as the origin is moved to the center, we can inscribe a circle
+    within the square, as shown in the following figure. The coordinates falling under
+    the circle can be rendered with `DotColor` to produce a circle pattern on the
+    model. In order to check whether the length is greater or lesser than `DotSize`,
+    we have used the `step()` GLSL API:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![How it works...](img/5527OT_06_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Syntax**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '| Variable | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `edge` | This specifies the location of the edge of the step function |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `x` | This specifies the value to be used to generate the step function |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Return value` | This step function returns 0.0 if x is smaller than edge;
+    otherwise, it returns 1.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The current implementation of the circle pattern is very static; it does not
+    show any movement on the patterns of the circle. In this section, we will apply
+    a general form of the 2D rotation matrix to perform a single rotation in the Euclidean
+    space; the general form of the rotation matrix is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/5527OT_06_30.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Modify the existing fragment shader recipe to see the circular patterns rotation
+    in action; the highlighted code is responsible for calculating the rotation matrix
+    according to the 2D equation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Generating* *the polka dot pattern*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating the brick pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The brick shader generates a pattern the bricks on the given surface of the
+    3D mesh object; this is another very good example of procedural texturing. The
+    brick pattern is made up of two components (a brick and the mortar); these are
+    represented using two different colors, as shown in the following figure. These
+    colors are defined using `BrickColor` and `MortarColor` as the global variables
+    in the vertex shader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The rectangular size of the brick consists of brick and mortal materials; the
+    total dimension of the rectangular region is 0.40 x 0.10 square units, out of
+    which 90 percent of the horizontal dimension (0.40) is reserved for the dimension
+    of the bricks along the *x* axis; the remaining 10 percent is used for the mortar
+    along the same axis. Similarly, the brick vertical dimension is 85 percent along
+    the *y* axis and the remaining 15 percent is used by the mortar''s vertical dimension:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Generating the brick pattern](img/5527OT_06_17.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Perform the following steps to implement the brick shader:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create `BrickVertex.glsl` and reuse the code of the vertex shader from the previous
+    recipe.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create `BrickFragment.glsl` and modify the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the main program and specify the color for `BrickColor` and `MortarColor`
+    uniform variables:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Similarly, specify the total rectangular size and brick percentage:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it...](img/5527OT_06_18.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Each incoming object coordinate `ObjectCoord` in the fragment shader is divided
+    by the `BrickSize`; the outcome position contains rows and columns of the brick
+    to which `ObjectCoord` belongs. For each alternative row, the position of the
+    brick is advanced by 0.5 units in the horizontal direction using the following
+    code snippet in the program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `fract` GLSL API calculates the fractional part of the position and stores
+    it in the `position` variable; as it''s a fractional value, it must be in a range
+    between 0.0 and 1.0; we must use this new value to compare it with `BrickPercent`
+    using the GLSL step function. The step function takes two arguments, a threshold
+    and a parameter against which the threshold needs to be compared; if the parameter
+    value is less than the threshold value, the function return `0`; otherwise, it
+    will return `1`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The mix function mixes two colors using a weight parameter; this weight parameter
+    in the current recipe is provided as a product between `useBrick.x` and `useBrick.y`.
+    The resultant color is multiplied with `PhongShading()`, which produces the final
+    light shading on the brick shader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The mix function that is used in the brick shader is responsible for performing
+    linear interpolation between two given values based on the weight value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Syntax**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '| Variable | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `x` | This specifies the start of the range in which to interpolate |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `y` | This specifies the end of the range in which to interpolate |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `a` | This specifies the value to use to interpolate between x and y |'
+  prefs: []
+  type: TYPE_TB
+- en: Mathematically, the *mix(x, y, and a)* function calculates the linear interpolation
+    between *x* and *y,* using `a` as weight. The resultant value is computed as *x
+    * (1 − a) + y * a*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Gouraud shading – the per-fragment shading technique* recipe in
+    [Chapter 5](ch05.html "Chapter 5. Light and Materials"), *Light and Materials*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating the polka dot pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This recipe is another procedural texture, which is an extension of our circle
+    pattern shader. In that recipe, we looked at the logic behind producing a 2D circle
+    pattern on a planar surface; this planar surface was created using fragment coordinates.
+    In this recipe, we will create a polka dot pattern on the surface of the 3D mesh
+    object; the main difference here is that instead of producing a logical circle
+    in the square, we will use an inscribed logical sphere within the logical cube
+    of dimensions **Side** x **Side** x **Side** units:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Generating the polka dot pattern](img/5527OT_06_19.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this recipe, we have reused the lighting technique using the *Implementing
+    two-side shading* recipe in [Chapter 5](ch05.html "Chapter 5. Light and Materials"),
+    *Light and Materials*. The generic vertex attributes for vertex positions, normals,
+    and texture coordinates are laid out with 0, 1, and 2 indexes, respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Perform the following steps to implement the polka dot recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create `PolkaDotsVertex.glsl` and reuse the code of the vertex shader from the
+    previous recipe.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create `PolkaDotsFragment.glsl`; edit the following fragment shader file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The following image shows the output of the polka shader on various 3D mesh
+    models; among these, the hollow cylinder shows the two-sided shading technique,
+    where the inside and outside faces are rendered with different color polka dots
+    from inside and outside:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/5527OT_06_20.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The polka dot shader uses object coordinates to produce polka dot on the surface
+    of the mesh model; these object coordinates are shared by the vertex shader in
+    the form of the `ObjectCoord` input vertex attribute variable. A modulus operation
+    is performed on `ObjectCoord` using the `Cube` variable, which is a `vec3` of
+    `Side`. This results in a logical cube, which is further subtracted by the half
+    cube dimension in order to bring the origin at the center of the logical cube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Calculating the distance of the translated `ObjectCoord` with respect to this
+    center will provide the length of the position vector from the translated origin:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, the length is compared with the `DotSize` using the GLSL step function
+    in order to check whether it''s inside the imaginary sphere of the `DotSize` radius
+    or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Depending on the outcome of the `insideSphere`, the color value is assigned
+    to the body and polka dots; the colors used for the front face are different from
+    the color used for back faces in order to exhibit the two-side shading.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Implementing two-side shading* recipe in [Chapter 5](ch05.html
+    "Chapter 5. Light and Materials"), *Light and Materials*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Procedural texture shading with object coordinates*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Creating the circular pattern and making them revolve*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Discarding fragments
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The OpenGL ES shading language provides an important feature of discarding fragments
+    using the `discard` keyword; this keyword is used only in the fragment shader
+    to prevent updating the framebuffer. In other words, using this keyword throws
+    away the current fragment and stops execution of the fragment shader. This feature
+    of the OpenGL ES shading language is a simple yet effective feature, which opens
+    up possibilities of producing cross-sectional views of 3D geometries, holes, or
+    perforated surfaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe reuses the last recipe; this requires a few changes in the fragment
+    shader to demonstrate discarded fragment capabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Rename the polka shader vertex and the fragment shader file as `DiscardFragVertex.glsl`
+    and `DiscardFragFragment.glsl`. Open the fragment shader file and add the highlighted
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![How to do it...](img/5527OT_06_21.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The preceding output shows the application of the discard keyword in the polka
+    fragment shader program. In this recipe, fragments are judged on the basis of
+    the `insideCircle` variable. This variable checks whether the fragment is falling
+    inside the circle or outside the circle. If it's falling inside the circle, then
+    the fragment is thrown away; this results in a perforated look, as shown in the
+    previous image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the vice versa condition, fragments residing outside of the circle are discarded,
+    as shown in previous images. In general, it's not advisable to use the `discard`
+    keyword extensively because it increases the overhead on the graphics pipeline
+    to perform additional operations. According to Imagination Technologies, for PowerVR
+    architecture, it advises limited use of the `discard` keyword in programming practices.
+    Although this is very much dependent on the application itself, it's advisable
+    to profile your application to see whether the `discard` produces a significant
+    loss in its performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Generating the polka dot pattern*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Procedural texture shading with texture coordinates*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Procedural texture shading with texture coordinates
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Texture coordinates control the wrapping of texture on the surface of a model;
+    these are 2D coordinates used to map texture on the 3D surface of the geometry.
+    Texture coordinates are mapped to a different coordinate system called **UV**
+    Mapping. Letters **U** and **V** denote the axis of the texture along the *x*
+    and *y* axis, respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Procedural texture shading with texture coordinates](img/5527OT_06_22.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The preceding extreme left image shows an icon that needs to be mapped to a
+    blue-colored square of some arbitrary dimension. An image (irrespective of its
+    dimensions) is always treated in the UV mapping between a range of 0 to 1 along
+    the U and V axis, respectively. Therefore, the bottom-left image is always **(0,
+    0)** and the top-left image is **(1, 1)**; there is no need to assign these values
+    in the OpenGL ES program. By default, it's understood by the graphics pipeline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What needs to be mentioned is the texture coordinates of the 2D/3D model; for
+    example; in the previous image, the blue color square is assigned with four UV
+    coordinates, which shows how the image is going to be completely mapped to the
+    surface of the square:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Procedural texture shading with texture coordinates](img/5527OT_06_23.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the preceding image, the blue-colored square is assigned with new texture
+    coordinates with bottom-left and top-right at (0, 0) and (0.5, 1), respectively;
+    the resultant mapped image is shown in the right-hand side corner, where we can
+    clearly see that new texture coordinates are pasted on half of the image along
+    the *U* axis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Texture coordinates are compulsory for image-based texturing; however, they
+    are not must for procedural texturing. Texture coordinates in procedural texturing
+    have their own importance and their applications are endless. This recipe will
+    demonstrate one of the applications of texture coordinates, where a grid like
+    procedural texture is produced on the surface of a 3D cube mesh model. For more
+    information on UV Mapping and its related application, refer to the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For this recipe, the mesh model must contain texture coordinates information.
+    For more information on how to create Wavefront object models with texture coordinates,
+    refer to [Chapter 8](ch08.html "Chapter 8. Font Rendering"), *Working with Meshes*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In order to implement this recipe, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create the `GridVertex.glsl` vertex shader program and add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'For the programming grid shader, we need to make changes in the fragment shader.
+    Create a new fragment shader file called `GridFragment.glsl` and use the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it...](img/5527OT_06_24.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The vertex shader receives texture coordinates from the OpenGL ES program in
+    the `TexCoord` vertex attribute; this attribute is defined with index **2** as
+    the layout location. Texture coordinates are passed on to the fragment shader
+    as an out variable using `TextureCoord`. In this recipe, we have used a cube made
+    of six square faces; each of these faces has texture coordinates defined in the
+    UV mapping. Each of these UV mapping coordinates is multiplied by a multiplier
+    factor variable called `texCoordMultiplyFactor`, which produces surface mapping
+    coordinates called **ST** coordinates. Note that ST coordinates are logical coordinates,
+    which are used to create surface mapping calculations; in many places, both are
+    used interchangeably:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![How it works...](img/5527OT_06_25.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The practical significance of `texCoordMultiplyFactor` is to define the number
+    of strips along horizontal and vertical dimensions. The width of the strip is
+    controlled by the `stripWidth` variable. As coordinates are converted to ST mapping,
+    we can now assume that there are 10 strips along the horizontal and vertical axis
+    and each strip is **1** unit wide. The stripWidth is compared against ST coordinate
+    fractional values using the GLSL `frac()` API; this API returns the fractional
+    value of the decimal number. If the fractional values are greater than the `stripWidth`,
+    then they are discarded; otherwise, depending on the front and back facing of
+    the fragment, they are assigned with colors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Implementing two-side shading* recipe in [Chapter 5](ch05.html
+    "Chapter 5. Light and Materials"), *Light and Materials*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Discarding fragments*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the *Applying texture with UV mapping* recipe in [Chapter 7](ch07.html
+    "Chapter 7. Textures and Mapping Techniques"), *Textures and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

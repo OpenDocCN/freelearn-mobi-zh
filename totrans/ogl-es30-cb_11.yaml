@@ -1,0 +1,869 @@
+- en: Chapter 11. Anti-aliasing Techniques
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the sampling rate technique
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Understanding the post processing technique
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing fast approximate anti-aliasing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing adaptive anti-aliasing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing an antialiased circle geometry
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Anti-aliasing is a technique in computer graphics that improves the quality
+    of the rendered image or video output displayed on the screen by minimizing jagged
+    lines or the stair-step case effect. The raster screen is composed of hundreds
+    of tiny square pixels arranged in a grid format. These pixels are sampled during
+    the image rasterization process according to the shape of the geometry. Basically,
+    the cause of anti-aliasing is the point sampling. These samples are represented
+    by rectangular pixels, which are not sufficient to produce curved shapes. Edges
+    in the image, which are round (not horizontal or vertical), are responsible for
+    this stair-step case effect as it ends up coloring pixels like a stair arrangement.
+    The aliasing problem is not much noticeable when an image or scene is still, but
+    as soon as they are in motion, jagged edges are highly visible. The following
+    image shows the rendering of an infinite detailed isosceles right triangle (**A**).
+    The rasterization stage performs the sampling and displays it on the screen with
+    limited sampling grid. Clearly, the stair-step case effect is easily visible on
+    the hypotenuse (**B**). However, the edges of the base and perpendicular are aligned
+    with horizontal and vertical grid pixels (**C**), thereby causing no jagged edges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, as soon as the triangle rotates, all edges will show the aliased effect:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction](img/5527OT_11_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The anti-aliasing takes samples from nearby or background pixels and blends
+    them with the color of the edge pixel to generate a smooth approximation such
+    that it minimizes the stair-step case effect and makes the edges appear smooth.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Anti-aliasing can be caused from other various factors, such as specular highlights,
+    shadows boundaries, geometry outlines, and so on, resulting in a rapid change
+    in the color frequencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Anti-aliasing techniques can be categorized into two types: sampling rate and
+    post processing techniques.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the sampling rate technique
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In sampling rate technique, an increase in the amount of the sample rate in
+    a pixel is used to decide the color of the pixel based on samples. This includes
+    techniques, such as Super Sample Anti-aliasing (SSAA), Multi Sample Anti-aliasing
+    (MSAA), Coverage Sampling Anti-aliasing (CSAA), which is usually driven on GPU
+    hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This section is a bit different from the rest of the *How to do it...* sections
+    that we followed in the chapters. In this, we will discuss the various sampling
+    rate techniques mentioned previously and the procedural difference between each
+    of them. Let's discuss them in detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Super Sample Anti-aliasing** (**SSAA**): This technique is also known as
+    **Full-Scene Anti-Aliasing** (**FSAA**). Here, the scene is first rendered to
+    higher resolution and then downsampled to its original resolution by taking the
+    average of its neighboring pixels. For example, if a given scene needs to be rendered
+    to a resolution of 1920 x 1080, it''s first rendered to a higher resolution of
+    3840 x 2160 on an off screen surface and downsampled. The off screen surface is
+    four times bigger, resulting in 2 x 2 samples per pixels when downsized to its
+    original resolution. The logic of FSAA is simple and results in fine quality,
+    but it all comes at a very high computational cost because it requires all pixels
+    to be available with the color and depth information per sample. This technique
+    was available in early video cards and is no longer widely used in real time applications
+    due to its tremendous computation cost.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Accumulation Buffer** (**AA**): This technique is similar to the FSAA, but
+    here the buffers are used with the same resolution and with more bits of color
+    than the desired image. In order to produce the same 2 x 2 sample per pixel, four
+    image buffers are created where each image view is moved half a pixel along the
+    *x* or y axis as needed. These images are then summed up in the GPUs accumulation
+    buffer and averaged to produce the anti-aliased output. The modern GPUs hardware
+    does not have accumulation buffers. Instead, this can be performed using fragment
+    shaders. The precision used in the pixel shader must be higher (10 to 16 bits
+    per channel) to store the accumulated resultant color. The 8 bit precision may
+    result in color banding artifact when blending is performed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Multi-Sampling Anti-aliasing** (**MSAA**): The large computational cost of
+    SSAA results in the advent of MSAA. This technique produces lower acceptable quality,
+    but it saves tremendous computation cost and has become the number one choice
+    of GPU hardware vendors for a long time. Multisample takes more than one sample
+    in the computation process for a given pixel in a single pass. There exists various
+    pixel sampling schemes, as shown in the following image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/5527OT_11_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The sample rate may vary depending on the rate of the change in color frequencies.
+    Cases such as shadows and geometry edges show a higher variation. Therefore, it
+    requires more samples to process better results. The shading is computed from
+    each fragment only once, which makes it faster than SSAA. For each sample, the
+    corresponding color and depth information is stored separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following image shows 1x and 4x sampling schemes. In the former case, the
+    sampling position is not sufficient to overlap with the green triangle, thereby
+    resulting in pixels that are colored in white. However, in the latter case, two
+    out of four sampling locations are successfully in the geometry. Therefore, the
+    interpolated resultant color falls in between these two colors, the extreme right-hand
+    side image shows a shade bar of the 4x sampling scheme:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/5527OT_11_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Coverage Sampling Anti-aliasing** (**CSAA**): This technique is an improved
+    version compared to MSAA. MSAA stores the color and depth information separately
+    for each sample. However, this storage is unnecessary and can be completely avoided.
+    The CSAA technique takes advantage of this drawback and avoids separate storages
+    for the color and depth information; it uses an index-based approach. In this,
+    each subpixel or sample stores an index to the fragment shader to which it''s
+    associated. All fragments are stored in a table format, which contains the color
+    and depth information. Each fragment is identified by its unique index.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the post processing technique
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this type of technique, a scene is rendered to an off screen surface and
+    processed with anti-aliasing algorithms. The process output is split up on the
+    on screen surface. This type of anti-aliasing includes AMD's Morphological Filtering
+    (MLAA), Fast Approximate Anti-aliasing (FXAA), Subpixel Morphological Anti-aliasing
+    (SMAA), and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this, we will discuss the various post processing techniques mentioned earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Fast Approximate Anti-aliasing** (**FXAA**): FXAA is a post-processing filtering
+    technique. This filter primarily does two things: it first detects edges and then
+    applies the blurring algorithm to aliased edges. Like previous techniques, which
+    are hardware dependent, FXAA can be highly useful for cases where anti-aliasing
+    options are limited. FXAA gives very good performance. It''s faster compared to
+    MSAA and SSAA, making it a preferred choice for the gaming industry. This technique
+    works in the image space. Therefore, it can be used in any case, such as the forward
+    rendered image or the deferred rendered image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/5527OT_11_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Forward rendering**: This is the traditional path of the rendering execution
+    model, where the geometry is first fed to the vertex shader followed by the fragment
+    shader. Finally, the processed visual is rendered to the target. This whole procedure
+    consists of four steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The geometry is computed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Material characteristics, such as normals, bidirectional tangents, and so on,
+    are defined.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The direction of the incident light is computed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Object surfaces and light interactions are computed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Deferred rendering**: In the deferred rendering technique, the first two
+    steps are separated from the last two steps, performing each of these in discrete
+    stages of the rendering pipeline. Here, the scene is divided into two passes.
+    The first pass is never used to perform any kind of shading. However, during this
+    pass, the vital information required for shading is gathered (position, normals,
+    material, and depth) in a set of textures and used in the second pass where the
+    direct and indirect light information is computed to light the objects.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing fast approximate anti-aliasing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'There are two very important factors in anti-aliasing: performance and quality.
+    A good anti-aliasing technique must be fast and should produce acceptable quality
+    results. FXAA stands very positive on these aspects. It''s faster compared to
+    MSAA, which provides roughly 25 percent reduction in performance overhead compared
+    to the SSAA technique. This works in the same resolution as the texture, which
+    eliminates extra overhead similar to other techniques, where the texture has scaled
+    to a higher resolution and then downsampled.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: FXAA works on the specific details of an image; it systematically detects the
+    stair-step case effect in the given image and blurs it out. Stair-steps are recognized
+    with an edge detection algorithm. Therefore, the quality of edge detection and
+    blurring algorithm are very important factors here. An incorrect algorithm may
+    miss important edges or detect incorrect edges, which may produce an unpleasant
+    quality after blurring.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this recipe, we will implement the FXAA technique. Let's understand this
+    implementation at a higher level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The FXAA technique first renders a scene to an off screen surface using the
+    **Frame Buffer Objects** (**FBO**). Like other screen space-based techniques,
+    which operates a full scene, the FXAA technique can be run on selective areas
+    that requires anti-aliasing. FXAA is implemented as a postprocessing shader. It
+    detects edges in the rendered scene on the basis of the pixel luminosity. The
+    detected edges are then smoothed out using their gradient. Both these processing
+    are done under a single pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This recipe is like any other postprocessing recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a FBO with the required dimensions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a scene and render it to the FBO off screen surface.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Apply the FXAA technique in a single pass to the FBO-textured scene.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this recipe, we will describe the third step, where we will implement the
+    FXAA algorithm in the fragment shader. For more information on post screen techniques,
+    refer to [Chapter 9](ch09.html "Chapter 9. Postscreen Processing and Image Effects"),
+    *Postscreen Processing and Image Effects*.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following code implements the FXAA technique algorithm in the fragment
+    shader; this fragment shader operates on an off screen scene texture image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The FXAA technique uses an interesting property of the human eye, which is luminosity
+    or color brightness; our eyes are highly sensitive to it. Human eyes are very
+    much capable of noticing the slightest change in luminosity. Detecting edges with
+    color brightness works with almost all types of aliasing effect, such as specular
+    or geometric aliasing. Luminosity or grayscale provides the brightness level in
+    an image; it's helpful in detecting light and dark regions in the image space.
+    The sharp transition in luminosity between two samples hints at the presence of
+    an edge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The FXAA filter implemented in this recipe takes five samplings around the
+    current texel and analyzes these for the presence of an edge. The following image
+    shows a triangle whose hypotenuse is suffering from the stair-step case effect
+    (**A**). A certain section of its edge is processed with the FXAA filter to perform
+    the anti-aliasing (**B**). This filter takes five samples and coverts them to
+    luminous texels for edge-detection (**C**). This information is used by the blurring
+    algorithm to blur the color intensity based on neighboring samples (**D**):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_11_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The `FBS` contains the size of the current off screen surface texture (FBO)
+    and its reciprocal gives the dimension of a unit texel. This unit texel is added
+    to the current texel (**M**) in various directions (top, bottom, left, and right)
+    to produce new sampling texels **NW** (top-left), **NE** (top-right), **SW** (bottom-left),
+    and SE (bottom-right) around the center texel (**M**). As the UV coordinate system
+    has the inverted **Y** direction compared to the Cartesian coordinate system,
+    we need to invert the North and South directions. As a result, you can see a negative
+    sign for the north and south components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `FXAALuma` function calculates the luminous weight for NW, NE, SW, SE and
+    M samples as shown in the next image; these weights are used to find the direction
+    of the blur.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following image gives the formula to calculate the direction of the edge.
+    If the result is a nonzero magnitude for the *x* and *y* component, an edge exists.
+    As you can see, the directional formula determines the components of the edge
+    direction along the *x* and *y* axis. Now, using this information, blurring can
+    be performed in a specific direction:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_11_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'You may have noticed that the direction of *x* is inverted (negative). This
+    is because the inverted signs used for north and south components are mentioned
+    in the preceding code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have got the direction. Now, we have to determine how far we should blur
+    it in the given direction. In order to find the distance, we roughly normalized
+    the direction vector in such a way that the smallest components become unity.
+    For this, the magnitude of this direction vector (`rcpDirMin`) can be calculated
+    taking the reciprocal of the smallest component directional vector. Now, the resultant
+    is undefined if there occurs a divide by zero condition. For this, a delta component
+    is added. We called this as reduced direction (`dirReduce`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The reduced direction calculation is pretty much easy; it''s the maximum value
+    of the product of the `FXAA_REDUCE_MUL` constant and the average value of all
+    luminous intensities and the `FXAA_REDUCE_MIN` constant. These constants are very
+    much dependent on the user observation. Therefore, it can be defined as uniforms
+    to allow these experiments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The unit directional vector can be calculated as `dir = dir * rcpDirMin`, but
+    there is another problem here. What if the resultant product is very large. This
+    will produce texels, which are far away from the current texel. We certainly don''t
+    want this because we are only interested in texels located nearby. So, we need
+    to clamp the spanning of this resultant directional vector to some limited range
+    using the following path. The `FXAA_SPAN_MAX` is a constant (8.0). The division
+    of the result with FBS gives us the direction of the texture space for a unit
+    texel in the UV direction:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we have the directional magnitude for blurring purposes. To perform the
+    blur, take two samples along the same direction of the edge. The first sample,
+    `rgbA` uses one-sixth of the forward (*dir * (2.0/3.0 - 0.5)*) and backward (*dir
+    *(1.0/3.0 - 0.5)*) direction (*dir*) to calculate two samples from the `Tex1`
+    texture. The resultant intensity is reduced by half:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, the other sample, namely, `rgbB,` also comprises of two inner samples,
+    which are half in the forward (*dir * (3.0/3.0 - 0.5)*) and backward (*dir * (0.0/3.0
+    - 0.5*) direction from the current texel. Here, the resultant intensity is reduced
+    by one-fourth and mixed with the resultant of `rgbA`. As the intensity of `rgbA`
+    is already reduced by half, it''s further reduced to one-fourth before mixing
+    it with the resultant sampling vectors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These two sample vectors (`rgbA` and `rgbB`) are used to perform a test to
+    check if the sampled texture is too far. For this, we calculate the minimum and
+    maximum luminosity from the given samples in `lumaMin` and `lumaMax`. Similarly,
+    compute the luminosity for `lumaB` and store it in the `rgbB` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the luminosity of `rgbB` is less than the minimum luminosity or greater
+    than the maximum one, clearly, it''s outside the expected range of the luminosity
+    that we sampled. In this case, we will color the current fragment with `rgbA`,
+    which is much closer to the sampled directed edge. On the other hand, if the luminosity
+    range is within the expected range, use the `rgbB` color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In this section, we will discuss the advantages and disadvantage of using FXAA:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Advantages**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: FXAA is faster compared to MSAA and yet consumes less memory.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This technique works in the image space as a filter. Therefore, it's easy to
+    integrate it into the shader and does not require a highly computational cost.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: FXAA smoothens edges that are produced by alpha-blended textures and those resulted
+    from fragment shader effects. It works on any technique, such as forward images
+    or defer-rendered images.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The cost of anti-aliasing is independent of the cost of rendering a scene. Therefore,
+    the executional time for anti-aliasing a complex scene with millions of vertices
+    and hundreds of texture is the same as a simple one, which contains a few hundred
+    vertices with a handful of textures.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The FXAA technique can be combined with other postprocessing filtering techniques.
+    This will completely remove the extra cost of the anti-aliasing pass.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If the information is available ahead of time to know which parts of the scene
+    are going to be anti-aliased, using features, such as scissor testing, viewport
+    information, the FXAA can be applied to selected regions.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disadvantages**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It requires a good quality edge detection algorithm; a poor quality algorithm
+    may miss some of the edges that need to be aliased.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Similarly, a good blurring algorithm needs to blur correct results.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It does not handle the temporal anti-aliasing.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Temporal anti-aliasing causes the rendering objects to hop to appear to jump
+    instead of giving an impression of smoothly moving objects towards them. The reason
+    behind this kind of behavior is the rate at which the scene is sampled; the sampling
+    rate is much lower compared to the transformation speed of objects in the scene.
+    In order to avoid temporal anti-aliasing effects, the sampling rate of a scene
+    must be at least twice as high as the fastest moving object.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Procedural texture shading with texture coordinates* recipe in
+    [Chapter 6](ch06.html "Chapter 6. Working with Shaders"), *Working with Shaders*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the *Implementing render to texture with Frame Buffer Objects* recipe
+    in [Chapter 7](ch07.html "Chapter 7. Textures and Mapping Techniques"), *Textures
+    and Mapping Techniques*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing adaptive anti-aliasing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The adaptive anti-aliasing mitigates the aliasing effects caused during the
+    implementation of procedural shaders. As procedural shaders are programmed to
+    produce dynamic textures, transition from the low to high frequency is very much
+    known to the programmer, as they are the one to program it. For example, the polka
+    dot recipe implementation generates dot patterns using a circle or sphere computational
+    logic. It paints the fragment shader with one type of color if it falls inside
+    the circle; otherwise, it uses the background color. In this case, the programmer
+    knows very well that the transition from one color to another will be very sharp.
+    This is where adaptive anti-aliasing is useful. It avoids such sharp color transitions
+    by interpolating colors between two colors. These sharp transitions can be made
+    smoother using many built-in shading language APIs, such as smooth, mix, and clamp.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this recipe, we will produce an animated strip pattern and remove the aliasing
+    effects on the strip edges by implementing an anti-aliasing procedural texture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Use the following fragment shader to implement the adaptive anti-aliasing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe implements animated horizontal strip patterns. It uses the vertical
+    component of object coordinates to produce this pattern. The object coordinates
+    of the 3D mesh model on which the pattern is to be generated are passed on to
+    the vertex shader, where it's shared with the fragment shader in the `objectY`
+    variable. The vertical component of these object coordinates are added with the
+    `offset` variable. The offset variable is a function of time. This animates the
+    strip pattern by displacing it from its last position to some new position each
+    time a new frame is rendered. These strip patterns will animate continuously from
+    the top to bottom direction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Frequency` variable controls the number of strips on an object. It is
+    multiplied with object coordinates to scale its range. The `fract()` API of the
+    shading language produces a decimal number ranging form 0.0 to 0.9, producing
+    a pattern (**A**) that resembles a sawtooth. Multiplying these values with two
+    and subtracting by one, we get a function that restricts the range between -1.0
+    and 1.0 (**B**). Finally, taking these absolute values produces a positive continuous
+    range that varies from 1.0 to 1.0 (**C**), which are stored in the triangle variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_11_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The strip pattern produces using the GLSL step API. This API returns 0.0 if
+    the triangle is smaller than 0.5 and 1.0 if bigger, as show in the following figure
+    (**D**):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_11_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The output produced by the `step` API is shown in the following image (refer
+    to the left-hand side of the red line). Clearly, aliased effects can be seen easily
+    because output values switch from 0.0 to 1.0 and vice versa directly. This aliasing
+    effect can be removed using an alternate API of GLSL called `smoothstep`. This
+    API takes two parameters as an input value and performs the interpolation between
+    the two. It avoids a sharp transition and interpolates a smooth range, as shown
+    in the preceding image (**E**). Two input parameters in the `smoothstep` API are
+    functions of the partial derivatives of the object coordinates along the *x* and
+    *y* components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_11_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Procedural texture shading with texture coordinates* recipe in
+    [Chapter 6](ch06.html "Chapter 6. Working with Shaders"), *Working with Shaders*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Implementing an anti-aliased circle geometry*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing an anti-aliased circle geometry
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A circle is a very common geometric shape that is widely used across a variety
+    of computer graphics application, such as rendering statistics with pie graphs,
+    drawing sign boards, animating dot patterns, and so on. In this recipe, we will
+    implement an antialiased circle geometry with the help of texture coordinates
+    and make it smoother using the adaptive anti-aliasing technique from the previous
+    recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One way to implement the antialiased circle geometry is to generate a set of
+    vertices along the circumference of the circle, where every two consecutive vertices
+    are connected to the center vertex (origin), creating a triangular slice. Several
+    such slices are required to create the skeleton of the circle, as shown in the
+    following image. When these vertices are rendered with the triangle primitive,
+    they produce a filled circle pattern. The smoothness of the produced circle shape
+    is highly dependent on the number of vertices used along the circumference. The
+    use of more vertices may degrade its performance as we try to achieve smoother
+    edges along the circumference.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Advantages**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the circle geometry is represented with the vertices itself, the collision
+    detection and pick test will be highly accurate.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disadvantages**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: More and more vertices are required for smoother edges. Eventually, this comes
+    at a cost of more performance overhead.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By default, the edges of the circle are not anti-aliasing. Such geometric techniques
+    may be very complex in terms of implementation.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Changes in the dimension of the geometry may surface the aliased edges:![Implementing
+    an anti-aliased circle geometry](img/5527OT_11_10.jpg)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In an alternate, we can use procedural shaders to produce circular geometries
+    with the help of texture coordinates. One thing to note here is that the circle
+    geometry produced in this technique is not a really a circle; it's a fake geometry
+    that only comprises of four vertices. Irrespective of how big the circle is, it
+    always uses the same number of vertices (4) to render a circle shape.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The basic principle of this technique is very simple. It uses four vertices
+    to create a square and produces a perfect logical circle inscribed in it. Fragments
+    that fall inside this circle are colored and the rest are masked by the alpha
+    channel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The circumference or edges of the circle are made smoother by processing it
+    with the adaptive anti-aliasing technique. Here, a small portion along the circumference
+    is interpolated from inside to outside to produce a smooth gradient.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at the high level implementation of this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a quad with vertices, as shown in the following image. The center of
+    the quad must be at the origin (0.0, 0.0, 0.0).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Assign each vertex with a texture coordinate as follows. As per the texture
+    coordinate convention, the origin always exists at the bottom-left part of the
+    quad:![Getting ready](img/5527OT_11_11.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Specify the winding of vertices in an anticlockwise direction (**V0** > **V1**
+    > **V2** > **V3**).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the fragment shader, subtract each texture coordinate with a half vector
+    along the UV direction. This will displace the origin from the bottom-left to
+    the center of the quad.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Check each fragment distance from the displaced origin. If the current fragment
+    is inside the outer radius range (say 0.5), then paint it with the required color;
+    otherwise, alpha blend the fragment with the background color.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: For anti-aliasing, take another radii called inner radius with a value smaller
+    than the outer radii (say 0.4) and interpolate the color value based on the weight
+    calculated from the position of the fragment texture coordinate inside the region
+    between the inner and outer radii [0.4 0.5].
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here are the steps to understand the step-by-step implementation of this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a class called `Circle` in `Circle.h`/`.cpp`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the class constructor, define the vertex and texture coordinate in the vertices
+    and `texCoords` variables respectively:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the vertex shader file called `AACircleVertex.glsl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Similarly, create `AACircleFragment.glsl` and add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Define the scene in the `NativeTemplate.cpp`, as shown in the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe mainly consists of two parts: the creation of the circle and smoothening
+    the edges of the created circle. In the first part, the geometry is defined to
+    create a base shape. The base shape is made up of four vertices to create a perfect
+    square. These vertices are shared with the vertex shader to produce eye coordinates.
+    Each of the vertex contains associated texture coordinates that are also passed
+    on to the vertex shader and shared with the fragment shader. The fragment shader
+    controls the shaded region of the perfect square in such a way that it appears
+    as a perfect circle. All this is done using the texture coordinate manipulation.
+    The following image shows the incoming texture coordinates mapped on the square
+    geometry (**A**). As you can see, the origin in the first image appears in the
+    bottom-left corner. This origin is logically moved to the center part of the square
+    (**B**) by subtracting the texture coordinate with half the total dimension of
+    the texture coordinate span in the UV direction.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This way, all texture coordinates get displaced with respect to the new origin
+    in the center of the square:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The distance of the displaced texture coordinate is calculated and checked
+    against the circle radii. If it''s smaller than the given radii, it means that
+    it''s inside the circle and needs to be painted with `PaintColor`. The inner part
+    will be colored with alpha 1.0 to appear solid. If the distance of the current
+    fragment texture coordinate appears outside the given radius, then it''s colored
+    with alpha 0.0\. This will make the outer part of the circle disappear:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/5527OT_11_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The second part of this technique makes the edges soft by processing it through
+    adaptive anti-aliasing. For this, two radii (`InnerRadius` and `OuterRadius`)
+    are used, as shown in the preceding image (**C**). Fragments that fall under the
+    band of these two radii are interpolated for their color values on the basis of
+    the weights obtained from the position of the texture coordinate in this band:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![How it works...](img/5527OT_11_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This technique has some pros and cons:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Pros**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This technique is highly performance efficient.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This technique produces high quality circle shapes with smooth edges.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Edge sharpness can be adjusted at runtime.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The border of the circle can be rendered.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Scaling does not effect the quality of the image. It can be adaptive.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Cons**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This technique cannot perform the collision detection or pick test with high
+    accuracy.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This technique produces high quality shapes with smooth edges.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Creating a circular pattern and making them revolve* recipe in
+    [Chapter 6](ch06.html "Chapter 6. Working with Shaders"), *Working with Shaders*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Implementing adaptive anti-aliasing*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

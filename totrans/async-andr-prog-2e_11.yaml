@@ -1,0 +1,659 @@
+- en: Chapter 11. Exploring Bus-based Communications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In previous chapters, we have been using different techniques to disseminate
+    data/events/notifications between several Android application components (`Activity`,
+    `Fragment`, `Service`, `BroadcastReceiver, …`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Intents were sent through the system carrying communication messages or notifications
+    to notify a `Service` or `Activity` to start
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Broadcast Intents were used to report a result back from background processes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Handlers were used to communicate between different processes and thread executions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These techniques usually involved a tight coupling between the component that
+    sends the message and the component that receives it. Typically, the sender dispatches
+    a message to a certain receiver and deals with the receiver lifecycle in order
+    to detect any receiver unavailability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we are going to present to the reader a new construct and pattern,
+    delivered by the `EventBus` library, that most of the time simplifies communication
+    between the different application components by decoupling the event producer
+    and event consumer component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing bus-based communication
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up an `EventBus` library in your project
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Defining and dispatching events in the Bus
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Registering subscribers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Processing events asynchronously with `threadMode`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Posting and removing sticking events
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction to bus-based communication
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The Bus based communication software pattern, also known as Publish/Subscribe,
+    is a pattern that allows sender and receiver entities to communicate without requiring
+    them to explicitly know each other. This communication model suppresses the tight
+    coupling between components and allows the delivery of messages from one receiver
+    to more than one final recipient. There are five different entities involved in
+    the communication pattern: publisher, subscriber, event, bus, and broker.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The **publisher** submits events to a shared messaging pipeline, named **bus**,
+    controlled by an entity called **broker**, that governs the stream of events submitted
+    and forwards them to a list of interested entities, called **subscribers**, that
+    previously registered in the broker to receive certain kinds of event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to receive certain kinds of event, the subscriber should express interest
+    in these events by creating a subscription in the broker and the broker should
+    keep a list of enabled subscriptions and forward the events to all of the subscribers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a consumer loses interest in one kind of event, it terminates the subscription,
+    and as a consequence, the broker will stop forwarding the unsubscribed events
+    related to the subscriber.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction to bus-based communication](img/Image_B05062_11_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this loosely coupled communication model, the publisher submits event A in
+    the shared bus without knowing the exact subscriber that will consume the event.
+    In the same way, the subscriber does not know about the sender entity that submitted
+    the event unless something is sent in event A to identify the event's origin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On Android specifically, it could simplify the communication between `Fragments`,
+    `Activities`, `Services`, or any other business logic object, such as persistence
+    service, that manages your application or UI state. In our examples, we will use
+    the library to send notifications between activies and fragments. However, the
+    same kind of construct could be applied to communicate between services and broadcast
+    receivers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: EventBus library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Although there are several open source libraries that are able to deliver this
+    kind of pattern in Android, we will base our code examples on the popular event
+    bus library ([http://greenrobot.org/eventbus/](http://greenrobot.org/eventbus/))
+    since it offers advanced features and high performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The high performance library is optimized for the Android OS and it has been
+    used by many popular applications on Google Play.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These are the advanced features delivered by the `EventBus` library that you
+    should be aware of:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Annotation-based subscription – You can define an subscription method by annotating
+    an Android `Activity`, `Service`, or `Fragment` instance method
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Background and main thread event delivery – The subscriber could define in which
+    thread the event will be delivered regardless of whether it was generated in a
+    background or main thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Event and subscriber inheritance – We can construct events or subscribers by
+    extending (Java subclass) other events or subscribers:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'No configuration required – The library, by default, allows us to use a ready-to-use
+    default `Bus` that does not require explicit instantiation, and can be used to
+    submit events from anywhere in the application:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Before we start using it, we will add the GreenRobot `Eventbus` dependency
+    to our module or application `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before we go deeper, we will present a simple example in which we use the library
+    to publish a simple event from a `BroadcastReceiver` to an `Activity`. Thus, the
+    `Activity` receiver method will deliver a notification on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we will create a `BroadcastListener` that listens for network changes
+    and submits an event in the `Bus` when the mobile network is not available and
+    an event with a detailed network state when the device mobile network is available.
+    The events will be propagated in the `Bus` and delivered to all the subscribers
+    interested in them, which in our case, will be an `Activity` that will display
+    a message on the screen that shows the mobile network state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'First, we will define the POJO classes that would be submitted in the `Bus`
+    by the publisher to notify the interested entities whether the mobile network
+    connectivity is available or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `MobileNetConnectedEvent` event is a POJO class that will be sent when the
+    mobile network is available and will carry a string message with the detailed
+    network state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `MobileNetDisconnectedEvent` is an event that does not carry any information
+    but it will notify the event subscriber that connection with the network was lost.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Submitting events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now with events defined, we will create the `BroadcastListener` that is going
+    to receive Intents from the Android OS when any network connectivity changes (Wi-Fi,
+    Mobile, …) occur on the device, and submits the events in the Bus when the mobile
+    connectivity has changed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we described before, the default and ready-to-use `EventBus` could be retrieved
+    from anywhere in our application, so, when a network change event is received
+    regarding the mobile network, we just get the default Bus by invoking `EventBus.getDefault()`
+    and we submit an event to it by calling the `Bus.post(Object event)` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that we will identify a network based on the `NetworkInfo` received in
+    the `ConnectivityManager.EXTRA_NETWORK_INFO` Intent extra.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a network change related to the mobile network is detected, we submit either
+    `MobileNetConnectedEvent` or a `MobileNetDisconnectedEvent` in the default `Bus`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Registering sbscribers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the `Publisher`/`Sender` class and event class already specified, all that
+    remains is to register our `Activity` class to receive both events and print the
+    event sent on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like we stated before, to receive any event from the `Bus`, the `Subscriber`
+    entity, which could be any Java class on your code, will have to register on the
+    Bus and subscribe to the event that it is interested in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Any object will have to register on the Bus by calling the register function
+    and provide a single on`<EventName>(EventType)` method annotated with `org.greenrobot.eventbus.Subscribe`
+    for all the kind of event that it is interested in:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s implement the functions that are going to handle the `MobileNetDisconnectedEvent`
+    and the `MobileNetConnectedEvent` event in our Activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Both public callbacks have the @Subscribe annotation and an `MobileNetDisconnectedEvent`/`MobileNetConnectedEvent`
+    object as the only method argument. Hence, whenever any of these events are posted
+    on the Bus by our `BroadcastReceiver` sender and the `Activity` has already subscribed
+    to them, our callbacks are notified, appending a new message on the UI console
+    screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, to register our `Activity` on the default Bus, we will override the
+    `onStart` and `onStop Activity` functions to register and unregister, respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once we register our class object, the Bus will transverse the `Activity` methods
+    using the reflection API and check for any methods that are annotated with the
+    `Subscribe` annotation. Once it finds any `@Subscribe` annotated methods with
+    a POJO Event as an argument, it will register the instance method to be invoked
+    when the event is published on the `Bus`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As soon as our `Activity` is destroyed, we terminate the bus subscription and
+    the `Bus` will stop sending the events. In any Android component, such as `Activity`,
+    Fragment, and `Service`, we should register and unregister on the Bus according
+    to the component lifecycle. It is really important to unregister the components
+    from the Bus, otherwise the Bus will maintain a reference to the registered component
+    and prevent it from being garbage collected. As a result, it will generate a memory
+    leak in the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thread mode
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`EventBus`, by default, delivers the event in the subscriber in the same thread
+    where the sender posted the event. Although this delivery scheme might work for
+    most use cases, such as events that perform Android UI changes, when a long operation
+    is executed in the event callback, the subscriber might block the main thread
+    and prevent the system from running the UI rendering in time and drop some UI
+    frames as a result.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To cope with time-consuming operations that might happen during the event delivery,
+    the `EventBus` library allows us to define the Thread in which the `Bus` will
+    call to deliver the event to the subscriber (`ThreadMode`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are four modes supported by `EventBus` that we can use to control the
+    event delivering behavior:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ThreadMode.POSTING` – The subscribers callback will be invoked in the same
+    thread where the sender posted the event. This is default behavior and the events
+    will be delivery synchronously to all the entities that subscribed to the dispatched
+    event.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ThreadMode.MAIN` - The Bus will invoke the subscriber''s callback in the main
+    UI thread. Thus, if the sender is running in the background thread when it posts
+    the event to the `Bus`, the bus will queue the message in the main `Looper` and
+    the event will get delivered in the main thread. For more details about how `Looper`
+    and Handlers work, see [Chapter 2](ch02.html "Chapter 2. Performing Work with
+    Looper, Handler, and HandlerThread"), *Performing Work with Looper, Handler, and
+    HandlerThread*. When the event is produced in the main thread it behaves as the
+    `ThreadMode.POSTING` mode.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ThreadMode.BACKGROUND` – The bus will invoke the subscriber''s callback in
+    a background thread that prevents the event handling from blocking the UI thread.
+    Notice that `EventBus` uses only one background thread to invoke all the callbacks,
+    so, any long-running component could defer the delivery of subsequent events.
+    When the event is produced in the background thread it is in the `ThreadMode.POSTING`
+    mode.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ThreadMode.ASYNC`- The Bus will invoke the subscriber''s callback using a
+    group of threads managed by the Bus. The thread pool of worker threads, created
+    from `Executors.newCachedThreadPool`, is going to be recycled and might be used
+    to execute blocking operations, such as network or long computing operations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You should set the thread mode required for your example based on the kind of
+    processing required to consume the Event. For example, when the consumer updates
+    the UI a `ThreadMode.MAIN` should be explicitly specified if the producer could
+    post an event from the background thread. In other use cases, if the consumer
+    does blocking or intensive operations you should use the `ThreadMode.ASYNC` mode
+    to span the events over a group of threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To explicitly determine in which thread the method is to be called by `EventBus`,
+    we must specify the `threadMode` property in the `Subscribe` annotation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Typically, an Android application requires tasks to run background work to obtain
+    dynamic data from the network service or from a content service. The data retrieved
+    is then dispatched to the main thread to be presented in the UI main thread. In
+    previous chapters, we used different techniques (AsyncTask, Loader, and HTTP Async
+    client) to accomplish this. In our next example, we are going to use `ThreadMode.BACKGROUND`
+    mode to perform an IO blocking operation that retrieves product information using
+    an `EventBus` asynchronous background thread pool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the results from the previous operation, we will build an event with product
+    details that will be reported back to the main UI thread to update the product
+    on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our `Activity` will present a `Fragment` with the product details and **Next**
+    and **Previous** buttons to browse between the product list. As explained before,
+    we will use the `EventBus` to dispatch an event details request to a background
+    thread and we will use an event to publish the results back from the Activity
+    background method to the `DetailsFragment` fragment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will define the `RetrieveProductEvent` and `ProductDetailEvent` POJOs
+    used to model a product details request and to model the product details:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we will create the `Fragment` that is going to register on the `Bus`
+    and subscribe to receive the `ProductDetailEvent` events with the product data.
+    As you know, it''s essential to register and unregister the `Fragment` on the
+    bus in order to prevent leaked memory resources, so, we will use the `Fragement`
+    `onResume` and the `onPause` lifecycle callbacks to `accomplish` that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Given that we want to update the UI when we receive the `ProductDetailEvent`,
+    we will create a subscriber that runs on `ThreadMode.MAIN` thread mode, and therefore,
+    receives the event callback in the main `Thread`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Following that, we will create the Activity that loads the `DetailsFragment`
+    and will request to load the first product (`productId=0`) from the product catalogue:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `Activity` will create a `FragmentTransaction` to the `DetailsFragment`
+    and commit it to the `FragmentManager`. To conclude, it will post an event on
+    the bus to load the first new product `RetrieveProductEvent(productId)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we are going to implement the subscriber method that is going to process
+    the `RetrieveProductEvent`, obtain the product details for the specified identifier
+    in the background, and dispatch the new product details event to all the interested
+    entities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using `ThreadMode.ASYNC`, we will force the `EventBus` to invoke the callback
+    on one of the Threads available in the `EventBus` asynchronous thread pool. This
+    thread mode is used to perform asynchronous operations that might block for some
+    time or take some time to execute, such as long computation calculations or network
+    operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Based on the thread mode defined by you, `EventBus` will manage all the thread
+    switching required to deliver to events in the right group of threads or thread,
+    regardless of whether the event is dispatched from the main thread or a background
+    thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the details of the product requested are loaded, the returned `ProductDetailEvent`
+    object is posted on the Bus for further processing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given that the `DetailsFragment` has the function onProductDetailEvent subscribed
+    to receive the `ProductDetailEvent` in the main thread, the bus broker will call
+    the function in the UI thread updating the `brandTv`, `nameTv`, `priceTv`, and
+    `TextView` widgets with the product details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the `EventBus threadMode` feature, we could submit events to the main thread
+    from any thread in the application and we can even hand over work to background
+    lines of execution using a clean and simple interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Just to conclude the example, we will add two buttons to browse between the
+    product list sequence. The **Next** button will submit a `RetrieveProductEvent`
+    request to get the next product on the list and the **Previous** button will submit
+    a `RetrieveProductEvent` to get the previous product on the list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using the `Publish`/`Subscribe` pattern delivered by EventBus, we were able
+    to update the `DetailFragment` without sharing a strict interface with the `Activity`.
+    Moreover, the event might have come from any other Android component and the result
+    would have been dispatched in the main thread by Event Bus.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Posting sticking events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Whenever we publish an event on the bus, the EventBus broker automatically delivers
+    the event to all the current subscribers, and by default, will immediately clear
+    the transient event. The new subscribers that register after the event is delivered
+    to the current subscribers will not get the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are situations when a new subscriber registers on the bus and no new event
+    is produced or submitted on the Bus for a long period of time. As such, the subscriber
+    will wait until the next event appears on the bus to produce any output from it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Furthermore, when the new subscriber is responsible for updating an Android
+    UI component like an `Activity` or a `Fragment`, the subscribers have to wait
+    for a new event to occur, hence, it might delay the UI update for a significant
+    amount of time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To solve this problem, the `EventBus` allows us to create `Sticky` events that
+    are kept in the memory and delivered to subscribers once they register on the
+    Bus. `EventBus` will keep the latest event of certain types in the memory and
+    deliver it during the registration whenever the subscriber creates a subscription
+    with sticky delivered on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To deliver a sticky event on the bus, the only thing that we need to do is
+    invoke the `Bus.postSticky` function rather than the post function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And create a `Subscriber` method with the `sticky` property enabled:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As an example, the `LocationManager` service allows us to create a `LocationListener`
+    that receives the current geographical location when the device''s location changes
+    by a certain `minDistance`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we use `LocationListener` to publish non-sticky `LocationEvent`s on the
+    Bus and the device''s location does not change for a long period of time, new
+    subscribers will have to wait until the device position changes to receive the
+    current position from the Bus:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Moreover, to reduce the device's energy consumption, the minimum time between
+    location updates (`minTime`) should be significant enough to be noticeable by
+    the application user in order to remove the waiting time for the next event the
+    will have the sticky event technique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we register our `Subscriber` method with sticky delivery enabled, the new
+    sticky registration will immediately get the latest position from the bus, stopping
+    the subscriber from waiting for the next location update posted by the `LocationListener`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To demonstrate this, first we will create an `Activity` that manages its own
+    `LocationListener`, receives location updates, and posts sticky `LocationEvent`
+    events on the Bus:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding code, we register our anonymous listener to receive location
+    updates when the `Activity` enters the foreground and we unregister the listener
+    when the `Activity` is paused, to either be destroyed or moved away from the foreground.
+    We register our listener to receive updates almost every five seconds and when
+    the position changes by 100 meters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the meantime, when the last known position is available from the GPS Location
+    Provider, we post a sticky event on the Bus to deliver the last known position
+    for future subscribers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our `LocationListener`, once again, will convert a Location object received
+    by an `onLocationChanged` callback to a `LocationEvent` object and submit a sticky
+    event on the bus with the callback. This sticky event will update the `EventBus`
+    cached `LocationEvent` and all sticky `Subscriber` methods will immediately get
+    this event once they subscribe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that we start from the assumption that the GPS Provider is enabled on the
+    device. For a more complete example, before you try to use the `LocationManager`,
+    verify whether the GPS Location is available or not and ask the user to enable
+    it on the device settings when the provider is not available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beyond that, in order to receive location updates, the `android.permission.ACCESS_COARSE_LOCATION`
+    or `android.permission.ACCESS_FINE_LOCATION` permissions must be declared in the
+    application permissions or requested at the runtime for API Levels greater than
+    23 (Marshmallow). The full source code is available from the Packt Publishing
+    website. Take a look at the complete source code to appreciate how to request
+    the required Android OS permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we will create a button that launches new `LocationEvent` subscribers
+    that register and unregister on the `Bus` immediately:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: The code in the button's `OnClickListener` will register a new `Runnable` object
+    instance on the Bus and unregister after that. During registration, the sticky
+    `Subscriber` method, `onLocationEvent`, will immediately get invoked with the
+    previously posted Location sticky object dispatched on the bus by our `LocationListener`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As soon as it receives a `LocationEvent`, the `onLocationEvent` method will
+    update the UI with the last position longitute and latitude and print the position
+    on the Android Log. With this approach, a sticky `Subscriber` method will not
+    have to wait until the position changes to receive a device position and update
+    the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Removing sticky events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In some use cases, it could be convienient to invalidate a sticky event from
+    the Bus and prevent a cached event from getting delivered to the following Subscribers.
+    EventBus allows us to clear the sticky events by calling the following functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`removeStickyEvent(<MyEventClass>)` – Removes and gets the recent sticky event
+    for the given event type'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`removeStickyEvent(Object event)` - Removes the sticky event if it equals the
+    passed event'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`removeAllStickyEvents()` - Removes the sticky events for all types'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let''s use one `removeStickyEvent` function to remove the latest sticky `LocationEvent`
+    from the bus:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: After we remove the sticky event from the bus, the latest `LocationEvent` will
+    be removed from the bus and no event is delivered during the registration to new
+    `LocationEvent` subscribers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned about the publish/subscribe messaging pattern used
+    to communicate between decoupled entities on an Android application. This pattern
+    must be applied to send event notifications or data to one or more Android component
+    recipients.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we introduced to the reader the `EventBus`, an optimized open source library
+    that delivers the publish-subscribe pattern for the Android platform and provides
+    advanced features such as sticky events and asynchronous event delivery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Following that, we learned how set up the library, how to model events, and
+    how to dispatch events on the default `Bus`. The Bus, a shared entity that receives
+    the events, will act as a broker and proxy for the events to the final recipients
+    that previously subscribed to them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We took a detailed look at `Eventbus` `threadMode` feature of EventBus that
+    allows us to define the thread in which the `Bus` delivers the event to the subscriber.
+    Hence, we were able to consume events in different threads (background, main thread,
+    and asynchronous threads) from the posting thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To finish our journey, we learned about sticky events, events that are cached
+    on the Bus and delivered to new sticky subscribers during the registration and
+    prevent such methods from waiting for the next event, in case of the absence of
+    new data.
+  prefs: []
+  type: TYPE_NORMAL

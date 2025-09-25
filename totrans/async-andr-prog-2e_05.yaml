@@ -1,0 +1,1374 @@
+- en: Chapter 5. Interacting with Services
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapters we focused our attention on the basic, high-level,
+    Android-specific constructs to load data asynchronously on an independent line
+    of execution (background thread); `android.os.AsyncTask` and `android.content.Loader`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What if we want to provide a common set of operations that implement any kind
+    of business logic over a centralized single entity that could be re-used by different
+    clients and has a lifecycle that is not bound to the client lifecycle? By clients,
+    in Android, we mean any kind of UI entity, such as an `Activity` or `Fragment`
+    object, a `BroadcastReceiver`, or any kind of object that wants to exercise business
+    logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The solution for this pattern in Android is available in the form of `android.app.Service`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Android, the Service programming pattern, well-known in enterprise architectures,
+    does not necessarily mean background work, so to avoid any kind of responsiveness
+    degradation in the UI we should try keep the main Thread execution of the Service
+    as lean as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Therefore, we have to use asynchronous techniques to coordinate the `Service`
+    work between the main thread and other threads that help to accomplish the `Service`
+    goal, to either keep the responsiveness at quite a decent level and provide results
+    to the Service request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Started Service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building responsive apps with IntentService
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Posting results with pending intents
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Reporting progress on the notification drawer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Applications of IntentService
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Bound service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Communicating with a local service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Broadcasting results with intents
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Applications of services
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introducing Service
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A `Service` in Android, as referred to before, is an entity that runs without
+    a user interface that could be used to execute any kind of business logic which
+    the application requires during the execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the basic unit of a visible application is `Activity`, its equivalent unit
+    for non-visible components is `Service`. Just like activities, services must be
+    declared in the AndroidManifest file so that the system is aware of them and can
+    manage them for us:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Service has lifecycle callback methods, similar to those of Activity, that
+    are always invoked on the application''s main thread. Here are the most important
+    callbacks that the user must define when it creates a service by extending the
+    Service base class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `onCreate()` is the lifecycle callback that is called once when the service
+    is created that might be used to allocate Service resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `onDestroy()` is the lifecycle callback called when the service is going
+    to be destroyed and might be used to free Service resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `onStartCommand()` is the lifecycle callback invoked when a started Service
+    is explicitly started with the `startService()` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onBind()` is the lifecycle callback called when the service is bound to a
+    Service client – `bindService()`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `onUnbind()` is the callback called when the service is unbound from a
+    client - `unbindService()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing Service](img/Image_B05062_05_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Also, just like `Activity`, `Service` does not automatically entail a separate
+    background thread or process, and as a result, performing intensive or blocking
+    operations in a `Service` callback method can lead to the annoying ANR dialog.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, there are several ways in which services are different to activities,
+    those ways are listed as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Service does not provide a user interface.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There can be many services active at the same time within an application.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A Service can remain active even if the application hosting it is not the current
+    foreground application, which means that there can be many services of many apps
+    are active at the same time.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Because the system is aware of services running within a process, it can avoid
+    killing those processes unless absolutely necessary, allowing the background work
+    to continue. Services have a higher priority than inactive or invisible activities.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Services in Android can be classified based on how the clients interact with
+    it, taking the next forms:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Started Service**: This is a kind of service that is explicitly started when
+    any object on the system invokes `startService()` and it will continue to run
+    until it stops itself by calling `stopSelf()` or it is explicitly destroyed with
+    `stopService()`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Bound Service**: This is a kind of service that is started when the first
+    client binds to it and runs until it has clients are connected. Service clients
+    attach to a Service by calling `bindService()`, and the service will be destroyed
+    when all the clients unbind, calling `unbindService()`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Hybrid Service**: This Service is started when an object on the system calls
+    `startService()` and might have clients connected to it during its lifecycle,
+    by calling `bindService()`. Like the started Service, it runs indefinitely until
+    the service is stopped, stops itself, or is killed by the system.![Introducing
+    Service](img/Image_B05062_05_01.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The Service can be also classified by its boundaries, taking the following
+    forms:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Local Service** (**LS**): The Service runs on the same process as the other
+    Android components and therefore the shared memory could be used to send Java
+    Objects between client and Server.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Internal Remote Service** (**IRS**): The Service runs on a separate process
+    but it can only be used by the components that belong to the application that
+    defines it. To access it, an IPC technique (Messenger or AIDL) is required to
+    interact with the remote process.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Global Service** (**GS**): The Service runs on a separate process and could
+    be accessed by other applications. For instance, with IRS, an IPC communication
+    technique must be used by the client to access it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Started service
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As described previously, a started Service is a service that is initiated when
+    the `Context` method `startService()` is invoked by any entity on the system that
+    has access to a Context object or is a Context itself, such as an Activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: An Intent is a messaging object that can carry data (action, category, extras,
+    and so on) and that you can use to request an action from another Android component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `startService()` function basically starts a service with an intent, and
+    returns to the user a component name that can be used to verify that the correct
+    service was resolved and invoked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To simplify the Service resolution, we pass an Intent created from the current
+    context with the Service class that needs to be started:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the system receives the first `startService(intent`) request, it builds
+    up the Service by calling `onCreate()` and forwards the intent from the first
+    `startService` and the subsequent Intents to the `onStartCommand` function to
+    be processed according to the order of `startService` calls:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `onStartCommand` should return an `int` that defines the Service restart
+    behavior applied by the system in cases where the system kills it to release resources.
+    Like explained before, the system maintains a list of Android running entities
+    on the system ordered by rank, and once the available system resources are low
+    it destroys the entities with lower rank first to free up resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most common restart `int` values are defined by the following Service static
+    fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`START_STICKY`: If the Service process is terminated by the system, the Service
+    is going to be restarted and no processed Intents will be delivered to the `onStartCommand`
+    function. When no start Intents are pending for delivery, a null Intent is passed
+    to the `onStartCommand` function. If a start request didn''t return before the
+    system kills the Service, the start request is submitted again on the restarted
+    Service passing `START_FLAG_RETRY` on the `onStartCommand` second argument.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_NOT_STICKY`: If the Service is terminated by the system, the Service
+    is only restarted when there is at least one pending start request to be delivered.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_REDELIVER_INTENT`: If the `Service` is terminated by the system, the
+    `Service` will be restarted redelivering the last delivered start Intent and any
+    pending requests. This kind of service is similar to `START_STICKY`, but instead
+    of delivering a null Intent in the start command, the last successfully delivered
+    Intent is dispatched. When the start request is redelivered, the flag `START_FLAG_REDELIVERY`
+    is passed in on the `onStartCommand` second argument.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `onStartCommand`, which executes on the main `Thread`, is the entry point
+    for your service, so in cases where you execute long running operations on your
+    `Service`, the offload of your operation into a background thread is imperative
+    for keeping your application responsiveness at bearable levels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the next code snippet, we are going to create a basic `Service` that offloads
+    the `Intent` processing to a background thread. The `SaveMyLocationService` Service
+    subclass is going to receive an address location in a String and consume it in
+    an operation that could occupy the CPU for a long period. First, we are going
+    to create the background thread, that will retrieve the locations from a queue
+    and consume them until it receives a signal to stop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the previous code, we basically constructed the foundations for our asynchronous
+    processing. The single thread that is started when the Service's `onCreate()`
+    callback is invoked on the main `Thread`, is going to monitor the jobs queue for
+    new location requests. The Thread will wait in the background efficiently, using
+    a Java monitor, until it gets notified with `notify()` when a new location is
+    submitted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When our background thread finds new locations in the queue, the `takeLocation()`
+    that is waiting on the Java monitor returns and forwards the new request to the
+    `consumeLocation()` to execute the business logic requested. The jobs are going
+    to be processed sequentially following the order of insertion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the `shouldStop` is set to true, the `run()` function will return and the
+    thread will be terminated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll need to register the Service in our AndroidManifest file, using a `<service>`
+    element as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the next step we are going to implement the `onStartCommand`, the function
+    that will receive the request from the system in the first place and forward it
+    to our thread to be processed in background:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: On the `onStartCommand`, we received the intent object from the system and the
+    location passed as a String on the Intent extras. Next, we push it to our queue
+    of jobs used to store the jobs in sequence. Later, we return the `START_STICKY`
+    flag, which means that we want the Service restarted after the system shuts down
+    our application and the pending intents delivered in case the system shuts down
+    the system to free up resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we have to implement the callback function to stop our background
+    processing infrastructure. This function is going to be called when the system
+    forces the service to terminate or any component sends a `stop` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `onDestroy()` function, we mainly ask our thread to terminate, setting
+    the `shouldStop` as true and by notifying the thread to finish the `run()` function.
+    In case you allocated objects in your `onCreate()` function, this callback should
+    be used to liberate any resources that you created during the Service lifecycle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we are going to create a simple Activity that is able to start the service
+    and stop the service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: In our Activity, we created a start button that calls `onStartServiceClick()`,
+    and a stop button that calls `onStopServiceClick()`, but for brevity we omitted
+    the code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the **start** button is clicked, our Activity will submit a new save location
+    request, with the current location retrieved from the `getCurrentLocation()` function,
+    to our service calling `startService()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clicking on the **stop** button will result in a `stopService()`, which sends
+    a stop request to our Service that leads to a `onDestroy()` invocation on our
+    Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is essential to mention that if the service is stopped and started repeatedly,
+    a new thread is created to replace the older one. As mentioned before, the thread
+    creation is an expensive operation, so in order to reduce the burden of the thread
+    creation, the developer should keep the Service running as long it may be needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our custom service is able to handle the `onStartCommand()` asynchronously very
+    well but in the next section, we will focus our attention on the `IntentService`
+    class, a special-purpose subclass of `Service` that comes in the Android SDK that
+    makes it very easy to implement a task queue to process work on a single background
+    thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building responsive apps with IntentService
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `IntentService` class is a specialized subclass of `Service` that implements
+    a background work queue using a single `HandlerThread`. When work is submitted
+    to an `IntentService`, it is queued for processing by a single `HandlerThread`,
+    and processed in order of submission on the `onHandleIntent` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: If the user exits the app before the queued work is completely processed, the
+    `IntentService` will continue working in the background. When the `IntentService`
+    has no more work in its queue, it will stop itself to avoid consuming unnecessary
+    resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The system may still kill a background app with an active `IntentService`, if
+    it really needs to (to reclaim enough memory to run the current foreground process),
+    but it will kill lower priority processes first, for example, other non-foreground
+    apps that do not have active services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `IntentService` class gets its name from the way in which we submit work
+    to it by invoking `startService` with an Intent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we do with our previous example, we can call `startService` as often as we
+    like, which will start the `IntentService` if it isn't already running, or simply
+    enqueue work to an already running instance if there is one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we want to pass some data to a `Service`, we can do so by supplying a data
+    URI or extra data fields via an Intent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can create an `IntentService` subclass by extending `android.app.IntentService`
+    and implementing the abstract `onHandleIntent` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We must invoke the single-argument constructor with a name for its background
+    thread (naming the thread makes debugging and profiling much easier).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll need to register the `IntentService` in our AndroidManifest file, using
+    a `<service>` element as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we want our `IntentService` to only be used by the components of our own
+    application, we can specify that it is not public with an extra attribute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s get started by implementing an `IntentService` to retrieve the number
+    of SMSs in the inbox from a particular mobile number:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the request is received on the `IntentService`, the request is pushed to
+    the internal `Looper` queue and as soon as it get chance to process it, the `IntenService`
+    invokes the `onHandleIntent` method with the Intent we passed in on the `startService()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we query the SMS Inbox Content Provider using the `phoneNumber` received,
+    and after that we count the records retrieved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that we're declaring a public static constant name for the argument parameter,
+    just to make it easy to use the correct name from any client `Activity` that wants
+    to invoke the Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can now invoke this `IntentService` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The code above receives the `phoneNumber` as an argument and submits a new start
+    request to `IntentService` to be processed sequentially following the submission
+    order.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far so good, but you've probably noticed that we haven't done anything with
+    the result we retrieved. In the next section, we'll look at some of the ways in
+    which we can send results from services to activities or fragments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling results
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Any `Service`—including subclasses of `IntentService`—can be used to start background
+    work from which the originating `Fragment` or `Activity` doesn't expect a response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, it is very common to need to return a result or display the result
+    of the background work to the user. We have several options for doing this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Send a `PendingIntent` to the `Service` from the originating `Activity`, allowing
+    the `Service` to callback to the `Activity` via its `onActivityResult` method
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Post a system notification allowing the user to be informed that the background
+    work was completed, even if the application is no longer in the foreground
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Send a message to a `Handler` in the originating `Activity` using `Messenger`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Broadcast the result as an `Intent`, allowing any `Fragment` or `Activity`—including
+    the originator—to receive the result of background processing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We'll learn about `BroadcastReceiver`, long-running tasks with `Service`, later,
+    but now we'll return results with `PendingIntent` and alert the user with system
+    notifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Posting results with PendingIntent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When we invoke an `IntentService`, it does not automatically have any way to
+    respond to the calling Activity; so if the `Activity` wants to receive a result,
+    it must provide some means for the `IntentService` to reply.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Arguably the easiest way to do that is with `PendingIntent`, which will be familiar
+    to any Android developer who has worked with multiple activities using the `startActivityForResult`
+    and `onActivityResult` methods, as the pattern is essentially the same.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A PendingIntent is a token that you give to a foreign application component
+    (Service, BroacastReceiver, or other applications) that allows the foreign entity
+    to use your application's permissions to execute a predefined piece of code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we''ll add a few static members to `CountMsgsIntentService` to ensure
+    that we use consistent values between it and the calling `Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll also need to define a static member in our Activity for the `REQUEST_CODE`
+    constant, which we can use to correctly identify the results returned to our `onActivityResult`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, when we want to invoke `CountMsgsIntentService` from our `Activity`, we'll
+    create a `PendingIntent` for the current `Activity`, which will act as a callback
+    to invoke the Activity `onActivityResult` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can create a `PendingIntent` with the `createPendingResult` method of the
+    Activity, which accepts three parameters: an `int` result code, an Intent to use
+    as the default result, and an `int` that encodes some flags for how the `PendingIntent`
+    can be used (for example, whether it may be used more than once):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We pass the `PendingIntent` to the `IntentService` by adding it as an extra
+    to the Intent we launch the `IntentService` with:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To handle the result that will be returned when this `PendingIntent` is invoked,
+    we need to implement `onActivityResult` in the `Activity`, and check for the result
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `IntentService` can now reply to the calling `Activity` by invoking one
+    of the `PendingIntent` send methods with the appropriate request code. Our updated
+    `onHandleIntent` method looks as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The additional code creates a new Intent object and populates it with our counter
+    result retrieved from the cursor, and sends the result back to the calling Activity
+    using the received `PendingIntent`. Additionally, we handle the `CanceledException`,
+    in case the calling `Activity` decided that it wasn't interested in the result
+    anymore and canceled the `PendingIntent`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That's all there is to it—our `Activity` will now be invoked via its `onActivityResult`
+    method when the `IntentService` completes its work. As a bonus, we will even receive
+    the result if the `Activity` has restarted, for example, due to configuration
+    changes such as a device rotation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What if the user left the `Activity` (or even left the application) while the
+    background work was in progress? In the next section, we'll use notifications
+    to provide feedback without interrupting the user's new context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Posting results as system notifications
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: System notifications appear initially as an icon in the notification area, normally
+    at the very top of the device screen. Once notified, the user can open the notification
+    drawer to see more details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notifications are an ideal way to inform the user of results or status updates
+    from services, particularly when the operation may take a long time to complete
+    and the user is likely to be doing something else in the meantime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s post the result of our message counter as a notification, with a message
+    containing the result that the user can read when they open the notification drawer.
+    We''ll use the support library to ensure broad API level compatibility, and add
+    one method to `CountMsgsIntentService`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each notification has an identifier that we can use to control whether a new
+    notification is posted or an existing one is reused. The identifier is an `int`,
+    and is the first parameter to the notify method. Since our `countMsgsFrom` value
+    is an `int`, and we would like to be able to post multiple notifications, it makes
+    sense to use `phoneNumber` as the ID for our notifications so that each different
+    request can produce its own separate notification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To post a notification containing the result of our service request, we just
+    need to update `onHandleIntent` to invoke the `notifyUser` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that we've learned the basics of using `IntentService`, let's consider some
+    real- world applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applications of IntentService
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Ideal applications for `IntentService` include just about any long-running task
+    where the work is not especially tied to the behavior of a `Fragment` or `Activity`,
+    and particularly when the task must complete its processing regardless of whether
+    the user exits the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, `IntentService` is only suitable for situations where a single worker
+    thread is sufficient to handle the workload, since its work is processed by a
+    single `HandlerThread` sequentially following the order of submission, and we
+    cannot start more than one instance of the same `IntentService` subclass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A use case that `Intent Service` is ideally suited for is one-shot, long–running
+    tasks that could be processed in the background without user intervention:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Uploading data to remote servers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Database or data backups
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Time consuming file data processing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Communication with web service resources (WSDL or REST)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Periodic time operations such as alarm processing, calendar event processing,
+    and so on
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A use case that `IntentService` is ideally suited for is uploading data to
+    remote servers because:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The upload usually must complete, even if the user leaves the application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A single upload at a time usually makes best use of the available connection,
+    since bandwidth is often asymmetric (there is much smaller bandwidth for upload
+    than download)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A single upload at a time gives us a better chance of completing each individual
+    upload before losing our data connection
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Let's see how we might implement a very simple `IntentService` that uploads
+    images to a simple web service via HTTP POST.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HTTP uploads with IntentService
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For this example, we'll create a new `Activity`, `UploadArtworkActivity`, to
+    allow the user to pick an album artwork to upload. We'll start with the code for
+    `AlbumListActivity` that we created in [Chapter 4](ch04.html "Chapter 4. Exploring
+    the Loader"), *Exploring the Loader*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our new `UploadArtworkActivity` only needs a small modification to add an `OnItemClickListener`
+    interface to the `GridView` of images, so that tapping an image triggers its upload.
+    We can add the listener as an anonymous inner class in `onCreate` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: This looks like quite a dense chunk of code, but all it really does is use the
+    position of the tapped thumbnail to move the `Cursor` to the correct row in its
+    result set, extract the ID of the album that was tapped, create a `Uri` for its
+    artwork file, and then start `UploadArtworkIntentService` with an Intent containing
+    that Uri.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll extract the details of the upload into a separate class, so `UploadArtworkIntentService`
+    itself is just a fairly sparse `IntentService` implementation. In `onCreate`,
+    we''ll set up an instance of our `ImageUploader` class, which will be used to
+    process all uploads added to the queue during this lifetime of the Service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The implementation of `ImageUploader` itself is not all that interesting—we
+    just use Java''s `HTTPURLConnection` class to post the image data to the server.
+    The complete source code is available on the Packt Publishing website, so we''ll
+    just list two critical methods—upload and pump—and leave out the housekeeping:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `pump` method just copies 1 KB chunks of data from the `InputStream` to
+    the `OutputStream`, pumping the data to the server, and invokes the progress callback
+    function, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each time a 1 KB chunk of data is pushed to the `OutputStream`, we invoke the
+    `ProgressCallback` method, which we'll use in the next section to report the progress
+    to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reporting progress
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For long-running processes, it can be very useful to report progress so that
+    the user can take comfort in knowing that something is actually happening.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To report progress from an `IntentService`, we can use the same mechanisms that
+    we use to send results—for example, sending `PendingIntents` containing progress
+    information, or posting system notifications with progress updates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can also use other techniques that we'll cover later in the chapter, broadcasting
+    intents to registered receivers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Whichever approach we take to report progress, we should be careful not to report
+    progress too frequently, otherwise we'll waste resources updating the progress
+    bar at the expense of completing the work itself!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s look at an example that displays a progress bar on notifications in
+    the drawer—a use case that the Android development team anticipated and therefore
+    made easy for us with the `setProgress` method of `NotificationCompat.Builder`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, max sets the target value at which our work will be completed, progress
+    is where we have got to so far, and indeterminate controls which type of progress
+    bar is shown. When indeterminate is true, the notification shows a progress bar
+    that indicates something is in progress without specifying how far through the
+    operation we are, while false shows the kind of progress bar that we need—one
+    that shows how much work we have done, and how much is left to do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll need to calculate progress and dispatch notifications at appropriate
+    intervals, which we''ve facilitated through our `ProgressCallback` class. Now
+    we need to implement the `ProgressCallback` and hook it up in `UploadArtworkIntentService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: The constructor of `ProgressNotificationCallback` consists of familiar code
+    to post a notification with a progress bar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `onProgress` method throttles the rate at which notifications are dispatched,
+    so that we only post an update as each additional 5 percent of the total data
+    is uploaded, in order not to swamp the system with notification updates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `onComplete` method posts a notification that sets both the integer progress
+    parameters to zero, which removes the progress bar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To complete the code, we implement `onHandleIntent` to display the notification
+    drawer and deliver the upload result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tap an artwork image to start uploading and you'll see a notification appear.
+    Slide open the notification drawer and watch the progress bar ticking up as your
+    image uploads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are finished with started services, so now it is time to move to a different
+    type of Service, the Bound Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bound Service
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A Bound Service is an Android Service that defines a client interface and allows
+    several entities to bind it by invoking `bindService()` and creating a relation
+    between each order that facilitates the interaction with a request-response model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Service` instance will be created when the first client attempts to connect
+    to it and will be alive until the last client disconnects from it using the `unbindService()`
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to create the connection between the client and the server, the service
+    must implement the `onBind()` function and return an `IBinder` object that implements
+    a lightweight remote procedure mechanism to perform in-process or cross-process
+    calls:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When all the clients disconnect from the Service, calling `unbindService()`,
+    the service `onUnbind()` member method is called:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: A Bound Service might reside in the same process (LS), in a different process
+    that belongs to the application (LIS), or in an another application process (GS),
+    so the technique to communicate with the service and the `IBinder` type returned
+    depends entirely on the service process location, as mentioned before.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we are going to explain how to interact and bind to a local
+    Service to initiate an asynchronous action on the Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The remote binding with AIDL or with Messenger are other techniques used in
+    advanced use cases where inter-process communication is required, though in this
+    book we are not going to cover it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For a smooth start, first we are going to cover a local `Service` binding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Communicating with a Local Service
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A local bound service is the most common type of bound `service`, and given
+    that the server and the client run on the same process, there is no need to use
+    an **inter-process communication** (**IPC**) technique to send requests and receive
+    responses between them. Moreover, both entities, the service client and server,
+    share the same address memory space within the process, making the exchange of
+    requests and responses quite easy using Java Objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since we are within the same process, the `Binder` object returned by the `onBind()`
+    `Service` method might define a method to return the `Service` class instance
+    object. In this manner, we can use the public `Service` class functions to submit
+    new requests to the `Service` in the same way as we invoke a regular object method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's demonstrate this with an example, creating a bound service that creates
+    an SHA1 cryptographic digest from a string that we type in a UI `EditText`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Primarily, we will start by implementing our own `Binder`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our binder, `LocalBinder`, extends from the `Binder` class, and provides a `getService()`
+    method to retrieve the instance of our `Service`. Then, when any client connects
+    to our `Service`, the `onBind()` function will return our `LocalBinder` instance
+    object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An `Activity` or `Fragment` that wants to directly interact with this `Service`
+    first needs to bind to it using the `bindService` method and secondly supply a
+    `ServiceConnection` to handle the `onServiceConnected()`/`onServiceDisconnected()`
+    callbacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `ServiceConnection` implementation simply casts the `IBinder` received
+    to the concrete class defined by the `Service`, obtains a reference to the `Service`,
+    and records it in a member variable of the `Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: When we lose the connection with Service unexpectedly, due to a service crash
+    or an unexpected error in the Android system, `onServiceDisconnected` gets called
+    to notify the client that the connection to the service is considered lost.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can make the `Activity` bind and unbind during its `onStart()` and `onStop()`
+    lifecycle method, because we only need to interact with the service when the `Activity`
+    is visible on the screen. We should try to avoid the bind and unbind `onResume()`
+    and `onPause() Activity` callbacks to reduce the number of connect and disconnect
+    transitions in your application''s lifecycle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the `Activity` starts, we call the `Context.bindService()`, passing an
+    Intent that explicitly defines the `Service` class that we want to bind, our `ServiceConnection`
+    instance, and the optional flag `Context.BIND_AUTO_CREATE` that means that the
+    System will keep the Service running as long as this bind exists.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Hybrid Services (Bound/Started), after we bind to a Service, we can access
+    the Service by calling `startService(Intent)` and process Service calls over `onStartCommand(Intent,
+    int, int)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is great—once the binding is made, we have a direct reference to the `Service`
+    instance and can call its methods! However, we didn't implement any methods in
+    our `Service` yet, so it's currently useless.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's create a method on `Sha1HashService` to calculate the digest in the background
+    and return the result to the `Activity`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, to execute this task in background we need to setup the execution engine,
+    so to achieve that we are going to set up our own `Executor` based on the `ThreadPool`
+    class supplied in `java.util.concurrent`. The Executor will support concurrency,
+    from two to four concurrent threads, and request queueing up to 32 queued jobs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the Service is created, immediately after the first binding, the `ThreadPool`
+    is started and the core threads (2) are started with `prestartAllCoreThreads`,
+    ready to process the incoming requests as soon as they arrive in the Service.
+    If the clients submit requests at such a pace that the core threads are not able
+    handle them, the thread pool will increase the number of worker threads in the
+    pool until it reaches four threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have the executor in place, we will create the public method that
+    receives the request to digest a `String`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since `Sha1Activity` has a direct object reference to `Sha1HashService`, we
+    can now go ahead and invoke its `getSha1Digest` method directly—taking care to
+    check that the `Service` is actually bound first, of course:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Taking the text retrieved from our `EditText` view, we call our Service `getSha1Digest`
+    to calculate the typed text digest. This is a very convenient and efficient way
+    of submitting work to a `Service`—there's no need to package up a request in an
+    Intent, so there's no excess object creation or communication overhead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since `getSha1Digest` is asynchronous, we can't return a result directly from
+    the method invocation, and `Sha1HashService` itself has no user interface, so
+    how can we present results to our user?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One possibility is to pass a callback to `Sha1HashService` so that we can invoke
+    methods of our `Activity` when the background work completes. Let''s define a
+    generic callback interface for the activity to implement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is a serious risk that by passing an `Activity` into the `Service`, we'll
+    expose ourselves to memory leaks. The lifecycles of `Service` and `Activity` do
+    not coincide, so strong references to an `Activity` from a `Service` can prevent
+    it from being garbage collected in a timely fashion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The simplest way to prevent such memory leaks is to make sure that `Sha1HashService`
+    only keeps a weak reference to the calling `Activity` so that when its lifecycle
+    is complete, the `Activity` can be garbage collected, even if there is an ongoing
+    calculation in the Service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is really important to remember that whenever we update the UI during the
+    `ResultCallback.onResult`, we must do it in the UI Thread; therefore, it is essential
+    to create a `Runnable` object with the result and post it on the main `Looper`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The modified `Sha1HashService` is shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We invoke the callback on the main thread using `postResultOnUI`, so that `Sha1Activity`
+    can interact with the user interface directly in the callback method. We can implement
+    the callback as a method of `Sha1Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can directly invoke methods in `Sha1HashService` and return results
+    via a callback method of `Sha1Activity` by passing the `Activity` itself as the
+    callback:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our service uses their local `ThreadPool` executor to handle the requests in
+    an asynchronous way, although we might have used the `AsyncTask` public static
+    executors: `SERIAL_EXECUTOR` to execute our digest calculation in a serialized
+    way, or the `THREAD_POOL_EXECUTOR` to calculate the digest concurrently and independently:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that the `AsyncTask` executors are a system-shared resource, a shared
+    group of threads, used by all the `AsyncTasks` in the system; therefore, our processing
+    might suffer a delay when all the executor threads are occupied doing work. In
+    most use cases there is no need to create our own custom group of working threads
+    and the `AsyncTask` executors should be used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This direct communication between `Sha1Activity` and `Sha1HashService` is very
+    efficient and easy to work with. However, there is a downside: if the `Activity`
+    restarts because of a configuration change, such as a device rotation, the `WeakReference`
+    to the callback will be garbage collected and `Sha1HashService` cannot send the
+    result.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section we are going to explore a mechanism that sends the results
+    back to an Activity, or an other part of the application, even after a configuration
+    change – Broadcast Intents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Broadcasting results with intents
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Broadcasting an `Intent` is a way of sending results to anyone who registers
+    to receive them. This can even include other applications in separate processes
+    if we choose, but if the `Activity` and `Service` are a part of the same process,
+    broadcasting is best done using a local broadcast, as this is more efficient and
+    secure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Broadcasting results with intents](img/Image_B05062_05_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can update `Sha1HashService` to broadcast its results with just a few extra
+    lines of code. First, let''s define two constants to make it easy to register
+    a receiver for the broadcast and extract the result from the broadcast Intent
+    object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can implement the method that does most of the work using the `LocalBroadcastManager`
+    to send an Intent object containing the calculated result. We''re using the support
+    library class `LocalBroadcastManager` here for efficiency and security—broadcasts
+    sent locally don''t incur the overhead of interprocess communication and cannot
+    be leaked outside of our application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `sendBroadcast` method is asynchronous and will return immediately without
+    waiting for the message to be broadcast and handled by receivers. Finally, we
+    invoke our new `broadcastResult` method from `getSha1Digest`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Great! We''re broadcasting the result of our background calculation. Now we
+    need to register a receiver in `Sha1Activity` to handle the result. Here''s how
+    we might define our `BroadcastReceiver` subclass:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: This `DigestReceiver` implementation is quite simple—all it does is extract
+    and display the result from the Intent it receives—basically fulfilling the role
+    of the Handler we used in the previous section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We only want this `BroadcastReceiver` to listen for results while our `Activity`
+    is at the top of the stack and visible in the application, so we''ll register
+    and unregister it in the `onStart()` and `onStop()` lifecycle methods. As with
+    the `Handler` that we used previously, we''ll also apply the attach/detach pattern
+    to make sure we don''t leak View objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: Of course, if the user moves to another part of the application that doesn't
+    register a `BroadcastReceiver`, or if we exit the application altogether, they
+    won't see the result of the calculation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If our Service could detect unhandled broadcasts, we could modify it to alert
+    the user with a system notification instead. We'll see how to do that in the next
+    section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detecting unhandled broadcasts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the previous sections, we used system notifications to post results to the
+    notification drawer—a nice solution for when the user has navigated away from
+    our app before the background work has completed. However, we don't want to annoy
+    the user by posting notifications when our app is still in the foreground and
+    can display the results directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ideally, we'll display the results in the app if it is still in the foreground
+    and send a notification otherwise. If we're broadcasting results, the `Service`
+    will need to know if anyone handled the broadcast and if not, send a notification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One way to do this is to use the `sendBroadcastSync` synchronous broadcast
+    method and take advantage of the fact that the `Intent` object we''re broadcasting
+    is mutable (any receiver can modify it). To begin with, we''ll add one more constant
+    to `Sha1HashService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, modify `broadcastResult` to use the synchronous broadcast method and
+    return the value of a Boolean extra property; `HANDLED` from the Intent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because `sendBroadcastSync` is synchronous, all registered `BroadcastReceivers`
+    will have handled the broadcast by the time `sendBroadcastSync` returns. This
+    means that if any receiver sets the Boolean extra property `HANDLED` to `true`,
+    `broadcastResult` will return `true`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our `BroadcastReceiver`, we''ll update the `Intent` object by adding a Boolean
+    property to indicate that we''ve handled it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now if `Sha1Activity` is still running, its `BroadcastReceiver` is registered
+    and receives the `Intent` object and will set the extra Boolean property `HANDLED`
+    with the value `true`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, if `Sha1Activity` has finished, the `BroadcastReceiver` will no longer
+    be registered and `Sha1HashService` will return `false` from its `broadcastResult`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There''s one final complication: unlike `sendBroadcast`, which always invokes
+    `BroadcastReceivers` on the main thread, `sendBroadcastSync` uses the thread that
+    it is called with.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our `BroadcastReceiver` interacts directly with the user interface, so we must
+    call it on the main thread. To broadcast the intent on the main thread synchronously,
+    we create an anonymous Runnable to execute the broadcast:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we have the broadcast function in place, we can call it from the `getSha1Digest`
+    to generate an Android notification when the intent is not handled by a `Receiver`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: This does just what we want—if our `BroadcastReceiver` handles the message,
+    we don't post a notification; otherwise, we will do so to make sure the user gets
+    their result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far we have been binding to a Service that runs within the same process,
+    where the client shares the memory address space with the Service. In the next
+    section we are going to detail how to interact with Services that run in remote
+    processes using the Android IPC-specific techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applications of Services
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With a little bit of work, `Services` give us the means to perform long-running
+    background tasks, and free us from the tyranny of the `Activity` lifecycle. As
+    opposed to `IntentService`, directly sub-classing a `Service` also gives us the
+    ability to control the level of concurrency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the ability to run as many tasks as we need and to take as long as is necessary
+    to complete those tasks, a world of new possibilities opens up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The only real constraint on how and when we use `Services` comes from the need
+    to communicate results to a user-interface component, such as a `Fragment` or
+    `Activity`, and the complexity this entails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Ideal use cases for `Services` tend to have the following characteristics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Long-running (a few hundred milliseconds and upward):'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Not specific to a single Activity or Fragment class
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Must complete, even if the user leaves the application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Does not require user intervention to complete
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Operations that require state between different calls
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Requires more concurrency than `IntentService` provides, or needs control over
+    the level of concurrency
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There are many applications that exhibit these characteristics, but the stand-out
+    example is, of course, handling concurrent downloads from a web service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To make good use of the available download bandwidth and to limit the impact
+    of network latency, we want to be able to run more than one download at a time
+    (but not too many). We also don't want to use more bandwidth than necessary by
+    failing to completely download a file and having to restart the download later.
+    So ideally, once a download starts, it should run to completion even if the user
+    leaves the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we explored the very powerful `Service` component, putting
+    it to use to execute long-running background tasks with or without a configurable
+    level of concurrency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We explored the incredibly useful `IntentService`—an ideal construct for performing
+    long-running background tasks off the main thread, surviving well beyond the lifecycle
+    of the initiating `Activity`, and even continuing to do useful work when the application
+    is no longer in the foreground.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We learned how to send work to an `IntentService` with parameterized Intents,
+    how to process that work in the background by implementing `onHandleIntent`, and
+    how to send results back to the originating `Activity` using a `PendingIntent`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For cases where the application is no longer in the foreground or an operation
+    is particularly long-running, we saw how to post notifications to the notification
+    drawer, complete with progress updates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also saw the wide range of communication mechanisms available for delivering
+    results back to the user: direct invocation of local `Service` methods; broadcasting
+    results to registered parties with `BroadcastReceiver`; and, if the user has already
+    left the application, raising system notifications.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the next chapter, we''ll add one other weapon to our arsenal: the ability
+    to run background tasks at specific times—even when the device is asleep—by scheduling
+    alarms with `AlarmManager`.'
+  prefs: []
+  type: TYPE_NORMAL

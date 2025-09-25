@@ -1,0 +1,1444 @@
+- en: Chapter 9. Asynchronous Work on the Native Layer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In previous chapters, we have been using Java thread APIs and concurrent primitives
+    delivered by the Android SDK to build our asynchronous constructs. A Java thread,
+    an independent line of execution in our application, is automatically attached
+    to the Android virtual machine and is bound to one native thread on the system.
+    In previous chapter examples, we executed Java compiled bytecode on the JVM and
+    used Java synchronization and concurrent primitives to solve correctness and liveness
+    issues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will make use of the Java Native Interface (JNI) to execute
+    code written in C/C++ and compile it to native code. The native code, which runs
+    directly on the hardware and makes use of the native CPU **Application Binary
+    Interface** (**ABI**), generally runs faster than the bytecode due to optimizations
+    made by the compilers, or optimizations introduced by developers with the use
+    of specific ABI techniques. Hence, when we perform intensive computing operations
+    on the device this could be the way to go to obtain a performance boost on your
+    application and to reduce the power consumption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this in mind, we will learn how to use the JNI interface to execute concurrent
+    tasks on native code (C/C++), interact with Java code from the native layer, and
+    update the UI from native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Later, we will learn how to create native threads and use synchronization primitives
+    such as `mutex` and `condition` to avoid any memory consistency problems that
+    could come up when the device multiple line of executions in parallel and they
+    share the same memory segments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To finish, we will start a group of threads to run background work on the native
+    layer that dispatches the result to the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introduction to JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android NDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Calling C functions from Java code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Calling C++ member/static functions from Java code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Accessing Java objects from native code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Executing native background work on Java threads
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Executing asynchronous work on a native thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interacting with a Java monitor from native code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Handling Java exceptions on the native layer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction to JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**JNI** is an interface that allows the execution of native code, written on
+    C, C++, or Assembly, from the **Java Virtual Machine** (**JVM**). The interface
+    strictly defines the way that any JNI implementation should act to manage and
+    control the interactions between Java code and the machine code. Moreover, the
+    machine code is able to interact with the JVM and create objects, execute member
+    functions, modify the member variables and handle Java exceptions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The JNI, which allows you to execute machine code along with your Java code,
+    is typically used to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Accelerate some critical portions of your application. Since the code runs
+    directly on the hardware, it could make use of specific instruction sets to improve
+    the execution:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Example: The use of SIMD instructions to accelerate audio or video floating-point
+    operations.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Integrate existing C/C++ libraries in to your Android application. You can
+    port any legacy code or library written to the Android platform and use it on
+    your Android application:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Example: The integration of open source libraries such as `opencv`, `libgdx`,
+    and `box2d` into your application runtime.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To use a platform dependent feature that is not accessible from the Java API:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Example: Low-level OS features such as poll and semaphores or native APIS such
+    as OpenGL, OpenSL ES, or OpenMAX AL.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Notice that adding C/C++ with JNI to your project does not come free and it
+    typically adds complexity to your project, making it harder to debug, build, and
+    test. Therefore, you must evaluate the cost/benefit before you make the decision
+    to use it in your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android NDK (Native Development Kit)
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To help with the building and construction of Android applications that require
+    a dynamic collaboration between the Java layer and the native layer, a development
+    kit named Android NDK is supplied on the Android Developer website ([http://developer.android.com/ndk/index.html](http://developer.android.com/ndk/index.html)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android NDK, the Android toolset that allows you to compile your code written
+    in C/C++ to the several ABIs supported by Android, is also able to compile pre-existing
+    libraries written in C or C++ to the Android platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we move on in more detail, you should install the NDK package in your
+    development platform, following the instructions defined on [http://developer.android.com/ndk/downloads](http://developer.android.com/ndk/downloads).
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the time of writing, the latest version of NDK is 10e, so we will base our
+    code and examples on this version for the rest of this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Java source code that you will write in your application, compiled by Android
+    SDK, generates Android bytecode that will be interpreted by the Android JVM on
+    any Android device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With your source code written in C or C++, the NDK compiler will convert it
+    to CPU code with different instruction sets, hardware features, calling conventions,
+    and storing conventions. Each kind of CPU architecture has its own ABI that defines
+    how the machine code should be arranged to interact with CPU hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The NDK toolset comes with tools that abstract these hardware traits and generates
+    machine code to the following ABIs: armeabi, armeabi-v7a, arm64-v8a, x86, x86_64,
+    mips, and mips64.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of the time you want to support as many devices as possible, so by default,
+    the NDK will generate code for all the CPU architectures and instruction sets
+    supported.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calling C functions from Java code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The powerful JNI interface, as referred to before, is able to manage interaction
+    in both directions, from Java to C and from C to Java.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A regular Java class declaring a method with the keyword `native` declares that
+    the method behavior is implemented in native code. Like a regular Java method,
+    the JNI `native` method is able to receive Java objects or primitive types as
+    arguments and return primitive types and objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how a `native` method definition will look like in a Java class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding activity will call the native code to check whether a number is
+    prime or not and print the result on the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice that our function receives a primitive as an argument and return a primitive
+    `boolean` as a result and does not have any body, like an abstract function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the member function declared as native, we inform the compiler that this
+    function is going to be implemented in C/C++, in a native library that gets loaded
+    dynamically at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the member function now declared as native on the Java side, let's use
+    `javah` to declare and implement our native method in the native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `javah` is able to help the developer to generate native method prototypes
+    with name conventions used by the JNI interface, the SDK becomes a handy tool
+    that generates a header file for all your class native methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use it, please go to your project directory, create a `jni` directory, and
+    run the next `javah` to generate the header file for your native function. In
+    Android Studio IDE, open a terminal window and go to the `src/main` directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If everything goes as expected, the file `com_..._chapter9_MyNativeActivity.h`
+    will be generated with our `native` method declaration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `native` method will receive a `JNIEnv*` pointer to the JVM environment,
+    a `jobject` reference to the actual Java object instance that invoked the method,
+    and an integer argument.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The previous method declared in the following JNI specification, it should be
+    declared and implemented in your code and loaded on the runtime over a shared
+    library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have the method declared, let''s create a `source` file under `jni`
+    called `c_functions.c`, with the `native` method implementation for our `isPrime`
+    function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: When `MyNativeActivity.isPrime` is called, the JNI interface transparently forwards
+    the processing to the native code function, passing a native integer primitive
+    (`jint`). The Android JNI implementation automatically converts the Java type
+    `int` value to a native type (`jint`), executes the native function, and at the
+    end returns `jboolean` that is automatically converted by the JNI interface to
+    a Java primitive, `boolean`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following table shows how Java types are mapped to native types:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Java Type | Native Type | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `boolean` | `Jboolean` | Unsigned 8 bits |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `byte` | `Jbyte` | Signed 8 bits |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `char` | `jchar` | Unsigned 16 bits |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `short` | `jshort` | Signed 16 bits |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `int` | `jint` | Signed 32 bits |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `long long` | `jlong` | Signed 64 bits |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `float` | `jfloat` | Floating Number 32 bit |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `double` | `jdouble` | Floating Number 64 bit |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Object` | `jobject` | Any Java Object |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Class` | `class` | Class Object |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `String` | `jstring` | String objects |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `void` | `void` |   |'
+  prefs: []
+  type: TYPE_TB
+- en: 'Although we have the native function declared and implemented in our source
+    file, the JVM will not find the method until we have loaded the shared library
+    that contains our native function. First, we will define the `ndk` folder in our
+    project''s root folder `local.properties` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, in our `build.gradle` module configuration we will define the shared
+    library name under the `ndk` configuration section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, Android Studio is able to `compile c_functions.c` and generate a shared
+    library with the name `mylib` for all the ABIs supported in the build directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: These libraries are going to be packed in a universal `apk` file ready to be
+    loaded by our Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All that remains is to load the library on our runtime before we try to use
+    it in our code. To load shared libraries on the JVM runtime, the `java.lang.System`
+    class provides a `static` method to load a shared library and its dependencies,
+    so before we use it on our class we will add a static section to our `Activity`
+    class to load the library as soon as the class loader loads our class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the library is required, the `System` class automatically detects the ABI
+    where the device is running and loads the required platform dependent library.
+    Therefore, if you are running on an x86 device, `x86/libmylib.so` is going to
+    be loaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calling C++ functions from native code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we have called a C function implemented in the `c_functions.c source`,
+    so, in the next section, we will show you how to call a C++ member class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will add the `isPrimeCPlusPlus` native method to `MyNativeActivty`
+    that returns `String` as a result. Let''s see how the native function declaration
+    will look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Running the `javah` tool against the new `MyNativeActivity` class definition
+    will generate a new function declaration with the following signature:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we are going to implement the prime function, as a `class static` function,
+    on a C++ source file with the name `mylib.cpp`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you build your project in Android Studio, the `mylib.cpp` source file will
+    be detected and the new function and class will be added to the `libmylib.so`
+    shared library file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we run the application, the C++ system default library will be loaded with
+    a minimal system C++ runtime. The default C++ runtime does not provide the C++
+    standard library, exception support, and **RunTime Type Information** (**RTTI**).
+    Therefore, if you want to make use of C++ standard library string classes, containers,
+    streams, and general algorithms, you will have to explicitly load the C++ runtime
+    required before you load your library. For a complete and up to date comparison
+    of the C++ runtime available on Android, please check C++ Runtimes on the Android
+    Developer website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we want to use a different C++ runtime than the system runtime, we must
+    explicitly set the runtime in your module''s `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Moreover, we must load the non-default C++ runtime library before we load our
+    library or any library that depends on it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since `c++_shared` provides a complete STL library implementation, from now
+    on we will use this runtime as the base C++ runtime for our code examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Great! So far, we have learned how to interact with native methods using the
+    JNI interface, so our next step is to learn how to access Java objects from native
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing Java objects from native code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we call a native function, the C or C++ function receives a `JNIEnv` pointer
+    to a table of JNI methods used to interact with JVM Runtime. The `JNIEnv` pointer
+    provides us with a set of primitives ready to find a Java class definition, set
+    or get Java object field values, call static or member Java object functions,
+    create Java objects, interact with Java monitors, or deal with exceptions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our next example will count the number of words on an `EditText` UI Widget on
+    a native function and update a `TextView` text with count results from the native
+    code. Therefore, we will learn how to use `JNIEnv` to access a member Java object
+    field and how to call a Java object method `(TextView.setText`) using the `JNIEnv`
+    interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start by defining our native function and invoke it every time the `EditField`
+    content changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that a new function is added to `Activity` so make sure you run `javah`
+    to generate the new native function declaration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we will define the JNI native function that counts the number of words
+    for a string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: We left the native implementation because we will implement it on a step-by-step
+    basis. As the first step, we will get the `TextView` object instance, used to
+    present the number of words on the UI text input, from the `charCountTv` object
+    field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To access a Java object field or method, a `jmethodID` or `jfieldID` is always
+    required:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In order to construct the `methodSignature` or the `fieldTypeCode` (TC), we
+    have to map the Java types to type codes using the following table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Java Type | Type Code (TC) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `boolean` | `Z` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Byte` | `B` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Char` | `C` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `double` | `D` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `float` | `F` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Int` | `I` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Long` | `J` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `short` | `S` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Object` | `L<package>;` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Void` | `V` |'
+  prefs: []
+  type: TYPE_TB
+- en: When we convert an array, always prefix the type code with the `[` character.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create a `jfieldID` we need a single type code. However, to construct the
+    method signature we use the following format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see how we obtain the `charCountTv TextView` object in the native code
+    using the instructions explained below:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once we have the `TextView` reference, we can invoke the `setText(CharSequence)`
+    instance method to publish the number of words found. To invoke a Java method
+    we will make use of the JNI function `CallVoidMethod` with a `jmethodId` created
+    from the method signature:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see how the native code that updates the `TextView charCountTv` with
+    the number of words will look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To invoke `static` methods and methods with different kind of result types,
+    the JNI interface provides us with a set of functions with the following signatures:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now that we have the basic knowledge about how to call native functions with
+    the JNI interface, we are ready to start using the JNI to execute asynchronous
+    work on native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Executing native background work on Java threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In previous sections, we used the JNI interface to execute native functions
+    on the main thread. Since they run on the main thread, the functions were able
+    to update the UI, access the `Activity` instance fields, and or update any UI
+    widget directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, as we discussed before, for long computing or intensive tasks we have
+    to execute them on the background thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In previous sections, we learned how to use the `AsyncTask, Loader`, `Handler`,
+    and Remote Services to execute work on background threads that don't reduce the
+    UI responsiveness or interfere with UI rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In any of these Android specific constructs, the background thread is already
+    attached to the JVM. Hence, the background thread already possesses access to
+    a ready to use JNI environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our next example, we will make use of the `Loader` construct and build `AsyncTaskLoader`,
+    that loads an image on the background, converts the image to gray scale in native
+    code, and publishes the result on the UI screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will detail how the `Loader` Java class definition will look before
+    we start to dig into the native function details:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that our `Loader` will load a `Bitmap` image wrapped in a generic `Result`
+    class, as we did in previous sections. When any exception happens on the Java
+    or Native code, `Result.error` is filled, making the `Loader` consumer able to
+    detect an error and react accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our loader will receive as an argument the image filename to load from the assets
+    and will decode the image to a `Bitmap` object in the `ARGB_8888` format and return
+    an image in grayscale
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the native function executes in the background thread without errors, the
+    `Result<Bitmap>` object is delivered to the `Loader` consumer in the UI Thread
+    to be updated to the device screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Executing `javah` against our new `AsynTaskLoader` class should generate the
+    `com_packpublishing_asynchronousandroid_chapter9_ToGrayImageLoader.h` header file
+    with the following function signature:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To process `Bitmap` objects on the native layer, the `jnigraphics` shared library
+    is required. Therefore, let''s update our `gradle` build configuration to link
+    our library with the `jnigraphics` shared library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Linking our library `mylib` against `jnigraphics` will force the dynamic loader
+    to load the `jnigraphics` library every time our library is loaded by `System.loadLibrary`.
+    Beyond that, the `gradle` system will pack the `jnigraphics` shared library for
+    the several ABIs required in the **application package file** (**APK**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have the method defined in the header, it is time to implement the
+    native function that converts the original `Bitmap` to a grayscale `Bitmap`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s create the source file `image.cpp` that includes the `jni` method
+    definition and the required `jnigraphics` header file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we will implement the function that converts the original pixels to gray
+    pixels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the help of the `jnigraphics` library, we can read the image information
+    using `AndroidBitmap_getInfo` and if everything goes well, the image info will
+    be stored on the local variable `info` for further use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, if `AndroidBitmap_getInfo` fails we will throw an exception in JVM
+    and return immediately from the native function because we call `return`. Under
+    a normal situation, if we throw an exception in the JVM with `ThrowNew`, the native
+    function does not stop and transfers control to the exception handler. Therefore,
+    if an exception is thrown during a native code call, when the function returns,
+    the JNI interface will detect it and transfer the execution to the exception handler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our example, we generate a `RuntimeException` with the `jclass` obtained
+    from the `Findclass` JNI function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we finish the bitmap processing, we unlock the pixels through `AndroidBitmap_unlockPixels`
+    and we return the `Bitmap` `jobject` to the `loadInBackground` function that originally
+    invoked the native method from the background thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you already know, the processed Bitmap will be delivered by the `AsyncTaskLoader`
+    in the UIThread, and it could be used to update an `ImageView` or other kind of
+    UI Widget that presents an image on the screen. Let''s see how a `LoaderCallback.onLoadFinished`
+    callback might look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this simple example, we were able to execute asynchronous work in machine
+    code with `AsyncTaskLoader` help, although a similar procedure could have been
+    done with an `AsyncTask` subclass, a normal thread, or even a `HandlerThread`.
+    These kind of Android construct use Java background threads managed by Android
+    JVM, therefore, it is not required to explicitly attach these threads to JVM since
+    they are part of the JVM system and have their own `JNIEnv`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we are going to learn how to create pure native threads
+    and use them to execute background work for our Android application in a consistent
+    and reliable way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Executing asynchronous work on a native thread
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Android NDK is bundled with the POSIX thread C API that provides an API
+    to create and destroy native threads, native mutual exclusion synchronization
+    primitives, named mutexes, and condition variables, that like Java monitors, allow
+    threads to wait until a change in a resource happens. Apart from this global API,
+    the developer also has access to a higher level C++11 thread API available on
+    `clang` and `gnu_stl` C++ Runtimes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since both of these frameworks offer the same kind of concurrent functionalities
+    we will use C++11 thread framework for its simplicity and similarity with the
+    Java Thread API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s update our `ndk build.gradle` to use the clang C++ Runtime that
+    supports the thread API that we are going to use in our following code examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Attaching and detaching native threads from JVM
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In order to interact with our JVM and execute background work concurrently for
+    us, the native threads should be attached to the current virtual machine and build
+    its own `JNIEnv`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The thread `JNIEnv` is tied to a specific native thread and cannot be shared
+    with other threads since it manages its own references and local thread environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To present this to you in a more practical way, in the next few paragraphs,
+    we will build a code example that creates JVM attached native threads that execute
+    work in the background and interact with the UI thread, publishing a `keep-alive`
+    message using a well known Android handler construct.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To attach any thread to the JVM, we need to access the global virtual machine
+    structure, `JavaVM`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A good way to get the JVM structures to retrieve from `JNI_OnLoad`, a function
+    that is automatically called on our library by the JavaVM when our library gets
+    loaded. When the callback is called by the JNI interface, we will save the JavaVM
+    reference for future use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the JVM global pointer ready to be used, we are able to attach any native
+    thread to the application JVM and start interacting with the `JNIEnv`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a starting point, we will create a high level C++ class that automatically
+    attaches to the JVM, and detaches from the JVM when the instance has been destroyed.
+    This class will be used as the base class in our thread examples, providing a
+    common abstract interface for native thread creation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how the `JavaThread` class definition will look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this class header, we subclass the `JavaThread` from the original C++ thread
+    class defined and we define the abstract method `run`. Any worker thread can subclass
+    `JavaThread`, providing its own implementation of the `run` method. Additionally,
+    the protected thread specific to the JNI interface environment is stored in `threadEnv`
+    for future use by the thread subclasses.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Beyond that, we will introduce you to the C++ synchronization primitives, available
+    from the thread header. `std:mutex` is a mutual exclusive primitive that only
+    allows one thread at a time to enter a protected critical scope. If a thread is
+    executing the critical code, another thread that tries to enter the critical section
+    will block the execution until the thread executing the critical section releases
+    the lock. Here is a simple example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: The same behavior would have been achieved in Java by using the synchronized
+    word in a Java block or a synchronized block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The condition concurrent primitive, like a Java monitor, can be used to block
+    a thread or a group of threads execution until another thread modifies a shared
+    information and sends a signal to notify the waiting threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we know what these C++ concurrency primitives are used for, let's implement
+    the `JavaThread` that automatically attaches and detaches itself to and from JVM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First of all, we will start the background native thread in the native `start()`
+    by passing the `entryPoint` functions as the runtime function for the thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: As soon as `std::thread` creates the thread in the system it will call the `entrypoint`
+    function in our object to initialize the JNI environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the meantime, we will block the calling thread until the new thread attaches
+    to JVM and sends a signal to the `startCond` condition variable. Next, when `std::thread`
+    initializes the new thread in the operating system, it changes the execution control
+    to the member function specified in the constructor, `JavaThread::entryPoint`.
+    In this function, we will attach the native thread to the JVM, dispatching the
+    execution to the subclass `run()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how we might implement the `entryPoint` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that the thread is detached from the JVM even when a runtime exception
+    is thrown during the `run` execution. When the thread is detached from the JVM,
+    all the thread monitors are released and all the Java threads waiting for this
+    thread are notified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the stopping mechanism, we will make use of a `boolean` variable and `condition`
+    variable to notify that the `shouldStop` condition has changed. Later on, our
+    `JavaThread` subclass will take advantage of this mechanism to stop the `run()`
+    execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how the `stop` method will look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the native thread base class completely defined, we are now ready to create
+    our derived class that implements the required behavior in the `run` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As defined before, we will use a `Handler` construct to submit messages from
+    the background threads to the UI thread. Since they run on the same process and
+    share the same memory, we can safely pass a reference to a `Handler` object to
+    the native background threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, before we start to implement our `JavaThread` sub-class, we will write
+    the `NativeThreadsActivity` and implement a `Handler` anonymous subclass to receive
+    messages from the native threads:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: This class will also be responsible for starting and stopping the native threads
+    each time we click on the **start** and **stop** button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The start and stop button setup is omitted in the code example. However, the
+    **start** button will invoke the native function of `startNativeThreads`, passing
+    `myHandler` as the `Handler` argument and the stop button will invoke `stopNativeThreads`
+    to stop the native thread execution. Additionally, we can also call `stopNativeThreads`
+    on `Activiy.onStop` to stop the threads when the activity gets destroyed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we need to implement the `JavaThread` that will run in the background and
+    submit a `healthcheck` message to the UI thread over the `handler` object. Since
+    the handler is coming from a different `jniEnv`, the first thing to do is to create
+    a JNI global reference from the original handler. Let''s start by implementing
+    the constructor that creates a global `Handler` object reference and store the
+    reference in a `member` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the constructor, we received the object reference from the main thread, we
+    called our `JavaThread` default constructor, and we created a global reference
+    to store the original reference.
+  prefs: []
+  type: TYPE_NORMAL
+- en: JNI references explained
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It's really important to understand in detail how JNI references are managed
+    by JVM, because if we don't use them properly, we can crash the application or
+    introduce a memory leak in the application. A memory leak will affect the application
+    performance, increase battery consumption, and in the long term crash the application
+    with a `java.lang.OutOfMemoryError` exception. As you know, JVM Garbage Collector
+    (GC) manages the application memory use, cleaning up objects when they are not
+    in use. An object is considered eligible for garbage collection when no references
+    to that object exist in the memory, so, when the GC finds a none referred object
+    it will release the object from the memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'JNI supports three types of reference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Local Reference** – References attached to a thread, `JNIEnv`, which is lifetime
+    valid for the duration of a native method. The reference is passed to the native
+    method and destroyed as soon as the method returns. The user can also create and
+    delete local references in the native method to prevent any object from being
+    garbage collected. Keep in mind that a local reference is valid in the `JNIEnv`
+    where it was created. The following JNI functions are available to manage local
+    references:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'JVM provides a function to allocate space in the current JNI frame to store
+    local references. By default, it has the capacity for 16 references:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Global Reference** – References used to keep global objects alive for an
+    unlimited period of time. These kinds of reference can be shared between thread
+    `JNIEnv` objects. It is critical to explicitly delete the reference from JVM when
+    they are no longer required. When you don''t free the reference from the system
+    you are creating a memory leak in your application. Notice that when you free
+    the reference from the system, the reference is no longer valid, so if you try
+    to use it an exception will be thrown in the JNI interface. The following JNI
+    functions are used to manage local references:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Weak Global Reference** – Like the global reference, but it doesn''t prevent
+    the object from being garbage collected when it is the only alive reference to
+    the object. Weak global references in JNI are a streamlined version of Java Weak
+    References:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Interacting with UI from native threads
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Since we want to cache a reference to a `Handler` object that survives the `startNativeThreads`
+    execution, it makes sense to create a global reference before we save it in a
+    member variable. The reference will be later used in our background thread to
+    submit messages to the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Given that we created a global reference in our `HealthCheckThread` class,
+    to release the reference in JVM and avoid any memory loss, we will delete the
+    global reference in the `HealthCheckThread.onDetach()` function called during
+    thread stopping:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we will update the `HealthCheckThread` and implement the `run` method
+    that is going to submit health check messages to the `Handler` object attached
+    to the UI thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `run` function will continuously execute until `shouldStop` is `true`. Furthermore,
+    between each cycle, the thread will send a message and block for one second unless
+    a stop signal is sent to notify the thread to stop. In this case, the native condition
+    variable is used to wake up the thread from the one second sleep when the stop
+    condition is set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All that remains regarding the `HealthCheckThread` class is to implement the
+    `sendHealthMessage`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before we start to use the handler object, we retrieve a `Message` from the
+    `Handler` global message poll using the `obtainMessage` instance method. To build
+    the string message passed in the `Message` object, we format a message using `ostringstream`,
+    a thread ID, and the current `datetime`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we push the built `Message` to the handler object to be delivered in our
+    `Activity`. To finish, we delete the created local reference from the local `JNIEnv`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting the native threads
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Just to finish our example, we will write the native methods `startNativeThreads`
+    and `stopNativeThreads`. These methods will create and destroy the native threads
+    each time we tap on the start or stop button. The UI code is omitted for brevity.
+    Let''s look at the `startNativeThreads` first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `startNativeThreads`, we create `num_thread` threads passing the main thread
+    `JNIEnv` and the handler reference to the `HealthCheckThread` constructor. The
+    `HealthCheckThread` pointer returned from the constructor is cached in a static
+    array for future use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stopping the native threads
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Given that we allocate the `HealthCheckThread` object in the dynamic memory
+    using the C++ operator `new`, in the `stopNativeThreads`, apart from stopping
+    the thread execution, it is required to release the dynamic memory to avoid any
+    memory leaks in the native code. So, all that remains is to implement the `stopNativeThreads`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `stopNativeThreads` function will stop the created threads using the `JavaThread::stop`
+    member function. As detailed before, the stop member function will use a condition
+    primitive to notify the running loop that it should finish its execution. After
+    we notify the background thread, we wait for it to finish and we destroy the object
+    stored in the array pointer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Great! In this section, we were able to start native threads, attach them to
+    JVM, and interact with the main thread using a Handler object. On the way, we
+    learned about the C++ `condition` and `mutex` concurrent primitives to synchronize
+    the access to shared resources in the native code. Although we have been using
+    the C++11 concurrent primitives to create and synchronize threads, we could have
+    written our examples using the concurrent primitives provided by the POSIX `pthread`
+    library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The POSIX library `libpthread` also provides methods to manage native threads,
+    mutual exclusion concurrency primitives (mutexes), and condition variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling Java exceptions in the native layer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: While in Java, when an exception is thrown during a method execution, the JVM
+    stops the normal method execution and tries to find an exception handler in the
+    runtime to take control of execution, the same does not apply when you execute
+    the Java method from the JNI code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The JNI requires developers to explicitly implement the exception handling after
+    an exception has occurred in a Java method invocation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Moreover, when exception handling is pending, only a few JNI functions are
+    safe to be invoked: `DeleteGlobalRef`, `DeleteLocalRef`, `DeleteWeakGlobalRef`,
+    `ExceptionCheck`, `ExceptionClear`, `ExceptionDescribe`, `ExceptionOccurred`,
+    `MonitorExit`, `PopLocalFrame`, `PushLocalFrame`, `Release<PrimitiveType>ArrayElements`,
+    `ReleasePrimitiveArrayCritical`, `ReleaseStringChars`, `ReleaseStringCritical`,
+    and `ReleaseStringUTFChars`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are three ways to handle Java exceptions in a native function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first way is to clear the pending exception with `ExceptionClear` and continue
+    to execute the native code. This approach is seldom safe and you need to review
+    all error flows to verify that you are handling the exception properly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second way is once the pending exception is detected, release the JNI allocated
+    resources, stop the native code execution, and return the control to the Java
+    code. In this case, the JNI will try to find a Java exception handler in the Java
+    frame that invoked the native method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The third way is to release the pending exception, generate a new exception
+    with a different class type, and return from the native method with the new exception
+    pending to be handled in Java code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our next example, we will follow the third because we will use most of the
+    functions available in the JNI to handle exceptions. First, we will show you how
+    to use the JNI exception in handling functions to clear a pending Java exception.
+    Beyond that, we will stop the native method execution, release all the native
+    resources, and throw a different exception to be handled in Java by the `RuntimeException`
+    handler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will write an `Activity` that invoking the native method will spawn
+    a pending exception in JVM:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each time the `genException` button is clicked, call a native method that fails
+    with a runtime exception (`java.lang.IndexOutOfBoundsException`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `onClick (View v)` method is only able to handle `java.lang.RuntimeException`,
+    so we must handle `IndexOutOfBoundsException` in the native function and convert
+    it to `RuntimeException`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There are two functions used to detect an exception in a JNI native function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ExceptionOccurred` function returns a `jthrowable` object reference if
+    there is a pending exception that is not handled so far, or null when `no exception`
+    is ready.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ExceptionCheck` function returns `jboolean` when there is an outstanding
+    unhandled exception in JVM, the function will return `JNI_TRUE` as the result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assuming that we don't want to use `jthrowable` returned by `ExceptionOccurred`,
+    we will use `ExceptionCheck` to detect the exception and enter the exception handling
+    code branch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thereafter, with the `ExceptionDescribe` function we will print the current
+    pending `throwable` stack trace in the error output, and with `ExceptionClear`,
+    we will clear the pending `IndexOutOfBoundsException` from JVM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given that we are only able to handle `RuntimeException` in the `Activity` function,
+    we will attach a `RuntimeException` to JVM to be handled as soon as the native
+    code returns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To conclude, and since we are going to stop the native function execution, we
+    must release any resource or JNI references allocated before we return from the
+    native function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Yes, with the help of these JNI exceptions, you should be able to detect and
+    handle any settled unhandled exception that results from a Java method invocation.
+    As stated before, it is extremely important to manually handle any pending exception
+    before you try to safely invoke other JNI methods that invoke `member` or `static`
+    functions, `get` or `set` fields on objects, or even create new objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interacting with a Java monitor from native code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So far, we have been synchronizing access to shared resources in Java threads
+    using synchronized statements or synchronized methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we are executing a native method and want to have access to a resource
+    or variable shared between multiple Java code and native code, the JNI offers
+    us `MonitorEnter` and `MonitorExit` methods to control access to the mutual exclusion
+    zone managed by a Java `synchronized` block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`MonitorEnter`, the function responsible for acquiring access to the Java monitor
+    scope, might block when another native thread or Java thread is the owner of the
+    monitor. When any thread acquires access to the block, JVM will make sure that
+    no other thread enters the critical section apart from the current thread.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MonitorExit` is the function responsible for releasing the monitor acquired
+    previously with `MonitorEnter`, giving the chance to another thread to enter the
+    mutual exclusion section.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To prevent a deadlock condition, any `MonitorEnter` call must be followed by
+    a `MonitorExit` call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our next code example, we will demonstrate this technique to synchronize
+    the access to a shared object used by the Java code and the native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are going to create a native thread that is constantly polling command requests
+    from a shared queue list managed in our `Activity`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`StatsActivity` will have a button to push commands to the shared queue list
+    and will display the request responses sent by the native thread in a `TextView`.
+    Whereas the UI will push commands to the request queue list in a main thread,
+    and the native code will try to pull commands from the native code in a background
+    thread, both need synchronized access to the shared queue list.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our command will ask the native layer to send information about the amount of
+    main memory that a program uses to run. As soon as it receives the response, it
+    will print in the UI `TextView`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start, let''s define the code to push new commands from the UI point of
+    view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that, before `onRSSReqListener` pushes the new request command to the
+    queue list, it acquires access to the synchronized section controlled by the `queueLock`
+    object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Given that the `queueLock` object is going to act as the guard object to access
+    the shared resource we have to forward it to the native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since we have already written the command request consumer, now we will move
+    our focus to the command request consumer, the native C++ `JavaThread` subclass
+    named `CPUStatThread`, that will process the requests and send back the command
+    response.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As explained before, `CPUStatThread` will implement the `run` method and send
+    us the response using `Activity''s` `Handler`, so let''s first implement the run
+    method to retrieve requests from `Activity` in the new source code file `stats.cpp`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our run method will retrieve the `queueLock` field from `StatsActivity` and
+    after acquiring access to the synchronized block controlled by the `queueLock`,
+    itwill pull a new request from the queue using the `StatsActivity`''s `getNextRequest`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`getNextRequest` will return -1 when nothing is available to be processed,
+    therefore our thread will sleep for 100 milliseconds, as defined in our run method.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When an `RSS_REQUEST` is received, our native background will process it in
+    the `sendRSSMessage` method and send a response back with the memory consumed
+    by the process in the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wrapping native data objects
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: So far, to send any kind of structured data from native code to Java code, we
+    have been building and dispatching regular Java objects. However, to reduce the
+    overhead required to convert from native types to Java types, and vice-versa,
+    it could make sense to send native wrapped structures or object pointers to Java
+    Runtime instead of creating a pure Java object in the native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most reliable technique is to store the native address into a long member
+    variable of the wrapper object to be compatible with 64 bit and 32 bit pointers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you know, JVM Garbage Collector will constantly maintain the heap memory
+    and clean the unreferenced objects for us to free more memory for next allocations
+    required by your application. The same does not apply to native objects allocated
+    in the dynamic memory using a `new` operator or the `malloc` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we create an object in native heap, we always have to explicitly release
+    it using the `delete` operator or `free` function, so to enforce the memory clean
+    up on all the objects that wrap native objects we will define an interface that
+    defines the required function to release underlying native objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Although we can use the `finalize` method to release any native resources when
+    the object gets garbage collected, there is no guarantee that the GC will call
+    `finalize` at any specific time in the future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To demonstrate this technique in our example, we will send back using the `Handler`,
+    a native `CPUStat` `struct` wrapped in a Java object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s first define the native `CPUStat` sent when to carry the information
+    related to the process memory consumption:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Notice that our `JCPUStat` implements the disposable object explained before,
+    so all that remains is to write the native methods for the JCPUStat class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: To simplify the native reference handling, we created two generic functions
+    to manipulate a `nativePtr` field in wrapper objects. The first function, `getNativePtr`,
+    will get the pointer field from the object and with help from `reinterpret_cast`
+    we will convert the original long value stored in a `CPUStat` pointer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we get access to the original pointer, we can call the `delete` operator
+    that will free the memory in the system and set the nativePtr as 0\. Setting the
+    pointer to zero will prevent a double free from happening when you call the `dispose`
+    method twice by mistake.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, with the wrapper class defined, we will process the original request
+    and build a `JCPUStat` response object to send back to `Activity` using the activity
+    `Handler`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our `sendRSSMessage` function will calculate the memory consumed by the process
+    using system facilities, and build a `JCPUStat` object that wraps a native C++
+    structure. Afterwards, `JCPUStat` is dispatched to the main thread using the activity
+    handler member object passed in the `sendRSSMessage` function. To finish, we cleaned
+    up all the local references created in the local scope.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The full source code is available from the Packt Publishing website. Take a
+    look at the complete source code to appreciate how we determined the memory consumed
+    by the current process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To complete the example, we will update `StatsActivity` to handle the RSS command
+    response on the `Handler`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once we get `JCPUStat` from the `Message` object, we read the RSS memory using
+    its native method `getRSSMemory` and then we print the result on the console UI
+    widget.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we explained before the `JCPUStat.dispose` method is explicitly called on
+    the Java Runtime to destroy the native object sent to us by the background thread.
+    The JVM GC will not clean up the native objects, therefore we must call `dispose`
+    to release native resources attached to a `Disposable` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`getRSSMemory` like the `dispose` method will make use of the `nativePtr` field
+    to retrieve the RSS value stored on the native object. Let''s see how it looks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: For brevity, `startCPUStatThread` and `stopCPUStatThread` is omitted, as it
+    is very similar to code used to start the native threads on previous example—see
+    the downloadable samples for the complete code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Great! We learned how to wrap native objects in Java objects, we defined an
+    interface to purge native memory from a java object when the native object is
+    no longer required and we learned how to create from native Java Objects calling
+    the object constructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter we introduce you to the JNI, a standard API available on Java
+    to interact with native code written in Assembly, C or C++ that it is available
+    to any Android Developer with the Android NDK kit installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the first section we explain how to setup a project with JNI code on Android
+    Studio and how to call C function and C++ member functions from any Java class
+    on your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Later, we use the JNI interface to execute a `Loader` asynchronous background
+    work on a native function. The native function was able to convert a colorful
+    image to a gray image on a Java background thread created by the `AsyncTaskLoader`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we discover how to attach and detach a pure native thread created using
+    the C++ standard library to the JVM. The attached thread worked as a normal Java
+    thread and managed its own JNI Environment, resources and references.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the meantime, we also discovered the differences between JNI global and Local
+    references and how to access a Java object field from the native code scope.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also learned a technique to wrap native objects on Java objects and we define
+    a concrete interface to dispose JNI resources attached to Java objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the end of the chapter, we learned how to detect and handle a pending exception
+    thrown on the JVM by a Java function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We all the techniques explained on this chapter you should be able to integrate
+    any code written in C/C++ in your asynchronous background execution. Beyond that,
+    you can also make use of the native code to optimize a crucial functionality in
+    your application or integrate with some native handy libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will learn how to use the Google GCM to push and pull
+    efficiently realtime messages from your server and how to schedule work with Google
+    Play Services framework.
+  prefs: []
+  type: TYPE_NORMAL

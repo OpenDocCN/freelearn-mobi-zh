@@ -1,0 +1,1247 @@
+- en: Chapter 5. Making a Jigsaw Puzzle Application
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '*Picture this…*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*So far, we''ve been dealing with a lot of text or calling mobile OS features.
+    These are neat things, but they''re not that visual. If you were longing to mess
+    around with pictures and image data, your time has come!*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: LiveCode isn't naturally a graphics powerhouse and its way of handling image
+    data (often referred to as "bitmap data" by other tools) is somewhat unusual.
+    It effectively stores the pixels of an image as a series of single byte characters
+    to represent the red, green, and blue values of each pixel. Handling a final image
+    is quite flexible, but in order to create something along the lines of a jigsaw
+    puzzle, we need to understand the format of `imageData`, a LiveCode property.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examine the way LiveCode stores bitmap data in an image object
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Find a way to use a single bitmap in place of 50 buttons
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Make a collision detection map
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Create a jigsaw puzzle app that takes advantage of several mobile device features
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Image data format
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In other authoring tools, such as Adobe Director and Adobe Flash, bitmap data
+    is stored as a matrix of 24-bit or 32-bit values. If you want to know the color
+    of the 20th pixel from the left edge in the 15th row from the top of the image,
+    you would have to use a `getPixel` function with these numbers filled in. In Flash,
+    which uses a zero starting point for all its variable types, you would have to
+    write the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You would in fact have to start this line with `var pixelcolor:uint`, but here
+    we''re looking at the main differences and not the oddities of having a strongly
+    typed programming language! In Director, which like LiveCode uses 1 based variables,
+    you would have to write the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, there's no need for variable typing or even a semicolon at the end of
+    the line. While we digress, Flash too, doesn't need the semicolon at the end or
+    at least, you don't have to type it yourself. Flash knew what you meant! Getting
+    back to the point…
+  prefs: []
+  type: TYPE_NORMAL
+- en: In LiveCode, each pixel of an image is represented by four bytes, which you
+    can access as if they are single-byte characters. The range of values in a byte
+    is 0-255, and storing such values, especially the value `0`, in character variables
+    does not work out well. Therefore, you would have to convert the character value
+    into a numeric value before making use of it. The basic problem is that, although
+    the numeric value is stored in a variable, when you come to do calculations on
+    it, LiveCode wants to work in Base 10 arithmetic and not in the binary form inside
+    the variable. You have to convert the variable into something that can be processed
+    using the `charToNum` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So, why would a character variable not like zeros you ask! Well, in the earliest
+    days of personal computers, the predominant programming language was Pascal. In
+    Pascal, a variable that contained a literal string needed a way to know how long
+    the string was. The first byte of a Pascal string stores the length of the string,
+    which was fine up to 255 characters, and in those days, it was most likely thought
+    of as enough, and more than anyone would ever need! In real life though, strings
+    can be longer than 255 characters. This paragraph alone is over 900 characters
+    long. To solve this issue, the C programming language used a zero to indicate
+    the end of a *C String*. You could have a million characters in a row; however,
+    only the last one would be a zero. RGB values don't care about the limitations
+    of C strings and there are zeros all over the place, which is why we convert it
+    to a numeric value as soon as we can.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to the oddity of each pixel being stored as four bytes of information,
+    there's also no way to tell specify rows and columns. All the pixels in an image
+    have their four bytes end to end; you have to do a calculation to know where in
+    the data the pixel you're looking for is located. If you have worked on a bitmap
+    editor before, say Photoshop or Gimp, you must be aware that you select content
+    based on an *X* and *Y* co-ordinate value that correspond to the column and row
+    that the pixel is located in. LiveCode doesn't let you access bitmaps in this
+    way. Hence, we need to do a calculation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s how the pixel from the preceding example would be retrieved in LiveCode
+    if you want it as a 24-bit value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: On the face of it, this is one of the few cases where the way it's done in LiveCode
+    is considerably longer than in other languages. However, quite often, you really
+    need the red, green, and blue values from the pixel, and in other languages, you
+    have to take extra steps to extract these values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The extra steps needed to make the returned number a 24-bit RGB value are no
+    big deal, as LiveCode is easily extended by your own functions. If you need the
+    24-bit value, use the preceding function and you will have added a `getPixel`
+    function to the LiveCode language. You still have to do the calculations to even
+    get at just the red value. Maybe one day, LiveCode will have a built-in `getPixel`
+    function that works quicker than your own function. The 24-bit number returned
+    here is in fact represented as three decimal numbers and not as a 24-bit binary
+    value, but it would still be generally referred to as *24 bit*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mystery byte…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first character of the four that represent one pixel is not used. LiveCode
+    has tutorials on how to use `imageData`, where that byte is referred to as Alpha.
+    That makes sense, as even the other tools that give you a 32-bit number have the
+    value broken up into Alpha, Red, Green, and Blue. Why doesn't that byte, which
+    RunRev calls Alpha, contain the alpha value? Who knows!
+  prefs: []
+  type: TYPE_NORMAL
+- en: One possibility is that the value doesn't serve its purpose well enough. When
+    talking about alpha transparency, you sometimes may mean that the image is transparent,
+    as might be the case in a GIF image. Other times, you may mean that it's translucent,
+    where it's only partially see-through.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To solve the ambiguous nature of the problem, LiveCode has two other properties
+    of an image, `maskData` and `alphaData`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: These properties of an image still have all the rows end to end, and you have
+    to do the calculation to find where a given pixel's alpha value is stored.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With `maskData`, you get a set of values for each of the pixels. For every value
+    other than 0, the pixel is visible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With `alphaData`, you get a set of values of the opaqueness of the pixel. 0
+    would be fully transparent, 255 would be fully opaque, and the values in between
+    will be translucent. 128 would be 50 percent opaque.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Later in this chapter, we are going to make use of both `maskData` and `alphaData`,
+    and we will refer to the 0-255 `alphaData` value as its *transparency*, and the
+    zero or nonzero `maskData` value as its *mask*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Misusing imageData
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The topics in the LiveCode online tutorials include manipulation of `imageData`,
+    turning a colored image into a grayscale one (this particular example of turning
+    a colored image is located at [http://lessons.runrev.com/s/lessons/m/4071/l/25371-vision-how-do-i-convert-a-color-image-to-grayscale](http://lessons.runrev.com/s/lessons/m/4071/l/25371-vision-how-do-i-convert-a-color-image-to-grayscale)).
+    We're not going to do that here. Instead, we'll use the values in the image, mask,
+    and alpha to achieve some neat things that don't change the image at all. In fact,
+    in some cases, we won't even see the image!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – testing a getPixel function
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before getting to useful examples, let''s make a `getPixel` function to obtain
+    the color components of a point in the image and then complete a quick test case.
+    The following steps will help you in this process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Make a new Mainstack. Click on **Save** to save it as **ImageDataTests**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We'll use the same stack to illustrate several things and at the end, we may
+    dare to try it on a mobile device!
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Set the stack's resolution to the size of your largest test device or just try
+    1024 x 768 if you'll be using the iPad Simulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: From the **File** menu, navigate to **Import as Control** | **Image** and select
+    any small image file you have, to place it in the upper-left corner of the card
+    window. The next example, uses a LiveCode logo image that can easily be obtained
+    from any LiveCode web page.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Place a new `Graphic` object next to the image. It's going to show a single
+    color, so just make it big enough so that you can easily see the color. Name it
+    `swatch`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Set graphics to default to show an empty box, so type this in the message box
+    to fill it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Edit the script of the image and type these lines in:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note that the two lines are commented out. LiveCode would only complain if we
+    keep asking for `getPixel` before we create that function!
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Edit the stack script. Add the `getPixel` function, which is very much like
+    the one shown in the Image data format we discussed in the preceding steps:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Back in the image script, uncomment the two lines. Start pointing at the image
+    and you should see the swatch graphic change color to match the pixel under the
+    cursor.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We made a very simple example case of how to use the color of a pixel in an
+    image; in this case, how to colorize a swatch. As setting `backgroundColor` of
+    a graphic requires `redvalue`, `greenvalue`, and `bluevalue`, we didn't need to
+    convert the values from the image to a 24-bit number and the `getPixel` function
+    was able to return `tRed,tGreen,tBlue`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, there isn't really any advantage to the way we did that compared to the
+    built-in `mouseColor` function. However, at least we gave the `getPixel` function
+    a tryout!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pop quiz – how many bits in a byte?
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Bytes* was mentioned a few times in this chapter and you may well know about
+    *bit depth* as we''ve talked about digital photographs. So tell me, how many bits
+    are there in a byte?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '32'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '24'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '8'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Depends on how hungry you are
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Answer: 8'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We won't even talk about bits or bytes in the rest of this chapter; however,
+    if only for the interest to mathematicians, it's good to know that a byte is 8
+    bits. A bit is a binary digit, and when you start to think of bits in those terms,
+    you will see that a byte can store 2 to the power of 8 values in it (binary being
+    Base 2). This comes into play when you look at the length of a Pascal string (2
+    to the power of 8 is 256, hence the range of characters in a Pascal String is
+    0-255) and it helps you realize that if a picture is made up of one byte, for
+    each pixel's red, green, and blue values, it's a 24-bit picture. Once you add
+    in another byte of data for the alpha channel, you have a 32-bit picture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Simulating lots of buttons
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In some applications, you need to know exactly which area of an image the user
+    is pointing at. For example, when there is a map and you want to show information
+    related to the region the user has clicked on, this could be done using a lot
+    of rectangular buttons or you could break the regions into graphics and use a
+    `mouseEnter` handler to detect which region it is. Instead, you could use a single
+    image to represent all the regions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – making a map of the United States
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'There are plenty of places online to get public domain images to use in your
+    applications. Search for `public domain images` and you will see links to Wikipedia
+    articles, government sites, and other sites that let you download images that
+    are free to use. The map shown in the following steps came from the file at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://upload.wikimedia.org/wikipedia/commons/3/32/Blank_US_Map.svg](http://upload.wikimedia.org/wikipedia/commons/3/32/Blank_US_Map.svg).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Make a new field named `states`. Find an alphabetical list of the 50 united
+    states to paste it into the field or you can type them in!
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Make another field, set the text size to 24, and the size of the field wide
+    enough for *New Hampshire* to fit in (just the words, not the entire state!).
+    Name the field `state`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Download the completed map**'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note that you can save a lot of work here by downloading the `us-map.png` file
+    from the support file section for this book, which you can find at [www.PacktPub.com](http://www.PacktPub.com).
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: If you have Adobe Illustrator, open the SVG file with it. If not, open it with
+    GIMP. Pixelmator is a low-cost alternative on Macintosh OS X.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In alphabetical order, fill in each state with a color where the red, green,
+    and blue values match the line number of that state + 100 . We're adding 100 so
+    that the shades of gray we'll see will not be so dark.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Continue the same through all the states. Here's how it will start to look like
+    in Illustrator, where Idaho is about to be colored as `112`, `112`, `112`:![Time
+    for action – making a map of the United States](img/image00274.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Change the size of the map, so that it would fill about a third of the stack
+    window, and choose **Export**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Color profile settings**'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: LiveCode treats bitmaps in a way that ignores color profile information in the
+    image, and that would ruin this thing we're trying to do. While exporting an image,
+    check whether there is an option to set the color profile to `genericRGB`. If
+    there isn't, then use a utility such as Color Sync to apply the `genericRGB` color
+    profile. Once the image is saved, there is something you can do to make sure that
+    it gets imported into LiveCode OK. Before importing, set the screen gamma to `2.23`
+    by typing in the message box and press *Enter*. This will set LiveCode to the
+    right settings to make sure that the color values appear correctly.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: If you're using Illustrator, set the background to be **White** and anti-aliasing
+    to be **None**. With GIMP, make sure that the PNG is saved without an alpha channel.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Type this line followed by the *Enter* key into the message box:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Import the PNG into your `ImageDataTests` stack.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Set the image''s script to this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Try pointing at the different states, at least point at the ones that you have
+    colored. The state name should appear in the `state` field.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For this case, we only needed to look at the value of the red channel for the
+    pixel under the cursor (the green and blue values are the same because we used
+    a gray color value for both). Rather than writing another function to get only
+    the red part of the data, we reused the existing `getPixel` function, but then
+    only took notice of the first item that the function returned. That number, after
+    subtracting 100 that we had added to it to make the shades not be so dark, was
+    then used as a lookup value to get the corresponding state name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pop quiz – getting the big picture
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The example map image was an SVG file. Is an SVG file smaller than a PNG file
+    for a given image? (do a little Wikipedia research and decide on the answer.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Yes'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'No'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Depends on the nature of the image
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Answer: 3'
+  prefs: []
+  type: TYPE_NORMAL
+- en: SVG is a description of how to draw the image, whereas PNG is a description
+    of the pixels in the image. In PNG, this information is also data compressed in
+    a lossless way. For the example map, at its original size, a 24-bit PNG is half
+    the size of the SVG file. There is a lot of data needed to describe the outlines
+    of the U.S. states! If the image needs to be enlarged, the PNG would become a
+    bigger-sized file and the SVG would remain at the same file size. On the other
+    hand, if an image was a rectangle piece of a diagonal gradient, the SVG would
+    be tiny and the PNG would be huge because there are no long runs of the same-colored
+    pixels for the data compression to work well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using maskData for collision detection
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In old 2D maze adventure games, your character would move in distinct chunks,
+    and while checking whether there was a wall or gap, the program only had to check
+    relatively few locations. The occupied spots could be stored in an array, taking
+    up little memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With other maze games, like those of marble maze tilt boards, you have to detect
+    collisions at a much finer degree. A full-blown physics engine could take care
+    of the problem, but it's possible to get some interesting results by storing the
+    maze as an image and checking the pixels that are in front of your character or
+    marble as the case may be.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a full-featured game, it would be better to use `imageData` or perhaps `alphaData`,
+    so that you can tell when you are going to hit something, and from the value you
+    read, you can also tell what it is you have hit. In the marble maze game, you
+    need to know when you have gone over a hole, for example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For this next test though, we'll just use `maskData` and see what we can do
+    about not hitting the thing that is in front of us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – making a racecourse
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We''re going to make a racecourse for little cars to move around. We''ll make
+    it out of the stack we''ve built! First, we need to convert what is on the card
+    into an image that represents walls and spaces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the LiveCode draw tools, add a bunch of objects to the `ImageDataTest`
+    stack. These are going to be the obstacles in the racecourse.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To create the image we''ll need, type this in the message box:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The preceding command will take a screenshot of the card window and place it
+    onto the card as a new *image* control. The new image will overlay the whole card,
+    so will not be noticeable. You can confirm that the image was created and select
+    it with the Project Browser.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the image that was created and select **Launch Editor**. This
+    will open the image in the bitmap editor that you have set in **Preferences**/**General**.
+    You will be prompted by LiveCode to select an editor if you haven't previously
+    done so.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In your image editor's **Layers** window, duplicate the initial single layer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Make a new layer that is transparent beneath the duplicate image layer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Delete the original layer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the editor's *Magic Wand* to select the white space of the card image in
+    the layer with the image in it (not the transparent layer). Delete the selected
+    area to reveal the transparent layer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Inverse the selection and fill it with a dark color (the color doesn't matter,
+    as it's used just so we can see where the holes are).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Take some time to fill in any small gaps. Also, place a thick border around
+    the outside of the image. This shows how the card looks like and how the snapshot
+    image should look like by now:![Time for action – making a racecourse](img/image00275.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Merge** the layers of the document and then select **Save**.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Return to LiveCode and click on the **Update** button, and the snapshot image
+    will be updated to reflect the changes you've made.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Give the image the name `backdrop`. Later, we'll set the image behind other
+    objects, but for now, we'll leave it on top of everything else.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We just made a pretty strange looking racecourse! In a real top-down racing
+    game, you would have to carefully design a nice-looking racecourse and make a
+    duplicate of the image for collision detection. In the duplicate, you would have
+    to erase the parts of the image that represent where cars are allowed to drive
+    and then, you would have to fill the rest of the image with a flat color. Players
+    would see the nice-looking racecourse, and underneath that would be the duplicate
+    flat color version used to detect collisions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We now need a car that drives itself around the course we've made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – making a racecar
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Take as much time as you would like to create an image of the car. Make it
+    so that it faces right. Then, once it''s in the stack, we''ll start adding the
+    required functions to its script. A size of about 40 pixels across should be about
+    right. Our sample car is also available on [www.PacktPub.com](http://www.PacktPub.com).
+    The following is a close-up image of what we''re talking about, as seen in Photoshop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Time for action – making a racecar](img/image00276.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Yours can be even better than that, if you like! Save it as a 24-bit PNG that
+    has transparency. Ok, start your engines…:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Import the image as a control and place it somewhere in the white area of the
+    `ImageDataTests` stack. Name it `car1`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Duplicate the image as many times as you like (the following script can handle
+    up to 100 cars) and name each one as a sequence, `car2`, `car3`, and so on.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Arguably, the correct *object-oriented* way to proceed would be to place some
+    functions on the images and some in the card or stack script, but for performance
+    reasons, we'll put everything in the stack script. Open the stack script.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add a line for the global variables we''ll need:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We''ll add a Start/Stop button soon, which will call a function to toggle whether
+    the cars are moving or not. Add the toggle function to the stack script:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `setSpeeds` handler, which is called by `startStopCars`, will initialize
+    the `gSpeeds` variable with a random speed for each of the car images. It will
+    also set the initial direction to zero as well as position the car at a known
+    location in the white area (`200, 200` in this case). Add the `setSpeeds` handler
+    to the stack script below the `startStopCars` handler:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `moveCars` handler, shown in step 8, we''re going to look at the `gBackdropMaskData`
+    variable to check whether the car is going to run into something solid. Add this
+    `hitBarrier` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `moveCars` handler is initially called by the `startStopCars` handler,
+    and then, it calls itself after every two ticks until the `gMovingCars` variable
+    is set to `false`. Type in the long `moveCars` handler into the stack script:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Collision avoidance**'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Take a moment to look at the `moveCars` handler; what is it doing? You will
+    no doubt have heard about collision detection; this is where you have code that
+    recognizes when one object has collided with another object or a wall perhaps.
+    You might as well trigger an explosion or a collision sound when that happens.
+    For our example though, we actually don't want things to collide, as we want the
+    cars to turn before they collide. For each car, up to 100 of them, we will look
+    ahead of the car to check whether it collides with the edges of the course. If
+    it's going to do so, we will change the direction that the car is heading toward,
+    repeatedly, until a safe forward direction is found.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add a Start/Stop Cars button to the card window and set its script as:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Select the backdrop image and choose **Send to Back** from the **Object** menu.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: It's a good idea to save it now!
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the Run/Browse tool and then on the Start/Stop Cars button to see your
+    cars drive around the interface. Here's how it looks like when 20 cars move about:![Time
+    for action – making a racecar](img/image00277.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note that you can continue to point at the parts of the image you first loaded
+    (the LiveCode logo in the preceding example) to see the swatch to the right changing
+    color. Also, if you point to different U.S. states, the text in the `state` field
+    you created changes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Having already used **imageData** to implement a color picker and to act as
+    multiple button areas, we went on to use the **maskData** of the image as a collision
+    map. There is quite a bit of arithmetic behind making the cars move in intelligent
+    ways, and you could go on to change some of the numbers to get different behavior
+    from the cars or you could take a break and get ready to make a jigsaw puzzle!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pop quiz – calculate this!
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For the U.S. map, we only needed to simulate 50 buttons. If you make use of
+    the red, green, and blue values, how many buttons could you simulate?
+  prefs: []
+  type: TYPE_NORMAL
+- en: One, enormous button
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 65,536 buttons
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 16,777,216 buttons
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Answer: 3'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with the discussion about *bits and bytes* (hey, I'm sure we weren't going
+    to see these words for the rest of this chapter!), the red, green, and blue values
+    combine to give us 2 to the power of 24 possible values. If you only used two
+    of the colors, then the answer would have been 65,536.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The things we have tried so far in this chapter use techniques that would be
+    useful in any LiveCode application and are not specific to mobile applications.
+    You can try the stack you have constructed; it will work well on a mobile device
+    with 20 cars driving around the screen! The color picker and states map work on
+    a mobile when its screen is touched. However, these tests don't really make use
+    of the mobile features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making a jigsaw puzzle
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The remainder of the chapter will build on the preceding information about `imageData`
+    and will also take advantage of a few mobile device features. We will make a jigsaw
+    puzzle app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Going to pieces…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The general technique we're going to use, is to take a set of PNGs that have
+    a nice alpha channel in them (that creates the puzzle piece edges) and then we
+    will replace the actual pixel data with an image of our own. The first thing we
+    need then is some PNGs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to make a commercial mobile application, either create your own
+    puzzle shapes or buy a royalty free image. For prototyping, you could grab any
+    image from the Web to get the basics going and then you could replace the images
+    with higher quality ones that you have bought. Here, we are using a preview image
+    from [http://depositphotos.com/](http://depositphotos.com/), which also sells
+    higher quality versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you do have high-quality versions, you may wish to create each puzzle piece,
+    so that they touch against each other perfectly. Here, we're using a preview image,
+    and we will select the inner part of each piece and create the PNGs from those.
+    There will be small gaps between the pieces, but at least this way we can prepare
+    the images we need quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – creating the pieces and choosing an image
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'If you wish to follow along with the exact same image shown here, know that
+    it was taken from the top-left section of the file present at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://static3.depositphotos.com/1004551/191/v/950/depositphotos_1914748-Jigsaw-puzzle-blank-templates.jpg](http://static3.depositphotos.com/1004551/191/v/950/depositphotos_1914748-Jigsaw-puzzle-blank-templates.jpg).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The image is shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Time for action – creating the pieces and choosing an image](img/image00278.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following steps will help in creating the pieces and choosing an image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Make a new Mainstack of the size 1024 x 768 (or the size of your tablet device).
+    Name the stack `jigsaw`, set the title to `Jigsaw Puzzle`, and save it.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Open the whole puzzle image in your image editor.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the **Magic Wand** tool to pick up the inner part of the upper-left piece
+    of the puzzle.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Fill that with a color that makes it easy to spot any remaining gaps.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Copy and paste into a new document (that has a transparent background) that
+    is the size of the piece you copied.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Repair any gaps using the brush tool that is set to the same fill color.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Save it as a PNG file(with Photoshop, that would be save it for Web and devices,
+    24 bit, with transparency). Use a naming scheme that may help you identify the
+    images easily. For example, `tlcorner.png`, `p1.png`, `trcorner.png`, and so on.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Proceed through all the differently shaped areas. In the example image, there
+    will be as few as 14 unique shapes. No need to save other pieces that are of the
+    same shape and orientation as the ones you already have.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The set of images will be similar to the ones shown in the following screenshot:![Time
+    for action – creating the pieces and choosing an image](img/image00279.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Import all the 14 images as **Control/Image**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Lay out a puzzle that covers most of the card window. In the following screenshot,
+    the puzzle was of 900 x 622 pixels with 11 x 8 pieces. Make duplicates of the
+    middle piece images to fill in the whole puzzle. You can accurately place a piece
+    after selecting it using the arrow keys on your keyboard.![Time for action – creating
+    the pieces and choosing an image](img/image00280.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the images in a grid-like fashion. The top-left piece would be named `p
+    1 1`, the top-right edge piece would be named `p 11 1` and the bottom-right piece
+    would have the name `p 11 8`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select all the pieces and group them. Name the group `pieces`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Make a button with the name `fromcamera` and a label with the name `Take a
+    Photo`. Set the button scripts to this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Set the buttons to get a drop shadow; use the options in the **Graphic Effects**
+    pane of the **Inspector** palette.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Edit the card script and add these global variables and functions that will
+    initialize the values that will be needed by the other functions we''ll make:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, add the `loadImage` handler, which the two buttons will call in order
+    to get an image from the user''s camera or photo album:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `makepuzzle` and `scatter` lines are commented out for now, so that you
+    can test the functions so far.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The puzzle pieces are now in place and are named in a way that we can take advantage
+    of them later when we manipulate them. If you go to **Standalone Application Settings**
+    and select **iOS** or **Android**, you can give the app a try.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Setting up some test images**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you use the iPad Simulator, you won't be able to test getting an image from
+    the camera, and at first, you will just have the default images in the photo library.
+    To add your own photo, drag images from **Finder** to the Simulator window, and
+    the image will be added to the Photos library. You can switch to the simulator
+    Home screen to reselect the Jigsaw app using the *cmd* + *Shift* + *H* key combination.
+    This way, you can add a few images to the library in order to select one as the
+    picture for the puzzle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When LiveCode gets an image from the mobile device, both from the camera and
+    the library or photo album, it places the picture as an image control that is
+    the topmost object on the card. We don't need the image itself, just its `imageData`.
+    In the `loadImage` handler, the image is made in the same size as the puzzle pieces
+    group, `imageData` is stored in the global variable `originalimage`, and the image
+    itself is deleted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we'll transfer the chosen picture to the puzzle pieces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – transferring imageData
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'By setting the chosen image to be of the same width and height as the group
+    that holds the puzzle pieces (that''s where the 900 and 662 numbers came from),
+    it becomes possible for us to transfer the matching rectangle of data from the
+    full image to the puzzle piece in question. The following steps will guide you
+    in transferring imageData:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the card script again. Add the `makepuzzle` handler:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `makepuzzle` handler will go through each of the puzzle pieces and call
+    another handler to do the transfer of data for that one piece. Here is the `makepiece`
+    handler:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the earlier `imageData` tests, we were only interested in one pixel at a
+    time, but here, we want lots of rows of data. The arithmetic, *((y+dy-1) * puzzlewidth…*,
+    and so on, quickly pull out a whole row of pixels at a time. These rows are built
+    up into a new variable, `tempimage`, which is finally transferred into the actual
+    puzzle piece.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'After the pieces have their rectangle of `imageData`, we then need to move
+    the pieces into random places, making the game ready for the user to play. This
+    is done with a `scatter` handler:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The first thing that most jigsaw puzzle players do is they separate the *straight-edged*
+    pieces. We can code things in a way so that their time is saved. We can employ
+    a function that places the edge pieces away from the non-edge pieces. The `edgepiece`
+    function (which is called from the preceding `scatter` handler) is this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The name that we carefully set for each piece is checked to verify that the
+    piece is either at the left, right, top, or bottom edge of the puzzle. In other
+    words, it's a piece located at the outer edges of the puzzle. Scatter places the
+    straight-edged pieces in the left half of the screen and the others in the right
+    half of the screen, as shown here:![Time for action – transferring imageData](img/image00281.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The start of the `makepuzzle` handler calls a `resetpuzzle` handler that is
+    used to make sure that the pieces are back where they started, ready for a new
+    picture to load. This is achieved when you use a property variable on each piece
+    named `myloc`, which records the initial location of the piece. Here''s the `resetpuzzle`
+    handler:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You can see that if `myloc` is not already set, then the piece must be in its
+    start position, and so, the `resetpuzzle` handler goes ahead and records that
+    location in the `myloc` property.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Uncomment the lines at step 17 of *Time for Action - creating the pieces and
+    choosing an image* (`makepuzzle` and scatter lines) and try another test of the
+    app. You should now be able to choose a picture and see it in the spread out puzzle
+    pieces. Hopefully, you will see something like this:![Time for action – transferring
+    imageData](img/image00282.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As mentioned in the preceding section, the right arithmetic made it relatively
+    easy for us to extract a desired rectangle of `imageData` from a larger image,
+    and store it in a smaller image that was the size of that rectangle. However,
+    there's one bit of magic that wasn't pointed out, the puzzle kept its shape! Even
+    though we had completely replaced `imageData` for the image, how did this happen?
+    Setting `imageData` doesn't interfere with `alphaData` of the image. The PNGs
+    that we imported kept their original alpha channel and so still had the same shape,
+    but just a different image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding interactivity
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Our jigsaw puzzle is ready to be shipped! Well, other than the fact it has no
+    interactivity at all! Let's add some.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time for action – setting up touch events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The handlers so far have been in the card script, the plan being to have different
+    cards with different types of puzzle. The interactivity handlers can be placed
+    in the stack script available for all the cards.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the stack script. There is only one of the global variables that we will
+    also need in the stack script, but there are a couple of initializing items we
+    need to cover. Start the stack script with these lines:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `preopenstack` handler checks whether the app is on iPhone and requests
+    that the device's native resolution be used. This will make sure that Retina displays
+    show the best quality. The `compositorType` being set to `"Static OpenGL"` will
+    help performance.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The interactivity we''ll use will make use of touch events. Each touch comes
+    with an associated ID value. Here is the handler that detects the start of a touch
+    event:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The check of the target name is a quick way to make sure that we don't drag
+    anything around except for the puzzle pieces. When a piece is touched, we use
+    the `relayerGroupedControls` and layer functions to make that piece appear above
+    the other pieces.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Do you remember how we added a dropshadow to the two buttons? Aside from making
+    them look nicer, we make use of it here too. By adding the same `dropShadow` to
+    the puzzle piece, we create the illusion that the piece is floating above the
+    screen.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Next thing to watch for is movement, which we can do with the `touchMove` event:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Again, there's a quick double check that you can perform to make sure that it's
+    a puzzle piece; otherwise, it's a simple case of setting the location of the piece
+    to the location of the user's finger.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'When the user releases the piece, we check whether it''s near its starting
+    place, and if it is near, we move the piece into its place and remove the dropShadow
+    effect:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This is the `checkdistance` handler and a `distance` function that it calls:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `distance` function is based on the **Pythagorean theorem**, returning the
+    number of pixels between the puzzle piece and its original `myloc` value. `snapdistance`
+    is the global variable that is used to determine whether the piece is close enough
+    to its starting place to be considered on target.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `move` line uses LiveCode's move function, which animates the piece into
+    its place.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'One last thing, let''s check whether the puzzle is complete. Add this handler
+    to the stack script:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '*What just happened?*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The jigsaw puzzle should fully work now. Something that you can't easily guess
+    from the touch functions we added is the fact that it works with multitouch. You
+    can drag on up to 10 pieces at once (or whatever the multitouch limit is for your
+    device). Here, each piece will show a drop shadow and all the pieces will animate
+    into their place when you let go of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Have a go hero – one for the kids
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Functions that relate to the puzzle itself are in the card script. Try making
+    a new card that has bigger puzzle pieces and a higher value for `snapdistance`
+    (the higher the value, the easier it is to get a piece into place). You could
+    make an opening card for the stack that has a set of difficulty level buttons,
+    one of which would jump to the easier puzzle. This would be ideal for younger
+    players.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding some guide graphics will help players know where the edges of the finished
+    puzzle are, and for simpler difficulty levels, you can even include outlines of
+    the individual puzzle pieces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are many other possibilities when it comes to making use of `imageData`
+    in paint programs, image processing applications, and so on, and it is still the
+    same as in the preceding examples. In this chapter, we went over and understood
+    the format of `imageData`, `alphaData`, and `maskData` and how to copy areas of
+    `imageData` from one image to another. Reading individual pixels of an image and
+    finding novel uses for the pixel values was covered here as well. We also saw
+    how to use multitouch interactivity to bring those chunks of `imageData` to life
+    in the form of a jigsaw puzzle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Working with graphics can be great fun, hopefully, this will just be the start
+    of what you will create. However, in the next chapter, we'll get back to making
+    a utility application. Sigh…
+  prefs: []
+  type: TYPE_NORMAL
