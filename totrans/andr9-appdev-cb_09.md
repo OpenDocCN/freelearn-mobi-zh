@@ -26,7 +26,7 @@
 
 本书旨在为您提供快速指南，以添加您自己的应用程序的功能和功能。因此，重点在于所需的代码，但强烈建议您也熟悉设计指南。
 
-查看谷歌手势设计指南：[https://www.google.com/design/spec/patterns/gestures.html](https://www.google.com/design/spec/patterns/gestures.html)。
+查看谷歌手势设计指南：[`www.google.com/design/spec/patterns/gestures.html`](https://www.google.com/design/spec/patterns/gestures.html)。
 
 在本章的后半部分，我们将探讨 Android 中的传感器功能，使用 Android 传感器框架。我们将演示如何获取所有可用传感器的列表，以及如何检查特定传感器。一旦我们识别出传感器，我们将演示如何设置监听器以读取传感器数据。最后，我们将以演示如何确定设备方向结束本章。
 
@@ -58,11 +58,36 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 1.  打开 `activity_main.xml` 并将现有的 `TextView` 替换为以下 `Button`：
 
-[PRE0]
+```kt
+<Button
+    android:id="@+id/button"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Button"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  现在打开 `MainActivy.java` 并将以下代码添加到现有的 `onCreate()` 方法中：
 
-[PRE1]
+```kt
+Button button = findViewById(R.id.button);
+button.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        Toast.makeText(MainActivity.this, "Click", Toast.LENGTH_SHORT).show();
+    }
+});
+button.setOnLongClickListener(new View.OnLongClickListener() {
+    @Override
+    public boolean onLongClick(View v) {
+        Toast.makeText(MainActivity.this, "Long Press", Toast.LENGTH_SHORT).show();
+        return true;
+    }
+});
+```
 
 1.  在设备或模拟器上运行应用程序，并尝试常规点击和长按。
 
@@ -70,11 +95,15 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 在本书中使用的多数示例中，我们使用以下属性在 XML 中设置 `onClick` 监听器：
 
-[PRE2]
+```kt
+android:onClick="" 
+```
 
 你可能会注意到 XML `onClick()` 方法回调需要与 `setOnClickListener` 的 `.onClick()` 回调相同的方法签名。
 
-[PRE3]
+```kt
+public void onClick(View v) {} 
+```
 
 这是因为当我们使用 XML `onClick` 属性时，Android 会自动为我们设置回调。此示例还演示了我们可以在一个视图上拥有多个监听器。
 
@@ -86,7 +115,9 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 如介绍中所述，还有其他事件监听器。你可以通过输入以下内容使用 Android Studio 的自动完成功能来列出可用监听器：
 
-[PRE4]
+```kt
+button.setOn 
+```
 
 当你开始输入时，你会在 Android Studio 的自动完成列表中看到可用选项的列表。
 
@@ -130,19 +161,41 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 1.  在 `MainActivity` 类中添加以下全局变量：
 
-[PRE5]
+```kt
+private GestureDetectorCompat mGestureDetector; 
+```
 
 1.  在 `MainActivity` 类中添加以下 `GestureListener` 类：
 
-[PRE6]
+```kt
+private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+    @Override
+    public boolean onSingleTapConfirmed(MotionEvent e) {
+        Toast.makeText(MainActivity.this, "onSingleTapConfirmed", Toast.LENGTH_SHORT).show();
+        return super.onSingleTapConfirmed(e);
+    }
+    @Override
+    public boolean onDoubleTap(MotionEvent e) {
+        Toast.makeText(MainActivity.this, "onDoubleTap", Toast.LENGTH_SHORT).show();
+        return super.onDoubleTap(e);
+    }
+}
+```
 
 1.  将以下 `onTouchEvent()` 方法添加到 `MainActivity` 类中，以处理触摸事件通知：
 
-[PRE7]
+```kt
+public boolean onTouchEvent(MotionEvent event) {
+    mGestureDetector.onTouchEvent(event);
+    return super.onTouchEvent(event);
+}
+```
 
 1.  最后，将以下行代码添加到 `onCreate()` 中：
 
-[PRE8]
+```kt
+mGestureDetector = new GestureDetectorCompat(this, new  GestureListener());
+```
 
 1.  在设备或模拟器上运行此应用程序。
 
@@ -182,23 +235,56 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 1.  用以下 `ImageView` 替换现有的 `TextView`：
 
-[PRE9]
+```kt
+<android.support.v7.widget.AppCompatImageView
+    android:id="@+id/imageView"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:src="img/ic_launcher"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  现在，打开 `MainActivity.java` 并将以下全局变量添加到类中：
 
-[PRE10]
+```kt
+private ScaleGestureDetector mScaleGestureDetector;
+private float mScaleFactor = 1.0f;
+private AppCompatImageView mImageView;
+```
 
 1.  将以下 `onTouchEvent()` 实现添加到 `MainActivity` 类中：
 
-[PRE11]
+```kt
+public boolean onTouchEvent(MotionEvent motionEvent) { 
+    mScaleGestureDetector.onTouchEvent(motionEvent); 
+    return true; 
+} 
+```
 
 1.  将以下 `ScaleListener` 类添加到 `MainActivity` 类中：
 
-[PRE12]
+```kt
+private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+    @Override
+    public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
+        mScaleFactor *= scaleGestureDetector.getScaleFactor();
+        mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f));
+        mImageView.setScaleX(mScaleFactor);
+        mImageView.setScaleY(mScaleFactor);
+        return true;
+    }
+} 
+```
 
 1.  将以下代码添加到现有的 `onCreate()` 方法中：
 
-[PRE13]
+```kt
+mImageView=findViewById(R.id.imageView);
+mScaleGestureDetector = new ScaleGestureDetector(this, new ScaleListener());
+```
 
 1.  要实验缩放手势功能，请在带触摸屏的设备上运行应用程序。
 
@@ -208,45 +294,94 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 我们使用带有应用程序图标的 `ImageView` 来提供缩放的视觉表示，通过设置 `ImageView` 的缩放，使用从 `ScaleGestureDetector` 返回的缩放因子。我们使用以下代码来防止缩放变得过大或过小：
 
-[PRE14]
+```kt
+mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10.0f)); 
+```
 
 # 滑动刷新
 
-向下拉列表以指示手动刷新称为Swipe-to-Refresh手势。这是一个如此常见的功能，以至于这种功能被封装在一个名为`SwipeRefreshLayout`的单个小部件中。
+向下拉列表以指示手动刷新称为 Swipe-to-Refresh 手势。这是一个如此常见的功能，以至于这种功能被封装在一个名为`SwipeRefreshLayout`的单个小部件中。
 
-此食谱将添加带有`ListView`的Swipe-to-Refresh功能。以下截图显示了刷新操作：
+此食谱将添加带有`ListView`的 Swipe-to-Refresh 功能。以下截图显示了刷新操作：
 
 ![图片](img/a8f6f355-f15d-4a23-9ac6-ccc38021df31.png)
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，并将其命名为`SwipeToRefresh`。使用默认的“手机和平板”选项，并在“添加活动到移动”对话框中选择“空活动”。
+在 Android Studio 中创建一个新的项目，并将其命名为`SwipeToRefresh`。使用默认的“手机和平板”选项，并在“添加活动到移动”对话框中选择“空活动”。
 
 # 如何做到这一点...
 
-首先，我们需要将`SwipeRefreshLayout`小部件和`ListView`添加到活动布局中，然后我们将在Java代码中实现刷新监听器。以下是详细步骤：
+首先，我们需要将`SwipeRefreshLayout`小部件和`ListView`添加到活动布局中，然后我们将在 Java 代码中实现刷新监听器。以下是详细步骤：
 
 1.  打开`activity_main.xml`并用以下内容替换现有的约束布局：
 
-[PRE15]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+    <android.support.v4.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <ListView
+            android:id="@android:id/list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </android.support.v4.widget.SwipeRefreshLayout>
+</RelativeLayout>
+```
 
 1.  现在打开`MainActivity.java`并为该类添加以下全局变量：
 
-[PRE16]
+```kt
+SwipeRefreshLayout mSwipeRefreshLayout;
+ListView mListView;
+List mArrayList = new ArrayList<>();
+private int mRefreshCount=0;
+```
 
 1.  将以下方法添加到`MainActivity`类中，以处理刷新：
 
-[PRE17]
+```kt
+private void refreshList() {
+    mRefreshCount++;
+    mArrayList.add("Refresh: " + mRefreshCount);
+    ListAdapter countryAdapter = new ArrayAdapter<String>(this, 
+            android.R.layout.simple_list_item_1, mArrayList);
+    mListView.setAdapter(countryAdapter);
+    mSwipeRefreshLayout.setRefreshing(false);
+}
+```
 
 1.  将以下代码添加到现有的`onCreate()`方法中：
 
-[PRE18]
+```kt
+mSwipeRefreshLayout = findViewById(R.id.swipeRefresh);
+mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+    @Override
+    public void onRefresh() {
+        refreshList();
+    }
+});
+mListView = findViewById(android.R.id.list);
+final String[] countries = new String[]{"China", "France", "Germany", "India",
+        "Russia", "United Kingdom", "United States"};
+mArrayList = new ArrayList<>(Arrays.asList(countries));
+ListAdapter countryAdapter = new ArrayAdapter<String>(this,
+        android.R.layout.simple_list_item_1, mArrayList);
+mListView.setAdapter(countryAdapter);
+```
 
 1.  在设备或模拟器上运行应用程序。
 
 # 它是如何工作的...
 
-此食谱的大部分代码通过在每次调用刷新方法时向`ListView`添加项目来模拟刷新。实现Swipe-to-Refresh的主要步骤包括：
+此食谱的大部分代码通过在每次调用刷新方法时向`ListView`添加项目来模拟刷新。实现 Swipe-to-Refresh 的主要步骤包括：
 
 1.  添加`SwipeRefreshLayout`小部件
 
@@ -256,23 +391,32 @@ Android 提供了一个事件监听器接口，用于在发生某些操作时接
 
 1.  在完成更新后调用`setRefreshing(false)`
 
-就这样。这个小部件使得添加Swipe-to-Refresh变得非常简单！
+就这样。这个小部件使得添加 Swipe-to-Refresh 变得非常简单！
 
 # 更多内容...
 
-虽然Swipe-to-Refresh手势现在是一个常见的功能，但仍然是一个好习惯，包括一个菜单项（特别是为了可访问性原因）。以下是一个XML菜单布局的片段：
+虽然 Swipe-to-Refresh 手势现在是一个常见的功能，但仍然是一个好习惯，包括一个菜单项（特别是为了可访问性原因）。以下是一个 XML 菜单布局的片段：
 
-[PRE19]
+```kt
+<menu  > 
+    <item 
+        android:id="@+id/menu_refresh" 
+        android:showAsAction="never" 
+        android:title="@string/menu_refresh"/> 
+</menu> 
+```
 
-在`onOptionsItemSelected()`回调中调用您的刷新方法。当从代码执行刷新操作，例如从菜单项事件时，您想通知`SwipeRefreshLayout`刷新，以便它可以更新UI。以下代码可以做到这一点：
+在`onOptionsItemSelected()`回调中调用您的刷新方法。当从代码执行刷新操作，例如从菜单项事件时，您想通知`SwipeRefreshLayout`刷新，以便它可以更新 UI。以下代码可以做到这一点：
 
-[PRE20]
+```kt
+SwipeRefreshLayout.setRefreshing(true); 
+```
 
 这告诉`SwipeRefreshLayout`开始刷新，以便它可以显示正在进行的指示器。
 
-# 列出可用传感器 - Android传感器框架简介
+# 列出可用传感器 - Android 传感器框架简介
 
-Android使用Android传感器框架支持硬件传感器。该框架包括以下类和接口：
+Android 使用 Android 传感器框架支持硬件传感器。该框架包括以下类和接口：
 
 +   `SensorManager`
 
@@ -282,17 +426,19 @@ Android使用Android传感器框架支持硬件传感器。该框架包括以下
 
 +   `SensorEvent`
 
-大多数Android设备都包括硬件传感器，但它们在不同制造商和型号之间差异很大。如果您的应用程序使用传感器，您有两个选择：
+大多数 Android 设备都包括硬件传感器，但它们在不同制造商和型号之间差异很大。如果您的应用程序使用传感器，您有两个选择：
 
-+   在AndroidManifest中指定传感器
++   在 AndroidManifest 中指定传感器
 
 +   在运行时检查传感器
 
-要指定您的应用程序使用传感器，请在AndroidManifest中包含`<uses-feature>`声明。以下是一个需要可用指南针的示例：
+要指定您的应用程序使用传感器，请在 AndroidManifest 中包含`<uses-feature>`声明。以下是一个需要可用指南针的示例：
 
-[PRE21]
+```kt
+<uses-feature android:name="android.hardware.sensor.compass" android:required="true"/>
+```
 
-如果您的应用程序使用指南针，但不需要它来运行，则应将`android:required="false"`设置为；否则，您的应用程序将无法从Google Play安装。
+如果您的应用程序使用指南针，但不需要它来运行，则应将`android:required="false"`设置为；否则，您的应用程序将无法从 Google Play 安装。
 
 传感器被分为以下三个类别：
 
@@ -302,7 +448,7 @@ Android使用Android传感器框架支持硬件传感器。该框架包括以下
 
 +   位置传感器：使用位置和磁力计测量设备的物理位置
 
-Android SDK支持以下传感器类型：
+Android SDK 支持以下传感器类型：
 
 | 传感器 | 检测 | 用途 |
 | --- | --- | --- |
@@ -320,13 +466,13 @@ Android SDK支持以下传感器类型：
 
 有两个额外的传感器，`TYPE_ORIENTATION`和`TYPE_TEMPERATURE`，已经被弃用，因为它们已被新的传感器所取代。
 
-本教程将演示如何检索可用传感器的列表。以下是Pixel 2模拟器的截图：
+本教程将演示如何检索可用传感器的列表。以下是 Pixel 2 模拟器的截图：
 
 ![](img/7008410a-903b-497c-80b4-101c14b46060.png)
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，并将其命名为`ListDeviceSensors`。使用默认的Phone & Tablet选项，并在提示活动类型时选择Empty Activity。
+在 Android Studio 中创建一个新的项目，并将其命名为`ListDeviceSensors`。使用默认的 Phone & Tablet 选项，并在提示活动类型时选择 Empty Activity。
 
 # 如何操作...
 
@@ -334,11 +480,32 @@ Android SDK支持以下传感器类型：
 
 1.  打开`activity_main.xml`，将现有的`TextView`替换为以下内容：
 
-[PRE22]
+```kt
+<ListView
+    android:id="@+id/list"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  接下来，打开`ActivityMain.java`，并将以下代码添加到现有的`onCreate()`方法中：
 
-[PRE23]
+```kt
+ListView listView = findViewById(R.id.list);
+List sensorList = new ArrayList<String>();
+
+List<Sensor> sensors = ((SensorManager) getSystemService(Context.SENSOR_SERVICE))
+        .getSensorList(Sensor.TYPE_ALL);
+for (Sensor sensor : sensors ) {
+    sensorList.add(sensor.getName());
+}
+ListAdapter sensorAdapter = new ArrayAdapter<String>(this,
+        android.R.layout.simple_list_item_1, sensorList);
+listView.setAdapter(sensorAdapter);
+```
 
 1.  在设备或模拟器上运行程序。
 
@@ -346,7 +513,10 @@ Android SDK支持以下传感器类型：
 
 以下代码行负责获取可用传感器的列表；其余代码将填充`ListView`：
 
-[PRE24]
+```kt
+List<Sensor> sensors = ((SensorManager) getSystemService(
+     Context.SENSOR_SERVICE)).getSensorList(Sensor.TYPE_ALL);
+```
 
 注意我们返回了一个`Sensor`对象列表。我们只获取传感器名称以在`ListView`中显示，但还有其他属性可用。请参阅*另请参阅*部分提供的完整列表。
 
@@ -354,19 +524,26 @@ Android SDK支持以下传感器类型：
 
 重要的是要注意，一个设备可以有多种相同类型的传感器。如果你正在寻找特定的传感器，你可以传递介绍中显示的表中的一个常量。在这种情况下，如果你想查看所有可用的加速度计传感器，你可以使用这个调用：
 
-[PRE25]
+```kt
+List<Sensor> sensors = sensorManager.getSensorList(Sensor.TYPE_ACCELEROMETER); 
+```
 
 如果你不是在寻找传感器列表，而是需要与特定传感器一起工作，你可以使用以下代码检查默认传感器：
 
-[PRE26]
+```kt
+SensorManager sensorManager =  ((SensorManager) getSystemService(Context.SENSOR_SERVICE));
+if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null){
+    //Sensor is available - do something here 
+}
+```
 
 # 另请参阅
 
-+   Android开发者传感器网站[http://developer.android.com/reference/android/hardware/Sensor.html](http://developer.android.com/reference/android/hardware/Sensor.html)
++   Android 开发者传感器网站[`developer.android.com/reference/android/hardware/Sensor.html`](http://developer.android.com/reference/android/hardware/Sensor.html)
 
-# 读取传感器数据 – 使用Android传感器框架事件
+# 读取传感器数据 – 使用 Android 传感器框架事件
 
-之前的配方，*列出可用传感器 – Android传感器框架简介*，提供了对Android传感器框架的介绍。现在，我们将查看使用`SensorEventListener`读取传感器数据。`SensorEventListener`接口只有两个回调：
+之前的配方，*列出可用传感器 – Android 传感器框架简介*，提供了对 Android 传感器框架的介绍。现在，我们将查看使用`SensorEventListener`读取传感器数据。`SensorEventListener`接口只有两个回调：
 
 +   `onSensorChanged()`
 
@@ -376,37 +553,78 @@ Android SDK支持以下传感器类型：
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，并将其命名为`ReadingSensorData`。使用默认的Phone & Tablet选项，并在提示活动类型时选择Empty Activity。
+在 Android Studio 中创建一个新的项目，并将其命名为`ReadingSensorData`。使用默认的 Phone & Tablet 选项，并在提示活动类型时选择 Empty Activity。
 
 # 如何做...
 
-我们将在活动布局中添加一个`TextView`来显示传感器数据，然后我们将添加`SensorEventListener`到Java代码中。我们将使用`onResume()`和`onPause()`事件来启动和停止我们的事件监听器。要开始，打开`activity_main.xml`并按照以下步骤操作：
+我们将在活动布局中添加一个`TextView`来显示传感器数据，然后我们将添加`SensorEventListener`到 Java 代码中。我们将使用`onResume()`和`onPause()`事件来启动和停止我们的事件监听器。要开始，打开`activity_main.xml`并按照以下步骤操作：
 
 1.  按照以下方式修改现有的`TextView`：
 
-[PRE27]
+```kt
+<TextView
+    android:id="@+id/textView"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="0"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  现在，打开`MainActivity.java`并添加以下全局变量声明：
 
-[PRE28]
+```kt
+private SensorManager mSensorManager; 
+private Sensor mSensor; 
+private TextView mTextView; 
+```
 
 1.  在`MainActivity`类中实现`SensorListener`类，如下所示：
 
-[PRE29]
+```kt
+private SensorEventListener mSensorListener = new SensorEventListener() {
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        mTextView.setText(String.valueOf(event.values[0]));
+    }
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        //Nothing to do
+    }
+};
+```
 
 1.  我们将在`onResume()`和`onPause()`中注册和取消注册传感器事件，如下所示：
 
-[PRE30]
+```kt
+@Override
+protected void onResume() {
+    super.onResume();
+    mSensorManager.registerListener(mSensorListener, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
+}
+
+@Override
+protected void onPause() {
+    super.onPause();
+    mSensorManager.unregisterListener(mSensorListener);
+}
+```
 
 1.  将以下代码添加到`onCreate()`中：
 
-[PRE31]
+```kt
+mTextView = (TextView)findViewById(R.id.textView);
+mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+```
 
 1.  你现在可以在物理设备上运行应用程序，以查看来自光传感器的原始数据。
 
 # 它是如何工作的...
 
-使用Android传感器框架首先是从获取传感器开始，我们在`onCreate()`中这样做。在这里，我们调用`getDefaultSensor()`，请求`TYPE_LIGHT`。我们在`onResume()`中注册监听器，并在`onPause()`中再次取消注册以减少电池消耗。当我们调用`registerListener()`时，我们传递我们的`mSensorListener`对象。
+使用 Android 传感器框架首先是从获取传感器开始，我们在`onCreate()`中这样做。在这里，我们调用`getDefaultSensor()`，请求`TYPE_LIGHT`。我们在`onResume()`中注册监听器，并在`onPause()`中再次取消注册以减少电池消耗。当我们调用`registerListener()`时，我们传递我们的`mSensorListener`对象。
 
 在我们的案例中，我们只寻找传感器数据，这些数据在`onSensorChanged()`回调中发送。当传感器发生变化时，我们使用传感器数据更新`TextView`。
 
@@ -416,7 +634,7 @@ Android SDK支持以下传感器类型：
 
 # 环境传感器
 
-Android支持以下四种环境传感器：
+Android 支持以下四种环境传感器：
 
 +   湿度
 
@@ -488,19 +706,21 @@ Android支持以下四种环境传感器：
 
 # 参见
 
-+   *列出可用传感器 - Android传感器框架简介*菜谱
++   *列出可用传感器 - Android 传感器框架简介*菜谱
 
-+   在第10章*图形和动画*的*使用传感器数据和RotateAnimation创建指南针*菜谱中
++   在第十章*图形和动画*的*使用传感器数据和 RotateAnimation 创建指南针*菜谱中
 
 +   有关设备方向，请参阅下一道菜谱：*读取设备方向*
 
-+   请参阅第14章*位置和地理围栏使用*中的GPS和位置菜谱
++   请参阅第十四章*位置和地理围栏使用*中的 GPS 和位置菜谱
 
 # 读取设备方向
 
-虽然Android框架会在方向更改时自动加载新资源（如布局），但有时您可能希望禁用此行为。如果您希望被通知方向更改而不是Android自动处理，请将以下属性添加到Android Manifest中的Activity：
+虽然 Android 框架会在方向更改时自动加载新资源（如布局），但有时您可能希望禁用此行为。如果您希望被通知方向更改而不是 Android 自动处理，请将以下属性添加到 Android Manifest 中的 Activity：
 
-[PRE32]
+```kt
+android:configChanges="keyboardHidden|orientation|screenSize" 
+```
 
 当以下配置更改发生时，系统将通过 `onConfigurationChanged()` 方法通知您，而不是自动处理：
 
@@ -512,11 +732,13 @@ Android支持以下四种环境传感器：
 
 `onConfigurationChanged()` 方法的签名如下：
 
-[PRE33]
+```kt
+onConfigurationChanged (Configuration newConfig) 
+```
 
 您将在 `newConfig.orientation` 中找到新的方向。
 
-禁用自动配置更改（这会导致布局重新加载并重置状态信息）不应作为正确保存状态信息的替代方案。您的应用程序仍然可能在任何时间被中断或完全停止，并由系统终止。（有关如何正确保存状态的信息，请参阅[第1章](ef2fe8b4-1320-45f5-b0d5-fb9fd1d35e07.xhtml)，*活动*中的*保存活动状态*。）
+禁用自动配置更改（这会导致布局重新加载并重置状态信息）不应作为正确保存状态信息的替代方案。您的应用程序仍然可能在任何时间被中断或完全停止，并由系统终止。（有关如何正确保存状态的信息，请参阅第一章，*活动*中的*保存活动状态*。）
 
 本食谱将演示如何确定当前设备方向。
 
@@ -530,11 +752,41 @@ Android支持以下四种环境传感器：
 
 1.  用以下 `Button` 替换现有的 `TextView`：
 
-[PRE34]
+```kt
+<Button
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Check Orientation"
+    android:id="@+id/button"
+    android:onClick="checkOrientation"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  添加以下方法来处理按钮点击：
 
-[PRE35]
+```kt
+public void checkOrientation(View view){
+    int orientation = getResources()
+            .getConfiguration().orientation;
+    switch (orientation) {
+        case Configuration.ORIENTATION_LANDSCAPE:
+            Toast.makeText(MainActivity.this, "ORIENTATION_LANDSCAPE", 
+                    Toast.LENGTH_SHORT).show();
+            break;
+        case Configuration.ORIENTATION_PORTRAIT:
+            Toast.makeText(MainActivity.this, "ORIENTATION_PORTRAIT", 
+                    Toast.LENGTH_SHORT).show();
+            break;
+        case Configuration.ORIENTATION_UNDEFINED:
+            Toast.makeText(MainActivity.this, "ORIENTATION_UNDEFINED", 
+                    Toast.LENGTH_SHORT).show();
+            break;
+    }
+}
+```
 
 1.  在设备或模拟器上运行应用程序。
 
@@ -544,7 +796,9 @@ Android支持以下四种环境传感器：
 
 要获取当前方向，我们只需调用此行代码：
 
-[PRE36]
+```kt
+getResources().getConfiguration().orientation 
+```
 
 方向以 `int` 的形式返回，我们将其与三个可能值之一进行比较，如下所示。
 
@@ -556,7 +810,9 @@ Android支持以下四种环境传感器：
 
 通常，图像可能会根据设备方向或为了补偿当前方向而旋转。在这种情况下，还有一个选项可以获取旋转：
 
-[PRE37]
+```kt
+int rotation = getWindowManager().getDefaultDisplay().getRotation();
+```
 
 在上一行代码中，`rotation` 将是以下值之一：
 
@@ -572,8 +828,8 @@ Android支持以下四种环境传感器：
 
 # 参见
 
-+   在[第1章](ef2fe8b4-1320-45f5-b0d5-fb9fd1d35e07.xhtml)，*活动*中的*保存活动状态*食谱
++   在第一章，*活动*中的*保存活动状态*食谱
 
-+   有关`Configuration`类的更多信息，请参阅以下开发者链接：[http://developer.android.com/reference/android/content/res/Configuration.html](http://developer.android.com/reference/android/content/res/Configuration.html)
++   有关`Configuration`类的更多信息，请参阅以下开发者链接：[`developer.android.com/reference/android/content/res/Configuration.html`](http://developer.android.com/reference/android/content/res/Configuration.html)
 
-+   有关`getRotation()`方法的更多信息，请参阅以下链接：[http://developer.android.com/reference/android/view/Display.html#getRotation()](http://developer.android.com/reference/android/view/Display.html#getRotation())
++   有关`getRotation()`方法的更多信息，请参阅以下链接：[`developer.android.com/reference/android/view/Display.html#getRotation()`](http://developer.android.com/reference/android/view/Display.html#getRotation())

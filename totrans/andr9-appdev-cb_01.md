@@ -30,7 +30,7 @@ Android SDK 提供了一个强大的工具来编程移动设备，而掌握这�
 
 要开始开发 Android 应用程序，请转到 Android Studio 页面下载新的 Android Studio IDE 和 **Android SDK** 套件：
 
-[http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html).
+[`developer.android.com/sdk/index.html`](http://developer.android.com/sdk/index.html).
 
 # 声明一个活动
 
@@ -70,7 +70,10 @@ Android Studio，现在版本为 3.2，用于本书中展示的所有代码示�
 
 如果您查看 `MainActivity.java` 文件，您会意识到它非常基础。这是因为我们选择了“空活动”选项（在第 5 步中）。现在，查看 `AndroidManifest.xml` 文件。这是我们实际声明活动的地方。在 `<application>` 元素内是 `<activity>` 元素：
 
-[PRE0]
+```kt
+<activity android:name=".MainActivity" android:label="@string/app_name"> <intent-filter> <action android:name="android.intent.action.MAIN"/> <category android:name=
+ "android.intent.category.LAUNCHER"/> </intent-filter> </activity>
+```
 
 在 Android Studio 中查看此 `xml` 文件时，您可能会注意到标签元素显示了在 `strings.xml` 资源文件中定义的实际文本（在这种情况下为 `DeclareAnActivity`）。
 
@@ -90,55 +93,78 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 # 准备工作
 
-为了保持简单，我们将使用意图对象来启动Android的一个内置应用程序，而不是创建一个新的应用程序。这只需要一个非常基础的应用程序，所以使用Android Studio创建一个新的Android项目，并将其命名为`ActivityStarter`。
+为了保持简单，我们将使用意图对象来启动 Android 的一个内置应用程序，而不是创建一个新的应用程序。这只需要一个非常基础的应用程序，所以使用 Android Studio 创建一个新的 Android 项目，并将其命名为`ActivityStarter`。
 
 # 如何操作...
 
 再次，为了使示例简单，以便我们可以专注于手头的任务，我们将创建一个函数来展示意图的作用，并从我们的活动中的按钮调用此函数。
 
-一旦在Android Studio中创建了新的项目，请按照以下步骤操作：
+一旦在 Android Studio 中创建了新的项目，请按照以下步骤操作：
 
 1.  打开`MainActivity.java`类并添加以下函数：
 
-[PRE1]
+```kt
+public void launchIntent(View view) { 
+    Intent intent = new Intent(Intent.ACTION_VIEW); 
+    intent.setData(Uri.parse("https://www.packtpub.com/")); 
+    startActivity(intent); 
+} 
+```
 
-+   当您输入此代码时，Android Studio将在视图和意图上给出以下警告：无法解析符号'Intent'。
++   当您输入此代码时，Android Studio 将在视图和意图上给出以下警告：无法解析符号'Intent'。
 
 +   这意味着您需要将库引用添加到项目中。您可以通过在`import`部分输入以下代码手动完成此操作：
 
-[PRE2]
+```kt
+        import android.content.Intent;
+        import android.net.Uri;
+        import android.support.v7.app.AppCompatActivity;
+        import android.os.Bundle;
+        import android.view.View;
+```
 
-或者，让Android Studio为您添加库引用：只需单击用红色字体突出显示的代码并按*Alt*+*Enter*。
+或者，让 Android Studio 为您添加库引用：只需单击用红色字体突出显示的代码并按*Alt*+*Enter*。
 
-1.  打开`activity_main.xml`文件并将`<TextView />`块替换为以下XML：
+1.  打开`activity_main.xml`文件并将`<TextView />`块替换为以下 XML：
 
-[PRE3]
+```kt
+<Button
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Launch Browser"
+    android:id="@+id/button"
+    android:onClick="launchIntent"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent"/>
+```
 
 ![](img/9b4364cb-0f0e-432a-b49d-84dc72f42ffd.png)
 
-1.  现在，是时候运行应用程序并看到意图的作用了。您需要创建一个Android模拟器（在Android Studio中，转到工具 | Android | AVDManager）或将物理设备连接到您的计算机。
+1.  现在，是时候运行应用程序并看到意图的作用了。您需要创建一个 Android 模拟器（在 Android Studio 中，转到工具 | Android | AVDManager）或将物理设备连接到您的计算机。
 
-1.  当您点击启动浏览器按钮时，您将看到默认的网页浏览器打开并显示指定的URL。
+1.  当您点击启动浏览器按钮时，您将看到默认的网页浏览器打开并显示指定的 URL。
 
 # 它是如何工作的...
 
-虽然简单，但这个应用展示了Android操作系统背后的强大功能。意图是一个消息对象。意图可以用来在您的应用程序组件（如服务和广播接收器）之间以及与设备上的其他应用程序之间进行通信。在这个菜谱中，我们要求操作系统启动任何可以处理我们使用`setData()`方法指定的数据的应用程序。（如果用户安装了多个浏览器但没有默认设置，操作系统将显示一个应用程序列表供用户选择。）
+虽然简单，但这个应用展示了 Android 操作系统背后的强大功能。意图是一个消息对象。意图可以用来在您的应用程序组件（如服务和广播接收器）之间以及与设备上的其他应用程序之间进行通信。在这个菜谱中，我们要求操作系统启动任何可以处理我们使用`setData()`方法指定的数据的应用程序。（如果用户安装了多个浏览器但没有默认设置，操作系统将显示一个应用程序列表供用户选择。）
 
-要在物理设备上测试此功能，您可能需要安装设备的驱动程序（驱动程序针对硬件制造商特定）。您还需要在设备上启用开发者模式。启用开发者模式的方法因Android操作系统版本而异。如果您在设备设置中看不到开发者模式选项，请打开“关于手机”选项并开始连续点击构建号。连续点击三次后，您应该会看到一个**Toast**消息告诉您您正在成为开发者的路上。再点击四次将启用该选项。
+要在物理设备上测试此功能，您可能需要安装设备的驱动程序（驱动程序针对硬件制造商特定）。您还需要在设备上启用开发者模式。启用开发者模式的方法因 Android 操作系统版本而异。如果您在设备设置中看不到开发者模式选项，请打开“关于手机”选项并开始连续点击构建号。连续点击三次后，您应该会看到一个**Toast**消息告诉您您正在成为开发者的路上。再点击四次将启用该选项。
 
-在这个菜谱中，我们创建了一个意图对象，使用`ACTION_VIEW`作为我们想要执行的操作（我们的意图）。您可能已经注意到，当您输入`Intent`和点号时，Android Studio提供了一个弹出列表的可能选项（这是自动完成功能），如下所示：
+在这个菜谱中，我们创建了一个意图对象，使用`ACTION_VIEW`作为我们想要执行的操作（我们的意图）。您可能已经注意到，当您输入`Intent`和点号时，Android Studio 提供了一个弹出列表的可能选项（这是自动完成功能），如下所示：
 
 ![](img/546a9d59-ea59-4c24-8eaa-68c2082ea760.png)
 
-`ACTION_VIEW`与数据中的URL一起，表示意图是查看网站，因此默认浏览器被启动（不同的数据可以启动不同的应用）。在这个例子中，我们只想用指定的URL打开浏览器，所以我们调用`startActivity()`方法。根据我们的需求，还有其他调用intent的方法。在*从活动返回结果*的配方中，我们将使用`startActivityForResult()`方法。
+`ACTION_VIEW`与数据中的 URL 一起，表示意图是查看网站，因此默认浏览器被启动（不同的数据可以启动不同的应用）。在这个例子中，我们只想用指定的 URL 打开浏览器，所以我们调用`startActivity()`方法。根据我们的需求，还有其他调用 intent 的方法。在*从活动返回结果*的配方中，我们将使用`startActivityForResult()`方法。
 
 # 更多内容...
 
-对于Android用户来说，下载他们喜欢的应用进行网页浏览、拍照、短信等是非常常见的。使用Intents，您可以让用户使用他们喜欢的应用，而不是试图重新发明所有这些功能。
+对于 Android 用户来说，下载他们喜欢的应用进行网页浏览、拍照、短信等是非常常见的。使用 Intents，您可以让用户使用他们喜欢的应用，而不是试图重新发明所有这些功能。
 
 # 参见
 
-要从菜单选择开始一个活动，请参考[第4章](271b832c-648f-4a10-967e-aac99272e9a9.xhtml)中的*处理菜单选择*配方，*菜单和动作模式*。
+要从菜单选择开始一个活动，请参考第四章中的*处理菜单选择*配方，*菜单和动作模式*。
 
 # 在活动之间切换
 
@@ -146,53 +172,97 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 # 准备工作
 
-我们将在Android Studio中创建一个新的项目，就像之前的配方中做的那样，并将其命名为`ActivitySwitcher`。Android Studio将创建第一个活动，`ActivityMain`，并自动在清单中声明它。
+我们将在 Android Studio 中创建一个新的项目，就像之前的配方中做的那样，并将其命名为`ActivitySwitcher`。Android Studio 将创建第一个活动，`ActivityMain`，并自动在清单中声明它。
 
 # 如何做到这一点...
 
-1.  由于Android Studio新建项目向导已经创建了第一个活动，我们只需创建第二个活动。打开ActivitySwitcher项目，导航到文件 | 新建 | 活动 | 空活动，如图所示：
+1.  由于 Android Studio 新建项目向导已经创建了第一个活动，我们只需创建第二个活动。打开 ActivitySwitcher 项目，导航到文件 | 新建 | 活动 | 空活动，如图所示：
 
 ![图片](img/133e7491-872e-4b22-81eb-c369e92163d5.png)
 
-1.  在“新建Android活动”对话框中，您可以保留默认的活动名称不变，或者将其更改为`SecondActivity`，如下所示：
+1.  在“新建 Android 活动”对话框中，您可以保留默认的活动名称不变，或者将其更改为`SecondActivity`，如下所示：
 
 ![图片](img/21eca820-853d-4f58-8b34-40c1951f17b1.png)
 
 1.  打开`MainActivity.java`文件，并添加以下函数：
 
-[PRE4]
+```kt
+    public void onClickSwitchActivity(View view) { 
+        Intent intent = new Intent(this, SecondActivity.class); 
+        startActivity(intent); 
+    }
+```
 
-1.  现在，打开位于`res/layout`文件夹中的`activity_main.xml`文件，并用以下XML替换`<TextView />`以创建按钮：
+1.  现在，打开位于`res/layout`文件夹中的`activity_main.xml`文件，并用以下 XML 替换`<TextView />`以创建按钮：
 
-[PRE5]
+```kt
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:text="Launch Second Activity"
+        android:onClick="onClickSwitchActivity"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+```
 
 1.  您现在可以运行代码并看到第二个活动打开。我们将进一步添加一个按钮到`SecondActivity`以关闭它，这将带我们回到第一个活动。打开`SecondActivity.java`文件并
 
     添加此功能：
 
-[PRE6]
+```kt
+    public void onClickClose(View view) { 
+        finish(); 
+    } 
+```
 
 1.  最后，将关闭按钮添加到`SecondActivity`布局中。打开`activity_second.xml`文件，并将以下`<Button>`元素添加到自动生成的`ConstraintLayout`中：
 
-[PRE7]
+```kt
+    <Button
+        android:id="@+id/buttonClose"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Close"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:onClick="onClickClose"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+```
 
 1.  在您的设备或模拟器上运行应用程序，并查看按钮的实际效果。
 
 # 它是如何工作的...
 
-这个练习的真正工作是在第3步中的 `onClickSwitchActivity()` 方法。这是我们使用 `SecondActivity.class` 声明第二个活动的地方。我们更进一步，向第二个活动添加了关闭按钮，以展示一个常见的现实世界情况：启动一个新的活动，然后返回到原始调用活动。这种行为是在 `onClickClose()` 函数中实现的。它所做的只是调用 `finish()`，但这告诉操作系统我们已经完成了这个活动。`finish()` 并不会实际上带我们回到调用活动（或任何特定的活动）；它只是关闭当前活动，并依赖于应用程序的 **返回栈** 来显示最后一个活动。如果我们想要特定的活动，我们还可以再次使用 Intent 对象，并在创建 Intent 时指定活动类名。
+这个练习的真正工作是在第 3 步中的 `onClickSwitchActivity()` 方法。这是我们使用 `SecondActivity.class` 声明第二个活动的地方。我们更进一步，向第二个活动添加了关闭按钮，以展示一个常见的现实世界情况：启动一个新的活动，然后返回到原始调用活动。这种行为是在 `onClickClose()` 函数中实现的。它所做的只是调用 `finish()`，但这告诉操作系统我们已经完成了这个活动。`finish()` 并不会实际上带我们回到调用活动（或任何特定的活动）；它只是关闭当前活动，并依赖于应用程序的 **返回栈** 来显示最后一个活动。如果我们想要特定的活动，我们还可以再次使用 Intent 对象，并在创建 Intent 时指定活动类名。
 
 这种活动切换并不会使应用程序变得非常吸引人。我们的活动什么也不做，只是演示了如何从一个活动切换到另一个活动，这当然将是几乎所有我们开发的应用程序的基本方面之一。
 
 如果我们手动创建了活动，我们需要将它们添加到清单中。使用“新建 Android 活动”向导将自动将必要的元素添加到 Android Manifest 文件中。要查看 Android Studio 为你做了什么，请打开 `AndroidManifest.xml` 文件并查看 `<application>` 元素：
 
-[PRE8]
+```kt
+<activity android:name=".MainActivity">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+</activity>
+<activity android:name=".SecondActivity"></activity>
+```
 
 在前面自动生成的代码中需要注意的一点是，第二个活动没有 `<intent-filter>` 元素。主活动通常是启动应用程序时的入口点。这就是为什么定义了 `MAIN` 和 `LAUNCHER`，以便系统知道在应用程序启动时启动哪个活动。
 
 # 参见
 
-+   要了解更多关于嵌入小部件（如按钮）的信息，请访问[第2章](3adebbef-b8f1-41ca-ba6c-c56329c9ea53.xhtml)，*视图、小部件和样式*
++   要了解更多关于嵌入小部件（如按钮）的信息，请访问第二章，*视图、小部件和样式*
 
 # 将数据传递给另一个活动
 
@@ -208,21 +278,56 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 1.  打开 `activity_main.xml` 并在按钮上方添加以下 `<EditText>` 元素：
 
-[PRE9]
+```kt
+<EditText
+    android:id="@+id/editTextData"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintBottom_toTopOf="@+id/button" />
+```
 
 在上一个菜谱中创建的 `<Button>` 元素没有变化。
 
 1.  现在，打开 `MainActivity.java` 文件，并按照以下方式修改 `onClickSwitchActivity()` 方法：
 
-[PRE10]
+```kt
+public void onClickSwitchActivity(View view) { 
+    EditText editText = (EditText)findViewById(R.id.editTextData); 
+    String text = editText.getText().toString(); 
+    Intent intent = new Intent(this, SecondActivity.class); 
+    intent.putExtra(Intent.EXTRA_TEXT,text); 
+    startActivity(intent); 
+}
+```
 
 1.  接下来，打开 `activity_second.xml` 文件并添加以下 `<TextView>` 元素：
 
-[PRE11]
+```kt
+<TextView
+    android:id="@+id/textViewText"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintBottom_toTopOf="@id/buttonClose"/>
+```
 
 1.  最后一个更改是编辑第二个活动以查找新数据并在屏幕上显示它。打开 `SecondActivity.java` 并按以下方式编辑 `onCreate()`：
 
-[PRE12]
+```kt
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_second);
+    TextView textView = (TextView) findViewById(R.id.textViewText);
+    if (getIntent() != null && getIntent().hasExtra(Intent.EXTRA_TEXT)) {
+        textView.setText(getIntent().getStringExtra(Intent.EXTRA_TEXT));
+    }
+}
+```
 
 1.  现在，运行项目。在主活动中输入一些文本，然后按“启动第二个活动”以查看它发送数据。
 
@@ -234,7 +339,9 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 第二个活动是使用我们创建的意图启动的，所以这只是一个获取意图并检查随它发送的数据的问题。我们在 `onCreate()` 中这样做：
 
-[PRE13]
+```kt
+textView.setText(getIntent().getStringExtra(Intent.EXTRA_TEXT)); 
+```
 
 # 还有更多...
 
@@ -254,25 +361,51 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 1.  首先，打开 `MainActivity.java` 并将以下常量添加到类中：
 
-[PRE14]
+```kt
+public static final String REQUEST_RESULT="REQUEST_RESULT"; 
+```
 
 1.  接下来，通过修改 `onClickSwitchActivity()` 方法来更改调用意图的方式，使其期望一个结果：
 
-[PRE15]
+```kt
+public void onClickSwitchActivity(View view) {
+    EditText editText = (EditText)findViewById(R.id.editTextData);
+    String text = editText.getText().toString();
+    Intent intent = new Intent(this, SecondActivity.class);
+    intent.putExtra(Intent.EXTRA_TEXT,text);
+    startActivityForResult(intent,1);
+}
+```
 
 1.  然后，添加此新方法以接收结果：
 
-[PRE16]
+```kt
+@Override
+protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    if (resultCode==RESULT_OK) {
+        Toast.makeText(this, Integer.toString(data.getIntExtra(REQUEST_RESULT, 
+                0)), Toast.LENGTH_LONG).show();
+    }
+}
+```
 
 1.  最后，修改 `SecondActivity.java` 中的 `onClickClose` 以设置返回值如下：
 
-[PRE17]
+```kt
+public void onClickClose(View view) { 
+    Intent returnIntent = new Intent(); 
+    returnIntent.putExtra(MainActivity.REQUEST_RESULT,42); 
+    setResult(RESULT_OK, returnIntent); 
+    finish(); 
+} 
+```
 
 # 它是如何工作的...
 
 如您所见，获取结果相对直接。我们只需使用 `startActivityForResult` 调用意图，表示我们想要返回一个结果。我们设置 `onActivityResult()` 回调处理程序来接收结果。最后，在关闭活动之前，我们确保第二个活动使用 `setResult()` 返回一个结果。在这个例子中，我们只是使用一个静态值设置结果。我们使用一个简单的 Toast 将结果显示给用户。
 
-检查结果码是一个好习惯，以确保用户没有取消操作。技术上它是一个整数，但系统将其用作布尔值。检查`RESULT_OK`或`RESULT_CANCEL`并根据情况相应处理。在我们的例子中，第二个活动没有取消按钮，为什么还要检查？如果用户点击返回按钮怎么办？Android会将结果码设置为`RESULT_CANCEL`并将intent设置为null，如果我们尝试访问null结果，这会导致我们的代码抛出异常。
+检查结果码是一个好习惯，以确保用户没有取消操作。技术上它是一个整数，但系统将其用作布尔值。检查`RESULT_OK`或`RESULT_CANCEL`并根据情况相应处理。在我们的例子中，第二个活动没有取消按钮，为什么还要检查？如果用户点击返回按钮怎么办？Android 会将结果码设置为`RESULT_CANCEL`并将 intent 设置为 null，如果我们尝试访问 null 结果，这会导致我们的代码抛出异常。
 
 我们使用了**Toast**对象，它显示一个方便的弹出**消息**来不引人注目地通知用户。它还作为一个方便的调试方法，因为它不需要特殊的布局或屏幕空间。
 
@@ -280,7 +413,9 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 除了结果码之外，`onActivityResults()`还包括一个**请求码**。你在想它从哪里来吗？它只是与`startActivityForResult()`调用一起传递的整数值，其形式如下：
 
-[PRE18]
+```kt
+startActivityForResult(Intent intent, int requestCode); 
+```
 
 我们没有检查请求码，因为我们知道我们只有一个结果要处理，但在具有多个活动的非平凡应用中，这个值可以用来识别哪个活动正在返回结果。
 
@@ -290,13 +425,13 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 +   要了解更多关于创建新活动类的信息，请参考*在活动之间切换*食谱。
 
-+   更多关于Toast的信息，请参阅第8章的*制作Toast*食谱，*警报和通知*。
++   更多关于 Toast 的信息，请参阅第八章的*制作 Toast*食谱，*警报和通知*。
 
 # 保存活动状态
 
 移动环境非常动态，用户比在桌面电脑上更频繁地切换任务。由于移动设备上通常资源较少，预期你的应用在某个时刻会被中断是合理的。系统也可能完全关闭你的应用以向当前任务提供额外资源。这是移动设备的特性。
 
-用户可能在你的应用中开始输入某些内容，然后被电话中断，或者切换到发送短信，当他们回到你的应用时，操作系统可能已经完全关闭了你的应用以释放内存。为了提供最佳的用户体验，你需要预期这种行为，并让用户更容易从他们离开的地方继续。好消息是，Android操作系统通过提供回调来通知你的应用状态变化，这使得这一切变得更加容易。
+用户可能在你的应用中开始输入某些内容，然后被电话中断，或者切换到发送短信，当他们回到你的应用时，操作系统可能已经完全关闭了你的应用以释放内存。为了提供最佳的用户体验，你需要预期这种行为，并让用户更容易从他们离开的地方继续。好消息是，Android 操作系统通过提供回调来通知你的应用状态变化，这使得这一切变得更加容易。
 
 简单地旋转设备将导致操作系统销毁并重新创建你的活动。这可能会显得有些过于强硬，但这样做是有好理由的：在纵向和横向布局不同的情况下非常常见，这确保了你的应用正在使用正确的资源。
 
@@ -308,7 +443,40 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 在 Android Studio 中创建一个新的项目，并将其命名为 `StateSaver`。我们只需要一个活动，因此自动生成的主活动就足够了。但是，我们需要一些小部件，包括 `EditText`、`Button` 和 `TextView`。它们的布局（在 `activity_main.xml` 中）如下所示：
 
-[PRE19]
+```kt
+<EditText
+    android:id="@+id/editText"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_alignParentTop="true"
+    android:layout_alignParentStart="true"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintBottom_toTopOf="@+id/button"/>
+
+<Button
+    android:id="@+id/button"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_centerInParent="true"
+    android:text="Count"
+    android:onClick="onClickCounter"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintBottom_toBottomOf="parent"/>
+
+<TextView
+    android:id="@+id/textViewCounter"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_below="@id/button"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/button"
+    app:layout_constraintBottom_toBottomOf="parent"/>
+```
 
 # 如何做到这一点...
 
@@ -316,15 +484,36 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 1.  为了跟踪计数器，我们需要向项目中添加一个全局变量，以及一个用于保存和恢复的键。将以下代码添加到 `MainActivity.java` 类中：
 
-[PRE20]
+```kt
+static final String KEY_COUNTER = "COUNTER"; 
+private int mCounter=0; 
+```
 
 1.  然后，添加处理按钮点击所需的代码；它增加计数器并在 `TextView` 小部件中显示结果：
 
-[PRE21]
+```kt
+public void onClickCounter(View view) {
+    mCounter++;
+    ((TextView)findViewById(R.id.textViewCounter))
+            .setText("Counter: " + Integer.toString(mCounter));
+}
+```
 
 1.  要接收应用程序状态更改的通知，我们需要将 `onSaveInstanceState()` 和 `onRestoreInstanceState()` 方法添加到我们的应用程序中。打开 `MainActivity.java` 并添加以下代码：
 
-[PRE22]
+```kt
+@Override 
+protected void onSaveInstanceState(Bundle outState) { 
+    super.onSaveInstanceState(outState); 
+    outState.putInt(KEY_COUNTER,mCounter); 
+} 
+
+@Override 
+protected void onRestoreInstanceState(Bundle savedInstanceState) { 
+    super.onRestoreInstanceState(savedInstanceState); 
+    mCounter=savedInstanceState.getInt(KEY_COUNTER); 
+} 
+```
 
 1.  运行程序并尝试更改方向以查看其行为（如果您使用的是模拟器，*Ctrl* + *F11* 将旋转设备）。
 
@@ -342,25 +531,31 @@ Android 应用程序模型可以看作是一个面向服务的模型，其中活
 
 `onRestoreInstanceState()` 回调并不是唯一可以恢复状态的地方。看看 `onCreate()` 的签名：
 
-[PRE23]
+```kt
+onCreate(Bundle savedInstanceState) 
+```
 
 这两种方法都接收同一个名为 `savedInstanceState` 的 `Bundle` 实例。您可以将恢复代码移动到 `onCreate()` 方法，并且它将按相同的方式工作。但有一个要注意的是，如果没有数据，例如在活动的初始创建期间，`savedInstanceState` 包将是一个空值。如果您想从 `onRestoreInstanceState()` 回调中移动代码，只需确保数据不是空值。以下是该代码的示例：
 
-[PRE24]
+```kt
+if (savedInstanceState!=null) { 
+    mCounter = savedInstanceState.getInt(KEY_COUNTER); 
+} 
+```
 
 # 相关内容
 
 +   *存储持久活动数据*菜谱将介绍持久存储
 
-+   查看第7章[数据存储](2bf1b0ac-516b-48e1-95f6-ce76f2046d20.xhtml)，了解更多关于如何持久化数据的示例
++   查看第七章数据存储，了解更多关于如何持久化数据的示例
 
-+   *理解活动生命周期*菜谱解释了Android Activity的生命周期
++   *理解活动生命周期*菜谱解释了 Android Activity 的生命周期
 
 # 存储持久活动数据
 
 能够暂时存储关于我们活动的信息非常有用，但往往我们希望我们的应用程序能够在多个会话中记住信息。
 
-Android支持SQLite，但对于简单的数据，如用户名或高分，这可能需要很多开销。幸运的是，Android还提供了`SharedPreferences`这样的轻量级选项来处理这些场景。（在实际应用中，您可能会同时使用这两种选项来保存数据。）
+Android 支持 SQLite，但对于简单的数据，如用户名或高分，这可能需要很多开销。幸运的是，Android 还提供了`SharedPreferences`这样的轻量级选项来处理这些场景。（在实际应用中，您可能会同时使用这两种选项来保存数据。）
 
 # 准备工作
 
@@ -372,11 +567,26 @@ Android支持SQLite，但对于简单的数据，如用户名或高分，这可�
 
 1.  在活动关闭前添加以下`onPause()`方法以保存数据：
 
-[PRE25]
+```kt
+@Override
+protected void onPause() {
+    super.onPause();
+    SharedPreferences settings = getPreferences(MODE_PRIVATE);
+    SharedPreferences.Editor editor = settings.edit();
+    editor.putInt(KEY_COUNTER, mCounter);
+    editor.commit();
+}
+```
 
 1.  然后，在`onCreate()`的末尾添加以下代码以恢复计数器：
 
-[PRE26]
+```kt
+SharedPreferences settings = getPreferences(MODE_PRIVATE);
+int defaultCounter = 0;
+mCounter = settings.getInt(KEY_COUNTER, defaultCounter);
+((TextView)findViewById(R.id.textViewCounter))
+        .setText("Counter: " + Integer.toString(mCounter));
+```
 
 1.  运行程序并尝试使用它。
 
@@ -394,13 +604,15 @@ Android支持SQLite，但对于简单的数据，如用户名或高分，这可�
 
 使用`getSharedPreferences()`与使用其对应方法没有区别，但它允许使用多个偏好文件。其形式如下：
 
-[PRE27]
+```kt
+getSharedPreferences(String name, int mode) 
+```
 
 在这里，`name`是文件名。`mode`可以是`MODE_PRIVATE`、`MODE_WORLD_READABLE`或`MODE_WORLD_WRITABLE`，它描述了文件的访问级别。
 
 # 相关内容
 
-+   [第7章](2bf1b0ac-516b-48e1-95f6-ce76f2046d20.xhtml)，*数据存储*，了解更多关于数据存储的示例
++   第七章，*数据存储*，了解更多关于数据存储的示例
 
 # 理解活动生命周期
 
@@ -424,15 +636,56 @@ Android支持SQLite，但对于简单的数据，如用户名或高分，这可�
 
 1.  打开 `activity_main.xml` 并为自动生成的 `TextView` 添加一个 ID：
 
-[PRE28]
+```kt
+android:id="@+id/textViewState" 
+```
 
 1.  剩余步骤将在 `MainActivity.java` 中进行。修改 `onCreate()` 方法以设置初始文本：
 
-[PRE29]
+```kt
+((TextView)findViewById(R.id.textViewState)).setText("onCreate()n");
+
+```
 
 1.  添加以下方法来处理剩余的事件：
 
-[PRE30]
+```kt
+@Override
+protected void onStart() {
+    super.onStart();
+    ((TextView)findViewById(R.id.textViewState)).append("onStart()\n");
+}
+
+@Override
+protected void onResume() {
+    super.onResume();
+    ((TextView)findViewById(R.id.textViewState)).append("onResume()\n");
+}
+
+@Override
+protected void onPause() {
+    super.onPause();
+    ((TextView)findViewById(R.id.textViewState)).append("onPause()\n");
+}
+
+@Override
+protected void onStop() {
+    super.onStop();
+    ((TextView)findViewById(R.id.textViewState)).append("onStop()\n");
+}
+
+@Override
+protected void onRestart() {
+    super.onRestart();
+    ((TextView)findViewById(R.id.textViewState)).append("onRestart()\n");
+}
+
+@Override
+protected void onDestroy() {
+    super.onDestroy();
+    ((TextView)findViewById(R.id.textViewState)).append("onDestroy()\n");
+}
+```
 
 1.  运行应用程序，并观察当按下返回键和主页键中断活动时会发生什么。尝试其他操作，如任务切换，以查看它们如何影响您的应用程序。
 
@@ -450,7 +703,16 @@ Android支持SQLite，但对于简单的数据，如用户名或高分，这可�
 
 +   值得注意的是，我们实际上从未看到`onDestroy()`方法的结果，因为到这时活动已经被移除。如果你想进一步探索这些方法，那么使用`Activity.isFinishing()`来查看在`onDestroy()`执行之前活动是否真的正在结束是非常有价值的，如下面的代码片段所示：
 
-[PRE31]
+```kt
+@Override
+public void onPause() {
+    super.onPause();
+    ((TextView)findViewById(R.id.textViewState)).append("onPause()\n");
+    if (isFinishing()){
+        ((TextView)findViewById(R.id.textViewState)).append(" ... finishing");
+    }
+}
+```
 
 在实现这些方法时，始终在执行任何工作之前调用超类。
 

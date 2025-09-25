@@ -2,55 +2,55 @@
 
 在本章中，我们将涵盖以下主题：
 
-+   创建和使用Fragment
++   创建和使用 Fragment
 
-+   在运行时添加和移除Fragment
++   在运行时添加和移除 Fragment
 
-+   在Fragment之间传递数据
++   在 Fragment 之间传递数据
 
-+   处理Fragment回退栈
++   处理 Fragment 回退栈
 
 # 简介
 
-在对[第2章](0b95f21f-496a-48ca-900c-32d887d3a3fe.xhtml)，*布局*中的布局有了一定的理解之后，我们将更深入地探讨使用Fragment进行UI开发。Fragment是将UI分割成更小部分以便于重用的一种方式。将Fragment视为具有自己的类、布局和生命周期的迷你活动。您不必在一个Activity布局中设计整个屏幕，可能还会在多个布局中重复功能，而是可以将屏幕分割成更小的、逻辑上合理的部分，并将它们转换为Fragment。然后，您的Activity布局可以按需引用一个或多个Fragment。
+在对第二章，*布局*中的布局有了一定的理解之后，我们将更深入地探讨使用 Fragment 进行 UI 开发。Fragment 是将 UI 分割成更小部分以便于重用的一种方式。将 Fragment 视为具有自己的类、布局和生命周期的迷你活动。您不必在一个 Activity 布局中设计整个屏幕，可能还会在多个布局中重复功能，而是可以将屏幕分割成更小的、逻辑上合理的部分，并将它们转换为 Fragment。然后，您的 Activity 布局可以按需引用一个或多个 Fragment。
 
-# 创建和使用Fragment
+# 创建和使用 Fragment
 
-Android并不总是支持Fragment。Android的早期版本是为手机设计的，当时屏幕相对较小。直到Android开始在平板电脑上使用时，才需要将屏幕分割成更小的部分。Android 3.0引入了`Fragments`类和Fragment管理器。
+Android 并不总是支持 Fragment。Android 的早期版本是为手机设计的，当时屏幕相对较小。直到 Android 开始在平板电脑上使用时，才需要将屏幕分割成更小的部分。Android 3.0 引入了`Fragments`类和 Fragment 管理器。
 
-随着新类的出现，也出现了Fragment生命周期。Fragment生命周期与在[第1章](ef2fe8b4-1320-45f5-b0d5-fb9fd1d35e07.xhtml)，*活动*中引入的活动生命周期相似，因为大多数事件都与活动生命周期并行。
+随着新类的出现，也出现了 Fragment 生命周期。Fragment 生命周期与在第一章，*活动*中引入的活动生命周期相似，因为大多数事件都与活动生命周期并行。
 
 这里是对主要回调的简要概述：
 
-+   `onAttach()`: 当Fragment与Activity关联时调用。
++   `onAttach()`: 当 Fragment 与 Activity 关联时调用。
 
-+   `onCreate()`: 当Fragment首次创建时调用。
++   `onCreate()`: 当 Fragment 首次创建时调用。
 
-+   `onCreateView()`: 当Fragment即将首次显示时调用。
++   `onCreateView()`: 当 Fragment 即将首次显示时调用。
 
-+   `onActivityCreated()`: 当相关Activity被创建时调用。
++   `onActivityCreated()`: 当相关 Activity 被创建时调用。
 
-+   `onStart()`: 当Fragment将变为用户可见时调用。
++   `onStart()`: 当 Fragment 将变为用户可见时调用。
 
-+   `onResume()`: 在Fragment显示之前调用。
++   `onResume()`: 在 Fragment 显示之前调用。
 
-+   `onPause()`: 当Fragment首次暂停时调用。用户可能会返回到Fragment，但这是您应该持久化任何用户数据的地方。
++   `onPause()`: 当 Fragment 首次暂停时调用。用户可能会返回到 Fragment，但这是您应该持久化任何用户数据的地方。
 
-+   `onStop()`: 当Fragment不再对用户可见时调用。
++   `onStop()`: 当 Fragment 不再对用户可见时调用。
 
 +   `onDestroyView()`: 它被调用以允许最终的清理。
 
-+   `onDetach()`: 当Fragment不再与Activity关联时调用。
++   `onDetach()`: 当 Fragment 不再与 Activity 关联时调用。
 
-对于我们的第一个练习，我们将创建一个新的由标准`Fragment`类派生的Fragment。但我们可以从以下几个其他Fragment类中派生，包括以下内容：
+对于我们的第一个练习，我们将创建一个新的由标准`Fragment`类派生的 Fragment。但我们可以从以下几个其他 Fragment 类中派生，包括以下内容：
 
 +   `DialogFragment`: 它用于创建一个浮动对话框
 
-+   `ListFragment`: 它在Fragment中创建一个`ListView`，类似于`ListActivity`
++   `ListFragment`: 它在 Fragment 中创建一个`ListView`，类似于`ListActivity`
 
 +   `PreferenceFragment`: 它创建了一个`Preference`对象的列表，通常用于设置页面
 
-在这个菜谱中，我们将通过创建一个由`Fragment`类派生的基本Fragment，并将其包含在Activity布局中来进行操作。
+在这个菜谱中，我们将通过创建一个由`Fragment`类派生的基本 Fragment，并将其包含在 Activity 布局中来进行操作。
 
 # 准备工作
 
@@ -64,15 +64,48 @@ Android并不总是支持Fragment。Android的早期版本是为手机设计的�
 
 1.  使用以下 XML 创建一个新的布局文件 `fragment_one.xml`：
 
-[PRE0]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fragment One"
+        android:id="@+id/textView"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout> 
+```
 
 1.  创建一个名为 `FragmentOne.java` 的新 Java 类，代码如下：
 
-[PRE1]
+```kt
+public class FragmentOne extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_one, container, false);
+    }
+}
+```
 
 1.  打开 `activity_main.xml` 文件，并用以下 `<fragment>` 元素替换现有的 `<TextView>` 元素：
 
-[PRE2]
+```kt
+<fragment
+    android:name="com.packtpub.createfragment.FragmentOne"
+    android:id="@+id/fragment"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_centerVertical="true"
+    android:layout_centerHorizontal="true" 
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  在设备或模拟器上运行程序。
 
@@ -112,47 +145,134 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 1.  创建一个名为 `fragment_one.xml` 的新布局文件，并包含以下 XML：
 
-[PRE3]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fragment One"
+        android:id="@+id/textView"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout> 
+```
 
 1.  第二个布局文件 `fragment_two.xml` 几乎相同，唯一的区别是文本：
 
-[PRE4]
+```kt
+android:text="Fragment Two" 
+```
 
 1.  创建一个名为 `FragmentOne.java` 的新 Java 类，并包含以下代码：
 
-[PRE5]
+```kt
+public class FragmentOne extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_one,
+                container, false);
+    }
+} 
+```
 
 +   按照以下方式从支持库中导入：
 
-[PRE6]
+```kt
+import android.support.v4.app.Fragment;
+```
 
 1.  创建第二个 Java 类 `FragmentTwo`，并包含以下代码：
 
-[PRE7]
+```kt
+public class FragmentTwo extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_two,
+                container, false);
+    }
+}
+```
 
 +   如前所述，从支持库中导入：
 
-[PRE8]
+```kt
+import android.support.v4.app.Fragment;
+```
 
 1.  现在我们需要在主活动布局中添加一个容器和一个按钮。按照以下方式更改 `activity_main.xml`：
 
-[PRE9]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <FrameLayout
+        android:id="@+id/frameLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/buttonSwitch"
+        android:layout_alignParentTop="true">
+    </FrameLayout>
+    <Button
+        android:id="@+id/buttonSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Switch"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+        android:onClick="switchFragment"/>
+</RelativeLayout>
+```
 
 1.  在创建了片段并将容器添加到布局中后，我们现在可以编写操作片段的代码。打开 `MainActivity.java` 并在类构造函数下方添加以下代码：
 
-[PRE10]
+```kt
+FragmentOne mFragmentOne;
+FragmentTwo mFragmentTwo;
+int showingFragment=0;
+```
 
 1.  在现有的 `onCreate()` 方法中，在 `setContentView()` 下方添加以下代码：
 
-[PRE11]
+```kt
+mFragmentOne = new FragmentOne();
+mFragmentTwo = new FragmentTwo();
+FragmentManager fragmentManager = getSupportFragmentManager();
+FragmentTransaction fragmentTransaction =
+        fragmentManager.beginTransaction();
+fragmentTransaction.add(R.id.frameLayout, mFragmentOne);
+fragmentTransaction.commit();
+showingFragment=1;
+```
 
 +   从支持库中导入：
 
-[PRE12]
+```kt
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+```
 
 1.  最后需要添加的代码处理片段切换，由按钮调用：
 
-[PRE13]
+```kt
+public void switchFragment(View view) {
+    FragmentManager fragmentManager = getSupportFragmentManager();
+    FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+    if (showingFragment==1) {
+        fragmentTransaction.replace(R.id.frameLayout, mFragmentTwo);
+        showingFragment = 2;
+    } else {
+        fragmentTransaction.replace(R.id.frameLayout, mFragmentOne);
+        showingFragment=1;
+    }
+    fragmentTransaction.commit();
+}
+```
 
 1.  在设备或模拟器上运行程序。
 
@@ -164,13 +284,15 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 现在您已经了解了片段事务，以下是 `onCreate()` 的简洁版本：
 
-[PRE14]
+```kt
+getSupportFragmentManager().beginTransaction().add(R.id.frameLayout, mFragmentOne).commit();
+```
 
 我们的 `switchFragment()` 方法基本上执行相同的片段事务。我们不是调用 `add()` 方法，而是调用带有现有片段的 `replace()` 方法。我们通过 `showingFragment` 变量跟踪当前片段，以便知道下一个要显示的片段。我们也不限于在两个片段之间切换。如果我们需要额外的片段，我们只需创建它们即可。
 
 # 还有更多...
 
-在[第1章](ef2fe8b4-1320-45f5-b0d5-fb9fd1d35e07.xhtml)的*切换活动*食谱中，我们讨论了返回栈。大多数用户都期望返回键可以向后移动通过“屏幕”，他们不知道或不在乎那些屏幕是活动还是片段。幸运的是，Android通过在调用`commit()`之前添加对`addToBackStack()`的调用，使得向返回栈添加片段变得非常简单。
+在第一章的*切换活动*食谱中，我们讨论了返回栈。大多数用户都期望返回键可以向后移动通过“屏幕”，他们不知道或不在乎那些屏幕是活动还是片段。幸运的是，Android 通过在调用`commit()`之前添加对`addToBackStack()`的调用，使得向返回栈添加片段变得非常简单。
 
 当一个片段被移除或替换而没有添加到返回栈时，它将被立即销毁。如果它被添加到返回栈，它将被停止，如果用户返回到该片段，它将被重新启动，而不是重新创建。
 
@@ -214,55 +336,147 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 1.  创建一个名为 `MasterFragment` 的新 Java 类，并修改它使其扩展 `ListFragment`，如下所示：
 
-[PRE15]
+```kt
+public class MasterFragment extends ListFragment 
+```
 
 +   从以下库中导入：
 
-[PRE16]
+```kt
+android.support.v4.app.ListFragment 
+```
 
 1.  在 `MasterFragment` 类中创建以下接口：
 
-[PRE17]
+```kt
+public interface OnMasterSelectedListener {
+    public void onItemSelected(String countryName);
+}
+```
 
 1.  使用以下代码设置接口回调监听器：
 
-[PRE18]
+```kt
+private OnMasterSelectedListener mOnMasterSelectedListener=null;
+
+public void setOnMasterSelectedListener(OnMasterSelectedListener listener) {
+    mOnMasterSelectedListener=listener;
+}
+```
 
 1.  `MasterFragment` 的最后一步是创建 `ListAdapter` 以填充 `ListView`，我们在 `onViewCreated()` 方法中这样做。当选择国家名称时，我们将使用 `setOnItemClickListener()` 调用我们的 `OnMasterSelectedListener` 接口，如下所示：
 
-[PRE19]
+```kt
+public void onViewCreated(View view, Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+
+    String[] countries = new String[]{"China", "France",
+            "Germany", "India", "Russia", "United Kingdom",
+            "United States"};
+
+    ListAdapter countryAdapter = new ArrayAdapter<String>(
+            getActivity(), android.R.layout.simple_list_item_1,
+            countries);
+
+    setListAdapter(countryAdapter);
+
+    getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+
+    getListView().setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View
+                view, int position, long id) {
+            if (mOnMasterSelectedListener != null) {
+                mOnMasterSelectedListener.onItemSelected(((
+                        TextView) view).getText().toString());
+            }
+        }
+    });
+}
+```
 
 1.  接下来，我们需要创建 `DetailFragment`，从布局开始。创建一个名为 `fragment_detail.xml` 的新布局文件，其 XML 如下所示：
 
-[PRE20]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <TextView
+        android:id="@+id/textViewCountryName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout>
+```
 
 1.  创建一个名为 `DetailFragment` 的新 Java 类，它扩展自 `Fragment`，如下所示：
 
-[PRE21]
+```kt
+public class DetailFragment extends Fragment 
+```
 
 +   从以下库中导入：
 
-[PRE22]
+```kt
+android.support.v4.app.Fragment 
+```
 
 1.  将以下常量添加到类中：
 
-[PRE23]
+```kt
+public static String KEY_COUNTRY_NAME="KEY_COUNTRY_NAME"; 
+```
 
 1.  如下重写 `onCreateView()` 方法：
 
-[PRE24]
+```kt
+@Override
+public View onCreateView(LayoutInflater inflater, 
+                         ViewGroup container, 
+                         Bundle savedInstanceState) {
+    return inflater.inflate(R.layout.fragment_detail, container, false);
+}
+```
 
 1.  编写 `onViewCreated()` 如下：
 
-[PRE25]
+```kt
+@Override
+public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+
+    Bundle bundle = getArguments();
+
+    if (bundle != null && bundle.containsKey(KEY_COUNTRY_NAME)) {
+        showSelectedCountry(bundle.getString(KEY_COUNTRY_NAME));
+    }
+}
+```
 
 1.  对于此 Fragment 的最后一步，当接收到选中的国家名称时更新 `TextView`。向类中添加以下方法：
 
-[PRE26]
+```kt
+public void showSelectedCountry(String countryName) {
+    ((TextView)getView().findViewById(R.id.textViewCountryName)).setText(countryName);
+}
+```
 
 1.  现有的 `activity_main.xml` 布局将处理纵向模式布局。删除现有的 `<TextView>` 并替换为以下 `<FrameLayout>`：
 
-[PRE27]
+```kt
+<FrameLayout
+    android:id="@+id/frameLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginTop="8dp"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  对于横向布局，在 `res` 文件夹中创建一个名为 `layout-land` 的新目录。最终结果将是 `res/layout-land`。
 
@@ -270,41 +484,128 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 1.  在`res/layout-land`中创建一个新的`activity_main.xml`布局，如下所示：
 
-[PRE28]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+    <FrameLayout
+        android:id="@+id/frameLayoutMaster"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"/>
+    <FrameLayout
+        android:id="@+id/frameLayoutDetail"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"/>
+</LinearLayout>
+```
 
-1.  最后的步骤是将`MainActivity`设置起来以处理Fragment。打开`MainActivity.java`文件，并添加以下类变量以跟踪单/双面板：
+1.  最后的步骤是将`MainActivity`设置起来以处理 Fragment。打开`MainActivity.java`文件，并添加以下类变量以跟踪单/双面板：
 
-[PRE29]
+```kt
+boolean mDualPane;
+```
 
 1.  接下来，按照以下方式修改`onCreate()`：
 
-[PRE30]
+```kt
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
+    setContentView(R.layout.activity_main);
+
+    MasterFragment masterFragment = null;
+    FrameLayout frameLayout = findViewById(R.id.frameLayout);
+    if (frameLayout != null) {
+        mDualPane = false;
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        masterFragment = (MasterFragment) getSupportFragmentManager()
+                .findFragmentByTag("MASTER");
+        if (masterFragment == null) {
+            masterFragment = new MasterFragment();
+            fragmentTransaction.add(R.id.frameLayout, masterFragment, "MASTER");
+        }
+        DetailFragment detailFragment = (DetailFragment)
+                getSupportFragmentManager().findFragmentById(R.id.frameLayoutDetail);
+        if (detailFragment != null) {
+            fragmentTransaction.remove(detailFragment);
+        }
+        fragmentTransaction.commit();
+    } else {
+        mDualPane = true;
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        masterFragment = (MasterFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.frameLayoutMaster);
+        if (masterFragment == null) {
+            masterFragment = new MasterFragment();
+            fragmentTransaction.add(R.id.frameLayoutMaster, masterFragment);
+        }
+        DetailFragment detailFragment = (DetailFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.frameLayoutDetail);
+        if (detailFragment == null) {
+            detailFragment = new DetailFragment();
+            fragmentTransaction.add(R.id.frameLayoutDetail, detailFragment);
+        }
+        fragmentTransaction.commit();
+    }
+    masterFragment.setOnMasterSelectedListener(new MasterFragment.OnMasterSelectedListener() {
+        @Override
+        public void onItemSelected(String countryName) {
+            sendCountryName(countryName);
+        }
+    });
+}
+```
 
 1.  最后要添加的代码是`sendCountryName()`方法，它处理将国家名称发送到`DetailFragment`：
 
-[PRE31]
+```kt
+private void sendCountryName(String countryName) {
+    DetailFragment detailFragment;
+    if (mDualPane) {
+        //Two pane layout
+        detailFragment = (DetailFragment) getSupportFragmentManager().findFragmentById(R.id.frameLayoutDetail);
+        detailFragment.showSelectedCountry(countryName);
+    } else {
+        // Single pane layout
+        detailFragment = new DetailFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString(DetailFragment.KEY_COUNTRY_NAME, countryName);
+        detailFragment.setArguments(bundle);
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.replace(R.id.frameLayout, detailFragment);
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+    }
+}
+```
 
 1.  在设备或模拟器上运行程序。
 
 # 它是如何工作的...
 
-我们首先创建`MasterFragment`。在我们使用的Master/Detail模式中，这通常代表一个列表，所以我们通过扩展`ListFragment`来创建一个列表。`ListFragment`是`ListActivity`的Fragment等价物。除了扩展自Fragment之外，它基本上是相同的。
+我们首先创建`MasterFragment`。在我们使用的 Master/Detail 模式中，这通常代表一个列表，所以我们通过扩展`ListFragment`来创建一个列表。`ListFragment`是`ListActivity`的 Fragment 等价物。除了扩展自 Fragment 之外，它基本上是相同的。
 
-如菜谱介绍中所述，我们不应尝试直接与其他Fragment通信。
+如菜谱介绍中所述，我们不应尝试直接与其他 Fragment 通信。
 
 为了提供一个通信列表项选择的方式，我们暴露了接口：`OnMasterSelectedListener`。每次在列表中选择一个项目时，我们都调用`onItemSelected()`。
 
-在Fragment之间传递数据的大部分工作是在宿主活动中完成的，但最终，接收Fragment需要一种接收数据的方式。`DetailFragment`以两种方式支持这一点：
+在 Fragment 之间传递数据的大部分工作是在宿主活动中完成的，但最终，接收 Fragment 需要一种接收数据的方式。`DetailFragment`以两种方式支持这一点：
 
 +   在创建时传递国家名称到参数包中
 
 +   一个公开的方法，供活动直接调用。
 
-当活动创建Fragment时，它也会创建一个包含我们想要发送的数据的bundle。在这里，我们使用在第7步中定义的`KEY_COUNTRY_NAME`添加国家名称。我们在`onViewCreated()`中使用`getArguments()`检索这个bundle。如果在bundle中找到该键，它将通过`showSelectedCountry()`方法提取并显示。这是活动如果Fragment已经可见（在双面板布局中）将直接调用的相同方法。
+当活动创建 Fragment 时，它也会创建一个包含我们想要发送的数据的 bundle。在这里，我们使用在第 7 步中定义的`KEY_COUNTRY_NAME`添加国家名称。我们在`onViewCreated()`中使用`getArguments()`检索这个 bundle。如果在 bundle 中找到该键，它将通过`showSelectedCountry()`方法提取并显示。这是活动如果 Fragment 已经可见（在双面板布局中）将直接调用的相同方法。
 
-这个菜谱的大部分工作都在活动中。我们创建了两个布局：一个用于纵向，一个用于横向。当处于横向方向时，Android将选择在第12步中创建的`res/layout-land`目录中的横向布局。这两个布局都使用一个`<FrameLayout>`占位符，类似于之前的练习。我们在`onCreate()`和`sendCountryName()`中管理Fragment。
+这个菜谱的大部分工作都在活动中。我们创建了两个布局：一个用于纵向，一个用于横向。当处于横向方向时，Android 将选择在第 12 步中创建的`res/layout-land`目录中的横向布局。这两个布局都使用一个`<FrameLayout>`占位符，类似于之前的练习。我们在`onCreate()`和`sendCountryName()`中管理 Fragment。
 
-在`onCreate()`中，我们通过检查当前布局是否包含`frameLayout`视图来设置`mDualPane`标志。如果找到`frameLayout`（意味着它不是null），那么我们只有一个面板，因为`frameLayout`仅在纵向布局中定义。如果没有找到`frameLayout`，那么我们有两个`<FrameLayout>`元素：一个用于`MasterFragment`，另一个用于`DetailFragment`。
+在`onCreate()`中，我们通过检查当前布局是否包含`frameLayout`视图来设置`mDualPane`标志。如果找到`frameLayout`（意味着它不是 null），那么我们只有一个面板，因为`frameLayout`仅在纵向布局中定义。如果没有找到`frameLayout`，那么我们有两个`<FrameLayout>`元素：一个用于`MasterFragment`，另一个用于`DetailFragment`。
 
 在 `onCreate()` 方法中，我们最后要做的事情是通过创建匿名回调来设置 `MasterFragment` 监听器，该回调将国家名称传递给 `sendCountryName()` 方法。`sendCountryName()` 方法是数据实际上传递给 `DetailFragment` 的地方。如果我们处于纵向（或单面板）模式，我们需要创建 `DetailFragment` 并替换现有的 `MasterFragment`。这就是我们创建包含国家名称的 bundle 并调用 `setArguments()` 的地方。注意我们在提交事务之前调用 `addToBackStack()`？这允许返回键将用户带回列表（`MasterFragment`）。如果我们处于横向模式，`DetailFragment` 已经可见，所以我们直接调用 `howSelectedCountry()` 公共方法。
 
@@ -312,7 +613,9 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 在 `MasterFragment` 中，在发送 `onItemSelected()` 事件之前，我们使用以下代码检查监听器是否为空：
 
-[PRE32]
+```kt
+if (mOnMasterSelectedListener != null) 
+```
 
 虽然设置回调以接收事件是活动的职责，但我们不希望如果没有监听器，代码会崩溃。另一种方法是在 Fragment 的 `onAttach()` 回调中验证活动是否扩展了我们的接口。
 
@@ -320,9 +623,9 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 # 参见
 
-+   对于 `RecyclerView` 示例，请参阅 [第 2 章](0b95f21f-496a-48ca-900c-32d887d3a3fe.xhtml) 的 *RecyclerView replaces ListView* 部分，*布局*，以及 [第 4 章](271b832c-648f-4a10-967e-aac99272e9a9.xhtml) 的 *Using Contextual Batch Mode with RecyclerView* 部分，*菜单和操作模式*。
++   对于 `RecyclerView` 示例，请参阅 第二章 的 *RecyclerView replaces ListView* 部分，*布局*，以及 第四章 的 *Using Contextual Batch Mode with RecyclerView* 部分，*菜单和操作模式*。
 
-+   有关资源目录的更多信息，请参阅 [第 3 章](3adebbef-b8f1-41ca-ba6c-c56329c9ea53.xhtml) 的 *Selecting themes based on the Android version* 部分，*视图、小部件和样式*。
++   有关资源目录的更多信息，请参阅 第三章 的 *Selecting themes based on the Android version* 部分，*视图、小部件和样式*。
 
 # 处理 Fragment 返回栈
 
@@ -340,35 +643,121 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 1.  创建一个新的布局文件 `fragment_one.xml`，其 XML 如下：
 
-[PRE33]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent">
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fragment One"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout>
+```
 
 1.  创建第二个 Fragment 布局文件 `fragment_two.xml`，其 XML 与上面相同，但更改以下文本属性：
 
-[PRE34]
+```kt
+android:text="Fragment Two"
+```
 
 1.  在创建布局文件后，是时候创建片段的类了。创建一个新的 Java 类 `FragmentOne.java`，代码如下：
 
-[PRE35]
+```kt
+public class FragmentOne extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_one,
+                container, false);
+    }
+} 
+```
 
 1.  创建第二个名为 `FragmentTwo` 的 Java 类，代码如下：
 
-[PRE36]
+```kt
+public class FragmentTwo extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_two,
+                container, false);
+    }
+}
+```
 
 1.  现在，我们需要将容器和按钮添加到 MainActivity 布局中。按如下方式更改 `activity_main.xml`：
 
-[PRE37]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <FrameLayout
+        android:id="@+id/frameLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/buttonNext"
+        android:layout_alignParentTop="true">
+    </FrameLayout>
+    <Button
+        android:id="@+id/buttonNext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Next"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"/>
+</RelativeLayout>
+```
 
 1.  在创建 Fragment 并将容器添加到布局后，我们现在可以编写操作 Fragment 的代码。打开 `MainActivity.java` 并在类构造函数下方添加以下代码：
 
-[PRE38]
+```kt
+Button mButtonNext;
+```
 
 1.  将以下代码添加到现有的 `onCreate()` 方法中，在 `setContentView()` 下方：
 
-[PRE39]
+```kt
+mButtonNext = findViewById(R.id.buttonNext);
+mButtonNext.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View view) {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction =
+                fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.frameLayout,  new FragmentTwo());
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+        mButtonNext.setVisibility(View.INVISIBLE);
+    }
+});
+
+FragmentManager fragmentManager = getSupportFragmentManager();
+FragmentTransaction fragmentTransaction =
+        fragmentManager.beginTransaction();
+fragmentTransaction.add(R.id.frameLayout,  new FragmentOne());
+fragmentTransaction.addToBackStack(null);
+fragmentTransaction.commit();
+```
 
 1.  最后要实现的方法是 `onBackPressed()` 回调：
 
-[PRE40]
+```kt
+@Override
+public void onBackPressed() {
+    if(getSupportFragmentManager().getBackStackEntryCount() == 2 ) {
+        super.onBackPressed();
+        mButtonNext.setVisibility(View.VISIBLE);
+    } else {
+        finish();
+    }
+}
+```
 
 1.  在设备或模拟器上运行程序。
 
@@ -380,26 +769,53 @@ FragmentManager 提供了在运行时使用 FragmentTransaction 添加、删除�
 
 在处理返回栈的基本知识覆盖后，现在是时候讨论另一个回调：`onBackStackChanged()`。这是您可以在栈发生变化时实现自定义行为的地方。一个常见的例子是将主页图标更改为返回箭头。当我们设置父属性（在 AndroidManifest 中）时，我们自动获得 Activity 的这种行为，但 Android 并不会为 Fragment 做这件事。如果我们想在 `FragmentTwo` 上有一个返回箭头，请将此行代码添加到 NextButton 的 `onClick()` 中：
 
-[PRE41]
+```kt
+getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+```
 
 如果你现在运行应用，当你进入`FragmentTwo`时，你会看到返回箭头。问题是，返回箭头实际上并没有做任何事情。你可能注意到的下一个问题是，如果你使用返回键，当你返回到`FragmentOne`时，你仍然会看到返回箭头。
 
 为了使返回箭头生效，将以下代码添加到`MainActivity`中：
 
-[PRE42]
+```kt
+@Override
+public boolean onOptionsItemSelected(MenuItem menuItem) {
+    if (menuItem.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
+    } else {
+        return super.onOptionsItemSelected(menuItem);
+    }
+}
+```
 
-现在应用将响应返回箭头，并将其与返回键同等对待。那么第二个问题呢？主页图标仍然显示返回箭头。这就是我们可以使用`onBackStackChanged()`回调的地方。我们不需要像之前那样修改NextButton的`onClick()`方法，我们可以将所有代码放入`onBackStackChanged()`中。
+现在应用将响应返回箭头，并将其与返回键同等对待。那么第二个问题呢？主页图标仍然显示返回箭头。这就是我们可以使用`onBackStackChanged()`回调的地方。我们不需要像之前那样修改 NextButton 的`onClick()`方法，我们可以将所有代码放入`onBackStackChanged()`中。
 
 要实现这个功能，我们需要在类定义中实现`OnBackStackChangedListener`接口。将`MainActivity`的声明修改如下：
 
-[PRE43]
+```kt
+public class MainActivity extends AppCompatActivity
+        implements FragmentManager.OnBackStackChangedListener {
+```
 
 然后将此行代码添加到`onCreate()`方法中（在`setContentView()`下方）以添加监听器：
 
-[PRE44]
+```kt
+getSupportFragmentManager().addOnBackStackChangedListener(this);
+```
 
 现在，我们可以实现`onBackStackChanged()`回调函数：
 
-[PRE45]
+```kt
+@Override
+public void onBackStackChanged() {
+    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.frameLayout);
+    if (fragment instanceof FragmentOne) {
+        getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+    } else if (fragment instanceof FragmentTwo) {
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    }
+}
+```
 
 现在当你运行应用并进入`FragmentTwo`时，你会看到返回箭头。你可以点击返回箭头图标或使用返回键返回到第一个屏幕。多亏了`onBackStackChanged()`回调，当你处于`FragmentOne`时，你不会看到返回箭头。

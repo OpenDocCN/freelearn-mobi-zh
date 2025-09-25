@@ -40,11 +40,25 @@ Android 框架提供了几个动画系统，以简化在您的应用程序中包
 
 这里有一个简单的示例，演示了如何使用视图动画来“闪烁”视图（按钮按下的简单模拟）：
 
-[PRE0]
+```kt
+Animation blink =AnimationUtils.loadAnimation(this,R.anim.blink); 
+view.startAnimation(blink); 
+```
 
 以下是位于 `res/anim` 文件夹中的 `blink.xml` 资源文件的目录内容：
 
-[PRE1]
+```kt
+<?xml version="1.0" encoding="utf-8"?> 
+<set > 
+    <alpha android:fromAlpha="1.0" 
+        android:toAlpha="0.0" 
+        android:background="#000000" 
+        android:interpolator="@android:anim/linear_interpolator" 
+        android:duration="100" 
+        android:repeatMode="restart" 
+        android:repeatCount="0"/> 
+</set> 
+```
 
 如您所见，创建此动画非常简单，因此如果视图动画实现了您的目标，请使用它。当它不符合您的需求时，转向属性动画系统。我们将通过在 *使用片段创建卡片翻转动画* 和 *使用自定义过渡创建缩放动画* 菜谱中使用新的 `objectAnimator` 来演示属性动画。
 
@@ -88,7 +102,7 @@ Android 框架提供了几个动画系统，以简化在您的应用程序中包
 
 在 Android Studio 中创建一个新的项目，并将其命名为 `LoadLargeImage`。使用默认的 Phone & Tablet 选项，并在提示活动类型时选择 Empty Activity。
 
-对于这个菜谱，我们需要一张大图。我们转向 Unsplash.com 下载了一张免费图片，([https://unsplash.com](https://unsplash.com))，尽管任何大（多兆字节）的图片都适用。
+对于这个菜谱，我们需要一张大图。我们转向 Unsplash.com 下载了一张免费图片，([`unsplash.com`](https://unsplash.com))，尽管任何大（多兆字节）的图片都适用。
 
 # 如何操作...
 
@@ -98,15 +112,44 @@ Android 框架提供了几个动画系统，以简化在您的应用程序中包
 
 1.  打开 `activity_main.xml` 并将现有的 `TextView` 替换为以下 `ImageView`：
 
-[PRE2]
+```kt
+<android.support.v7.widget.AppCompatImageView
+    android:id="@+id/imageViewThumbnail"
+    android:layout_width="100dp"
+    android:layout_height="100dp"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  现在，打开 `MainActivity.java` 并添加这个方法，我们稍后会解释：
 
-[PRE3]
+```kt
+public Bitmap loadSampledResource(int imageID, int targetHeight, int targetWidth) {
+    final BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inJustDecodeBounds = true;
+    BitmapFactory.decodeResource(getResources(), imageID, options);
+    final int originalHeight = options.outHeight;
+    final int originalWidth = options.outWidth;
+    int inSampleSize = 1;
+    while ((originalHeight / (inSampleSize *2)) > targetHeight
+            && (originalWidth / (inSampleSize *2)) > targetWidth) {
+        inSampleSize *= 2;
+    }
+    options.inSampleSize = inSampleSize;
+    options.inJustDecodeBounds = false;
+    return BitmapFactory.decodeResource(getResources(), imageID, options);
+}
+```
 
 1.  将以下代码添加到现有的 `onCreate()` 方法中：
 
-[PRE4]
+```kt
+AppCompatImageView imageView = findViewById(R.id.imageViewThumbnail);
+imageView.setImageBitmap(
+        loadSampledResource(R.drawable.miguel_henriques_789508_unsplash, 100, 100));
+```
 
 1.  在设备或模拟器上运行应用程序。
 
@@ -118,43 +161,53 @@ Android 框架提供了几个动画系统，以简化在您的应用程序中包
 
 将图像缩小四分之一）要计算`inSampleSize`，首先，我们需要知道图像的大小。我们可以使用`inJustDecodeBounds`属性如下：
 
-[PRE5]
+```kt
+options.inJustDecodeBounds = true; 
+```
 
 这告诉`BitmapFactory`获取图像尺寸而不实际存储图像内容。一旦我们有了图像大小，我们使用以下代码计算样本：
 
-[PRE6]
+```kt
+while ((originalHeight / (inSampleSize *2)) > targetHeight
+            && (originalWidth / (inSampleSize *2)) > targetWidth) {
+        inSampleSize *= 2;
+    }
+```
 
 这段代码的目的是确定最大的样本大小，不会将图像缩小到目标尺寸以下。要做到这一点，我们将样本大小加倍并检查是否超过目标尺寸。如果没有，我们保存加倍后的样本大小并重复。一旦减小后的尺寸低于目标尺寸，我们使用最后保存的`inSampleSize`。
 
-从`inSampleSize`文档（以下*参考以下内容*部分中的链接）中注意，解码器使用基于2的幂的最终值，因此任何其他值都将四舍五入到最接近的2的幂。
+从`inSampleSize`文档（以下*参考以下内容*部分中的链接）中注意，解码器使用基于 2 的幂的最终值，因此任何其他值都将四舍五入到最接近的 2 的幂。
 
 一旦我们有了样本大小，我们设置`inSampleSize`属性并将`inJustDecodeBounds`设置为`false`，以正常加载。以下是代码：
 
-[PRE7]
+```kt
+options.inSampleSize = inSampleSize; 
+options.inJustDecodeBounds = false; 
+```
 
-重要的是要注意，这个食谱说明了将任务应用到您自己的应用程序中的概念。加载和处理图像可能是一个耗时的操作，这可能导致您的应用程序停止响应。这不是一个好现象，可能会导致Android显示**应用程序无响应**（**ANR**）对话框。建议在后台线程上执行长时间任务以保持UI线程的响应。`AsyncTask`类可用于执行后台网络处理，但还有许多其他库可用（食谱末尾的链接）。
+重要的是要注意，这个食谱说明了将任务应用到您自己的应用程序中的概念。加载和处理图像可能是一个耗时的操作，这可能导致您的应用程序停止响应。这不是一个好现象，可能会导致 Android 显示**应用程序无响应**（**ANR**）对话框。建议在后台线程上执行长时间任务以保持 UI 线程的响应。`AsyncTask`类可用于执行后台网络处理，但还有许多其他库可用（食谱末尾的链接）。
 
 # 更多内容...
 
-重要的是要注意，我们传递给`loadSampledResource()`方法的`targetHeight`和`targetWidth`参数实际上并没有设置图像大小。如果您使用与我们相同的图像大小（4,000 x 6,000）运行应用程序，样本大小将为32，导致加载的图像大小为187 x 125。
+重要的是要注意，我们传递给`loadSampledResource()`方法的`targetHeight`和`targetWidth`参数实际上并没有设置图像大小。如果您使用与我们相同的图像大小（4,000 x 6,000）运行应用程序，样本大小将为 32，导致加载的图像大小为 187 x 125。
 
-如果您的布局需要特定大小的图像，您可以在布局文件中设置大小，或者您可以直接使用Bitmap类修改图像大小。
+如果您的布局需要特定大小的图像，您可以在布局文件中设置大小，或者您可以直接使用 Bitmap 类修改图像大小。
 
 # 参考以下内容
 
-+   开发者文档：BitmapFactory.inSampleSize() 在 [https://developer.android.com/reference/android/graphics/BitmapFactory.Options.html#inSampleSize](https://developer.android.com/reference/android/graphics/BitmapFactory.Options.html#inSampleSize)
++   开发者文档：BitmapFactory.inSampleSize() 在 [`developer.android.com/reference/android/graphics/BitmapFactory.Options.html#inSampleSize`](https://developer.android.com/reference/android/graphics/BitmapFactory.Options.html#inSampleSize)
 
-+   参考Glide在[https://github.com/bumptech/glide](https://github.com/bumptech/glide)
++   参考 Glide 在[`github.com/bumptech/glide`](https://github.com/bumptech/glide)
 
-+   参考Square的Picasso[https://square.github.io/picasso/](https://square.github.io/picasso/)
++   参考 Square 的 Picasso[`square.github.io/picasso/`](https://square.github.io/picasso/)
 
-+   参考Facebook的Fresco[https://github.com/facebook/fresco](https://github.com/facebook/fresco)
++   参考 Facebook 的 Fresco[`github.com/facebook/fresco`](https://github.com/facebook/fresco)
 
-+   检查[第15章](98c7bc7b-43e2-43de-aed4-fe2fb6dc72f3.xhtml)中的*AsyncTask*任务，*为应用商店准备您的应用*，以在后台线程上处理长时间运行的操作。
++   检查第十五章中的*AsyncTask*任务，*为应用商店准备您的应用*，以在后台线程上处理长时间运行的操作。
 
 # 过渡动画 – 定义场景并应用过渡
 
-Android过渡框架提供了以下功能：
+Android 过渡框架提供了以下功能：
 
 +   **组级动画**：动画应用于层次结构中的所有视图
 
@@ -178,7 +231,7 @@ Android过渡框架提供了以下功能：
 
 +   **结束场景**：结束视图（或`ViewGroup`）
 
-+   **Transitions**：Android为以下三种过渡提供了内置支持：
++   **Transitions**：Android 为以下三种过渡提供了内置支持：
 
     +   **自动过渡（默认过渡）**：淡出，移动，调整大小，然后淡入（按此顺序）
 
@@ -190,7 +243,7 @@ Android过渡框架提供了以下功能：
 
 以下是在使用以下类时，过渡框架的一些已知限制：
 
-+   **SurfaceView**：由于`SurfaceView`动画是在非UI线程上执行的，因此动画可能不正确，可能与应用程序不同步
++   **SurfaceView**：由于`SurfaceView`动画是在非 UI 线程上执行的，因此动画可能不正确，可能与应用程序不同步
 
 +   **TextView**：动画文本大小更改可能不会正确工作，导致文本跳转到最终状态
 
@@ -198,35 +251,104 @@ Android过渡框架提供了以下功能：
 
 +   **TextureView**：某些过渡可能无法工作
 
-本教程提供了一个关于使用过渡动画系统的快速教程。我们将从定义场景和过渡资源开始，然后应用过渡，从而创建动画。以下步骤将指导您在XML中创建资源，因为它们通常是推荐的。资源也可以通过代码创建，我们将在
+本教程提供了一个关于使用过渡动画系统的快速教程。我们将从定义场景和过渡资源开始，然后应用过渡，从而创建动画。以下步骤将指导您在 XML 中创建资源，因为它们通常是推荐的。资源也可以通过代码创建，我们将在
 
 在*更多内容*部分讨论。
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，并将其命名为`TransitionAnimation`。在目标Android设备对话框中，选择手机和平板选项，并将最小SDK选择为API 19（或更高）。当被提示选择活动类型时，选择空活动。
+在 Android Studio 中创建一个新的项目，并将其命名为`TransitionAnimation`。在目标 Android 设备对话框中，选择手机和平板选项，并将最小 SDK 选择为 API 19（或更高）。当被提示选择活动类型时，选择空活动。
 
 # 如何操作...
 
 下面是创建资源文件并应用过渡动画的步骤：
 
-1.  将现有的`activity.main.xml`布局替换为以下XML：
+1.  将现有的`activity.main.xml`布局替换为以下 XML：
 
-[PRE8]
+```kt
+<?xml version="1.0" encoding="utf-8"?> 
+<RelativeLayout  
 
-1.  使用以下XML创建一个名为`activity_main_end.xml`的新布局文件：
+    android:id="@+id/layout" 
+    android:layout_width="match_parent" 
+    android:layout_height="match_parent"> 
+    <TextView 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:text="Top" 
+        android:id="@+id/textViewTop" 
+        android:layout_alignParentTop="true" 
+        android:layout_centerHorizontal="true" /> 
+    <TextView 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:text="Bottom" 
+        android:id="@+id/textViewBottom" 
+        android:layout_alignParentBottom="true" 
+        android:layout_centerHorizontal="true" /> 
+    <Button 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:text="Go" 
+        android:id="@+id/button" 
+        android:layout_centerInParent="true" 
+        android:onClick="goAnimate"/> 
+</RelativeLayout> 
+```
 
-[PRE9]
+1.  使用以下 XML 创建一个名为`activity_main_end.xml`的新布局文件：
 
-1.  创建一个新的过渡资源目录（文件 | 新建 | Android资源目录，并将过渡作为资源类型选择）。
+```kt
+<?xml version="1.0" encoding="utf-8"?> 
+<RelativeLayout  
 
-1.  在`res/transition`文件夹中创建一个名为`transition_move.xml`的新文件，使用以下XML：
+    android:id="@+id/layout" 
+    android:layout_width="match_parent" 
+    android:layout_height="match_parent"> 
+    <TextView 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:text="Bottom" 
+        android:id="@+id/textViewBottom" 
+        android:layout_alignParentTop="true" 
+        android:layout_centerHorizontal="true" /> 
+    <TextView 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:text="Top" 
+        android:id="@+id/textViewTop" 
+        android:layout_alignParentBottom="true" 
+        android:layout_centerHorizontal="true" /> 
+    <Button 
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content" 
+        android:text="Go" 
+        android:id="@+id/button" 
+        android:layout_centerInParent="true"/> 
+</RelativeLayout> 
+```
 
-[PRE10]
+1.  创建一个新的过渡资源目录（文件 | 新建 | Android 资源目录，并将过渡作为资源类型选择）。
+
+1.  在`res/transition`文件夹中创建一个名为`transition_move.xml`的新文件，使用以下 XML：
+
+```kt
+<?xml version="1.0" encoding="utf-8"?> 
+<changeBounds xmlns:android=
+     "http://schemas.android.com/apk/res/android" />
+```
 
 1.  使用以下代码添加`goAnimate()`方法：
 
-[PRE11]
+```kt
+public void goAnimate(View view) {
+    ViewGroup root = findViewById(R.id.layout);
+    Scene scene = Scene.getSceneForLayout(root, R.layout.activity_main_end, this);
+    Transition transition = TransitionInflater.from(this)
+            .inflateTransition(R.transition.transition_move);
+    TransitionManager.go(scene, transition);
+}
+```
 
 1.  你已经准备好在设备或模拟器上运行应用程序了。
 
@@ -236,19 +358,28 @@ Android过渡框架提供了以下功能：
 
 +   创建起始场景：以下代码行将加载起始场景：
 
-[PRE12]
+```kt
+ViewGroup root = findViewById(R.id.layout); 
+```
 
 +   创建过渡效果：以下代码行将创建过渡效果：
 
-[PRE13]
+```kt
+Transition transition = TransitionInflater.from(this)
+            .inflateTransition(R.transition.transition_move);
+```
 
 +   定义结束场景：以下代码行将定义结束场景：
 
-[PRE14]
+```kt
+Scene scene = Scene.getSceneForLayout(root, R.layout.activity_main_end, this);
+```
 
 +   开始过渡：以下代码行将开始过渡：
 
-[PRE15]
+```kt
+TransitionManager.go(scene, transition); 
+```
 
 虽然简单，但这个菜谱的大部分工作都在创建必要的资源文件。
 
@@ -256,7 +387,27 @@ Android过渡框架提供了以下功能：
 
 现在，我们将查看如何仅使用代码创建相同的过渡动画（尽管我们仍然会使用初始的`activity_main.xml`布局文件）：
 
-[PRE16]
+```kt
+ViewGroup root = findViewById(R.id.layout);
+Scene scene = new Scene(root);
+
+Transition transition = new ChangeBounds();
+TransitionManager.beginDelayedTransition(root,transition);
+
+TextView textViewTop = findViewById(R.id.textViewTop);
+RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams)textViewTop.getLayoutParams();
+params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM,1);
+params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+textViewTop.setLayoutParams(params);
+
+TextView textViewBottom = findViewById(R.id.textViewBottom);
+params = (RelativeLayout.LayoutParams) textViewBottom.getLayoutParams();
+params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM,0);
+params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 1);
+textViewBottom.setLayoutParams(params);
+
+TransitionManager.go(scene);
+```
 
 我们仍然需要起始场景和结束场景以及过渡效果；唯一的区别在于我们如何创建资源。在之前的代码中，我们使用当前布局创建了起始场景。
 
@@ -264,9 +415,9 @@ Android过渡框架提供了以下功能：
 
 # 参见
 
-+   请参考[https://developer.android.com/guide/topics/resources/animation-resource.html](https://developer.android.com/guide/topics/resources/animation-resource.html)上的动画资源网页
++   请参考[`developer.android.com/guide/topics/resources/animation-resource.html`](https://developer.android.com/guide/topics/resources/animation-resource.html)上的动画资源网页
 
-# 使用传感器数据和RotateAnimation创建指南针
+# 使用传感器数据和 RotateAnimation 创建指南针
 
 在上一章中，我们演示了从物理设备传感器读取传感器数据。在那个菜谱中，我们使用了光传感器，因为环境传感器的数据通常不需要任何额外的处理。虽然获取磁场强度数据很容易，但这些数字本身并没有太多意义，当然也不
 
@@ -278,11 +429,11 @@ Android过渡框架提供了以下功能：
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，命名为`Compass`。使用默认的Phone & Tablet选项，并在提示活动类型时选择Empty Activity。
+在 Android Studio 中创建一个新的项目，命名为`Compass`。使用默认的 Phone & Tablet 选项，并在提示活动类型时选择 Empty Activity。
 
-我们需要一个用于指南针指示器的图像。在www.Pixabay.Com上有一个图像，可以通过此链接为我们工作：
+我们需要一个用于指南针指示器的图像。在 www.Pixabay.Com 上有一个图像，可以通过此链接为我们工作：
 
-[https://pixabay.com/en/geography-map-compass-rose-plot-42608/](https://pixabay.com/en/geography-map-compass-rose-plot-42608/)。
+[`pixabay.com/en/geography-map-compass-rose-plot-42608/`](https://pixabay.com/en/geography-map-compass-rose-plot-42608/)。
 
 虽然不是必需的，但此图像具有透明背景，在旋转图像时看起来更好。
 
@@ -294,33 +445,111 @@ Android过渡框架提供了以下功能：
 
 1.  打开`activity_main.xml`，将现有的`TextView`替换为以下`ImageView`：
 
-[PRE17]
+```kt
+<android.support.v7.widget.AppCompatImageView
+    android:id="@+id/imageViewCompass"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_centerInParent="true"
+    android:src="img/compass"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  现在，打开`MainActivity.java`，添加以下全局变量声明：
 
-[PRE18]
+```kt
+private SensorManager mSensorManager;
+private Sensor mMagnetometer;
+private Sensor mAccelerometer;
+private AppCompatImageView mImageViewCompass;
+private float[] mGravityValues=new float[3];
+private float[] mAccelerationValues=new float[3];
+private float[] mRotationMatrix=new float[9];
+private float mLastDirectionInDegrees = 0f;
+```
 
 1.  将以下`SensorEventListener`类添加到`MainActivity`类中：
 
-[PRE19]
+```kt
+private SensorEventListener mSensorListener = new SensorEventListener() {
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        calculateCompassDirection(event);
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int
+            accuracy) {
+        //Nothing to do 
+    }
+};
+```
 
 1.  如下重写`onResume()`和`onPause()`方法：
 
-[PRE20]
+```kt
+@Override
+protected void onResume() {
+    super.onResume();
+    mSensorManager.registerListener(mSensorListener, mMagnetometer, 
+            SensorManager.SENSOR_DELAY_FASTEST);    
+    mSensorManager.registerListener(mSensorListener, mAccelerometer, 
+            SensorManager.SENSOR_DELAY_FASTEST);
+}
+
+@Override
+protected void onPause() {
+    super.onPause();
+    mSensorManager.unregisterListener(mSensorListener);
+}
+```
 
 1.  将以下代码添加到现有的`onCreate()`方法中：
 
-[PRE21]
+```kt
+mImageViewCompass = findViewById(R.id.imageViewCompass);
+mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+mMagnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+```
 
 1.  最终代码执行实际的计算和动画：
 
-[PRE22]
+```kt
+private void calculateCompassDirection(SensorEvent event) {
+    switch (event.sensor.getType()) {
+        case Sensor.TYPE_ACCELEROMETER:
+            mAccelerationValues = event.values.clone();
+            break;
+        case Sensor.TYPE_MAGNETIC_FIELD:
+            mGravityValues = event.values.clone();
+            break;
+    }
+    boolean success = SensorManager.getRotationMatrix(mRotationMatrix, null,
+            mAccelerationValues, mGravityValues);
+    if (success) {
+        float[] orientationValues = new float[3];
+        SensorManager.getOrientation(mRotationMatrix, orientationValues);
+        float azimuth = (float) Math.toDegrees(-orientationValues[0]);
+        RotateAnimation rotateAnimation = new RotateAnimation(mLastDirectionInDegrees, azimuth,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setDuration(50);
+        rotateAnimation.setFillAfter(true);
+        mImageViewCompass.startAnimation(rotateAnimation);
+        mLastDirectionInDegrees = azimuth;
+    }
+}
+```
 
 1.  您已准备好运行应用程序。虽然您可以在模拟器上运行此应用程序，但没有加速度计和磁力计，您将看不到指南针移动。
 
 # 它是如何工作的...
 
-由于我们已经在*读取传感器数据 - 使用Android传感器框架*部分（在前一章）中介绍了读取传感器数据，因此我们不会重复解释传感器框架，而是直接跳到`calculateCompassDirection()`方法。
+由于我们已经在*读取传感器数据 - 使用 Android 传感器框架*部分（在前一章）中介绍了读取传感器数据，因此我们不会重复解释传感器框架，而是直接跳到`calculateCompassDirection()`方法。
 
 我们直接从`onSensorChanged()`回调中调用此方法。由于我们使用同一个类来处理磁力计和加速度计的传感器回调，我们首先检查在`SensorEvent`中报告的是哪个传感器。然后，我们调用`SensorManager.getRotationMatrix()`，传入最后一批传感器数据。如果计算成功，它将返回`RotationMatrix`，我们使用它来调用`SensorManager.getOrientation()`方法。请注意，`getOrientation()`将在`orientationValues`数组中返回以下数据：
 
@@ -332,7 +561,7 @@ Android过渡框架提供了以下功能：
 
 方位角以弧度为单位报告，方向相反，因此我们反转符号并使用`Math.toDegrees()`将其转换为度数。方位角表示北方的方向，因此我们在`RotateAnimation`中使用它。
 
-使用`SensorManager`已经完成的数学计算，实际的指南针动画非常简单。我们使用前一个方向和新的方向创建`RotateAnimation`。我们使用`Animation.RELATIVE_TO_SELF`标志和0.5f（或50%）将图像的中心设置为旋转点。在调用`startAnimation()`更新指南针之前，我们使用`setDuration()`和`setFillAfter(true)`设置动画持续时间。（使用`true`表示我们希望在动画完成后将图像保留“原样”；否则，图像将重置回原始图像。）最后，我们保存下一次传感器更新时的方位角。
+使用`SensorManager`已经完成的数学计算，实际的指南针动画非常简单。我们使用前一个方向和新的方向创建`RotateAnimation`。我们使用`Animation.RELATIVE_TO_SELF`标志和 0.5f（或 50%）将图像的中心设置为旋转点。在调用`startAnimation()`更新指南针之前，我们使用`setDuration()`和`setFillAfter(true)`设置动画持续时间。（使用`true`表示我们希望在动画完成后将图像保留“原样”；否则，图像将重置回原始图像。）最后，我们保存下一次传感器更新时的方位角。
 
 # 还有更多...
 
@@ -346,7 +575,7 @@ Android过渡框架提供了以下功能：
 
 +   请参阅 [http://developer.android.com/reference/android/hardware/SensorManager.html#getOrientation(float[], float[])](http://developer.android.com/reference/android/hardware/SensorManager.html#getOrientation(float%5B%5D,%20float%5B%5D)) 的 getOrientation() 开发者文档。
 
-+   请参阅 [http://developer.android.com/reference/android/view/animation/RotateAnimation.html](http://developer.android.com/reference/android/view/animation/RotateAnimation.html) 的 RotateAnimation 开发者文档。
++   请参阅 [`developer.android.com/reference/android/view/animation/RotateAnimation.html`](http://developer.android.com/reference/android/view/animation/RotateAnimation.html) 的 RotateAnimation 开发者文档。
 
 # 使用 ViewPager 创建幻灯片放映
 
@@ -368,59 +597,150 @@ Android过渡框架提供了以下功能：
 
 1.  使用以下 XML 创建一个新的布局文件 `fragment_slide.xml`：
 
-[PRE23]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <android.support.v7.widget.AppCompatImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/imageView"
+        android:layout_gravity="center_horizontal" />
+</LinearLayout>
+```
 
 1.  现在，创建一个新的名为 `SlideFragment.java` 的 Java 类。它将扩展 `Fragment` 如下：
 
-[PRE24]
+```kt
+public class SlideFragment extends Fragment { 
+```
 
 +   从支持库导入，结果如下导入：
 
-[PRE25]
+```kt
+import android.support.v4.app.Fragment; 
+```
 
 1.  添加以下全局声明：
 
-[PRE26]
+```kt
+private int mImageResourceID; 
+```
 
 1.  添加以下空的默认片段构造函数：
 
-[PRE27]
+```kt
+public SlideFragment() {}
+```
 
 1.  添加以下方法以保存图像资源 ID：
 
-[PRE28]
+```kt
+public void setImage(int resourceID) { 
+    mImageResourceID=resourceID; 
+} 
+```
 
 1.  如下重写 `onCreateView()`：
 
-[PRE29]
+```kt
+@Override
+public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
+    ViewGroup rootView = (ViewGroup) inflater.inflate(R.layout.fragment_slide, container, false);
+    AppCompatImageView imageView = rootView.findViewById(R.id.imageView);
+    imageView.setImageResource(mImageResourceID);
+    return rootView;
+}
+```
 
 1.  我们的主要活动将只显示一个 `ViewPager`。打开 `activity_main.xml` 并将文件内容替换为以下内容：
 
-[PRE30]
+```kt
+<android.support.v4.view.ViewPager
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/viewPager"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+```
 
 1.  现在，打开 `MainActivity.java` 并添加以下全局声明：
 
-[PRE31]
+```kt
+private final int PAGE_COUNT=4; 
+private ViewPager mViewPager; 
+private PagerAdapter mPagerAdapter; 
+```
 
 +   使用以下导入：
 
-[PRE32]
+```kt
+import android.support.v4.view.PagerAdapter; 
+import android.support.v4.view.ViewPager; 
+```
 
 1.  在 `MainActivity` 类中创建以下子类：
 
-[PRE33]
+```kt
+private class SlideAdapter extends FragmentStatePagerAdapter {
+    public SlideAdapter(FragmentManager fm) {
+        super(fm);
+    }
+    @Override
+    public Fragment getItem(int position) {
+        SlideFragment slideFragment = new SlideFragment();
+        switch (position) {
+            case 0:
+                slideFragment.setImage(R.drawable.slide_0);
+                break;
+            case 1:
+                slideFragment.setImage(R.drawable.slide_1);
+                break;
+            case 2:
+                slideFragment.setImage(R.drawable.slide_2);
+                break;
+            case 3:
+                slideFragment.setImage(R.drawable.slide_3);
+                break;
+        }
+        return slideFragment;
+    }
+    @Override
+    public int getCount() {
+        return PAGE_COUNT;
+    }
+}
+```
 
 +   使用以下导入：
 
-[PRE34]
+```kt
+import android.support.v4.app.Fragment; 
+import android.support.v4.app.FragmentManager; 
+import android.support.v4.app.FragmentStatePagerAdapter; 
+```
 
 11. 在 `MainActivity` 类中重写 `onBackPressed()` 如下：
 
-[PRE35]
+```kt
+@Override
+public void onBackPressed() {
+    if (mViewPager.getCurrentItem() == 0) {
+        super.onBackPressed();
+    } else {
+        mViewPager.setCurrentItem(mViewPager.getCurrentItem() - 1);
+    }
+}
+```
 
 12. 将以下代码添加到 `onCreate()` 方法中：
 
-[PRE36]
+```kt
+mViewPager = findViewById(R.id.viewPager);
+mPagerAdapter = new SlideAdapter(getSupportFragmentManager());
+mViewPager.setAdapter(mPagerAdapter);
+```
 
 13. 在设备或模拟器上运行应用程序。
 
@@ -448,7 +768,7 @@ Android过渡框架提供了以下功能：
 
 # 参见
 
-+   请参阅 Android ViewPager 文档，[http://developer.android.com/reference/android/support/v4/view/ViewPager.html](http://developer.android.com/reference/android/support/v4/view/ViewPager.html)
++   请参阅 Android ViewPager 文档，[`developer.android.com/reference/android/support/v4/view/ViewPager.html`](http://developer.android.com/reference/android/support/v4/view/ViewPager.html)
 
 +   请参阅 *创建自定义缩放动画* 菜谱以获取创建自定义动画的示例
 
@@ -466,9 +786,9 @@ Android过渡框架提供了以下功能：
 
 对于玩牌的前后图像，我们在 [www.pixabay.com](http://www.pixabay.com) 找到了以下图像：
 
-+   [https://pixabay.com/en/ace-hearts-playing-cards-poker-28357/](https://pixabay.com/en/ace-hearts-playing-cards-poker-28357/)
++   [`pixabay.com/en/ace-hearts-playing-cards-poker-28357/`](https://pixabay.com/en/ace-hearts-playing-cards-poker-28357/)
 
-+   [https://pixabay.com/en/card-game-deck-of-cards-card-game-48978/](https://pixabay.com/en/card-game-deck-of-cards-card-game-48978/)
++   [`pixabay.com/en/card-game-deck-of-cards-card-game-48978/`](https://pixabay.com/en/card-game-deck-of-cards-card-game-48978/)
 
 # 如何操作...
 
@@ -476,67 +796,222 @@ Android过渡框架提供了以下功能：
 
 1.  一旦你有了卡片的正反两面图像，将它们复制到`res/drawable`文件夹中，分别命名为`card_front.jpg`和`card_back.jpg`（如果图像的原始文件扩展名不同，请保持原始文件扩展名）。
 
-1.  创建一个动画资源目录：`res/animator`。（在Android Studio中，转到文件 | 新建 | Android资源目录。当新建Android资源对话框显示时，在资源类型下拉列表中选择`animator`。）
+1.  创建一个动画资源目录：`res/animator`。（在 Android Studio 中，转到文件 | 新建 | Android 资源目录。当新建 Android 资源对话框显示时，在资源类型下拉列表中选择`animator`。）
 
-1.  在`res/animator`中使用以下XML创建`card_flip_left_enter.xml`：
+1.  在`res/animator`中使用以下 XML 创建`card_flip_left_enter.xml`：
 
-[PRE37]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:valueFrom="1.0"
+        android:valueTo="0.0"
+        android:propertyName="alpha"
+        android:duration="0" />
+    <objectAnimator
+        android:valueFrom="-180"
+        android:valueTo="0"
+        android:propertyName="rotationY"
+        android:interpolator="@android:interpolator/accelerate_decelerate"        
+        android:duration="@integer/card_flip_duration_full"/>
+    <objectAnimator
+        android:valueFrom="0.0"
+        android:valueTo="1.0"
+        android:propertyName="alpha"
+        android:startOffset="@integer/card_flip_duration_half"
+        android:duration="1" />
+</set>
+```
 
-1.  在`res/animator`中使用以下XML创建`card_flip_left_exit.xml`：
+1.  在`res/animator`中使用以下 XML 创建`card_flip_left_exit.xml`：
 
-[PRE38]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:valueFrom="0"
+        android:valueTo="180"
+        android:propertyName="rotationY"
+        android:interpolator="@android:interpolator/accelerate_decelerate"
+        android:duration="@integer/card_flip_duration_full"/>
+    <objectAnimator
+        android:valueFrom="1.0"
+        android:valueTo="0.0"
+        android:propertyName="alpha"
+        android:startOffset="@integer/card_flip_duration_half"
+        android:duration="1" />
+</set>
+```
 
-1.  在`res/animator`中使用以下XML创建`card_flip_right_enter.xml`：
+1.  在`res/animator`中使用以下 XML 创建`card_flip_right_enter.xml`：
 
-[PRE39]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:valueFrom="1.0"
+        android:valueTo="0.0"
+        android:propertyName="alpha"
+        android:duration="0" />
+    <objectAnimator
+        android:valueFrom="180"
+        android:valueTo="0"
+        android:propertyName="rotationY"
+        android:interpolator="@android:interpolator/accelerate_decelerate"        
+        android:duration="@integer/card_flip_duration_full" />
+    <objectAnimator
+        android:valueFrom="0.0"
+        android:valueTo="1.0"
+        android:propertyName="alpha"
+        android:startOffset="@integer/card_flip_duration_half"
+        android:duration="1" />
+</set>
+```
 
-1.  在`res/animator`中使用以下XML创建`card_flip_right_exit.xml`：
+1.  在`res/animator`中使用以下 XML 创建`card_flip_right_exit.xml`：
 
-[PRE40]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:valueFrom="0"
+        android:valueTo="-180"
+        android:propertyName="rotationY"
+        android:interpolator="@android:interpolator/accelerate_decelerate"        
+        android:duration="@integer/card_flip_duration_full" />
+    <objectAnimator
+        android:valueFrom="1.0"
+        android:valueTo="0.0"
+        android:propertyName="alpha"
+        android:startOffset="@integer/card_flip_duration_half"
+        android:duration="1" />
+</set>
+```
 
-1.  在`res/values`中创建一个新的资源文件，命名为`timing.xml`，使用以下XML：
+1.  在`res/values`中创建一个新的资源文件，命名为`timing.xml`，使用以下 XML：
 
-[PRE41]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="card_flip_duration_full">1000</integer>
+    <integer name="card_flip_duration_half">500</integer>
+</resources>
+```
 
-1.  在`res/layout`中使用以下XML创建一个新的文件，命名为`fragment_card_front.xml`：
+1.  在`res/layout`中使用以下 XML 创建一个新的文件，命名为`fragment_card_front.xml`：
 
-[PRE42]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.AppCompatImageView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:src="img/card_front"
+    android:scaleType="centerCrop" />
+```
 
-1.  在`res/layout`中使用以下XML创建一个新的文件，命名为`fragment_card_back.xml`：
+1.  在`res/layout`中使用以下 XML 创建一个新的文件，命名为`fragment_card_back.xml`：
 
-[PRE43]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.AppCompatImageView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:src="img/card_back"
+    android:scaleType="centerCrop" /> 
+```
 
-1.  使用以下代码创建一个新的Java类`CardFrontFragment`：
+1.  使用以下代码创建一个新的 Java 类`CardFrontFragment`：
 
-[PRE44]
+```kt
+public class CardFrontFragment extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, 
+                             Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_card_front, container, false);
+    }
+}
+```
 
-1.  使用以下代码创建一个新的Java类`CardBackFragment`：
+1.  使用以下代码创建一个新的 Java 类`CardBackFragment`：
 
-[PRE45]
+```kt
+public class CardBackFragment extends Fragment {
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, 
+                             Bundle savedInstanceState) {        
+        return inflater.inflate(R.layout.fragment_card_back, container, false);
+    }
+} 
+```
 
-1.  将现有的`activity_main.xml`文件替换为以下XML：
+1.  将现有的`activity_main.xml`文件替换为以下 XML：
 
-[PRE46]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+```
 
 1.  打开`MainActivity.java`并添加以下全局声明：
 
-[PRE47]
+```kt
+boolean mShowingBack = false;
+```
 
 1.  将以下代码添加到现有的`onCreate()`方法中：
 
-[PRE48]
+```kt
+FrameLayout frameLayout = findViewById(R.id.container);
+frameLayout.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        flipCard();
+    }
+});
+
+if (savedInstanceState == null) {
+    getSupportFragmentManager()
+            .beginTransaction()
+            .add(R.id.container, new CardFrontFragment())
+            .commit();
+}
+```
 
 1.  添加以下方法，它处理实际的片段转换：
 
-[PRE49]
+```kt
+void flipCard() {
+    if (mShowingBack) {
+        mShowingBack = false;
+        getSupportFragmentManager().popBackStack();
+    } else {
+        mShowingBack = true;
+        getSupportFragmentManager()
+                .beginTransaction()
+                .setCustomAnimations(
+                        R.animator.card_flip_right_enter,
+                        R.animator.card_flip_right_exit,
+                        R.animator.card_flip_left_enter,
+                        R.animator.card_flip_left_exit)
+                .replace(R.id.container, new CardBackFragment())
+                .addToBackStack(null)
+                .commit();
+    }
+}
+```
 
 1.  你已经准备好在设备或模拟器上运行应用程序了。
 
 # 它是如何工作的...
 
-创建卡片翻页的大部分工作在于设置资源。由于我们想要卡片的正反两面视图，我们创建了两个包含适当图像的片段。当卡片被按下时，我们调用`flipCard()`方法。实际的动画由`setCustomAnimations()`处理。这就是我们传入在XML中定义的四个动画资源的地方。正如你所见，Android使这变得非常简单。
+创建卡片翻页的大部分工作在于设置资源。由于我们想要卡片的正反两面视图，我们创建了两个包含适当图像的片段。当卡片被按下时，我们调用`flipCard()`方法。实际的动画由`setCustomAnimations()`处理。这就是我们传入在 XML 中定义的四个动画资源的地方。正如你所见，Android 使这变得非常简单。
 
-需要注意的是，我们没有使用Support Library Fragment Manager，因为支持库不支持`objectAnimator`。如果你想支持Android 3.0之前的版本，你需要包含旧的动画资源，并在运行时检查操作系统版本，或者直接在代码中创建动画资源。（见下一道菜谱。）
+需要注意的是，我们没有使用 Support Library Fragment Manager，因为支持库不支持`objectAnimator`。如果你想支持 Android 3.0 之前的版本，你需要包含旧的动画资源，并在运行时检查操作系统版本，或者直接在代码中创建动画资源。（见下一道菜谱。）
 
 # 参见
 
@@ -554,7 +1029,7 @@ Android过渡框架提供了以下功能：
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，并将其命名为`ZoomAnimation`。使用默认的Phone & Tablet选项，并在提示活动类型时选择Empty Activity。
+在 Android Studio 中创建一个新的项目，并将其命名为`ZoomAnimation`。使用默认的 Phone & Tablet 选项，并在提示活动类型时选择 Empty Activity。
 
 对于本菜谱所需的图像，我们从[www.pixabay.com](http://www.pixabay.com)下载了一张图片并将其包含在项目源文件中，但你可以使用任何图像。
 
@@ -562,27 +1037,151 @@ Android过渡框架提供了以下功能：
 
 一旦您的图像准备就绪，请按照以下步骤操作：
 
-1.  将您的图像复制到`res/drawable`文件夹，并命名为`image.jpg`（如果不是JPEG图像，则保留原始文件扩展名）。
+1.  将您的图像复制到`res/drawable`文件夹，并命名为`image.jpg`（如果不是 JPEG 图像，则保留原始文件扩展名）。
 
-1.  现在，打开`activity_main.xml`并用以下内容替换现有的XML：
+1.  现在，打开`activity_main.xml`并用以下内容替换现有的 XML：
 
-[PRE50]
+```kt
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/frameLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+        <android.support.v7.widget.AppCompatImageButton
+            android:id="@+id/imageViewThumbnail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleType="centerCrop"
+            android:background="@android:color/transparent"/>
+    </LinearLayout>
+    <android.support.v7.widget.AppCompatImageView
+        android:id="@+id/imageViewExpanded"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible" />
+</FrameLayout>
+```
 
 1.  现在，打开`MainActivity.java`并声明以下全局变量：
 
-[PRE51]
+```kt
+private Animator mCurrentAnimator;
+private AppCompatImageView mImageViewExpanded;
+```
 
 1.  将我们在“缩小大图像以避免内存不足异常”菜谱中创建的`loadSampledResource()`方法添加到缩放图像中：
 
-[PRE52]
+```kt
+private Bitmap loadSampledResource(int imageID, int targetHeight, int targetWidth) {
+    final BitmapFactory.Options options = new BitmapFactory.Options();
+    options.inJustDecodeBounds = true;
+    BitmapFactory.decodeResource(getResources(), imageID, options);
+    final int originalHeight = options.outHeight;
+    final int originalWidth = options.outWidth;
+    int inSampleSize = 1;
+    while ((originalHeight / (inSampleSize *2)) > targetHeight
+            && (originalWidth / (inSampleSize *2))
+            > targetWidth) {
+        inSampleSize *= 2;
+    }
+    options.inSampleSize =inSampleSize;
+    options.inJustDecodeBounds = false;
+    return (BitmapFactory.decodeResource(getResources(), imageID, options));
+}
+```
 
 1.  将以下代码添加到`onCreate()`方法中：
 
-[PRE53]
+```kt
+final AppCompatImageButton imageViewThumbnail = findViewById(R.id.imageViewThumbnail);
+imageViewThumbnail.setImageBitmap(loadSampledResource(R.drawable.image, 100, 100));
+imageViewThumbnail.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View view) {
+        zoomFromThumbnail(imageViewThumbnail);
+    }
+});
+mImageViewExpanded = findViewById(R.id.imageViewExpanded);
+mImageViewExpanded.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        mImageViewExpanded.setVisibility(View.GONE);
+        mImageViewExpanded.setImageBitmap(null);
+        imageViewThumbnail.setVisibility(View.VISIBLE);
+    }
+});
+```
 
 1.  添加以下`zoomFromThumbnail()`方法，它处理实际的动画，稍后解释：
 
-[PRE54]
+```kt
+private void zoomFromThumbnail(final AppCompatImageButton imageViewThumb) {
+    if (mCurrentAnimator != null) {
+        mCurrentAnimator.cancel();
+    }
+
+    final Rect startBounds = new Rect();
+    final Rect finalBounds = new Rect();
+    final Point globalOffset = new Point();
+
+    imageViewThumb.getGlobalVisibleRect(startBounds);
+    findViewById(R.id.frameLayout).getGlobalVisibleRect(finalBounds, globalOffset);
+    mImageViewExpanded.setImageBitmap(
+            loadSampledResource(R.drawable.image, finalBounds.height(), finalBounds.width()));
+
+    startBounds.offset(-globalOffset.x, -globalOffset.y);
+    finalBounds.offset(-globalOffset.x, -globalOffset.y);
+
+    float startScale;
+    if ((float) finalBounds.width() / finalBounds.height() >
+            (float) startBounds.width() / startBounds.height()) {
+        startScale = (float) startBounds.height() / finalBounds.height();
+        float startWidth = startScale * finalBounds.width();
+        float deltaWidth = (startWidth - startBounds.width()) / 2;
+        startBounds.left -= deltaWidth;
+        startBounds.right += deltaWidth;
+    } else {
+        startScale = (float) startBounds.width() / finalBounds.width();
+        float startHeight = startScale * finalBounds.height();
+        float deltaHeight = (startHeight - startBounds.height()) / 2;
+        startBounds.top -= deltaHeight;
+        startBounds.bottom += deltaHeight;
+    }
+
+    imageViewThumb.setVisibility(View.GONE);
+    mImageViewExpanded.setVisibility(View.VISIBLE);
+    mImageViewExpanded.setPivotX(0f);
+    mImageViewExpanded.setPivotY(0f);
+
+    AnimatorSet animatorSet = new AnimatorSet();
+    animatorSet.play(ObjectAnimator.ofFloat(mImageViewExpanded, View.X,
+            startBounds.left, finalBounds.left))
+            .with(ObjectAnimator.ofFloat(mImageViewExpanded, View.Y,
+                    startBounds.top, finalBounds.top))
+            .with(ObjectAnimator.ofFloat(mImageViewExpanded, View.SCALE_X, startScale, 1f))
+            .with(ObjectAnimator.ofFloat(mImageViewExpanded, View.SCALE_Y, startScale, 1f));
+    animatorSet.setDuration(1000);
+    animatorSet.setInterpolator(new DecelerateInterpolator());
+    animatorSet.addListener(new AnimatorListenerAdapter() {
+        @Override
+        public void onAnimationEnd(Animator animation) {
+            mCurrentAnimator = null;
+        }
+
+        @Override
+        public void onAnimationCancel(Animator animation) {
+            mCurrentAnimator = null;
+        }
+    });
+    animatorSet.start();
+    mCurrentAnimator = animatorSet;
+}
+```
 
 1.  在设备或模拟器上运行应用程序。
 
@@ -600,13 +1199,23 @@ Android过渡框架提供了以下功能：
 
 在计算了起始和结束边界之后，我们现在可以创建动画。实际上，在这种情况下有四个动画，每个矩形的一个点对应一个动画，如以下代码所示：
 
-[PRE55]
+```kt
+animatorSet.play(ObjectAnimator.ofFloat(mImageViewExpanded, View.X,
+        startBounds.left, finalBounds.left))
+        .with(ObjectAnimator.ofFloat(mImageViewExpanded, View.Y,
+                startBounds.top, finalBounds.top))
+        .with(ObjectAnimator.ofFloat(mImageViewExpanded, View.SCALE_X, startScale, 1f))
+        .with(ObjectAnimator.ofFloat(mImageViewExpanded, View.SCALE_Y, startScale, 1f));
+```
 
 这两行代码控制动画时间：
 
-[PRE56]
+```kt
+animatorSet.setDuration(1000); 
+animatorSet.setInterpolator(new AccelerateInterpolator()); 
+```
 
-`setDuration()`方法告诉动画对象之前设置的平移动画需要多长时间。然而，`setInterpolator()`控制平移的方式。（在*简介*中提到了Interpolator，并在本食谱的*另请参阅*部分提供了链接。）在用`start()`方法开始动画后，我们将当前动画保存到`mCurrentAnimator`变量中，以便在需要时取消动画。我们创建一个`AnimatorListenerAdapter`来响应动画事件，并在动画完成后清除`mCurrentAnimator`变量。
+`setDuration()`方法告诉动画对象之前设置的平移动画需要多长时间。然而，`setInterpolator()`控制平移的方式。（在*简介*中提到了 Interpolator，并在本食谱的*另请参阅*部分提供了链接。）在用`start()`方法开始动画后，我们将当前动画保存到`mCurrentAnimator`变量中，以便在需要时取消动画。我们创建一个`AnimatorListenerAdapter`来响应动画事件，并在动画完成后清除`mCurrentAnimator`变量。
 
 # 还有更多...
 
@@ -614,59 +1223,89 @@ Android过渡框架提供了以下功能：
 
 # 获取默认动画持续时间。
 
-我们在设置持续时间时使用了1,000毫秒。我们故意使用较长的持续时间以便更容易查看动画。我们可以使用以下代码获取默认的Android动画持续时间：
+我们在设置持续时间时使用了 1,000 毫秒。我们故意使用较长的持续时间以便更容易查看动画。我们可以使用以下代码获取默认的 Android 动画持续时间：
 
-[PRE57]
+```kt
+getResources().getInteger(android.R.integer.config_shortAnimTime)
+```
 
 # 另请参阅
 
 +   请参阅第一篇食谱，*将大图像缩小以避免内存不足异常*，以详细了解`loadSampledResource()`方法。
 
-+   请参考[http://developer.android.com/reference/android/view/animation/Interpolator.html](http://developer.android.com/reference/android/view/animation/Interpolator.html)上的Interpolator开发者文档。
++   请参考[`developer.android.com/reference/android/view/animation/Interpolator.html`](http://developer.android.com/reference/android/view/animation/Interpolator.html)上的 Interpolator 开发者文档。
 
-# 使用新的ImageDecoder库显示动画图像（GIF/WebP）。
+# 使用新的 ImageDecoder 库显示动画图像（GIF/WebP）。
 
-Android P（API 28）引入了一个名为ImageDecoder的新库，它将弃用BitmapFactory类。这个新的图像库承诺将使处理位图更容易，同时还能处理旧BitmapFactory类不支持的其他文件格式，例如GIF和WebP动画图像。
+Android P（API 28）引入了一个名为 ImageDecoder 的新库，它将弃用 BitmapFactory 类。这个新的图像库承诺将使处理位图更容易，同时还能处理旧 BitmapFactory 类不支持的其他文件格式，例如 GIF 和 WebP 动画图像。
 
-在撰写本文时，它仅适用于运行Android P（或更高版本）的设备，且不支持在支持库中，但根据谷歌问题跟踪器上的此问题，有计划将ImageDecoder添加到支持库中：[https://issuetracker.google.com/issues/78041382](https://issuetracker.google.com/issues/78041382)。
+在撰写本文时，它仅适用于运行 Android P（或更高版本）的设备，且不支持在支持库中，但根据谷歌问题跟踪器上的此问题，有计划将 ImageDecoder 添加到支持库中：[`issuetracker.google.com/issues/78041382`](https://issuetracker.google.com/issues/78041382)。
 
-当这种情况发生时，或如果发生这种情况，之前的示例将更新为使用这个新库。现在，我们将查看新功能，那就是对显示GIF图像的原生支持。
+当这种情况发生时，或如果发生这种情况，之前的示例将更新为使用这个新库。现在，我们将查看新功能，那就是对显示 GIF 图像的原生支持。
 
 # 准备工作
 
-在Android Studio中创建一个新的项目，命名为`AnimatedImage`。在“目标Android设备”对话框中，确保为“手机和平板”选项选择API 28（或更高版本）。当被提示选择“活动类型”时，选择“空活动”。在“配置活动”对话框（如图所示）中，取消选择“向后兼容性”选项，因为此功能在支持库中尚不可用：
+在 Android Studio 中创建一个新的项目，命名为`AnimatedImage`。在“目标 Android 设备”对话框中，确保为“手机和平板”选项选择 API 28（或更高版本）。当被提示选择“活动类型”时，选择“空活动”。在“配置活动”对话框（如图所示）中，取消选择“向后兼容性”选项，因为此功能在支持库中尚不可用：
 
 ![](img/44fe8b12-8dcf-46ab-9b06-ee8525066084.png)
 
-我们还需要一个GIF图像。我们转向Giphy.com寻找免费版权的图像，您可以在可下载的项目文件中看到。
+我们还需要一个 GIF 图像。我们转向 Giphy.com 寻找免费版权的图像，您可以在可下载的项目文件中看到。
 
 # 如何操作...
 
-一旦您有了GIF图像，请按照以下步骤操作：
+一旦您有了 GIF 图像，请按照以下步骤操作：
 
 1.  将您的图像复制到`res/drawable`文件夹。我们的文件名为`giphy.gif`，但您可以使用自己的文件名。
 
 1.  打开`activity_main.xml`，将现有的`TextView`替换为以下`ImageView`：
 
-[PRE58]
+```kt
+<ImageView
+    android:id="@+id/imageView"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 1.  打开`MainActivity.java`，并将以下代码行添加到现有的`onCreate()`方法中：
 
-[PRE59]
+```kt
+loadGif();
+```
 
-1.  最后，按照以下方式添加loadGif方法：
+1.  最后，按照以下方式添加 loadGif 方法：
 
-[PRE60]
+```kt
+private void loadGif() {
+    try {
+        ImageDecoder.Source source = ImageDecoder.createSource(getResources(),
+                R.drawable.giphy);
+        Drawable decodedAnimation = ImageDecoder.decodeDrawable(source);
 
-1.  在至少运行Android P的设备或模拟器上运行您的应用程序。
+        ImageView imageView = findViewById(R.id.imageView);
+        imageView.setImageDrawable(decodedAnimation);
 
-如果在运行此代码时看不到动画图像，请尝试在AndroidManifest中禁用硬件加速。将以下内容添加到`<application>`节点或`<activity>`节点中：
+        if (decodedAnimation instanceof AnimatedImageDrawable) {
+            ((AnimatedImageDrawable) decodedAnimation).start();
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```
+
+1.  在至少运行 Android P 的设备或模拟器上运行您的应用程序。
+
+如果在运行此代码时看不到动画图像，请尝试在 AndroidManifest 中禁用硬件加速。将以下内容添加到`<application>`节点或`<activity>`节点中：
 
 `android:hardwareAccelerated="false"`。
 
 # 它是如何工作的...
 
-如前述代码所示，`ImageDecoder`库使得显示GIF变得非常简单。首先，您必须定义您的源图像。目前，`createSource()`方法可以从以下来源读取图像：
+如前述代码所示，`ImageDecoder`库使得显示 GIF 变得非常简单。首先，您必须定义您的源图像。目前，`createSource()`方法可以从以下来源读取图像：
 
 +   资源（drawable）文件夹
 
@@ -678,25 +1317,27 @@ Android P（API 28）引入了一个名为ImageDecoder的新库，它将弃用Bi
 
 +   文件
 
-（这可能在最终的Android P版本中有所改变。）
+（这可能在最终的 Android P 版本中有所改变。）
 
-在我们的代码中，我们将图片复制到了drawable文件夹。如果我们将其复制到assets文件夹，代码将如下所示：
+在我们的代码中，我们将图片复制到了 drawable 文件夹。如果我们将其复制到 assets 文件夹，代码将如下所示：
 
-[PRE61]
+```kt
+ImageDecoder.Source source = ImageDecoder.createSource(getAssets(), "giphy.gif");
+```
 
-在定义了图像源之后，我们只需调用`decodeDrawable()`来解码图像并设置ImageView的drawable。一旦设置了drawable，动画图像的最后一个关键步骤是调用`start()`方法。如果解码的图像是`AnimatedDrawable`类型（如果我们加载了一个有效的GIF，它将是这种类型），我们就调用start方法来激活动画。
+在定义了图像源之后，我们只需调用`decodeDrawable()`来解码图像并设置 ImageView 的 drawable。一旦设置了 drawable，动画图像的最后一个关键步骤是调用`start()`方法。如果解码的图像是`AnimatedDrawable`类型（如果我们加载了一个有效的 GIF，它将是这种类型），我们就调用 start 方法来激活动画。
 
 # 参见
 
-+   `ImageDecoder`文档：[https://developer.android.com/reference/android/graphics/ImageDecoder](https://developer.android.com/reference/android/graphics/ImageDecoder)
++   `ImageDecoder`文档：[`developer.android.com/reference/android/graphics/ImageDecoder`](https://developer.android.com/reference/android/graphics/ImageDecoder)
 
-+   参见下一道菜谱，了解更多使用ImageDecoder库的示例
++   参见下一道菜谱，了解更多使用 ImageDecoder 库的示例
 
-# 使用新的ImageDecoder创建圆形图像
+# 使用新的 ImageDecoder 创建圆形图像
 
 如前所述，ImageDecoder 库是 Android P 中引入的新库，它承诺了许多之前使用 BitmapFactory 类不可用的新功能和令人兴奋的功能。其中之一是使用后处理器应用图像效果的能力。后处理器是一个新的辅助类，允许您在图像加载后添加自定义处理（或操作）。自定义处理可能包括向图像添加色调、在图像上绘制（如邮票）、添加边框，或者在我们的例子中使图像圆形。
 
-在我们的例子中，我们从矩形图像（从 Pixabay.com 下载，您可以在以下链接中看到：[https://pixabay.com/en/wallpaper-background-eclipse-1492818/](https://pixabay.com/en/wallpaper-background-eclipse-1492818/)）开始。然后我们应用后处理器来创建圆形图像，正如您可以在下面的屏幕截图中所见：
+在我们的例子中，我们从矩形图像（从 Pixabay.com 下载，您可以在以下链接中看到：[`pixabay.com/en/wallpaper-background-eclipse-1492818/`](https://pixabay.com/en/wallpaper-background-eclipse-1492818/)）开始。然后我们应用后处理器来创建圆形图像，正如您可以在下面的屏幕截图中所见：
 
 ![](img/5757b552-0f27-42bc-97a3-f0980a77b43f.png)
 
@@ -714,19 +1355,67 @@ Android P（API 28）引入了一个名为ImageDecoder的新库，它将弃用Bi
 
 1.  打开 `activity_main.xml` 并将现有的 `TextView` 替换为以下 `ImageView`：
 
-[PRE62]
+```kt
+<ImageView
+    android:id="@+id/imageView"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintLeft_toLeftOf="parent"
+    app:layout_constraintRight_toRightOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+```
 
 3. 打开 `MainActivity.java` 并将以下代码添加到类声明中：
 
-[PRE63]
+```kt
+PostProcessor mCirclePostProcessor = new PostProcessor() {
+    @Override
+    public int onPostProcess(Canvas canvas) {
+        Path path = new Path();
+        path.setFillType(Path.FillType.INVERSE_EVEN_ODD);
+        int width = canvas.getWidth();
+        int height = canvas.getHeight();
+        path.addCircle(width/2,height/2,600, Path.Direction.CW);
+        Paint paint = new Paint();
+        paint.setAntiAlias(true);
+        paint.setColor(Color.TRANSPARENT);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+        canvas.drawPath(path, paint);
+        return PixelFormat.TRANSLUCENT;
+    }
+};
+```
 
 4. 将以下代码行添加到现有的 `onCreate()` 方法中：
 
-[PRE64]
+```kt
+loadImage();
+```
 
 5. 需要添加的最后一段代码是以下 `loadImage()` 方法：
 
-[PRE65]
+```kt
+private void loadImage() {
+    ImageDecoder.Source source = ImageDecoder.createSource(getResources(),
+            R.drawable.stars);
+
+    ImageDecoder.OnHeaderDecodedListener listener = 
+            new ImageDecoder.OnHeaderDecodedListener() {
+        public void onHeaderDecoded(ImageDecoder decoder, ImageDecoder.ImageInfo info,
+                                    ImageDecoder.Source source) {
+            decoder.setPostProcessor(mCirclePostProcessor);
+        }
+    };
+    try {
+        Drawable drawable = ImageDecoder.decodeDrawable(source, listener);
+        ImageView imageView = findViewById(R.id.imageView);
+        imageView.setImageDrawable(drawable);
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+```
 
 6. 在至少运行 Android P 的设备或模拟器上运行应用程序。
 
@@ -734,7 +1423,9 @@ Android P（API 28）引入了一个名为ImageDecoder的新库，它将弃用Bi
 
 我们从与之前食谱相同的 XML 布局开始。如果我们省略了添加后处理器的步骤，我们会得到一个标准的矩形图像。为了自己看看，请在 `OnHeaderDecodedListener` 中注释掉以下行代码：
 
-[PRE66]
+```kt
+decoder.setPostProcessor(mCirclePostProcessor);
+```
 
 这里正在进行的这项工作的核心是在第 3 步中创建的 `PostProcessor`。尽管有几行代码，但所做的工作非常简单。它只是创建一个圆（使用我们指定的尺寸）并清除（通过将颜色设置为 `TRANSPARENT`）不在我们圆内的所有内容。
 
@@ -744,12 +1435,14 @@ Android P（API 28）引入了一个名为ImageDecoder的新库，它将弃用Bi
 
 如果你想使用圆角而不是圆形图像呢？通过在后处理器的`Path`创建中进行一个简单的更改，你就可以实现这种效果。在创建`Path`时，不要使用`addCircle()`调用，而是使用以下代码行代替：
 
-[PRE67]
+```kt
+path.addRoundRect(0, 0, width, height, 250, 250, Path.Direction.CW);
+```
 
-使用250的值创建一个非常圆滑的角落，因此请进行实验以获得所需的圆滑程度。查看“也见”部分中的参考链接以获取有关后处理器和`Path`的更多信息。
+使用 250 的值创建一个非常圆滑的角落，因此请进行实验以获得所需的圆滑程度。查看“也见”部分中的参考链接以获取有关后处理器和`Path`的更多信息。
 
 # 也见
 
-+   `PostProcessor`参考文档：[https://developer.android.com/reference/android/graphics/PostProcessor](https://developer.android.com/reference/android/graphics/PostProcessor)
++   `PostProcessor`参考文档：[`developer.android.com/reference/android/graphics/PostProcessor`](https://developer.android.com/reference/android/graphics/PostProcessor)
 
-+   `Path`参考文档：[https://developer.android.com/reference/android/graphics/Path](https://developer.android.com/reference/android/graphics/Path)
++   `Path`参考文档：[`developer.android.com/reference/android/graphics/Path`](https://developer.android.com/reference/android/graphics/Path)

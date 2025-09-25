@@ -1,4 +1,4 @@
-# 第10章：测试和调试 Compose 应用
+# 第十章：测试和调试 Compose 应用
 
 编程是一个非常富有创造性的过程。使用 Jetpack Compose 实现看起来很棒的 **用户界面**（**UI**）和流畅的动画是纯粹的乐趣。然而，打造一个出色的应用不仅仅需要编写代码。测试和调试同样重要，因为无论您如何精心设计和实现您的应用，错误和故障都是不可避免的，至少在非平凡程序中是这样。但无需害怕，因为您可以使用强大的工具来检查您的代码是否按预期运行。
 
@@ -18,9 +18,9 @@
 
 # 技术要求
 
-本章基于 `TestingAndDebuggingDemo` 示例。请参考 [*第1章*](B17505_01_ePub.xhtml#_idTextAnchor014) 的 *技术要求* 部分，了解如何安装和设置 Android Studio 以及如何获取本书配套的代码库。
+本章基于 `TestingAndDebuggingDemo` 示例。请参考 *第一章* 的 *技术要求* 部分，了解如何安装和设置 Android Studio 以及如何获取本书配套的代码库。
 
-本章的所有代码文件都可以在 GitHub 上找到：[https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_10](https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_10)。
+本章的所有代码文件都可以在 GitHub 上找到：[`github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_10`](https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_10)。
 
 # 设置和编写测试
 
@@ -30,17 +30,22 @@
 
 +   **集成测试**：应用的所有构建块是否正确集成？根据应用的功能，这可能包括访问远程服务、与数据库通信或在设备上读取和写入文件。
 
-+   **UI测试**：UI是否准确？所有UI元素是否在所有支持的屏幕尺寸上都可见？它们是否总是显示正确的值？按钮点击或滑块移动等交互是否触发了预期的功能？还有非常重要的一点：应用的所有部分是否都易于访问？
++   **UI 测试**：UI 是否准确？所有 UI 元素是否在所有支持的屏幕尺寸上都可见？它们是否总是显示正确的值？按钮点击或滑块移动等交互是否触发了预期的功能？还有非常重要的一点：应用的所有部分是否都易于访问？
 
-测试的数量因类型而异。长期以来，人们一直声称，理想情况下，你大部分的测试应该是单元测试，其次是集成测试。这导致了一种**测试金字塔**的概念，其中单元测试是其基础，UI测试是顶端。就像所有的隐喻一样，测试金字塔也经历了支持和严厉的批评。如果你想了解更多关于它以及一般测试策略的信息，请参阅本章末尾的*进一步阅读*部分。Jetpack Compose测试是UI测试。因此，虽然你可能编写了许多相应的测试用例，但使用单元测试测试底层业务逻辑可能更为重要。
+测试的数量因类型而异。长期以来，人们一直声称，理想情况下，你大部分的测试应该是单元测试，其次是集成测试。这导致了一种**测试金字塔**的概念，其中单元测试是其基础，UI 测试是顶端。就像所有的隐喻一样，测试金字塔也经历了支持和严厉的批评。如果你想了解更多关于它以及一般测试策略的信息，请参阅本章末尾的*进一步阅读*部分。Jetpack Compose 测试是 UI 测试。因此，虽然你可能编写了许多相应的测试用例，但使用单元测试测试底层业务逻辑可能更为重要。
 
 为了使测试可靠、易懂和可重复，使用了自动化。在下一节中，我将向你展示如何使用*JUnit 4*测试框架编写单元测试。
 
 ## 实现单元测试
 
-单位是小的、独立的代码片段——通常是函数、方法、子程序或属性，具体取决于编程语言。让我们看看以下代码片段中的简单Kotlin函数：
+单位是小的、独立的代码片段——通常是函数、方法、子程序或属性，具体取决于编程语言。让我们看看以下代码片段中的简单 Kotlin 函数：
 
-[PRE0]
+```kt
+fun isEven(num: Int): Boolean {
+  val div2 = num / 2
+  return (div2 * 2) == num
+}
+```
 
 `isEven()`确定传递的`Int`值是否为偶数。如果是这样，函数返回`true`；否则，返回`false`。该算法基于这样一个事实：只有偶数`Int`值才能被`2`整除而没有余数。假设我们经常使用这个函数，我们当然想确保结果总是正确的。但我们如何做到这一点（如何测试这一点）？为了彻底验证`isEven()`，我们需要检查从`Int.MIN_VALUE`到`Int.MAX_VALUE`的所有可能的输入值。即使在快速的计算机上，这也可能需要一些时间。编写良好单元测试的艺术部分在于识别所有重要的边界和转换。关于`isEven()`，以下可能是一些：
 
@@ -52,21 +57,64 @@
 
 要编写和执行单元测试，你应该将以下依赖项添加到你的模块级`build.gradle`属性文件中：
 
-[PRE1]
+```kt
+androidTestImplementation "androidx.test.ext:junit:1.1.3"
+androidTestImplementation "androidx.compose.ui:ui-test-
+  junit4:$compose_version"
+debugImplementation "androidx.compose.ui:ui-test-
+  manifest:$compose_version"
+testImplementation 'junit:junit:4.13.2'
+androidTestImplementation "androidx.test.espresso:espresso-
+  core:3.4.0"
+```
 
 根据你将添加到你的应用程序项目中的测试类型，一些前面的依赖项可能是可选的。例如，`androidx.test.espresso`只在你的应用程序也包含你希望测试的旧式视图（例如在互操作性场景中）时需要。
 
 单元测试是在你的开发机器上执行的。测试类放置在`app/src/test/java`目录中，并通过`SimpleUnitTest`可用：
 
-![图10.1 – Android Studio项目工具窗口中的单元测试]
+![图 10.1 – Android Studio 项目工具窗口中的单元测试]
 
 ![img/B17075_10_1.jpg]
 
-图10.1 – Android Studio项目工具窗口中的单元测试
+图 10.1 – Android Studio 项目工具窗口中的单元测试
 
 让我们看看以下代码片段中的类：
 
-[PRE2]
+```kt
+Package
+  eu.thomaskuenneth.composebook.testinganddebuggingdemo
+import org.junit.*
+import org.junit.Assert.assertEquals
+class SimpleUnitTest {
+  companion object {
+    @BeforeClass
+    @JvmStatic
+    fun setupAll() {
+      println("Setting things up")
+    }
+  }
+  @Before
+  fun setup() {
+    println("Setup test")
+  }
+  @After
+  fun teardown() {
+    println("Clean up test")
+  }
+  @Test
+  fun testListOfInts() {
+    val nums = listOf(Int.MIN_VALUE, -3, -2, 2, 3,
+                      Int.MAX_VALUE)
+    val results = listOf(true, false, true, true, false,
+                         false)
+    nums.forEachIndexed { index, num ->
+      val result = isEven(num)
+      println("isEven($num) returns $result")
+      assertEquals(result, results[index])
+    }
+  }
+}
+```
 
 一个测试类包含一个或多个测试。一个`@Test`。它检查某些定义明确的情景、条件或标准。测试应该是独立的，这意味着它们不应该依赖于之前的测试。我的例子是测试`isEven()`对于六个输入值是否返回正确的结果。这样的检查基于**断言**。断言定义了期望的行为。如果断言未满足，则测试失败。
 
@@ -74,15 +122,20 @@
 
 你可以通过在**项目**工具窗口中右键单击测试类并选择**运行 '…'**来运行单元测试。一旦为测试类创建了一个启动配置，你也可以通过菜单栏和工具栏来运行测试。测试结果在**运行**工具窗口中显示，如下面的截图所示：
 
-![图10.2 – Android Studio运行工具窗口中的测试结果]
+![图 10.2 – Android Studio 运行工具窗口中的测试结果]
 
 ![img/B17075_10_2.jpg]
 
-图10.2 – Android Studio运行工具窗口中的测试结果
+图 10.2 – Android Studio 运行工具窗口中的测试结果
 
 尽管测试通过了，但我的`isEven()`实现可能仍然不完美。虽然测试检查了上下限，但它没有测试负数和正数之间的转换。让我们纠正这个问题并添加另一个测试，如下所示：
 
-[PRE3]
+```kt
+@Test
+fun testIsEvenZero() {
+  assertEquals(true, isEven(0))
+}
+```
 
 幸运的是，这个测试也通过了。
 
@@ -96,7 +149,24 @@
 
 `SimpleButtonDemo()` 可组合组件（属于 `TestingAndDebuggingDemo` 示例）显示一个带有按钮的框，按钮居中。第一次点击按钮会将文本从 **A** 更改为 **B**。后续点击会在 **B** 和 **A** 之间切换。代码如下所示：
 
-[PRE4]
+```kt
+@Composable
+fun SimpleButtonDemo() {
+  val a = stringResource(id = R.string.a)
+  val b = stringResource(id = R.string.b)
+  var text by remember { mutableStateOf(a) }
+  Box(
+    modifier = Modifier.fillMaxSize(),
+    contentAlignment = Alignment.Center
+  ) {
+    Button(onClick = {
+      text = if (text == a) b else a
+    }) {
+      Text(text = text)
+    }
+  }
+}
+```
 
 文本存储为可变的 `String` 状态。它在 `onClick` 块内部更改，并用作 `Text()` 可组合组件的参数。如果我们想测试 `SimpleButtonDemo()`，我们可能需要检查的一些方面包括这些：
 
@@ -108,27 +178,47 @@
 
 下面是一个简单的测试类的样子：
 
-[PRE5]
+```kt
+@RunWith(AndroidJUnit4::class)
+class SimpleInstrumentedTest {
+  @get:Rule
+  val rule = createComposeRule()
+  @Before
+  fun setup() {
+    rule.setContent {
+      SimpleButtonDemo()
+    }
+  }
+  @Test
+  fun testInitialLetterIsA() {
+    rule.onNodeWithText("A").assertExists()
+  }
+}
+```
 
 与 *实现单元测试* 部分的 `SimpleUnitTest` 类不同，它的源代码存储在 `app/src/androidTest/java` 目录中（与普通单元测试的 `…/test/…` 相反）。`SimpleInstrumentedTest` 是一个 **仪器化测试**。与普通单元测试不同，它们不是在开发机上本地执行，而是在 Android 模拟器或真实设备上执行，因为它们需要 Android 特定的功能来运行。仪器化测试可以通过 **项目** 工具窗口访问，如下面的截图所示：
 
-![图 10.3 – Android Studio 项目工具窗口中的仪器化测试
-
-](img/B17075_10_3.jpg)
+![图 10.3 – Android Studio 项目工具窗口中的仪器化测试](img/B17075_10_3.jpg)
 
 图 10.3 – Android Studio 项目工具窗口中的仪器化测试
 
 您可以通过在 **项目** 工具窗口中右键单击测试类并选择 **运行 '…'** 来运行仪器化测试。一旦为测试类创建了启动配置，您也可以使用菜单栏和工具栏来运行测试。测试结果在 **运行** 工具窗口中显示，如下面的截图所示：
 
-![图 10.4 – Android Studio 运行工具窗口中的仪器化测试结果
-
-](img/B17075_10_4.jpg)
+![图 10.4 – Android Studio 运行工具窗口中的仪器化测试结果](img/B17075_10_4.jpg)
 
 图 10.4 – Android Studio 运行工具窗口中的仪器化测试结果
 
 在你的测试类中，JUnit 的 `@Before` 和 `@After` 注解。有几个预定义的规则——例如，`TestName` 规则可以在测试方法内部提供当前测试名称，如下所示：
 
-[PRE6]
+```kt
+@get:Rule
+var name = TestName()
+...
+@Test
+fun testPrintMethodName() {
+  println(name.methodName)
+}
+```
 
 当 `testPrintMethodName()` 函数运行时，它会打印其名称。您可以在通过添加 `get:` 到属性获取器的 `@Rule` 注解中看到输出。如果不这样做，将导致执行期间出现 `ValidationError`（`The @Rule '…' must be public`）消息。
 
@@ -156,7 +246,14 @@ Compose 测试基于规则。`createComposeRule()` 返回 `ComposeContentTestRul
 
 在上一节中，我向您展示了一个简单的测试用例，用于检查按钮文本是否与给定的字符串匹配。这里还有一个测试用例。它点击按钮以查看按钮文本是否按预期更改：
 
-[PRE7]
+```kt
+@Test
+fun testLetterAfterButtonClickIsB() {
+  rule.onNodeWithText("A")
+    .performClick()
+    .assert(hasText("B"))
+}
+```
 
 再次，我们首先查找按钮。`performClick()`（这被称为 `Assert(hasText("B"))`）检查按钮文本是否为 **B**。断言确定测试是否通过或失败。
 
@@ -172,13 +269,13 @@ Compose 测试基于规则。`createComposeRule()` 返回 `ComposeContentTestRul
 
 要查看上一节中用 `testLetterAfterButtonClickIsB()` 测试的语义节点的外观，您可以在 `.assert(…)` 之后添加以下表达式：
 
-[PRE8]
+```kt
+.printToLog("SimpleInstrumentedTest")
+```
 
 结果在 **Logcat** 中可见，如下截图所示：
 
-![图 10.5 – Logcat 中的语义节点
-
-](img/B17075_10_5.jpg)
+![图 10.5 – Logcat 中的语义节点](img/B17075_10_5.jpg)
 
 图 10.5 – Logcat 中的语义节点
 
@@ -186,11 +283,42 @@ Compose 测试基于规则。`createComposeRule()` 返回 `ComposeContentTestRul
 
 让我们看看另一个查找函数，`onNodeWithContentDescription()`。我们将使用它来测试 `Image()` 是否是当前 UI 的一部分。代码如下所示：
 
-[PRE9]
+```kt
+@Composable
+fun ImageDemo() {
+  Image(
+    painter = painterResource(id =
+        R.drawable.ic_baseline_airport_shuttle_24),
+    contentDescription = stringResource(id =
+        R.string.airport_shuttle),
+    contentScale = ContentScale.FillBounds,
+    modifier = Modifier
+      .size(width = 128.dp, height = 128.dp)
+      .background(Color.Blue)
+  )
+}
+```
 
 如果您的应用 UI 包含图像，您通常应该为它们添加内容描述。内容描述用于，例如，由辅助软件向视觉障碍人士描述当前屏幕上显示的内容。因此，通过添加它们，您可以大大提高可用性。此外，内容描述有助于查找复合元素。您可以在以下代码片段中看到这些用法：
 
-[PRE10]
+```kt
+@RunWith(AndroidJUnit4::class)
+class AnotherInstrumentedTest {
+  @get:Rule
+  val rule = createComposeRule()
+  @Test
+  fun testImage() {
+    var contentDescription = ""
+    rule.setContent {
+      ImageDemo()
+      contentDescription = stringResource(id =
+          R.string.airport_shuttle)
+    }
+    rule.onNodeWithContentDescription(contentDescription)
+      .assertWidthIsEqualTo(128.dp)
+  }
+}
+```
 
 `testImage()` 首先设置内容（`ImageDemo()`）。然后查找具有给定内容描述的语义节点。最后，`assertWidthIsEqualTo()` 检查由该节点表示的 UI 元素的宽度是否为 128 密度无关像素宽。
 
@@ -200,21 +328,57 @@ Compose 测试基于规则。`createComposeRule()` 返回 `ComposeContentTestRul
 
 使用 `onNodeWithText()` 和 `onNodeWithContentDescription()` 可以轻松找到包含文本和图像的可组合函数。但如果你需要找到其他内容的语义节点——例如，一个 `Box()`？以下示例 `BoxButtonDemo()` 展示了一个在内部居中的 `Button()` 的 `Box()`。点击按钮会切换框的背景颜色，从白色变为浅灰色，然后再变回白色：
 
-[PRE11]
+```kt
+val COLOR1 = Color.White
+val COLOR2 = Color.LightGray
+@Composable
+fun BoxButtonDemo() {
+  var color by remember { mutableStateOf(COLOR1) }
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(color = color),
+    contentAlignment = Alignment.Center
+  ) {
+    Button(onClick = {
+      color = if (color == COLOR1)
+        COLOR2
+      else
+        COLOR1
+    }) {
+      Text(text = stringResource(id = R.string.toggle))
+    }
+  }
+}
+```
 
 测试 `BoxButtonDemo()` 意味着找到框，检查其初始背景颜色，点击按钮，然后再次检查颜色。为了能够找到框，我们使用 `testTag()` 修饰符对其进行标记，如下面的代码片段所示。应用标签允许我们在测试中找到修改后的元素：
 
-[PRE12]
+```kt
+val TAG1 = "BoxButtonDemo"
+Box(
+  modifier = ...
+    .testTag(TAG1)
+    ...
+```
 
 我们可以检查框是否存在，如下所示：
 
-[PRE13]
+```kt
+@Test
+fun testBoxInitialBackgroundColorIsColor1() {
+  rule.setContent {
+    BoxButtonDemo()
+  }
+  rule.onNode(hasTestTag(TAG1)).assertExists()
+}
+```
 
 `onNode()` 查找器接收一个 `hasTestTag()` 参数。`hasTestTag()` 查找具有给定测试标签的节点。有几个预定义的匹配器。例如，`isEnabled()` 返回节点是否启用，而 `isToggleable()` 如果节点可以被切换则返回 `true`。
 
 小贴士
 
-Google 在 [https://developer.android.com/jetpack/compose/testing-cheatsheet](https://developer.android.com/jetpack/compose/testing-cheatsheet) 提供了一份测试速查表。它很好地将查找器、匹配器、操作和断言分组。
+Google 在 [`developer.android.com/jetpack/compose/testing-cheatsheet`](https://developer.android.com/jetpack/compose/testing-cheatsheet) 提供了一份测试速查表。它很好地将查找器、匹配器、操作和断言分组。
 
 要完成测试代码，我们需要检查框的背景颜色。但我们该如何做呢？根据之前的示例，你可能期望有一个 `hasBackgroundColor()` 匹配器。不幸的是，目前还没有。测试只能依赖于语义树中可用的内容，但如果它不包含我们所需的信息，我们可以轻松地添加它。我将在下一节中向你展示如何操作。
 
@@ -228,13 +392,36 @@ Google 在 [https://developer.android.com/jetpack/compose/testing-cheatsheet](ht
 
 你可以在以下代码片段中看到这些用法：
 
-[PRE14]
+```kt
+val BackgroundColorKey =
+        SemanticsPropertyKey<Color>("BackgroundColor")
+var SemanticsPropertyReceiver.backgroundColor by
+ BackgroundColorKey
+@Composable
+fun BoxButtonDemo() {
+  ...
+  Box(
+    modifier = ...
+      .semantics { backgroundColor = color }
+      .background(color = color),
+      ...
+```
 
 使用 `SemanticsPropertyKey`，你可以以类型安全的方式在语义块中设置键值对。每个键都有一个静态定义的值类型——在我的例子中，这是 `Color`。`SemanticsPropertyReceiver` 是由 `semantics {}` 块提供的范围。它旨在通过扩展函数设置键值对。
 
 这是如何在测试用例中访问自定义语义属性的方法：
 
-[PRE15]
+```kt
+@Test
+fun testBoxInitialBackgroundColorIsColor1() {
+  rule.setContent {
+    BoxButtonDemo()
+  }
+  rule.onNode(SemanticsMatcher.expectValue
+             (BackgroundColorKey,COLOR1))
+     .assertExists()
+}
+```
 
 `expectValue()` 检查给定键的值是否等于预期值。
 
@@ -244,15 +431,13 @@ Google 在 [https://developer.android.com/jetpack/compose/testing-cheatsheet](ht
 
 # 调试 Compose 应用
 
-本节的标题 *调试 Compose 应用* 可能表明与调试传统的基于视图的应用存在重大差异。幸运的是，情况并非如此。在 Android 上，所有可组合层次结构都封装在 `androidx.compose.ui.platform.ComposeView` 中。如果你调用了 `ComponentActivity` 的 `setContent {}` 扩展函数，或者你故意在一个布局中包含可组合层次结构（参见 [*第 9 章*](B17505_09_ePub.xhtml#_idTextAnchor148)，*探索互操作性 API*），这会间接发生。无论如何，最终 `ComposeView` 都会在屏幕上显示——例如，在 Activity 或 Fragment 中。因此，关于 Android 应用基本构建块（活动、片段、服务、广播接收器、意图和内容提供者）的所有方面都保持不变。
+本节的标题 *调试 Compose 应用* 可能表明与调试传统的基于视图的应用存在重大差异。幸运的是，情况并非如此。在 Android 上，所有可组合层次结构都封装在 `androidx.compose.ui.platform.ComposeView` 中。如果你调用了 `ComponentActivity` 的 `setContent {}` 扩展函数，或者你故意在一个布局中包含可组合层次结构（参见 *第九章*，*探索互操作性 API*），这会间接发生。无论如何，最终 `ComposeView` 都会在屏幕上显示——例如，在 Activity 或 Fragment 中。因此，关于 Android 应用基本构建块（活动、片段、服务、广播接收器、意图和内容提供者）的所有方面都保持不变。
 
 当然，任何 UI 框架都提倡特定的调试习惯。例如，视图系统需要关注 `null` 引用。此外，你还需要确保状态的变化能够可靠地触发组件树的更新。幸运的是，这些都不适用于 Jetpack Compose。由于可组合项是 Kotlin 函数，你可以在需要时通过逐步执行代码来跟踪可组合层次结构的创建，并检查 `State`。
 
 为了在运行时仔细检查你的可组合函数的视觉表示，你可以使用 Android Studio 的 **布局检查器**，如下面的截图所示。一旦你在模拟器或真实设备上部署了你的应用，请使用 **工具** 菜单中的 **布局检查器** 打开此工具：
 
-![图 10.6 – Android Studio 中的布局检查器
-
-](img/B17075_10_6.jpg)
+![图 10.6 – Android Studio 中的布局检查器](img/B17075_10_6.jpg)
 
 图 10.6 – Android Studio 中的布局检查器
 
@@ -262,9 +447,16 @@ Google 在 [https://developer.android.com/jetpack/compose/testing-cheatsheet](ht
 
 ## 使用自定义修饰符进行日志记录和调试
 
-正如我在 [*第 3 章*](B17505_03_ePub.xhtml#_idTextAnchor054) 的“修改行为”部分中解释的，*探索 Compose 的关键原则*，修饰符是一个有序的不可变修饰符元素集合。修饰符可以改变 Compose UI 元素的看起来和行为。您通过实现 `Modifier` 的扩展函数来创建自定义修饰符。以下代码片段使用 `DrawScope` 接口打印可组合的大小：
+正如我在 *第三章* 的“修改行为”部分中解释的，*探索 Compose 的关键原则*，修饰符是一个有序的不可变修饰符元素集合。修饰符可以改变 Compose UI 元素的看起来和行为。您通过实现 `Modifier` 的扩展函数来创建自定义修饰符。以下代码片段使用 `DrawScope` 接口打印可组合的大小：
 
-[PRE16]
+```kt
+fun Modifier.simpleDebug() = then(object : DrawModifier {
+  override fun ContentDrawScope.draw() {
+    println("width=${size.width}, height=${size.height}")
+    drawContent()
+  }
+})
+```
 
 根据您选择哪个接口，您可以记录不同的方面。例如，使用 `LayoutModifier`，您可以访问与布局相关的信息。
 
@@ -294,7 +486,18 @@ Google 在 [https://developer.android.com/jetpack/compose/testing-cheatsheet](ht
 
 要启用调试检查器信息，您必须将 `androidx.compose.ui.platform` 包中的全局顶级变量 `isDebugInspectorInfoEnabled` 设置为 `true`。然后，您可以使用反射访问和打印调试检查器信息。以下是您需要的代码：
 
-[PRE17]
+```kt
+.semantics { backgroundColor = color }.also {
+  (it as CombinedModifier).run {
+    val inner = this.javaClass.getDeclaredField("inner")
+    inner.isAccessible = true
+    val value = inner.get(this) as InspectorValueInfo
+    value.inspectableElements.forEach {
+      println(it)
+    }
+  }
+}
+```
 
 `semantics {}` 返回的修饰符类型为 `CombinedModifier`，因为 `composed {}` 调用了 `then()`，它底层使用 `CombinedModifier`。你不仅可以打印原始的可检查元素，还可以根据需要自定义输出。
 
@@ -306,7 +509,7 @@ Google 在 [https://developer.android.com/jetpack/compose/testing-cheatsheet](ht
 
 最后一个主要部分解释了如何调试 Compose 应用。我们回顾了语义树，并展示了如何利用 `InspectorInfo` 和 `InspectorValueInfo` 来调试自定义修饰符。
 
-[第 11 章](B17505_11_ePub.xhtml#_idTextAnchor174)，*结论和下一步*，总结了本书内容。我们展望未来，看看 Jetpack Compose 的未来版本可能会添加什么。例如，我们预览了 Compose 的 Material 3，它将 *Material You* 设计概念引入 Compose 应用。我们还超越了 Android，考察了其他平台上的 Compose。
+第十一章，*结论和下一步*，总结了本书内容。我们展望未来，看看 Jetpack Compose 的未来版本可能会添加什么。例如，我们预览了 Compose 的 Material 3，它将 *Material You* 设计概念引入 Compose 应用。我们还超越了 Android，考察了其他平台上的 Compose。
 
 # 进一步阅读
 

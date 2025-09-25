@@ -4,8 +4,8 @@
 
 在本节中，我们将涵盖以下章节：
 
-+   [*第一章*](B17505_01_ePub.xhtml#_idTextAnchor014), *构建您的第一个 Compose 应用*
++   *第一章*, *构建您的第一个 Compose 应用*
 
-+   [*第二章*](B17505_02_ePub.xhtml#_idTextAnchor040), *理解声明式范式*
++   *第二章*, *理解声明式范式*
 
-+   [*第三章*](B17505_03_ePub.xhtml#_idTextAnchor054), *探索 Compose 的关键原则*
++   *第三章*, *探索 Compose 的关键原则*

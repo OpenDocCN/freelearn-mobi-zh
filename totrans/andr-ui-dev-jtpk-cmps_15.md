@@ -24,7 +24,7 @@
 
 如果您喜欢这本书，您可能对 Packt 的其他书籍也感兴趣：
 
-[![](img/Cover_1.png)](https://www.packtpub.com/product/mastering-kotlin/9781838555726)
+![](https://www.packtpub.com/product/mastering-kotlin/9781838555726)
 
 **精通 Kotlin**
 
@@ -48,7 +48,7 @@ ISBN: 978-1-83855-572-6
 
 +   使用 Kotlin 和 Ktor 构建服务器端服务
 
-[![](img/Cover_2.png)](https://www.packtpub.com/product/android-programming-with-kotlin-for-beginners/9781789615401)
+![](https://www.packtpub.com/product/android-programming-with-kotlin-for-beginners/9781789615401)
 
 **《Kotlin 入门 Android 编程》**
 
@@ -72,10 +72,10 @@ ISBN: 978-1-78961-540-1
 
 # Packt 正在寻找像您这样的作者
 
-如果您有兴趣成为Packt的作者，请访问[authors.packtpub.com](http://authors.packtpub.com)并今天申请。我们已与成千上万的开发者和技术专业人士合作，就像您一样，帮助他们将见解分享给全球科技社区。您可以提交一般申请，申请我们正在招募作者的特定热门话题，或者提交您自己的想法。
+如果您有兴趣成为 Packt 的作者，请访问[authors.packtpub.com](http://authors.packtpub.com)并今天申请。我们已与成千上万的开发者和技术专业人士合作，就像您一样，帮助他们将见解分享给全球科技社区。您可以提交一般申请，申请我们正在招募作者的特定热门话题，或者提交您自己的想法。
 
 # 分享您的想法
 
-现在您已经完成了*使用Jetpack Compose的Android UI开发*，我们非常想听听您的想法！如果您在亚马逊购买了这本书，请选择[https://www.amazon.in/review/create-review/error?asin=1801812160](https://www.amazon.in/review/create-review/error?asin=1801812160)为这本书提供反馈或在该购买网站上留下评论。
+现在您已经完成了*使用 Jetpack Compose 的 Android UI 开发*，我们非常想听听您的想法！如果您在亚马逊购买了这本书，请选择[`www.amazon.in/review/create-review/error?asin=1801812160`](https://www.amazon.in/review/create-review/error?asin=1801812160)为这本书提供反馈或在该购买网站上留下评论。
 
 您的评论对我们和科技社区都非常重要，它将帮助我们确保我们提供的是高质量的内容。
