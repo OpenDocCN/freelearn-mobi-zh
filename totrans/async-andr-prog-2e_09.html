@@ -1,0 +1,854 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;9.&#xA0;Asynchronous Work on the Native Layer"><div class="titlepage"><div><div><h1 class="title"><a id="ch09"/>Chapter 9. Asynchronous Work on the Native Layer</h1></div></div></div><p>In previous chapters, we have been using Java thread APIs and concurrent primitives delivered by the Android SDK to build our asynchronous constructs. A Java thread, an independent line of execution in our application, is automatically attached to the Android virtual machine and is bound to one native thread on the system.  In previous chapter examples, we executed Java compiled bytecode on the JVM and used Java synchronization and concurrent primitives to solve correctness and liveness issues.</p><p>In this chapter, we will make use of the Java Native Interface (JNI) to execute code written in C/C++ and compile it to native code. The native code, which runs directly on the hardware and makes use of the native <a id="id497" class="indexterm"/>CPU <span class="strong"><strong>Application Binary Interface</strong></span> (<span class="strong"><strong>ABI</strong></span>), generally runs faster than the bytecode due to optimizations made by the compilers, or optimizations introduced by developers with the use of specific ABI techniques. Hence, when we perform intensive computing operations on the device this could be the way to go to obtain a performance boost on your application and to reduce the power consumption.</p><p>With this in mind, we will learn how to use the JNI interface to execute concurrent tasks on native code (C/C++), interact with Java code from the native layer, and update the UI from native code.</p><p>Later, we will learn how to create native threads and use synchronization primitives such as <code class="literal">mutex</code> and <code class="literal">condition</code> to avoid any memory consistency problems that could come up when the device multiple line of executions in parallel and they share the same memory segments.</p><p>To finish, we will start a group of threads to run background work on the native layer that dispatches the result to the UI.</p><p>In this chapter, we will cover:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Introduction to JNI</li><li class="listitem" style="list-style-type: disc">Android NDK</li><li class="listitem" style="list-style-type: disc">Calling C functions from Java code</li><li class="listitem" style="list-style-type: disc">Calling C++ member/static functions from Java code</li><li class="listitem" style="list-style-type: disc">Accessing Java objects from native code</li><li class="listitem" style="list-style-type: disc">Executing native background work on Java threads</li><li class="listitem" style="list-style-type: disc">Executing asynchronous work on a native thread</li><li class="listitem" style="list-style-type: disc">Interacting with a Java monitor from native code</li><li class="listitem" style="list-style-type: disc">Handling Java exceptions on the native layer</li></ul></div><div class="section" title="Introduction to JNI"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec66"/>Introduction to JNI</h1></div></div></div><p>
+<span class="strong"><strong>JNI</strong></span><a id="id498" class="indexterm"/> is an interface that allows the execution of native code, written on C, C++, or Assembly, from the <span class="strong"><strong>Java Virtual Machine</strong></span> (<span class="strong"><strong>JVM</strong></span>). The interface strictly defines the way that any JNI implementation should act to manage and control the interactions between Java code and the machine code. Moreover, the machine code is able to interact with the JVM and create objects, execute member functions, modify the member variables and handle Java exceptions.</p><p>The JNI, which allows you to execute machine code along with your Java code, is typically used to:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Accelerate some critical portions of your application. Since the code runs directly on the hardware, it could make use of specific instruction sets to improve the execution:  <div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Example:  The use of SIMD instructions to accelerate audio or video floating-point operations.</li></ul></div></li><li class="listitem" style="list-style-type: disc">Integrate existing C/C++ libraries in to your Android application. You can port any legacy code or library written to the Android platform and use it on your Android application:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Example: The integration of open source libraries such as <code class="literal">opencv</code>, <code class="literal">libgdx</code>, and <code class="literal">box2d</code> into your application runtime.</li></ul></div></li><li class="listitem" style="list-style-type: disc">To use a platform dependent feature that is not accessible from the Java API:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Example: Low-level OS features such as poll and semaphores or native APIS such as OpenGL, OpenSL ES, or OpenMAX AL.</li></ul></div></li></ul></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note52"/>Note</h3><p>Notice that adding C/C++ with JNI to your project does not come free and it typically adds complexity to your project, making it harder to debug, build, and test. Therefore, you must evaluate the cost/benefit before you make the decision to use it in your application.</p></div></div><div class="section" title="Android NDK (Native Development Kit)"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec65"/>Android NDK (Native Development Kit)</h2></div></div></div><p>To help <a id="id499" class="indexterm"/>with the building and construction of Android applications that require a dynamic collaboration between the Java layer and the native layer, a development kit named Android NDK is supplied on the Android <a id="id500" class="indexterm"/>Developer website (<a class="ulink" href="http://developer.android.com/ndk/index.html">http://developer.android.com/ndk/index.html</a>).</p><p>The Android NDK, the Android toolset that allows you to compile your code written in C/C++ to the several ABIs supported by Android, is also able to compile pre-existing libraries written in C or C++ to the Android platform.</p><p>Before we move on in more detail, you should install the NDK package in your development platform, following the instructions defined on <a class="ulink" href="http://developer.android.com/ndk/downloads">http://developer.android.com/ndk/downloads</a>.</p><p>At the time of writing, the latest version of NDK is 10e, so we will base our code and examples on this version for the rest of this chapter.</p><p>The Java source code that you will write in your application, compiled by Android SDK, generates Android bytecode that will be interpreted by the Android JVM on any Android device.</p><p>With your source code written in C or C++, the NDK compiler will convert it to CPU code with different instruction sets, hardware features, calling conventions, and storing conventions. Each kind of CPU architecture has its own ABI that defines how the machine code should be arranged to interact with CPU hardware.</p><p>The NDK toolset comes with tools that abstract these hardware traits and generates machine code to the following ABIs: armeabi, armeabi-v7a, arm64-v8a, x86, x86_64, mips, and mips64.</p><p>Most of the time you want to support as many devices as possible, so by default, the NDK will generate code for all the CPU architectures and instruction sets supported.</p></div></div></div>
+<div class="section" title="Calling C functions from Java code"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec67"/>Calling C functions from Java code</h1></div></div></div><p>The powerful <a id="id501" class="indexterm"/>JNI interface, as referred to before, is able to manage interaction in both directions, from Java to C and from C to Java. </p><p>A regular Java <a id="id502" class="indexterm"/>class declaring a method with the keyword <code class="literal">native</code> declares that the method behavior is implemented in native code. Like a regular Java method, the JNI <code class="literal">native</code> method is able to receive Java objects or primitive types as arguments and return primitive types and objects.</p><p>Let's see how a <code class="literal">native</code> method definition will look like in a Java class:</p><div class="informalexample"><pre class="programlisting">public class MyNativeActivity extends Activity {
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    ...
+    cTv.setText(isPrime(2) ? "true" : "false");
+  }
+  …
+  private native boolean isPrime(int number );
+}</pre></div><p>The preceding activity will call the native code to check whether a number is prime or not and print the result on the UI. </p><p>Notice that our function receives a primitive as an argument and return a primitive <code class="literal">boolean</code> as a result and does not have any body, like an abstract function. </p><p>With the member function declared as native, we inform the compiler that this function is going to be implemented in C/C++, in a native library that gets loaded dynamically at runtime. </p><p>With the member function now declared as native on the Java side, let's use <code class="literal">javah</code> to declare and implement our native method in the native code.</p><p>A <code class="literal">javah</code> is able to help the developer to generate native method prototypes with name conventions used by the JNI interface, the SDK becomes a handy tool that generates a header file for all your class native methods.</p><p>To use it, please go to your project directory, create a <code class="literal">jni</code> directory, and run the next <code class="literal">javah</code> to generate the header file for your native function. In Android Studio IDE, open a terminal window and go to the <code class="literal">src/main</code> directory:</p><div class="informalexample"><pre class="programlisting">javah  -d jni -classpath &lt;sdk_direcory&gt;/android.jar:../../build/intermediates/classes/debug/  com.packpublishing.asynchronousandroid.chapter9.MyNativeActivity</pre></div><p>If everything goes as expected, the file <code class="literal">com_..._chapter9_MyNativeActivity.h</code> will be generated with <a id="id503" class="indexterm"/>our <code class="literal">native</code> method declaration:</p><div class="informalexample"><pre class="programlisting">JNIEXPORT jboolean JNICALL Java_com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity_isPrime
+  (JNIEnv *, jobject, jint);</pre></div><p>The <code class="literal">native</code> method will receive a <code class="literal">JNIEnv* </code>pointer to the JVM environment, a <code class="literal">jobject</code> reference to the actual <a id="id504" class="indexterm"/>Java object instance that invoked the method, and an integer argument.</p><p>The previous method declared in the following JNI specification, it should be declared and implemented in your code and loaded on the runtime over a shared library.</p><p>Now that we have the method declared, let's create a <code class="literal">source</code> file under <code class="literal">jni</code> called <code class="literal">c_functions.c</code>, with the <code class="literal">native</code> method implementation for our <code class="literal">isPrime</code> function:</p><div class="informalexample"><pre class="programlisting">#include "com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+jboolean  Java_com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity_isPrime( JNIEnv *env, jobject obj, jint number) {
+    int c;
+    for (c = 2; c &lt; number ; c++) {
+        if (number % c == 0)
+            return JNI_FALSE;
+    }
+    return JNI_TRUE;
+}
+#ifdef __cplusplus
+}
+#endif</pre></div><p>When <code class="literal">MyNativeActivity.isPrime</code> is called, the JNI interface transparently forwards the processing to the native code function, passing a native integer primitive (<code class="literal">jint</code>). The Android JNI implementation automatically converts the Java type <code class="literal">int</code> value to a native type (<code class="literal">jint</code>), executes the native function, and at the end returns <code class="literal">jboolean</code> that is automatically <a id="id505" class="indexterm"/>converted by the JNI interface to a Java <a id="id506" class="indexterm"/>primitive, <code class="literal">boolean</code>.</p><p>The following table shows how Java types are mapped to native types:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Java Type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Native Type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">boolean</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Jboolean</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Unsigned 8 bits</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">byte</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Jbyte</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Signed 8 bits</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">char</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jchar</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Unsigned 16 bits</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">short</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jshort</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Signed 16 bits</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">int</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jint</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Signed 32 bits</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">long long</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jlong</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Signed 64 bits</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">float</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jfloat</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Floating Number 32 bit</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">double</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jdouble</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Floating Number 64 bit</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Object</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jobject</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Any Java Object </p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Class</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">class</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Class Object</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">String</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">jstring</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>String objects</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">void</code> </p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">void</code>
+</p>
+</td><td style="text-align: left" valign="top"> </td></tr></tbody></table></div><p>Although we have the native function declared and implemented in our source file, the JVM will not find the method until we have loaded the shared library that contains our native function. First, we will define the <code class="literal">ndk</code> folder in our project's root folder <code class="literal">local.properties</code> file:</p><div class="informalexample"><pre class="programlisting">ndk.dir=&lt;Path to downloaded NDK package&gt;/android-ndk-r10e</pre></div><p>Next, in our <code class="literal">build.gradle</code> module configuration we will define the shared library name under the <code class="literal">ndk</code> configuration section:</p><div class="informalexample"><pre class="programlisting">apply plugin: 'com.android.library'
+
+android {
+    defaultConfig {
+        minSdkVersion 9
+     ...
+        ndk { moduleName "mylib" } 
+    } 
+}</pre></div><p>Finally, Android <a id="id507" class="indexterm"/>Studio is able to <code class="literal">compile c_functions.c</code> and <a id="id508" class="indexterm"/>generate a shared library with the name <code class="literal">mylib</code>  for all the ABIs supported in the build directory:</p><div class="informalexample"><pre class="programlisting">├── lib
+│   ├── arm64-v8a
+│   │   └── libmylib.so
+│   ├── armeabi
+│   │   └── libmylib.so
+│   ├── armeabi-v7a
+│   │   └── libmylib.so
+│   ├── mips
+│   │   └── libmylib.so
+│   ├── mips64
+│   │   └── libmylib.so
+│   ├── x86
+│   │   └── libmylib.so
+│   └── x86_64
+│       └── libmylib.so</pre></div><p>These libraries are going to be packed in a universal <code class="literal">apk</code> file ready to be loaded by our Android application. </p><p>All that remains is to load the library on our runtime before we try to use it in our code. To load shared libraries on the JVM runtime, the <code class="literal">java.lang.System</code> class provides a <code class="literal">static</code> method to load a shared library and its dependencies, so before we use it on our class we will add a static section to our <code class="literal">Activity</code> class to load the library as soon as the class loader loads our class:</p><div class="informalexample"><pre class="programlisting">public class MyNativeActivity extends Activity {
+   …
+   static {
+      System.loadLibrary("mylib");
+   }
+}</pre></div><p>When the library is required, the <code class="literal">System</code> class automatically detects the ABI where the device is running <a id="id509" class="indexterm"/>and loads the required platform dependent <a id="id510" class="indexterm"/>library. Therefore, if you are running on an x86 device, <code class="literal">x86/libmylib.so </code>is going to be loaded.</p></div>
+<div class="section" title="Calling C++ functions from native code"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec68"/>Calling C++ functions from native code</h1></div></div></div><p>So far, we <a id="id511" class="indexterm"/>have called a C function implemented <a id="id512" class="indexterm"/>in the <code class="literal">c_functions.c source</code>, so, in the next section, we will show you how to call a C++ member class.</p><p>First, we will add the <code class="literal">isPrimeCPlusPlus</code> native method to <code class="literal">MyNativeActivty</code> that returns <code class="literal">String</code> as a result. Let's see how the native function declaration will look:</p><div class="informalexample"><pre class="programlisting">public class MyNativeActivity extends Activity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+      ...
+      TextView cPlusTv = (TextView)  
+          findViewById(R.id.helloFromCPlusPlus);
+      cPlusTv.setText(isPrimeCPlusPlus(4));
+    }
+
+    public native String isPrimeCPlusPlus(int number);
+}</pre></div><p>Running the <code class="literal">javah</code> tool against the new <code class="literal">MyNativeActivity</code> class definition will generate a new function declaration with the following signature:</p><div class="informalexample"><pre class="programlisting">JNIEXPORT jstring JNICALL Java_com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity_isPrimeCPlusPlus(JNIEnv *, jobject, jint);</pre></div><p>Next, we are going to implement the prime function, as a <code class="literal">class static</code> function, on a C++ source file with the name <code class="literal">mylib.cpp</code>:</p><div class="informalexample"><pre class="programlisting">#include "com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity.h"
+
+class Math {
+  public:
+  static int isPrime(int number) { ...// Elided for brevity}
+};
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+jstring  Java_com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity_isPrimeCPlusPlus
+(JNIEnv * env, jobject obj, jint number) {
+
+  return (env)-&gt;NewStringUTF(
+     Math::isPrime(number) ? "Is Prime" : "Is not Prime");
+}
+
+#ifdef __cplusplus
+}
+#endif</pre></div><p>If you build your <a id="id513" class="indexterm"/>project in Android Studio, the <code class="literal">mylib.cpp</code> <a id="id514" class="indexterm"/>source file will be detected and the new function and class will be added to the <code class="literal">libmylib.so</code> shared library file.</p><p>Once we run the application, the C++ system default library will be loaded with a minimal system C++ runtime. The default C++ runtime does not provide the C++ standard library, exception support, and <span class="strong"><strong>RunTime Type Information</strong></span> (<span class="strong"><strong>RTTI</strong></span>). Therefore, if you want to make use of C++ standard library string classes, containers, streams, and general algorithms, you will have to explicitly load the C++ runtime required before you load your library. For a complete and up to date comparison of the C++ runtime available on Android, please check C++ Runtimes on the Android Developer website.</p><p>If we want to use a different C++ runtime than the system runtime, we must explicitly set the runtime in your module's <code class="literal">build.gradle</code> file:</p><div class="informalexample"><pre class="programlisting">  ndk {
+    moduleName "mylib"
+    stl "c++_shared"
+  }</pre></div><p>Moreover, we must load the non-default C++ runtime library before we load our library or any library that depends on it:</p><div class="informalexample"><pre class="programlisting">public class MyNativeActivity extends Activity {
+  static {
+    System.loadLibrary("c++_shared");
+    System.loadLibrary("mylib");
+  }
+}</pre></div><p>Since <code class="literal">c++_shared</code> provides a complete STL library implementation, from now on we will use this runtime as the base C++ runtime for our code examples.</p><p>Great! So far, we <a id="id515" class="indexterm"/>have learned how to interact with native <a id="id516" class="indexterm"/>methods using the JNI interface, so our next step is to learn how to access Java objects from native code.</p></div>
+<div class="section" title="Accessing Java objects from native code"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec69"/>Accessing Java objects from native code</h1></div></div></div><p>When we <a id="id517" class="indexterm"/>call a native function, the C or C++ function <a id="id518" class="indexterm"/>receives a <code class="literal">JNIEnv</code> pointer to a table of JNI methods used to interact with JVM Runtime. The <code class="literal">JNIEnv</code> pointer provides us with a set of primitives ready to find a Java class definition, set or get Java object field values, call static or member Java object functions, create Java objects, interact with Java monitors, or deal with exceptions.</p><p>Our next example will count the number of words on an <code class="literal">EditText</code> UI Widget on a native function and update a <code class="literal">TextView</code> text with count results from the native code. Therefore, we will learn how to use <code class="literal">JNIEnv</code> to access a member Java object field and how to call a Java object method <code class="literal">(TextView.setText</code>) using the <code class="literal">JNIEnv</code> interface.</p><p>Let's start by defining our native function and invoke it every time the <code class="literal">EditField</code> content changes:</p><div class="informalexample"><pre class="programlisting">public class MyNativeActivity extends Activity {
+   
+  protected EditText inputTextEt = null;
+  protected TextView charCountTv = null;
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+	 
+     // Reference stored as member fields for native access	
+    inputTextEt = (EditText) findViewById(R.id.inputText);
+    charCountTv = (TextView) findViewById(R.id.charCount);
+	 
+    // Called every time the code changes
+    inputTextEt.addTextChangedListener(new TextWatcher() {
+      @Override
+      public void onTextChanged(CharSequence s, int start, 
+                                int before, int count) {
+        updateWordCounter(s.toString());
+      }
+      ...
+    });
+  }
+  // Native function that calculates the number of words 
+  // in a string
+  private native void updateWordCounter(String s);
+}</pre></div><p>Notice that a <a id="id519" class="indexterm"/>new function is added to <code class="literal">Activity</code> so make <a id="id520" class="indexterm"/>sure you run <code class="literal">javah</code> to generate the new native function declaration.</p><p>Next, we will define the JNI native function that counts the number of words for a string:</p><div class="informalexample"><pre class="programlisting">class Util {
+  public:
+  static int countWords(const std::string &amp;strString) { 
+    ... 
+  };
+}
+
+Void Java_com_packpublishing_asynchronousandroid_chapter9_MyNativeActivity_updateWordCounter(JNIEnv *env, jobject obj, jstring text) {
+
+    std::string content(env-&gt;GetStringUTFChars(text, 0));
+
+    size_t word_cnt= Util::countWords(content);
+
+    // Update the TexView with word_cnt integer
+
+}</pre></div><p>We left the native implementation because we will implement it on a step-by-step basis. As the first step, we will get the <code class="literal">TextView</code> object instance, used to present the number of words on the UI text input, from the <code class="literal">charCountTv</code> object field. </p><p>To access a Java object field or method, a <code class="literal">jmethodID</code> or <code class="literal">jfieldID </code>is always required:</p><div class="informalexample"><pre class="programlisting">jmethodID   GetMethodID(JNIEnv* env, jclass clazz, 
+                        const char*name, 
+                        const char* methodSignature);
+
+jfieldID    GetFieldID(JNIEnv*, jclass clazz, 
+                       const char*name, 
+                       const char* fieldTypeCode);</pre></div><p>In order to <a id="id521" class="indexterm"/>construct the <code class="literal">methodSignature</code> <a id="id522" class="indexterm"/>or the <code class="literal">fieldTypeCode</code> (TC), we have to map the Java types to type codes using the following table:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Java Type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Type Code (TC)</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">boolean</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Z</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Byte</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">B</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Char</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">C</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">double</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">D</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">float</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">F</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Int</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">I</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Long</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">J</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">short</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">S</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Object</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">L&lt;package&gt;;</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">Void</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">V</code>
+</p>
+</td></tr></tbody></table></div><p>When we convert an array, always prefix the type code with the <code class="literal">[</code> character.</p><p>To create a <code class="literal">jfieldID</code> we need a single type code. However, to construct the method signature we use the following format:</p><div class="informalexample"><pre class="programlisting"> (&lt;Argument 1 TC &gt;&lt;Argument N TC&gt;) &lt;Return TC&gt;</pre></div><p>Let's see how we obtain the <code class="literal">charCountTv TextView</code> object in the native code using the instructions explained below:</p><div class="informalexample"><pre class="programlisting">// 1. Obtain a reference to the MyNativeActivity class definiton
+jclass activityClass = env-&gt;GetObjectClass(obj);
+
+// 2. Get the fieldId for the charCountTv TextView 
+   jfieldID charCountFId = env-&gt;GetFieldID(activityClass, "charCountTv", "Landroid/widget/TextView;");
+
+// 3. Retrieve the object using the object and the jfieldID
+jobject tvObj = env-&gt;GetObjectField(obj,charCountFId); </pre></div><p>Once we have the <code class="literal">TextView</code> reference, we can invoke the <code class="literal">setText(CharSequence)</code> instance method to publish the number of words found. To invoke a Java method we will make use of <a id="id523" class="indexterm"/>the JNI function <code class="literal">CallVoidMethod</code> <a id="id524" class="indexterm"/>with a <code class="literal">jmethodId</code> created from the method signature: </p><div class="informalexample"><pre class="programlisting">void CallVoidMethod(JNIEnv *env, jclass clazz,
+                    jmethodID methodID, ...);</pre></div><p>Let's see how the native code that updates the <code class="literal">TextView charCountTv</code> with the number of words will look:</p><div class="informalexample"><pre class="programlisting">// 1. Get the TextView class definition 
+jclass textViewClass = env-&gt;GetObjectClass(tvObj);
+
+// 2. Get the methodId for the TextView.setText function
+jmethodID setTextMId = env-&gt;GetMethodID(
+       textViewClass, "setText", "(Ljava/lang/CharSequence;)V");
+
+// 3. Invoke the SetText instance function
+   env-&gt;CallVoidMethod(
+     tvObj,setTextMId,env-&gt;NewStringUTF(wordCountStr);</pre></div><p>To invoke <code class="literal">static</code> methods and methods with different kind of result types, the JNI interface provides us with a set of functions with the following signatures:</p><div class="informalexample"><pre class="programlisting">// To invoke a Class static method that returns a Java Type
+&lt;NativeType&gt; CallStatic&lt;Type&gt;Method(
+   JNIEnv *env, jobject obj, jmethodID methodID, ...);
+
+// To invoke a method that returns a Java &lt;Type&gt;  
+&lt;NativeType&gt; Call&lt;Type&gt;Method(
+   JNIEnv *env, jobject obj, jmethodID methodID, ...);
+
+// To invoke a method that returns a Java &lt;Type[]&gt;  
+&lt;NativeArrayType&gt; Call&lt;Type&gt;MethodA(
+  JNIEnv *env, jobject obj, jmethodID methodID, ...);</pre></div><p>Now that we have the basic knowledge about how to call native functions with the JNI interface, we are ready <a id="id525" class="indexterm"/>to start using the JNI to execute asynchronous work on native code. </p></div>
+<div class="section" title="Executing native background work on Java threads"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec70"/>Executing native background work on Java threads</h1></div></div></div><p>In previous <a id="id526" class="indexterm"/>sections, we used the JNI <a id="id527" class="indexterm"/>interface to execute native functions on the main thread. Since they run on the main thread, the functions were able to update the UI, access the <code class="literal">Activity</code> instance fields, and or update any UI widget directly.  </p><p>However, as we discussed before, for long computing or intensive tasks we have to execute them on the background thread. </p><p>In previous sections, we learned how to use the <code class="literal">AsyncTask, Loader</code>, <code class="literal">Handler</code>, and Remote Services to execute work on background threads that don't reduce the UI responsiveness or interfere with UI rendering.</p><p>In any of these Android specific constructs, the background thread is already attached to the JVM. Hence, the background thread already possesses access to a ready to use JNI environment.</p><p>In our next example, we will make use of the <code class="literal">Loader</code> construct and build <code class="literal">AsyncTaskLoader</code>, that loads an image on the background, converts the image to gray scale in native code, and publishes the result on the UI screen. </p><p>First, we will detail how the <code class="literal">Loader</code> Java class definition will look before we start to dig into the native function details:</p><div class="informalexample"><pre class="programlisting">public class GrayImageLoader extends AsyncTaskLoader&lt;Result&lt;Bitmap&gt;&gt; {
+
+  final String fileName;
+  Bitmap grayImage;
+
+  public ToGrayImageLoader(Context ctx, String fileName) {
+    super(ctx);
+    this.fileName =  fileName;
+  }
+
+  @Override
+  public Result&lt;Bitmap&gt; loadInBackground() {
+    Result&lt;Bitmap&gt; result = new Result&lt;Bitmap&gt;();
+    try {
+      BitmapFactory.Options options = new BitmapFactory.Options();
+      options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+      
+      // Build a RGBA 8888 Bitmap to represent the image 
+      Bitmap b = BitmapFactory.decodeFile(this.fileName, options);
+      
+      // Convert the Image to Gray scale on Native code
+      Bitmap originalImage = BitmapFactory.decodeStream(
+        getContext().getAssets().open(fileName));
+         
+ 	  // Fill the result with the Gray Image
+      result.obj = convertImageToGray(originalImage);
+    } catch (Exception e) {
+      result.error = e;
+    }
+    return result;
+  }
+
+  private native Bitmap convertImageToGray(Bitmap original);
+  …
+}</pre></div><p>Notice that our <a id="id528" class="indexterm"/><code class="literal">Loader</code> will load a <code class="literal">Bitmap</code> <a id="id529" class="indexterm"/>image wrapped in a generic <code class="literal">Result</code> class, as we did in previous sections. When any exception happens on the Java or Native code, <code class="literal">Result.error</code> is filled, making the <code class="literal">Loader</code> consumer able to detect an error and react accordingly.</p><p>Our loader will receive as an argument the image filename to load from the assets and will decode the image to a <code class="literal">Bitmap</code> object in the <code class="literal">ARGB_8888</code> format and return an image in grayscale</p><p>When the native function executes in the background thread without errors, the <code class="literal">Result&lt;Bitmap&gt;</code> object is delivered to the <code class="literal">Loader</code> consumer in the UI Thread to be updated to the device screen.</p><p>Executing <code class="literal">javah</code> against our new <code class="literal">AsynTaskLoader</code> class should generate the <code class="literal">com_packpublishing_asynchronousandroid_chapter9_ToGrayImageLoader.h</code> header file with the following function signature:</p><div class="informalexample"><pre class="programlisting">JNIEXPORT jobject JNICALL Java_com_packpublishing_asynchronousandroid_chapter9_ToGrayImageLoader_convertImageToGray(JNIEnv * env, jobject loader, jobject bitmap);</pre></div><p>To process <code class="literal">Bitmap</code> <a id="id530" class="indexterm"/>objects on the native layer, the <code class="literal">jnigraphics</code> shared library is required. Therefore, let's update our <code class="literal">gradle</code> build configuration to link our library with the <code class="literal">jnigraphics</code> shared library:</p><div class="informalexample"><pre class="programlisting">ndk {
+    moduleName "mylib"
+    stl "stlport_shared"
+    ldLibs "jnigraphics", "log"
+}</pre></div><p>Linking our library <code class="literal">mylib</code> against <code class="literal">jnigraphics</code> will force the dynamic loader to load the <code class="literal">jnigraphics</code> <a id="id531" class="indexterm"/>library every time our library is loaded by <code class="literal">System.loadLibrary</code>. Beyond that, the <code class="literal">gradle</code> system will pack the <code class="literal">jnigraphics</code> shared library for the several ABIs required in the <span class="strong"><strong>application package file</strong></span> (<span class="strong"><strong>APK</strong></span>).</p><p>Now that we have the method defined in the header, it is time to implement the native function that converts the original <code class="literal">Bitmap</code> to a grayscale <code class="literal">Bitmap</code>.</p><p>First, let's create the source file <code class="literal">image.cpp</code> that includes the <code class="literal">jni</code> method definition and the required <code class="literal">jnigraphics</code> header file: </p><div class="informalexample"><pre class="programlisting">#include "com_packpublishing_asynchronousandroid_chapter9_ToGrayImageLoader.h"
+#include &lt;android/bitmap.h&gt;</pre></div><p>Next, we will implement the function that converts the original pixels to gray pixels:</p><div class="informalexample"><pre class="programlisting">jobject Java_com_packpublishing_asynchronousandroid_chapter9_ToGrayImageLoader_convertImageToGray(JNIEnv * env, jobject obj, jobject bitmap) {
+
+  AndroidBitmapInfo info; // Image Information
+  void * pixels; // Pixel Matrix
+  int ret; // Jni Graphics operation result code
+  
+   // Reads the Image width, height, format,...
+  if ( (ret = AndroidBitmap_getInfo(env, bitmap, &amp; info)) &lt; 0) {
+    jclass clazz = env-&gt;FindClass("java/lang/RuntimeException");
+    env-&gt;ThrowNew(clazz, "Failed to get bitmap info");
+    return 0;
+  }
+  // Loads the bitmap pixel matrix on pixels pointer
+  if ((ret = AndroidBitmap_lockPixels(env,bitmap,(void **)&amp; pixels)) &lt; 0) {
+    // Exception Generation Elided for brevity
+  }
+  // Convert each pixel to gray
+  ...
+  AndroidBitmap_unlockPixels(env, bitmap);
+  return bitmap;
+}</pre></div><p>With the help of the <code class="literal">jnigraphics</code> library, we can read the image information using <code class="literal">AndroidBitmap_getInfo</code> and if everything goes well, the image info will be stored on the local variable <code class="literal">info</code> for further use. </p><p>However, if <a id="id532" class="indexterm"/><code class="literal">AndroidBitmap_getInfo</code> fails we will throw an exception in JVM and return immediately from the <a id="id533" class="indexterm"/>native function because we call <code class="literal">return</code>. Under a normal situation, if we throw an exception in the JVM with <code class="literal">ThrowNew</code>, the native function does not stop and transfers control to the exception handler. Therefore, if an exception is thrown during a native code call, when the function returns, the JNI interface will detect it and transfer the execution to the exception handler.</p><p>In our example, we generate a <code class="literal">RuntimeException</code> with the <code class="literal">jclass</code> obtained from the <code class="literal">Findclass</code> JNI function.</p><p>When we finish the bitmap processing, we unlock the pixels through <code class="literal">AndroidBitmap_unlockPixels</code> and we return the <code class="literal">Bitmap</code> <code class="literal">jobject</code> to the <code class="literal">loadInBackground</code> function that originally invoked the native method from the background thread.</p><p>As you already know, the processed Bitmap will be delivered by the <code class="literal">AsyncTaskLoader</code> in the UIThread, and it could be used to update an <code class="literal">ImageView</code> or other kind of UI Widget that presents an image on the screen. Let's see how a <code class="literal">LoaderCallback.onLoadFinished</code> callback might look:</p><div class="informalexample"><pre class="programlisting">@Override
+public void onLoadFinished(Loader&lt;Result&lt;Bitmap&gt;&gt; loader, Result&lt;Bitmap&gt; data) {
+  if ( data.obj != null ) {
+    ImageView iv = (ImageView)findViewById(R.id.grayImage);
+    iv.setImageBitmap(data.obj);
+  } else {
+    Log.e("&lt;TAG&gt;", data.error.getMessage(), data.error);
+  }
+}</pre></div><p>In this simple example, we were able to execute asynchronous work in machine code with <code class="literal">AsyncTaskLoader</code> help, although a similar procedure could have been done with an <code class="literal">AsyncTask</code> subclass, a normal thread, or even a <code class="literal">HandlerThread</code>. These kind of Android construct use Java background threads managed by Android JVM, therefore, it is not required to explicitly <a id="id534" class="indexterm"/>attach these threads to JVM since they are part of the JVM system and have their own <code class="literal">JNIEnv</code>.</p><p>In the next chapter, we <a id="id535" class="indexterm"/>are going to learn how to create pure native threads and use them to execute background work for our Android application in a consistent and reliable way. </p></div>
+<div class="section" title="Executing asynchronous work on a native thread"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec71"/>Executing asynchronous work on a native thread</h1></div></div></div><p>The Android <a id="id536" class="indexterm"/>NDK is bundled with the POSIX thread C API that provides an API to create and destroy native threads, native mutual exclusion synchronization primitives, named mutexes, and condition variables, that like Java monitors, allow threads to wait until a change in a resource happens. Apart from this global API, the developer also has access to a higher level C++11 thread API available on <code class="literal">clang</code> and <code class="literal">gnu_stl</code> C++ Runtimes. </p><p>Since both of these frameworks offer the same kind of concurrent functionalities we will use C++11 thread framework for its simplicity and similarity with the Java Thread API. </p><p>First, let's update our <code class="literal">ndk build.gradle</code> to use the clang C++ Runtime that supports the thread API that we are going to use in our following code examples:</p><div class="informalexample"><pre class="programlisting">ndk {
+  moduleName "mylib"
+  stl "c++_shared"
+  cppFlags.add("-frtti")
+  cppFlags.add("-exceptions)
+}</pre></div><div class="section" title="Attaching and detaching native threads from JVM"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec66"/>Attaching and detaching native threads from JVM</h2></div></div></div><p>In order to <a id="id537" class="indexterm"/>interact with our JVM and execute <a id="id538" class="indexterm"/>background work concurrently for us, the native threads should be attached to the current virtual machine and build its own <code class="literal">JNIEnv</code>.</p><p>The thread <code class="literal">JNIEnv</code> is tied to a specific native thread and cannot be shared with other threads since it manages its own references and local thread environment.  </p><p>To present this to you in a more practical way, in the next few paragraphs, we will build a code example that creates JVM attached native threads that execute work in the background and interact with the UI thread, publishing a <code class="literal">keep-alive</code> message using a well known Android handler construct.</p><p>To attach any <a id="id539" class="indexterm"/>thread to the JVM, we need to access the global virtual machine structure, <code class="literal">JavaVM</code>:</p><div class="informalexample"><pre class="programlisting">jint AttachCurrentThread(JavaVM *vm, void **p_env, void *thr_args) </pre></div><p>A good way to get the <a id="id540" class="indexterm"/>JVM structures to retrieve from <code class="literal">JNI_OnLoad</code>, a function that is automatically called on our library by the JavaVM when our library gets loaded. When the callback is called by the JNI interface, we will save the JavaVM reference for future use:</p><div class="informalexample"><pre class="programlisting">// Java VM Global Pointer
+static JavaVM* gVm = NULL;
+jint JNI_OnLoad (JavaVM* vm, void* reserved) {
+    gVm = vm;
+    return JNI_VERSION_1_4;
+}</pre></div><p>With the JVM global pointer ready to be used, we are able to attach any native thread to the application JVM and start interacting with the <code class="literal">JNIEnv</code>. </p><p>As a starting point, we will create a high level C++ class that automatically attaches to the JVM, and detaches from the JVM when the instance has been destroyed.  This class will be used as the base class in our thread examples, providing a common abstract interface for native thread creation.</p><p>Let's see how the <code class="literal">JavaThread</code> class definition will look:</p><div class="informalexample"><pre class="programlisting">#include &lt;thread&gt; // including the C++11 Thread Header
+#include &lt;jni.h&gt;  // JNI Header
+class JavaThread: public std::thread {
+public:	 
+  JavaThread();
+  Void join(); // Wait for the thread to finish
+  void entryPoint();
+  void start(); 
+  void stop();
+protected:
+   // Method that subclass should implement to define
+   // the unit of work 
+   virtual void run() = 0;    	 
+   virtual void onDetach() {};JNIEnv* threadEnv = NULL; // Thread specific JNI Environment
+   std::thread thread_; // C++11 Thread 
+   // is Thread attached to JVM
+bool isStarted = false;
+   std::condition_variable startCond;
+   std::mutex startMutex;
+   volatile bool shouldStop = false;
+   std::condition_variable stopCond;
+   std::mutex stopMutex;
+};</pre></div><p>In this class header, we subclass the <code class="literal">JavaThread</code> from the original C++ thread class defined and we define the abstract method <code class="literal">run</code>. Any worker thread can subclass <code class="literal">JavaThread</code>, providing its own implementation of the <code class="literal">run</code> method. Additionally, the protected thread specific to the JNI interface environment is stored in <code class="literal">threadEnv</code> for future use by the thread subclasses.</p><p>Beyond that, we will <a id="id541" class="indexterm"/>introduce you to the C++ synchronization <a id="id542" class="indexterm"/>primitives, available from the thread header. <code class="literal">std:mutex</code> is a mutual exclusive primitive that only allows one thread at a time to enter a protected critical scope. If a thread is executing the critical code, another thread that tries to enter the critical section will block the execution until the thread executing the critical section releases the lock.  Here is a simple example:</p><div class="informalexample"><pre class="programlisting"> // Thread waits for his turn
+ mutex.lock();
+ ...// Only one thread enters on this section
+ mutex.unlock();</pre></div><p>The same behavior would have been achieved in Java by using the synchronized word in a Java block or a synchronized block.</p><p>The condition concurrent primitive, like a Java monitor, can be used to block a thread or a group of threads execution until another thread modifies a shared information and sends a signal to notify the waiting threads.</p><p>Now that we know what these C++ concurrency primitives are used for, let's implement the <code class="literal">JavaThread</code> that automatically attaches and detaches itself to and from JVM.</p><p>First of all, we will start the background native thread in the native <code class="literal">start()</code> by passing the <code class="literal">entryPoint</code> <a id="id543" class="indexterm"/>functions as the runtime function for the thread:</p><div class="informalexample"><pre class="programlisting">void JavaThread::start() {
+    thread_ = std::thread(&amp;JavaThread::entryPoint, this);
+    std::unique_lock&lt;std::mutex&gt; lck(startMutex);
+    // wait until the Thread is attached to JVM
+    while (!isStarted) startCond.wait(lck);
+}</pre></div><p>As soon as <code class="literal">std::thread</code> creates the thread in the system it will call the <code class="literal">entrypoint</code> function in our object <a id="id544" class="indexterm"/>to initialize the JNI environment.</p><p>In the meantime, we will block the calling thread until the new thread attaches to JVM and sends a signal to the <code class="literal">startCond</code> condition variable. Next, when <code class="literal">std::thread</code> initializes the new thread in the operating system, it changes the execution control to the member function specified in the constructor, <code class="literal">JavaThread::entryPoint</code>. In this function, we will attach the native thread to the JVM, dispatching the execution to the subclass <code class="literal">run()</code> method.</p><p>Let's see how we might implement the <code class="literal">entryPoint</code> function:</p><div class="informalexample"><pre class="programlisting">void JavaThread::entryPoint() {
+
+  // Attach current thread to Java virtual machine
+  // and obrain JNIEnv interface pointer
+  { 
+    // Acquires the start Mutex to access the conditional variable
+    std::unique_lock&lt;std::mutex&gt; lck(startMutex);
+    // Ataches the current thread to the JVM 
+    // and caches the JNIEnv 
+    if ( gVm-&gt;AttachCurrentThread(&amp;threadEnv, NULL) != 0) {
+      ..// Handle the error 
+    }
+    isStarted = true;  // Changes the shared variable
+    startCond.notify_all(); // Notify the thread constructor
+  }
+  onAttach();
+  try {
+    // Run the subclass method
+    run();
+  } catch (...) {
+    // Detach current thread when an exception happens
+    onDetach();
+    gVm-&gt;DetachCurrentThread();
+    throw;
+  }
+  // Detach current thread from Java virtual machine
+  onDetach(); 
+  gVm-&gt;DetachCurrentThread();
+}</pre></div><p>Notice that the thread <a id="id545" class="indexterm"/>is detached from the JVM even when a <a id="id546" class="indexterm"/>runtime exception is thrown during the <code class="literal">run</code> execution. When the thread is detached from the JVM, all the thread monitors are released and all the Java threads waiting for this thread are notified.</p><p>For the stopping mechanism, we will make use of a <code class="literal">boolean</code> variable and <code class="literal">condition</code> variable to notify that the <code class="literal">shouldStop</code> condition has changed. Later on, our <code class="literal">JavaThread</code> subclass will take advantage of this mechanism to stop the <code class="literal">run()</code> execution.</p><p>Let's see how the <code class="literal">stop</code> method will look:</p><div class="informalexample"><pre class="programlisting">void JavaThread::stop() {
+    // Acquire the stop mutex 
+    std::unique_lock&lt;std::mutex&gt; lck(stopMutex);    
+    // Change the should stop condition 
+this-&gt;shouldStop =true;    
+    // Notify any thread waiting for this signal that shouldstop
+    // condition has changed.
+    stopCond.notify_all();
+}</pre></div><p>With the native thread base class completely defined, we are now ready to create our derived class that implements the required behavior in the <code class="literal">run</code> method.</p><p>As defined before, we will use a <code class="literal">Handler</code> construct to submit messages from the background threads to the UI thread. Since they run on the same process and share the same memory, we can safely pass a reference to a <code class="literal">Handler</code> object to the native background threads. </p><p>First, before we start to implement our <code class="literal">JavaThread</code> sub-class, we will write the <code class="literal">NativeThreadsActivity</code> and implement a <code class="literal">Handler</code> anonymous subclass to receive messages from <a id="id547" class="indexterm"/>the native threads:</p><div class="informalexample"><pre class="programlisting">public class NativeThreadsActivity extends Activity {  
+  public static final int HEALTHCHECK = 0; // Handler Message Code
+  ...
+  // Process the Message sent by the native threads
+  Handler myHandler = new Handler() {
+    public void handleMessage(Message msg) {
+      switch (msg.what) {
+      case HEALTHCHECK:
+        TextView tv = (TextView)findViewById(R.id.console);
+        tv.setText((String) msg.obj + tv.getText());
+        break;
+      }
+    }
+  };
+  // Start the Native Threads when the start button is clicked
+  public native void startNativeThreads(Handler handler);
+  // Stop The Native Threads when the stop button is clicked
+  public native void stopNativeThreads();
+}
+Once our handler receives a message with the code <code class="literal">HEALTHCHECK</code> it will prepend the String received on the <code class="literal">msg.obg</code> to a <code class="literal">TextView</code> on the <code class="literal">Activity</code> UI screen. </pre></div><p>This class will also <a id="id548" class="indexterm"/>be responsible for starting and stopping the native threads each time we click on the <span class="strong"><strong>start</strong></span> and <span class="strong"><strong>stop</strong></span> button.</p><p>The start and stop button setup is omitted in the code example. However, the <span class="strong"><strong>start</strong></span> button will invoke the native function of <code class="literal">startNativeThreads</code>, passing <code class="literal">myHandler</code> as the <code class="literal">Handler</code> argument and the stop button will invoke <code class="literal">stopNativeThreads</code> to stop the native thread execution. Additionally, we can also call <code class="literal">stopNativeThreads</code> on <code class="literal">Activiy.onStop</code> to stop the threads when the activity gets destroyed.</p><p>Now we need to implement the <code class="literal">JavaThread</code> that will run in the background and submit a <code class="literal">healthcheck</code> message to the UI thread over the <code class="literal">handler</code> object. Since the handler is coming from a different <code class="literal">jniEnv</code>, the first thing to do is to create a JNI global reference from the original handler. Let's start by implementing the constructor that creates a global <code class="literal">Handler</code> object reference and store the reference in a <code class="literal">member</code> variable:</p><div class="informalexample"><pre class="programlisting">class HealthCheckThread: public JavaThread {
+
+     jobject handlerObj; // Cache the Global Reference  
+public:
+    HealthCheckThread(JNIEnv *env_,jobject handlerObj_):
+      JavaThread(), 
+      // Use the main threadJNIEnv to create a global ref
+      handlerObj(env_-&gt;NewGlobalRef(handlerObj_)) {} 
+     }</pre></div><p>In the constructor<a id="id549" class="indexterm"/>, we received the object reference <a id="id550" class="indexterm"/>from the main thread, we called our <code class="literal">JavaThread </code>default constructor, and we created a global reference to store the original reference.</p></div><div class="section" title="JNI references explained"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec67"/>JNI references explained</h2></div></div></div><p>It's really important to <a id="id551" class="indexterm"/>understand in detail how JNI references are managed by JVM, because if we don't use them properly, we can crash the application or introduce a memory leak in the application. A memory leak will affect the application performance, increase battery consumption, and in the long term crash the application with a <code class="literal">java.lang.OutOfMemoryError </code>exception.  As you know, JVM Garbage Collector (GC) manages the application memory use, cleaning up objects when they are not in use. An object is considered eligible for garbage collection when no references to that object exist in the memory, so, when the GC finds a none referred object it will release the object from the memory. </p><p>JNI supports three types of reference:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Local Reference</strong></span> – References attached to a thread, <code class="literal">JNIEnv</code>, which is lifetime valid for the duration of a native method. The reference is passed to the native method and destroyed as soon as the method returns. The user can also create and delete local references in the native method to prevent any object from being garbage collected. Keep in mind that a local reference is valid in the <code class="literal">JNIEnv</code> where it was created. The following JNI functions are available to manage local references:<div class="informalexample"><pre class="programlisting">Jobject NewLocalRef(jobject);
+void DeleteLocalRef (jobject);</pre></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"> JVM provides a function to allocate space in the current JNI frame to store local references. By default, it has the capacity for 16 references:<div class="informalexample"><pre class="programlisting">jint EnsureLocalCapacity(jint);</pre></div></li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Global Reference</strong></span> – References used to keep global objects alive for an unlimited period of time. These kinds of reference can be shared between thread <code class="literal">JNIEnv</code> objects. It is critical to explicitly delete the reference from JVM when they are no longer required. When you don't free the reference from the system you are creating a memory leak in your application. Notice that when you free the reference from the system, the reference is no longer valid, so if you try to use it an exception will be thrown in the JNI interface. The following JNI <a id="id552" class="indexterm"/>functions are used to manage local references:<div class="informalexample"><pre class="programlisting">jobject NewGlobalRef (jobject);
+void DeleteGlobalRef(jobject);</pre></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Weak Global Reference</strong></span> – Like the global reference, but it doesn't prevent the object from being garbage collected when it is the only alive reference to the object. Weak global references in JNI are a streamlined version of Java Weak References:<div class="informalexample"><pre class="programlisting">jweak NewWeakGlobalRef(JNIEnv *env, jobject obj);
+void DeleteWeakGlobalRef(JNIEnv *env, jweak obj);</pre></div></li></ul></div></div><div class="section" title="Interacting with UI from native threads"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec68"/>Interacting with UI from native threads</h2></div></div></div><p>Since we want to cache a <a id="id553" class="indexterm"/>reference to a <code class="literal">Handler</code> object that survives the <code class="literal">startNativeThreads</code> execution, it makes sense to create a global reference before we save it in a member variable. The reference will be later used in our background thread to submit messages to the UI. </p><p>Given that we created a global reference in our <code class="literal">HealthCheckThread</code> class, to release the reference in JVM and avoid any memory loss, we will delete the global reference in the <code class="literal">HealthCheckThread.onDetach()</code> function called during thread stopping:</p><div class="informalexample"><pre class="programlisting">class HealthCheckThread: public JavaThread {
+    ...
+    virtual void onDetach(){
+        jniEnv()-&gt;DeleteGlobalRef(handlerObj);
+    }
+}</pre></div><p>Next, we will update the <code class="literal">HealthCheckThread</code> and implement the <code class="literal">run</code> method that is going to submit health check messages to the <code class="literal">Handler</code> object attached to the UI thread:</p><div class="informalexample"><pre class="programlisting">virtual void run(){
+
+  while (!shouldStop) {
+    std::unique_lock&lt;std::mutex&gt; lck(stopMutex);
+    // Do Work
+    // ...
+    sendHealthMessage();
+    // Wait until a stop signal is sent
+    stopCond.wait_for(lck, std::chrono::seconds(1));
+  }
+    }</pre></div><p>The <code class="literal">run</code> function will <a id="id554" class="indexterm"/>continuously execute until <code class="literal">shouldStop</code> is <code class="literal">true</code>. Furthermore, between each cycle, the thread will send a message and block for one second unless a stop signal is sent to notify the thread to stop. In this case, the native condition variable is used to wake up the thread from the one second sleep when the stop condition is set.</p><p>All that remains regarding the <code class="literal">HealthCheckThread</code> class is to implement the <code class="literal">sendHealthMessage</code>:</p><div class="informalexample"><pre class="programlisting">void sendHealthMessage() {
+
+  // Get the Handler class from the JVM
+  jclass handlerClass = jniEnv()-&gt;FindClass("android/os/Handler");
+  
+  // Get the Handler.obtainMessage methodId 
+  jmethodID obtainMId = jniEnv()-&gt;GetMethodID(handlerClass,  
+ "obtainMessage","(ILjava/lang/Object;)Landroid/os/Message;");
+  ...
+  // Build up the alive message
+  std::ostringstream oss;
+  oss &lt;&lt; "Thread[" &lt;&lt; std::this_thread::get_id() 
+      &lt;&lt; "] is alive at " &lt;&lt; ctime( &amp; tt) &lt;&lt; std::endl;;
+  
+  // Obtain a message object 
+  jobject messagObj = jniEnv()-&gt;CallObjectMethod(handlerObj, 
+                      obtainMId,
+                      HEALTHCHECK_MESSAGE,
+                      jniEnv()-&gt;NewStringUTF(oss.str().c_str()));
+
+  // Get the Handler.senMessage methodId
+  jmethodID sendMsgMId = jniEnv()-&gt;GetMethodID(handlerClass, 
+                         "sendMessage","(Landroid/os/Message;)Z");
+  
+  // Enqueues a new message on the main thread looper
+  jniEnv()-&gt;CallBooleanMethod(handlerObj,sendMsgMId, messagObj);
+  // Deletes the local references
+  jniEnv()-&gt;DeleteLocalRef(handlerClass);
+  jniEnv()-&gt;DeleteLocalRef(messagObj);
+}</pre></div><p>Before we start to use the <a id="id555" class="indexterm"/>handler object, we retrieve a <code class="literal">Message</code> from the <code class="literal">Handler</code> global message poll using the <code class="literal">obtainMessage</code> instance method. To build the string message passed in the <code class="literal">Message</code> object, we format a message using <code class="literal">ostringstream</code>, a thread ID, and the current <code class="literal">datetime</code>.</p><p>Then, we push the built <code class="literal">Message</code> to the handler object to be delivered in our <code class="literal">Activity</code>. To finish, we delete the created local reference from the local <code class="literal">JNIEnv</code>. </p></div><div class="section" title="Starting the native threads"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec69"/>Starting the native threads</h2></div></div></div><p>Just to finish our example, we <a id="id556" class="indexterm"/>will write the native methods <code class="literal">startNativeThreads</code> and <code class="literal">stopNativeThreads</code>. These methods will create and destroy the native threads each time we tap on the start or stop button. The UI code is omitted for brevity. Let's look at the <code class="literal">startNativeThreads</code> first:</p><div class="informalexample"><pre class="programlisting">static const int num_threads = 10;
+static JavaThread* threads[num_threads];
+
+void  Java_com_packpublishing_asynchronousandroid_chapter9_NativeThreadsActivity_startNativeThreads
+        (JNIEnv *jEnv, jobject activity, jobject handler){
+
+    LOGI("Starting  %d Native Threads",num_threads);
+    // Launch a group of threads
+    for (int i = 0; i &lt; num_threads; ++i) {
+        threads[i] = new HealthCheckThread(jEnv,handler);
+        threads[i]-&gt;start();
+     }
+}</pre></div><p>In <code class="literal">startNativeThreads</code>, we create <code class="literal">num_thread</code> threads passing the main thread <code class="literal">JNIEnv</code> and the handler <a id="id557" class="indexterm"/>reference to the <code class="literal">HealthCheckThread</code> constructor. The <code class="literal">HealthCheckThread</code> pointer returned from the constructor is cached in a static array for future use. </p></div><div class="section" title="Stopping the native threads"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec70"/>Stopping the native threads</h2></div></div></div><p>Given that we allocate the <a id="id558" class="indexterm"/><code class="literal">HealthCheckThread</code> object in the dynamic memory using the C++ operator <code class="literal">new</code>, in the <code class="literal">stopNativeThreads</code>, apart from stopping the thread execution, it is required to release the dynamic memory to avoid any memory leaks in the native code. So, all that remains is to implement the <code class="literal">stopNativeThreads</code>:</p><div class="informalexample"><pre class="programlisting">void Java_com_packpublishing_asynchronousandroid_chapter9_NativeThreadsActivity_stopNativeThreads(JNIEnv *env, jobject activity){
+
+    LOGI("Stopping %d Native Threads", num_threads);
+   
+    for (int i = 0; i &lt; num_threads; ++i) {
+        // Notify the thread to stop
+     threads[i]-&gt;stop();        
+        // This blocks the execution of the current thread until
+        // HealthCheckThread native thread finishes
+        threads[i]-&gt;join();        
+  // De-allocates memory previously allocated 
+        delete threads[i];
+    }
+}</pre></div><p>The <code class="literal">stopNativeThreads</code> function will stop the created threads using the <code class="literal">JavaThread::stop</code> member function. As detailed before, the stop member function will use a condition primitive to notify the running loop that it should finish its execution. After we notify the background thread, we wait for it to finish and we destroy the object stored in the array pointer. </p><p>Great! In this section, we were able to start native threads, attach them to JVM, and interact with the main thread using a Handler object. On the way, we learned about the C++ <code class="literal">condition</code> and <code class="literal">mutex</code> concurrent primitives to synchronize the access to shared resources in the native code.  Although we have been using the C++11 concurrent primitives to create and synchronize threads, we could have written our examples using the concurrent primitives <a id="id559" class="indexterm"/>provided by the POSIX <code class="literal">pthread</code> library. </p><p>The POSIX library <code class="literal">libpthread</code> also provides methods to manage native threads, mutual exclusion concurrency primitives (mutexes), and condition variables.</p></div></div>
+<div class="section" title="Handling Java exceptions in the native layer"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec72"/>Handling Java exceptions in the native layer</h1></div></div></div><p>While in <a id="id560" class="indexterm"/>Java, when an exception is thrown <a id="id561" class="indexterm"/>during a method execution, the JVM stops the normal method execution and tries to find an exception handler in the runtime to take control of execution, the same does not apply when you execute the Java method from the JNI code. </p><p>The JNI requires developers to explicitly implement the exception handling after an exception has occurred in a Java method invocation.</p><p>Moreover, when exception handling is pending, only a few JNI functions are safe to be invoked: <code class="literal">DeleteGlobalRef</code>, <code class="literal">DeleteLocalRef</code>, <code class="literal">DeleteWeakGlobalRef</code>, <code class="literal">ExceptionCheck</code>, <code class="literal">ExceptionClear</code>, <code class="literal">ExceptionDescribe</code>, <code class="literal">ExceptionOccurred</code>, <code class="literal">MonitorExit</code>, <code class="literal">PopLocalFrame</code>, <code class="literal">PushLocalFrame</code>, <code class="literal">Release&lt;PrimitiveType&gt;ArrayElements</code>, <code class="literal">ReleasePrimitiveArrayCritical</code>, <code class="literal">ReleaseStringChars</code>, <code class="literal">ReleaseStringCritical</code>, and <code class="literal">ReleaseStringUTFChars</code>.</p><p>There are three ways to handle Java exceptions in a native function. </p><p>The first way is to clear the pending exception with <code class="literal">ExceptionClear</code> and continue to execute the native code. This approach is seldom safe and you need to review all error flows to verify that you are handling the exception properly.</p><p>The second way is once the pending exception is detected, release the JNI allocated resources, stop the native code execution, and return the control to the Java code. In this case, the JNI will try to find a Java exception handler in the Java frame that invoked the native method. </p><p>The third way is to release the pending exception, generate a new exception with a different class type, and return from the native method with the new exception pending to be handled in Java code.</p><p>In our next example, we will follow the third because we will use most of the functions available in the JNI to handle exceptions. First, we will show you how to use the JNI exception in handling functions to clear a pending Java exception. Beyond that, we will stop the native method execution, release all the native resources, and throw a different exception to be handled in Java by the <code class="literal">RuntimeException</code> handler.</p><p>First, we will write an <code class="literal">Activity</code> that invoking the native method will spawn a pending exception in JVM:</p><div class="informalexample"><pre class="programlisting">public class ExceptionActivity extends Activity {
+
+ ...
+ OnClickListener onClickListener = new OnClickListener() {
+    @Override
+    public void onClick(View v) {
+      try {
+        // Allocate a ByteBuffer with a size of 8 bytes
+        ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+        
+        // Call a native function that will try to access 
+        // an out of bounds buffer position
+        genException(byteBuffer);
+	    // Catches a Runtime Exception
+      } catch (RuntimeException e) {
+        // Prints the Exception Stack Trace to the TextView
+        TextView console = (TextView)findViewById(R.id.console);
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        console.setText(sw.toString());
+      }
+    }
+  };
+  ...
+  // Native Function that will generate and Exception
+  private native void genException(ByteBuffer buffer);
+}</pre></div><p>Each time the <a id="id562" class="indexterm"/><code class="literal">genException</code> button is clicked, call a native method that fails with a runtime exception (<code class="literal">java.lang.IndexOutOfBoundsException</code>).</p><p>The <code class="literal">onClick (View v)</code> method is only able to handle <code class="literal">java.lang.RuntimeException</code>, so we must handle <code class="literal">IndexOutOfBoundsException </code>in the native function and convert it to <code class="literal">RuntimeException</code>:</p><div class="informalexample"><pre class="programlisting">void Java_com_packpublishing_asynchronousandroid_chapter9_ExceptionActivity_genException(JNIEnv * jniEnv, jobject activityObj, jobject byteBuffer){
+     
+  // Get the ByteBuffer class 
+  jclass byteBufC= jniEnv-&gt;GetObjectClass(byteBuffer);
+  
+  jmethodID getMid = jniEnv&gt;GetMethodID(byteBufC,"get","(I)B");
+  
+// Trying to access a buffer position out of the buffer capacity
+  jbyte byte = jniEnv-&gt;CallByteMethod(byteBuffer,getMid,32);
+
+  if (jniEnv-&gt;ExceptionCheck()) {
+    // Prints the exception  on the standard Error
+    jniEnv-&gt;ExceptionDescribe();    
+    // Clears the exception on the JVM
+    jniEnv-&gt;ExceptionClear();
+    jclass excC = jniEnv&gt;FindClass("java/lang/RuntimeException");
+    jniEnv-&gt;ThrowNew(excC,"Failed to get byte from buffer");
+    // Release the Allocated Resources 
+    jniEnv-&gt;DeleteLocalRef(excC);
+    jniEnv-&gt;DeleteLocalRef(byteBufC);        
+    // Return with Pending RuntimeException
+    return;
+  }
+  ...
+}</pre></div><p>There are two functions used to detect an exception in a JNI native function:</p><p>The <code class="literal">ExceptionOccurred</code> function returns a <code class="literal">jthrowable</code> object reference if there is a pending exception that is not handled so far, or null when <code class="literal">no exception</code> is ready.</p><p>The <code class="literal">ExceptionCheck</code> function returns <code class="literal">jboolean</code> when there is an outstanding unhandled exception in JVM, the function will return <code class="literal">JNI_TRUE</code> as the result.</p><p>Assuming that we don't want to use <code class="literal">jthrowable</code> returned by <code class="literal">ExceptionOccurred</code>, we will use <code class="literal">ExceptionCheck</code> to detect the exception and enter the exception handling code branch. </p><p>Thereafter, with the <code class="literal">ExceptionDescribe</code> function we will print the current pending <code class="literal">throwable</code> stack trace in the error output, and with <code class="literal">ExceptionClear</code>, we will clear the pending <code class="literal">IndexOutOfBoundsException</code> from JVM. </p><p>Given that we are only <a id="id563" class="indexterm"/>able to handle <code class="literal">RuntimeException</code> in the <code class="literal">Activity</code> function, we will attach a <code class="literal">RuntimeException</code> to JVM to be handled as soon as the native code returns. </p><p>To conclude, and since we are going to stop the native function execution, we must release any resource or JNI references allocated before we return from the native function.</p><p>Yes, with the help of these JNI exceptions, you should be able to detect and handle any settled unhandled exception that results from a Java method invocation. As stated before, it is extremely <a id="id564" class="indexterm"/>important to manually handle any pending exception before you try to safely invoke other JNI methods that invoke <code class="literal">member</code> or <code class="literal">static</code> functions, <code class="literal">get</code> or <code class="literal">set</code> fields on objects, or even create new objects.</p></div>
+<div class="section" title="Interacting with a Java monitor from native code"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec73"/>Interacting with a Java monitor from native code</h1></div></div></div><p>So far, we <a id="id565" class="indexterm"/>have been synchronizing access to shared resources in Java threads using synchronized statements or synchronized methods:</p><div class="informalexample"><pre class="programlisting">synchronized (obj) { ... // synchronized block }
+synchronized void incrementCount() { ... // synchronized methods }</pre></div><p>When we are executing a native method and want to have access to a resource or variable shared between multiple Java code and native code, the JNI offers us <code class="literal">MonitorEnter</code> and <code class="literal">MonitorExit</code> methods to control access to the mutual exclusion zone managed by a Java <code class="literal">synchronized</code> block:</p><div class="informalexample"><pre class="programlisting">jint MonitorEnter(JNIEnv *env, jobject obj);
+jint MonitorExit(JNIEnv *env, jobject obj);</pre></div><p> <code class="literal">MonitorEnter</code>, the function responsible for acquiring access to the Java monitor scope, might block when another native thread or Java thread is the owner of the monitor. When any thread acquires access to the block, JVM will make sure that no other thread enters the critical section apart from the current thread.</p><p>
+<code class="literal">MonitorExit</code> is the function responsible for releasing the monitor acquired previously with <code class="literal">MonitorEnter</code>, giving the chance to another thread to enter the mutual exclusion section.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note53"/>Note</h3><p>To prevent a deadlock condition, any <code class="literal">MonitorEnter</code> call must be followed by a <code class="literal">MonitorExit</code> call.</p></div></div><p>In our next code example, we will demonstrate this technique to synchronize the access to a shared object used by the Java code and the native code.</p><p>We are going to create a native thread that is constantly polling command requests from a shared queue list managed in our <code class="literal">Activity</code>. </p><p>
+<code class="literal">StatsActivity</code> will have a button to push commands to the shared queue list and will display the request responses sent by the native thread in a <code class="literal">TextView</code>. Whereas the UI will push commands to the request queue list in a main thread, and the native code will try to pull commands from the native code in a background thread, both need synchronized access to the shared queue list.</p><p>Our command will <a id="id566" class="indexterm"/>ask the native layer to send information about the amount of main memory that a program uses to run. As soon as it receives the response, it will print in the UI <code class="literal">TextView</code>.</p><p>To start, let's define the code to push new commands from the UI point of view:</p><div class="informalexample"><pre class="programlisting">public class StatsActivity extends Activity {
+     // Memory RSS(Resident Set Size) SIZE Retrieve size Request
+  public static final int MEM_RSS_REQUEST = 0;
+
+  // Shared Resource between Java and Native
+  Queue&lt;Integer&gt; requests = new LinkedList&lt;Integer&gt;();
+  Object queueLock = new Object();
+
+  OnClickListener onRSSReqListener = new OnClickListener() {
+    @Override
+    public void onClick(View v) {
+      synchronized (queueLock) {
+        requests.add(MEM_RSS_REQUEST);
+      }
+    }
+  };
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    ...
+    RSSButton.setOnClickListener(onRSSReqListener);
+  }
+}</pre></div><p>Notice that, before <code class="literal">onRSSReqListener</code> pushes the new request command to the queue list, it acquires access to the synchronized section controlled by the <code class="literal">queueLock</code> object. </p><p>Given that the <code class="literal">queueLock</code> object is going to act as the guard object to access the shared resource we have to forward it to the native code.</p><p>Since we have already written the command request consumer, now we will move our focus to the command request consumer, the native C++ <code class="literal">JavaThread</code> subclass named <code class="literal">CPUStatThread</code>, that will process the requests and send back the command response. </p><p>As explained <a id="id567" class="indexterm"/>before, <code class="literal">CPUStatThread</code> will implement the <code class="literal">run</code> method and send us the response using <code class="literal">Activity's</code> <code class="literal">Handler</code>, so let's first implement the run method to retrieve requests from <code class="literal">Activity</code> in the new source code file <code class="literal">stats.cpp</code>:</p><div class="informalexample"><pre class="programlisting">#include "thread.h" // Header where JavaThread is defined
+
+static const int RSS_REQUEST= 0;
+
+class CPUStatThread: public JavaThread {
+  
+  // Reference to the Activity and received on the constructor
+  jobject activityObj; 
+  ...
+  virtual void run() {
+    while ( !shouldStop ) {
+      std::unique_lock&lt;std::mutex&gt; lck(stopMutex);
+      processMessage();
+      // Wait until a stop signal is sent
+         stopCond.wait_for(lck,std::chrono::milliseconds(200));
+    }
+  }
+  void processMessage(){
+
+    jclass activityClass = jniEnv()-&gt;GetObjectClass(activityObj);
+    
+    // Retrieve the QueueLock(lockObj) and the Handler 
+    // Fields(handlerObj) objects from Activity and 
+    // getNextRequest methodId
+	 ... 
+    // Acquire the queue monitor	 
+    jniEnv()-&gt;MonitorEnter(lockObj);
+    
+    // Retrieve the next command request to be processed
+    int requestCode = jniEnv()-&gt;CallIntMethod(activityObj, 
+                                              getNextRequestMid);
+    switch (requestCode){
+      case RSS_REQUEST:
+        LOGI("Received a RSS Request");
+        sendRSSMessage(handlerObj);
+        break;
+    }
+    // Release the queue monitor	
+      jniEnv()-&gt;MonitorExit(lockObj);
+	// Release local References to avoid leaks
+   ...
+  }
+};</pre></div><p>Our run method will <a id="id568" class="indexterm"/>retrieve the <code class="literal">queueLock</code> field from <code class="literal">StatsActivity</code> and after acquiring access to the synchronized block controlled by the <code class="literal">queueLock</code>, it<code class="literal"> </code>will pull a new request from the queue using the <code class="literal">StatsActivity</code>'s <code class="literal">getNextRequest</code> method:</p><div class="informalexample"><pre class="programlisting">public class StatsActivity extends Activity {
+
+  int getNextRequest(){
+    return requests.size()&gt; 0 ? requests.remove():-1;
+  }
+}</pre></div><p> <code class="literal">getNextRequest</code> will return -1 when nothing is available to be processed, therefore our thread will sleep for 100 milliseconds, as defined in our run method.</p><p>When an <code class="literal">RSS_REQUEST</code> is received, our native background will process it in the <code class="literal">sendRSSMessage</code> method and send a response back with the memory consumed by the process in the system.</p><div class="section" title="Wrapping native data objects"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec71"/>Wrapping native data objects</h2></div></div></div><p>So far, to send any <a id="id569" class="indexterm"/>kind of structured data from native code to Java code, we have been building and dispatching regular Java objects. However, to reduce the overhead required to convert from native types to Java types, and vice-versa, it could make sense to send native wrapped structures or object pointers to Java Runtime instead of creating a pure Java object in the native code. </p><p>The most reliable technique is to store the native address into a long member variable of the wrapper object to be compatible with 64 bit and 32 bit pointers:</p><div class="informalexample"><pre class="programlisting">public class MyObject {
+  // Transports a pointer to original 
+  // native object or structure
+  long nativePtr; 
+}</pre></div><p>As you know, JVM Garbage Collector will constantly maintain the heap memory and clean the unreferenced objects for us to free more memory for next allocations required by your application. The same does not apply to native objects allocated in the dynamic memory using a <code class="literal">new</code> operator or the <code class="literal">malloc </code>function. </p><p>When we create an object in native heap, we always have to explicitly release it using the <code class="literal">delete</code> operator or <code class="literal">free</code> function, so to enforce the memory clean up on all the objects that wrap native objects we will define an interface that defines the required function to release underlying native objects:</p><div class="informalexample"><pre class="programlisting">public interface Disposable {
+  // Releases the native objects wrapped on the object
+  void dispose();
+}</pre></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note54"/>Note</h3><p>Although we can use the <code class="literal">finalize</code> method to release any native resources when the object gets garbage collected, there is no guarantee that the GC will call  <code class="literal">finalize</code> at any specific time in the future. </p></div></div><p>To demonstrate this technique in our example, we will send back using the <code class="literal">Handler</code>, a native <code class="literal">CPUStat</code> <code class="literal">struct</code> wrapped in a Java object.</p><p>Let's first define the native <code class="literal">CPUStat</code> sent when to carry the information related to the process memory consumption:</p><div class="informalexample"><pre class="programlisting">struct CPUStat{
+    double vm; // Virtual Memory Size
+    double rss; // Process Resident Memory    
+    // constructor 
+    CPUStat( double &amp;vm_,
+             double &amp;rss_):vm(vm_),rss(rss_){}
+};
+
+And its Java counterpart:
+
+public class JCPUStat implements Disposable {    
+    // Reference to the native struct stored on a long
+    long nativePtr;
+
+    public JCPUStat(long nativePtr){
+        this.nativePtr = nativePtr;
+    }
+    native long getRSSMemory();
+
+    @Override
+    public native void dispose();
+}</pre></div><p>Notice that our <code class="literal">JCPUStat</code> <a id="id570" class="indexterm"/>implements the disposable object explained before, so all that remains is to write the native methods for the JCPUStat class:</p><div class="informalexample"><pre class="programlisting">   // Generic function to convert a nativePtr member to a T pointer 
+template &lt;typename T&gt;
+T * getNativePtr(JNIEnv * env, jobject obj) {
+  jclass c = env-&gt;GetObjectClass(obj);
+  jfieldID nativePtrFID =  env-&gt;GetFieldID(c, "nativePtr", "J");
+  jlong nativePtr = env-&gt;GetLongField(obj, nativePtrFID);
+  return reinterpret_cast&lt;T * &gt;(nativePtr);
+}
+
+void unsetNativePtr(JNIEnv * env, jobject obj) {
+  jclass c = env-&gt;GetObjectClass(obj);
+  jfieldID nativePtrFID =  env-&gt;GetFieldID(c, "nativePtr", "J");
+  env-&gt;SetLongField(obj, nativePtrFID, 0);
+}
+
+void Java_com_packpublishing_asynchronousandroid_chapter9_JCPUStat_dispose(JNIEnv *env, jobject obj){
+  	
+   // Retrieves the pointer to the original structure
+   CPUStat *stat = getNativePtr&lt;CPUStat&gt;(env,obj);
+   if ( stat != 0 ) {
+     delete stat;  // Releases the memory allocated to stat
+     unsetNativePtr(ev,obj); 
+   }
+   }</pre></div><p>To simplify the native reference handling, we created two generic functions to manipulate a <code class="literal">nativePtr</code> <a id="id571" class="indexterm"/>field in wrapper objects. The first function, <code class="literal">getNativePtr</code>, will get the pointer field from the object and with help from <code class="literal">reinterpret_cast</code> we will convert the original long value stored in a <code class="literal">CPUStat</code> pointer.</p><p>After we get access to the original pointer, we can call the <code class="literal">delete</code> operator that will free the memory in the system and set the nativePtr as 0. Setting the pointer to zero will prevent a double free from happening when you call the <code class="literal">dispose</code> method twice by mistake.</p><p>Next, with the wrapper class defined, we will process the original request and build a <code class="literal">JCPUStat</code> response object to send back to <code class="literal">Activity</code> using the activity <code class="literal">Handler</code>:</p><div class="informalexample"><pre class="programlisting">// Function to retrieve the Memory Usage 
+void CPUStatThread::processMemUsage(
+  double&amp; vm_usage, double&amp; resident_set){...}
+
+void CPUStatThread::sendRSSMessage(jobject &amp; handlerObj) {
+
+  double vm, rss;
+  // Read the mempory usage
+  processMemUsage(vm, rss);
+  jclass jCpuStatClass = jniEnv()-&gt;FindClass(
+    "com.packpublishing.asynchronousandroid.chapter9.JCPUStat");
+  
+  // Find the JCPUStat Constructor
+  jmethodID  jCpuConstructorMid = jniEnv()-&gt;GetMethodID(
+    jCpuStatClass, "&lt;init&gt;", "(J)V");
+  // Create a native CPUStat object 
+  CPUStat * cpuStat = new CPUStat(vm, rss);
+ 
+  // Wrap the native object on a JCPUStat object  
+  jlong nativePtr = reinterpret_cast&lt;jlong&gt;(cpuStat);
+  jobject jCpuStat = jniEnv()-&gt;NewObject(
+    jCpuStatClass, jCpuConstructorMid, nativePtr);
+  
+  // Get the Handler Reference and send Message
+  ...    
+  // Build up the Response Message with the 
+  jobject messagObj = jniEnv()-&gt;CallObjectMethod(
+     handlerObj, obtainMId, RSS_RESPONSE, jCpuStat);
+  
+  // Push the message to the main Thread Handler                   
+  jniEnv()-&gt;CallBooleanMethod(handlerObj, sendMsgMId, messagObj);
+  // Clean up the local references
+  ...
+  }</pre></div><p>Our <code class="literal">sendRSSMessage</code> function will calculate the memory consumed by the process using system facilities, and build a <code class="literal">JCPUStat</code> object that wraps a native C++ structure. Afterwards, <code class="literal">JCPUStat</code> is dispatched to the main thread using the activity handler member object <a id="id572" class="indexterm"/>passed in the <code class="literal">sendRSSMessage</code> function. To finish, we cleaned up all the local references created in the local scope. </p><p>The full source code is available from the Packt Publishing website. Take a look at the complete source code to appreciate how we determined the memory consumed by the current process.</p><p>To complete the example, we will update <code class="literal">StatsActivity</code> to handle the RSS command response on the <code class="literal">Handler</code>:</p><div class="informalexample"><pre class="programlisting">public class StatsActivity extends Activity {
+  public static final int MEM_RSS_REQUEST = 0;
+  public static final int MEM_RSS_RESPONSE = 1;
+  public Handler myHandler = new Handler() {
+    public void handleMessage(Message msg) {
+      switch (msg.what){
+        case MEM_RSS_RESPONSE:
+          TextView tv = (TextView) findViewById(R.id.console);
+          JCPUStat stat = (JCPUStat) msg.obj;
+          tv.setText("Memory Consumed is "+stat.getRSSMemory());
+          // Releases the native object and frees the memory
+          stat.dispose();
+          break;
+      }
+    }
+  };
+  ...
+  public native void startCPUStatThread();
+  public native void stopCPUStatThread()
+}</pre></div><p>Once we get <code class="literal">JCPUStat</code> from the <code class="literal">Message</code> object, we read the RSS memory using its native method <code class="literal">getRSSMemory</code> and then we print the result on the console UI widget.</p><p>As we explained before the <code class="literal">JCPUStat.dispose</code> method is explicitly called on the Java Runtime to destroy the native object sent to us by the background thread. The JVM GC will not clean up the native <a id="id573" class="indexterm"/>objects, therefore we must call <code class="literal">dispose</code> to release native resources attached to a <code class="literal">Disposable</code> object. </p><p>
+<code class="literal">getRSSMemory</code> like the <code class="literal">dispose</code> method will make use of the <code class="literal">nativePtr</code> field to retrieve the RSS value stored on the native object. Let's see how it looks:</p><div class="informalexample"><pre class="programlisting">jlong Java_com_packpublishing_asynchronousandroid_chapter9_JCPUStat_getRSSMemory(JNIEnv *env, jobject obj) {
+    CPUStat *stat = getNativePtr&lt;CPUStat&gt;(env,obj);
+    return (jlong)stat-&gt;rss;
+}</pre></div><p>For brevity, <code class="literal">startCPUStatThread</code> and <code class="literal">stopCPUStatThread</code> is omitted, as it is very similar to code used to start the native threads on previous example—see the downloadable samples for the complete code.</p><p>Great! We learned how to wrap native objects in Java objects, we defined an interface to purge native memory from a java object when the native object is no longer required and we learned how to create from native Java Objects calling the object constructor.</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec74"/>Summary</h1></div></div></div><p>In this chapter we introduce you to the JNI, a standard API available on Java to interact with native code written in Assembly, C or C++ that it is available to any Android Developer with the Android NDK kit installed.</p><p>In the first section we explain how to setup a project with JNI code on Android Studio and how to call C function and C++ member functions from any Java class on your application.</p><p>Later, we use the JNI interface to execute a <code class="literal">Loader</code> asynchronous background work on a native function. The native function was able to convert a colorful image to a gray image on a Java background thread created by the <code class="literal">AsyncTaskLoader</code>.</p><p>Next, we discover how to attach and detach a pure native thread created using the C++ standard library to the JVM. The attached thread worked as a normal Java thread and managed its own JNI Environment, resources and references.</p><p>In the meantime, we also discovered the differences between JNI global and Local references and how to access a Java object field from the native code scope.</p><p>We also learned a technique to wrap native objects on Java objects and we define a concrete interface to dispose JNI resources attached to Java objects.</p><p>At the end of the chapter, we learned how to detect and handle a pending exception thrown on the JVM by a Java function. </p><p>We all the techniques explained on this chapter you should be able to integrate any code written in C/C++ in your asynchronous background execution. Beyond that, you can also make use of the native code to optimize a crucial functionality in your application or integrate with some native handy libraries.</p><p>In the next chapter, we will learn how to use the Google GCM to push and pull efficiently realtime messages from your server and how to schedule work with Google Play Services framework.</p></div></body></html>

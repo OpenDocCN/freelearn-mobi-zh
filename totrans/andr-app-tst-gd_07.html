@@ -1,0 +1,1078 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;7.&#xA0;Testing Recipes"><div class="titlepage"><div><div><h1 class="title"><a id="ch07"/>Chapter 7. Testing Recipes</h1></div></div></div><p>This chapter provides practical examples of different common situations that you will encounter by applying the disciplines and techniques described in the previous chapters. The examples are presented in a Cookbook style so you can adapt and use them for your projects.</p><p>The following are the topics that will be covered in this chapter:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Android Unit tests</li><li class="listitem" style="list-style-type: disc">Testing activities and applications</li><li class="listitem" style="list-style-type: disc">Testing databases and ContentProviders</li><li class="listitem" style="list-style-type: disc">Testing local and remote services</li><li class="listitem" style="list-style-type: disc">Testing UIs</li><li class="listitem" style="list-style-type: disc">Testing exceptions</li><li class="listitem" style="list-style-type: disc">Testing parsers</li><li class="listitem" style="list-style-type: disc">Testing for memory leaks</li></ul></div><p>After this chapter you will have a reference to apply testing to your projects and to know what to do in every situation.</p><div class="section" title="Android Unit tests"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec01"/>Android Unit tests</h1></div></div></div><p>There are some cases where you really need to test parts of the application in isolation with little connection to the underlying system. In such cases we have to select a base class that is high enough in the hierarchy to remove some of the dependencies but not high enough for us to be responsible for some of the basic infrastructure.<a class="indexterm" id="id332"/>
+</p><p>The candidate base class in this case is possibly<code class="literal"> AndroidTestCase</code>. This example has been taken from the<span class="strong"><strong> Android CTS</strong></span> test suite (<a class="ulink" href="http://source.android.com/compatibility/cts-intro.html">http://source.android.com/compatibility/cts-intro.html</a>):<a class="indexterm" id="id333"/>
+</p><div class="informalexample"><pre class="programlisting">/*
+* Copyright (C) 2009 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+* either express or implied.
+* See the License for the specific language governing permissions
+* and limitations under the License.
+*/
+package com.android.cts.appaccessdata;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import android.test.AndroidTestCase;
+/**
+* Test that another app's private data cannot be accessed.
+*
+* Assumes that {@link APP_WITH_DATA_PKG} has already created the private data.
+*/
+public class AccessPrivateDataTest extends AndroidTestCase {
+/**
+* The Android package name of the application that owns the private data
+*/
+private static final String APP_WITH_DATA_PKG = "com.android.cts.appwithdata";
+</pre></div><p>Up to here we have:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The standard Android Open Source Project copyright.</li><li class="listitem" style="list-style-type: disc">The package definition. This test lives in<code class="literal"> com.android.cts.appaccessdata</code>.</li><li class="listitem" style="list-style-type: disc">Some imports.</li><li class="listitem" style="list-style-type: disc">The definition of<code class="literal"> AccessPrivateDataTest</code>, which extends<code class="literal"> AndroidTestCase</code> because it's a unit test that doesn't require the system infrastructure. In this particular case we could have also used<code class="literal"> TestCase</code> directly, because we are not accessing Context.</li><li class="listitem" style="list-style-type: disc">The definition of the constant<code class="literal"> APP_WITH_DATA_PKG</code>, indicating the package name of the application containing the private data we are trying to access:<a class="indexterm" id="id334"/><div class="informalexample"><pre class="programlisting">/**
+* Name of private file to access. This must match the name * of the file created by
+* {@link APP_WITH_DATA_PKG}.
+*/
+private static final String PRIVATE_FILE_NAME = "private_file.txt";
+/**
+* Tests that another app's private file cannot be accessed
+* @throws IOException
+*/
+public void testAccessPrivateData() throws IOException {
+try {
+// construct the absolute file path to the app's private file
+String privateFilePath = String.format( "/data/data/%s/%s", APP_WITH_DATA_PKG, PRIVATE_FILE_NAME);
+FileInputStream inputStream = new FileInputStream(privateFilePath);
+inputStream.read();
+inputStream.close();
+fail("Was able to access another app's private data");
+} catch (FileNotFoundException e) {
+// expected
+} catch (SecurityException e) {
+// also valid
+}
+}
+}
+</pre></div></li></ul></div><p>In this second part, we have:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The definition of<code class="literal"> PRIVATE_FILE_NAME</code>, containing the name of the file we will try to access</li><li class="listitem" style="list-style-type: disc">The test method<code class="literal"> testAccessPrivateData</code>, which actually exercises the feature</li></ul></div><p>This test method,<code class="literal"> testAccessPrivateData()</code>, tests the access to other packages' private data and fails if this is possible. To achieve this, the expected exceptions are caught and if this doesn't happen<code class="literal"> fail()</code> is invoked with a custom message.</p></div></div>
+<div class="section" title="Testing activities and applications"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec02"/>Testing activities and applications</h1></div></div></div><p>This section shows some examples of activities and applications tests. They cover some common cases that you will find in your day-to-day testing and you can adapt them to suit your specific needs.<a class="indexterm" id="id335"/>
+</p><div class="section" title="Applications and preferences"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec01"/>Applications and preferences</h2></div></div></div><p>In Android parlance, application refers to a base class used when it is needed to maintain a global application state. This is usually utilized for dealing with shared preferences. We expect that tests altering these preferences' values don't affect the behavior of the real application. Imagine the tests deleting user account information for an application storing these values as shared preferences. It doesn't sound like a good idea. So what we really need is the ability to mock a<code class="literal"> Context</code> that also mocks the access to the<code class="literal"> SharedPreferences</code>.</p><p>Our first attempt could be to use<code class="literal"> RenamingDelegatingContext</code>, but unfortunately, it does not mock<code class="literal"> SharedPreferences</code>, although it is close because it mocks database and filesystem access. So, first we need to create a specialized mock<code class="literal"> Context</code> that also mocks the latter.</p><div class="section" title="The RenamingMockContext class"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec01"/>The RenamingMockContext class</h3></div></div></div><p>Let's create the specialized<code class="literal"> Context</code>. The class<code class="literal"> RenamingDelegatingContext</code> is a very good point to start from because as we mentioned before, database and filesystem access will be mocked. The problem is how to mock<code class="literal"> SharedPreferences</code> access.<a class="indexterm" id="id336"/>
+</p><p>Remember that<code class="literal"> RenamingDelegatingContext</code> as its name suggests, delegates everything to a<code class="literal"> Context</code>. So the root of our problem lies in this<code class="literal"> Context</code>. Because it is a mock<code class="literal"> Context</code> as well,<code class="literal"> MockContext</code> seems to be the correct base class. As you may remember, in<a class="link" href="ch03.html" title="Chapter 3. Building Blocks on the Android SDK"> Chapter 3</a>,<span class="emphasis"><em> Building Blocks on the Android SDK</em></span>, we looked at the mock object and we noted that<code class="literal"> MockContext</code> can only be used to inject other dependencies and all methods are non-functional and throw<code class="literal"> UnsupportedOperationException</code>. However, this is also a feature we can use to our advantage in detecting the minimum set of methods that needs to be implemented in a case like this. So let's start creating an empty<code class="literal"> MockContext</code> to whom the other<code class="literal"> Context</code>, that we can name<code class="literal"> RenamingMockContext</code>, delegates:</p><div class="informalexample"><pre class="programlisting">private static class RenamingMockContext extends RenamingDelegatingContext {
+private static final String PREFIX = "test.";
+public RenamingMockContext(Context context) {
+super(new DelegatedMockContext(context), PREFIX);
+}
+private static class DelegatedMockContext extends MockContext {
+public DelegatedMockContext(Context context) {
+// TODO Auto-generated constructor stub
+}
+}
+}
+</pre></div><p>We created a mock<code class="literal"> Context, RenamingMockContext</code>, that delegates to another empty<code class="literal"> MockContext, DelegatedMockContext</code>, and uses a renaming prefix.<a class="indexterm" id="id337"/>
+</p></div><div class="section" title="The TemperatureConverterApplicationTests class"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec02"/>The TemperatureConverterApplicationTests class</h3></div></div></div><p>We have the<code class="literal"> RenamingMockContext</code>, now we need a test that uses it. Because we will be testing an application, the base class for the test would be<code class="literal"> ApplicationTestCase</code>. This test case provides a framework in which you can test application classes in a controlled environment. It provides basic support for the lifecycle of an application, and hooks by which you can inject various dependencies and control the environment in which your application is tested. We can inject the<code class="literal"> RenamingMockContext</code> before the<code class="literal"> Application</code> is created using the<code class="literal"> setContext()</code> method.<a class="indexterm" id="id338"/>
+</p><p>Our<code class="literal"> TemperatureConverter</code> application, which we started in<a class="link" href="ch04.html" title="Chapter 4. Test Driven Development"> Chapter 4</a>,<span class="emphasis"><em> Test Driven Development</em></span>, will be storing the decimal places as a shared preference. Consequently we will be creating a test to set the decimal places and then retrieving it to verify its value:</p><div class="informalexample"><pre class="programlisting">public class TemperatureConverterApplicationTests extends
+ApplicationTestCase&lt;TemperatureConverterApplication&gt; {
+private TemperatureConverterApplication mApplication;
+public TemperatureConverterApplicationTests() {
+this("TemperatureConverterApplicationTests");
+}
+public TemperatureConverterApplicationTests(String name) {
+super(TemperatureConverterApplication.class);
+setName(name);
+}
+@Override
+protected void setUp() throws Exception {
+super.setUp();<span class="strong"><strong>
+final RenamingMockContext mockContext = new RenamingMockContext(getContext());
+setContext(mockContext);</strong></span>
+createApplication();
+mApplication = getApplication();
+}
+@Override
+protected void tearDown() throws Exception {
+super.tearDown();
+}
+public final void testPreconditions() {
+assertNotNull(mApplication);
+}
+public final void testSetDecimalPlaces() {
+final int expected = 3;
+mApplication.setDecimalPlaces(expected);
+assertEquals(expected, mApplication.getDecimalPlaces());
+}
+}
+</pre></div><p>We extend<code class="literal"> ApplicationTestCase</code> using the<code class="literal"> TemperatureConverterApplication</code> template parameter. Soon, we will be creating the class extending<code class="literal"> Application</code>.</p><p>Then we use the<span class="strong"><strong> Given name constructor</strong></span> pattern that we discussed in<a class="link" href="ch03.html" title="Chapter 3. Building Blocks on the Android SDK"> Chapter 3</a>, <span class="emphasis"><em>Building Blocks on the Android SDK.</em></span></p><p>In the<code class="literal"> setUp()</code> method we create the mock context and set the context for this test using<code class="literal"> setContext()</code> method; we create the application using<code class="literal"> createApplication()</code> and finally hold a reference to it as it will be used frequently in our tests.</p><p>Regarding our tests, using the<span class="strong"><strong> Test preconditions</strong></span> pattern that we reviewed previously, we check that the recently created application is not null.<a class="indexterm" id="id339"/>
+</p><p>Lastly is the test that actually tests for the required behavior setting the decimal places, retrieving it, and verifying its value.<a class="indexterm" id="id340"/>
+</p><p>Our first objective is to get these tests to compile. Later we will focus on the success of these tests. To get it to compile, we need to create the class<code class="literal"> TemperatureConverterApplication</code> and the getter and setter for decimal places, that ultimately should use<code class="literal"> SharedPreferences</code> to store and retrieve the specific preference:</p><div class="informalexample"><pre class="programlisting">/**
+* Copyright (C) 2010-2011 Diego Torres Milano
+*/
+package com.example.aatg.tc;
+import android.app.Application;
+/**
+* @author diego
+*
+*/
+public class TemperatureConverterApplication extends
+Application {
+/**
+*
+*/
+public TemperatureConverterApplication() {
+// TODO Auto-generated constructor stub
+}
+public void setDecimalPlaces(int expected) {
+// TODO Auto-generated method stub
+}
+public Object getDecimalPlaces() {
+// TODO Auto-generated method stub
+return null;
+}
+}
+</pre></div><p>Running the tests we obtain a failure related to the fact that we are not storing the decimal places anywhere. We can implement this using<code class="literal"> SharedPreferences</code> in this way:<a class="indexterm" id="id341"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* Copyright (C) 2010-2011 Diego Torres Milano
+*/
+package com.example.aatg.tc;
+import android.app.Application;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.preference.PreferenceManager;
+/**
+* @author diego
+*
+*/
+public class TemperatureConverterApplication extends Application {
+private static final String TAG = "TemperatureConverterApplication";
+public static final int DECIMAL_PLACES_DEFAULT = 2;
+public static final String DECIMAL_PLACES = "decimalPlaces";
+private SharedPreferences mSharedPreferences;
+/**
+*
+*/
+public TemperatureConverterApplication() {
+// TODO Auto-generated constructor stub
+}
+@Override
+public void onCreate() {
+super.onCreate();
+mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+}
+public void setDecimalPlaces(int d) {
+final Editor editor = mSharedPreferences.edit();
+editor.putString(DECIMAL_PLACES, Integer.toString(d));
+editor.commit();
+}
+public int getDecimalPlaces() {
+return Integer.parseInt( mSharedPreferences.getString(DECIMAL_PLACES, Integer.toString(DECIMAL_PLACES_DEFAULT)));
+}
+}
+</pre></div><p>If we complete these steps, compile and run the tests, we discover that they fail with an<code class="literal"> UnsupportedOperationException</code> in<code class="literal"> MockContext.getPackageName()</code>.</p><p>We change<code class="literal"> DelegateMockContext</code> to override<code class="literal"> getPackageName()</code>, delegating to the original context passed as a parameter to the constructor:</p><div class="informalexample"><pre class="programlisting">private static class RenamingMockContext extends RenamingDelegatingContext {
+/**
+* The renaming prefix.
+*/
+private static final String PREFIX = "test.";
+public RenamingMockContext(Context context) {
+super(new DelegatedMockContext(context), PREFIX);
+}
+private static class DelegatedMockContext extends MockContext {
+private Context mDelegatedContext;
+public DelegatedMockContext(Context context) {
+mDelegatedContext = context;
+}<span class="strong"><strong>
+@Override
+public String getPackageName() {
+return mDelegatedContext.getPackageName();
+}</strong></span>
+}
+</pre></div><p>Running the tests again, this time we obtain a different, though somewhat expected,<code class="literal"> UnsupportedOperationException</code>. This exception is received while invoking<code class="literal"> getSharedPreferences()</code>. Thus, the next step is to override this method in<code class="literal"> DelegatedMockContext:</code>
+<a class="indexterm" id="id342"/>
+</p><div class="informalexample"><pre class="programlisting">@Override
+public SharedPreferences getSharedPreferences( String name, int mode) {
+return mDelegatedContext.getSharedPreferences( PREFIX + name, mode);
+}
+</pre></div><p>Any time that a<code class="literal"> SharedPreference</code> is requested, this method will invoke the delegating context, adding the prefix for the name. The original<code class="literal"> SharedPreferences</code> used by the application are unchanged.</p><p>We can verify this behavior by furnishing the<code class="literal"> TemperatureConverterApplication</code> class with the previously mentioned methods, then storing some value in the shared preferences, running the tests, and eventually verifying that this value was not affected by running the tests.</p></div></div><div class="section" title="Testing activities"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec02"/>Testing activities</h2></div></div></div><p>The next example shows how an activity can be tested in complete isolation using<code class="literal"> ActivityUnitTestCase&lt;Activity&gt;</code> base class as opposed to<code class="literal"> ActivityInstrumentationTestCase2&lt;Activity&gt;</code>. This method requires more care and attention but also provides a greater flexibility and control over the<code class="literal"> Activity</code> under test. This kind of test is intended for testing general<code class="literal"> Activity</code> behavior and not an<code class="literal"> Activity</code> instance's interaction with other system components or UI related tests.<a class="indexterm" id="id343"/>
+</p><p>We are taking this example from the ApiDemos sample application (<a class="ulink" href="http://developer.android.com/resources/samples/ApiDemos/index.html">http://developer.android.com/resources/samples/ApiDemos/index.html</a>) that is provided as an SDK companion. This sample is somewhat long so we have split it into several code snippets to improve its readability:</p><div class="informalexample"><pre class="programlisting">/*
+* Copyright (C) 2008 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+* implied.
+* See the License for the specific language governing permissions
+* and limitations under the License.
+*/
+package com.example.android.apis.app;
+import com.example.android.apis.R;
+import com.example.android.apis.view.Focus2ActivityTest;
+import android.content.Context;
+import android.content.Intent;
+import android.test.ActivityUnitTestCase;
+import android.test.suitebuilder.annotation.MediumTest;
+import android.widget.Button;
+</pre></div><p>This first code snippet has nothing more than the required copyrights and imports:<a class="indexterm" id="id344"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* This demonstrates completely isolated "unit test" of an Activity
+* class.
+*
+* &lt;p&gt;This model for testing creates the entire Activity (
+* like {@link Focus2ActivityTest}) but does
+* not attach it to the system (for example, it cannot launch another
+* Activity).
+* It allows you to inject additional behaviors via the
+* {@link android.test.ActivityUnitTestCase#setActivityContext(
+* Context)} and
+* {@link android.test.ActivityUnitTestCase#setApplication(
+* android.app.Application)} methods.
+* It also allows you to more carefully test your Activity's
+* performance
+* Writing unit tests in this manner requires more care and
+* attention, but allows you to test
+* very specific behaviors, and can also be an easier way
+* to test error conditions.
+*
+* &lt;p&gt;Because ActivityUnitTestCase creates the Activity
+* under test completely outside of
+* the usual system, tests of layout and point-click UI
+* interaction are much less useful
+* in this configuration. It's more useful here to concentrate
+* on tests that involve the
+* underlying data model, internal business logic, or exercising
+* your Activity's life cycle.
+*
+* &lt;p&gt;See {@link com.example.android.apis.AllTests} for
+* documentation on running
+* all tests and individual tests in this application.
+*/
+public class ForwardingTest extends ActivityUnitTestCase&lt;Forwarding&gt; {
+private Intent mStartIntent;
+private Button mButton;
+public ForwardingTest() {
+super(Forwarding.class);
+}
+</pre></div><p>This second snippet includes the test case definition extending<code class="literal"> ActivityUnitTestCase&lt;Forwarding&gt;</code> as we mentioned earlier as a unit test for an Activity class. This activity under test will be disconnected from the system so it is only intended to test internal aspects of it and not its interaction with other components.</p><p>The no-argument constructor is also defined here as we mentioned in previous examples:</p><div class="informalexample"><pre class="programlisting">@Override
+protected void setUp() throws Exception {
+super.setUp();
+// In setUp, you can create any shared test data, // or set up mock components to inject
+// into your Activity. But do not call startActivity() // until the actual test methods.
+// into your Activity. But do not call startActivity() // until the actual test methods.
+mStartIntent = new Intent(Intent.ACTION_MAIN);
+}
+</pre></div><p>This<code class="literal"> setUp()</code> method follows the pattern of invoking the super method and initializes the field with the Intent used to start the Activity. In this case we are saving the<code class="literal"> Intent</code> as member<code class="literal"> mStartIntent:</code>
+<a class="indexterm" id="id345"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* The name 'test preconditions' is a convention to
+* signal that if this
+* test doesn't pass, the test case was not set up
+* properly and it might
+* explain any and all failures in other tests.
+* This is not guaranteed
+* to run before other tests, as junit uses reflection
+* to find the tests.
+*/
+@MediumTest
+public void testPreconditions() {
+startActivity(mStartIntent, null, null);
+mButton = (Button) getActivity().findViewById(R.id.go);
+assertNotNull(getActivity());
+assertNotNull(mButton);
+}
+</pre></div><p>This defines the<code class="literal"> testPreconditions()</code> method that we also explained before. As noted in the method's comment, remember that this name is just a convention and no execution order is guaranteed:</p><div class="informalexample"><pre class="programlisting">/**
+* This test demonstrates examining the way that activity calls
+* startActivity() to launch
+* other activities.
+*/
+@MediumTest
+public void testSubLaunch() {
+Forwarding activity = startActivity( mStartIntent, null, null);
+mButton = (Button) activity.findViewById(R.id.go);
+// This test confirms that when you click the button, // the activity attempts to open
+// another activity (by calling startActivity) and // close itself (by calling finish()).
+mButton.performClick();
+assertNotNull(getStartedActivityIntent());
+assertTrue(isFinishCalled());
+}
+</pre></div><p>This test performs a click on the "go" button of the Forwarding Activity. The<code class="literal"> onClickListener</code> of that button invokes<code class="literal"> startActivity()</code> with an<code class="literal"> Intent</code> defining the component as the<code class="literal"> ForwardTarget</code> class, thus this is the<code class="literal"> Activity</code> that will be started.</p><p>After performing this action we verify that the<code class="literal"> Intent</code> used to launch the new<code class="literal"> Activity</code> is not null and that<code class="literal"> finish()</code> was called on our<code class="literal"> Activity</code>.</p><p>Once the activity under test is started using<code class="literal"> startActivity(mStartIntent, null, null)</code>, the components are verified to assure that they are as expected. In order to do that, the recently started activity is verified for "not null" using an assertion on<code class="literal"> getActivity()</code> and then the button that was obtained by<code class="literal"> findViewById()</code> is also verified for a "not null" value:<a class="indexterm" id="id346"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* This test demonstrates ways to exercise the Activity's
+* life cycle.
+*/
+@MediumTest
+public void testLifeCycleCreate() {
+Forwarding activity = startActivity( mStartIntent, null, null);
+// At this point, onCreate() has been called, but nothing else
+// Complete the startup of the activity
+getInstrumentation().callActivityOnStart(activity);
+getInstrumentation().callActivityOnResume(activity);
+// At this point you could test for various configuration // aspects, or you could
+// use a Mock Context to confirm that your activity has made // certain calls to the system
+// and set itself up properly.
+getInstrumentation().callActivityOnPause(activity);
+// At this point you could confirm that the activity has // paused properly, as if it is
+// no longer the topmost activity on screen.
+getInstrumentation().callActivityOnStop(activity);
+// At this point, you could confirm that the activity has // shut itself down appropriately,
+// or you could use a Mock Context to confirm that your // activity has released any system
+// resources it should no longer be holding.
+// ActivityUnitTestCase.tearDown(), which is always // automatically called, will take care
+// of calling onDestroy().
+}
+}
+</pre></div><p>This is perhaps the most interesting test method in this test case. This test case demonstrates how to exercise the<code class="literal"> Activity</code> lifecycle. After starting the<code class="literal"> Activity, onCreate()</code> was automatically called, and we then exercise other lifecycle methods by invoking them manually. To be able to invoke these methods we use the<code class="literal"> Intrumentation</code> of this test.<a class="indexterm" id="id347"/>
+</p><p>Finally, we don't manually invoke<code class="literal"> onDestroy()</code> as it will be invoked for us in<code class="literal"> tearDown().</code>
+</p><p>Next, we have the<code class="literal"> testSubLaunch()</code> test. This test checks for various conditions after starting the<code class="literal"> Activity</code> under test using<code class="literal"> startActivity(mStartIntent, null, null)</code>. The<code class="literal"> Button</code> is obtained using<code class="literal"> findViewById()</code> and then it is pressed issuing<code class="literal"> performClick().</code> The action when this button is touched is to launch a new<code class="literal"> Activity</code> and this is precisely the condition that is checked, asserting that<code class="literal"> getStartedActivityIntent()</code> returns "not null". The latter method returns the Intent that was used if the<code class="literal"> Activity</code> under tests invoked<code class="literal"> startActivity(Intent)</code> or<code class="literal"> startActivityForResult(Intent, int)</code>. The last step is to verify that<code class="literal"> finish()</code> was called if the other<code class="literal"> Activity</code> was launched and we do that by verifying the return value of<code class="literal"> isFinishCalled()</code>, which returns true if one of the finish methods (<code class="literal">finish(), finishFromChild(Activity)</code>, or<code class="literal"> finishActivity(int)</code>) were called in the<code class="literal"> Activity</code> under test.</p><p>It's time to exercise the<code class="literal"> Activity</code> lifecycle for which the<code class="literal"> testLifeCycleCreate()</code> method is used. This method starts the<code class="literal"> Activity</code> in the same way as the previously analyzed test.</p><p>After that, the activity is started, its<code class="literal"> onCreate()</code> method is called, and the<code class="literal"> Instrumentation</code> is used to invoke other lifecycle methods like<code class="literal"> getInstrumentation().callActivityOnStart(activity)</code> and<code class="literal"> getInstrumentation().callActivityOnResume(activity)</code> to complete the<code class="literal"> Activity</code> under test start up.</p><p>The<code class="literal"> Activity</code> is now completely started and its time to test for the aspects we are interested in. Once this is achieved, we can follow other steps in the lifecycle. Note that this sample test does not test for anything special here.</p><p>To finish the lifecycle, we will call<code class="literal"> getInstrumentation().callActivityOnPause(activity)</code> and<code class="literal"> getInstrumentation().callActivityOnStop(activity)</code>. As it's mentioned in the method's comments, we don't have to worry about calling<code class="literal"> onDestory()</code> as it will be automatically called by<code class="literal"> tearDown()</code>.<a class="indexterm" id="id348"/>
+</p><p>If you want to run the tests, once you have the<code class="literal"> ApiDemos.apk</code> and its tests installed onto a device or emulator, you can run this command line:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ adb -e shell am instrument -w -e class com.example.android.apis.app.ForwardingTest com.example.android.apis.tests/android.test.InstrumentationTestRunner</strong></span>
+</pre></div><p>The output is as follows:</p><p>
+<span class="strong"><strong>com.example.android.apis.app.ForwardingTest:... Test results for InstrumentationTestRunner=... Time: 0.614 OK (3 tests)</strong></span>
+</p><p>This test represents a skeleton you can reuse to test your<code class="literal"> Activities</code> in isolation and to test lifecycle related cases. The injection of mock object could also facilitate testing other aspects of the<code class="literal"> Activity</code> such as accessing system resources.</p></div></div>
+<div class="section" title="Testing files, databases, and ContentProviders"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec03"/>Testing files, databases, and ContentProviders</h1></div></div></div><p>Some test cases have the need to exercise databases or ContentProviders operations, and soon comes the need to mock these operations. For example, if we are testing an application on a real device, we don't want to interfere with the normal operation of applications on such devices, mainly when we change values that may be shared by more than one application.<a class="indexterm" id="id349"/>
+</p><p>Such cases can take advantage of another mock class that is not a part of<code class="literal"> android.test.mock</code> package but of<code class="literal"> android.test</code> instead, namely<code class="literal"> RenamingDelegatingContext</code>.</p><p>This class lets us mock file and database operations. A prefix supplied in the constructor is used to modify the target of these operations. All other operations are delegated to the delegating<code class="literal"> Context</code> that you must specify in the constructor too.</p><p>Suppose our<code class="literal"> Activity</code> under test uses some files or databases that we want to control in some way, maybe to introduce specialized content to drive our tests, and we don't want to, or we cannot use real files or database. In such cases we create<code class="literal"> RenamingDelegatingContext</code> specifying a prefix. We provide mock files using this prefix and introduce any content we need to drive our tests, and the<code class="literal"> Activity</code> under test could you use them with no alteration.</p><p>The advantage of keeping our<code class="literal"> Activity</code> unchanged, that is not modifying it to read from a different source, is that this assures all tests are valid. If we introduce a change only intended for our tests, we will not be able to assure that under real conditions, the<code class="literal"> Activity</code> behaves the same.</p><p>To demonstrate this case, we will create an extremely simple<code class="literal"> Activity</code>.</p><p>The activity<code class="literal"> MockContextExampleActivity</code> displays the content of a file inside<code class="literal"> TextView</code>. What we intend to demonstrate is how it displays different content during normal operation of<code class="literal"> Activity</code> as compared to when it is under test:</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.mockcontextexample;
+import android.app.Activity;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.widget.TextView;
+import java.io.FileInputStream;
+public class MockContextExampleActivity extends Activity {
+public final static String FILE_NAME = "myfile.txt";
+private TextView mTv;
+/** Called when the activity is first created. */
+@Override
+public void onCreate(Bundle savedInstanceState) {
+super.onCreate(savedInstanceState);
+setContentView(R.layout.main);
+mTv = (TextView) findViewById(R.id.TextView01);
+final byte[] buffer = new byte[1024];
+try {
+final FileInputStream fis = openFileInput(FILE_NAME);
+final int n = fis.read(buffer);
+mTv.setText(new String(buffer, 0, n-1));
+} catch (Exception e) {
+mTv.setText(e.toString());
+mTv.setTextColor(Color.RED);
+}
+}
+public String getText() {
+return mTv.getText().toString();
+}
+}
+</pre></div><p>This is our simple<code class="literal"> Activity</code>. It reads the content of the<code class="literal"> myfile.txt</code> file and displays it on a<code class="literal"> TextView</code>. It also displays any error that may occur.<a class="indexterm" id="id350"/>
+</p><p>We need some content for this file. Probably the easiest way of creating the files is as shown:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ adb shell echo "This is real data" \&gt; \ /data/data/com.example.aatg.mockcontextexample/files/myfile.txt
+$ adb shell echo "This is *MOCK* data" \&gt; \ /data/data/com.example.aatg.mockcontextexample/files/test.myfile.txt</strong></span>
+</pre></div><p>We created two different files, one named<code class="literal"> myfile.txt</code> and the other<code class="literal"> test.myfile.txt</code>, with different content. The latter indicates that it is a mock content.</p><p>The following code demonstrates the use of this mock data in our activity tests:</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.mockcontextexample.test;
+import com.example.aatg.mockcontextexample. MockContextExampleActivity;
+import android.content.Intent;
+import android.test.ActivityUnitTestCase;
+import android.test.RenamingDelegatingContext;
+public class MockContextExampleTest extends ActivityUnitTestCase&lt;MockContextExampleActivity&gt; {
+private static final String PREFIX = "test.";
+private RenamingDelegatingContext mMockContext;
+public MockContextExampleTest() {
+super(MockContextExampleActivity.class);
+}
+protected void setUp() throws Exception {
+super.setUp();
+mMockContext = new RenamingDelegatingContext( getInstrumentation().getTargetContext(), PREFIX);
+mMockContext.makeExistingFilesAndDbsAccessible();
+}
+protected void tearDown() throws Exception {
+super.tearDown();
+}
+public void testSampleTextDisplayed() {
+setActivityContext(mMockContext);
+startActivity(new Intent(), null, null);
+final MockContextExampleActivity activity = getActivity();
+assertNotNull(activity);
+String text = activity.getText();
+assertEquals("This is *MOCK* data", text);
+}
+}
+</pre></div><p>The class<code class="literal"> MockContextExampleTest</code> extends<code class="literal"> ActivityUnitTestCase</code> because we are looking for isolated testing of<code class="literal"> MockContextExampleActivity</code> and because we are going to inject a mocked context; in this case the injected context is a<code class="literal"> RenamingDelegatinContext</code> as a dependency.<a class="indexterm" id="id351"/>
+</p><p>Our fixture consists of the mock context,<code class="literal"> mMockContext</code>, the<code class="literal"> RenamingDelegatingContext</code> using the target context obtained by.getInstrumentation().getTargetContext(). Note that the context where the instrumentation is run is different than the context of the<code class="literal"> Activity</code> under test.</p><p>Here a fundamental step follows—since we want to make the existing files and databases accessible to this test we have to invoke<code class="literal"> makeExistingFilesAndDbsAccessible()</code>.</p><p>Then, our test named<code class="literal"> testSampleTextDisplayed()</code> injects the mock context using<code class="literal"> setActivityContext()</code>.</p><div class="tip" style="margin-left: 0.5in; margin-right: 0.5in;" title="Tip"><h3 class="title"><a id="tip06"/>Tip</h3><p>You must invoke<code class="literal"> setActivityContext()</code> to inject a mock context<span class="strong"><strong> before</strong></span> you start the Activity under test by invoking<code class="literal"> startActivity()</code>.</p></div><p>Then the<code class="literal"> Activity</code> is started by<code class="literal"> startActivity()</code> using an<code class="literal"> Intent</code> just created.<a class="indexterm" id="id352"/>
+</p><p>The<code class="literal"> Activity</code> under test is obtained using<code class="literal"> getActivity()</code> and it is verified for a "not null" value.</p><p>We obtain the text value held by the<code class="literal"> TextView</code> by using a getter we added to the<code class="literal"> Activity</code>.</p><p>Finally, the text value obtained is checked against the<code class="literal"> String</code><span class="emphasis"><em>"This is MOCK* data"</em></span>. It is important here to notice that the value used for this test is the test file content not the real file content.</p><div class="section" title="The BrowserProvider tests"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec03"/>The BrowserProvider tests</h2></div></div></div><p>These tests are taken from the Android Open Source Project (AOSP). Source code can be obtained as a component of the Browser.git project at<a class="ulink" href="http://android.git.kernel.org/?p=platform/packages/apps/Browser.git"> http://android.git.kernel.org/?p=platform/packages/apps/Browser.git</a>. They are intended to test some aspects of the Browser Bookmarks content provider, BrowserProvider, which is part of the standard Browser included with the Android platform.<a class="indexterm" id="id353"/>
+</p><div class="informalexample"><pre class="programlisting">/*
+* Copyright (C) 2010 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+* or implied.
+* See the License for the specific language governing permissions
+* and limitations under the License.
+*/
+package com.android.browser;
+import android.app.SearchManager;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
+import android.test.AndroidTestCase;
+import android.test.suitebuilder.annotation.MediumTest;
+import java.util.ArrayList;
+import java.util.Arrays;
+</pre></div><p>This first code snippet has nothing more than the required copyrights and imports:<a class="indexterm" id="id354"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* Unit tests for {@link BrowserProvider}.
+*/
+@MediumTest
+public class BrowserProviderTests extends AndroidTestCase {
+private ArrayList&lt;Uri&gt; mDeleteUris;
+@Override
+protected void setUp() throws Exception {
+mDeleteUris = new ArrayList&lt;Uri&gt;();
+super.setUp();
+}
+@Override
+protected void tearDown() throws Exception {
+for (Uri uri : mDeleteUris) {
+deleteUri(uri);
+}
+super.tearDown();
+}
+</pre></div><p>This second snippet includes the test case definition extending<code class="literal"> AndroidTestCase</code>. The class<code class="literal"> BrowserProviderTests</code> extends<code class="literal"> AndroidTestCase</code> because a<code class="literal"> Context</code> is needed to access provider content.</p><p>The fixture created in the<code class="literal"> setUp()</code> method creates an<code class="literal"> ArrayList</code> of<code class="literal"> Uris</code> that is used to keep track of the inserted<code class="literal"> Uris</code> to be deleted in the<code class="literal"> tearDown()</code> method. Perhaps we could have saved all this hassle using a mock content provider, maintaining the isolation between our tests and the system. Anyway,<code class="literal"> tearDown()</code> iterates over this list and deletes the stored<code class="literal"> Uris</code>.</p><p>There is no need to override the constructor here as<code class="literal"> AndroidTestCase</code> is not a parameterized class and we don't need to do anything special in it:<a class="indexterm" id="id355"/>
+</p><div class="informalexample"><pre class="programlisting">public void testHasDefaultBookmarks() {
+Cursor c = getBookmarksSuggest("");
+try {
+assertTrue("No default bookmarks", c.getCount() &gt; 0);
+} finally {
+c.close();
+}
+}
+public void testPartialFirstTitleWord() {
+assertInsertQuery("http://www.example.com/rasdfe", "nfgjra sdfywe", "nfgj");
+}
+public void testFullFirstTitleWord() {
+assertInsertQuery("http://www.example.com/", "nfgjra dfger", "nfgjra");
+}
+public void testFullFirstTitleWordPartialSecond() {
+assertInsertQuery("http://www.example.com/", "nfgjra dfger", "nfgjra df");
+}
+public void testFullTitle() {
+assertInsertQuery("http://www.example.com/", "nfgjra dfger", "nfgjra dfger");
+}
+</pre></div><p>The next test,<code class="literal"> testHasDefaultBookmarks()</code>, is a test for the default bookmarks. Upon startup a cursor iterates over the default bookmarks obtained by invoking<code class="literal"> getBookmarksSuggest("")</code>, which returns the bookmarks unfiltered; that is why the query parameter is "".<a class="indexterm" id="id356"/>
+</p><p>Then,<code class="literal"> testPartialFirstTitleWord(), testFullFirstTitleWord(), testFullFirstTitleWordPartialSecond()</code>, and<code class="literal"> testFullTitle()</code> test for the insertion of bookmarks. To achieve this they invoke<code class="literal"> assertInsertQuery()</code> using the bookmarked<code class="literal"> Url</code>, its title, and the query. The method<code class="literal"> assertInsertQuery()</code> adds the bookmarks to the bookmark provider, inserting the<code class="literal"> Url</code> issued as a parameter with the specified title. The<code class="literal"> Uri</code> returned is verified to be not null and not exactly the same as the default one. Finally the<code class="literal"> Uri</code> is inserted in the list of<code class="literal"> Uri</code> instances to be deleted in<code class="literal"> testDown():</code>
+<a class="indexterm" id="id357"/>
+</p><div class="informalexample"><pre class="programlisting">// Not implemented in BrowserProvider
+// public void testFullSecondTitleWord() {
+// assertInsertQuery("http://www.example.com/rasdfe", // "nfgjra sdfywe", "sdfywe");
+// }
+public void testFullTitleJapanese() {
+String title = "\u30ae\u30e3\u30e9\u30ea\u30fc\ u30fcGoogle\u691c\u7d22";
+assertInsertQuery("http://www.example.com/sdaga", title, title);
+}
+public void testPartialTitleJapanese() {
+String title = "\u30ae\u30e3\u30e9\u30ea\u30fc\ u30fcGoogle\u691c\u7d22";
+String query = "\u30ae\u30e3\u30e9\u30ea\u30fc";
+assertInsertQuery("http://www.example.com/sdaga", title, query);
+}
+// Test for http://b/issue?id=2152749
+public void testSoundmarkTitleJapanese() {
+String title = "\u30ae\u30e3\u30e9\u30ea\u30fc\ u30fcGoogle\u691c\u7d22";
+String query = "\u30ad\u30e3\u30e9\u30ea\u30fc";
+assertInsertQuery("http://www.example.com/sdaga", title, query);
+}
+</pre></div><p>These tests are similar to the tests presented before, but in this case they use Japanese titles and queries. It is recommended to test the application's components under different conditions like in this case where other languages with different character sets are used.<a class="indexterm" id="id358"/>
+</p><p>We have several tests that are intended to verify the utilization of this bookmark provider for other locales and languages than just English. These particular cases cover the Japanese language utilization in bookmark titles. The tests<code class="literal"> testFullTitleJapanese(), testPartialTitleJapanese()</code>, and<code class="literal"> testSoundmarkTitleJapanese()</code> are the Japanese versions of the tests introduced before using Unicode characters:</p><div class="informalexample"><pre class="programlisting">//
+// Utilities
+//
+private void assertInsertQuery(String url, String title, String query) {
+addBookmark(url, title);
+assertQueryReturns(url, title, query);
+}
+private void assertQueryReturns(String url, String title, String query) {
+Cursor c = getBookmarksSuggest(query);
+try {
+assertTrue(title + " not matched by " + query, c.getCount() &gt; 0);
+assertTrue("More than one result for " + query, c.getCount() == 1);
+while (c.moveToNext()) {
+String text1 = getCol(c, SearchManager.SUGGEST_COLUMN_TEXT_1);
+assertNotNull(text1);
+assertEquals("Bad title", title, text1);
+String text2 = getCol(c, SearchManager.SUGGEST_COLUMN_TEXT_2);
+assertNotNull(text2);
+String data = getCol(c, SearchManager.SUGGEST_COLUMN_INTENT_DATA);
+assertNotNull(data);
+assertEquals("Bad URL", url, data);
+}
+} finally {
+c.close();
+}
+}
+private Cursor getBookmarksSuggest(String query) {
+Uri suggestUri = Uri.parse( "content://browser/bookmarks/search_suggest_query");
+String[] selectionArgs = { query };
+Cursor c = getContext().getContentResolver().query( suggestUri, null, "url LIKE ?",selectionArgs, null);
+assertNotNull(c);
+return c;
+}
+private void addBookmark(String url, String title) {
+Uri uri = insertBookmark(url, title);
+assertNotNull(uri);
+assertFalse( android.provider.Browser.BOOKMARKS_URI.equals(uri));
+mDeleteUris.add(uri);
+}
+private Uri insertBookmark(String url, String title) {
+ContentValues values = new ContentValues();
+values.put("title", title);
+values.put("url", url);
+values.put("visits", 0);
+values.put("date", 0);
+values.put("created", 0);
+values.put("bookmark", 1);
+return getContext().getContentResolver().insert( android.provider.Browser.BOOKMARKS_URI, values);
+}
+private void deleteUri(Uri uri) {
+int count = getContext().getContentResolver(). delete(uri, null, null);
+assertEquals("Failed to delete " + uri, 1, count);
+}
+private static String getCol(Cursor c, String name) {
+int col = c.getColumnIndex(name);
+String msg = "Column " + name + " not found, columns: " + Arrays.toString(c.getColumnNames());
+assertTrue(msg, col &gt;= 0);
+return c.getString(col);
+}
+}
+<a class="indexterm" id="id359"/>
+</pre></div><p>Several utility methods follow. These are the utilities used in the tests. We briefly looked at<code class="literal"> assertInsertQuery()</code> before, so now let's look at the other methods as well.<a class="indexterm" id="id360"/>
+</p><p>The method<code class="literal"> assertInsertQuery()</code> invokes<code class="literal"> assertQueryReturns(url, title, query)</code>, after<code class="literal"> addBookmark()</code>, to verify that the<code class="literal"> Cursor</code> returned by<code class="literal"> getBookmarksSuggest(query)</code> contains the expected data. This expectation can be summarized as:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Number of rows returned by the query is greater than 0</li><li class="listitem" style="list-style-type: disc">Number of rows returned by the query is equal to 1</li><li class="listitem" style="list-style-type: disc">The title in the returned row is not null</li><li class="listitem" style="list-style-type: disc">The title returned by the query is exactly the same as the method parameter</li><li class="listitem" style="list-style-type: disc">The second line for the suggestion is not null</li><li class="listitem" style="list-style-type: disc">The URL returned by the query is not null</li><li class="listitem" style="list-style-type: disc">This URL matches exactly the URL issued as the method parameter</li></ul></div><p>This is a simplified Activity Diagram that will help us understand the relationship among these methods:</p><div class="mediaobject"><img alt="The BrowserProvider tests" src="graphics/3500OS_07_01.jpg"/></div><p>These tests follow the basic structure described before and are depicted in the UML activity diagram. Firstly,<code class="literal"> assertInsertQuery()</code> is invoked which in turns invokes<code class="literal"> addBookmark()</code> and<code class="literal"> assertQueryReturns()</code>. Then,<code class="literal"> getBookmarksSuggest()</code> is called and finally the asserts to validate the conditions we are testing. The most outstanding thing here is the utilization of asserts in these utility methods, which helps us test conditions along the way.<a class="indexterm" id="id361"/>
+</p><p>This strategy provides an interesting pattern to follow in our tests. Some of the utility methods that we need to create to complete our tests can also carry their own verification of several conditions and improve our test quality.</p><p>Creating assert methods in our classes allows us to introduce domain-specific testing language that can be reused when testing other parts of the system.</p></div></div>
+<div class="section" title="Testing exceptions"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec04"/>Testing exceptions</h1></div></div></div><p>We have mentioned this before. In<a class="link" href="ch01.html" title="Chapter 1. Getting Started with Testing"> Chapter 1</a>,<span class="emphasis"><em> Getting Started</em></span> with<span class="emphasis"><em> Testing</em></span> we stated that you should test for exceptions and wrong values instead of just testing positive cases.<a class="indexterm" id="id362"/>
+</p><p>We have also presented this test before but here we are digging deeper into it:</p><div class="informalexample"><pre class="programlisting">public final void testExceptionForLessThanAbsoluteZeroF() {
+try {
+TemperatureConverter.fahrenheitToCelsius( TemperatureConverter.ABSOLUTE_ZERO_F-1);
+fail();
+}
+catch (InvalidTemperatureException ex) {
+// do nothing
+}
+}
+public final void testExceptionForLessThanAbsoluteZeroC() {
+try {
+TemperatureConverter.celsiusToFahrenheit( TemperatureConverter.ABSOLUTE_ZERO_C-1);
+fail();
+}
+catch (InvalidTemperatureException ex) {
+// do nothing
+}
+}
+</pre></div><p>Every time we have a method that is supposed to generate an exception, we should test this condition. The best way of doing it is by invoking the method inside a try-catch block, catching the expected<code class="literal"> Exception</code>, and failing otherwise. In this precise case we test for<code class="literal"> InvalidTemperature:</code>
+</p><div class="informalexample"><pre class="programlisting">public void testLifeCycleCreate() {
+Forwarding activity = startActivity(mStartIntent, null, null);
+// At this point, onCreate() has been called,
+// but nothing else
+// Complete the startup of the activity
+getInstrumentation().callActivityOnStart(activity);
+getInstrumentation().callActivityOnResume(activity);
+// At this point you could test for various
+// configuration aspects, or you could
+// use a Mock Context to confirm that your activity has made
+// certain calls to the system and set itself up properly.
+getInstrumentation().callActivityOnPause(activity);
+// At this point you could confirm that the activity has
+// paused properly, as if it is
+// no longer the topmost activity on screen.
+getInstrumentation().callActivityOnStop(activity);
+// At this point, you could confirm that the activity
+// has shut itself down appropriately,
+// or you could use a Mock Context to confirm that your
+// activity has released any system
+// resources it should no longer be holding.
+// ActivityUnitTestCase.tearDown(), which is always
+// automatically called, will take care
+// of calling onDestroy().
+}
+</pre></div></div>
+<div class="section" title="Testing local and remote services"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec05"/>Testing local and remote services</h1></div></div></div><p>This test is also from a ApiDemos sample application (<a class="ulink" href="http://developer.android.com/resources/samples/ApiDemos/index.html">http://developer.android.com/resources/samples/ApiDemos/index.html</a>).<a class="indexterm" id="id363"/>
+</p><p>The idea is to extend the<code class="literal"> ServiceTestCase&lt;Service&gt;</code> class to test a service in a controlled environment:</p><div class="informalexample"><pre class="programlisting">/*
+* Copyright (C) 2008 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+* implied.
+* See the License for the specific language governing permissions
+* and limitations under the License.
+*/
+package com.example.android.apis.app;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Handler;
+import android.os.IBinder;
+import android.test.MoreAsserts;
+import android.test.ServiceTestCase;
+import android.test.suitebuilder.annotation.MediumTest;
+import android.test.suitebuilder.annotation.SmallTest;
+</pre></div><p>This first code snippet has nothing more than the required copyrights and imports:</p><div class="informalexample"><pre class="programlisting">/**
+* This is a simple framework for a test of a Service.
+* See {@link android.test.ServiceTestCase
+* ServiceTestCase} for more information on how to write and
+* extend service tests.
+*
+* To run this test, you can type:
+* adb shell am instrument -w \
+* -e class com.example.android.apis.app.LocalServiceTest \
+* com.example.android.apis.tests/android.test.
+* InstrumentationTestRunner
+*/
+public class LocalServiceTest extends ServiceTestCase&lt;LocalService&gt; {
+public LocalServiceTest() {
+super(LocalService.class);
+}
+</pre></div><p>Then, we are using the no argument constructor as we did before, invoking the super constructor using the service class<code class="literal"> LocalService:</code>
+</p><div class="informalexample"><pre class="programlisting">@Override
+protected void setUp() throws Exception {
+super.setUp();
+}
+</pre></div><p>Now we are using the pattern of invoking the super methods in<code class="literal"> setUp()</code> and<code class="literal"> tearDown()</code>.</p><p>We are not setting up any specific fixture in this test so we are just invoking super methods:<a class="indexterm" id="id364"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* The name 'test preconditions' is a convention to signal that
+* if this
+* test doesn't pass, the test case was not set up properly and
+* it might
+* explain any and all failures in other tests. This is not
+* guaranteed to run before other tests, as junit uses
+* reflection to find the tests.
+*/
+@SmallTest
+public void testPreconditions() {
+}
+</pre></div><p>We now have an empty<code class="literal"> testPreconditions()</code>. We don't need any preconditions tested here:</p><div class="informalexample"><pre class="programlisting">/**
+* Test basic startup/shutdown of Service
+*/
+@SmallTest
+public void testStartable() {
+Intent startIntent = new Intent();
+startIntent.setClass(getContext(), LocalService.class);
+startService(startIntent);
+}
+/**
+* Test binding to service
+*/
+@MediumTest
+public void testBindable() {
+Intent startIntent = new Intent();
+startIntent.setClass(getContext(), LocalService.class);
+IBinder service = bindService(startIntent);
+}
+}
+</pre></div><p>The constructor, as in other similar cases, invokes the parent constructor passing this service class as a parameter.</p><p>This is followed by a<code class="literal"> testStartable()</code> test. It is annotated with the<code class="literal"> SmallTest</code> annotation to categorize this test. Next we start the service using an Intent that we create here, setting its class to the class of the service under test. We also use the instrumented Context for this Intent. This class allows for some dependency injection, as every service depends on the Context in which it runs, and the application with which it is associated. This framework allows you to inject modified, mock, or isolated replacements for these dependencies, and thus performs a true unit test.</p><p>As we simply run our tests as-is, the<code class="literal"> Service</code> will be injected with a fully-functional<code class="literal"> Context</code>, and a generic<code class="literal"> MockApplication</code> object.</p><p>Then we start the service using the<code class="literal"> startService(startIntent)</code> method, in the same way as if it was started by<code class="literal"> Context.startService()</code>, providing the arguments it supplied. If you use this method to start the service, it will automatically be stopped by<code class="literal"> tearDown()</code>.<a class="indexterm" id="id365"/>
+</p><p>Another test,<code class="literal"> testBindable(),</code> which is categorized as<code class="literal"> MediumTest</code>, will be testing if the service can be bound. This test uses<code class="literal"> bindService(startIntent)</code>, which starts the service under test, in the same way as if it was started by<code class="literal"> Context.bindService()</code>, providing the arguments it supplied. It returns the communication channel to the service. It may return null if clients cannot bind to the service. Most probably this test should check for the null return value in the service with an assertion like<code class="literal"> assertNotNull(service)</code> to verify that the service was bound correctly, but it doesn't. Be sure to include this test when you write code for similar cases.</p><p>The returned<code class="literal"> IBinder</code> is usually for a complex interface that has been described using AIDL. In order to test with this interface, your service must implement a<code class="literal"> getService()</code> method, as shown in<code class="literal"> samples.ApiDemos.app.LocalService</code>, which has this implementation of that method:</p><div class="informalexample"><pre class="programlisting">/**
+* Class for clients to access. Because we know this service
+* always runs in the same process as its clients,
+* we don't need to deal with IPC.
+*/
+public class LocalBinder extends Binder {
+LocalService getService() {
+return LocalService.this;
+}
+}
+</pre></div></div>
+<div class="section" title="Extensive use of mock objects"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec06"/>Extensive use of mock objects</h1></div></div></div><p>In previous chapters we described and used the mock classes that are present in the Android SDK. While these classes could cover a great number of cases, that is not all and you may have the need for other mock objects to furnish your test cases.<a class="indexterm" id="id366"/>
+</p><p>Several libraries provide the infrastructure to satisfy our mocking needs, but we are now concentrating on EasyMock which is perhaps the most widely used in Android.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;" title="Note"><h3 class="title"><a id="note18"/>Note</h3><p>This is not an EasyMock tutorial. We will just be analyzing its use in Android, so if you are not familiar with it I would recommend you take a look at the documentation available at its website:<a class="ulink" href="http://easymock.org/"> http://easymock.org/</a>.</p></div><p>EasyMock, an Open Source software project available under the Apache 2.0 license, provides mock objects mainly for interfaces. It is a perfect match for Test Driven Development due to the way of recording expectations and its dynamically generated mock objects because they support refactoring, and test code will not break when renaming methods or changing its signature.<a class="indexterm" id="id367"/>
+</p><p>According to its documentation, the most relevant benefits of EasyMock are as follows:<a class="indexterm" id="id368"/>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Hand-writing classes for Mock Objects are not needed.</li><li class="listitem" style="list-style-type: disc">Supports refactoring-safe Mock Objects. Test code will not break at runtime when renaming methods or reordering method parameters.</li><li class="listitem" style="list-style-type: disc">Supports return values and exceptions.</li><li class="listitem" style="list-style-type: disc">Supports checking the order of method calls, for one or more Mock Objects.</li></ul></div><p>To demonstrate its usage and to establish a style that can be later reproduced for other tests we are completing and expanding test cases produced before for our application.<a class="indexterm" id="id369"/>
+</p><p>In our previous<code class="literal"> TemperatureConverter</code> example, we decided to extend<code class="literal"> EditText</code> to create<code class="literal"> EditNumber</code>, a text field that accepts only signed decimal numbers.<code class="literal"> EditNumber</code> uses an<code class="literal"> InputFilter</code> to provide this feature. In the following tests we will be exercising this filter to verify that the correct behavior is implemented.</p><p>To create the test we will be using a property that<code class="literal"> EditNumber</code> inherits from<code class="literal"> EditText</code>, that can add a listener, actually a<code class="literal"> TextWatcher</code>, to provide methods that are called whenever the text of<code class="literal"> EditText</code> changes. This<code class="literal"> TextWatcher</code> is a collaborator for the test and we could have implemented it as a separate class, but this is tedious and may introduce more errors, so the approach taken is to use EasyMock to avoid the need of writing it.</p><p>And this is precisely how we are introducing a mock<code class="literal"> TextWatcher</code> to check method invocations while text changes.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;" title="Note"><h3 class="title"><a id="note19"/>Note</h3><p>The latest version of EasyMock supported by Android as of this writing is EasyMock 2.5.2. You may want to try out a different one but it is likely you will encounter problems.</p></div><p>The first thing we should do is add<code class="literal"> easymock-2.5.2.jar</code> to the Test project properties.<a class="indexterm" id="id370"/>
+</p><p>The following screenshot shows how the easymock JAR file was added to the<span class="strong"><strong> Java Build Path</strong></span> of the Test project:</p><div class="mediaobject"><img alt="Extensive use of mock objects" src="graphics/3500_07_02.jpg"/></div><p>In order to use EasyMock in our tests we only need to statically import its methods from<code class="literal"> org.easymockEasyMock</code>, which are the only non-internal, non-deprecated methods of EasyMock 2:</p><div class="informalexample"><pre class="programlisting">import static org.easymock.EasyMock.*;
+</pre></div><p>It is preferable to use specific imports instead of using the wildcard, but it's not so easy to create the static import statement in Eclipse. However, if we organize imports (using<span class="strong"><strong> Source | Organize Imports</strong></span> or the shortcut<span class="emphasis"><em> Shift+Ctrl+O)</em></span>, Eclipse will create the specific statements.</p><div class="section" title="Importing libraries"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec04"/>Importing libraries</h2></div></div></div><p>We have added an EasyMock library to the project's Java Build Path. This is usually not a problem, but sometimes rebuilding the project leads us to the following error that avoids the final APK. The problem is found when this final APK cannot be created because there is a problem while it is archived:<a class="indexterm" id="id371"/>
+</p><p>
+<span class="strong"><strong>[2010-10-28 01:12:29 - TemperatureConverterTest] Error generating final archive: duplicate entry: LICENSE</strong></span>
+</p><p>This depends on how many libraries are included by the project and what they are.</p><p>Most of the available Open Source libraries have a similar content as proposed by GNU and include files like LICENSE, NOTICE, CHANGES, COPYRIGHT, INSTALL, among others. We will find this problem as soon as we try to include more than one in the same project to ultimately build a single APK.</p><p>The solution to this problem is to repackage the library content renaming these files; for example,<code class="literal"> LICENSE</code> could be renamed to<code class="literal"> LICENSE.&lt;library&gt;</code>. It is recommended to add the suffix<span class="strong"><strong> android</strong></span> to the repackaged library to keep track of these changes.</p><p>This is an example of the steps you may need to rename those files:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ mkdir mylib-1.0
+$ (cd mylib-1.0; jar xf /path/to/mylib-1.0.jar)
+$ mv mylib-1.0/META-INF/LICENSE mylib-1.0/META-INF/LICENSE.mylib
+$ mv mylib-1.0/META-INF/NOTICE mylib-1.0/META-INF/NOTICE.mylib
+$ (cd mylib-1.0; jar cf /path/to/mylib-1.0-android.jar .)</strong></span>
+</pre></div><p>The idea is to move the common file names to a name suffixed by the library name to provide some uniqueness.</p></div><div class="section" title="The testTextChanged test"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec05"/>The testTextChanged test</h2></div></div></div><p>This test will exercise<code class="literal"> EditNumber</code> behavior, checking the method calls on the<code class="literal"> TextWatcher</code> mock and verifying the results.<a class="indexterm" id="id372"/>
+</p><p>We are using an<code class="literal"> AndroidTestCase</code> because we are interested in testing<code class="literal"> EditNumber</code> in isolation of other components or<code class="literal"> Activities</code>.</p><p>This test defines two<code class="literal"> String</code> arrays: sai and sar.<code class="literal"> sai</code> stands for<code class="literal"> String</code> array input and<code class="literal"> sar</code> for<code class="literal"> String</code> array result. As you may have guessed already,<code class="literal"> sai</code> contains the input and<code class="literal"> sar</code> the expected result for the corresponding element in the input after filters have been applied.</p><p>In real life you should select more descriptive names for the variables used in the tests as you should do for your code, but here we are constrained by the space and thus we have selected very short names. The names<code class="literal"> saInput</code> and<code class="literal"> saResult</code> would be good choices:<a class="indexterm" id="id373"/>
+</p><div class="informalexample"><pre class="programlisting">/**
+* Test method for {@link com.example.aatg.tc.EditNumber}.
+* Several input strings are set and compared against the
+* expected results after filters are applied.
+* This test use {@link EasyMock}
+*/
+public final void testTextChanged() {
+final String[] sai = new String[] {
+null, "", "1", "123", "-123", "0", "1.2", "-1.2", "1-2-3", "+1", "1.2.3" };
+final String[] sar = new String[] {
+"", "", "1", "123", "-123", "0", "1.2", "-1.2", "123", "1", "12.3" };
+// mock
+final TextWatcher watcher = createMock(TextWatcher.class);
+mEditNumber.addTextChangedListener(watcher);
+for (int i=1; i &lt; sai.length; i++) {
+// record
+watcher.beforeTextChanged(stringCmp(sar[i-1]), eq(0),
+eq(sar[i-1].length()), eq(sar[i].length()));
+watcher.onTextChanged(stringCmp(sar[i]), eq(0),
+eq(sar[i-1].length()), eq(sar[i].length()));
+watcher.afterTextChanged(stringCmp(
+Editable.Factory.getInstance().newEditable(sar[i])));
+// replay
+replay(watcher);
+// exercise
+mEditNumber.setText(sai[i]);
+// test
+final String actual = mEditNumber.getText().toString();
+assertEquals(sai[i] + " =&gt; " + sar[i] + " =&gt; " + actual, sar[i], actual);
+// verify
+verify(watcher);
+// reset
+reset(watcher);
+}
+}
+</pre></div><p>We begin creating<code class="literal"> sai</code> and<code class="literal"> sar</code>. As we explained before they are two<code class="literal"> String</code> arrays containing the inputs and results expected.</p><p>Then we create a mock<code class="literal"> TextWatcher</code> using<code class="literal"> createMock(TextWatcher.class)</code> and assign it to<code class="literal"> mEditNumber</code>, the<code class="literal"> EditNumber</code> created in the test fixture.<a class="indexterm" id="id374"/>
+</p><p>We create a loop to iterate over every element of the<code class="literal"> sai</code> array.</p><p>Next, we take the seven common steps usually needed to use the mock object:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem"> Create the mock using<code class="literal"> createMock(), createNiceMock(),</code> or<code class="literal"> createStrictMock()</code>.</li><li class="listitem"> Record the expected behavior; all methods invoked will be recorded.</li><li class="listitem"> Replay, to change the state of the object from record to play when it really behaves like a mock object.</li><li class="listitem"> Exercise the methods, usually by invoking methods of the class under test.</li><li class="listitem"> Test the results of the exercised methods using asserts. This step is optional for simpler cases.</li><li class="listitem"> Verify that the behavior specified was actually followed. If this was not the case we will receive an exception.</li><li class="listitem"> Reset can be used to reuse a mock object, clearing its state.</li></ol></div><p>In the record step we declare all the methods we are expecting to be invoked on the mock object together with its arguments. We use comparators for the arguments.</p><p>We will be using a special<code class="literal"> Comparator, stringCmp()</code>, because we are interested in comparing the<code class="literal"> String</code> content for different classes used by Android, such as<code class="literal"> Editable, CharSequence, String</code>, and so on.</p><p>The other comparator,<code class="literal"> eq()</code>, expects an<code class="literal"> int</code> that is equal to the given value. The latter is provided by EasyMock for all primitive types and<code class="literal"> Object</code>, but we need to implement<code class="literal"> stringCmp()</code> as it supports some Android-specific usage.</p><p>EasyMock has a predefined matcher that would help us in creating our comparator:</p><div class="informalexample"><pre class="programlisting">public static &lt;T&gt; T cmp(T value, Comparator&lt;? super T&gt; comparator, LogicalOperator operator)
+</pre></div><p>The<code class="literal"> cmp</code> comparator method expects an argument that will be compared using the provided comparator using the operator. The comparison that will take place is<code class="literal"> comparator.compare(actual, value) operator 0</code> where operator can be one of logical operator values in EasyMock's<code class="literal"> LogicalOperator enum</code>, representing &lt;,&lt;=,&gt;,&gt;=, or ==.</p><p>As you may have already realized, its frequent use in a test could be really complex and may lead to errors, so to simplify this process we will be using a helper class that we call<code class="literal"> StringComparator:</code>
+</p><div class="informalexample"><pre class="programlisting">public static final class StringComparator&lt;T&gt; implements Comparator&lt;T&gt; {
+/* (non-Javadoc)
+* @see java.util.Comparator#compare( java.lang.Object, java.lang.Object)
+*
+* Return the {@link String} comparison of the arguments.
+*/
+@Override
+public int compare(T object1, T object2) {
+return object1.toString().compareTo(object2.toString());
+}
+}
+</pre></div><p>This class implements the<code class="literal"> Comparator&lt;T&gt;</code> interface, which has an abstract method named<code class="literal"> compare</code>. We implement this method by returning the result of the comparison of the objects passed as arguments after they are converted to String. Remember that<code class="literal"> compareTo(String string)</code> applied to a String compares the string specified as a parameter to the string using the Unicode values of the characters. Its return value is:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">0 (zero) if the strings contain the same characters in the same order</li><li class="listitem" style="list-style-type: disc">A negative integer if the first non-equal character in this string has a Unicode value which is less than the Unicode value of the character at the same position in the specified string, or if this string is a prefix of the specified string</li><li class="listitem" style="list-style-type: disc">A positive integer if the first non-equal character in this string has a Unicode value which is greater than the Unicode value of the character at the same position in the specified string, or if the specified string is a prefix of this string</li></ul></div><p>We could invoke<code class="literal"> EasyMock.cmp()</code> directly using this comparator but to simplify things even further we will create a generic static method<code class="literal"> stringCmp:</code>
+</p><div class="informalexample"><pre class="programlisting">/**
+* Return {@link EasyMock.cmp} using a {@link StringComparator} and
+* {@link LogicalOperator.EQUAL}
+*
+* @param &lt;T&gt; The original class of the arguments
+* @param o The argument to the comparison
+* @return {@link EasyMock.cmp}
+*/
+public static &lt;T&gt; T stringCmp(T o) {
+return cmp(o, new StringComparator&lt;T&gt;(), LogicalOperator.EQUAL);
+}
+</pre></div><p>This method will invoke<code class="literal"> EasyMock.cmp()</code> using the right comparator for the specific type and using<code class="literal"> EQUAL</code> as the operator.</p><p>That is why in our test we can simply use:</p><div class="informalexample"><pre class="programlisting">watcher.beforeTextChanged(stringCmp(sar[i-1]), …
+</pre></div></div><div class="section" title="Introducing Hamcrest"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec06"/>Introducing Hamcrest</h2></div></div></div><p>While the previous method is valid, a more generic approach would be to introduce<span class="strong"><strong> hamcrest</strong></span>, a library of matcher objects (also known as constraints or predicates) allowing<span class="emphasis"><em> match</em></span> rules to be defined declaratively, to be used in other frameworks. Hamcrest also provides adaptors for EasyMock 2.<a class="indexterm" id="id375"/>
+</p><p>We will be revisiting our previous example introducing hamcrest for our matchers.</p><p>To be able to use hamcrest we need to include it to the<span class="strong"><strong> Java Build Path</strong></span>.<a class="indexterm" id="id376"/>
+</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;" title="Note"><h3 class="title"><a id="note20"/>Note</h3><p>In this example we use hamcrest-1.2, which is the latest release. Instead of using<code class="literal"> hamcrest-1.2-all.jar</code> we use the individual components and the method described before to avoid several<code class="literal"> LICENSE.txt</code> files from clashing.</p></div><p>Download hamcrest library from<a class="ulink" href="http://code.google.com/p/hamcrest."> http://code.google.com/p/hamcrest.</a>
+<a class="indexterm" id="id377"/>
+</p><p>You need to include the following JAR files:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">hamcrest-core</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">hamcrest-library</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">hamcrest-integration</code></li></ul></div><p>The following screenshot shows the new project properties after adding hamcrest libraries:</p><div class="mediaobject"><img alt="Introducing Hamcrest" src="graphics/3500_07_03.jpg"/></div><div class="section" title="Hamcrest matchers"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec03"/>Hamcrest matchers</h3></div></div></div><p>Hamcrest comes with a library of useful matchers. Here are some of the most important ones:<a class="indexterm" id="id378"/>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Core</strong></span><a class="indexterm" id="id379"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>anything:</strong></span> Always matches; useful if you don't care what the object under test is<a class="indexterm" id="id380"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>describedAs:</strong></span> Decorator to adding custom failure description<a class="indexterm" id="id381"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>is:</strong></span> Decorator to improve readability</li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Logical</strong></span><a class="indexterm" id="id382"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>allOf:</strong></span> Matches if all matchers match, short circuits (like Java &amp;&amp;)<a class="indexterm" id="id383"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>anyOf:</strong></span> Matches if any matchers match, short circuits (like Java ||)<a class="indexterm" id="id384"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>not:</strong></span> Matches if the wrapped matcher doesn't match and vice versa<a class="indexterm" id="id385"/></li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Object</strong></span><a class="indexterm" id="id386"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>equalTo:</strong></span> Test object equality using<code class="literal"> Object.equals</code><a class="indexterm" id="id387"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>hasToString:</strong></span> Test<code class="literal"> Object.toString</code><a class="indexterm" id="id388"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>instanceOf, isCompatibleType:</strong></span> Test type<a class="indexterm" id="id389"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>notNullValue, nullValue:</strong></span> Test for null<a class="indexterm" id="id390"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>sameInstance:</strong></span> Test object identity<a class="indexterm" id="id391"/></li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Beans</strong></span><a class="indexterm" id="id392"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>hasProperty:</strong></span> Test JavaBeans properties<a class="indexterm" id="id393"/></li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Collections</strong></span><a class="indexterm" id="id394"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Array:</strong></span> Test an array's elements against an array of matchers<a class="indexterm" id="id395"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>hasEntry, hasKey, hasValue:</strong></span> Test a map containing an entry, key, or value<a class="indexterm" id="id396"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>hasItem, hasItems:</strong></span> Test a collection containing elements<a class="indexterm" id="id397"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>hasItemInArray:</strong></span> Test an array containing an element<a class="indexterm" id="id398"/></li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Number</strong></span><a class="indexterm" id="id399"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>closeTo:</strong></span> Test floating point values are close to a given value<a class="indexterm" id="id400"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>greaterThan, greaterThanOrEqualTo, lessThan, lessThanOrEqualTo:</strong></span> Test ordering<a class="indexterm" id="id401"/></li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Text</strong></span><a class="indexterm" id="id402"/><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>equalToIgnoringCase:</strong></span> Test string equality ignoring case<a class="indexterm" id="id403"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>equalToIgnoringWhiteSpace:</strong></span> Test string equality ignoring differences in runs of whitespace<a class="indexterm" id="id404"/></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>containsString, endsWith, startsWith:</strong></span> Test string matching<a class="indexterm" id="id405"/></li></ul></div></li></ul></div></div><div class="section" title="The hasToString matcher"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec04"/>The hasToString matcher</h3></div></div></div><p>Our next step is to create the matcher to replace the previous use of the<code class="literal"> stringCmp()</code> Comparator.<code class="literal"> EasyMock2Adapter</code> is an adapter class provided by hamcrest:<a class="indexterm" id="id406"/>
+</p><div class="informalexample"><pre class="programlisting">import org.hamcrest.integration.EasyMock2Adapter;
+import org.hamcrest.object.HasToString;
+/**
+* Create an {@link EasyMock2Adapter} using a
+* {@link HasToString.hasToString}
+*
+* @param &lt;T&gt; The original class of the arguments
+* @param o The argument to the comparison
+* @return o
+*/
+public static &lt;T&gt; T hasToString(T o) {
+EasyMock2Adapter.adapt(
+HasToString.hasToString(o.toString()));
+return o;
+}
+</pre></div><p>Having this matcher implemented, the following step is still required. We need to adapt the<code class="literal"> testTextChanged()</code> method to include this newly created matcher instead of<code class="literal"> stringCmp():</code>
+</p><div class="informalexample"><pre class="programlisting">// record
+watcher.beforeTextChanged(hasToString(sar[i-1]), eq(0),
+eq(sar[i-1].length()), eq(sar[i].length()));
+watcher.onTextChanged(hasToString(sar[i]), eq(0),
+eq(sar[i-1].length()), eq(sar[i].length()));
+watcher.afterTextChanged(hasToString(
+Editable.Factory.getInstance().newEditable(sar[i])));
+</pre></div></div></div></div>
+<div class="section" title="Testing Views in isolation"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec07"/>Testing Views in isolation</h1></div></div></div><p>The test we are analyzing here also belongs to the ApiDemos project. It demonstrates how some properties of the<code class="literal"> Views</code> conforming a<code class="literal"> Layout</code> can be tested when the behavior itself cannot be isolated. Testing focus is one of these situations.<a class="indexterm" id="id407"/>
+</p><p>To avoid creating the full<code class="literal"> Activity</code>, this test is extending<code class="literal"> AndroidTestCase:</code>
+<a class="indexterm" id="id408"/>
+</p><div class="informalexample"><pre class="programlisting">/*
+* Copyright (C) 2008 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+* either express or implied.
+* See the License for the specific language governing permissions
+* and limitations under the License.
+*/
+package com.example.android.apis.view;
+import com.example.android.apis.R;
+import android.content.Context;
+import android.test.AndroidTestCase;
+import android.test.suitebuilder.annotation.SmallTest;
+import android.view.FocusFinder;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+</pre></div><p>As in previous cases we start with the required copyright and imports:</p><div class="informalexample"><pre class="programlisting">/**
+* This exercises the same logic as {@link Focus2ActivityTest} but in
+* a lighter weight manner; it doesn't need to launch the activity,
+* and it can test the focus behavior by calling {@link FocusFinder}
+* methods directly.
+*
+* {@link Focus2ActivityTest} is still useful to verify that, at an
+* end to end level, key events actually translate to focus
+* transitioning in the way we expect.
+* A good complementary way to use both types of tests might be to
+* have more exhaustive coverage in the lighter weight test case,
+* and a few end to end scenarios in the functional {@link
+* android.test.ActivityInstrumentationTestCase}.
+* This would provide reasonable assurance that the end to end
+* system is working, while avoiding the overhead of
+* having every corner case exercised in the slower,
+* heavier weight way.
+*
+* Even as a lighter weight test, this test still needs access to a
+* {@link Context} to inflate the file, which is why it extends
+* {@link AndroidTestCase}.
+*
+* If you ever need a context to do your work in tests, you can
+* extend {@link AndroidTestCase}, and when run via an {@link
+* android.test.InstrumentationTestRunner},
+* the context will be injected for you.
+*
+* See {@link com.example.android.apis.app.ForwardingTest} for
+* an example of an Activity unit test.
+*
+* See {@link com.example.android.apis.AllTests} for
+* documentation on running
+* all tests and individual tests in this application.
+*/
+public class Focus2AndroidTest extends AndroidTestCase {
+</pre></div><p>As we mentioned before, this test extends<code class="literal"> AndroidTestCase</code> to provide a lightweight alternative to<code class="literal"> ActivityInstrumentationTestCase&lt;Activity&gt;</code> when possible.<a class="indexterm" id="id409"/>
+</p><p>You may have thought about using just<code class="literal"> TestCase</code>, but unfortunately this is not possible as we need a<code class="literal"> Context</code> to inflate the XML layout via<code class="literal"> LayoutInflater</code>, and<code class="literal"> AndroidTestCase</code> will provide us with this component:</p><div class="informalexample"><pre class="programlisting">private FocusFinder mFocusFinder;
+private ViewGroup mRoot;
+private Button mLeftButton;
+private Button mCenterButton;
+private Button mRightButton;
+@Override
+protected void setUp() throws Exception {
+super.setUp();
+mFocusFinder = FocusFinder.getInstance();
+// inflate the layout
+final Context context = getContext();
+final LayoutInflater inflater = LayoutInflater.from(context);
+mRoot = (ViewGroup) inflater.inflate(R.layout.focus_2, null);
+// manually measure it, and lay it out
+mRoot.measure(500, 500);
+mRoot.layout(0, 0, 500, 500);
+mLeftButton = (Button) mRoot.findViewById(R.id.leftButton);
+mCenterButton = (Button) mRoot.findViewById(R.id.centerButton);
+mRightButton = (Button) mRoot.findViewById( R.id.rightButton);
+}
+</pre></div><p>The fixture set up is as follows:<a class="indexterm" id="id410"/>
+</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem"><code class="literal"> FocusFinder</code> is a class that provides the algorithm used to find the next focusable<code class="literal"> View</code>. It implements the singleton pattern and that's why we use<code class="literal"> FocusFinder.getInstance()</code> to obtain a reference to it. This class has several methods to help us find focusable and touchable items as we mentioned, given various conditions as the nearest in a given direction or searching from a particular rectangle.</li><li class="listitem"> Then we get the<code class="literal"> LayoutInflater</code> and inflate the layout under test.</li><li class="listitem"> One thing we need to take into account, as our test is isolated from other parts of the system, is that we have to manually measure and layout the components.</li><li class="listitem"> Then, we use the<span class="emphasis"><em> find views</em></span> pattern and we assign the found views to the fields:<div class="informalexample"><pre class="programlisting">/**
+* The name 'test preconditions' is a convention to signal
+* that if this test doesn't pass, the test case was not
+* set up properly and it might explain any and all failures
+* in other tests. This is not guaranteed to run before
+* other tests, as junit uses reflection to find the tests.
+*/
+@SmallTest
+public void testPreconditions() {
+assertNotNull(mLeftButton);
+assertTrue("center button should be right of left button",
+mLeftButton.getRight() &lt; mCenterButton.getLeft());
+assertTrue("right button should be right of center button",
+mCenterButton.getRight() &lt; mRightButton.getLeft());
+}
+</pre></div></li></ol></div><p>Once the fixture has been configured we describe the precondition in a test which, as we mentioned earlier is named<code class="literal"> testPreconditions()</code>. However, because tests are found using reflection, there is no guarantee that it will run in a particular order, as all of the test methods are looked for by evaluating if their name begins with test.</p><p>These preconditions include the verification of the relative position on the screen for the components. In this case their edges relative to the parent are used.<a class="indexterm" id="id411"/>
+</p><p>In a previous chapter we enumerated all the available asserts in our arsenal and you may remember that to test<code class="literal"> Views</code> position, we had a complete set of assertions in the<code class="literal"> ViewAsserts</code> class. However, this depends on how the layout is defined:</p><div class="informalexample"><pre class="programlisting">@SmallTest
+public void testGoingRightFromLeftButtonJumpsOverCenterToRight() {
+assertEquals("right should be next focus from left", mRightButton, mFocusFinder.findNextFocus( mRoot, mLeftButton, View.FOCUS_RIGHT));
+}
+@SmallTest
+public void testGoingLeftFromRightButtonGoesToCenter() {
+assertEquals("center should be next focus from right", mCenterButton, mFocusFinder.findNextFocus( mRoot, mRightButton, View.FOCUS_LEFT));
+}
+}
+</pre></div><p>The method<code class="literal"> testGoingRightFromLeftButtonJumpsOverCenterToRight()</code>, as its name suggests, tests the focus gained by the right button when the focus moves from the right to the left button. To achieve this search, the instance of<code class="literal"> FocusFinder</code> obtained during the<code class="literal"> setUp()</code> method is employed. This class has a<code class="literal"> findNextFocus()</code> method to obtain the View receiving focus in a given direction. The value obtained is checked against our expectations.</p><p>In a similar way, the test<code class="literal"> testGoingLeftFromRightButtonGoesToCenter()</code>, tests the focus going in the other direction.</p></div>
+<div class="section" title="Testing parsers"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec08"/>Testing parsers</h1></div></div></div><p>There are many occasions where your Android application relies on external XML, JSON messages, or documents obtained from web services. These documents are used for data interchange between the local application and the server. There are many use cases where XML or JSON documents are obtained from the server or generated by the local application to be sent to the server. Ideally, methods invoked by these activities have to be tested in isolation to have real unit tests and to achieve this, we need to include some mock files somewhere in our APK to run the tests.<a class="indexterm" id="id412"/>
+</p><p>But the question is where can we include these files?</p><p>Let's find out.</p><div class="section" title="Android assets"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec07"/>Android assets</h2></div></div></div><p>To begin, a brief review of the assets definition can be found in the Android SDK documentation:<a class="indexterm" id="id413"/>
+</p><div class="blockquote"><blockquote class="blockquote"><p>The difference between "resources" and "assets" isn't much on the surface, but in general, you'll use resources to store your external content much more often than you'll use assets. The real difference is that anything placed in the resources directory will be easily accessible from your application from the R class, which is compiled by Android. Whereas, anything placed in the assets directory will maintain its raw file format and, in order to read it, you must use the AssetManager to read the file as a stream of bytes. So keeping files and data in resources (res/) makes them easily accessible.</p></blockquote></div><p>Clearly, assets are what we need to store the files that will be parsed to test the parser.</p><p>So our XML or JSON files should be placed on the assets folder to prevent manipulation at compile time and to be able to access their raw content while the application or test run.</p><p>But be careful; we need to place them in the assets folder of our<span class="strong"><strong> test project</strong></span> because they are not part of the application and we don't want them packed with it.</p></div><div class="section" title="The parser activity"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec08"/>The parser activity</h2></div></div></div><p>This is an extremely simple activity to demonstrate the case. Our activity obtains an XML or JSON document from a server and then parses it. Let's assume we have a<code class="literal"> parseXml</code> method:<a class="indexterm" id="id414"/>
+</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.parserexample;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
+import android.app.Activity;
+import android.os.Bundle;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+public class ParserExampleActivity extends Activity {
+/** Called when the activity is first created. */
+@Override
+public void onCreate(Bundle savedInstanceState) {
+super.onCreate(savedInstanceState);
+setContentView(R.layout.main);
+}
+public String parseXml(InputStream xml) {
+try {
+XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+factory.setNamespaceAware(true);
+XmlPullParser parser = factory.newPullParser();
+parser.setInput(new InputStreamReader(xml));
+int eventType = parser.getEventType();
+StringBuilder sb = new StringBuilder();
+while (eventType != XmlPullParser.END_DOCUMENT) {
+if(eventType == XmlPullParser.TEXT) {
+sb.append(parser.getText());
+}
+eventType = parser.next();
+}
+return sb.toString();
+}
+catch (Exception e) {
+// TODO Auto-generated catch block
+e.printStackTrace();
+}
+return null;
+}
+}
+</pre></div><p>This is an oversimplified example of an activity that includes a parser method to illustrate the use of assets. Your real application may look very different and your parser could be implemented as an external class that could be tested in isolation and integrated at a later stage.<a class="indexterm" id="id415"/>
+</p></div><div class="section" title="The parser test"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec09"/>The parser test</h2></div></div></div><p>This test implements an<code class="literal"> ActivityInstrumentationTestCase2</code> for the<code class="literal"> ParserExampleActivity</code> class:<a class="indexterm" id="id416"/>
+</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.parserexample.test;
+import com.example.aatg.parserexample.ParserExampleActivity;
+import android.test.ActivityInstrumentationTestCase2;
+import java.io.IOException;
+import java.io.InputStream;
+public class ParserExampleActivityTest extends ActivityInstrumentationTestCase2&lt;ParserExampleActivity&gt; {
+public ParserExampleActivityTest() {
+super(ParserExampleActivity.class);
+}
+protected void setUp() throws Exception {
+super.setUp();
+}
+protected void tearDown() throws Exception {
+super.tearDown();
+}
+public final void testParseXml() {
+ParserExampleActivity activity = getActivity();
+String result = null;
+try {
+InputStream myxml = getInstrumentation().getContext(). getAssets().open("my_document.xml");
+result = activity.parseXml(myxml);
+} catch (IOException e) {
+fail(e.getLocalizedMessage());
+}
+assertNotNull(result);
+}
+}
+</pre></div><p>Almost all the methods are simple implementations of the default ones and the only interesting method for us is<code class="literal"> testParseXml().</code> Firstly, the activity is obtained by invoking<code class="literal"> getActivity()</code>. Then an<code class="literal"> InputStream</code> is obtained, opening the file<code class="literal"> my_document.xml</code> from the assets by<code class="literal"> getInstrumentation().getContext().getAssets()</code>. Note that the<code class="literal"> Context</code> and thus the assets obtained here are from the tests package not from the<code class="literal"> Activity</code> under test.</p><p>Next, the activity<code class="literal"> parseXml()</code> method is invoked using the recently obtained<code class="literal"> InputStream</code>. If there is an<code class="literal"> Exception, fail()</code> is invoked and if everything goes well we test that the result is not null.</p><p>We should then provide the XML we want to use for the test in an asset named<code class="literal"> my_document.xml</code>.</p><p>The content could be:</p><div class="informalexample"><pre class="programlisting">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!-- place this file in assets/my_document.xml --&gt;
+&lt;my&gt;This is my document&lt;/my&gt;
+</pre></div></div></div>
+<div class="section" title="Testing for memory leaks"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec09"/>Testing for memory leaks</h1></div></div></div><p>Sometimes memory consumption is an important factor to measure the good behavior of the test target, be it an Activity, Service, ContentProvider, or other Component.<a class="indexterm" id="id417"/>
+</p><p>To test for this condition, we can use a utility test that you can invoke from other tests mainly after having run a test loop:</p><div class="informalexample"><pre class="programlisting">public final void assertNotInLowMemoryCondition() {
+//Verification: check if it is in low memory
+ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+((ActivityManager)getActivity().getSystemService( Context.ACTIVITY_SERVICE)).getMemoryInfo(mi);
+assertFalse("Low memory condition", mi.lowMemory);
+}
+</pre></div><p>This assertion can be called from other tests. At the beginning it obtains the<code class="literal"> MemoryInfo</code> from<code class="literal"> ActivityManager</code> using<code class="literal"> getMemoryInfo()</code>, after getting the instance using<code class="literal"> getSystemService()</code>. The field<code class="literal"> lowMemory</code> is set to true if the system considers itself to currently be in a low memory situation.</p><p>In some cases we want to dive even deeper in the resource usage and we can obtain more detailed information from the process table.</p><p>We can create another helper method to obtain process information and use it in our tests:</p><div class="informalexample"><pre class="programlisting">public final String captureProcessInfo() {
+String cmd = "ps";
+String memoryUsage = null;
+int ch; // the character read
+try {
+Process p = Runtime.getRuntime().exec(cmd);
+InputStream in = p.getInputStream();
+StringBuffer sb = new StringBuffer(512);
+while ((ch = in.read()) != -1) {
+sb.append((char) ch);
+}
+memoryUsage = sb.toString();
+} catch (IOException e) {
+fail(e.getLocalizedMessage());
+}
+return memoryUsage;
+}
+</pre></div><p>To obtain this information, a command (in this case,<code class="literal"> ps</code> is used but you can adapt it to your needs) is executed using<code class="literal"> Runtime.exec()</code>. The output of this command is concatenated in a<code class="literal"> String</code> that is later returned. We can use the return value to print it to the logs in our test or we can further process the content to obtain summary information.<a class="indexterm" id="id418"/>
+</p><p>This is an example if logging the output:</p><div class="informalexample"><pre class="programlisting">Log.d(TAG, captureProcessInfo());
+</pre></div><p>When this test is run we obtain information about the running processes:</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): USER PID PPID VSIZE RSS WCHAN PC NAME</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 1 0 312 220 c009b74c 0000ca4c S /init</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 2 0 0 0 c004e72c 00000000 S kthreadd</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 3 2 0 0 c003fdc8 00000000 S ksoftirqd/0</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 4 2 0 0 c004b2c4 00000000 S events/0</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 5 2 0 0 c004b2c4 00000000 S khelper</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 6 2 0 0 c004b2c4 00000000 S suspend</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 7 2 0 0 c004b2c4 00000000 S kblockd/0</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 8 2 0 0 c004b2c4 00000000 S cqueue</strong></span>
+</p><p>
+<span class="strong"><strong>11-12 21:10:29.182: DEBUG/ActivityTest(1811): root 9 2 0 0 c018179c 00000000 S kseriod</strong></span>
+</p><p>
+<span class="strong"><strong>[…]</strong></span>
+</p><p>The output was cut for brevity but you will get the complete list of processes running on the system.</p><p>A brief explanation of the information obtained is as follows:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Column</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>USER</p>
+</td><td style="text-align: left" valign="top">
+<p>This is the textual user ID.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>PID</p>
+</td><td style="text-align: left" valign="top">
+<p>Process ID number of the process.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>PPID</p>
+</td><td style="text-align: left" valign="top">
+<p>Parent process ID.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>VSIZE</p>
+</td><td style="text-align: left" valign="top">
+<p>Virtual memory size of the process in KiB. This is the virtual memory the process reserves.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>RSS</p>
+</td><td style="text-align: left" valign="top">
+<p>Resident set size, the non-swapped physical memory that a task has used (in pages). This is the actual amount of real memory the process takes in pages.</p>
+<p>This does not include pages which have not been demand-loaded in.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>WCHAN</p>
+</td><td style="text-align: left" valign="top">
+<p>This is the "channel" in which the process is waiting. It is the address of a system call, and can be looked up in a namelist if you need a textual name.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>PC</p>
+</td><td style="text-align: left" valign="top">
+<p>The current EIP (instruction pointer).</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>State (no header)</p>
+</td><td style="text-align: left" valign="top">
+<p>The process state.</p>
+<p>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">S for sleeping in an interruptible state</li><li class="listitem" style="list-style-type: disc">R for running</li><li class="listitem" style="list-style-type: disc">T for a stopped process</li><li class="listitem" style="list-style-type: disc">Z for a zombie</li></ul></div><p>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>NAME</p>
+</td><td style="text-align: left" valign="top">
+<p>Command name. Application processes in Android are renamed after its package name.</p>
+</td></tr></tbody></table></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec10"/>Summary</h1></div></div></div><p>In this chapter, several real world examples of tests that cover a wide range of cases were presented. You can use them as a starting point while creating your own tests.</p><p>We covered a variety of testing recipes that you can extend for your own tests. We used mock contexts and showed how a<code class="literal"> RenamingDelegatingContext</code> can be used in various situations to change the data obtained by the tests. We also analyzed the injection of these mock context into test dependencies.</p><p>Then, we used<code class="literal"> ActivityUnitTestCase</code> to test Activities in complete isolation. We tested Views in isolation using<code class="literal"> AndroidTestCase</code>. We demonstrated the use of EasyMock 2 to mock objects combined with Hamcrest to provide comparators. Finally we treated the analysis of potential memory leaks.</p><p>The next chapter focuses on automating the testing process using Continuous Integration.</p></div></body></html>

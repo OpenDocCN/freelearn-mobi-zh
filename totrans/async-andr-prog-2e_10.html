@@ -1,0 +1,461 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;10.&#xA0;Network Interactions with GCM"><div class="titlepage"><div><div><h1 class="title"><a id="ch10"/>Chapter 10. Network Interactions with GCM</h1></div></div></div><p>In previous chapters, in order to update any kind of dynamic data that our examples required, we explicitly initiated a connection to a remote server, waking up the network radio and other resources required to perform the network operation. The application might fetch either fresh data or exactly the same data if nothing has changed since the last fetch.</p><p>Although this communication-fetching model might work for most use cases, it could consume battery resources and internet bandwidth in vain when the data does not change often.</p><p>This technique, commonly known as <span class="strong"><strong>data polling</strong></span>, may also increase the server load when a great number of clients try to fetch or verify whether any data has changed.</p><p>An alternative to the polling technique is <span class="strong"><strong>data pushing</strong></span>. In this technique, the server tells the application when new data is available or when the data has changed. When the data consumer (application) gets notified, it will initiate a new interaction with the server to retrieve the fresh data. </p><p>Since fewer synchronizations are required, it will lead to fewer network interactions, which will lead to less battery resources consumed.</p><p>In this chapter, we will introduce you to <span class="strong"><strong>Google Cloud Messaging</strong></span> (<span class="strong"><strong>GCM</strong></span>), a service delivered by Google Play Services that will help you to build applications that require data pushing or pulling messaging services. GCM delivers a framework to deliver push messages to multiple devices or group of devices in a battery-efficient way.</p><p>In this chapter, we will cover the following topics:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Polling versus pushing messaging </li><li class="listitem" style="list-style-type: disc">How to setup and configure <span class="strong"><strong>GCM</strong></span> for your application</li><li class="listitem" style="list-style-type: disc">Receiving downstream messages from the server with GCM </li><li class="listitem" style="list-style-type: disc">Receiving downstream messages from GCM topic streams</li><li class="listitem" style="list-style-type: disc">Sending upstream messages to your server with GCM</li><li class="listitem" style="list-style-type: disc">Registering one shot and periodic network tasks with <code class="literal">GcmNetworkManager</code></li></ul></div><div class="section" title="Introduction to GCM"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec75"/>Introduction to GCM</h1></div></div></div><p>Since every network <a id="id574" class="indexterm"/>interaction with your server could wake the wireless radio interface up, on a device with limited energy resources it is crucial to minimize the number of times that your application tries to hit the network to sync data. </p><p>For applications that require regular updates and up-to-date data, like a messaging application, polling in the background by setting an alarm for every x minutes, then waking up the radio and downloading your data could drain the battery in a matter of hours. </p><div class="mediaobject"><img src="graphics/Image_B05062_10_01.jpg" alt="Introduction to GCM"/><div class="caption"><p>Figure 1 - Polling data from remote server</p></div></div><p>The GCM offers us a platform to efficiently deliver notifications, with less than 4096 bytes, when there is new data to be consumed or to synchronize. This interaction model reduces the network interactions, and there is no need to constantly poll the server to discover data changes.</p><div class="mediaobject"><img src="graphics/Image_B05062_10_02.jpg" alt="Introduction to GCM"/></div><p>Beyond the ability to dispatch downstream messages from your server (using HTTP or XMPP protocol messages) to your Android application, the GCM framework provides a battery-efficient communication channel to dispatch upstream messages from your application to a XMPP server managed by you.</p><p>The GCM client that runs on the Android device provides a reliable and battery-efficient connection between your <a id="id575" class="indexterm"/>GCM server and the device. The connection maintained is highly optimized to minimize bandwidth and battery consumption. Therefore, the use of GCM for applications that require high-frequency network data updates, such as real-time messaging, is extremely recommended.</p><p>Beyond that, when the device is offline and is not able to contact the GCM service, the platform is able to retain the messages in queues until a maximum number of 20 queued messages, and ensure the delivery of the messages as soon as the device goes online again.</p></div></div>
+<div class="section" title="Setting up and configuring GCM for your application"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec76"/>Setting up and configuring GCM for your application</h1></div></div></div><p>To setup <a id="id576" class="indexterm"/>Google Cloud Messaging on your application <a id="id577" class="indexterm"/>you will have to register with GCM and set up a Google API Project on your Google Developers Console (<a class="ulink" href="https://developers.google.com/mobile/add">https://developers.google.com/mobile/add</a>):</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">First pick <span class="strong"><strong>Android App Platform</strong></span></li><li class="listitem">Specify your application name<p>Example: <code class="literal">Asynchronous Android</code>
+</p></li><li class="listitem">Supply your application package name<p>Example: <code class="literal">com.packpublishing.asynchronousandroid</code>
+</p></li><li class="listitem">Select <span class="strong"><strong>Cloud Messaging Services</strong></span> and <span class="strong"><strong>Enable Google Cloud Messaging</strong></span></li><li class="listitem">Generate the configuration files and download the JSON configuration file <code class="literal">google-services.json </code>to your computer.</li><li class="listitem">Save <a id="id578" class="indexterm"/>your credentials (Server APIKey, SenderId) to authenticate with the GCM platform</li></ol></div><p>Once you have <a id="id579" class="indexterm"/>registered your application with GCM, get the <code class="literal">google-services.json</code> configuration file and copy the file into the <code class="literal">app/</code> or <code class="literal">mobile/</code> directory of your Android Studio Project. </p><p>Next, add the Google Play Services SDK to your project level and app-level <code class="literal">&lt;PROJECT_DIRECTORY&gt;/build.gradle </code>file and rebuild your Android Studio Project:</p><div class="informalexample"><pre class="programlisting">buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.5.0'
+        classpath 'com.google.gms:google-services:1.5.0-beta2'
+    }
+}
+..</pre></div><p>Update the application module build<code class="literal"> &lt; PROJECT_DIRECTORY &gt;/app/build.gradle</code>:</p><div class="informalexample"><pre class="programlisting">apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "21.1.1"
+    defaultConfig {
+        applicationId "com.packpublishing.asynchronousandroid"
+        minSdkVersion 9
+        targetSdkVersion 23
+    }    
+}
+dependencies {
+  ...
+  compile 'com.google.android.gms:play-services-gcm:8.3.0'
+}
+apply plugin: 'com.google.gms.google-services'</pre></div><p>To use GCM on your Android application you need to have a device with Android API 8 or higher with the Google Play Store installed, or a device with API level 9 if you want to use the new GCM features delivered by the Google Play Services.</p><p>With the Google Services library dependencies declared on our build files, we can start to bootstrap the GCM infrastructure on our application. </p><p>To use <a id="id580" class="indexterm"/>GCM in your application, you have to register for the following <a id="id581" class="indexterm"/>permissions on your application <code class="literal">AndroidManifest.xml</code> file:</p><div class="informalexample"><pre class="programlisting">&lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+&lt;!-- Required to wakeup the device and deliver messages --&gt; 
+&lt;uses-permission android:name="android.permission.WAKE_LOCK" /&gt;
+
+&lt;permission android:name="&lt;Package&gt;.permission.C2D_MESSAGE"
+        android:protectionLevel="signature"/&gt;
+&lt;uses-permission android:name="&lt;Package&gt;.permission.C2D_MESSAGE"/&gt;
+   ...
+&lt;/manifest&gt;</pre></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note55"/>Note</h3><p>Notice that you should replace <code class="literal">&lt;Package&gt;</code> with your unique application package, such as <code class="literal">com.packpublishing.asynchronousandroid</code>. </p></div></div><div class="section" title="Registering the GCM Receiver"><div class="titlepage"><div><div><h2 class="title"><a id="ch10lvl2sec72"/>Registering the GCM Receiver</h2></div></div></div><p>In order to <a id="id582" class="indexterm"/>receive Broadcast Intents from the GCM Platform, we will add the GCM <code class="literal">GcmReceiver</code>, a <code class="literal">WakefulBroadcastReceiver</code> subclass provided by the <a id="id583" class="indexterm"/>GCM library, to our <code class="literal">AndroidManifest.xml</code> application element:</p><div class="informalexample"><pre class="programlisting">&lt;receiver
+  android:name="com.google.android.gms.gcm.GcmReceiver"
+  android:exported="true"
+  <code class="literal">android</code>:permission="com.google.android.c2dm.permission.SEND" &gt;
+  &lt;intent-filter&gt;
+      &lt;action android:name="com.google.android.c2dm.intent.RECEIVE" /&gt;
+      &lt;category android:name="&lt;Package&gt;" /&gt;
+  &lt;/intent-filter&gt;
+&lt;/receiver&gt;</pre></div><p>This <code class="literal">BroadcastReceiver</code> <a id="id584" class="indexterm"/>receives an Intent when a new downstream <a id="id585" class="indexterm"/>message arrives from the GCM Server, so it is required to subscribe to Intents with action <code class="literal">com.google.android.c2dm.intent.RECEIVE</code>. </p></div><div class="section" title="Setting up a registration service"><div class="titlepage"><div><div><h2 class="title"><a id="ch10lvl2sec73"/>Setting up a registration  service</h2></div></div></div><p>In order to <a id="id586" class="indexterm"/>receive downstream messages from the GCM platform, the Android application requires a registration token. The registration token, a secret ID issued by the GCM server, must be obtained to identify the device on the service.</p><p>To obtain a registration token we will define an <code class="literal">IntentService</code> that will retrieve the registration token using Instance ID API. Let's start by defining it on the <code class="literal">AndroidManisfest.xml</code>:</p><div class="informalexample"><pre class="programlisting">  &lt;service android:name=".chapter10.RegistrationIntentService"
+           android:exported="false"&gt;
+  &lt;/service&gt;</pre></div><p>Our <code class="literal">IntentService</code> subclass will retrieve a new registration token in the background using the <code class="literal">SenderId</code> returned from the GCM registration. Once the new registration token is received, it will be dispatched to our servers to be stored safely. The token is our pass key to access the GCM service, so, in order to submit notifications, the server has to present this token. On the device, the registration will be implicitly stored securely by the GCM framework.</p><div class="informalexample"><pre class="programlisting">public class RegistrationIntentService extends IntentService {
+
+  @Override
+  protected void onHandleIntent(Intent intent) {
+
+    SharedPreferences sharedPreferences = PreferenceManager.
+      getDefaultSharedPreferences(this);
+
+    try {
+      // Get the InstanceID Singleton
+      InstanceID instanceID = InstanceID.getInstance(this);
+
+      Log.i(TAG, "\n-----------------------------------------\n" +
+                 " GCM App instance UUID: " + instanceID.getId() +
+                 "\n-----------------------------------------\n"
+            );
+      
+      // Retrieve the Sender Id from GCM Registration
+      String senderId = getString(R.string.gcm_defaultSenderId);
+      
+      // Retrieve a token with a sender ID
+      String token = instanceID.getToken(senderId, 
+       GoogleCloudMessaging.INSTANCE_ID_SCOPE, null);
+        
+      // Save the Registration to the server
+      sendRegistrationToServer(token);
+      
+   sharedPreferences.edit().
+     putBoolean(MyChatActivity.SENT_TOKEN_TO_SERVER, true).
+       apply();
+
+    } catch (Exception e) {
+      Log.d(TAG, "Failed to get registration token", e);
+   sharedPreferences.edit().
+     putBoolean(MyChatActivity.SENT_TOKEN_TO_SERVER, false).
+       apply();    
+    }
+  }
+}</pre></div><p>Once a registration token is received with success, we update the default application shared preferences file, setting the <code class="literal">SENT_TOKEN_TO_SERVER</code> to <code class="literal">true</code>. This property indicates whether the <a id="id587" class="indexterm"/>generated token has been sent to your server. If the property is false, we send the token to your server. Otherwise, your server should have already received the token.</p><p>If an exception happens while fetching the new token or updating our registration token on our server during the <code class="literal">sendRegistrationToServer</code> call, we will set the <code class="literal">SENT_TOKEN_TO_SERVER </code>as <code class="literal">false</code>, ensuring that a new attempt is going be executed later.</p><p>Though you would want to persist the registration to your backend server, for now, we will print the <a id="id588" class="indexterm"/>registration token to the log output. You can pick the value using <code class="literal">logcat</code> for future use in our examples.</p><div class="informalexample"><pre class="programlisting">  private void sendRegistrationToServer(String token) {       
+    Log.i(TAG, " GCM Registration Token: " + token );
+  }</pre></div></div><div class="section" title="InstanceID listener"><div class="titlepage"><div><div><h2 class="title"><a id="ch10lvl2sec74"/>InstanceID listener</h2></div></div></div><p>The first time we get <a id="id589" class="indexterm"/><code class="literal">InstanceID</code> through <code class="literal">InstanceID.getInstance</code>, a UUID Application identifier is generated to identify the application on the GCM platform.</p><p>The instance ID may become invalid, if:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The application explicitly deletes Instance ID (<code class="literal">Instance.deleteToken</code>)</li><li class="listitem" style="list-style-type: disc">The device is factory reset </li><li class="listitem" style="list-style-type: disc">The application is uninstalled </li><li class="listitem" style="list-style-type: disc">The user clears application data</li></ul></div><p>To receive a notification, each time the registration token requires a refresh, we will create a service that extends <code class="literal">InstanceIDListenerService</code>, registers to <code class="literal">com.google.android.gms.iid.InstanceID</code> intent, and includes it on the <code class="literal">AndroidManifest.xml</code>:</p><div class="informalexample"><pre class="programlisting">&lt;service
+  android:name=".chapter10.MyInstanceIDListenerService"
+  android:exported="false"&gt;
+  &lt;intent-filter&gt;
+   &lt;action android:name="com.google.android.gms.iid.InstanceID" /&gt;
+  &lt;/intent-filter&gt;
+&lt;/service&gt;
+
+public class MyInstanceIDListenerService 
+   extends InstanceIDListenerService {
+   @Override
+   public void onTokenRefresh() { 
+     // Starts the Registration Service to obtain a new token
+     Intent intent = new Intent(this, 
+                                   RegistrationIntentService.class);
+     startService(intent);     
+     sharedPreferences.edit().
+     putBoolean(MessagingActivity.SENT_TOKEN_TO_SERVER, false).
+     apply();    
+   }
+}</pre></div><p>The <code class="literal">onTokenRefresh</code> callback will be invoked when the registration token needs to be refreshed. This may occur if the security of the previous token has been compromised, such as with a suspicious <a id="id590" class="indexterm"/>use of the token. This procedure is usually initiated by the <code class="literal">instanceID</code> provider.</p><p>Instance ID API is used to manage security tokens that authorize your application or your server to interact with the GCM Service.</p><div class="mediaobject"><img src="graphics/Image_B05062_10_03.jpg" alt="InstanceID listener"/></div><p>Beyond the creation of new tokens, the <code class="literal">InstanceID</code> singleton instance is able to delete tokens or even invalidate an <code class="literal">InstanceID</code>.</p><div class="informalexample"><pre class="programlisting">void  deleteInstanceID()
+void  deleteToken(String authorizedEntity, String scope)</pre></div></div></div>
+<div class="section" title="Receiving downstream messages"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec77"/>Receiving downstream messages</h1></div></div></div><p>With the basic blocks <a id="id591" class="indexterm"/>required to set up the GCM client already in place, in our first GCM example we will send a simple downstream message through the GCM Platform and print it as a notification on the Android Notification drawer.</p><p>To handle GCM messages, we will have to implement a service that extends from <code class="literal">GcmListenerService</code> and override the <code class="literal">onMessageReceived(String,Bundle)</code> method. Since <code class="literal">GcmReceiver</code> extends <code class="literal">WakefulBroadcastReceiver</code>, it is guaranteed that the CPU is going to be awake until the service completes the delivery.</p><p>Our <code class="literal">GcmListenerService</code> subclass will receive a message from GCM and create an Android Notification as soon as it receives it.</p><div class="informalexample"><pre class="programlisting">public class NotificationGCMHandler extends GcmListenerService {
+
+  public static final int NOTIFICATION_ID ="GCMNotification".
+                                            hashCode();
+
+  @Override
+  public void onMessageReceived(String from, Bundle data) {
+	    
+    String msgType = data.getString("type");
+
+    // Notification Message received from GCM.
+    if ( msgType.startsWith("my_notifications") ) {
+      createNotification(data.getString("title"),
+                         data.getString("body"));
+    }
+  }
+  private void createNotification(String title, String body) {   
+   // Elided for brevity...
+ }  
+  }</pre></div><p>We also need to register our <code class="literal">GcmListenerService</code> service class in the <code class="literal">AndroidManifest.xml</code> registering the service to receive the <code class="literal">com.google.android.c2dm.intent.RECEIVE</code> action:</p><div class="informalexample"><pre class="programlisting">  &lt;service android:name=".chapter10.NotificationGCMHandler"
+           android:exported="false" &gt;
+     &lt;intent-filter&gt;
+        &lt;action 
+        android:name="com.google.android.c2dm.intent.RECEIVE"/&gt;
+     &lt;/intent-filter&gt;
+  &lt;/service&gt;</pre></div><p>To instigate the initial registration with GCM, we will create an Activity that will start the <code class="literal">RegistrationService's</code> <code class="literal">IntentService</code> to retrieve the required token. However, before we try to retrieve the token, we will have to check if the Google Play Services is available on the device, and that the version installed on this device is no older than the one required by this client.</p><p>Let's get started by <a id="id592" class="indexterm"/>implementing the <code class="literal">Activty.onCreate</code> method, triggering interaction with the GCM platform:</p><div class="informalexample"><pre class="programlisting">public class MyChatActivity extends Activity {
+  public static final String SENT_TOKEN_TO_SERVER = "sent2Server";
+  private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    if (checkPlayServices()) {
+      Log.i(LOG_TAG, "Registering to GCM");
+      SharedPreferences sharedPref = PreferenceManager.
+                                     getDefaultSharedPreferences(this);
+      // Registering is started when there is no available token
+      boolean sentToken = sharedPref.
+                          getBoolean(SENT_TOKEN_TO_SERVER, false);
+      if (!sentToken) {
+        //...Print an error
+      }
+      Intent int = new Intent(this, RegistrationIntentService.
+                              class);
+      startService(int);
+    }
+  }
+}</pre></div><p>Before we start the registration service, <code class="literal">checkPlayServices</code> will verify if the Google Play Services is installed on the device. If the service is not available, a dialog box is shown to the user that <a id="id593" class="indexterm"/>allows the users to download it from the Play Store or enable it on the device system settings:</p><div class="informalexample"><pre class="programlisting">private boolean checkPlayServices() {
+  
+  // Returns the singleton instance of GoogleApiAvailability.
+  GoogleApiAvailability apiAvailability = GoogleApiAvailability.
+                                          getInstance();
+  // Verify if the Google Play Service installed is 
+  // installed and compatible with GCM Library used
+  int rc = apiAvailability.isGooglePlayServicesAvailable(this);
+  if ( rc != ConnectionResult.SUCCESS ) {
+
+    // The error can be resolved with a user action
+    if (apiAvailability.isUserResolvableError(rc)) {
+      
+      // Shows a user action dialog to resolve the issue
+      apiAvailability.getErrorDialog(this, 
+        rc,PLAY_SERVICES_RESOLUTION_REQUEST).show();
+    } else {
+      Log.i(TAG, "This device is not supported.");
+     // Finishing the Activiy
+      finish();
+    }
+    return false;
+  }
+  return true;
+}</pre></div><p>When the <code class="literal">isGooglePlayServicesAvailable</code> returns success, we return true from the function and initiate the registration service. </p><p>When the function returns an error that can be resolved by the user, such as <code class="literal">SERVICE_VERSION_UPDATE_REQUIRED</code>, a localized dialog is shown to the user to correct the problem. The dialog could redirect the user to the Play Store if Google Play Services is out of date or missing, or to system settings if Google Play Services is disabled on the device. </p><p>If the returned cannot be solved by a user action, we simply finish the current <code class="literal">Activity</code> and print a log message because the device will not be able to register in GCM and receive the downstream message.</p><p>Yes! We finished the application GCM bootstrap, and as soon as we start the <code class="literal">Activity</code> and register with GCM, the device will be ready to receive downstream messages from GCM.</p><p>Remember that our <a id="id594" class="indexterm"/>registration service will print a registration token to the log output, so don't forget to note it when you run the <code class="literal">MyChatActivity</code> for the first time. </p><div class="informalexample"><pre class="programlisting">I ...:  GCM Application Instance Identifier: &lt;InstanceId&gt;
+I ...:  GCM Registration Token: &lt;Registration Token&gt;</pre></div><p>To interact with GCM you could set up an HTTP or XMPP backend server that uses the server credentials to connect to the GCM Service. For simplicity and testing we will build and submit HTTP messages directly.</p><p>To send a downstream message to our device we will have to send HTTP POST a message with a JSON object in the payload, setting the field to <code class="literal">to</code> with our noted registration token and a <code class="literal">data</code> object field with our custom notification properties: <code class="literal">title</code> and <code class="literal">body</code> and <code class="literal">type.</code>
+</p><p>Here is a JSON-formatted message that will generate an Android notification as soon as <code class="literal">NotificationGCMHandler</code> receives it from GCM:</p><div class="informalexample"><pre class="programlisting">{
+  "data": {
+    "title": "Hello from GCM",
+    "body": "Hello from your fake server",
+    "type": "my_notifications"
+   },
+   "to": "&lt;DeviceRegistrationToken&gt;"
+}</pre></div><p>To submit HTTP messages to the GCM platform, you can use the curl command or use the chrome web application Postman (<a class="ulink" href="http://www.getpostman.com/">http://www.getpostman.com/</a>). Here is the curl command that will submit the previous message to GCM:</p><div class="informalexample"><pre class="programlisting">$ curl --request POST \
+    --url https://gcm-http.googleapis.com/gcm/send \
+    --header 'authorization: key=&lt;Server API Key&gt;' \
+    --header 'Content-Type: application/json' \
+    --data '{"data":{"title":"Hello from GCM","body":"Hello from   
+   your fake server","type":"notification"},
+            "to":"&lt;DeviceRegistrationToken&gt;"}'</pre></div><p>Don't forget to replace the <code class="literal">&lt;Server API Key&gt; </code>with the API key generated on the Google Cloud Console registration and replace <code class="literal">&lt;DeviceRegistrationToken&gt;</code> with the token generated for your device. Notice that the downstream data messages have a maximum 4KB payload.</p><p>If everything goes well <a id="id595" class="indexterm"/>with your GCM setup, your data object properties are passed to your <code class="literal">onMessageReceived()</code> method in the data bundle object and the GCM service will send you back a HTTP Response (200) with a message body similar to the one below:</p><div class="informalexample"><pre class="programlisting">{
+  "multicast_id": 6425212369847183592,
+  "success": 1,
+  "failure": 0,
+  "canonical_ids": 0,
+  "results": [{
+    "message_id": "0:1456441876781708%69ee9872f9fd7ecd"
+  }]
+}</pre></div></div>
+<div class="section" title="Receiving messages from topic"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec78"/>Receiving messages from topic</h1></div></div></div><p>The downstream <a id="id596" class="indexterm"/>messages allow us to send send short (4KB) messages to alert the user of new updates, new content or even reminders. </p><p>A downstream message is a one-way communication channel where the users can receive messages, but they cannot respond to them directly or take any immediate action. </p><p>To build interactive experiences, such as a chat system, we will have to support a bidirectional communication where the user can receive downstream messages and also send upstream messages to other devices or groups of devices.</p><p>In our next example, we will build a simple group messaging system based on the GCM upstream messaging and topic messaging features. The group messaging system will allow multiple devices to publish text messages to a shared message channel. </p><p>GCM topic messaging allows your backend server to send a message to devices that have a particular topic. Once the GCM receives a message to a particular topic, it will route and deliver the message to the subscribed devices transparently using the list of subscribed devices managed on the GCM platform.</p><p>A topic is identified by the name that follows the next regular expression:</p><div class="informalexample"><pre class="programlisting">      /topics/[a-zA-Z0-9-_.~%]+</pre></div><p>To start receiving messages related to a particular topic name, a GCM-registered client application will have to subscribe in GCM with its own registration token and the desired topic stream.</p><p>First of all, we will <a id="id597" class="indexterm"/>update our <code class="literal">RegistrationIntentService</code> to subscribe our application to the <code class="literal">"/topics/forum"</code> message stream using the registration token received:</p><div class="informalexample"><pre class="programlisting">public class RegistrationIntentService extends IntentService {
+
+  private static final String TOPIC_NAME = "forum";
+
+  @Override
+  protected void onHandleIntent(Intent intent) {
+    ...
+    // Retrieve the token
+    String token = instanceID.getToken(senderId, 
+        GoogleCloudMessaging.INSTANCE_ID_SCOPE,null);
+    ...
+    // Subscribe to Topics
+    subscribeTopics(token);
+  }
+  
+  private void subscribeTopics(String token) {
+    GcmPubSub pubSub = GcmPubSub.getInstance(this);
+    try {
+         pubSub.subscribe(token, "/topics/ " + TOPIC_NAME, null);
+    } catch (Exception e) {
+        Log.e(TAG, "Failed to subscribe to " + TOPIC_NAME, e);
+    }
+  ...
+}</pre></div><p>To unsubscribe the device from the GCM "forum" topic, we can invoke <code class="literal">GcmPubSub</code>'s <code class="literal">unsubscribe()</code> with the registration token and topic name.</p><p>The topic messages are delivered to our <code class="literal">GcmListenerService</code> (<code class="literal">NotificationGCMHandler</code>) in the same way the push notification GCM messages were delivered in our previous example. The topic messages are delivered to our application, with the <code class="literal">from</code> field storing the topic name <code class="literal">/topics/forum</code>.</p><p>I will give you an idea <a id="id598" class="indexterm"/>of what a typical topic message for our topic could look like:</p><div class="informalexample"><pre class="programlisting">{ 
+  "to": "/topics/forum",
+  "data": {
+    "username": "heldervasc",
+    "text": "I need to learn more about Android Development"
+  }
+}</pre></div><p>The data object field is the field on the message that we might use to pass custom properties to the application. In our example, it carries information about the username and text written by the user.</p><p>Next, and taking into account that <code class="literal">NotificationGCMHandler</code> will receive the topic messages sent from the GCM, we will update it to handle the topic messages received, and broadcast each topic message to any local <code class="literal">BroadcastReceiver</code>.</p><p>Our <code class="literal">NotificationGCMHandler</code> will simply wrap the topic messages on the Intents and dispatch them to the local Activity within your process. This asynchronous communication technique, already explained in previous chapters, is faster and more secure as your messages don't leave your application:</p><div class="informalexample"><pre class="programlisting">public class NotificationGCMHandler extends GcmListenerService {
+
+  public static final String FORUM_TOPIC = "/topics/forum";
+  public static final String USERNAME_KEY = "username";
+  public static final String TEXT_KEY = "text";
+  public static final String MSG_DELIVERY = "asyncforum";
+
+  @Override
+  public void onMessageReceived(String from, Bundle data) {
+
+       // Verify if it is a forum message
+    if (from.equals(FORUM_TOPIC)) {
+ 
+     // Build an intent from the forum topic message. 
+      Intent intent = new Intent(MSG_DELIVERY);
+      intent.putExtra(USERNAME_KEY, data.getString(USERNAME_KEY));
+      intent.putExtra(TEXT_KEY, data.getString(TEXT_KEY));
+
+	  // Broadcast the intent to local interested objects
+     LocalBroadcastManager.
+       getInstance(this).sendBroadcast(intent);
+    } else ... {
+      ...
+    }
+  } }</pre></div><p>With our <code class="literal">GcmListenerService</code> forwarding the messages received from our messaging topic, it is time to build the Activity that is going to display the messages received and publish messages to the group chat using the GCM upstream messages. </p><p>Starting from the work <a id="id599" class="indexterm"/>done in the previous chapter, we will create a <code class="literal">MessagingActivity</code> that will also verify that Google Play Services is available and start the <code class="literal">RegistrationIntentService</code> when no registration token is available:</p><div class="informalexample"><pre class="programlisting">public class MessagingActivity extends Activity {
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.chat_layout);
+    if (checkPlayServices()) {
+     ...    
+    }
+  }   
+}</pre></div><p>To receive and display the topic messages in our Activity, we will create an anonymous <code class="literal">BroadcastReceiver</code> subclass that dynamically registers and unregisters the reception of local Intents whose action is <code class="literal">MSG_DELIVERY</code>. </p><p>Since we only want to receive the topic messages when the Activity is in the foreground, we will register and unregister to the local broadcasts on <code class="literal">onResume</code> and <code class="literal">onPause</code> callbacks:</p><div class="informalexample"><pre class="programlisting">public class MessagingActivity extends Activity {
+     ...
+  @Override
+  protected void onResume() {
+    super.onResume();
+   
+    // Create an intent filter to receive forum Intents
+    IntentFilter filter = new IntentFilter(
+      NotificationGCMHandler.MSG_DELIVERY);
+    
+    // Register the local Receive to receive the Intents
+    LocalBroadcastManager.getInstance(this).
+      registerReceiver(onMessageReceiver, filter);
+  }
+
+  @Override
+  protected void onPause() {
+    super.onPause();
+    // Unregister the Local Receiver
+    LocalBroadcastManager.getInstance(this).
+      unregisterReceiver(onMessageReceiver);
+  }
+}</pre></div><p>All that remains is to display our group chat messages on the UI and implement the <code class="literal">BroacastReceiver</code> that <a id="id600" class="indexterm"/>receives the broadcast Intents and updates the UI with the message username and text.</p><p>To process the Broadcast Intent, we must override the <code class="literal">onReceive</code> method of <code class="literal">BroacastReceiver </code>in order to receive local <code class="literal">Intent</code>:</p><div class="informalexample"><pre class="programlisting">BroadcastReceiver onMessageReceiver = new BroadcastReceiver(){
+
+  @Override
+  public void onReceive(Context context, Intent intent) {
+
+      TextView chatText = (TextView)findViewById(R.id.chatWindow);
+      String username = intent.getStringExtra("username");
+      String bodyText = intent.getStringExtra("text");
+      String line = String.format("%s : %s%n", username,bodyText)
+      // Prepend the message 
+      chatText.setText( line + chatText.getText().toString());
+  }
+};</pre></div><p>Now, if you submit a topic message to the GCM using the following <code class="literal">curl</code> command, you will see a new message <a id="id601" class="indexterm"/>popping up on the UI <code class="literal">TextView</code>:</p><div class="informalexample"><pre class="programlisting">curl --request POST  \
+--url "https://gcm-http.googleapis.com/gcm/send" \
+--header 'authorization: &lt;SERVER_API_KEY&gt;'  \
+--header 'Content-Type: application/json'  \
+--data '{ "data": {  
+        "username": "heldervasc",
+        "text": "Welcome to Asynchronous Android group chat"
+     },       
+    "to": "/topics/forum"
+   }'</pre></div></div>
+<div class="section" title="Sending upstream messages"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec79"/>Sending upstream messages</h1></div></div></div><p>Although we are <a id="id602" class="indexterm"/>able to receive the chat group messages, we are <a id="id603" class="indexterm"/>not able to interact with the message stream from the application. Additionally, to send and process upstream messages with the GCM platform, an application server that implements the XMPP Connection Server protocol is required to connect to the GCM servers and receive upstream XMPP messages.</p><p>To deal with our group messages we built a very basic XMPP server that processes the upstream messages from the device and forwards the message to the topic message.</p><p>The basic XMPP Server source code is available from the Packt Publishing website. Grab it from the Packt website, and, before you run it, update the static fields with your <code class="literal">SenderID</code> and your <code class="literal">ServerKey</code> in the <code class="literal">GCMServer.java</code> class file. </p><div class="informalexample"><pre class="programlisting">private static final String SENDER_ID = "&lt;YOUR_SENDER_ID&gt;"; 
+private static final String SERVER_KEY = "&lt;SERVER_KEY&gt;";</pre></div><p>The server will connect to the GCM platform, initiate a XMPP session, and process all the messages delivered to the <code class="literal">&lt;SENDER_ID&gt;@gcm.googleapis.com</code>.</p><p>To generate an upstream message, we created a <code class="literal">EditText</code> on the UI and created a button that, once fired, will send an upstream message. To send an upstream message on the GCM platform, the application needs to provide the following fields:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The address of our server on the GCM platform: <code class="literal">&lt;SENDER_ID&gt;@gcm.googleapis.com</code>.</li><li class="listitem" style="list-style-type: disc">A unique message identifier (<code class="literal">message_id</code>)</li><li class="listitem" style="list-style-type: disc">A message payload with a custom key/value pairs</li></ul></div><p>Now, let's update <code class="literal">MessagingActivity</code> to send the upstream message based on the <code class="literal">EditText</code> input field. Since the upstream dispatch requires network access, and as you know we cannot perform networking on the main <code class="literal">Thread</code>, we must perform the execution off the main thread using an <code class="literal">AsyncTask</code> subclass. On the Activity class, we implemented a basic <a id="id604" class="indexterm"/>asynchronous construct named <code class="literal">AsyncJob</code> to perform the network operation in the background, catching any exception that <a id="id605" class="indexterm"/>happen during the upstream request. This special purpose class could be used in background tasks that don't produce any results:</p><div class="informalexample"><pre class="programlisting">public abstract class AsyncJob 
+  extends AsyncTask&lt;Void, Void, Result&lt;Void&gt; &gt; {
+
+  @Override
+  protected Result&lt;Void&gt; doInBackground(Void ...args) {
+    Result&lt;Void&gt; result = new Result&lt;Void&gt;();
+    try { runOnBackground() } 
+    catch (Throwable e)  { result.error = e; }
+    return result;
+  }
+  @Override
+  protected void onPostExecute(Result&lt;Void&gt; result) {
+    if ( result.error != null ) { onFailure(result.error);} 
+    else { onSuccess();}
+  }
+  // Backrgound Execution Task
+  abstract void runOnBackground() throws Exception;
+  // Error Callback
+  abstract void onFailure(Throwable e);
+  // Success Function
+  abstract void onSuccess();
+}</pre></div><p>With <code class="literal">AsyncJob</code>, we declared three abstract methods that any <code class="literal">AsyncJob</code> subclass should provide implementations. <code class="literal">runOnBackground</code> should implement the background task, <code class="literal">OnFailure</code> should be used to handle execution exceptions, and the <code class="literal">onSuccess</code> callback is invoked to inform the developer that the job has been successfully completed.</p><p>Now we are ready to implement the <code class="literal">OnClicklistener</code> that will build up an upstream message and dispatch <a id="id606" class="indexterm"/>it to our XMPP server in the <a id="id607" class="indexterm"/>background:</p><div class="informalexample"><pre class="programlisting">OnClickListener sendListener = new OnClickListener() {
+  
+  @Override
+  public void onClick(View v) {
+
+    TextView msgText = (TextView) findViewById(R.id.msg);
+    final String msgToSend = msgText.getText().toString();
+    msgText.setText("");
+
+    new AsyncJob() {
+      @Override
+      void runOnBackground() throws Exception {
+
+        // Build the data Bundle wit our key/value pairs
+        Bundle data = new Bundle();
+        data.putString(USERNAME_KEY, "Helder");
+        data.putString(EXT_KEY, msgToSend);
+        data.putString("topic", NotificationGCMHandler.
+                                FORUM_TOPIC);
+        // Generate a random message Id
+        String id = Integer.toString(new Random().nextInt());
+
+       // Get the GCMMessaging instance
+        GoogleCloudMessaging gcm = GoogleCloudMessaging.
+          getInstance(MessagingActivity.this);
+        
+        // Sends the Message to the GCM platform
+        gcm.send(getString(R.string.gcm_SenderId) + 
+                 "@gcm.googleapis.com", id, data);
+      }
+      @Override
+      void onFailure(Throwable e) {
+//… Handle the exception
+Log.e(TAG,"Failed to send upstream message to forum",e);
+      }
+      @Override
+      void onSuccess() {
+        //.. No Exception thrown 
+}
+    }.execute();
+  }
+};</pre></div><p>In our example, we created a <code class="literal">Bundle</code> object with all the payload data that we want to dispatch. Beyond that, we created a unique message ID using the <code class="literal">java.util.Random.nextInt</code> instance method.</p><p>This message receives <a id="id608" class="indexterm"/>as parameters the address following the format <code class="literal">&lt;SENDER_ID&gt;@gcm.googleapis.com</code>, the unique message ID string generated from the <a id="id609" class="indexterm"/>random integer, and the bundle with your payload.</p><p>Once we invoke the <code class="literal">GoogleCloudMessaging.send</code>, if an active connection is available, the new upstream message will be sent immediately, otherwise the message will be queued. Once the connectivity is re-established, the queued messages are dispatched to the GCM servers.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note56"/>Note</h3><p>If the client attempts to send more messages after the 20-message limit is reached, it returns an error.</p></div></div><p>The <code class="literal">GoogleCloudMessaging</code> API will reuse and manage the connection to the GCM platform in an efficient way, maximizing the device battery life transparently for us.</p><p>As soon as the message is received by our XMPP server, the message is dispatched to <code class="literal">/topics/forum</code> and, consequently, it will update the UI message stream with the message we typed.</p></div>
+<div class="section" title="GcmListenerService delivery callbacks"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec80"/>GcmListenerService delivery callbacks</h1></div></div></div><p>In some <a id="id610" class="indexterm"/>situations, when there is no connectivity with the GCM servers due to lack of network connectivity, the message could remain on the local queues for a long period of time. So, in order to discard a message that remains on the queue without being sent to the GCM Service within the time specified, the <code class="literal">GoogleCloudMessaging</code> API provides an additional send method that could receive a TTL (Time to Live) time to set the message expire time:</p><div class="informalexample"><pre class="programlisting">void send (String to, String msgId, long timeToLive, Bundle data)</pre></div><p>This works great when you have messages that are only relevant if they arrive within a certain time frame. With a time to live of 0, we'll attempt to send and return an error immediately if we're not connected. This situation does not apply for our example, so we will keep the original code with the send method that does not discard an old unsent message.</p><p>It is important to understand that the application GCM client is only able to queue a maximum of 20 messages when there is no connection to the GCM platform for a long period of time.</p><p>Beyond the upstream expiration feature, the <code class="literal">GcmListenerService</code> also allows us to receive the upstream messages' dispatch statuses by overriding the <code class="literal">onMessageSent </code>and <code class="literal">onSendError</code> callbacks:</p><div class="informalexample"><pre class="programlisting">    void onMessageSent(String msgId) 
+    void onSendError(String msgId, String error)</pre></div><p>The <code class="literal">onMessageSent</code> callback is invoked when the message is delivered to the GCM and the is called when there is an error dispatching the message to the GCM connection server. Notice that both <a id="id611" class="indexterm"/>callbacks are invoked with the message identifier as argument, so you should use this identifier to pinpoint the message that was sent or failed with an error. </p><p>For efficiency reasons, the GCM message delivery reports are delivered in batches, so don't expect to receive the callback execution immediately after you upload a single message.</p><p>To receive upstream messages' dispatch statuses in our chat example, we will update our <code class="literal">NotificationGCMHandler</code> and override the   <code class="literal">onMessageSent</code> and <code class="literal">onSendError</code>:</p><div class="informalexample"><pre class="programlisting">public class NotificationGCMHandler extends GcmListenerService {
+       ...
+    @Override
+    public void onMessageSent(String msgId) {
+        super.onMessageSent(msgId);
+        Log.i(TAG, "Message w/ id="+msgId+" send to GCM Server ");
+    }
+
+    @Override
+    public void onSendError(String msgId, String error) {
+        super.onSendError(msgId, error);
+        Log.e(TAG, "Message w/ id=" + msgId + 
+                   " send failed with error "+error);
+    }
+}</pre></div><p>The callback methods defined in our <code class="literal">GcmListenerService</code> callbacks we print a message to the application log output with the message that was sent or failed. The dispatch of a message could fail if the message expiration time is reached or when a maximum size of upstream queued messages has been reached. </p><p>Sweet! We've finished our group chat based on the GCM platform. During our journey we learned how to <a id="id612" class="indexterm"/>send a topic message upstream and downstream using a battery-efficient API that maintains a network connection with the Google servers. The API allows us to create bidirectional communication channels between the server and a device, or between a group of devices. </p></div>
+<div class="section" title="Executing tasks with GCM Network Manager"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec81"/>Executing tasks with GCM Network Manager</h1></div></div></div><p>Beyond the <a id="id613" class="indexterm"/>messaging framework, the <a id="id614" class="indexterm"/>GCM library comes with <code class="literal">GcmNetworkManager</code>, an API that allows us to efficiently schedule recurrent or periodic tasks on all the devices that run API level 9 (Android 2.1) and above. For devices running on API Level 21 (Lollipop) and above, GCM Network Manager uses the native <code class="literal">JobScheduler</code> API internally, covered in detail in <a class="link" href="ch07.html" title="Chapter 7. Exploring the JobScheduler API">Chapter 7</a>, <span class="emphasis"><em>Exploring the JobScheduler API</em></span>. In the same way as the <code class="literal">JobScheduler</code> API, it will try to batch the jobs and reduce the number of wakeups from idle state to improve the battery life of your user's device.</p><p>Moreover, with GCM Network Manager we are also able to set criteria that should meet to start the job execution, such as when the device is in a charging state or an unmetered WIFI connectivity is available. Although the GCM API offers us the same criteria offered by the <code class="literal">JobScheduler</code> API, it can be used on older and newer devices that have Google Play Services installed.</p><p>So, before you try to use it, you need to make sure that Google Play Services version is available on the device using the <code class="literal">GoogleApiAvailability</code> class, as we did for the GCM example.</p><p>Take a look at the <code class="literal">checkPlayServices()</code> function from our previous example to a more complete solution. The previous function will display dialog when any user action is required to update or install Google Play Services.</p><p>We can schedule a task execution on GCM Network Manager to run under certain conditions, such as:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">When certain network connectivity is available (any network available, unmetered network connectivity)</li><li class="listitem" style="list-style-type: disc">When the device is plugged to the charger</li><li class="listitem" style="list-style-type: disc">A task that runs within a predefined time window in the future</li><li class="listitem" style="list-style-type: disc">Specify the task to run even after a reboot</li></ul></div><p>While the criteria supported are the same as the Scheduler API covered previously and available on devices that run on Android Lollipop, this API requires some extra mandatory criteria that you should specify to register a service task execution on the GCM Network.</p><p>To build and <a id="id615" class="indexterm"/>construct a GCM task, two Builder <a id="id616" class="indexterm"/>classes are available: The <code class="literal">OneoffTask.Builder</code> used to create single shot tasks, and the <code class="literal">PeriodicTask.Builder </code>used register a task that runs recurrently at regular intervals.</p><div class="section" title="Building a one shot task"><div class="titlepage"><div><div><h2 class="title"><a id="ch10lvl2sec75"/>Building a one shot task </h2></div></div></div><p>A <code class="literal">OneoffTask</code> is a <a id="id617" class="indexterm"/>task that will execute once, within a specified time window in the future. The options available to configure a <code class="literal">OneoffTask</code> from the <code class="literal">OneoffTask.Builder</code> are:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Execution Window Range (Mandatory) </li><li class="listitem" style="list-style-type: disc">Tag Identifier (Mandatory)</li><li class="listitem" style="list-style-type: disc"><code class="literal">GcmTaskService</code> subclass that runs our task(Mandatory)</li><li class="listitem" style="list-style-type: disc">Extra Arguments (Optional)</li><li class="listitem" style="list-style-type: disc">Job Persistence (Optional)</li><li class="listitem" style="list-style-type: disc">Required Network (Optional)</li><li class="listitem" style="list-style-type: disc">Charging Required (Optional)</li><li class="listitem" style="list-style-type: disc">Update Current Task (Optional)</li></ul></div><p>In our next example, we will make use of GCM Network Manager to schedule the backup of account settings. The account settings, when updated, are stored in a local file and, once the backup runs, the account details will be pushed to our XMPP server over an upstream message. For saving our account settings, we will create an Activity that displays a form to fill our personal details. </p><p>The form will have a button that, once clicked, will save our account details on a local file and register a GCM Network task execution to push our details to our network XMPP Server.</p><p>To extend the battery life and reduce our metered mobile internet usage, we will register our backup task to run only when the WIFI network is available and the device is charging, at most 4 hours after scheduling.  </p><p>Before we register our task on GCM Network Manager, we will add our <code class="literal">GcmTaskService</code> to <a id="id618" class="indexterm"/>the application manifest:</p><div class="informalexample"><pre class="programlisting">&lt;service
+  android:name=".chapter10.MyBackupService"
+  android:exported="true"
+android:permission="com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE"&gt;
+  &lt;intent-filter&gt;
+    &lt;action 
+   android:name="com.google.android.gms.gcm.ACTION_TASK_READY"/&gt;
+  &lt;/intent-filter&gt;
+&lt;/service&gt;</pre></div><p>In the Android Manifest we added Intent filters required to receive GCM start broadcasts and, to protect our service from being started by programmes other than Google Play Services, we added the <code class="literal">com.google.android.gms.permission.BIND_NETWORK_TASK_SERVICE</code> permission.</p><p>Next, we are ready to register a one-off task to backup the account details stored locally on the application default shared preference file. Whenever the user updates the account details and taps the save button on the UI, the account details will be stored locally and a <code class="literal">OneoffTask</code> task is built and registered on GCM NM to publish the changes on our network servers.</p><p>Let's see what the save button <code class="literal">OnClickListener</code> looks like:</p><div class="informalexample"><pre class="programlisting">public class AccountSettingsActivity extends Activity {
+
+  public static final String TASK_BACKUP = "backup";
+
+  public static long FOUR_HOUR = 3600*4L;
+
+  // Executed when the user taps on save button
+  OnClickListener listener = new OnClickListener() {
+
+    @Override
+    public void onClick(View v) {
+      // Store the details on the default shared preferences file
+      ...
+	   // Obtain a GCM NM Instance 
+      GcmNetworkManager gcmNM = GcmNetworkManager.
+        getInstance(AccountSettingsActivity.this);      
+      OneoffTask task = new OneoffTask.Builder()
+        // Sets the Service to start
+        .setService(MyBackupService.class)
+        // Task Identifier
+        .setTag(TASK_BACKUP)
+           // Will run in the next 4 hours      
+        .setExecutionWindow(0L, FOUR_HOUR)
+        // Requires WIFI Network
+        .setRequiredNetwork(Task.NETWORK_STATE_UNMETERED)
+        // Requires Charging
+        .setRequiresCharging(true)
+           .build();
+
+      gcmNM.schedule(task);
+    }
+  };
+}</pre></div><p>To register tasks from your <code class="literal">Activity</code>, we obtained an instance of <code class="literal">GcmNetworkManage</code>r using the <code class="literal">Activity</code> context. Next, we created a <code class="literal">OneoffTask.Builder</code> object and set the task to start the <code class="literal">MyBackupService</code> service to complete the task and to run the task at least 4 hours after the scheduling.</p><p>Notice that the framework will start your job as soon as all the criteria are met and taking into account other <a id="id619" class="indexterm"/>jobs scheduled to run. As explained before, the GCM NM will delay the job execution and batch jobs to reduce the number of CPU wakeups from idle state.</p><p>Now, we will create the <code class="literal">MyBackupService</code> that extends from <code class="literal">GcmTaskService</code> and implements the following method:</p><div class="informalexample"><pre class="programlisting">int onRunTask(TaskParams args);</pre></div><p>Our <code class="literal">OnRunTask</code> method will publish our account detail updates to our XMPP server:</p><div class="informalexample"><pre class="programlisting">public class MyBackupService extends GcmTaskService {
+
+  @Override
+  public int onRunTask(TaskParams taskParams) {
+    Log.i(TAG, "Backing up the account settings");
+    try {
+
+      // Obtain the default Shared preference object
+      SharedPreferences sp =PreferenceManager.
+        getDefaultSharedPreferences(this);
+
+      // Builds the upstream data bundle
+      Bundle data = new Bundle();
+      data.putString(FIRST_NAME, sp.getString(FIRST_NAME, ""));
+      data.putString(LAST_NAME,sp.getString(LAST_NAME, ""));
+      data.putString(AGE, sp.getString(AGE, ""));
+
+      // Specify the resource to update (Optional)
+      data.putString("resource","/account");
+      data.putString("operation","update");
+
+      String msgId = Integer.toString(new Random().nextInt());
+      GoogleCloudMessaging gcm = GoogleCloudMessaging.
+        getInstance(MyBackupService.this);
+      gcm.send( SENDER_ID + "@gcm.googleapis.com", msgId, data);
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to backup account", e);
+      return GcmNetworkManager.RESULT_RESCHEDULE;
+    }
+    return GcmNetworkManager.RESULT_SUCCESS;
+  }
+}</pre></div><p>To execute the <code class="literal">onRunTask</code> method, the <code class="literal">GcmTaskService</code> started by GCM NM will spawn a background thread with <code class="literal">THREAD_PRIORITY_BACKGROUND</code> priority and will keep the device awake holding CPU <code class="literal">Wakelock</code> for at most 3 minutes. After 3 minutes of execution, if your task has <a id="id620" class="indexterm"/>not returned, GCM NM considers that your task has timed out, and will release the CPU <code class="literal">Wakelock</code>.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note57"/>Note</h3><p>If your service receives more than one request at once, you should serialize the job execution with a synchronized section to avoid thread safety issues.</p></div></div><p>The result code returned by <code class="literal">onRunTask</code> will determine the task execution success (<code class="literal">RESULT_SUCCESS</code>), failure (<code class="literal">RESULT_FAILURE</code>) or failure with reschedule (<code class="literal">RESULT_RESCHEDULE</code>). In our particular example, if an exception is thrown during the upstream message submission the result code <code class="literal">RESULT_RESCHEDULE</code> returned will force the task to be re-executed <a id="id621" class="indexterm"/>again after a back-off period (exponential).</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch10lvl1sec82"/>Summary</h1></div></div></div><p>In this chapter we learned how to send and receive data using a battery-efficient communication channel provide by GCM Platform.</p><p>First, we learned the differences between polling and push/pull communication techniques to interact with network servers. The push and pull messaging used by GCM is able to reduce the battery efficiency of your application by avoiding redundant server queries to keep the user's data up to date.</p><p>In the meantime, we learned how to setup and configure the GCM library on our application. To interact with Google Services, our device obtained a <code class="literal">instanceID</code> and registration token to authenticate and identify our device on the GCM service.</p><p>Next, we learned how handle notification messages and topic messages on our application and we interacted with a custom XMPP server using GCM upstream messages. At the same time, we built group chat system that is able to aggregate messages from different users in a unified stream of messages displayed on the screen.</p><p>Finally, we learned how to use GCM Network Manager to schedule network tasks that run when certain criteria are meet on the device such as the device is connected to the WIFI network. </p><p>In the next chapter, we will introduce the reader to the <code class="literal">RXJava</code>, a library used to compose asynchronous and event-based tasks on Java by using observable data streams.</p></div></body></html>

@@ -1,0 +1,338 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;9.&#xA0;Performance Testing and Profiling"><div class="titlepage"><div><div><h1 class="title"><a id="ch09"/>Chapter 9. Performance Testing and Profiling</h1></div></div></div><p>In the previous chapters, we studied and developed tests for our Android application. Those tests let us evaluate the compliance to a certain number of specifications and allow us to determine if the software is behaving correctly or according to these rules by taking a binary verdict, whether it complies or not. If it does the software is correct; if it does not we have to fix it until it does.</p><p>In many other cases, mainly after we have verified that the software conforms to all these specifications, we want to move forward and know how or in what manner they are satisfied, and at the same time how the system performs under different situations to analyze other attributes such as usability, speed, response time, and reliability.</p><p>According to Android Developer's Guide (<a class="ulink" href="http://developer.android.com/guide/index.html">http://developer.android.com/guide/index.html</a>), these are the best practices when it comes to designing our application:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Designing for performance</li><li class="listitem" style="list-style-type: disc">Designing for responsiveness</li><li class="listitem" style="list-style-type: disc">Designing for seamlessness</li></ul></div><p>It's extremely important to follow these best practices and start thinking mainly in terms of performance and responsiveness from the very beginning of the design. Since our application will run on mobile devices with limited computer power, the bigger gains are obtained by identifying the targets for the optimization once our application is built, at least partially, and applying the performance testing that we will be discussing soon.</p><p>As Donald Knuth popularized years ago:</p><div class="blockquote"><blockquote class="blockquote"><p>"Premature<span class="emphasis"><em> optimization is the root of all evil"</em></span>.</p></blockquote></div><p>These optimizations, which are based on guesses, intuition, and even superstition often interfere with the design over short term periods, and with readability and maintainability over long term periods. On the contrary,<span class="emphasis"><em> micro-optimizations</em></span> are based on identifying the bottlenecks or hot-spots that require optimization, apply the changes, and then benchmark again to evaluate the improvements of the optimization. So the point we are concentrating on here is on measuring the existing performance and the optimization alternatives.</p><p>This chapter will introduce a series of concepts related to benchmarking and profiles as follows:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Traditional logging statement methods</li><li class="listitem" style="list-style-type: disc">Creating Android performance tests</li><li class="listitem" style="list-style-type: disc">Using profiling tools</li><li class="listitem" style="list-style-type: disc">Microbenchmarks using Caliper</li></ul></div><div class="section" title="Ye Olde Logge method"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec01"/>Ye Olde Logge method</h1></div></div></div><p>Sometimes this is too simplistic for real scenarios but I'm not going to say that it could not help in some cases mainly because its implementation takes minutes and you only need the<code class="literal"> logcat</code> text output to analyze the case, which comes in handy during situations as described in previous chapters where you want to automate procedures or apply Continuous Integration.<a class="indexterm" id="id451"/>
+</p><p>This method consists in timing a method, and or a part of it, surrounding it by two time measures and logging the difference at the end:</p><div class="informalexample"><pre class="programlisting">/* (non-Javadoc)
+* @see android.text.TextWatcher#onTextChanged( * java.lang.CharSequence, int, int, int)
+*/
+public void onTextChanged(CharSequence s, int start, int before, int count) {
+if (!mDest.hasWindowFocus() || mDest.hasFocus() || s == null ) {
+return;
+}
+final String str = s.toString();
+if ( "".equals(str) ) {
+mDest.setText("");
+return;
+}<span class="strong"><strong>
+final long t0;
+if ( BENCHMARK_TEMPERATURE_CONVERSION ) {
+t0 = System.currentTimeMillis();
+}</strong></span>
+try {
+final double temp = Double.parseDouble(str);
+final double result = (mOp == OP.C2F) ? TemperatureConverter.celsiusToFahrenheit(temp) : TemperatureConverter.fahrenheitToCelsius(temp);
+final String resultString = String.format("%.2f", result);
+mDest.setNumber(result);
+mDest.setSelection(resultString.length());
+} catch (NumberFormatException e) {
+// WARNING
+// this is generated while a number is entered,
+// for example just a '-'
+// so we don't want to show the error
+} catch (Exception e) {
+mSource.setError("ERROR: " + e.getLocalizedMessage());
+}<span class="strong"><strong>
+if ( BENCHMARK_TEMPERATURE_CONVERSION ) {
+long t = System.currentTimeMillis() - t0;
+Log.i(TAG, "TemperatureConversion took " + t + " ms to complete.");
+}</strong></span>
+}
+</pre></div><p>This is very straightforward. We take the times and log the difference. For this we are using the<code class="literal"> Log.i()</code> method and we can see the output in<code class="literal"> logcat</code> while we run the application. You can control the execution of this benchmark by setting<code class="literal"> true</code> or<code class="literal"> false</code> to the<code class="literal"> BENCHMARK_TEMPERATURE_CONVERSION</code> constant that you should have defined elsewhere.<a class="indexterm" id="id452"/>
+</p><p>When we launch the activity with the<code class="literal"> BENCHMARK_TEMPERATURE_CONVERSION</code> constant set to true in the<code class="literal"> logcat</code>, we will receive messages like these every time the conversion takes place:</p><p>
+<span class="strong"><strong>INFO/TemperatureConverterActivity(392): TemperatureConversion took 55 ms to complete</strong></span>.</p><p>
+<span class="strong"><strong>INFO/TemperatureConverterActivity(392): TemperatureConversion took 11 ms to complete</strong></span>.</p><p>
+<span class="strong"><strong>INFO/TemperatureConverterActivity(392): TemperatureConversion took 5 ms to complete</strong></span>.</p><p>Something you should take into account is that these benchmark-enabling constants should not be enabled in the production build, as other common constants are used like DEBUG or LOGD. To avoid this mistake you should integrate the verification of these constants values in the build process you are using for automated builds such as Ant or Make.</p><p>Pretty simple, but this would not apply for more complex cases.</p></div></div>
+<div class="section" title="Performance tests in Android SDK"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec02"/>Performance tests in Android SDK</h1></div></div></div><p>If the previous method of adding log statements does not suit you, there is a different method of getting performance test results from our application.<a class="indexterm" id="id453"/>
+</p><p>Unfortunately, performance tests in Android SDK are half baked (at least up to Android 2.3 Gingerbread, the latest version available at the time this book was written). There is no reasonable way of getting performance test results from an Android SDK application as the classes used by Android tests are hidden in the Android SDK and only available to system applications, that is to applications that are built as part of the main build or system image. This strategy is not available for SDK applications so we are not digging deeper in that direction and we will focus on other available choices.<a class="indexterm" id="id454"/>
+</p><div class="section" title="Launching the performance test"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec01"/>Launching the performance test</h2></div></div></div><p>These tests are based on a similar approach like the one used by Android to test system applications. The idea is to extend<code class="literal"> android.app.Instrumentation</code> to provide performance snapshots, automatically creating a framework that we can even extend to satisfy other needs. We are presenting a simple case here due to the limitations imposed by this medium.<a class="indexterm" id="id455"/>
+</p><div class="section" title="Creating the LaunchPerformanceBase instrumentation"><div class="titlepage"><div><div><h3 class="title"><a id="ch09lvl3sec01"/>Creating the LaunchPerformanceBase instrumentation</h3></div></div></div><p>Our first step is to extend<code class="literal"> Instrumentation</code> to provide the functionality we need. We are using a new package named<code class="literal"> com.example.aatg.tc.test.launchperf</code> to keep our tests organized:<a class="indexterm" id="id456"/>
+</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.tc.test.launchperf;
+import android.app.Instrumentation;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+/**
+* Base class for all launch performance Instrumentation classes.
+*/
+public class LaunchPerformanceBase extends Instrumentation {
+public static final String TAG = "LaunchPerformanceBase";
+protected Bundle mResults;
+protected Intent mIntent;
+/**
+* Constructor.
+*/
+public LaunchPerformanceBase() {
+mResults = new Bundle();
+mIntent = new Intent(Intent.ACTION_MAIN);
+mIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+setAutomaticPerformanceSnapshots();
+}
+/**
+* Launches intent {@link #mIntent}, and waits for idle before
+* returning.
+*/
+protected void LaunchApp() {
+startActivitySync(mIntent);
+waitForIdleSync();
+}
+@Override
+public void finish(int resultCode, Bundle results) {
+Log.v(TAG, "Test reults = " + results);
+super.finish(resultCode, results);
+}
+}
+</pre></div><p>We are extending<code class="literal"> Instrumentation</code> here. The constructor initialized the two fields in this class:<code class="literal"> mResults</code> and<code class="literal"> mIntent</code>. At the end we invoke the method<code class="literal"> setAutomaticPerformanceSnapshots()</code> which is the key here to create this performance test.<a class="indexterm" id="id457"/>
+</p><p>The method<code class="literal"> LaunchApp()</code> is in charge of starting the desired<code class="literal"> Activity</code> and waiting before returning.</p><p>The<code class="literal"> finish()</code> method logs the results received and then invokes<code class="literal"> Instrumentation's finish()</code>.</p></div><div class="section" title="Creating the TemperatureConverterActivityLaunchPerformance class"><div class="titlepage"><div><div><h3 class="title"><a id="ch09lvl3sec02"/>Creating the TemperatureConverterActivityLaunchPerformance class</h3></div></div></div><p>This class sets up the<code class="literal"> Intent</code> to invoke the<code class="literal"> TemperatureConverterActivity</code> and furnish the infrastructure provided by the<code class="literal"> LaunchPerformanceBase</code> class to test the performance of launching our<code class="literal"> Activity:</code>
+<a class="indexterm" id="id458"/>
+</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.tc.test.launchperf;
+import com.example.aatg.tc.TemperatureConverterActivity;
+import android.app.Activity;
+import android.os.Bundle;
+/**
+* Instrumentation class for {@link TemperatureConverterActivity} launch performance testing.
+*/
+public class TemperatureConverterActivityLaunchPerformance extends LaunchPerformanceBase {
+/**
+* Constructor.
+*/
+public TemperatureConverterActivityLaunchPerformance() {
+super();
+}
+@Override
+public void onCreate(Bundle arguments) {
+super.onCreate(arguments);
+mIntent.setClassName("com.example.aatg.tc", "com.example.aatg.tc.TemperatureConverterActivity");
+start();
+}
+/**
+* Calls LaunchApp and finish.
+*/
+@Override
+public void onStart() {
+super.onStart();
+LaunchApp();
+finish(Activity.RESULT_OK, mResults);
+}
+}
+</pre></div><p>Here,<code class="literal"> onCreate()</code> calls<code class="literal"> super.onCreate()</code> as the Android lifecycle dictates. Then the<code class="literal"> Intent</code> is set, specifying the class name and the package. Then one of the<code class="literal"> Instrumentation's</code> methods is called,<code class="literal"> start()</code>, which creates and starts a new thread in which to run instrumentation. This new thread will make a call to<code class="literal"> onStart()</code>, where you can implement the instrumentation.</p><p>Then<code class="literal"> onStart()</code> implementation follows, invoking<code class="literal"> LaunchApp()</code> and<code class="literal"> finish()</code>.<a class="indexterm" id="id459"/>
+</p></div></div><div class="section" title="Running the tests"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec02"/>Running the tests</h2></div></div></div><p>To be able to run this test we need to define the specific<code class="literal"> Instrumentation</code> in the<code class="literal"> AndroidManifest.xml</code> of the<code class="literal"> TemperatureConverterTest</code> project.<a class="indexterm" id="id460"/>
+</p><p>This is the snippet of code we have to add to the manifest:</p><div class="informalexample"><pre class="programlisting">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;manifest  package="com.example.aatg.tc.test" android:versionCode="1" android:versionName="1.0"&gt;
+&lt;application android:icon="@drawable/icon" android:label="@string/app_name"&gt;
+&lt;uses-library android:name="android.test.runner" /&gt;
+&lt;/application&gt;
+&lt;uses-sdk android:minSdkVersion="9" /&gt;
+&lt;instrumentation android:targetPackage="com.example.aatg.tc" android:name="android.test.InstrumentationTestRunner" android:label="Temperature Converter Activity Tests" android:icon="@drawable/icon" /&gt;<span class="strong"><strong>
+&lt;instrumentation android:targetPackage="com.example.aatg.tc" android:label="Temperature Converter Activity Launch Performance" android:name=".launchperf.TermeratureConverterActivity LaunchPerformance" /&gt;</strong></span>
+&lt;/manifest&gt;
+</pre></div><p>Once everything is in place we are ready to start running the test.</p><p>First, install the APK that includes these changes. Then, we have several options to run the tests as we have reviewed in previous chapters. In this case we are using the command line as it is the easiest way of getting all the details. Replace the serial number for what is applicable in your case:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ adb -s emulator-5554 shell am instrument -w com.example.aatg.tc.test/.launchperf.TermeratureConverterActivityLaunchPerformance</strong></span>
+</pre></div><p>We receive the set of results for this test in the standard output:</p><div class="informalexample"><pre class="programlisting">INSTRUMENTATION_RESULT: other_pss=13430
+INSTRUMENTATION_RESULT: java_allocated=2565
+INSTRUMENTATION_RESULT: global_freed_size=16424
+INSTRUMENTATION_RESULT: native_private_dirty=504
+INSTRUMENTATION_RESULT: native_free=6
+INSTRUMENTATION_RESULT: global_alloc_count=810
+INSTRUMENTATION_RESULT: other_private_dirty=12436
+INSTRUMENTATION_RESULT: global_freed_count=328
+INSTRUMENTATION_RESULT: sent_transactions=-1
+INSTRUMENTATION_RESULT: java_free=2814
+INSTRUMENTATION_RESULT: received_transactions=-1
+INSTRUMENTATION_RESULT: pre_sent_transactions=-1
+INSTRUMENTATION_RESULT: other_shared_dirty=5268
+INSTRUMENTATION_RESULT: pre_received_transactions=-1<span class="strong"><strong>
+INSTRUMENTATION_RESULT: execution_time=4563</strong></span>
+INSTRUMENTATION_RESULT: native_size=11020
+INSTRUMENTATION_RESULT: native_shared_dirty=1296<span class="strong"><strong>
+INSTRUMENTATION_RESULT: cpu_time=1761</strong></span>
+INSTRUMENTATION_RESULT: java_private_dirty=52
+INSTRUMENTATION_RESULT: native_allocated=11013
+INSTRUMENTATION_RESULT: gc_invocation_count=0
+INSTRUMENTATION_RESULT: java_shared_dirty=1860
+INSTRUMENTATION_RESULT: global_alloc_size=44862
+INSTRUMENTATION_RESULT: java_pss=1203
+INSTRUMENTATION_RESULT: java_size=5379
+INSTRUMENTATION_RESULT: native_pss=660
+INSTRUMENTATION_CODE: -1
+</pre></div><p>We have highlighted two of the values we are interested in:<span class="strong"><strong> execution_time</strong></span> and<span class="strong"><strong> cpu_time</strong></span>. They account for the total execution time and the CPU time used respectively.</p><p>Running this test on an emulator increases the potential for mis-measurement, because the host computer is running other processes that also take on the CPU, and the emulator does not necessarily represent the performance of a real piece of hardware.</p><p>Because of this we are taking these two measures into account. The<code class="literal"> execution_time</code> gives us the real time and<code class="literal"> cpu_time</code> the total time used by the CPU to compute our code.<a class="indexterm" id="id461"/>
+</p><p>Needless to say, that in this and any other case where you measure something that is variable over time, you should use a measurement strategy and run the test several times to obtain different statistical values, such as average or standard deviation.</p><p>Unfortunately, the current implementation of Android ADT does not allow using an instrumentation that does not extend<code class="literal"> android.test.InstrumentationTestRunner</code>, though<code class="literal"> .launchperf.TemperatureConverterActivityLaunchPerformance</code> extends<code class="literal"> LaunchPerformaceBase</code> that extends<code class="literal"> Instrumentation</code>.</p><p>This screenshot shows the error trying to define this Instrumentation in Eclipse Run Configurations:</p><div class="mediaobject"><img alt="Running the tests" src="graphics/3500_09_01.jpg"/></div></div></div>
+<div class="section" title="Using the Traceview and dmtracedump platform tools"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec03"/>Using the Traceview and dmtracedump platform tools</h1></div></div></div><p>The Android SDK includes among its various tools two that are specially intended to analyze performance problems and potentially determine the target to apply optimizations.<a class="indexterm" id="id462"/>
+</p><p>These tools have an advantage over other alternatives: usually no modification to the source code is needed for simpler tasks. However, for more complex cases some additions are needed, but they are very simple as we will see shortly.<a class="indexterm" id="id463"/>
+</p><p>If you don't need precision about starting and stopping tracing, you can drive it from the command line or Eclipse. For example, to start tracing from the command line you can use the following command. Remember to replace the serial number for what is applicable in your case:<a class="indexterm" id="id464"/>
+</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ adb -s emulator-5554 am start -n com.example.aatg.tc/.TemperatureConverterActivity
+$ adb -s emulator-5554 shell am profile com.example.aatg.tc start /mnt/sdcard/tc.trace</strong></span>
+</pre></div><p>Do something, for example enter a temperature in the Celsius field to force a conversion.</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ adb -s emulator-5554 shell am profile com.example.aatg.tc stop
+$ adb -s emulator-5554 pull /mnt/sdcard/tc.trace /tmp/tc.trace
+1132 KB/s (2851698 bytes in 2.459s)
+$ traceview /tmp/tc.trace</strong></span>
+</pre></div><p>Otherwise, if you need more precision about when profiling starts, you can add this piece of code instead of the previous one:</p><div class="informalexample"><pre class="programlisting">@Override
+public void onTextChanged(CharSequence s, int start, int before, int count) {
+if (!dest.hasWindowFocus() || dest.hasFocus() || s == null ) {
+return;
+}
+final String ss = s.toString();
+if ( "".equals(ss) ) {
+dest.setText("");
+return;
+}<span class="strong"><strong>
+if ( BENCHMARK_TEMPERATURE_CONVERSION ) {
+Debug.startMethodTracing();
+}</strong></span>
+try {
+final double result = (Double) convert.invoke( TemperatureConverter.class, Double.parseDouble(ss));
+dest.setNumber(result);
+dest.setSelection(dest.getText().toString().length());
+} catch (NumberFormatException e) {
+// WARNING
+// this is generated while a number is entered,
+//for example just a '-'
+// so we don't want to show the error
+} catch (Exception e) {
+dest.setError(e.getCause().getLocalizedMessage());
+}<span class="strong"><strong>
+if ( BENCHMARK_TEMPERATURE_CONVERSION ) {
+Debug.stopMethodTracing();
+}</strong></span>
+}
+</pre></div><p>This will create a trace file, using the default name<code class="literal"> dmtrace.trace</code> in the Sdcard by invoking<code class="literal"> Debug.startMethodTracing()</code>, which starts method tracing with the default log name and buffer size. When we are done, we call<code class="literal"> Debug.stopMethodTracing()</code> to stop the profiling.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;" title="Note"><h3 class="title"><a id="note23"/>Note</h3><p>To be able to write to the Sdcard the application requires a<code class="literal"> android.permission.WRITE_EXTERNAL_STORAGE</code> permission added in the manifest.</p><p>For VMs earlier than Android 2.2, the permission is required even for doing this from Eclipse as the file is also generated. Starting with Android 2.2, the stream is sent through the JDWP connection and the permission is not needed anymore.</p></div><p>You need to exercise the application in order to obtain the trace file. This file needs to be pulled to the development computer to be further analyzed using<code class="literal"> traceview:</code>
+</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ adb -s emulator-5554 pull /mnt/sdcard/dmtrace.trace /tmp/dmtrace.trace
+375 KB/s (50664 bytes in 0.131s)
+$ traceview /tmp/dmtrace.trace</strong></span>
+</pre></div><p>After running this command<code class="literal"> traceview's</code> window appears displaying all the information collected:</p><div class="mediaobject"><img alt="Using the Traceview and dmtracedump platform tools" src="graphics/3500_09_02.jpg"/></div><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;" title="Note"><h3 class="title"><a id="note24"/>Note</h3><p>Remember that enabling profiling really slows down the application execution so the measure should be interpreted by its relative weight not by their absolute values.</p></div><p>The top part of the window shows the<span class="strong"><strong> timeline panel</strong></span> and a colored area for every method. Time increases to the right. There are also small lines under the colored row displaying the extent of all the calls to the selected method.</p><p>We profiled a small segment of our application so only the main thread was running. In other cases where other threads were running during the profiling, this information will also be displayed.</p><p>The bottom part shows the<span class="strong"><strong> profile panel</strong></span> and every method executed and its parent-child relationship. We refer to calling methods as<span class="emphasis"><em> parents</em></span> and called methods as<span class="emphasis"><em> children</em></span>. When clicked, a method expands to show its parents and children. Parents are shown with a purple background and children with a yellow background.</p><p>Also the color selected for the method, done in a round-robin fashion, is displayed before the method name.</p><p>Finally, at the bottom there's a<span class="strong"><strong> Find:</strong></span> field where we can enter a filter to reduce the amount of information displayed. For example if we are only interested in displaying methods in the<code class="literal"> com.example.aatg.tc</code> package, we should enter<span class="strong"><strong> com/example/aatg/tc</strong></span>.</p><p>Clicking on a column will set the order of the list according to this column in ascending or descending order.</p><p>This table describes the available columns and their descriptions:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Column</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>name</p>
+</td><td style="text-align: left" valign="top">
+<p>The name of the method including its package name in the form described above, which is using "/" (slash) as the delimiter. Also the parameters and the return type are displayed.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Incl%</p>
+</td><td style="text-align: left" valign="top">
+<p>The inclusive time, as a percentage of the total time, used by the method. That is including all of its children.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Inclusive</p>
+</td><td style="text-align: left" valign="top">
+<p>The inclusive time, in milliseconds, used by this method. That is including this method and all of its children.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Excl%</p>
+</td><td style="text-align: left" valign="top">
+<p>The exclusive time, as a percentage of the total time, used by the method. That is excluding all of its children.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Exclusive</p>
+</td><td style="text-align: left" valign="top">
+<p>The exclusive time, in milliseconds, this is the total time spent in this method. That is excluding all of its children.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Calls+Recur</p>
+<p>Calls/Total</p>
+</td><td style="text-align: left" valign="top">
+<p>This column shows the number of calls for this method and the number of recursive calls.</p>
+<p>The number of calls compared with the total number of calls made to this method.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Time/Call</p>
+</td><td style="text-align: left" valign="top">
+<p>The time in milliseconds of every call.</p>
+<p>That is Inclusive/Calls.</p>
+</td></tr></tbody></table></div></div>
+<div class="section" title="Microbenchmarks"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec04"/>Microbenchmarks</h1></div></div></div><p>Benchmarking is the act of running a computer program or operation in order to compare operations in a way that produces quantitative results, normally by running a set of tests and trials against them.<a class="indexterm" id="id465"/>
+</p><p>Benchmarks can be organized in two big categories:<a class="indexterm" id="id466"/>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Macrobenchmarks</li><li class="listitem" style="list-style-type: disc">Microbenchmarks</li></ul></div><p>
+<span class="strong"><strong>Macrobenchmarks</strong></span> exist as a means to compare different platforms in specific areas such as processor speed, number of floating point operations per unit of time, graphics and 3D performance, and so on. They are normally used against hardware components but can also be used to test software specific areas, such as compiler optimization or algorithms.<a class="indexterm" id="id467"/>
+</p><p>As opposed to these traditional macrobenchmarks, a<span class="strong"><strong> microbenchmark</strong></span> attempts to measure the performance of a very small piece of code, often a single method. The results obtained are used to choose between competing implementations that provide the same functionality deciding the optimization path.<a class="indexterm" id="id468"/>
+</p><p>The risk here is to microbenchmark something different than what you think you are measuring. This is something to take into account mainly in the case of JIT compilers as used by Android starting with version 2.2 Froyo. The JIT compiler may compile and optimize your microbenchmark differently than the same code in your application. So, be cautious when taking your decision.</p><p>This is different from the profiling tactic introduced in the previous section as this approach does not consider the entire application but a single method or algorithm at a time.</p><div class="section" title="Caliper microbenchmarks"><div class="titlepage"><div><div><h2 class="title"><a id="ch09lvl2sec03"/>Caliper microbenchmarks</h2></div></div></div><p>
+<span class="strong"><strong>Caliper</strong></span> is Google's Open Source framework for writing, running, and viewing results of microbenchkmarks. There are many examples and tutorials on its website at<a class="ulink" href="http://code.google.com/p/caliper/"> http://code.google.com/p/caliper/</a>.<a class="indexterm" id="id469"/>
+</p><p>It's a work in progress but still useful in many circumstances. We are exploring its essential use here and will introduce more Android related usage in the next chapter.</p><p>Its central idea is to benchmark methods, mainly to understand how efficient they are; we may decide that this is the target for our optimization, perhaps after analyzing the results provided by profiling via traveview.</p><p>Caliper benchmark extends normally<code class="literal"> com.google.caliper.SimpleBenchmark</code> which implements the<code class="literal"> Benchmark</code> interface. Benchmarks are structured in a similar fashion as JUnit 3 tests and maintain the same structure with the difference that here benchmarks start with the prefix<span class="strong"><strong> time</strong></span> as opposed to<span class="strong"><strong> test</strong></span>. Every benchmark then accepts an<code class="literal"> int</code> parameter usually named<code class="literal"> reps</code>, indicates the number of repetitions to benchmark the code that sits inside the method surrounded by a loop counting the repetitions.</p><p>The<code class="literal"> setUp()</code> method is also present.<a class="indexterm" id="id470"/>
+</p><p>We need caliper installed in our computer. At the time of this writing, caliper is not distributed as binary but as source code that you can download and build yourself. Follow the instructions provided in its website which basically is getting the source code and building yourself.</p><p>Put in a very simple way, you can do it using these command lines. You need Subversion and Ant installed to do it:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ svn checkout http://caliper.googlecode.com/svn/trunk/ caliper-read-only
+$ cd caliper-read-only
+$ ant</strong></span>
+</pre></div><p>The<code class="literal"> calliper-0.0.jar</code> and<code class="literal"> allocation.jar</code> will be found in the<code class="literal"> build/caliper-0.0/lib</code> subdirectory.</p><div class="section" title="Creating the TemperatureConverterBenchmark project"><div class="titlepage"><div><div><h3 class="title"><a id="ch09lvl3sec03"/>Creating the TemperatureConverterBenchmark project</h3></div></div></div><p>Let's start by creating a new Java project in Eclipse. Yes, this time is not an Android project, just Java.<a class="indexterm" id="id471"/>
+</p><p>For consistency use the package<code class="literal"> com.example.aatg.tc.benchmark</code> as the main package.</p><p>Add the<code class="literal"> caliper</code> library and the existing<code class="literal"> TemperatureConverter</code> project to the<span class="strong"><strong> Java Build Path</strong></span> in the project's properties.</p><p>Then create the<code class="literal"> TemperatureConverterBenchmark</code> class that is containing our benchmarks:</p><div class="informalexample"><pre class="programlisting">package com.example.aatg.tc.benchmark;
+import java.util.Random;
+import com.example.aatg.tc.TemperatureConverter;
+import com.google.caliper.Param;
+import com.google.caliper.SimpleBenchmark;
+/**
+* Caliper Benchmark.&lt;br&gt;
+* To run the benchmarks in this class:&lt;br&gt;
+* {@code $ CLASSPATH=... caliper com.example.aatg.tc. * benchmark.TemperatureConverterBenchmark. * CelsiusToFahrenheitBenchmark} [-Dsize=n]
+*
+* @author diego
+*
+*/
+public class TemperatureConverterBenchmark {
+public static class CelsiusToFahrenheitBenchmark extends SimpleBenchmark {
+private static final double T = 10; // some temp
+@Param
+int size;
+private double[] temps;
+@Override
+protected void setUp() throws Exception {
+super.setUp();
+temps = new double[size];
+Random r = new Random(System.currentTimeMillis());
+for (int i=0; i &lt; size; i++) {
+temps[i] = T * r.nextGaussian();
+}
+}
+public final void timeCelsiusToFahrenheit(int reps) {
+for (int i=0; i &lt; reps; i++) {
+for (double t: temps) {
+TemperatureConverter.celsiusToFahrenheit(t);
+}
+}
+}
+}
+public static void main(String[] args) {
+System.out.println("This is a caliper benchmark.");
+}
+}
+</pre></div><p>We have a<code class="literal"> setUp()</code> method that, similar to JUnit tests, is run before the benchmarks are run. This method initializes an array of random temperatures used in the conversion benchmark. The size of this array is passed as a parameter to caliper and annotated here with the<code class="literal"> @Param</code> annotation. Caliper will provide the value of this parameter automatically.<a class="indexterm" id="id472"/>
+</p><p>We use a Gaussian distribution for the pseudo-random temperatures as this could be a good model of the reality.</p><p>Then the benchmark itself. As we noted before it should start with the prefix time, as in this instance<code class="literal"> timeCelsiusToFahrenheit()</code>. Inside this method we loop for the repetitions and invoke the conversion<code class="literal"> TemperatureConverter.celsiusToFahrenheit()</code> which is the method we wish to benchmark.</p></div><div class="section" title="Running caliper"><div class="titlepage"><div><div><h3 class="title"><a id="ch09lvl3sec04"/>Running caliper</h3></div></div></div><p>To run caliper we use a script which is based on the script that comes with the distribution. Be sure to place it in a directory included in the<code class="literal"> PATH</code> or use the correct path to invoke it:<a class="indexterm" id="id473"/>
+</p><div class="informalexample"><pre class="programlisting">#!/bin/bash
+VERSION=0.0
+CALIPER_DIR=/opt/caliper-$VERSION
+export PATH=$PATH:$JAVA_HOME/bin
+exec java -cp ${CALIPER_DIR}/lib/caliper-${VERSION}.jar:$CLASSPATH com.google.caliper.Runner "$@"
+</pre></div><p>Adapt it to your needs. Before running it, remember that we still need to set our<code class="literal"> CLASSPATH</code> so caliper can find the<code class="literal"> TemperatureConverter</code> and the benchmarks themselves. For example:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ export CLASSPATH=$CLASSPATH:~/workspace/TemperatureConverter/bin:~/workspace/TemperatureConverterBenchmark/bin</strong></span>
+</pre></div><p>Afterwards we can run caliper as:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ caliper com.example.aatg.tc.benchmark.TemperatureConverterBenchmark.CelsiusToFahrenheitBenchmark -Dsize=1</strong></span>
+</pre></div><p>This will run the benchmarks and if everything goes well we will be presented with the results:</p><p>
+<span class="strong"><strong>0% Scenario{vm=java, benchmark=CelsiusToFahrenheit, size=1} 8.95ns; σ=0.11ns @ 10 trials</strong></span>
+</p><p>
+<span class="strong"><strong>.caliperrc found, reading properties..</strong></span>.</p><p>
+<span class="strong"><strong>ns logarithmic runtime</strong></span>
+</p><p>
+<span class="strong"><strong>9 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</strong></span>
+</p><p>
+<span class="strong"><strong>vm: java</strong></span>
+</p><p>
+<span class="strong"><strong>benchmark: CelsiusToFahrenheit</strong></span>
+</p><p>
+<span class="strong"><strong>size: 1</strong></span>
+</p><p>Alternatively we can repeat the benchmark for different number of temperatures to find out if the values itself affect the performance of the conversion. In such cases we run:</p><div class="informalexample"><pre class="programlisting"><span class="strong"><strong>$ caliper com.example.aatg.tc.benchmark.TemperatureConverterBenchmark.CelsiusToFahrenheitBenchmark -Dsize=1,10,100</strong></span>
+</pre></div><p>Here we added different sizes for the temperatures array and the results obtained are as follows:</p><p>
+<span class="strong"><strong>0% Scenario{vm=java, trial=0, benchmark=CelsiusToFahrenheit, size=1} 3.47 ns; σ=0.19 ns @ 10 trials</strong></span>
+</p><p>
+<span class="strong"><strong>33% Scenario{vm=java, trial=0, benchmark=CelsiusToFahrenheit, size=10} 11.67 ns; σ=1.20 ns @ 10 trials</strong></span>
+</p><p>
+<span class="strong"><strong>67% Scenario{vm=java, trial=0, benchmark=CelsiusToFahrenheit, size=100} 63.06 ns; σ=3.83 ns @ 10 trials</strong></span>
+</p><p>
+<span class="strong"><strong>67% Scenario{vm=java, trial=0, benchmark=CelsiusToFahrenheit, size=100} 63.06 ns; σ=3.83 ns @ 10 trials</strong></span>
+</p><p>
+<span class="strong"><strong>size ns linear runtime</strong></span>
+</p><p>
+<span class="strong"><strong>1 3.47 =</strong></span>
+</p><p>
+<span class="strong"><strong>10 11.67 =====</strong></span>
+</p><p>
+<span class="strong"><strong>100 63.06 ==============================</strong></span>
+</p><p>
+<span class="strong"><strong>vm: java</strong></span>
+</p><p>
+<span class="strong"><strong>trial: 0</strong></span>
+</p><p>
+<span class="strong"><strong>benchmark: CelsiusToFahrenheit</strong></span>
+</p><p>To help visualize these results there is a service hosted in the Google AppEngine (<a class="ulink" href="http://microbenchmarks.appspot.com">http://microbenchmarks.appspot.com</a>) that accepts your result's data and lets you visualize them in a much better way. To access this service you should obtain an API key providing your Google login. Once obtained this key is placed in the<code class="literal"> .caliperrc</code> file in your home directory and next time you run the benchmarks the results will be uploaded.<a class="indexterm" id="id474"/>
+</p><p>The<code class="literal"> .caliperrc</code> would look like this snippet after you pasted the obtained API key:</p><div class="informalexample"><pre class="programlisting"># Caliper API key for myuser@gmail.com
+postUrl: http://microbenchmarks.appspot.com:80/run/
+apiKey: 012345678901234567890123456789012
+</pre></div><p>Now run the benchmarks again using the same command line as before:</p><div class="informalexample"><pre class="programlisting">$ caliper com.example.aatg.tc.benchmark.TemperatureConverterBenchmark.CelsiusToFahrenheitBenchmark -Dsize=1,10,100
+</pre></div><p>In addition to the text output, you will receive the instructions to access the results online. You can view current and previous benchmark results online at:<a class="indexterm" id="id475"/>
+</p><p>
+<a class="ulink" href="http://microbenchmarks.appspot.com/run/user@gmail.com/com.example.aatg.tc.benchmark.TemperatureConverterBenchmark.CelsiusToFahrenheitBenchmark">http://microbenchmarks.appspot.com/run/user@gmail.com/com.example.aatg.tc.benchmark.TemperatureConverterBenchmark.CelsiusToFahrenheitBenchmark</a>.</p><div class="note" style="margin-left: 0.5in; margin-right: 0.5in;" title="Note"><h3 class="title"><a id="note25"/>Note</h3><p>In the previous URL replace<code class="literal"> user@gmail.com</code> with your real Google login username that you used to generate the API key.</p></div><div class="mediaobject"><img alt="Running caliper" src="graphics/3500_09_03.jpg"/></div></div></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec05"/>Summary</h1></div></div></div><p>In this chapter we dissected the available alternatives to test the performance measures of our application benchmarking and profiling our code.</p><p>While some options that should be provided by the Android SDK are not yet completed by the time of this writing, and there is no possibility to implement Android<code class="literal"> PerformanceTestCases</code> because some code is hidden in the SDK, we visited and analyzed some other valid alternatives.</p><p>Among these alternatives we found that we can use simple log statements to more sophisticated code extending Instrumentation.</p><p>Subsequently we analyzed profiling alternatives and described and exemplified the use of<code class="literal"> traceview</code> and<code class="literal"> dmtracedump</code>.</p><p>Finally, we discovered caliper—a microbenchmarking tool that has native support for Android. However, we introduced its most basic usage and postponed more specific Android and Dalvik VM usage for the next chapter.</p><p>In the next chapter we will be building Android from source code to obtain an EMMA instrumented build and we will be executing coverage report on our code. We will also introduce alternative tactics and tools by the end of the chapter.</p></div></body></html>

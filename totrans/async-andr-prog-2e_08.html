@@ -1,0 +1,758 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;8.&#xA0;Interacting with the Network"><div class="titlepage"><div><div><h1 class="title"><a id="ch08"/>Chapter 8. Interacting with the Network</h1></div></div></div><p>So far, we have been using the HttpURLConnection HTTP client to transfer data from and to the network, such as when downloading images from an HTTP server and synchronizing information with a remote HTTP server. We have been using this Android HTTP client blindly without going into much detail about the internals and the features provided by this handy framework that deals transparently with the HTTP protocol for us.</p><p>In this chapter, we'll learn more about the advanced features of HttpURLConnection and fresh techniques to communicate asynchronously and securely with a remote server using the HTTP protocol.</p><p>In the meantime, we will learn how use a customized HTTP client to communicate over secure channels, tweak the HTTP client to deal with network delays, and learn how to interact with web APIs.</p><p>In this chapter, we will cover the following:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Introducing Android HTTP clients</li><li class="listitem" style="list-style-type: disc">Performing HTTP requests asynchronously</li><li class="listitem" style="list-style-type: disc">Interacting with JSON web APIs</li><li class="listitem" style="list-style-type: disc">Interacting with XML web APIs</li><li class="listitem" style="list-style-type: disc">Optimizing HTTP timeouts</li><li class="listitem" style="list-style-type: disc">Communicating securely over SSL sessions</li><li class="listitem" style="list-style-type: disc">HTTP open source libraries</li></ul></div><div class="section" title="Introducing Android HTTP clients"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec61"/>Introducing Android HTTP clients</h1></div></div></div><p>In recent times, the<a id="id431" class="indexterm"/> ability to send and receive data from remote servers has become an essential feature that all applications should enforce in order to create dynamic and impressive experiences. Today almost every application uses the network to pull up data information, execute remote business logic operations, and download or upload resources.</p><p>The network interactions that happen between the application and a remote server are typically defined as a set of request/response messages that traverse the network using a network protocol.</p><p>In general, the HTTP protocol is often used to transport messages between each peer, and the Android SDK comes with two high-level HTTP clients available out of the box to send and receive data: <code class="literal">AndroidHttpClient</code> and <code class="literal">HttpURLConnection</code>.</p><p>The HTTP <a id="id432" class="indexterm"/>communication protocol is a stateless, standard text-based application<a id="id433" class="indexterm"/> protocol maintained by <span class="strong"><strong>Internet Engineering Task Force</strong></span> (<span class="strong"><strong>IETF</strong></span>) and the <span class="strong"><strong>World Wide Web Consortium</strong></span> (<span class="strong"><strong>W3C</strong></span>) and is widely used on the Internet to exchange data between a client, normally called a <a id="id434" class="indexterm"/>user agent, and a server.</p><p>The protocol has undergone some improvements over time, but most servers and clients base their implementation on HTTP 1.1, a revision of the original HTTP 1.0, which introduced the connection re-use feature and chunked transfer encoding to the original protocol.</p><p>In a typical HTTP flow, the client, the entity that initiates the operation, sends a request to the server over a connection and waits for the server's response. On the other end, the server reads the request from the communication channel, processes the request, and sends a response back to the client. In the next figure, we can visualize a request and response example exchanged between peers:</p><div class="mediaobject"><img src="graphics/Image_B05062_08_01.jpg" alt="Introducing Android HTTP clients"/></div><p>The new HTTP revision, 2.0, published in May 2015, hasn't been widely adopted and there is no official support on the Android SDK.</p><p>After a preliminary HTTP<a id="id435" class="indexterm"/> protocol introduction, we will try to compare the HTTP clients available on the Android SDK.</p><div class="section" title="AndroidHttpClient"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec60"/>AndroidHttpClient</h2></div></div></div><p>The <code class="literal">AndroidHttpClient</code> client library, based on the Apache HTTP client, has been deprecated since API Level 9 (Gingerbread), but it provides a large and flexible API to access HTTP servers with support for cookie management, timeout customization, basic authentication schemes, and secure communication channels.</p><p>This client is more <a id="id436" class="indexterm"/>stable than <code class="literal">HttpURLConnection</code> on API Level 8 (Froyo) and API Level 7 (Eclair).</p><p>On API Level 23 (Marshmallow), support for this client has been removed in favor of <code class="literal">HttpURLConnection</code> due to the lack of transparent response compression and response caching.</p></div><div class="section" title="HttpURLConnection"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec61"/>HttpURLConnection</h2></div></div></div><p>This client framework supports secure communication sessions (HTTPS), transparent response compression, response caching, network timeout customization, network connection polling, IPV6 support, proxy servers, and streaming.</p><p>According to Google, prior to API Level 8 (Froyo), this client has some important issues that could spoil the HTTP connection re-use.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note45"/>Note</h3><p>Since Android 4.4 (KitKat), this implementation engine is based on the open source OkHttp Square library.</p></div></div><p>Given that <code class="literal">HttpURLConnection</code> is the HTTP client recommended by Google for Android versions<a id="id437" class="indexterm"/> greater than API Level 9, we will base our code examples on this HTTP client. However, this fragmentation issue can be surpassed by using different Android HTTP clients based on the API Level:</p><div class="informalexample"><pre class="programlisting">if (Build.VERSION.SDK_INT &gt;= 9) {
+    // After Gingerbread, use the google recommended
+    // client, HttpUrlConnection
+    ...
+}  else {
+    // Prior to Gingerbread, use the Apache based
+    // client, AndroidHttpClient
+    ...
+}</pre></div><p>In the next section, we <a id="id438" class="indexterm"/>will start to write our HTTP asynchronous toolkit based on <code class="literal">HttpURLConnection</code> and explore the advanced features delivered by the client to communicate with remote peers.</p></div></div></div>
+<div class="section" title="Performing HTTP requests asynchronously"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec62"/>Performing HTTP requests asynchronously</h1></div></div></div><p>So far we have been using the <code class="literal">HttpURLConnection</code> client and <code class="literal">AsyncTask</code> to retrieve remote data<a id="id439" class="indexterm"/> asynchronously in our code examples.</p><p>While this solution can work in most cases, we could end up with loads of duplicate code in our applications.</p><p>In this section, we will create a neat high-level asynchronous HTTP client to perform remote requests outside of the main thread that forwards the result of the request to the application's main thread using a callback handler. This approach fits well with the application UI model because the callback handler, which executes on the main thread, is able to update the UI with the data retrieved from the server.</p><p>First of all, let's define the basic interface that our asynchronous client should honor to execute remote requests in the background:</p><div class="informalexample"><pre class="programlisting">public interface AsyncHTTPClient {
+    void execute(HTTPRequest request, ResponseHandler handler);
+}</pre></div><p>The <code class="literal">HTTPRequest</code> class is a Java model used to define all the parameters required to build the HTTP request. We will omit some of the implementation details, but with the help of the <code class="literal">Builder</code> class, we will be able to define the HTTP request verb, the request URL, the HTTP headers, the HTTP query parameters, and the HTTP body:</p><div class="informalexample"><pre class="programlisting">public class HTTPRequest {
+  
+  final Verb mVerb;
+  final String mUrl;
+  final List&lt;Header&gt; mHeaders;
+  final Map&lt;String, String&gt; mParameters;
+  final Body mBody;
+
+  private HTTPRequest(Builder builder) {...}
+  }</pre></div><p>
+<code class="literal">ResponseHandler</code> is the class that defines the callbacks that will be invoked when a success or failure response is sent from the server, or an exception happens during the operation execution. So, we'll define an abstract <code class="literal">ResponseHandler</code> class for the subclasses to<a id="id440" class="indexterm"/> implement:</p><div class="informalexample"><pre class="programlisting">public abstract class ResponseHandler {
+    
+    // Method invoked when a success response is returned
+    // 200 Response Code
+    abstract public void onSuccess(HTTPResponse response) ;
+
+    // Method invoked when a failure response is returned
+    // 4XX, 50X 	
+    abstract public void onFailure(HTTPResponse response) ;
+   
+    // Method Invoked when an error happens
+    abstract public void onError(Throwable error);
+}</pre></div><p>All callback methods are forwarded automatically to the main thread when a response or an error is ready to be dispatched to the handler. All the network and input/output operations and memory allocations have to be done on the background thread to avoid any UI undesired pauses.</p><p>When the server returns an HTTP response, one of the following methods, <code class="literal">onSuccess</code> or <code class="literal">OnFailure</code>, is invoked based on the code returned by the response message. So, when any of the callbacks are called, an <code class="literal">HTTPResponse</code> object is delivered for further processing.</p><p>For now, the <code class="literal">HTTPResponse</code> class carries information about the request code, the response headers, and the response body:</p><div class="informalexample"><pre class="programlisting">public class HTTPResponse {
+
+    final int mResponseCode;
+    final List&lt;Header&gt; mHeaders;
+    final Body mBody;
+    
+}</pre></div><p>With the base classes and interface already defined, let's implement our asynchronous high-level client with the help of the <code class="literal">HttpURLConnection</code> class.</p><p>Since we already know how to construct a background-processing pipeline based on the <code class="literal">AsyncTask</code> class, for simplicity, we will base our implementation on this construct. In the future, you <a id="id441" class="indexterm"/>can replace <code class="literal">AsyncTask</code> with <code class="literal">AsyncTaskLoader</code> to support configuration changes:</p><div class="informalexample"><pre class="programlisting"> public class HTTPAsyncTask extends
+  AsyncTask&lt;HTTPRequest, Void, Result&lt;HTTPResponse&gt;&gt; {
+
+  // Response Handler to be invoked In onPostExecute
+  // on the UI Thread
+  final ResponseHandler mHandler;
+  
+  // Handler is passed on the constructor
+  public  HTTPAsyncTask(ResponseHandler handler) {
+    this.mHandler = handler;
+  }
+  ...
+}</pre></div><p>As defined in the preceding code, the input parameter type for our <code class="literal">AsyncTask</code> is <code class="literal">HTTPRequest</code> and as a result an object of type <code class="literal">Result&lt;HTTPResponse&gt;</code> is sent to the UI thread. The result, is a generic class, as defined in previous chapters, that is able to carry an error or an <code class="literal">HTTPResponse</code> object.</p><p>With the <code class="literal">HTTPAsyncTask</code> generic parameters already defined, now it is time to override <code class="literal">doInBackground</code> to send the HTTP request and process the response in the background:</p><div class="informalexample"><pre class="programlisting">@Override
+protected Result&lt;HTTPResponse&gt; doInBackground(HTTPRequest... params) {
+
+  HTTPRequest request = params[0];
+  Body body = null;
+  HttpURLConnection conn = null;
+  Result&lt;HTTPResponse&gt; response = new Result&lt;HTTPResponse&gt;();
+  try {
+
+    // Retrieve the request URL from the request object
+    URL url = new URL(request.mUrl);
+
+    // Opens up the connection to the remote peer
+    conn = (HttpURLConnection) url.openConnection();
+
+    // Set the HTTP Request verb
+    conn.setRequestMethod(request.mVerb);
+
+    // set The HTTP Request Headers
+    setRequestHeaders(conn,request);
+   	 
+    // Allows Receiving data on the response
+    conn.setDoInput(true);
+
+    // Retrieve the response code
+    int responseCode = conn.getResponseCode();
+
+    // Build the HTTP Response Object
+    HTTPResponse.Builder builder = new HTTPResponse.Builder()
+    .setResponseCode(responseCode);
+
+    // Fill the HTTP Response Headers
+    fillHeaders(conn.getHeaderFields(), builder);
+
+    // Read the Body from the Connection Input Stream
+    // using a factory
+    body = BodyFactory.read(conn.getContentType(),
+                              conn.getInputStream());
+    // Set the HTTPResponse body
+    builder.setBody(body);
+    // Build the HTTP Response Object
+    response.result = builder.build();
+  } catch (Exception e) {
+    response.error = e;
+  } finally {
+    if ( conn != null ) {
+      conn.disconnect();
+  }
+  }
+  return response;
+  }
+  
+// Write any header to the Request Ex: Accept: text/xml
+void setRequestHeaders(HttpURLConnection con, HTTPRequest request ) {
+  for (Header header : request.mHeaders) {
+    con.addRequestProperty(header.getName(), header.getValue());
+  }
+}</pre></div><p>
+<code class="literal">openConnection</code> will establish a TCP connection with the resource specified in the <code class="literal">URL</code> object. Once<a id="id442" class="indexterm"/> the connection is established, and we try to retrieve the status line response code, our HTTP request headers and body are dispatched to the network.</p><p>As soon as the status line is read, we process the HTTP response headers received and we store them on our response object for further processing. As you probably already know, an HTTP response might contain data on the HTTP message body, related to the resource specified on the requested URL.</p><p>For further processing, the data will be consumed from the connection <code class="literal">InputStream</code> in order to build a <code class="literal">Body</code> object. To detect the type of data content received on the HTTP Response, the client should look into the header Content-Type content. To simplify this recognition, the <code class="literal">HttpURLConnection</code> class provides the member method, <code class="literal">getContentType()</code>, that retrieves the content directly from the header.</p><p>The body consumption and construction is done on the <code class="literal">BodyFactory</code> class shown in the following code:</p><div class="informalexample"><pre class="programlisting">public class BodyFactory {
+
+  public static Body read(String mimeType,
+                          InputStream is) throws IOException {
+    Body result = null;
+    if ( mimeType.startsWith("text") ) {
+      result = new TextPlainBody(mimeType);
+      result.consume(is);
+    }    
+    return result;
+  }
+}</pre></div><p>Since we know the content type, we are ready to consume the body and store the bytes received on a <code class="literal">Body</code> object for further processing by our <code class="literal">ResponseHandler</code>.</p><p>
+<code class="literal">Body</code> is an abstract class and itself is not able to read any kind of content, although we can extend the <code class="literal">Body</code> class directly to build a text body from the received data.</p><p>Our <code class="literal">Body</code> subclass, called <code class="literal">TextPlainBody</code>, will implement the abstract consume function in order to construct the body from the <code class="literal">InputStream</code>:</p><div class="informalexample"><pre class="programlisting">abstract void consume(InputStream is)
+  throws IOException;</pre></div><p>The consume code for the <code class="literal">TextPlainBody</code> is omitted for brevity, though the full source code is available to download from the Packt Publishing website. Take a look at the <code class="literal">TextPlainBody</code> source code to appreciate how we build a string using the <code class="literal">InputStream</code>.</p><p>For now, we only support the <code class="literal">text/*</code> type; however, in the next sections we are going to extend the <code class="literal">BodyFactory</code> class to support other interesting mime types, such as JSON documents.</p><p>Once the response<a id="id443" class="indexterm"/> body has been fully read, the connection with the remote server will be closed and the resources held by the connection released.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note46"/>Note</h3><p>The connection is not immediately destroyed but rather pushed to a connection pool for future use. After a finite amount of time idle (<code class="literal">idleTimeout</code>) on the pool, the connection is destroyed.</p></div></div><p>During the <code class="literal">doInBackground</code> execution, network or input/output exceptions are likely to arise, so to avoid an application crash we must catch and forward them over the <code class="literal">result.error</code> to the <code class="literal">postExecute</code> function and later to the <code class="literal">ResponseHandler</code> specified when the execution is initiated.</p><p>Unchecked exceptions that propagate out of AsyncTask's methods will crash our application, so we must test carefully and handle those if necessary.</p><p>To make our <code class="literal">AsyncTask</code> subclass useful, we have to write the <code class="literal">onPostExecute</code> function that forwards the response or an error to the <code class="literal">ResponseHandler</code> object:</p><div class="informalexample"><pre class="programlisting">protected void onPostExecute(Result&lt;HTTPResponse&gt; result) {
+
+  if ( result.error != null ) {
+    mHandler.onError(result.error);
+  } else if ( result.obj.mResponseCode ==
+              HttpURLConnection.HTTP_OK ) {
+    mHandler.onSuccess(result.obj);
+  } else {
+    mHandler.onFailure(result.obj);
+  }
+}</pre></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note47"/>Note</h3><p>As stated before in <a class="link" href="ch03.html" title="Chapter 3. Exploring the AsyncTask">Chapter 3</a>, <span class="emphasis"><em>Exploring AsyncTask</em></span>, the <code class="literal">onPostExecute</code> callback will be executed on the main thread, so you should avoid any time-consuming operations on the following callbacks: <code class="literal">onError</code>, <code class="literal">onSucess</code>, and <code class="literal">onFailure</code>.</p></div></div><p>All that remains is to<a id="id444" class="indexterm"/> invoke our <code class="literal">AsyncTask</code> from our <code class="literal">AsyncHTTPClient</code> subclass—<code class="literal">PacktAsyncHTTPClient</code>:</p><div class="informalexample"><pre class="programlisting">public class PacktAsyncHTTPClient implements AsyncHTTPClient {
+
+  @Override
+  public void execute( HTTPRequest request,
+                       ResponseHandler handler) {
+    // Execute the HTTP Request on the default AsyncTask Executor
+    new HTTPAsyncTask(handler).execute(request);
+  }
+  ...
+ }</pre></div><p>Great! Now we have a core asynchronous HTTP client implementation with support for text mime types. In the next section we will use our high-level client to retrieve a text message from a remote server.</p><div class="section" title="Retrieving a text response"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec62"/>Retrieving a text response</h2></div></div></div><p>With our asynchronous HTTP client<a id="id445" class="indexterm"/> supporting text responses, we are able to make use of it to obtain a dynamic text so, let's create an activity that displays the text available on a remote URL resource.</p><p>First, we have to build our <code class="literal">HTTPRequest</code> using the <code class="literal">HTTPRequest.Builder</code> class:</p><div class="informalexample"><pre class="programlisting">protected void onCreate(Bundle savedInstanceState) {
+   ...
+  HTTPRequest.Builder builder = new HTTPRequest.Builder();
+  // Set the HTTP Verb to GET
+  builder.setVerb(HTTPRequest.Verb.GET);
+  // Sets location of the remote resource
+  builder.setUrl("http://&lt;hostname&gt;:&lt;port&gt;/greetings");
+  // Build the request object
+  HTTPRequest request =  builder.build();
+  ...
+}</pre></div><p>We wish to draw your attention to the fact that you should replace <code class="literal">&lt;hostname&gt;</code> and <code class="literal">&lt;port&gt;</code> to make it work for your HTTP server.</p><p>As defined before, in <a id="id446" class="indexterm"/>order to execute the request over our asynchronous client, <code class="literal">AsyncHTTPClient</code>, we must provide a <code class="literal">ResponseHandler</code> object to the <code class="literal">execute</code> method. Moreover, we want to define an object that updates the UI with the text obtained.</p><p>First of all, we will extend our <code class="literal">ResponseHandler</code> abstract and create a class to process the body and forward the response to a callback that receives the text message as the input:</p><div class="informalexample"><pre class="programlisting">public abstract class TextResponseHandler 
+  extends ResponseHandler {
+   // Response Callback receiving the string body
+    abstract void onSuccess(String response);
+
+    @Override
+    public void onSuccess(HTTPResponse response) {
+        TextPlainBody body = (TextPlainBody)response.mBody;
+        // Invoke the callback that receives a string
+        onSuccess(body.getContent());
+    }
+}</pre></div><p>Next, we need to finish our <code class="literal">Activity</code> code to send the HTTP request and in the meantime we will also present a progress dialog making the user aware that something is going on in the background:</p><div class="informalexample"><pre class="programlisting">HTTPRequest request =  builder.build();
+// Create a client Instance object
+PacktAsyncHTTPClient client = new PacktAsyncHTTPClient();
+// Enable a progress bar
+ProgressBar pb =(ProgressBar) findViewById(R.id.loading);
+pb.setVisibility(View.VISIBLE);
+// Retrieve the response on the background
+client.execute(request,textResponseHandler);
+...</pre></div><p>Now, all we need is to define our <code class="literal">textResponseHandler</code>, an anonymous inner class that implements <code class="literal">TextReponseHandler</code>, updates the <code class="literal">View</code> with the <code class="literal">String</code> received, and dismisses the indeterminate<a id="id447" class="indexterm"/> progress dialog enabled:</p><div class="informalexample"><pre class="programlisting">TextResponseHandler greetingsHandler = new TextResponseHandler() {
+
+  // Invoked when request was processed with success by the server
+  @Override
+  void onSuccess(String response) {
+    
+    // Update the View with the String received on the 
+    // HTTP body
+    EditText et = (EditText) findViewById(R.id.inputText);
+    et.setText(response);
+    dismissProgress();
+  }
+
+  // Invoked when the served returned an error
+  @Override
+  public void onFailure(HTTPResponse response) {
+    Log.e("GreetingsActivity", "Server returned an error: " + 
+          response.mResponseCode + " " + 
+          response.mResponseMessage);
+    dismissProgress();
+  }
+  
+  // Invoked when an error happened
+  @Override
+  public void onError(Throwable error) {
+    Log.e("GreetingsActivity", "Exception happened: " + 
+           error.getMessage(), error);
+    dismissProgress();
+  }  
+};</pre></div><p>Notice that all the callback functions are going to be executed on the main thread, so in these functions you should follow the golden rule of not blocking the thread to avoid UI delays.</p><p>When the server returns an error or an exception happens during the execution, the following callback methods, <code class="literal">onFailure</code> and <code class="literal">OnError</code>, are called respectively.</p><p>Support for reading text resources from a remote server is a good starting point, although in most cases we intend to<a id="id448" class="indexterm"/> communicate with the remote server to exchange structured document formats, such as JSON, XML, or even binary data.</p></div><div class="section" title="Interacting with JSON web APIs"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec63"/>Interacting with JSON web APIs</h2></div></div></div><p>Our previous <code class="literal">TextResponseHandler</code> is able to process the generic response <code class="literal">HTTPResponse</code> fulfilled with a text response and forward a String coming<a id="id449" class="indexterm"/> from JSON web APIs and forward a <code class="literal">String</code> to the <code class="literal">TextResponseHandler onReceive(String)</code> callback.</p><p>Now we want to go a little further and convert an <code class="literal">HTTPResponse</code> returned from the <code class="literal">doInBackground</code> to a<a id="id450" class="indexterm"/> <span class="strong"><strong>Plain Old Java Object</strong></span> (<span class="strong"><strong>POJO</strong></span>) that characterizes a model on our business logic. To achieve that, we must convert a JSON-structured content returned on the HTTP body to one Java defined previously.</p><p>To forward the processing <a id="id451" class="indexterm"/>to the callbacks defined above, we will create the <code class="literal">JSONResponseHandler</code>, an abstract subclass of <code class="literal">ResponseHandler</code> that implements <code class="literal">onSuccess(HTTPResponse)</code>, <code class="literal">onFailure(HTTPResponse)</code>, and convert the objects to <code class="literal">&lt;ResponseType&gt;</code> and <code class="literal">&lt;ErrorType&gt;</code> respectively:</p><div class="informalexample"><pre class="programlisting">public abstract class JsonResponseHandler&lt;ResponseType, ErrorType&gt; extends ResponseHandler {
+
+  abstract public void onSuccess(ResponseType response);
+  abstract public void onFailure(ErrorType response);
+  ...
+}</pre></div><p>To support the processing of different body contents, our <code class="literal">BodyFactory</code> needs an update. So, before we move on to the <code class="literal">JSONResponseHandler</code> implementation, we will update our <code class="literal">BodyFactory</code> function to support the <code class="literal">application/json</code> mimetype:</p><div class="informalexample"><pre class="programlisting">public class BodyFactory {
+
+  public static Body read(String mimeType,
+                         InputStream is)
+    throws IOException {
+
+    ...
+    } else if ( mimeType.startsWith("application/json")){
+      result = new RawBody(mimeType);
+      result.consume(is);
+    }  
+    return result;
+  }
+}</pre></div><p>Notice that we read the content from the network and we store the data on a new <code class="literal">Body</code> class named <code class="literal">RawBody</code> that simply stores the content that comes from the HTTP Response body on an internal byte memory buffer.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note48"/>Note</h3><p>Storing<a id="id452" class="indexterm"/> the full body might work for our simple client use cases. Although, if we are willing to process bodies with megabytes of data, we must use another strategy to read and consume the body, consume the body in chunks, or save the body on a local filesystem.</p></div></div><p>With the body already <a id="id453" class="indexterm"/>with JSON web APIs stored on the device memory, we are ready to process it with the help of our <code class="literal">JSONResponseHandler</code>.</p><div class="section" title="Converting Java objects to JSON"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec10"/>Converting Java objects to JSON</h3></div></div></div><p>To convert the <a id="id454" class="indexterm"/>JSON document format to a plain object we will make use of one open source library that's very well known in the <a id="id455" class="indexterm"/>Android community—the Google GSON library: <a class="ulink" href="https://github.com/google/gson">https://github.com/google/gson</a>.</p><p>The GSON library, a library developed and maintained by Google, is able to convert Java objects to a JSON object and vice versa.</p><p>So, before you move on, make sure that you add the library to your Gradle or Eclipse project:</p><div class="informalexample"><pre class="programlisting">compile 'com.google.code.gson:gson:2.5'</pre></div><p>To convert from a protocol encoded content body to a POJO, we will define the <code class="literal">BodyDecoder</code> interface:</p><div class="informalexample"><pre class="programlisting">public interface BodyDecoder &lt;T&gt; {
+    T decode(Body body) throws Exception ;
+}</pre></div><p>To convert from a POJO to a <code class="literal">Body</code> object, we are going to define the <code class="literal">BodyEncoder</code> interface:</p><div class="informalexample"><pre class="programlisting">public interface BodyEncoder&lt;T&gt; {
+    Body encode(T obj,String mimeType) throws Exception;
+}</pre></div><p>To decode a JSON <a id="id456" class="indexterm"/>document to a POJO, we will have to subclass this generic interface and write the code to deal with the JSON decoding with the help of the GSON library:</p><div class="informalexample"><pre class="programlisting">public class JSONConverter&lt;POJO&gt; 
+  implements BodyEncoder&lt;POJO&gt;, BodyDecoder&lt;POJO&gt; {
+  // Store the Generic Type information
+  private final Type pojoType;
+
+  JSONConverter(Type pojoType) {
+    this.pojoType = pojoType;
+  }
+
+  @Override
+  public POJO decode(Body body) throws Exception {
+    Gson gson = new Gson();
+    RawBody rawBody = (RawBody) body;
+    InputStream is = null;
+    POJO obj = null;
+    try {
+      is = new ByteArrayInputStream(rawBody.getContent());
+      BufferedReader bfReader = 
+        new BufferedReader(new InputStreamReader(is));
+      obj = gson.fromJson(bfReader, pojoType);
+    } finally {
+      if (is != null) is.close();
+    }
+    return obj;
+  }
+}</pre></div><p>Finally, we are ready to implement our generic <code class="literal">JSONResponseHandler</code> that forwards the converted JSON-structured documents returned on the <code class="literal">onSuccess</code> and <code class="literal">onFailure</code> methods to the<a id="id457" class="indexterm"/> generic types <code class="literal">Response</code> and <code class="literal">Error</code>.</p><p>Here is how the <code class="literal">JsonResponseHandler</code> code will look:</p><div class="informalexample"><pre class="programlisting">public abstract class JsonResponseHandler&lt;ResponseType, ErrorType&gt;
+  extends ResponseHandler {
+   // Store the Response Type class information
+    private final Type responseType;
+   // Store the Error Type class information
+    private final Type errorType;
+
+    JsonResponseHandler(Type responseType, Type errorType) {
+        this.responseType = responseType;
+        this.errorType = errorType;
+    }
+  
+  // Callback invoked on the main Thread that converts
+  // a body to a POJO object
+  @Override
+  public void onSuccess(HTTPResponse response) {
+    RawBody body = (RawBody)response.mBody;
+
+    if ( body != null ) {
+      Response obj = null;
+      try {
+        obj = new JSONConverter&lt;Response&gt;(responseType).
+                decode(body);
+        onSuccess(obj); 
+      } catch (Exception e) {
+        onError(e);
+      }
+     
+    } else {
+      onSuccess((Response)null);
+    }
+  }
+  @Override
+  public void onFailure(HTTPResponse response) {...}
+}</pre></div><p>This generically typed class is able to consume the <code class="literal">RawBody</code> object forwarded from <code class="literal">onSuccess</code> or <code class="literal">onFailure</code> and expose two generic type parameters. The first <code class="literal">Response</code> is a generic type that specifies the type of POJO class for the success response (<code class="literal">onSuccess</code>) and the <code class="literal">Error</code> generic type that specifies the type of POJO class for the error function (<code class="literal">onFailure</code>).</p><p>When any of the callback functions that receive the <code class="literal">HTTPResponse</code> is invoked, with the help of the GSON library we convert the JSON document, stored on the <code class="literal">RawBody</code>, to a response/error object.</p><p>The <code class="literal">onFailure</code> function is omitted because its code is quite similar to the <code class="literal">onSuccess</code> method; however, you can take a look at the full source code on the Packt Publishing website to understand the differences.</p><p>Finally, we are ready to exercise our asynchronous client by reading a model from an HTTP JSON body:</p><div class="informalexample"><pre class="programlisting">  Content-Type: application/json
+    
+   [
+     {
+      "userId": 1,
+      "id": 1,
+      "title": "..",
+      "body": "..."
+     },...
+   ]</pre></div><p>To test our client we <a id="id458" class="indexterm"/>will take advantage of <code class="literal">JSONPlaceHolder</code> (<a class="ulink" href="http://jsonplaceholder.typicode.com/">http://jsonplaceholder.typicode.com/</a>), a fake online REST<a id="id459" class="indexterm"/> API for testing and prototyping.</p><p>Before we try to access it, let's define the <code class="literal">User</code> POJO class that we will use in our example:</p><div class="informalexample"><pre class="programlisting">public class User {
+  public int id;
+  public String name;
+  public String username;
+  public String email;
+  public String phone;
+  public String website;
+}</pre></div><p>And we will define a POJO class for the <code class="literal">failure</code> function:</p><div class="informalexample"><pre class="programlisting">public class Error {
+  public int resultCode;
+  public String resultMessage;
+}</pre></div><p>To display the models returned from the fake API, we'll create a new <code class="literal">UserListActivity</code> that will implement <code class="literal">JSONResponseHandler</code> and display the name and the e-mail of all the users <a id="id460" class="indexterm"/>with the JSON document returned from <a class="ulink" href="http://jsonplaceholder.typicode.com/users">http://jsonplaceholder.typicode.com/users</a>.</p><p>Let's start by defining the <code class="literal">JsonResponseHandler&lt;List&lt;User&gt;,Error&gt;</code> anonymous class that receives a list of users as an argument , <code class="literal">List&lt;User&gt;</code>, for the success callback and an <code class="literal">Error</code> object as<a id="id461" class="indexterm"/> the argument for the failure callback.</p><p>
+<code class="literal">onSuccess(List&lt;User&gt;)</code> will update a <code class="literal">ListView</code> that displays the name followed by the e-mail:</p><div class="informalexample"><pre class="programlisting">JsonResponseHandler&lt;List&lt;User&gt;, Error&gt; jsonResponseHandler =
+  new JsonResponseHandler&lt;List&lt;User&gt;, Error&gt;(
+    new TypeToken&lt;ArrayList&lt;User&gt;&gt;() {} .getType(),
+    new TypeToken&lt;Error&gt;() {} .getType()) {
+      // On Success Callback
+      @Override
+      public void onSuccess(List&lt;User&gt; users) {
+        // Update the List View with the a List Adapter that displays
+        // the user name and email per user
+        ListView listView = (ListView) findViewById(R.id.usersList);
+        ListAdapter adapter = new UserListAdapter(
+          UserListActivity.this, users);
+        listView.setAdapter(adapter);
+      }
+      // Prints the Error object
+      @Override
+      public void onFailure(Error response) {
+        Log.e("UserListActivity",
+              "Error happened retrieving greetings " +
+              response.toString());
+      }
+      @Override
+      public void onError(Throwable error) {
+      // Do Something with the exception
+      }
+    };</pre></div><p>All that remains is to write the Activity's <code class="literal">onCreate</code> function that builds up the HTTP Request and dispatches the request, GET /users, to the <code class="literal">JSONPlaceHolder</code> API:</p><div class="informalexample"><pre class="programlisting">@Override
+protected void onCreate(Bundle savedInstanceState) {
+  super.onCreate(savedInstanceState);
+  setContentView(R.layout.user_list_layout);
+
+  HTTPRequest.Builder builder = new HTTPRequest.Builder();
+  // Set the HTTP Verb to GET
+  builder.setVerb(HTTPRequest.Verb.GET);
+  // Sets location of the remote resource
+  builder.setUrl("http://jsonplaceholder.typicode.com/users");
+  
+  // Notify the server that the client is able to receive json
+  // documents
+  builder.addHeader(new Header("Accept","application/json"));
+  HTTPRequest request = builder.build();
+
+  PacktAsyncHTTPClient client = new PacktAsyncHTTPClient();
+  client.execute(request, jsonResponseHandler);
+}</pre></div><p>When the server sends back a response to our request, the <code class="literal">JSONResponseHandler</code> object will decode the JSON document with a list of 10 users and convert the document to a <code class="literal">List&lt;User&gt;</code> object.</p><p>The JSON data<a id="id462" class="indexterm"/> exchange format has predominantly been used on most recent APIs and web services deployed on the Internet because of its simplicity, readability, compactness, and lack of data structure rigidity.</p><p>However, XML-based remote web services, mainly based on the SOA data exchange protocol, are still around to cover advanced use cases where we want to have stricter data model schema validation and modelling, built-in namespace support, and advanced information extraction tools.</p><p>XML-based APIs have lost some traction in the industry, although the XML-based APIs are still common, so in the next section we will extend our toolkit to support the encoding and decoding of XML content on our HTTP requests.</p></div></div><div class="section" title="Interacting with XML web APIs"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec64"/>Interacting with XML web APIs</h2></div></div></div><p>Over the last 10 years, XML message-based <a id="id463" class="indexterm"/>APIs have been successfully used to exchange data (SOAP) and run<a id="id464" class="indexterm"/> remote procedures (XML-RPC) between applications and remote servers. Moreover, nowadays, some REST APIs are built with JSON and XML support, so it's up to the developer to decide whether they want to interact with the API using XML or JSON documents.</p><p>With this in mind, we will extend our toolkit to exchange XML messages in order to communicate with the remote server.</p><p>In the preceding<a id="id465" class="indexterm"/> sections, we implemented a <code class="literal">ResponseHandler</code> to decode JSON documents sent on the HTTP body, but now we want to go further and add support for sending XML documents on the HTTP Request.</p><p>If we go back into our <code class="literal">HTTPAsyncTask</code> details, the code required to support body transmissions on the request was lacking; therefore, this is the perfect time to rewrite the code to carry an entity body on the HTTP request:</p><div class="informalexample"><pre class="programlisting">@Override
+protected Result&lt;HTTPResponse&gt; doInBackground(HTTPRequest... params) {
+  ...
+  if ( request.mBody != null ) {
+    // Allows Sending data on the request
+    conn.setDoOutput(true);
+    // Specifies The Content-Type based on the Body Mime Type
+    conn.setRequestProperty(
+      "Content-type", request.mBody.getMimeType());
+    // Retrieves the connection stream to write content
+    OutputStream os = conn.getOutputStream();
+    request.mBody.write(os);
+  }
+  // Retrieve the response code
+  int responseCode = conn.getResponseCode();
+  ...
+}</pre></div><p>In the preceding code, when<a id="id466" class="indexterm"/> a body is available on the <code class="literal">HTTPRequest</code> object and before we try to read the <code class="literal">responseCode</code> of the response status line, we retrieve the output stream from the <code class="literal">HttpURLConnection</code> and we write the content stored on the <code class="literal">Body</code> object.</p><p>Apart from the data written, the header <code class="literal">Context-Type</code> is set on the HTTP request header section based on the body's mimetype.</p><p>Now, we are ready<a id="id467" class="indexterm"/> to send and receive entity bodies on the HTTP request and response respectively, so now we can start to work on our XML implementation example.</p><p>In the next <a id="id468" class="indexterm"/>paragraphs, and following the JSON section, we will write the code to serialize an API Request into an XML document and the code to de-serialize XML documents, received on response, to an API Response object.</p><div class="section" title="Converting Java objects to XML"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec11"/>Converting Java objects to XML</h3></div></div></div><p>To de-serialize<a id="id469" class="indexterm"/> and serialize from Java objects to XML and vice-versa, we will use the open source library SimpleXML (<a class="ulink" href="http://simple.sourceforge.net/">http://simple.sourceforge.net/</a>); therefore, to make use of it, please add this library to <a id="id470" class="indexterm"/>your application list of external dependencies.</p><p>If you use Android Studio, here is the content to add to your <code class="literal">build.gradle</code> list of dependencies:</p><div class="informalexample"><pre class="programlisting">dependencies {
+  ...
+  compile('org.simpleframework:simple-xml:2.7.+'){
+        exclude module: 'stax'
+        exclude module: 'stax-api'
+        exclude module: 'xpp3'
+  }
+}</pre></div><p>With the <code class="literal">User</code> model defined previously we will build up a <code class="literal">APIRequest</code> named <code class="literal">GetUserInfo</code> that will get the user details (<code class="literal">GetUserInfoResponse</code>) for the user identifier submitted in the request.</p><p>To describe this further, let's define the API Request POJO objects:</p><div class="informalexample"><pre class="programlisting">@Root(name = "GetUserInfo")
+@Namespace(prefix="p", 
+  reference="https://www.packtpub.com/asynchronous_android")
+public class GetUserInfo {
+
+    @Namespace(reference=
+      "https://www.packtpub.com/asynchronous_android")
+    @Element(name="UserId")
+    public String userId;
+         // … Setters and Getters
+}</pre></div><p>And let's define the API Response POJO object:</p><div class="informalexample"><pre class="programlisting">@Root
+@Namespace(prefix = "p",
+  reference = "https://www.packtpub.com/asynchronous_android")
+public class GetUserInfoResponse {
+
+  @Element(name = "User")
+  @Namespace(prefix = "p", 
+    reference = "https://www.packtpub.com/asynchronous_android" )
+  private User user = new User();
+  // … Setters and Getters
+}</pre></div><p>The annotation<a id="id471" class="indexterm"/> for the other classes, <code class="literal">User</code>, <code class="literal">Address</code>, and <code class="literal">Company</code>, are quite similar to the ones above, with all the elements referring to the <code class="literal">https://www.packtpub.com/asynchronous_android</code> namespace, hence we will omit the POJO changes for brevity.</p><p>With the mapping between the Java objects and XML Request and response message finished, let's start to work on the code that converts the <code class="literal">GetUserInfo</code> object into an XML document.</p><p>To encode an XML document from a Java object, we will subclass this generic interface to encode a POJO generic type into an XML document with the help of SimpleXML:</p><div class="informalexample"><pre class="programlisting">public class XMLConverter&lt;POJO&gt;
+  implements Encoder&lt;POJO&gt;{
+
+  private final Class&lt;POJO&gt; clazz;
+  XMLConverter(Class&lt;POJO&gt; clazz){ this.clazz = clazz; }
+
+  @Override
+  public Body encode(POJO obj, String mimeType)
+    throws Exception {
+    
+    // Creates SimpleXML Serializer Instance
+    Serializer serializer = new Persister();
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    
+    // Converts from obj -&gt; xml document
+    serializer.write(obj, output);
+    
+    // Build a RawBody body
+    RawBody body = new RawBody(mimeType);
+    output.close();
+   
+    // Stores the result on the body
+    body.setContent(output.toByteArray());
+    return body;
+  }
+}</pre></div></div><div class="section" title="Converting XML to Java objects"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec12"/>Converting XML to Java objects</h3></div></div></div><p>To decode an <a id="id472" class="indexterm"/>XML document to a Java POJO object we will add the <code class="literal">BodyDecoder&lt;POJO&gt;</code> to the <code class="literal">XMLConverter</code> class definition interface and write the code to convert the XML document to a POJO generic class with the help of the SimpleXML library:</p><div class="informalexample"><pre class="programlisting">public class XMLConverter&lt;POJO&gt;
+  implements BodyEncoder&lt;POJO&gt;, BodyDecoder&lt;POJO&gt; {
+  
+  ...
+  @Override
+  public POJO decode(Body body) throws Exception {
+    // Instantiate a SimpleXML Serializer
+    Serializer serializer = new Persister();
+    InputStream is = null;
+    RawBody rawBody = (RawBody)body;
+    POJO obj = null;
+    try {
+      is = new ByteArrayInputStream(rawBody.getContent());
+      BufferedReader bfReader =
+        new BufferedReader(new InputStreamReader(is));
+      obj = (POJO) serializer.read(clazz, bfReader);
+    } finally {
+      if ( is != null ) is.close();
+    }
+    return obj;
+  }
+  ...
+}</pre></div><p>With the XML serialization and deserialization already in place, let's start to write the activity that will retrieve the user information from a remote server using the <code class="literal">GetUserInfo</code> and <code class="literal">GetUserInfoResponse</code> defined above and display the user information on a UI.</p><p>To test our client, we will create a fake XML WebService with the help of the mockable <a class="ulink" href="https://www.mockable.io/">https://www.mockable.io/</a> web <a id="id473" class="indexterm"/>application. This web application allows us to create configurable REST APIs that return a static JSON or XML document as a response to the clients, so this tool will be extremely helpful to test our client in a controlled environment.</p><p>Our fake HTTP API will return the<a id="id474" class="indexterm"/> following XML document when any HTTP request is sent to the following URI, <a class="ulink" href="http://demo1472539.mockable.io/GetUserInfo">http://demo1472539.mockable.io/GetUserInfo</a>:</p><div class="informalexample"><pre class="programlisting">&lt;?xml version="1.0"  ?&gt;
+&lt;p:GetUserInfoResponse
+   &gt;
+ &lt;p:User&gt;
+   &lt;p:Id&gt;12&lt;/p:Id&gt;
+   &lt;p:Name&gt;John&lt;/p:Name&gt;
+   &lt;p:Username&gt;John&lt;/p:Username&gt;
+   ...
+   &lt;p:Company&gt;
+        &lt;p:Name&gt;Packt&lt;/p:Name&gt;
+        ...
+    &lt;/p:Company&gt;
+  &lt;/p:User&gt;
+  &lt;/p:GetUserInfoResponse&gt;</pre></div><p>In order to <a id="id475" class="indexterm"/>convert the <code class="literal">HTTPResponse</code> objects received by the <code class="literal">onSuccess(HTTPRequest)</code> and <code class="literal">onFailure(HTTPResponse)</code> callbacks to domain models, we will have to subclass the <code class="literal">ResponseHandler</code> abstract <a id="id476" class="indexterm"/>class and create the code to de-serialize a generic POJO class:</p><div class="informalexample"><pre class="programlisting">public abstract class XMLResponseHandler
+   &lt;Response, Error&gt; extends ResponseHandler {
+  
+  // Class used to by Simple to convert to the ResponseTYpe
+  private final Class&lt;Response&gt; responseClass;
+
+  private final Class&lt;Error&gt; errorClass;
+
+  XMLResponseHandler(Class&lt;Response&gt; responseClass,
+                     Class&lt;Error&gt; errorClass) {
+    this.responseClass = responseClass;
+    this.errorClass = errorClass;
+  }
+
+  // Callback invoked with the converted Response  object instance
+  abstract public void onSuccess(Response response);
+
+  // Callback invoked with the converted Error object instance
+  abstract public void onFailure(Error response);
+ 
+  // Convert the body to a POJO object using the our converter
+  @Override
+  public void onSuccess(HTTPResponse response) {
+    RawBody body = (RawBody)response.mBody;
+
+    if ( body != null ) {
+      Response obj = null;
+      try {
+        obj = new XMLConverter&lt;Response&gt;(responseClass)
+        decode(body);
+        onSuccess(obj);
+      } catch (Exception e) {
+        onError(e);
+      }
+    } else { onSuccess((Response)null); }
+  }
+ //.. Failure elided for brevity
+}</pre></div><p>Now we are ready to collect the <code class="literal">GetUserInfoResponse</code> dispatched from our fake server, so let's implement, on our Activity, an anonymous inner <code class="literal">XMLResponseHandler</code> subclass that will update the UI with user details:</p><div class="informalexample"><pre class="programlisting">XMLResponseHandler&lt;GetUserInfoResponse, Error&gt; xmlResponseHandler
+  = new XMLResponseHandler&lt;GetUserInfoResponse,Error&gt;(
+      GetUserInfoResponse.class, Error.class) {
+
+  // Updates the UI with the user details
+  @Override
+  public void onSuccess(GetUserInfoResponse getUserInfoResponse) {
+    TextView nameTv = (TextView)findViewById(R.id.nameValue);
+    TextView emailTv = (TextView)findViewById(R.id.emailValue);
+    
+    nameTv.setText(getUserInfoResponse.getUser().name);
+    emailTv.setText(getUserInfoResponse.getUser().email);
+    
+  }
+  @Override
+  public void onFailure(Error response) {
+    // Do Something with the Error 
+  }
+  @Override
+  public void onError(Throwable error) {
+    // Do Something with the Throwable
+  }
+};</pre></div><p>To finish our <code class="literal">Activity</code>, we will have to build the request and ask our asynchronous client to<a id="id477" class="indexterm"/> execute our demand in the background with the help of the <code class="literal">HTTPAsyncTask</code> class:</p><div class="informalexample"><pre class="programlisting">HTTPRequest.Builder builder = new HTTPRequest.Builder();
+// Set the HTTP POST Verb
+builder.setVerb(HTTPRequest.Verb.POST);
+
+// Set location of the remote resource
+builder.setUrl("http://demo1472539.mockable.io/GetUserInfo");
+
+// Tell the Server that you are able to consume 
+// application/xml contents on the response
+builder.addHeader(new Header("Accept", "application/xml"));
+
+// Build the Request Body object
+GetUserInfo query = new GetUserInfo();
+query.setUserId("123");
+try {
+  // Encode the POJO into a XML Document
+  Body body = new XMLConverter&lt;GetUserInfo&gt;(GetUserInfo.class)
+                .encode(query, "application/xml");
+  builder.setBody(body);
+} catch (Exception e) {
+  // Catch and display and error to the user
+  ...
+}
+PacktAsyncHTTPClient client = new PacktAsyncHTTPClient();
+client.execute(builder.build(), xmlResponseHandler);</pre></div><p>Once the response is returned from the fake server, the UI will be updated to show the user name, e-mail, and other properties, based on the XML specified on the fake endpoint.</p><p>Nothing is mentioned about the error flow; however, I will challenge you to create a fake endpoint that returns an error object to exercise the <code class="literal">onError</code> callback. The full source code with<a id="id478" class="indexterm"/> the error flow is available to download from the Packt Publishing website. Take a look at it to appreciate how error handling is implemented. The error XML document might be something similar to this:</p><div class="informalexample"><pre class="programlisting">&lt;?xml version="1.0"?&gt;
+&lt;p:Error   
+   &gt;
+ &lt;p:ResultCode&gt;1000&lt;/p:ResultCode&gt;
+ &lt;p:ResultMessage&gt;The LDAP Server is down&lt;/p:ResultMessage&gt;
+&lt;/p:Error&gt;</pre></div><p>So far, we have covered most common formats (Text, XML, and JSON) used in the industry to exchange data between HTTP clients and servers. Each of these formats has its own strengths; however, for its compactness and simplicity (easy parsing, syntax, and so on), the JSON format has been widely adopted by API designers, electronics manufacturers, and <span class="strong"><strong>Software as a Service</strong></span> (<span class="strong"><strong>SaaS</strong></span>) vendors.</p><p>During this process, we <a id="id479" class="indexterm"/>will build up a core framework that could be easily extended to support different data exchange formats, such as YAML or binary protocols. Therefore, you might write your own <code class="literal">BodyEncoder</code>, <code class="literal">BodyDecoder</code>, and <code class="literal">ResponseHandler</code> to fit a standard data format or even your own data format.</p><p>In this section, we will introduce<a id="id480" class="indexterm"/> the reader to a set of timeouts available on the <code class="literal">HttpUrlConnection</code> used to accommodate network delays on the request execution.</p></div></div></div>
+<div class="section" title="Customizing HTTP timeouts"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec63"/>Customizing HTTP timeouts</h1></div></div></div><p>When <code class="literal">HttpUrlConnection</code> connects, reads, or<a id="id481" class="indexterm"/> writes content over a low bandwidth network (2G, 3G, and so on), the exposure to unpredictable communication delays can not be avoided. Moreover, apart from the mobile network delays, the HTTP servers might introduce significant response delays (server latency) when they are experiencing high volumes of traffic.</p><p>Although the default timeout values used by the the <code class="literal">HttpUrlConnection</code> are long enough to cope with these delays, there are some special use cases where you might want to customize the default values according to your needs. For example, when on the way to the application server, the HTTP request travels through some proxies.</p><p>
+<code class="literal">HttpUrlConnection</code> offers us two member methods that can be used to change the default timeouts:</p><div class="informalexample"><pre class="programlisting">void setConnectTimeout(int timeoutMillis)
+void setReadTimeout(int timeoutMillis)</pre></div><p>
+<code class="literal">setConnectTimeout(int)</code> is able to redefine the maximum time in milliseconds that our client is allowed to wait until the TCP connection to the remote host is established (server is down). <code class="literal">ConnectTimeoutException</code> will be thrown whenever the connection fails, for example, if the server is down or is not able to respond in time due to lack of resources, so you should be careful and handle this exception cleanly in your code.</p><p>When the hostname resolves into multiple addresses, the client will try to connect one after the other and the timeout will be applicable multiple times. If the timeout is set to <code class="literal">0</code>, the connection will be blocked until the TCP timeout expires, which on Android is normally several minutes.</p><p>
+<code class="literal">setReadTimeout(int)</code> defines the maximum time that our client is allowed to be blocked on the read operation until any available data is allowed to be read. The default value <code class="literal">0</code> will block the read operation indefinitely until data becomes available, the connection is dropped by the remote peer, or an error occurs on the socket. When the timeout is longer than <code class="literal">0</code> and no data is available when the timeout expires, a <code class="literal">SocketTimeoutException</code> will be thrown.</p><p>Now that we understand the meaning of each timeout, let's update our <code class="literal">HTTPRequest.Builder</code> with some new setter methods:</p><div class="informalexample"><pre class="programlisting">public class HTTPRequest {
+  ...
+  public static class Builder {
+
+    private int mReadTimeout = 0; // Default Value
+    private int mConnectTimeout = 0; // Default Value
+
+    public void setConnectTimeout(int connectTimeoutMs) {
+      this.mConnectTimeout = connectTimeoutMs;
+    }
+    public void setReadTimeout(int readTimeoutMs) {
+      this.mReadTimeout = readTimeoutMs;
+    }
+  }
+}</pre></div><p>Finally, we have to update <code class="literal">HTTPAsyncTask</code> to set the timeouts specified on the <code class="literal">HTTPRequest</code>, on the <code class="literal">HttpURLConnection</code> object used to connect to the remote server:</p><div class="informalexample"><pre class="programlisting">public class HTTPAsyncTask extends 
+  AsyncTask&lt;HTTPRequest, Void, Result&lt;HTTPResponse&gt;&gt; {
+   @Override
+   protected Result&lt;HTTPResponse&gt; doInBackground(
+    HTTPRequest... params) {    
+      conn = (HttpURLConnection) url.openConnection();
+      conn.setReadTimeout(request.mReadTimeout);
+      conn.setConnectTimeout(request.mConnectTimeout);
+      ...
+  }
+}</pre></div><p>It's highly recommended that you test your customized timeouts under several network latency levels and take into account the time that your server could defer the response for a couple of seconds when it is under load.</p><p>A typical network delay<a id="id482" class="indexterm"/> could go from 80-120 ms on an LTE mobile network to 150-550 ms on a GPRS mobile network</p><p>When you run your application on the Internet and you have to deal with sensitive data, such as personal information, payment information, or business documentation, it is really important to protect your communication channels with a security layer that hides the exchanged data from an<a id="id483" class="indexterm"/> outside attacker or avoids any spoofing attacks. In the next section, we will expand our high-level client to support a secure SSL connection channel to the remote server.</p></div>
+<div class="section" title="Communicating securely over SSL sessions"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec64"/>Communicating securely over SSL sessions</h1></div></div></div><p>So far, we have been<a id="id484" class="indexterm"/> using plain connections to communicate with a remote HTTP server. Despite the fact that these kinds of connections might fit your application requirements when the data exchanged is not sensitive, there are use cases where we must use a secure channel to send or receive, preventing any third party from reading or changing the data exchanged on the network.</p><p>In order to setup an <a id="id485" class="indexterm"/>SSL session with a remote server, our client, with the help of some cryptographic tools, will create a cryptographic communication channel where all the data is encrypted with a symmetric cipher that uses a secret key exchanged during the secure connection handshake. Apart from that, the content received and encrypted with a previously exchanged secret key is validated against other peer public keys to prove that the data is coming and signed from the right source.</p><p>During the connection establishment, as part of the SSL handshake, the server has to prove that it holds a private key for a trusted certificate. A trusted certificate is a certificate that is available from our list<a id="id486" class="indexterm"/> of trusted <span class="strong"><strong>Certificate Authorities</strong></span> (<span class="strong"><strong>CA</strong></span>s) or it was signed by one of the certificates available from your trusted CAs.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note49"/>Note</h3><p>The Android platform comes out-of-the-box with a list of well-known trusted CAs that help us to assure the identity of most servers on the Internet.</p></div></div><p>Therefore, when we are contacting to a server with a certificate signed by a well-known CA, the code used before to create an HTTPS connection does not require any changes:</p><div class="informalexample"><pre class="programlisting">URL url = new URL("https://packtpub.com");
+con = (HttpsURLConnection) url.openConnection();</pre></div><p>This code example will create an SSL connection using the default cryptographic cipher suite specified on the Android platform and validate the server against the platform CAs.</p><p>Although this can<a id="id487" class="indexterm"/> work in most of the cases, it might be necessary to use a specific CA, a list of trusted certificates, or only the safest ciphersuite (TLSv1)i In the<a id="id488" class="indexterm"/> cases where the developer has to build their own <code class="literal">SSLContext</code> and specify their own <code class="literal">TrustManagers</code> and <code class="literal">KeyManagers</code> in order to connect successfully to the remote server.</p><p>In the next paragraphs we are going to extend our client to use private keys and CAs stored on Java keystores in order to <a id="id489" class="indexterm"/>validate and communicate with a server of which the <span class="strong"><strong>Certificate authority</strong></span> (<span class="strong"><strong>CA</strong></span>) is managed by us.</p><p>First of all, we will create an <code class="literal">SSLOptions</code> class where we define the cipher suite that we want to use in our SSL session:</p><div class="informalexample"><pre class="programlisting">public class SSLOptions {
+
+  enum CipherSuite {
+    DEFAULT("Default"), // Supported on Android API Level &gt; 9
+    SSL("SSL"), // Supported on Android API Level &gt; 9
+    SSLv3("SSLv3"), // Supported on Android API Level &gt; 9
+    TLS("TLS"), // Supported on Android API Level &gt; 1
+    TLSv1("TLSv1"), // Supported on Android API Level &gt; 1+
+    TLSv1_1("TLSv1.1"), // Supported on Android API Level &gt; 16+
+    TLSv1_2("TLSv1.2"); // Supported on Android API Level &gt; 16+
+ ...
+  }
+  // Cipher Suite used on the connection
+  final CipherSuite cipherSuite; 
+  final SSLContext sslContext;
+ 
+  public SSLOptions(Context ctx, Builder builder)
+    throws Exception {
+    ...
+    // Build up our own SSLContext
+    sslContext = SSLContext.
+    getInstance(cipherSuite.toString());
+<span class="strong"><strong>    // Will use the Android default KeyManager and TrustManager</strong></span>
+    sslContext.init(null,null,new SecureRandom());
+  }  
+
+  public static class Builder {   
+    private CipherSuite cipherSuite = CipherSuite.DEFAULT;
+    ...         
+    SSLOptions build(Context ctx) throws Exception {
+      return new SSLOptions(ctx, this);
+    }
+  }
+}</pre></div><p>With the preceding <a id="id490" class="indexterm"/>code we are able the control the cipher suite used by our <code class="literal">SSLContext</code>; however, in order to use our own private key, certificates, and trusted CAs, we will have to initialize the <code class="literal">SSLContext</code> with our own <code class="literal">TrustManager</code> and <code class="literal">KeyManager</code>:</p><div class="informalexample"><pre class="programlisting">void init(KeyManager[] km, TrustManager[] tm, SecureRandom sr)</pre></div><p>For simplicity, we will load our <code class="literal">KeyManagers</code> and <code class="literal">TrustManager</code> from a keystore file stored on the application assets directory. The Java keystore is available on the Packt Publishing website. So, before we go any further, download the <code class="literal">asynchronous_client.ks</code> file from the Packt website with a ready-to-use private key, a certificate, and the custom CA certificate that signed the certificate as the trusted Authority.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note50"/>Note</h3><p>Notice that you can build your own <code class="literal">TrustManager</code> and <code class="literal">KeyManager</code> custom subclass that can load the private key and the certificates from a different source but for simplicity we will load them from a file.</p></div></div><p>Let's take a look at our <code class="literal">asynchronous_client.ks java</code> keystore file with the help of the keytool application.</p><p>On the command line, please run the following command to list the content of the keystore:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>keytool -list -v -keystore asynchronous_client.ks -storetype BKS provider org.bouncycastle.jce.provider.BouncyCastleProvider providerpath bcprov-jdk15on-146.jar</strong></span>
+
+Alias name: <span class="strong"><strong>asynchronous_client</strong></span>
+Entry type: <span class="strong"><strong>PrivateKeyEntry</strong></span>
+Certificate[1]:
+Owner: C=UK,ST=Birmingham,L=Birmingham,O=Packt Publishing,OU=Packt Publishing,CN=asynchronous_client
+Issuer: C=UK,…,CN=packt
+Certificate[2]:
+Owner: C=UK,…,CN=packt
+
+Alias name: <span class="strong"><strong>ca</strong></span>
+Entry type: <span class="strong"><strong>trustedCertEntry</strong></span>
+Owner: C=UK,…,CN=packt
+Issuer: C=UK,…,CN=packt</pre></div><p>Our keystore file, which will act as the trusted store file and keystore file, has a public and private key named <code class="literal">asynchronous_client</code> and a trusted CA named ca. The keytool requires the Bouncy Castle Provider JAR to read the the file contents, so before, please download the file from the Packt website.</p><p>Notice that since we have <code class="literal">C=UK</code>, <code class="literal">ST=Birmingham</code>, <code class="literal">L=Birmingham</code>, <code class="literal">O=Packt Publishing</code>, and <code class="literal">CN=packt</code> as a trusted CA, we will allow our HTTP to <a id="id491" class="indexterm"/>connect with SSL endpoints that present a certificate signed by this authority or a certificate where all intermediate certificates are trustworthy (a trusted certificate chain).</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note51"/>Note</h3><p>Every Android device comes with a pre-installed list of trusted certificates that can be used to authenticate a secure remote peer.</p></div></div><p>Now that we know the details about our keystore and truststore, let's update our SSL options to load the <code class="literal">KeyManager</code> and <code class="literal">TrustManager</code> from the <code class="literal">asynchronous_client.ks</code>:</p><div class="informalexample"><pre class="programlisting">public class SSLOptions {
+  final CipherSuite cipherSuite; 
+  final SSLContext sslContext;
+  private final  String keyStore;
+  private final String keyStorePassword;
+  private final String trustStore;
+  private final String trustStorePassword;
+  ...
+
+  public SSLOptions(Context ctx, Builder builder)
+    throws Exception {
+    ...
+    sslContext = initSSLContext(ctx);
+  }
+  // Initialize the SSLContect with loaded 
+  private SSLContext initSSLContext(Context ctx)
+    throws Exception {
+
+    KeyManagerFactory kmf = getKeyManagerFactory(ctx);
+    TrustManagerFactory tmf = getTrustManagerFactory(ctx);
+    // Use the cipher suite defined SSL, SSLv3 , TLS, TLSv1,
+    SSLContext result = SSLContext.getInstance(
+                          cipherSuite.toString());
+
+    result.init( kmf != null ? kmf.getKeyManagers() : null ,
+                 tmf != null ? tmf.getTrustManagers() : null,
+                 new SecureRandom());
+    return result;
+  }
+}</pre></div><p>Notice that <a id="id492" class="indexterm"/>we initialize SSLContext using the Keymanager list and <code class="literal">TrustManager</code> list returned by <code class="literal">KeyManagerFactory</code> and <code class="literal">TrustManagerFactory</code> respectively. Hence, the next step is to write the code member method to acquire our factories. So, let's start with the <code class="literal">getKeyManagerFactory</code>:</p><div class="informalexample"><pre class="programlisting">KeyManagerFactory getKeyManagerFactory(Context ctx)
+  throws Exception {
+  KeyManagerFactory kmf = null;
+  // Initialize Key store
+  if ( keyStore != null ) {
+    // Load the file keystore from the assets directory
+    InputStream keyStoreIs = ctx.getResources().
+                              getAssets().open(keyStore);
+    String algorithm = KeyManagerFactory.getDefaultAlgorithm();
+    kmf = KeyManagerFactory.getInstance(algorithm);
+    
+    // Create BouncyCastle Key Store 
+    KeyStore ks = KeyStore.getInstance("BKS");
+    
+    // Load the Keymanagers available on the file using
+    // a password
+    ks.load(keyStoreIs, keyStorePassword.toCharArray());
+    kmf.init(ks, keyStorePassword.toCharArray());
+  }
+  return kmf;
+}</pre></div><p>The previous code <a id="id493" class="indexterm"/>will load up a public and private key from a BCS keystore that we previously prepared. So, all that remains is the <code class="literal">getTrustManagerFactory</code> function used to load our trusted CA:</p><div class="informalexample"><pre class="programlisting">TrustManagerFactory getTrustManagerFactory(Context ctx)
+  throws Exception {
+
+  TrustManagerFactory tmf = null;
+  
+  if ( trustStore != null) {
+    InputStream keyStoreIs = ctx.getResources().
+                               getAssets().open(trustStore);
+    String algorithm = TrustManagerFactory.getDefaultAlgorithm();
+    tmf = TrustManagerFactory.getInstance(algorithm);
+    KeyStore ts = KeyStore.getInstance("BKS");
+    ts.load(keyStoreIs, trustStorePassword.toCharArray());
+    tmf.init(ts);
+  }
+  return tmf;
+}</pre></div><p>Now that we have the <code class="literal">SSLOptions</code> class to initialize our <code class="literal">SSLContext</code>, let's move on to the <code class="literal">HTTPRequest</code> and update our <code class="literal">Builder</code> to store the <code class="literal">SSLOptions</code>:</p><div class="informalexample"><pre class="programlisting">public class HTTPRequest {
+
+  final SSLOptions mSSLOptions;
+
+  private HTTPRequest(Builder builder) {
+    this.mSSLOptions = builder.mSSLOptions;
+  }
+  
+  public static class Builder {
+    ...
+    private SSLOptions mSSLOptions = null;
+     
+    public Builder setSSLOptions(SSLOptions options) {
+      this.mSSLOptions = options;
+      return this;
+    }
+  }
+  ...
+}</pre></div><p>Finally, we are<a id="id494" class="indexterm"/> ready to update our <code class="literal">HTTPAsyncTask</code> to use our <code class="literal">SSLOptions</code> object in order to customize our SSL client endpoint. Hence, we will be able to verify the identity of our server that has a certificate signed by our own CA (<code class="literal">C=UK</code>, <code class="literal">ST=Birmingham</code>, <code class="literal">L=Birmingham</code>, <code class="literal">O=Packt Publishing</code>, <code class="literal">CN=packt</code>) and vice-versa:</p><div class="informalexample"><pre class="programlisting">@Override
+protected Result&lt;HTTPResponse&gt;
+doInBackground(HTTPRequest... params) {
+  // Retrieve the request URL from the request object
+  URL url = new URL(request.mUrl);
+  // Opens up the connection to the remote pper
+  conn = initConnection(request, url);
+  ...
+}
+
+HttpURLConnection 
+initConnection( HTTPRequest request, URL url) throws IOException {
+
+  HttpURLConnection genCon = (HttpURLConnection) url.
+                             openConnection();
+ 
+  if ( url.getProtocol().equals("https") ) {
+    HttpsURLConnection con = (HttpsURLConnection) genCon;
+    // Apply our SSL Options to the connection
+    if ( request.mSSLOptions != null ) {
+      applySSLContext(request, con);
+    }
+  }
+  return result;
+}
+void 
+applySSLContext(HTTPRequest request, HttpsURLConnection con) {
+<span class="strong"><strong>  // Initialize the SSL Session with your own</strong></span>
+<span class="strong"><strong>  // keystore and truststore</strong></span>
+  if ( request.mSSLOptions != null ) {
+    SSLContext ctx = request.mSSLOptions.sslContext;
+    con.setSSLSocketFactory(ctx.getSocketFactory());
+    con.setHostnameVerifier(new AcceptAllHostNameVerifier());
+  }
+}</pre></div><p>Notice that our implementation does not perform hostname verification, because the server CN might not match the server hostname used to contact the HTTP server.</p><p>However, if you want to <a id="id495" class="indexterm"/>be stricter about this, change the <code class="literal">setHostnameVerifier</code> line to use the default behavior, implement your own <code class="literal">HostnameVerifier</code>, or use the hostname verifiers available on the Android SDK, such as the Apache <code class="literal">X509HostnameVerifier</code> that checks whether the supplied hostname matches any of the supplied certificate CNs or Subject-Alts.</p><p>Finally, let's illustrate how to use our client to connect to a server that possesses a certificate with the following certificate chain:</p><div class="informalexample"><pre class="programlisting">// Server Certificate
+Certificate[1]:
+Owner: CN=asynchronous_server, OU=Packt Publishing, O=Packt Publishing, L=Birmingham, ST=Birmingham, C=UK
+Issuer: CN=packt, ..., C=UK
+
+// CA Certificate
+Certificate[2]:
+Owner: CN=packt, OU=Packt Publishing, O=Packt Publishing, L=Birmingham, ST=Birmingham, C=UK
+Issuer: CN=packt, …, C=UK</pre></div><p>The following code shows how to establish an SSL session with a URL where the protocol is <code class="literal">https</code>:</p><div class="informalexample"><pre class="programlisting">// Set the HTTP Verb to GET
+builder.setVerb(HTTPRequest.Verb.GET);
+// Sets location of the remote resource
+builder.setUrl("https://&lt;server_hostname&gt;:&lt;port&gt;/hello_ssl");
+builder.addHeader(new Header("Accept", "text/plain"));
+SSLOptions.Builder sslBuilder = new SSLOptions.Builder();
+
+// TLS Cipher Suite using the  asynchronous_client.ks 
+// as the truststore file and keystore file 
+sslBuilder.setKeyStore("asynchronous_client.ks", "123qwe")
+          .setTrustStore("asynchronous_client.ks", "123qwe")
+          .setCipherSuite(SSLOptions.CipherSuite.TLS);
+
+// The Application context is required to load
+// the keystore from the assets
+builder.setSSLOptions(sslBuilder.build(getApplication()));
+
+HTTPRequest request = builder.build();
+
+PacktAsyncHTTPClient client = new PacktAsyncHTTPClient();
+client.execute(request, textResponseHandler);</pre></div><p>If the SSL <a id="id496" class="indexterm"/>handshake between the peers finishes with success, the server verifies our identity and our client verifies the server's identity. As a result, a cryptographic channel is opened between both entities keeping the data hidden from third-party intruders.</p></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec65"/>Summary</h1></div></div></div><p>In this chapter, we explored in detail the <code class="literal">HttpUrlConnection</code> Android HTTP client and we built a basic and expandable asynchronous client to interact with HTTP web APIs.</p><p>In the first section, we exposed the main differences between the <code class="literal">HttpUrlConnection</code> client and the deprecated Apache HTTP client available on pre-Marshmallow SDKs.</p><p>Next, we wrote the core classes and callback interfaces for our asynchronous client and we expanded our high-level client to interact with JSON and Web APIs. Additionally, we built the code to convert from our Java models to a JSON or an XML document.</p><p>Later, we learned how to configure the HTTP timeouts and to set up secure communications that are able to use our own signed certificates, keys, and CAs. In our example, we created and prepared an SSL context to be used to establish a secure channel based on a prepared Java secure keystore.</p><p>In the next chapter, we will introduce and explore the <span class="strong"><strong>JNI</strong></span> (<span class="strong"><strong>Java Native Interface</strong></span>) to create asynchronous tasks in native code (C/C++). This interface is able to interact with compiled code that runs directly on the device's CPU. </p></div></body></html>
