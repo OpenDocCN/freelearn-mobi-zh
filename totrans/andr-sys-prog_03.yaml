@@ -1,0 +1,809 @@
+- en: Discovering Kernel, HAL, and Virtual Hardware
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Once we set up the development environment and get the source code ready to
+    use. We can start to explore the Android system architecture in more depth. We
+    will look at the AOSP source tree first. After that, we will study the virtual
+    hardware platforms that we are going to use in this book. Based on our understanding
+    of the virtual hardware, we will look at the layers related to the system customization.
+    In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deep analysis of Android HAL using the goldfish lights service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Review the hardware specification for goldfish
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Overview about QEMU pipe implementation in the goldfish kernel
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: What is inside the AOSP?
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before we move to the details, let''s take a look at the top level of the AOSP
+    source code tree again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_03_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following table gives a brief description about each folder. We will look
+    at some of them throughout this book:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Directory** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `packages` | Stock Android applications. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `libcore` | Core Java library. Apache Harmony is used before Nougat. OpenJDK
+    is used with Nougat. Some features of Java 8 are used in Nougat. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `frameworks/*` | Android framework core components. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `frameworks/base/services` | Android system services. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `art` | Android runtime. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `dalvik` | Dalvik virtual machine. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `libnativehelper` | Helper functions for use with JNI. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `system/*` | Native services and libraries. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `system/core` | A minimal Linux system to boot Android. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `bionic` | C library. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external` | External projects imported into the AOSP. It includes both the
+    HAL layer and system services. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware` | HAL and hardware libraries. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `device` | Device-specific files and components. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `bootable` | Recovery and bootloader. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `abi` | Minimal C++ runtime type information support. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `build` | Build system and Makefiles. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `sdk` | Android SDK. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `cts` | Compatibility test suite. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `development` | Development tools. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ndk` | Android NDK. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `tools` | Various IDE tools. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `prebuilts` | Prebuilt images and binaries. |'
+  prefs: []
+  type: TYPE_TB
+- en: For a particular module or component, we may have to dig into multiple levels
+    of subfolders to figure out what is included in it. This is especially true for
+    the `frameworks`, `system`, and `external` folders. The subfolders in `frameworks`
+    include Android framework layer code, but Android system services also reside
+    in `frameworks/base/services` and we will look at them later in this session.
+    The same is true for the contents in the `system` and `external` folders.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android emulator HAL
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We built the Android emulator in [Chapter 2](984e0cef-7bf6-4454-bede-bb34c553be12.xhtml),
+    *Setting Up the Development Environment*. In order to have an overview of Android
+    emulator HAL, we can take a look at the `$OUT/system/lib/hw` folder as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_03_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can see that there is a list of shared libraries. These are the shared libraries
+    of goldfish HAL. The source code of the preceding shared libraries can be found
+    in the `device/generic/goldfish` folder. The following table shows the relationship
+    between the shared library, device node, and hardware module:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Hardware** | **Device** | **Lib (HAL)** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `audio` | `/dev/eac` | `audio.primary.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `camera` | `/dev/qemu_pipe` | `camera.goldfish.jpeg.so` `camera.goldfish.so`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `fingerprint` | `/dev/qemu_pipe` | `fingerprint.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `gps` | `/dev/qemu_pipe` | `gps.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `lights` | `/dev/qemu_pipe` | `lights.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `power` | `/dev/qemu_pipe` | `power.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `sensors` | `/dev/qemu_pipe` | `sensors.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `vibrator` | `/dev/qemu_pipe` | `vibrator.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `graphics` | `/dev/qemu_pipe` | `gralloc.goldfish.so` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `serial` | `/dev/ttyS[0 - 2]` | simple device don''t need a separate shared
+    library |'
+  prefs: []
+  type: TYPE_TB
+- en: As we can see from the preceding table, except for the serial port and audio,
+    all the other hardware modules use a device node `/dev/qemu_pipe` to talk to the
+    kernel. The QEMU pipe device provides a bridge between emulated devices and Android
+    emulator. Since the QEMU pipe is an important device for the emulator, we will
+    introduce it later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Usually, the HAL implementation is a shared library and it will be loaded by
+    system service at runtime. It actually depends on the complexity of the hardware
+    itself when it comes to deciding the actual implementation. For example, there
+    is no separate shared library for simple hardware such as serial ports. The system
+    service implementation of a serial port accesses the device node directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For more complicated hardware devices, such as graphics, there is a dedicated
+    daemon SurfaceFlinger running in the background as well as multiple shared libraries
+    associated with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will analyze the HAL of device goldfish lights and use it
+    as an example to understand the relationship between frameworks, system servers,
+    and HAL implementation. After that, we will go through the hardware interface
+    for goldfish devices. Finally, we will analyze the QEMU pipe implementation in
+    the goldfish kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Calling sequence
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will use the lights hardware interface as an example to explain how HAL,
+    system services, and hardware managers work together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_03_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Lights HAL, system service, and hardware manager
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As shown in the preceding figure, when an application wants to access hardware
+    resources, it has to get an instance of the hardware manager first. For goldfish
+    lights, the code in the application may look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The hardware manager talks to the system service to get hardware access. Usually,
+    the hardware manager is implemented in Java. It calls to the system service using
+    a binder interface since the hardware manager and system service run in different
+    process spaces. The upper layer of the system service also implements in Java.
+    After the system service gets the request, it will call to HAL library using JNI
+    since the HAL is implemented using C or C++ usually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_03_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Calling sequence of lights service
+  prefs: []
+  type: TYPE_NORMAL
+- en: The preceding figure shows the calling sequence when an application wants to
+    change the light on the device. We will use a bottom-up approach in this section
+    to look at the calling sequence from HAL to the application layer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Goldfish lights HAL
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The goldfish lights HAL implementation can be found in the `$AOSP/device/generic/goldfish/lights`
+    folder. To implement the HAL layer, the hardware vendor usually needs to implement
+    the following three data structures:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'All the preceding three data structures are implemented in the `lights_qemu.c`
+    file for goldfish. In the HAL implementation, we need to define `struct hw_module_t`
+    named `HAL_MODULE_INFO_SYM` first as follows. This registers the hardware module
+    ID `LIGHTS_HARDWARE_MODULE_ID` in the system. After this, lights system service
+    can get the module using the `hw_get_module` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You may notice that the `method` field has a pointer of `lights_module_methods`
+    inside the preceding data structure. It is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This defines the second HAL data structure `hw_module_methods_t`. Inside this
+    data structure, it defines an `open_lights` method, which is the HAL function
+    to initialize the hardware. Let''s take a look at this function as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Inside `open_lights`, it allocates the memory for the `light_device_t` data
+    structure, which inherits the third HAL data structure, `hw_device_t`. When it
+    initializing the data structure `light_device_t`, it registers two functions,
+    `close_lights` and `set_light`, so the system service can call these functions
+    to change the light or close the device. The function pointer `set_light` is set
+    to a specific function according to the type of light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside each `set_light_xxx` function, it talks to the kernel space through
+    the QEMU pipe device `/dev/qemu_pipe`. For example, we can take a look at `set_light_backlight`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Inside the `set_light_backlight` function, it calls `qemud_channel_open` and
+    `qemud_channel_send` to do the actual work. Both functions use the QEMU pipe device
+    `/dev/qemu_pipe` eventually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The system service and hardware manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To analyze how the application accesses light hardware, refer to the figure
+    of the lights service calling sequence. In an application, what calls the `getService(LightsManager.class)`
+    function to get an instance of `LightsManager` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Usually the hardware manager and system service are implemented in different
+    processes for most hardware interfaces. However, the hardware of the light is
+    so simple, so both the system service and hardware manager are implemented in
+    the same process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The system service includes two parts: Java and JNI. The JNI implementation
+    can be found at `frameworks/base/services/core/jni`, while the Java implementation
+    can be found at `frameworks/base/services/core/java/com/android/server`. Both
+    `LightsManager` and `LightsService` are implemented in `frameworks/base/services/core/java/com/android/server/lights`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are three files in this folder as follows. They implement both `LightsManager`
+    and `LightsService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s look at `LightsManager` first. We can see from the following snippet
+    that `LightsManager` only returns an abstract class, `Light`, to the caller:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s follow the code to look at the abstract class `Light`. In the abstract
+    class `Light`, it defines a list of functions that have to be implemented for
+    `Light`. These functions are implemented in the `LightsService` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In `LightsService.java` in the following snippet, it implements the list of
+    functions defined by the `Light` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This set of functions in the abstract class `Light` calls a `setLightLocked`
+    function to do the actual work. In this function, it calls a native function,
+    `setLight_native`, to invoke the native part of `LightsService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Besides `setLight_native`, `LightService` also calls two more native functions,
+    `init_native` and `finalize_native`. We can see this in the following code snippet.
+    These two functions call to the HAL layer functions, as we discussed in the previous
+    section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have looked at the implementation of `LightsManager` and the Java implementation
+    of `LightsService`. Now let''s explore the JNI part of the `LightsService` implementation.
+    The JNI part is implemented in `com_android_server_lights_LightsService.cpp`,
+    which can be found in the `$AOSP/frameworks/base/services/core/jni` folder. We
+    will look at how these three native functions used in `LightsService` are connected
+    to the HAL layer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `init_native` function, it calls the `hw_get_module` function to get
+    the light HAL module using `LIGHTS_HARDWARE_MODULE_ID` as the hardware ID. If
+    you look back, it is defined in the HAL. This function loads the shared library
+    of HAL implementations. In this case, it loads `lights.goldfish.so`. After loading
+    the shared library, it calls `get_device` to initialize all the light devices.
+    We can see the implementation of `get_device` in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `get_device`, it invokes the `open` method and gets the instance of HAL data
+    structure `hw_device_t`. We discussed the `open` method in the goldfish lights
+    HAL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s look at another native function, `setLight_native`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `setLight_native` function, it gets the pointer of the data structure
+    `Devices` first. After that, it calls the HAL function `set_light` to do the actual
+    work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, let''s look at the implementation of the native method, `finalize_native`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see that the `finalize_native` function just frees all resources used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android emulator kernel and hardware
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We use goldfish lights as an example to perform the calling sequence analysis
+    from an application to the goldfish HAL. Now we can look at the kernel layer and
+    the underlying hardware. We can also take an overview from the top to the bottom
+    again to understand how the entire system works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_03_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The goldfish architecture
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use the preceding figure to explain goldfish kernel and hardware in detail.
+    As you can see, the preceding figure is similar to the architecture diagram that
+    we saw in [Chapter 1](4ddc5eff-b4d7-452c-b83c-0c3c1d40da57.xhtml), *Introduction
+    to Android System Programming*. This architecture diagram is the general architecture
+    diagram for Android, but the preceding figure is specific to goldfish.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the diagram, we can see the parts that we are interested in the goldfish
+    kernel and emulator hardware. From the top to the bottom, the application utilizes
+    the Android framework to implement functionalities and access the hardware. The
+    framework usually resides in a different process from the system service layer,
+    so they use Binder IPC to communicate with each other. The system service talks
+    to the **HAL** using **JNI**, since **HAL** usually implements in the native language.
+    The **HAL** is the user space implementation of hardware control and it communicates
+    to the device driver in the kernel space through system calls. In the case of
+    the goldfish hardware, the device driver accesses the virtual hardware through
+    memory I/O registers, as we will see in the following section on Android emulator
+    hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android emulator hardware
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Unlike real hardware, most Android emulator hardware interfaces are emulated
+    using QEMU, which is a popular open source emulator engine used by many open source
+    projects. The Android development team customized QEMU and added a virtual hardware
+    platform called goldfish. As we mentioned in [Chapter 2](984e0cef-7bf6-4454-bede-bb34c553be12.xhtml),
+    *Setting Up the Development Environment*, there are currently two versions of
+    Android emulator available in the latest SDK. The code name for the original Android
+    emulator is goldfish and the new one is ranchu. However, the virtual hardware
+    code base for device emulation in QEMU is the same for both versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detailed information about goldfish hardware interfaces can be found in the
+    document `GOLDFISH-VIRTUAL-HARDWARE.TXT`. This document can be found in the AOSP
+    source code at `$AOSP/platform/external/qemu/docs/GOLDFISH-VIRTUAL-HARDWARE.TXT`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For different kernel versions, the hardware interfaces may have some differences.
+    In this book, we will look at the Intel x86-based ranchu virtual hardware, which
+    uses Android Linux version 3.10.0\. Let's look at the goldfish devices that we
+    will discuss in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Goldfish platform bus
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the architecture diagram for goldfish, we have a detailed diagram for the
+    kernel and goldfish hardware. We can see that all goldfish devices are enumerated
+    through the goldfish platform bus. The platform bus is a special device that is
+    capable of enumerating other platform devices found on the system to the kernel.
+    This flexibility allows us to customize which virtual devices are available when
+    running a given emulated system configuration. The following table defines goldfish
+    platform bus registers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Goldfish platform bus 32-bit I/O registers**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Offset** | **Name** | **Abstract** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x00` | `BUS_OP` | R: Iterate to the next device in enumeration.W: Start
+    device enumeration. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x04` | `GET_NAME` | W: Copy device name to kernel memory. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x08` | `NAME_LEN` | R: Read length of current device''s name. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x0c` | `ID` | R: Read ID of the current device. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x10` | `IO_BASE` | R: Read I/O base address of the current device. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x14` | `IO_SIZE` | R: Read I/O base size of the current device. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x18` | `IRQ_BASE` | R: Read base IRQ of the current device. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x1c` | `IRQ_COUNT` | R: Read IRQ count of the current device. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x20` | `NAME_ADDR_HIGH` | # For 64-bit guest architectures only:W: Write
+    high 32-bit of kernel address of name buffer used by `GET_NAME`. Must be written
+    to before the `GET_NAME` write. |'
+  prefs: []
+  type: TYPE_TB
+- en: QEMU pipe device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the most important emulated devices in goldfish hardware is the QEMU
+    pipe device. This is a special device that is totally specific to QEMU, but allows
+    guest processes to communicate directly with the emulator with extremely high
+    performance. This is achieved by avoiding any in-kernel memory copies, relying
+    on the fact that QEMU can access guest memory at runtime (under proper conditions
+    controlled by the kernel). As we can see from the goldfish architecture diagram,
+    many other hardware interfaces, such as GPS, sensors, basebands, cameras, and
+    so on, are emulated through the QEMU pipe. The following table defines QEMU pipe
+    device registers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**QEMU pipe device registers**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Offset** | **Name** | **Abstract** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x00` | `COMMAND` | W: Write to perform command (see the following). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x04` | `STATUS` | R: Read status. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x08` | `CHANNEL` | RW: Read or set current channel ID. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x0c` | `SIZE` | RW: Read or set current buffer size. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x10` | `ADDRESS` | RW: Read or set current buffer physical address. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x14` | `WAKES` | R: Read wake flags. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x18` | `PARAMS_ADDR_LOW` | RW: Read/set low bytes of parameter''s block
+    address. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x1c` | `PARAMS_ADDR_HIGH` | RW: Read/set high bytes of parameter''s block
+    address. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x20` | `ACCESS_PARAMS` | W: Perform access with parameter block. |'
+  prefs: []
+  type: TYPE_TB
+- en: Refer to the AOSP document `ANDROID-QEMU-PIPE.TXT` for details about the device's
+    operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Goldfish audio device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The goldfish audio device implements a virtual sound card with the following
+    properties:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stereo output at fixed 44.1 kHz frequency, using signed 16-bit samples. This
+    is mandatory.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mono input at fixed 8 kHz frequency, using signed 16-bit samples. This is optional.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following table defines goldfish audio device registers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Offset** | **Name** | **Abstract** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x00` | `INT_STATUS` |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x04` | `INT_ENABLE` |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x08` | `SET_WRITE_BUFFER_1` | W: Set address of first kernel output buffer.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x0c` | `SET_WRITE_BUFFER_2` | W: Set address of second kernel output buffer.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x10` | `WRITE_BUFFER_1` | W: Send first kernel buffer samples to output.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x14` | `WRITE_BUFFER_2` | W: Send second kernel buffer samples to output.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x18` | `READ_SUPPORTED` | R: Reads 1 if input is supported, 0 otherwise.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x1c` | `SET_READ_BUFFER` |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x20` | `START_READ` |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x24` | `READ_BUFFER_AVAILABLE` |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x28` | `SET_WRITE_BUFFER_1_HIGH` | # For 64-bit guest CPUs:W: Set high
+    32 bits of the first kernel output buffer address. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x30` | `SET_WRITE_BUFFER_2_HIGH` | # For 64-bit guest CPUs:W: Set high
+    32 bits of second kernel output buffer address. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x34` | `SET_READ_BUFFER_HIGH` | # For 64-bit guest CPUs:W: Set high 32
+    bits of kernel input buffer address. |'
+  prefs: []
+  type: TYPE_TB
+- en: Goldfish serial port
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android emulator has its own implementation of a virtual serial port. It always
+    reserves the first two virtual serial ports:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first one is used to receive kernel messages. This is done by adding the
+    `console=ttyS0` parameter to the kernel command line.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The second one is used to set up the legacy `qemud` channel, used on older Android
+    platform revisions. This is done by adding `android.qemud=ttyS1` on the kernel
+    command line. The `qemud` channel is implemented as a Linux daemon process used
+    as a channel between the guest and emulator. In the latest emulator version, a
+    QEMU pipe is used instead of `qemud`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following table defines goldfish serial port registers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Offset** | **Name** | **Abstract** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x00` | `PUT_CHAR` | W: Write a single 8-bit value to the serial port. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x04` | `BYTES_READY` | R: Read the number of available buffered input bytes.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x08` | `CMD` | W: Send command (see the following). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x10` | `DATA_PTR` | W: Write kernel buffer address. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x14` | `DATA_LEN` | W: Write kernel buffer size. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `0x18` | `DATA_PTR_HIGH` | # For 64-bit guest CPUs only:W: Write high 32
+    bits of kernel buffer address. |'
+  prefs: []
+  type: TYPE_TB
+- en: 'The CMD I/O register is used to send various commands to the device, identified
+    by the following values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each device instance uses one IRQ, raised to indicate that there is incoming/buffered
+    data to read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Goldfish kernel
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Goldfish kernel can be downloaded from the AOSP source repository. You can
+    download and build the kernel source code using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The following table is a list of goldfish device drivers. This is based on kernel
+    version 3.10.0\. At the moment, kernel version 3.10.0 is for ranchu and 3.4.67
+    is for goldfish. The following table lists some goldfish specific devices. In
+    ranchu, Virtio devices are used as block devices to simulate EMMC. Virtio devices
+    are paravirtualized devices in QEMU that have better performance than emulated
+    hardware devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Device** | **Path** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish platform bus | `drivers/platform/goldfish/pdev_bus.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| QEMU pipe | `drivers/platform/goldfish/goldfish_pipe.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Frame buffer | `drivers/video/goldfishfb.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish audio | `drivers/staging/goldfish/goldfish_audio.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish NAND | `drivers/staging/goldfish/goldfish_nand.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish battery | `drivers/power/goldfish_battery.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish events | `drivers/input/keyboard/goldfish_events.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish MMC | `drivers/mmc/host/android-goldfish.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| goldfish serial | `drivers/tty/goldfish.c` |'
+  prefs: []
+  type: TYPE_TB
+- en: QEMU pipe
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Since QEMU pipe is used as a channel to emulate many goldfish devices, we can
+    review one of the major functions, `goldfish_pipe_read_write`, to understand data
+    transmission between guest and host:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see from the preceding code, it invokes the `access_with_param` function
+    first. This is the fastest way to transfer data between the guest and emulator
+    using shared memory. With this method, the goldfish kernel allocates a piece of
+    memory at boot time. The guest and emulator will use this shared memory to transfer
+    parameters between them. If the `access_with_param` function fails, it will use
+    the following sequence to transfer data through the QEMU pipe device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now let''s take a look at the `access_with_param` function as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: The address of `aps` is the pre-allocated shared memory between the guest and
+    emulator. All data structures that need to be used for a single operation are
+    filled in this data structure `aps`. The command will be written to register `PIPE_REG_ACCESS_PARAMS`.
+    The write to `PIPE_REG_ACCESS_PARAMS` will trigger the operation. QEMU will read
+    the content of the `access_params` block, use its fields to perform the operation,
+    and then write back the return value into `aps->result`. The difference between
+    shared memory `aps` and the QEMU pipe device is similar to DMA and register-based
+    device I/O. The shared memory or DMA is much more efficient in large blocks of
+    memory access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can explore the rest of the goldfish device drivers by yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we introduced the content of the AOSP source code. After that,
+    we used goldfish lights HAL as an example to analyze the calling sequence from
+    the application to HAL. Finally, we reviewed the Android architecture again using
+    the Android system for the emulator. We also reviewed goldfish kernel and hardware
+    to understand how they work together with the rest of the software stacks. In
+    the next chapter, we will start to work on our own x86emu device and use it to
+    explore how to extend an emulator to support additional functionalities.
+  prefs: []
+  type: TYPE_NORMAL

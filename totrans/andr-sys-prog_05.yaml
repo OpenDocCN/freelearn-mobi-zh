@@ -1,0 +1,1015 @@
+- en: Enabling the ARM Translator and Introducing Native Bridge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We created a new x86emu device in the last chapter. This is the foundation
+    of further customization and extension. As we know, if the application includes
+    native libraries, it cannot run on a different processor architecture. Most Android
+    applications are built for the ARM platform. We usually have problems with running
+    these applications with ARM native libraries on Intel x86 platform. However, Google
+    provides a solution for this situation from Android 5 and above called **Native
+    Bridge**. We will delve into the Native Bridge and Intel Houdini implementation
+    to extend x86emu to support the ARM native application in this chapter. In this
+    chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Native Bridge
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Integrating the Houdini library to the x86emu device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building and testing the image with Houdini integration
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introducing Native Bridge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Native Bridge is implemented as a part of **Android Runtime** (**ART**) in
+    the Android architecture. It is used to support running native libraries in a
+    different processor architecture so that an application with native libraries
+    can run on a broader range of devices. The Intel ARM translator called Houdini
+    is one of the use cases of Native Bridge. In ART, there are two stages for the
+    Native Bridge to be initialized:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the first stage, the Native Bridge is loaded in the system as part of the
+    ART initialization process. This is common for all applications.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the second stage, when an application with native libraries is started, it
+    will be forked from Zygote. At this time, the Native Bridge will be initialized
+    and ready to be used for the application. This is a process that is specific for
+    individual applications. For example, if there are no native libraries being used,
+    Native Bridge won't be initialized for this application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Zygote** Android at its core has a process they call the Zygote, which starts
+    up at init. This process is a "warmed-up" process, which means it''s a process
+    that''s been initialized and has all the core libraries linked in. When you start
+    an application, the Zygote is forked to create the new process. The real speedup
+    is achieved by *not* copying the shared libraries. This memory will only be copied
+    if the new process tries to modify it. This means that all of the core libraries
+    can exist in a single place because they are read-only.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the application starts to load a native library from a different processor
+    architecture, the Native Bridge will help to resolve the loading of this library.
+    For example, when we load an ARM library on Intel the x86 architecture, the Native
+    Bridge will use Houdini to load and execute this ARM library in the Intel x86
+    environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Native Bridge in Android architecture
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Native Bridge is built as a `libnativebridge.so` shared library as part of
+    the Android system libraries, as shown in the preceding diagram. The implementation
+    can be found at `$AOSP/system/core/libnativebridge`. Within the Native Bridge
+    implementation, it has five states defined in `native_bridge.cc`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the Android system has just started, Native Bridge is in a `kNotSetup`
+    state. During the initialization of ART, it will be loaded into the system and
+    the stage changes to `kOpened`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These two states are in the first stage of the Native Bridge initialization.
+    When the user starts an application with native libraries, the system will fork
+    a new process from Zygote. At this time, the system will do some pre-initialization
+    work for Native Bridge, and we will see this later in this chapter. The state
+    changes to `kPreInitialized` at this time. After the process is forked from Zygote,
+    Native Bridge is initialized as part of the process creation and its state becomes
+    `kInitialized`. The `kClosed` state is usually not used unless there is an error
+    and Native Bridge is closed. These three states fall into the second stage of
+    the Native Bridge initialization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the overview about Native Bridge in Android system architecture, we will
+    have to delve into the details of each stage about Native Bridge used at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up Native Bridge as part of the ART initialization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: First of all, let's take a look at how Native Bridge is loaded in the system.
+    Native Bridge is loaded as part of the initialization of ART. As shown in the
+    following diagram, it includes function calls from **ART** to the **Native Bridge**
+    implementation. At the end of this stage, the state of **Native Bridge** will
+    be set to `kOpened`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Loading Native Bridge
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the system is initializing ART, the `Runtime::Init` function is called.
+    Inside `Runtime::Init`, a `LoadNativeBridge` function is invoked to load the Native
+    Bridge shared library. We can see this in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This `LoadNativeBridge` function is part of ART and it is implemented in the
+    `native_bridge_art_interface.cc` file, as shown in the following snippet. This
+    function simply calls to another function, `android::LoadNativeBridge`, in the
+    namespace `android`, while it itself is in the namespace of `art`. The functions
+    in the namespace of `android` are part of the Native Bridge implementation, as
+    shown in the preceding diagram, and we will see more of this later in this chapter.
+    We can see the implementation of `LoadNativeBridge` in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `android::LoadNativeBridge` function in the `android` namespace has an
+    extra `native_bridge_art_callbacks` parameter compared to the `art:LoadNativeBridge`
+    function in the `art` namespace. The type of this parameter is a pointer of `struct
+    NativeBridgeRuntimeCallbacks`, which is defined in `native_bridge.h`. In `struct
+    NativeBridgeRuntimeCallbacks`, it defines three callback methods as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: These three callback functions that are part of ART are implemented in the `native_bridge_art_interface.cc`
+    file. These callback functions provide a way for native methods to call JNI native
+    functions. We will see how this callback data structure is passed to the actual
+    Native Bridge implementation later. In our case, the actual implementation is
+    the Houdini library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `native_bridge.h` file defines another callback function data structure,
+    `NativeBridgeCallbacks`, which is used as the Native Bridge interface of its actual
+    implementation. In our case, this implementation is the Houdini library. The Houdini
+    library needs to implement these callback functions and pass the pointers to Native
+    Bridge so that ART can use them. The following figure depicts the relationship
+    between these two groups of callback functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: ART, Native Bridge, and Houdini
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the preceding figure, we can see that **ART** calls **Native Bridge** functions
+    to load and initialize the **Native Bridge** module. The **Native Bridge** module
+    invokes the callback functions registered by **Houdini** to handle all ARM native
+    binary translations. During the initialization of **Native Bridge**, **NativeBridgeRuntimeCallbacks**
+    are passed to the **Houdini** library so that the methods in the **Houdini** library
+    can call JNI native functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s take a look at the implementation of `android::LoadNativeBridge`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see from the preceding code snippet, `android::LoadNativeBridge` checks
+    the state first. It should be in a `kNotSetup` state. Otherwise, it will report
+    an error and return.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To be convenient, we will refer to the function in the Android namespace as
+    `LoadNativeBridge` instead of `android::LoadNativeBridge` in the next few paragraphs.
+    The files that will be discussed can be found at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`$AOSP/art/runtime/runtime.c`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`$AOSP/art/runtime/native_bridge_art_interface.c`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`$AOSP/system/core/libnativebridge/native_bridge.cc`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After that, it will check whether the first parameter is `NULL` and the filename
+    is good to use or not. If everything is good, it will open the library through
+    `dlopen` using the filename `nb_library_filename`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So what is the content of the `nb_library_filename` filename? As we can see
+    from the `Runtime::Init` function, the first parameter of `LoadNativeBridge` is
+    initialized using a `Opt::NativeBridge` property:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This property is initialized from the default property `ro.dalvik.vm.native.bridge`,
+    which is defined in the `default.prop` file of the Android system. This is done
+    in the `AndroidRuntime::startVm` function, as you can see in the following snippet.
+    This function is defined in the `$AOSP/frameworks/base/core/jni/AndroidRuntime.cpp`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When Native Bridge is enabled, the `ro.dalvik.vm.native.bridge` property usually
+    includes a shared library filename. In our case, it is `libhoudini.so` for Intel
+    devices or `libnb.so` for Android-x86\. If Native Bridge is disabled, its value
+    is 0\. Once the library is loaded successfully, it will use the `kNativeBridgeInterfaceSymbol`
+    symbol to get the memory location and cast the location to a pointer of `NativeBridgeCallbacks`.
+    This means that the Houdini library provides an implementation of `NativeBridgeCallbacks`.
+    Let''s look at what it is inside `NativeBridgeCallbacks`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From the preceding code snippet, we can see that `NativeBridgeCallbacks` includes
+    a variable and seven callback functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`version`: This is the version number of the interface. So far, there are two
+    versions. Version 1 defines the first five callback functions and version 2 adds
+    another two new functions, which we will see very shortly.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`initialize`: This function initializes an instance of Native Bridge. Native
+    Bridge''s internal implementation must ensure multithread safety and Native Bridge
+    is initialized only once.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`loadLibrary` : This function loads a shared library that is supported by the
+    Native Bridge.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getTrampoline` : This function gets a Native Bridge trampoline for the specified
+    native method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`isSupported` : This function checks whether the instance of Native Bridge
+    is valid and whether it is for an ABI that is supported by Native Bridge.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In version 2, the following two functions are added:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`isCompatibleWith`: This function checks whether the bridge is compatible with
+    the given version of library. A bridge may decide not to be forward- or backward-compatible,
+    and `libnativebridge` will then stop using it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getSignalHandler`: A callback function to retrieve a Native Bridge''s signal
+    handler for the specified signal. The runtime will ensure that the signal handler
+    is being called after the runtime''s own handler, but before all chained handlers.
+    The native bridge should not try to install the handler by itself, as that will
+    potentially lead to cycles.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now we have concluded the first stage of the Native Bridge initialization. As
+    we can see from the preceding lists, Native Bridge is loaded at the startup of
+    ART. At this stage, the initialization is not process-specific. The library name
+    is defined in the `ro.dalvik.vm.native.bridge` property. In our case, ART loads
+    the `libhoudini.so` library through the `LoadNativeBridge` function defined in
+    `libnativebridge.so`. After Native Bridge is loaded successfully, the state is
+    set to `kOpened`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pre-initializing Native Bridge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the second stage of Native Bridge initialization, it becomes process-specific.
+    Native Bridge can be used by an Android application to load a native library in
+    a different processor architecture than the current device. The other two states,
+    `kPreInitialized` and `kInitialized`, are related to the creation of Android applications,
+    as we know that all applications are forked from Zygote in Android. Let''s look
+    at the pre-initialization of Native Bridge first, as shown in the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Pre-initialization of Native Bridge
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'During the creation of an application, the `ForkAndSpecializeCommon` function
+    is called. The pre-initialization of Native Bridge is done in this function. This
+    function is defined in the `$AOSP/frameworks/base/core/jni/com_android_internal_os_Zygote.cpp`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this `ForkAndSpecializeCommon` function, it checks whether the current process
+    is not a SystemServer process and if the Native Bridge is ready to use. After
+    that, it calls the `NeedsNativeBridge` function to check whether the current process
+    needs to use Native Bridge or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `NeedsNativeBridge` function compares `instruction_set` with the current
+    Android platform instruction set. If these two instruction sets are different,
+    then we need to use Native Bridge; otherwise, we don't. The `NeedsNativeBridge`
+    function is implemented in `native_bridge.cc`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If Native Bridge is needed by the application, then `PreInitializeNativeBridge`,
+    which is also implemented in `native_bridge.cc`, is going to be called with two
+    parameters, `app_data_dir_in` and `instruction_set`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: From the preceding code snippet, we can see that it will check whether the state
+    is `kOpened` or not. Then `PreInitializeNativeBridge` will do two things. Firstly,
+    it creates a code cache directory using the first parameter, `app_data_dir_in`,
+    for Native Bridge in the `data` folder of the application. Next, it uses the second
+    parameter, `instruction_set`, to find the `/system/lib/<isa>/cpuinfo` path and
+    it does a bind-mount of it to `/proc/cpuinfo`. If Houdini is available in the
+    device, you can find the `/system/lib/arm/cpuinfo` file in the `system` folder.
+    Once the preceding two tasks are completed, the state of Native Bridge will be
+    set to `kPreInitialized`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initializing Native Bridge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After the state is changed to `kPreInitialized`, the creation of the new Android
+    application will continue in the `ForkAndSpecializeCommon` function. At the end
+    of this function, it calls a `callPostForkChildHooks` registered function through
+    a global variable, `gCallPostForkChildHooks`. The call stack will eventually go
+    to a `ZygoteHooks_nativePostForkChild` function, which is the JNI implementation
+    of the `postForkChild` Java method. The `postForkChild` function is called by
+    Zygote in the child process after every fork. The following table is a summary
+    of the call stack:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Function** | **Class** | **Language** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ForkAndSpecializeCommon` |  | C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `gCallPostForkChildHooks` |  | C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `callPostForkChildHooks` | Zygote | Java |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `postForkChild` | ZygoteHooks | Java |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ZygoteHooks_nativePostForkChild` | JNI (postForkChild) | C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: The `ZygoteHooks_nativePostForkChild` function is implemented in the `$AOSP/
+    art/runtime/native/dalvik_system_ZygotHooks.cc` file. The `DidForkFromZygote`
+    function is implemented in the `$AOSP/art/runtime/runtime.cc` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following diagram is a summary of functions involved in the second stage
+    of the initialization of Native Bridge. Be aware that we are in the child process
+    now. We can see that the **Runtime::DidForkFromZygote** function in **ART** will
+    call the following Native Bridge interface functions: **InitializeNativeBridge**
+    and **SetupEnvironment**. The Native Bridge interface functions will eventually
+    call the registered callback functions in the Houdini library.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Initialization of Native Bridge
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s look at the JNI implementation of `postForkChild`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, it checks the instruction set again to decide whether we need Native
+    Bridge for the application. Then it calls the `Runtime::DidForkFromZygote` function
+    to initialize Native Bridge in the new process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, `Runtime::DidForkFromZygote` calls the `InitializeNativeBridge`
+    based on the action. Now let''s dive into the `InitializeNativeBridge` function,
+    which is implemented in `native_bridge.cc`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `InitializeNativeBridge` function, it creates the folder for the code
+    cache first. Then, it invokes the `initialize` function, implemented by the Houdini
+    library in our case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The shared library is `libhoudini.so` in Intel devices. If you run Android-x86
+    on an Intel device, the shared library is `libnb.so`. We will discuss `libnb.so`
+    later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After that, it calls another `SetupEnvironment` function in `native_bridge.cc`
+    to set up the environment for the Native Bridge in the current application. Finally,
+    it sets the state to `kInitialized`. Now Native Bridge is ready for the current
+    application to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading a native library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Once Native Bridge is ready to use, we can have a look at what happens when
+    an application loads a native library in a different processor architecture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We know that, if we implement a native method in a shared library, we need
+    to implement a `JNI_OnLoad` entry point, which is used to register native methods.
+    The Java code needs to make a call to either `System.load` or `System.loadLibrary`
+    to load this shared library. In the following table, it is the call stack from
+    `System.loadLibrary` to `JNI_OnLoad`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Function** | **Class** | **Language** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `System.loadLibrary` | Runtime | Java |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `doLoad` | Runtime | Java |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `nativeLoad` | Runtime | JNI |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `Runtime_nativeLoad` | Runtime | C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `LoadNativeLibrary` | JavaVMExt | C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `JNI_OnLoad` |  | C++ |'
+  prefs: []
+  type: TYPE_TB
+- en: 'Let''s look into the details of `JavaVMExt::LoadNativeLibrary`. This function
+    is defined in `$AOSP/art/runtime/jni_internal.cc`. The following diagram is the
+    part of `JavaVMExt::LoadNativeLibrary` related to Native Bridge:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Loading native library
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android applications call to this function when they load native libraries.
+    Usually, we refer to the native library in the same processor architecture here.
+    With Native Bridge, we can load supported native libraries in a different processor
+    architecture with this function as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `LoadNativeLibrary` function will call to `dlopen` to load the shared library
+    first. If it is a shared library in a different processor architecture, such as
+    an open ARM library on an Intel x86 platform, the `dlopen` call should fail. In
+    this case, it will try to load the library again using Native Bridge instead of
+    returning an error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use Native Bridge, it calls to the `NativeBridgeIsSupported` function first
+    to check whether Native Bridge is supported or not. The `NativeBridgeIsSupported`
+    function calls to the Houdini callback function, `isSupported`, to check whether
+    the given shared library can be supported by Native Bridge or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the library can be supported by Native Bridge, `LoadNativeLibrary` will
+    call another Native Bridge function, `android::NativeBridgeLoadLibrary`, to load
+    the library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The Native Bridge `NativeBridgeLoadLibrary` function will make a call to the
+    Houdini callback function `loadLibrary` to load the library. After the native
+    library is loaded successfully, the `JNI_OnLoad` entry point will be found in
+    the library and the system will call it to register the native methods registered
+    by the native library. For a normal native library, the system function `dlsym`
+    is used to get the `JNI_OnLoad` method, but the `FindSymbolWithNativeBridge` function
+    is used to get `JNI_OnLoad` from the Houdini library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`FindSymbolWithNativeBridge` calls to the `NativeBridgeGetTrampoline` Native
+    Bridge function, while `NativeBridgeGetTrampoline` calls to the `getTrampoline`
+    Houdini callback function to do the actual work:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: From the preceding analysis, we can see that the ARM translator library Houdini
+    uses the Native Bridge in Android to support ARM binary translation. The interfaces
+    between the Houdini library and the system are two sets of callback functions.
+    The callback functions defined in `NativeBridgeCallbacks` are used by the system
+    to perform the function calls to the ARM native library, while the callback functions
+    defined in `NativeBridgeRuntimeCallbacks` can be used by the functions in the
+    Houdini library to call JNI functions in the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating Houdini to the x86emu device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The goal of this chapter is to support Houdini ARM binary translation in Android
+    emulator. After we have an overview of the internals of Native Bridge, which is
+    the foundation of the Houdini library, we can work on Houdini support for our
+    x86emu device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the Houdini library is an Intel proprietary library, it is not available
+    publicly. For those people who want to add Houdini to a new device, such as an
+    Android emulator that is not supported by Intel, the only possible way is to copy
+    the Houdini library from a supported device and add it to the unsupported device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, the open source project Android-x86 provides basic support for
+    Houdini to any Intel devices, which we can use as a reference in this book. In
+    this chapter, we will add Houdini to an Android emulator based on the Android-x86
+    project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changing the configuration of the x86emu build
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The basic steps to support Houdini on a new device are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change the device configurations according to what we have discussed in [Chapter
+    4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml), *Customizing the Android Emulator*,
+    in the *Why* c*ustomize the Android emulator?* section
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Copy a suitable version of the Houdini library to the `system` folder
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: To work on the preceding two steps, let's start with the changes to the x86emu
+    device configurations first. What we will do for this is that we will use the
+    source code in [Chapter 4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml), *Customizing
+    the Android Emulator* as the baseline and make changes on top of it. This is also
+    the approach that we will use in most of the chapters in this book. We will make
+    independent changes based on the simplest code base for each topic. What I mean
+    is that the source code for x86emu in [Chapter 4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml),
+    *Customizing the Android Emulator* is the simplest code base for the x86emu device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Given that we already have a working copy of the AOSP source code for x86emu,
+    we can make changes for this chapter in a new branch:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: I created a tag for each chapter and we can use that as the start for the new
+    development. The `android-7.1.1_r4_x86emu_ch04_r1` tag is the baseline for [Chapter
+    4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml), *Customizing the Android Emulator*.
+    From the preceding commands, we create a new branch, `android-7.1.1_r4_ch05`,
+    for the development work in this chapter. I didn't push the development branches
+    to GitHub, but I pushed all the tags to GitHub. After we complete all the changes
+    in this chapter, we will create a new tag, `android-7.1.1_r4_x86emu_ch05_r1`,
+    for this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After we make all the changes, we also need to update the manifest file so
+    that we can have a manifest to download the code for this chapter. Instead of
+    using tags, I use branches to manage manifests. The branch for this chapter''s
+    manifests is `android-7.1.1_r4_ch05_aosp`. We can use the following command to
+    download the source code of:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you set up the local mirror as we discussed in [Chapter 2](984e0cef-7bf6-4454-bede-bb34c553be12.xhtml),
+    *Setting Up the Development Environment*, you can check out the source code as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: You need to create an `android-7.1.1_r4_ch05` branch for your own local mirror
+    referring to the `android-7.1.1_r4_ch05_aosp` branch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After we create a working copy of the source code using the preceding manifest,
+    we can look at the `.repo/manifest.xml` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding manifest file, we use the `android-7.1.1_r4_x86emu_ch05_r1`
+    tag to tag all projects that are not in AOSP projects. The `device/generic/common`
+    project is duplicated from Android-x86 and the `device/generic/goldfish` project
+    is duplicated from AOSP. Besides `kernel` and `device/generic/x86emu`, these are
+    the two projects that we need to change in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending the x86emu device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Once we have done all the changes for the source code configuration, we can
+    start to extend the x86emu device to support Houdini now. What are the changes
+    that we have to make? Since I have done all the changes before I explained them
+    here, let's use a tool to compare the difference between the source code in [Chapter
+    4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml), *Customizing the Android Emulator*
+    and this chapter's code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_05_007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Changes to support Houdini
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we can see in the preceding screenshot, we added a `system` folder and we
+    modified four Makefiles. We can ignore the `x86emu_x86_64.mk` Makefile, since
+    we won't discuss 64-bit builds in this book. The changes to `x86emu_x86_64.mk`
+    are similar to those for `x86emu_x86.mk`, so we save ourselves the effort of discussing
+    similar things twice. It won't be a significant effort for you to enable a 64-bit
+    build for x86emu by yourself. The other two files, `.cproject` and `.project`,
+    are generated due to Eclipse integration and we can ignore them too. Let's look
+    at `BoardConfig.mk`, `x86emu_x86.mk`, and `device.mk` one by one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changes to BoardConfig.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the board configuration file, we need to add an ARM instruction set to the
+    CPU ABI list so that the program can detect support for the ARM instruction set
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: You may have noticed the `BUILD_ARM_FOR_X86` macro. This macro is used by Android-x86
+    Houdini support and we will discuss it later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changes to x86emu_x86.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the product definition Makefile, `x86emu_x86.mk`, we set the `persist.sys.nativebridge`
+    property to `1`. Then we copy all files under the `$AOSP/device/generic/x86emu/system`
+    folder to the `$OUT/system` image. All the files under the `$AOSP/device/generic/x86emu/system/lib/arm`
+    folder are a copy of the Houdini libraries:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Changes to device.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the device Makefile `device.mk`, we only added one line to include another
+    Makefile, `nativebridge.mk`, in the `device/generic/common/nativebridge` directory.
+    As we discussed in the section on source configuration, we use the one from Android-x86
+    to support Houdini integration. We will analyze the `nativebridge.mk` Makefile
+    in the next section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using the Android-x86 implementation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Since we use Houdini support from the Android-x86 project, we can see that we
+    only need to make very minor changes to the x86emu Makefiles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s look at `nativebridge.mk` in Android-x86:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`nativebridge.mk` copies an `enable_nativebridge` script to the `system` folder
+    first. After that, it sets the `ro.dalvik.vm.isa.arm` and `ro.enable.native.bridge.exec`
+    properties. These two properties will be added to `system/build.prop` in the system
+    image. It also sets the default property `ro.dalvik.vm.native.bridge` to `libnb.so`.
+    This property is used by ART to find the Houdini library. Android-x86 uses the
+    `libnb.so` library instead of `libhoudini.so`, which all supported Intel devices
+    use. The `libnb.so` library is a wrapper of `libhoudini.so`. Since we use `libnb.so`
+    as the ARM binary translation library, we need to add this package to the build.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyzing libnb.so
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Since the `libnb.so` library is the key starting point for Native Bridge support
+    in Android-x86, we will dive into the details of it now. The Makefile to build
+    `libnb.so` can be found at `device/generic/common/nativebridge/Android.mk`. The
+    source code for `libnb.so` includes only one file, `libnb.cpp`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `libnb.cpp`, we can see that it loads the `libhoudini.so` library, which
+    is the original Houdini library from Intel, and it makes only two changes. It
+    checks the `persist.sys.nativebridge` property before it does the initialization.
+    The rest of the code provides a wrapper of `NativeBridgeCallbacks` and the wrapper
+    functions call the one in the Houdini library directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using binfmt_misc
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Up to now, what we have discussed is how to load an ARM shared library in the
+    Intel x86 architecture. Houdini can also support running standalone ARM applications
+    on Intel devices as well. To do this, it uses a mechanism called `binfmt_misc`.
+    `binfmt_misc`, which is a capability of the Linux kernel that allows arbitrary
+    executable file formats to be recognized and passed to certain user space applications,
+    such as emulators and virtual machines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the Linux kernel documentation, this kernel feature allows you
+    to invoke almost every program by simply typing its name in the shell. This includes,
+    for example, compiled Java (TM), Python, or Emacs. To achieve this, you must tell
+    `binfmt_misc` which interpreter should be invoked with which binary. `binfmt_misc`
+    recognizes the binary-type by matching some bytes at the beginning of the file
+    with a magic byte sequence (masking out specified bits) that you have supplied.
+    `binfmt_misc` can also recognize a filename extension such as `.com` or `.exe`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use this method, first we must mount `binfmt_misc`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To register a new binary type, we must set up a string that looks as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then we need to add it to `/proc/sys/fs/binfmt_misc/register`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is what the fields mean:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`name` is an identifier string. A new `/proc` file will be created with this
+    name below the `/proc/sys/fs/binfmt_misc` directory.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`type` is the type of recognition. It gives `M` for magic and `E` for extension.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`offset` is the offset of the magic/mask in the file, counted in bytes. This
+    defaults to 0 if you omit it (that is, you write `:name:type::magic...`).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`magic` is the byte sequence that `binfmt_misc` is matching for. The magic
+    string may contain hex-encoded characters such as `\x0a` or `\xA4`. In a shell
+    environment, you should write `\\x0a` to prevent the shell from eating your `\`.
+    If you chose the matching filename extension, this is the extension to be recognized
+    (without the `.`, the `\x0a` specials are not allowed). Extension matching is
+    case-sensitive.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`mask` is a (optional, defaults to all `0xff`) mask. You can mask out some
+    bits from matching by supplying a string like magic.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`interpreter` is the program that should be invoked with the binary as the
+    first argument (specify the full path).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`flags` is an optional field that controls several aspects of the invocation
+    of the interpreter. It is a string of capital letters and each controls a certain
+    aspect.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In `nativebridge.mk`, it copies an `enable_nativebridge` script to the `system`
+    folder. This file is used to enable Houdini in Android-x86\. In Android-x86, Houdini
+    is not enabled by default. This can be turned on at any time using an option in
+    Settings app of Android-x86\. Of course, this is not supported in the AOSP source
+    code. When you turn on Houdini in Android-x86, it calls the `enable_nativebridge`
+    script. This script does two things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It downloads Houdini from the third-party project repository to the local repository
+    and installs it in the `/system/lib/arm` system directory. It also sets the `persist.sys.nativebridge`
+    property to `1`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the second part of this script, it creates the `binfmt_misc` files in the
+    `/proc` directory.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We won''t use the `enable_nativebridge` script directly, but we want to run
+    the second part of `enable_nativebridge` at the system start. With the second
+    part, Houdini is enabled in the Android emulator by default. This can be done
+    by adding the second part of `enable_nativebridge` to `device/generic/goldfish/init.goldfish.sh`.
+    The following is the code snippet that we added to the end of `init.goldfish.sh`.
+    This is the script that is used to set up the environment for the Android emulator
+    during system startup:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we rebuild the image and start the emulator, we can verify the changes
+    using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that we registered two `binfmt_misc` types: `arm_dyn` and `arm_exe`.
+    The `/proc` file `arm_dyn` is used to load the shared library and `arm_exe` is
+    used to load the ARM executable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we look at the content of `arm_exe`, from the preceding output we can see
+    that the `/system/lib/arm/houdini` interpreter is used to interpret ARM binaries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building and testing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have made all the code changes to enable Houdini now. We can build the system
+    image using the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: After we build the system image, we can test it. Of course, we can test the
+    images using any Android application that can run on the ARM architecture. However,
+    in order to get details about the test targets, we will use two unit test applications
+    to verify our work in this chapter. The first one is a standalone ARM application
+    that can be run from the command line. The second one is an Android application
+    with a JNI shared library for ARM only. The Android emulator images and test binaries
+    in this chapter can be downloaded from [https://sourceforge.net/projects/android-system-programming/files/android-7/ch05/ch05.zip/download](https://sourceforge.net/projects/android-system-programming/files/android-7/ch05/ch05.zip/download).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The source code for these two test applications is hosted on GitHub. You can
+    get the source code at [https://github.com/shugaoye/asp-sample/tree/master/ch05](https://github.com/shugaoye/asp-sample/tree/master/ch05).
+  prefs: []
+  type: TYPE_NORMAL
+- en: To build the test applications, you need to have both Android SDK and NDK so
+    that you can build both Android applications and native applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the command-line application
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After you clone the preceding Git repository for test applications, you can
+    build and test them. Let''s test the command-line application first. It is a very
+    simple "hello world" application to print just one line message to standard output
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can build it and test it in the emulator as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: After you build it, you can check the file format using the `file` command.
+    You can see that the output is a 32-bit ARM ELF file. You can push this binary
+    to the emulator using `adb` and run it. You will see that it can print the output
+    message to standard output correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the Android JNI application
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Next, let's test the Android application with the ARM JNI library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The JNI library can be found at `ch05/test2/jni`. The processor architecture
+    that can be supported is defined in `Application.mk` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that we build the JNI library for `armeabi` and `armeabi-v7a`. Let''s
+    build the JNI library using NDK first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we build the JNI library, we can import the Android source code to Eclipse
+    or Android Studio to build the application itself. We won''t explain the details
+    of importing and building Android applications. You can read books on how to develop
+    an Android application and how to develop a JNI library to find out more. What
+    we want to investigate here is the test result. After we have the APK file, we
+    can install it in the emulator and run it. At the same time, we can catch the
+    debug log using logcat. Here is the log from my environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see from the preceding log message that Houdini is initialized successfully
+    and that the `libHelloJNI.so` JNI library is loaded by Native Bridge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we introduced Native Bridge in Android architecture first
+    so that we can understand how it works. Based on our understanding of Native Bridge,
+    we extended the x86emu device with Houdini support. We changed the Makefiles of
+    the x86emu device and we also utilized the open source project Android-x86 to
+    save the effort of integration. After we integrated Houdini in x86emu, we tested
+    two scenarios of Houdini use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A standalone command-line application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An Android application with a native shared library built with JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the next chapter, we will explore more about the x86emu start up process
+    and we will learn how to debug the start up process using a customized ramdisk
+    image.
+  prefs: []
+  type: TYPE_NORMAL

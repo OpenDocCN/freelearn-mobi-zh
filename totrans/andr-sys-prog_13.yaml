@@ -1,0 +1,866 @@
+- en: Creating OTA Packages
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the last chapter, we analyzed the internals of recovery and learnt how it
+    works. As we saw, one of the major functionalities of recovery is to support OTA
+    update. In this chapter, we will look at the OTA package and study the process
+    of the OTA package update. We will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will look at what is inside an OTA package. We will study the internals of
+    `updater` and `updater-script`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will learn the process about how to build an OTA package.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Finally, we need to improve recovery to remove the dependencies from the Android
+    system.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: What is inside an OTA package
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we start to build an OTA package, let's look at what's inside an OTA
+    package. The OTA package can be used to update the system to a new release. The
+    new release can be a major release or a minor release. For example, it could be
+    a minor update to the existing Android version to fix critical issues or security
+    flaws. It could also be the major update from Android 6 to Android 7\. Let's look
+    at the content of the OTA package that we are going to create in this chapter
+    to find out what is inside an OTA package. The OTA package that we are going to
+    create in this chapter is an OTA update package of our entire ROM. We can use
+    recovery to flash the OTA package to our VirtualBox device. This is another way
+    to install the system image that we build to the virtual device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s look at the content of the OTA package that we will build in this chapter.
+    The OTA package itself is a ZIP file. After we extract the ZIP file, we can list
+    the content of the ZIP file as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that it includes two files and three folders. After we flash this
+    update package using recovery, it will update the `/boot` partition and the `/system`
+    partition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`boot.img`: The image of the `/boot` partition, which includes kernel and ramdisk.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`file_contexts`: This file is used to assign labels to files according to SELinux
+    policy. SELinux is enabled by default in the latest Android system. After the
+    recovery updates the system partition, it must apply labels using this file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`META-INF`: This folder includes the signature of the OTA package, the updater,
+    and updater script. We will look at the details of this folder later.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`recovery`: This folder includes an `install-recovery.sh` shell script and
+    a `recovery-from-boot.p` patch file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`system`: This is the `system` folder that recovery will update to the `/system`
+    partition.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'OTA packages are usually used to update `/boot` and `/system` partitions. It
+    does not update itself. The update of the `/recovery` partition is in the normal
+    boot up process. During the boot up, the init will execute `install-recovery.sh`
+    in the `init.rc` script through the following `flash_recovery` service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `install-recovery.sh` script installs recovery using the `recovery-from-boot.p`
+    patch file as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: In our environment setup, the `/recovery` partition is in the `/dev/block/sda7`
+    partition. This script will check the `sha1` hash of the `/dev/block/sha7` partition.
+    If the `sha1` hash value is not the same, it will update the `/recovery` partition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s look at the `META-INF` folder, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_13_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we can see, the signature of the update package, updater, and updater script
+    are included in the `META-INF` folder. Before the recovery applies the update,
+    it will verify the package signature in the `META-INF` folder against the trusted
+    certificates at `/system/etc/security/otacerts.zip`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The updater is an executable at `META-INF/com/google/android/update-binary`.
+    It interprets a script in the `META-INF/com/google/android/updater-script` file.
+    The script is written in an extensible scripting language (edify) that supports
+    commands for typical update related tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the updater and the updater script are the key components in the OTA package
+    to support an OTA update, we will look into the details of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Updater
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'updater is an individual executable for the target device in the AOSP source
+    tree. It can be found in the `$AOSP/bootable/recovery/updater` folder. Let''s
+    look at the main function in the `updater.cpp` file. Since the `main` function
+    is a little long, let''s look at it in several paragraphs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The updater has four arguments. The first thing it will do is check whether
+    there are four arguments passed to it. As we can see from the code, these four
+    arguments are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first argument is the executable name, which is `update-binary` here
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The second argument is the updater version
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The third argument is the pipe that can be used to communicate to the recovery
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The fourth argument is the OTA package path
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'It will check the updater version before it continues:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next thing to do is to open the pipe to establish the communication channel
+    with recovery. Then it extracts `updater-script` from the OTA package to prepare
+    for the execution of the script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before it can start to execute the update script, it needs to register functions
+    to interpret edify language inside the update script. As we can see from the preceding
+    code, these functions include the following four categories:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Built-in functions to support the edify language syntax. These functions are
+    implemented in `bootable/recovery/edify/expr.cpp`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Package installation related functions. These functions are implemented in `bootable/recovery/updater/install.cpp`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Functions to handle block-based OTA packages. In Android 4.4 and earlier versions,
+    the file-based OTA updates are used. In Android 5.0 and later versions, the block-based
+    OTA updates are used. Refer to the following URL about file versus block OTAs:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[https://source.android.com/devices/tech/ota/block.html](https://source.android.com/devices/tech/ota/block.html)'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The block-based functions are implemented in `bootable/recovery/updater/blockimg.cpp`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The developers can extend recovery and updater to provide device-specific OTA
+    extensions.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: After it registers all functions, it calls the `parse_string` function to parse
+    the script. Finally, it calls the `Evaluate` function to execute the script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The updater script
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After we explore the implementation of updater, we will look at the updater
+    script in this section. The updater script is the one that performs the update
+    operations in the target device. The updater script is written in a simple script
+    language called edify. An edify script is a list of expressions, one expression
+    per line. It supports the following operators:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The comparison operators, such as `==` (string equal) and `!=` (string not equal)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The logical operators, such as `||` (logical or), `&&` (logical and), and `!`
+    (logical not)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The concatenation operator `+`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The only reserved keywords are conditional keywords `if`, `then`, `else`, and
+    `endif`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All values in edify are strings. Empty strings are `false` in a Boolean context
+    and all other strings are `true`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can refer to the following URL to learn more about edify syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://source.android.com/devices/tech/ota/inside_packages](https://source.android.com/devices/tech/ota/inside_packages)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Edify functions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The major functionalities of the edify language are implemented as edify functions
+    and the edify functions are registered in the preceding updater source code. To
+    support the OTA update, the edify functions include built-in functions, installation
+    functions, block image functions, and device extensions. We will look at each
+    category in the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Built-in functions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The built-in functions are used to support edify language syntax. The built-in
+    functions are registered by `RegisterBuiltins`. We can look at the following source
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `RegisterBuiltins` function registers the following built-in functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ifelse(cond, e1[, e2])`: Evaluates `cond`, and if it is true it evaluates
+    and returns the value of `e1`, otherwise it evaluates and returns `e2` (if present).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`abort([msg])`: Aborts execution of the script immediately, with the optional
+    `msg`. If the user has turned on text display, `msg` appears in the recovery log
+    and on screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assert(expr[, expr, ...])`: Evaluates each `expr` in turn. If any is false,
+    it immediately aborts execution with the message `assert failed`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`concat(expr[, expr, ...])`: Evaluates each expression and concatenates them.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`is_substring(substring, string)`: Returns true if a substring can be found.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`stdout(expr[, expr, ...])`: Evaluates each expression and dumps its value
+    to `stdout`. This is useful for debugging.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sleep(secs)`: Sleeps for `secs` seconds.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`less_than_int(a, b)`: Returns true if and only if `a` (interpreted as an integer)
+    is less than `b` (interpreted as an integer).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`greater_than_int(a, b)`: Returns true if and only if `a` (interpreted as an
+    integer) is greater than `b` (interpreted as an integer).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Installation functions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The installation-related functions are registered by `RegisterInstallFunctions`.
+    The following is the source code of it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, most functions are registered here; we will now have a look
+    at them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`mount(fs_type, partition_type, name, mount_point)`: This function mounts a
+    filesystem of `fs_type` at `mount_point`. The `partition_type` argument must be
+    one of MTD or EMMC. The `name` argument is the name of a partition (system, userdata
+    or cache, and so on). Recovery does not mount any filesystems by default and the
+    updater script must mount any partitions it needs to modify.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`is_mounted(mount_point)`: Returns true if there is a filesystem mounted at
+    `mount_point`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`unmount(mount_point)`: Unmounts the filesystem mounted at `mount_point`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`format(fs_type, partition_type, location, fs_size, mount_point)`: This function
+    formats a given partition. The `fs_type` argument can be yaffs2, ext4, or f2fs.
+    The `partition_type` argument can be MTD or EMMC. The `location` argument is either
+    the name of the partition or device. The `fs_size` argument is the filesystem
+    size and `mount_point` is the mount point name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`show_progress(frac, secs)`: Advances the progress meter over the next `frac`
+    of its length over the `secs` seconds. The `secs` argument may be zero, in which
+    case the meter is not advanced automatically, but by the use of the `set_progress`
+    function defined as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`set_progress(frac)`: This function sets the position of the progress meter
+    within the chunk defined by the most recent `show_progress` call.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`delete([filename, ...])`: Deletes all the filenames listed. Returns the number
+    of files successfully deleted.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`delete_recursive([dirname, ...])`: Recursively deletes `dirname` and all their
+    contents. Returns the number of directories successfully deleted.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`package_extract_dir(package_dir, dest_dir)`: Extracts all files from the package
+    underneath `package_dir` and writes them to the corresponding tree beneath `dest_dir`.
+    Any existing files are overwritten.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`package_extract_file(package_file[, dest_file])`: Extracts a single `package_file`
+    from the `update` package and writes it to `dest_file`, overwriting existing files
+    if necessary.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`symlink(target[, source, ...])`: Creates all sources as symlinks to target.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`set_metadata(filename, key1, value1[, key2 , value2, ...])`: Sets the keys
+    of the given filename to values.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`set_metadata_recursive(dirname, key1, value1[, key2, value2, ...])`: Recursively
+    sets the keys of the given `dirname` and all its children to values.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getprop(key)`: Returns the value of the system property key (or the empty
+    string, if it''s not defined).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`file_getprop(filename, key)`: Reads the given filename, interprets it as a
+    properties file (for example, `/system/build.prop`), and returns the value of
+    the given key, or the empty string if the key is not present.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`write_raw_image(filename_or_blob, partition)`: Writes the image in `filename_or_blob`
+    to the MTD partition.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`apply_patch(src_file, tgt_file, tgt_sha1, tgt_size, patch1_sha1, patch1_blob,
+    [...])`: Applies a binary patch to `src_file` to produce `tgt_file`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`apply_patch_check(filename, sha1[, sha1, ...])`: Returns true if the contents
+    of `filename` or the temporary copy in the cache partition (if present) have a
+    SHA1 checksum equal to one of the given `sha1` values.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`apply_patch_space(bytes)`: Returns true if at least bytes of scratch space
+    is available for applying binary patches.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`wipe_block_device(block_dev, len)`: Wipes the `len` bytes of the given block
+    device, `block_dev`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`read_file(filename)`: Reads `filename` and returns its contents as a binary
+    blob.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sha1_check(blob[, sha1])`: The `blob` argument is a blob of the type returned
+    by `read_file` or the one-argument form of `package_extract_file`. With no `sha1`
+    arguments, this function returns the SHA1 hash of the blob. With one or more `sha1`
+    arguments, this function returns the SHA1 hash if it equals one of the arguments,
+    or the empty string if it does not equal any of them.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`rename(src_filename, tgt_filename)`: Renames `src_filename` to `tgt_filename`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`wipe_cache()`: Causes the cache partition to be wiped at the end of a successful
+    installation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ui_print([text, ...])`: Concatenates all text arguments and prints the result
+    to the UI.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`run_program(path[, arg, ...])`: Executes the binary at `path` with arguments
+    `arg`. Returns the program''s exit status.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`reboot_now(name[, arg, ...])`: Reboots the device immediately. The `name`
+    argument is the partition name passed to the Android reboot property.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`get_stage(name)`: This function returns the value saved by the `set_stage`
+    function. The `name` argument is the block device for the `/misc` partition.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`set_stage(name, stage)`: This function stores a string value that future invocations
+    of recovery can access. The `name` argument is the block device for the `/misc`
+    partition. The stage is the string to store.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`enable_reboot()`: Sends the `enable_reboot` command to recovery through the
+    pipe.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`tune2fs(arg, ...)`: Changes the filesystem parameters on an ext2/ext3 filesystem.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Block image functions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In Android 5.0 or above, the block-based OTA packages can be used. The block-based
+    OTA packages treat the entire partition as a single file and update it at block
+    level. The functions for block-based OTA packages are registered by the `RegisterBlockImageFunctions`
+    function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The block-based update implementation includes three functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`block_image_verify(partition, transfer_list, new, patch)`: The `partition`
+    argument is the device that the update will do. Usually, it is the `/system` partition.
+    The `transfer_list` argument is a text file containing commands to transfer data
+    from one place to another on the `target` partition. This command only performs
+    a dry run without writing to test if an update can proceed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`block_image_update(partition, transfer_list, new, patch)`: This function is
+    the same as `block_image_verify` except it performs the actual update.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`range_sha1(partition, range)`: This function checks the SHA1 hash of a partition
+    in the specified range.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Device extensions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As Android system developers, we can extend the edify language to meet our
+    device-specific requirements. To extend the edify language with our own functions,
+    we can register our functions using the following function call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: We will explain how to extend the edify language in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preparing an OTA package for x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have understood updater and the updater script inside an OTA package so
+    far. We can build an OTA package for our x86vbox device now. To build an OTA package,
+    we can use the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The default OTA package build in Android 5 or above is to build the block-based
+    OTA package, but we will get an error building block-based OTA packages for x86vbox.
+    There are a lot more configurations that are needed to be done to support block-based
+    OTA packages in our environment. All the third-party recovery packages cannot
+    use block-based update packages as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To avoid this error, we need to change the following `build/core/Makefile`
+    file to remove the `--block` option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the build is completed, we can check the OTA package as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s take a look at the updater script inside the OTA package that we just
+    built:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the updater script, it checks the build information of the current system
+    first. If the current system is newer than the OTA package, it won't update the
+    system. After that, it also checks the device name of the running system and the
+    OTA package, both should match each other. Otherwise, we may update the system
+    using a wrong OTA package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After all verification work has been done, the script will format the `/system`
+    partition and create a new `system` folder from the OTA package. Once the system
+    files are installed, the script will create all necessary soft-links and apply
+    properties for SELinux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, it will update the `/boot` partition with a new kernel and ramdisk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we build the OTA package for the x86vbox device, and we also build recovery
+    in [Chapter 12](5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml), *Introducing Recovery*,
+    we can update our system to the OTA package. We should be able to update the system
+    using this OTA package, but the system may not be able to boot up at the moment.
+    We have two issues that need to be resolved before we can do more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Recalling how we built recovery for x86vbox, we reuse the source code that
+    we developed from [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml), *Creating
+    Your Own Device on VirtualBox,* to [Chapter 11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml),
+    *Enabling VirtualBox-Specific Hardware Interfaces* as much as possible. This means
+    we inherited the following features in the recovery build in [Chapter 12](5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml),
+    *Introducing Recovery*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first problem inherited from the two stages boot is that we use the components
+    in the Android `system` folder to boot recovery. Ideally, the recovery should
+    not depend on anything else. It should be a self-contained system. For example,
+    the recovery should work properly, even though the system image is damaged. We
+    can repair the system using recovery.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We use the two stages boot process from the Android-x86 project. As we can see
+    from the previous chapters, the system disk layout for a two stages boot is different
+    from the standard Android system. The system that we create using the OTA package
+    is the standard Android system disk layout. We can only use the standard boot
+    process to boot the system after the OTA update. This means we have to boot the
+    system using `ramdisk.img` instead of `initrd.img`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Removing dependencies on /system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The dependencies to the Android `/system` folder include two parts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All kernel modules for device drivers are located at: `$OUT/system/lib/modules/4.x.x-android-x86`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We need to run some basic Linux commands during the recovery boot process.
+    For example, we do hardware initialization using the following command:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`on init exec -- /system/bin/logwrapper /system/bin/sh /system/etc/init.sh`'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Let's work on the preceding two points one by one in the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hardware initialization in recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To load the minimum device drivers needed by recovery, we have to change the
+    execution of the shell script for Android system start. This is a customization
+    process from general to specific, which is different from the goal of the Android-x86
+    project. In the Android-x86 project, all possible device drivers are available,
+    while we should only include the drivers needed by recovery for VirtualBox here.
+    As we can see when we introduce a two stages boot, all possible device drivers
+    are compiled and available in the `$OUT/system/lib/modules/4.x.x-android-x86`
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The kernel modules will be loaded to the system depending on the hardware found
+    by the kernel dynamically. In our case, we will remove the dynamically loading
+    process and keep the minimum kernel modules only necessary for the recovery boot
+    up. Let''s look at the original startup script for x86vbox:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: During the startup, the `init` process will run the preceding command line to
+    execute the `/system/etc/init.sh` script. The commands `/system/bin/logwrapper`
+    and `/system/bin/sh` are both part of the Android system in the `/system/bin`
+    folder. They are not available to recovery, since the `/system` partition is not
+    mounted after recovery boot up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To resolve this issue, we will use the `busybox` binary in `initrd.img` to provide
+    a minimum environment to execute Linux shell commands in recovery environments.
+    We cannot execute the `/system/etc/init.sh` script either, since it is stored
+    in the `/system/etc` folder, which is also not available to recovery. We will
+    replace it by creating another script, `init.x86vbox.sh,` in `/sbin` in the recovery
+    environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We changed `init.recovery.x86vbox.rc` to the following one to remove the dependency
+    from `/system`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: During the `early-init` stage, we create the soft-links to make `/bin/sh` available.
+    We replaced `/system/bin/sh` with `/bin/sh` residing in recovery ramdisk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `init.x86vbox.sh` script, we load the device drivers needed by recovery
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, in the shell script `init.x86vbox.sh`, we created all soft-links
+    for `busybox` first. Then, we loaded all necessary device drivers. We also mounted
+    a shared folder of VirtualBox under the `/vendor` folder so that we can exchange
+    data between the host and the guest. We will use this folder in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Minimum execution environment in recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we can see from both scripts, `init.recovery.x86vbox.rc` and `init.x86vbox.sh`,
+    we need to execute some Linux commands so that we can perform our tasks during
+    the boot up process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need to include all these Linux commands in `ramdisk-recovery.img` so that
+    they are available to recovery. However, the problem is not as simple as we think
+    so far. Most of the commands are dynamically linked instead of static linked in
+    AOSP build output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our case, we have two sets of shared libraries that we need to include in
+    `ramdisk-recovery.img`. The `busybox` binary in `initrd.img` from Android-x86
+    is prebuilt out of the AOSP tree, so they have their own dependencies. If we go
+    to the `newinstaller` folder `bootable/newinstaller/initrd`, we can see the list
+    of executable and shared libraries:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are eight shared libraries besides the `busybox` binary, as we can see
+    in the preceding snippet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Besides `busybox`, we also have some executables that are built as part of
+    the AOSP source tree. They have a different set of shared libraries, which need
+    to be included in `ramdisk-recovery.img` as well. For example, the display `uvesafb`
+    driver needs a user space daemon `/sbin/v86d`, which is built as part of the AOSP
+    tree. Without a set of shared libraries in place, it won''t be able to work properly.
+    To allow us to run these executable files, we need to include the following shared
+    libraries in `ramdisk-recovery.img`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You may be wondering how to find the shared library dependencies. One way that
+    we can do this is to get the linkage information using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see from the preceding output, we can find the shared libraries needed
+    by `/sbin/v86d` using the `readelf` command. We also need to verify the dependencies
+    through the testing in the recovery environment, which we will discuss more in
+    the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To include all the discussed kernel modules and shared libraries in `ramdisk-recovery.img`,
+    we changed a part of `x86vbox.mk` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_13_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Building and testing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: After we have done all the analysis in this chapter, we can build and test our
+    code now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As usual, we have a manifest file for each chapter. We make changes for this
+    chapter based on the source code of [Chapter 12](5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml),
+    *Introducing Recovery*. The following are the projects that we changed in this
+    chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that we need to change four projects: `recovery`, `newinstaller`,
+    `common`, and `x86vbox`. We have an `android-7.1.1_r4_x86vbox_ch13_r1` tag as
+    the baseline of the source code for this chapter.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To get the source code from GitHub and AOSP directly, the following command
+    can be used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the source code is ready for use, we can set the environment and build
+    the system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To build `initrd.img`, we can run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To build the OTA package for the x86vbox device, we can run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: To test the AOSP images in VirtualBox, we need to use PXE boot and NFS as we
+    introduced in [Chapter 9](c8d10155-cc8e-4b8c-a5e0-f359520c894a.xhtml), *Booting
+    Up x86vbox Using PXE/NFS*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After the build is completed, we can add an entry in the PXE boot configuration
+    file, `$HOME/.VirtualBox/TFTP/pxelinux.cfg/default`, as follows to test recovery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the recovery is started, we can see the following screen of recovery
+    on the x86vbox device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_13_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The user interface of recovery for x86vbox looks the same on any Android device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before you download the source code and build everything by yourself, you can
+    also download and test the pre-built image in this chapter at [https://sourceforge.net/projects/android-system-programming/files/android-7/ch13/ch13.zip/download](https://sourceforge.net/projects/android-system-programming/files/android-7/ch13/ch13.zip/download).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learnt about the workflow of updater, which is the one actually
+    to do the work of the OTA update. The updater interprets the updater script inside
+    the OTA package to perform the update. We don't have to create the updater script
+    by ourselves. It is created during the build process automatically. You may have
+    some questions here, since you may use some recovery packages created by open
+    source developers or ROM developers. You may even use recovery distributed by
+    LineageOS/CyanogenMod or TWRP. How do they relate to the topics that we discussed
+    in this chapter? These are the topics that we will cover in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL

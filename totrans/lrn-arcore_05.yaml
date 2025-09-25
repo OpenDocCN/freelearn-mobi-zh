@@ -1,0 +1,717 @@
+- en: Real-World Motion Tracking
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that we have all the fun stuff set up and ready to go, we can begin building
+    some real-world AR apps. In order to do this, we will be picking and choosing
+    various pieces we need from the samples. The samples are great examples, but,
+    for the most part, they are nothing more than boilerplate code. This means that
+    we have no reason to rewrite code sections that already work well. Instead, we
+    will focus on adding new code to tackle AR problems. In this chapter, we will
+    dive in and learn in depth how ARCore motion tracking works. We will learn the
+    current limitations of motion tracking with ARCore and develop a technique for
+    overcoming those limitations. Here are the main topics that we will cover in this
+    chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Motion tracking in depth
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 3D sound
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Resonance Audio
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A tracking service with Firebase
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Visualize tracked motion
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In order to successfully complete the exercises in this chapter, the reader
+    will need to complete the setup till [Chapter 4](9739deb2-69a5-4756-aa54-946ba15eb405.xhtml),
+    *ARCore on the Web*. It may be helpful to review some of the exercises from that
+    chapter as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Motion tracking in depth
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'ARCore implements motion tracking using an algorithm known as **visual-inertial
+    odometry** (**VIO**). VIO combines the identification of image features from the
+    device''s camera with internal motion sensors to track the device''s orientation
+    and position relative to where it started. By tracking orientation and position,
+    we have the ability to understand where a device is in 6 degrees of freedom, or
+    what we will often refer to as the device''s/object''s **pose**. Let''s take a
+    look at what a pose looks like in the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/63cc29fa-8877-4442-ade8-3a65019042b2.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 6 Degrees of Freedom, Pose
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will use the term pose frequently when identifying an object's position and
+    orientation in 3D. If you recall from [Chapter 4](9739deb2-69a5-4756-aa54-946ba15eb405.xhtml),
+    *ARCore on the Web*, a pose can also be expressed in a mathematical notation called
+    a matrix. We can also refer to rotation in a special form of complex math called
+    a **quaternion**. Quaternions allow us to define all aspects of 3D rotation in
+    a simple form. Again, we won't worry about the specific math here; we will just
+    mention how it is used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Perhaps it will be more helpful if we can see how this works in a modified
+    ARCore sample. Open up the `spawn-at-surface.html` example from the `Android/three.ar.js/examples`
+    folder in a text editor and follow the given steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scroll down or search for the `update` function.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Locate the following line of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add the following lines of code right after the highlighted line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Save the file. The code we added just extracts the camera's position and orientation
+    (rotation) into some helper variables: `pos` and `rot`. Then, it outputs the values
+    to the console with the `console.log` function. As it happens, the camera also
+    represents the device's view.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Open Command Prompt or shell window.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Launch the `http-server` in your `android` folder by entering this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Launch the Chrome debugging tools and connect remotely to your device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Open the `spawn-at-surface.html` file using the WebARCore browser app on your
+    device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Switch back to the Chrome tools and click on Inspect.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Wait for the new window to open and click on Console. Move your device around
+    while running the AR app (`spawn-at-surface.html`), and you should see the Console
+    tab updated with messages about the device''s position and orientation. Here''s
+    an example of how this should look:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/0c42ea9a-646c-4dda-bb38-cfb0f89fe7c9.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Console output showing device position and orientation being tracked
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code we added in this example tracks the camera, which, as it so happens,
+    represents the view projected through the device in an AR app. We refer to a camera
+    as the view of a scene in 3D. A 3D scene can have multiple cameras, but, typically,
+    we only use one in AR. The following is a diagram of how we define a camera or
+    view projection in 3D:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/9b8e5644-539d-48a4-ad41-41e09850b6bb.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Viewing frustum of a 3D camera
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main task of a camera is to project or flatten the 3D virtual objects into
+    a 2D image, which is then displayed on the device. If you scroll near the middle
+    of the `spawn-at-surface.html` file, you will see the following code, which creates
+    the camera for the scene:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `vrDisplay` is the device's actual camera, `60` represents the field of
+    view, `window.innerWidth / window.innerHeight` represents the **aspect ratio**,
+    and `vrDisplay.depthNear` and `vrDisplay.depthFar` represent the near and far
+    plane depth distances. The near and far, along with the field of view, represent
+    the view frustum. All objects in the view frustum will be rendered. Feel free
+    to try and change those parameters to see what effect they have on the scene view
+    when running the app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use a field of view of 60 degrees in this setting to give a more natural
+    perspective to the objects in the scene. Feel free to experiment with larger and
+    smaller angles to see the visual effect this has on the scene objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have a better understanding of how we can track our device around
+    a scene, we will extend our example. In the next section, we will introduce 3D
+    spatial sound.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 3D sound
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '3D sound is another illusion we cast at the listener in order to further trick
+    them into believing that our virtually generated world is real. In fact, 3D sound
+    has been used extensively for years in movies, TV, and of course, video games
+    in order to trick the listener into a more immersive experience. In a movie, for
+    instance, the listener is stationary, so 3D sound can be mimicked by setting up
+    multiple speakers. However, in an AR or VR mobile app, the sound needs to come
+    from a single (mono) or double (stereo, headphones) source. Fortunately, numerous
+    smart people figured out how our human ears hear using a technique called **binaural
+    sound** to map out sounds in 3D. The next diagram goes into a little more detail
+    on how binaural audio works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/8dae6f4d-343a-4209-b724-293e4762cd9b.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 3D sound visualized
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since then, we have figured out not only how to record binaural audio, but also
+    how to play it back, thus giving us the ability to play sounds that fool the brain
+    into thinking that their source is different from reality. However, most of the
+    current technology assumes that the user is stationary, but, of course, that is
+    far from the case in an AR app. In an AR app, our user (listener) is moving in
+    our virtual world, which means that the 3D sounds around the listener also need
+    to adjust. Fortunately, Google has again come to the rescue and developed a 3D
+    sound API for AR and VR, called **Resonance Audio**. We will explore more about
+    Resonance Audio and how to use it in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resonance Audio
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Google developed Resonance Audio as a tool for developers who need to include
+    3D spatial audio in their AR and VR applications. We will use this tool to put
+    3D sound in our demo app. Let''s get started by opening up the `spawn-at-surface.html`
+    file in your favorite text editor and then follow the given steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Locate the beginning of the JavaScript and add the following lines in the variable
+    declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, scroll down to just before the `update` function and start a new function
+    called `initAudio`, like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we need to initialize an `AudioContext`, which represents the device''s
+    stereo sound. Inside the `initAudio` function, enter the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we set up the audio scene in `Resonance` and output the binaural audio
+    to the device''s stereo output by adding this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After this, we define some properties for the virtual space around the user
+    by adding the given code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, there is plenty of flexibility here to define any `room` you
+    want. We are describing a room in this example, but that room can also be described
+    as an outdoor space. There's an example of this for the **up** direction at the
+    bottom where the **transparent** option is used. Transparent means sound will
+    pass through the virtual wall in that direction, and you can represent the outdoors
+    by setting all directions to transparent.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now, we add the `room` to the audio scene by writing this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that `room` is done, let''s add the audio source by entering the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `audioElement` is a connection to an HTML `audio` tag. Essentially, what
+    we are doing here is replacing the default audio of HTML with the audio routed
+    through resonance to provide us with spatial sound.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Finally, we need to add our `audio` object when we spawn our box and play the
+    sound. Enter the given code just following the function call to `THREE.ARUtils.placeObjectAtHit`inside
+    the `onClick` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before we run our sample, we need to download the `cube-sound.wav` file and
+    put it in our sample folder. Open the folder where you downloaded the book's source
+    code and copy the file from `Chapter_5/Resources/cube-sound.wav` to your `Android/three.ar.js/examples`
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binaural is so named because we hear sound with both the ears. In order to get
+    the most from the audio examples in this chapter, ensure that you wear stereo
+    headphones. You will be able to hear some differences with your device's mono
+    speaker, but it won't be the same without headphones.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now when you are ready to run the app, save the `spawn-at-surface.html` page,
+    start your device, and close and reopen the WebARCore app. Play around with the
+    app and spawn a box by tapping a surface. Now when the box spawns, you will hear
+    the cube sound. Move around the scene and see how the sound moves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Not what you expected? That''s right, the sound still moves with the user.
+    So what''s wrong? The problem is that our audio scene and 3D object scene are
+    in two different virtual spaces or dimensions. Here''s a diagram that hopefully
+    explains this further:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/8a2e4d4f-4f2e-43a1-95c9-cbeb057d3334.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Difference in audio and virtual 3D object space
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The problem we have is that our audio space moves with the user. What we want
+    is to align the audio space with the same reference as our camera and then move
+    the listener. Now, this may sound like a lot of work, and it likely would be,
+    if not for ARCore. So thankfully, we can do this by adding one line right after
+    those couple of console lines we put in earlier, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Find the two `console.log` lines we added in the previous section and comment
+    them out like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If you omitted the previous section, you will need to go back and complete it.
+    The code we use in this section requires it*.*
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add our new line of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: All this line does is to adjust the audio position relative to the user (camera).
+    It does this by subtracting the `X`, `Y`, and `Z` values of the position vectors.
+    We could have also just as easily subtracted the vectors.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the sample again. Spawn some boxes and move around.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note that when you place a box and move around, the sound changes, as you expect
+    it to. This is due to our ability to track the user in 3D space relative to where
+    a virtual sound is. In the next section, we will look at extending our ability
+    to track users by setting up a tracking service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A tracking service with Firebase
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now, being able to track a user's motion is all well and good, but what if we
+    wanted to track a user across applications or even multiple users at the same
+    time? This will require us to write a server, set up a database, make a schema,
+    and so on, which is certainly not an easy task and cannot be easily explained
+    in just a chapter. However, what if there was an easier way? Well, there is, and
+    again, Google comes to our rescue with Firebase.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Firebase is an excellent collection of app tools and storage services that
+    are dead simple to use and cross-platform. We will use Firebase database, a real-time
+    database service, to track our user''s position. Open up a web browser and follow
+    the given steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Browse to [firebase.google.com](https://firebase.google.com/).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the GET STARTED button.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Log in with your Google (Gmail) account. If you don't have one, yes, you will
+    need to create one to continue.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the Add project button.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Name your project `ARCore` and select your own Country/Region, as shown in
+    the following excerpt:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/7e5dfefe-4619-40ff-87d4-cc7708626781.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Setting up the ARCore project
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click on CREATE PROJECT. This will create your project and open up the Firebase
+    Console.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Click on Add Firebase to your web app, which can be found at the top of the
+    Project Overview page. This will open up a dialog similar to the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/fa2c34a8-c817-4361-a43f-db671318adc6.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Copy the setup code for your project
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click on COPY. This should copy the two script tags and contents to your clipboard.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Don't worry if the keys and URLs you see are different; they should be different.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open up the `spawn-at-surface.html` file in your favorite text editor. Scroll
+    down to just before the last `<script>` tag, the one with the big block of code.
+    Paste the code (*Ctrl* + *V* and*command* + *V* on Mac) you copied earlier.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Setting up the database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'With that, we have set up the ARCore Firebase project. Now we want to create
+    our real-time database and set it up for us to connect to. Go back to the Firebase
+    Console and follow the given steps to set up a database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Close the configuration dialog that we left open from the last exercise.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on Database on the left-hand side menu.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on GET STARTED. This will create a Firebase Realtime Database with default
+    security turned on. We don't really need authentication at this point, so let's
+    just turn it off.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Click on the RULES tab. The default security rule is defined with JSON. We
+    want to change this so that our database has public access. Replace the JSON with
+    the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Click on PUBLISH. You should now see the following security warning:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/2053873a-2786-4adc-a044-9d4c4dea139d.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The security warning after turning on public access
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click on the DATA tab. Leave this tab and the browser window open.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Turning off security is okay for development prototyping. However, as soon as
+    you go past a prototype, you need to turn security back on. Failure to do this
+    can cost you all manner of heartache, pain, and things you probably can't imagine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Time to test the connection
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Believe it or not, our real-time database service is up and running; now we
+    just want to test our connection by writing a single value to the database from
+    our AR Web app. Open up `spawn-at-surface.html` in a text editor and follow along:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scroll down to the Firebase script we added earlier. Add the following code
+    after the last line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The preceding line creates a reference to the database. Now, let''s set some
+    data using the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Save the file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Various versions of the `spawn-at-surface.html` page can be found in the book's
+    downloaded source code at `Chapter_5/Examples`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the page on your desktop using the [**http://localhost:9999/three.ar.js/examples/spawn-at-surface.html**](http://localhost:9999/three.ar.js/examples/spawn-at-surface.html)
+    URL. At this stage, we are just setting a single point of data when the page starts,
+    as a test, so we don't need AR. Of course, ensure that you start `http-server`
+    before running any tests.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After the page loads, you will see the ARCore warning message, but not to worry,
+    this is just a test of the real-time database service.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Go back to the Firebase Console ****([https://console.firebase.google.com/u/0/?pli=1](https://console.firebase.google.com/u/0/?pli=1)**)******
+    window we left open. Ensure that you are looking at the Database page and DATA
+    tab, as shown:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/0beed976-b5a3-4217-ab4a-69574d4e8306.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Checking the data that was set on the Firebase database
+  prefs: []
+  type: TYPE_NORMAL
+- en: Expand the pose and its child objects, as shown in the preceding excerpt. If
+    everything is working correctly, you should see the values we set for a simulated
+    pose (position).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We now have a service in place, with the ability to track any data we want.
+    Firebase allows us to model our data and schema on the fly, which is very useful
+    in prototyping. It also has the extra benefit of being free, public, and accessible
+    from the other platforms we will work with later. In the next section, we will
+    put our tracking service to use by tracking the user in real time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Visualizing tracked motion
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that we understand how to track motion and have a service in place, let''s
+    see how we can put this service to use and visualize the tracked data in our AR
+    app. Open up the `spawn-at-surface.html` page in a text editor and follow the
+    given steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Find that last line of code we added in the last exercise and delete it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Replace that line with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first line in the preceding snippet is setting an index or count variable.
+    Then, we use the `setInterval` function to set up a repeating timer that calls
+    the anonymous function every second (1000 milliseconds). We do this so that we
+    only track movement every second. We could certainly track movement every frame
+    like in a multiplayer game, but for now, one second will work. The rest of the
+    code, you have seen earlier in the previous exercises.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Save the file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the sample in your browser's device. Now, move around with the device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Go to the Firebase Console. You should now see a stream of data getting fed
+    into the database. Feel free to expand the data points and see the values being
+    captured.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Great, we can now see our data being collected. Of course, it is a little difficult
+    for us humans to easily make sense of the data unless we can visualize it in 2D
+    or 3D, which means that we have a few options. We can build a separate web page
+    to just track the users on a map. Yet, that sounds more like a standard web exercise,
+    so let''s leave that to readers who are so inclined. Instead, what we will do
+    is draw a 3D path of where the user has traveled, using the same data that we
+    are sending to our database. Open up that text editor again and load up `spawn-at-camera.html`
+    to follow along:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Locate that call to the `setInterval` function we added in the last exercise.
+    We need to change some code in order to create a line from the points.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Enter the following code after the identified line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code first checks whether `lastPos` is defined. On the first run through
+    the `setInterval` timer loop, `lastPos` will be undefined; it then gets set right
+    after the `if` statement. Then, after `lastPos` is defined, we create a basic
+    line `material` with the call to `THREE.LineBasicMaterial`, passing in a hexadecimal
+    color value. Next, we create our `geometry`, a `line`, using the current `pos` and
+    `lastPos` variables with the `material`. We do this by first constructing a `Vector3`
+    object with the `x`, `y`, and `z` values of each position. Finally, we add the
+    `line` to the scene with `scene.add(line)`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: A vector is nothing more than an ordered set of numbers, where each number represents
+    a dimension. There are a number of cool mathematical properties about vectors
+    that are useful to know. However, for now, think of a `Vector3` as representing
+    a point in 3D space at the `x`, `y`, and `z` coordinates. We use the term vertex
+    to refer to a vector or point on a line, surface, or mesh.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Save the file and run it in the WebARCore browser on your device. Now when
+    you move around, you will see a trail of blue lines follow you, as shown in the
+    following picture:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/76425f6b-dd40-4dc1-b5a2-ad3ab343a3b9.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Sample showing tracked path as blue lines
+  prefs: []
+  type: TYPE_NORMAL
+- en: Feel free to continue playing with the app. The development cycle (build, deploy,
+    and run) is quick when developing a simple single page web app, which gives you
+    plenty of opportunities to make quick changes, run them, and then debug easily.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'At the end or near the end of every chapter, an exercise section will be available
+    to test your knowledge and give you more experience with ARCore. Complete the
+    following exercises on your own:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change the color of the tracking line from blue to red, or another color.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Replace the straight line segments with a `SplineCurve`. Hint—you will need
+    to track more than one previous position.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Make the cube and/or audio follow the user along the tracked path. Hint—you
+    can use another `setInterval` timer function to move the box every 1.1 seconds
+    (1100 milliseconds) along the path.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With that, we complete our look at motion tracking with ARCore. As we learned,
+    ARCore gives us the ability to track position and rotation or the pose of a device
+    using feature identification correlated with the device's motion sensors. We then
+    learned why it is important to track the position of a user when building AR apps
+    with 3D sound. This taught us the difference between our audio and virtual (3D)
+    scene and how to convert between references. We then extended our ability to track
+    a user by setting up a Firebase Realtime Database and connected that to our AR
+    app. By doing this, we could now track a single user or multiple users globally.
+    Of course, we didn't have enough time here to build on this further. For now,
+    we finished the app by drawing the user's travel path while the device moves around
+    an area.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will jump back to working with Android (Java) and learn
+    more about environmental understanding and various related 3D concepts, which
+    is the next topic on the fundamental AR topics' list.
+  prefs: []
+  type: TYPE_NORMAL

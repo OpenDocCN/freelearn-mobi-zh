@@ -1,0 +1,925 @@
+- en: Booting Up x86vbox Using PXE/NFS
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the last chapter, we created the x86vbox device and we were able to build
+    it in our environment. In this chapter, we will start to debug the boot up process
+    for x86vbox. The first thing that we meet in the boot up process is the bootloader
+    issue. We could use the same GRUB bootloader as Android-x86\. With GRUB, we still
+    have issues about how to configure and install it on the storage media. If we
+    go this way, we need to spend some time talking about the topics related to bootloader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using VirtualBox as a virtual hardware platform, we have a much simpler solution.
+    We can use the built-in PXE boot mechanism to avoid bootloader issues. From a
+    debugging point of view, PXE boot can make the entire boot up process more transparent
+    to us. With PXE boot, we can move the installation of bootloader out of the picture
+    so we can concentrate on debugging the Android system itself. In this chapter,
+    we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up a PXE boot environment
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Configuring VirtualBox to boot from PXE
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up the root filesystem using NFS
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up a PXE boot environment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: What is PXE? **PXE** means **Preboot Execution Environment**. To build a Linux
+    environment, what we need is to find a way to load the kernel and ramdisk to the
+    system memory. This is one of the major tasks performed by most Linux bootloaders.
+    The bootloader usually fetches the kernel and ramdisk from some kind of storage
+    device, such as flash storage, hard disk, USB, and so on. It can also be retrieved
+    from a network connection. PXE is a method that can boot a device with LAN connection
+    and a PXE-capable **network interface controller** (**NIC**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As shown in the following diagram, PXE uses the DHCP and TFTP protocols to
+    complete the boot process. In the simplest environment, a PXE server is set up
+    as both a DHCP and TFTP server. The NIC client obtains the IP address from the
+    DHCP server and uses the TFTP protocol to get the kernel and ramdisk images to
+    start the boot process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: PXE boot environment
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we will learn how to prepare a PXE-capable ROM for a VirtualBox
+    virtio network adapter so that we can use this ROM and boot the system via PXE.
+    We will also learn how to set up a PXE server, which is the key element in the
+    PXE setup. In VirtualBox, it includes a built-in PXE server. We will use this
+    built-in PXE server to boot the Android system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preparing PXE Boot ROM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Even though PXE boot is supported by VirtualBox, the setup is not consistent
+    on a different NIC. You may get error messages such as `PXE-E3C - TFTP Error -
+    Access Violation` during the boot. This is because PXE boot depends on LAN Boot
+    ROM. When you choose different network adapters, you may get different test results.
+    To get a consistent test result, you can use the LAN Boot ROM from the Etherboot/gPXE
+    project. gPXE is an open source (GPL) network bootloader. It provides a direct
+    replacement for proprietary PXE ROMs, with many extra features such as DNS, HTTP,
+    iSCSI, and so on. There is a page at the gPXE project website about how to set
+    up LAN Boot ROM for VirtualBox:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.etherboot.org/wiki/romburning/vbox](http://www.etherboot.org/wiki/romburning/vbox)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following table lists network adapters supported by VirtualBox:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **VirtualBox adapters** | **PCI vendor ID** | **PCI device ID** | **Mfr name**
+    | **Device name** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Am79C970A | 1022h | 2000h | AMD | PCnet-PCI II (AM79C970A) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Am79C973 | 1022h | 2000h | AMD | PCnet-PCI III (AM79C973) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 82540EM | 8086h | 100Eh | Intel | Intel PRO/1000 MT Desktop (82540EM) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 82543GC | 8086h | 1004h | Intel | Intel PRO/1000 T Server (82543GC) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 82545EM | 8086h | 100Fh | Intel | Intel PRO/1000 MT Server (82545EM) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| virtio | 1AF4h | 1000h |  | Paravirtualized Network (virtio-net) |'
+  prefs: []
+  type: TYPE_TB
+- en: Since paravirtualized networks have better performance in most situations, we
+    will explore how to support PXE boot using the virtio-net network adapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Downloading and building the LAN Boot ROM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There may be LAN Boot ROM binary images available on the Internet, but they
+    are not provided at the gPXE project. We have to build from source code according
+    to the instructions from the gPXE project website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s download and build the source code using the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Fixing up the ROM image
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before the ROM image can be used, the ROM image has to be updated due to VirtualBox
+    having the following requirements on ROM image size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Size must be 4K aligned (that is, a multiple of 4,096)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Size must not be greater than 64K
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let''s check the image size first and make sure that it is not larger than
+    65,536 bytes (64K):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that it is less than 64K. Now we have to pad the image file to a
+    4K boundary. We can do this using the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We check the image file size again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, the file size is 64K now. To be convenient, I will upload this
+    file at the following link and you can download it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://sourceforge.net/projects/android-system-programming/files/android-7/ch14/1af41000.rom/download](https://sourceforge.net/projects/android-system-programming/files/android-7/ch14/1af41000.rom/download)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuring the virtual machine to use the LAN Boot ROM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The user-based VirtualBox configuration can be stored in the `$HOME/.VirtualBox`
+    folder and we need to use this folder for the built-in PXE server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This folder is not created by default, so we need to create it first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we create this folder, we can launch VirtualBox and quit. Then, let''s
+    look at the content of the `$HOME/.VirtualBox` folder again, as shown in the following
+    screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: From the preceding screenshot, we can see that the content of this folder is
+    empty before we run VirtualBox. After we execute VirtualBox and quit, there are
+    a list of files that are created by VirtualBox in this folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we can change the configuration to use the LAN Boot ROM we just created.
+    To use this LAN Boot ROM, we can use the `VBoxManage` command to update VirtualBox
+    settings. We use the following command to set the `LanBootRom` path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: We copied the LAN Boot ROM to `$HOME/.VirtualBox/1af41000.rom`. We use `global`
+    here, then all VMs will use the gPXE LAN Boot ROM. We can change `global` to a
+    specific virtual machine name. In that case, the gPXE LAN Boot ROM will only be
+    used by that virtual machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Having set up the configuration, let''s look at the `$HOME/.VirtualBox/VirtualBox.xml`
+    configuration file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, the `VBoxInternal/Deices/pcbios/o/Config/LanBootRom` configuration
+    is set in this configuration file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To remove the preceding configuration, we just have to reset the path value
+    as follows. The `$VM_NAME` argument can be `global` or a virtual machine name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can also check the current configuration using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Setting up the PXE boot environment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'With a proper PXE ROM installed, we can set up the PXE server now. Before we
+    set up a PXE server, we need to think about the network connections. There are
+    three ways a virtual machine in VirtualBox can connect to the network:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Bridged network**: This connects to the same physical network as the host.
+    It looks like the virtual machine connects to the same LAN connection as the host.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Host-only network**: This connects to a virtual network that is only visible
+    by the virtual machine and the host. In this configuration, the virtual machine
+    cannot connect to an outside network, such as the Internet.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**NAT network**: This one connects to the host network through NAT. This is
+    the most common choice. In this configuration, the virtual machine can access
+    the external network, but the external network cannot connect to the virtual machine
+    directly. For example, if you set up a FTP service on the virtual machine, the
+    computers on the LAN of the host cannot access this FTP service. If you want to
+    publish this service, you have to use port forwarding settings to do this.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: With these concepts in mind, if you want to use a dedicated machine as the PXE
+    server, you can use a bridged network in your environment. However, you must be
+    very careful using this setup. This is usually done by the IT group in your organization,
+    since you cannot set up a DHCP server on the LAN without affecting others. We
+    won't use this option here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The host-only network is actually a good choice for this case, because this
+    kind of network is an isolated network configuration. The network connection only
+    exists between the host and the virtual machine. It is possible to use the host-only
+    network to set up the PXE server, but we won't use this option in our setup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In VirtualBox, PXE booting in the NAT network is supported. With this option,
+    we don't need to set up a separate PXE server by ourselves. We will use this built-in
+    PXE server in this book. The test environment from this chapter to [Chapter 14](15628e05-2216-4855-8347-588f61c8f61a.xhtml),
+    *Customizing and Debugging Recovery* will use this setup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuring and testing the PXE boot
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We can create a virtual machine instance to test the environment. We will demonstrate
+    this in the Ubuntu 14.04 environment. The same setup can be duplicated to the
+    Windows or OS X environment as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up the virtual machine
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s create a virtual machine called pxeAndroid in VirtualBox first. After
+    starting the VirtualBox, we can click the New button to create a new virtual machine,
+    as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: We call it pxeAndroid and choose Linux as the type of virtual machine. We can
+    just follow the wizard to create this virtual machine with a suitable configuration.
+    After the virtual machine is created, we need to make a few changes to the settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing that needs to be changed is the network configuration. We need
+    to set the network adapter as a NAT network. We can click the name of the virtual
+    machine, pxeAndroid, first and then click on the Settings button to change the
+    settings. Select the Network option on the left-hand side, as we can see in the
+    following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We select Adapter 1, the default for the NAT network. We need to change the
+    Adapter Type to Paravirtualized Network (virtio-net) since we will use the PXE
+    ROM that we just built. The NAT network can connect to the outside network. It
+    supports port forwarding so that we can access certain services in the virtual
+    machine. The one that we need to set up here is the ADB service. We need to use
+    ADB to debug the x86vbox device later. We can set up the port forwarding for ADB
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Next, we can click on the System option to specify that the default boot order
+    is to boot from the network interface, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Using VirtualBox internal PXE booting with NAT
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Once we set up the virtual machine, we can use the built-in PXE server of VirtualBox
+    for PXE boot using the NAT network. To use the built-in PXE server, we need to
+    set it up using the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a `$HOME/.VirtualBox/TFTP` folder. The built-in `TFTP` root is at `$HOME/.VirtualBox/TFTP`
+    on Linux or `%USERPROFILE%\.VirtualBox\TFTP` on Windows.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Usually, the default boot image name is `pxelinux.0` for PXE boot, but it is
+    `vmname.pxe` for the VirtualBox built-in PXE. For example, if we use `pxeAndroid`
+    as the virtual machine name, we have to make a copy of `pxelinux.0` and name it
+    `pxeAndroid.pxe` under the `TFTP` root folder.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Configuring pxelinux.cfg
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we can test the virtual machine that we just set up, we need to specify
+    it in the configuration file to let the PXE boot know where to find the kernel
+    and ramdisk images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The PXE boot process is something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the pxeAndroid virtual machine powers on, the client will get the IP address
+    through DHCP.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After the DHCP configuration is found, the configuration includes the standard
+    information such as IP address, subnet mask, gateway and DNS, and so on. In addition,
+    it also provides the location of the TFTP server and the filename of a boot image.
+    The name of the boot image is usually `pxelinux.0`. The name of the boot image
+    is `vmname.pxe` for the built-in PXE boot environment where the `vmname` should
+    be the name of virtual machine. For example, it is `pxeAndroid.pxe` for our virtual
+    machine.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The client contacts the TFTP server to obtain the boot image. The boot image
+    should be put under `TFTP` root, which is `$HOME/.VirtualBox/TFTP` in our case.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The TFTP server sends the boot image (`pxelinux.0` or `vmname.pxe`), and the
+    client executes it.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: By default, the boot image searches the `pxelinux.cfg` directory on the TFTP
+    server for boot configuration files.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The client downloads all the files it needs (kernel, ramdisk, root filesystem,
+    and so on) and then loads them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `pxeAndroid` target machine reboots.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In step 5, the boot image searches the boot configuration files in the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, it searches for the boot configuration file that is named according to
+    the MAC address represented in lower case hexadecimal digits with dash separators.
+    For example, for the MAC address 08:00:27:90:99:7B, it searches for the file `08-00-27-90-99-7b`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, it searches for the configuration file using the IP address (of the machine
+    that is being booted) in upper-case hexadecimal digits. For example, for the IP
+    address 192.168.56.100, it searches for the `C0A83864` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If that file is not found, it removes one hexadecimal digit from the end and
+    tries again. However, if the search is still not successful, it finally looks
+    for a file named `default` (in lower case).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'For example, if the boot filename is `$HOME/.VirtualBox/TFTP/pxeAndroid.pxe`,
+    the Ethernet MAC address is 08:00:27:90:99:7B, and the IP address is 192.168.56.100,
+    the boot image looks for filenames in the following order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `pxelinux.0` boot image is part of an open source project the Syslinux.
+    We can get the boot image and the menu user interface from the Syslinux project
+    using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After Syslinux is installed, `pxelinux.0` can be copied to the `TFTP` root
+    folder as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To have a better user interface, we can copy `menu.c32` to the `TFTP` folder
+    as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: pxelinux.cfg/default
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now, we will look at how to configure the boot configuration file `$HOME/.VirtualBox/TFTP/pxelinux.cfg/default`.
+    In our setup, it looks like the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding file can be download from [https://github.com/shugaoye/asp-sample/blob/master/ch09/pxelinux.cfg/default](https://github.com/shugaoye/asp-sample/blob/master/ch09/pxelinux.cfg/default).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can copy it from the above mentioned GitHub URL and you need to change the
+    NFS shared folder to your own `ROOT=10.0.2.2:/{your NFS shared folder}`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The syntax in the boot configuration file can be found at the following URL
+    from the Syslinux project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.syslinux.org/wiki/index.php?title=SYSLINUX](http://www.syslinux.org/wiki/index.php?title=SYSLINUX)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the preceding configuration file that we use in this chapter, we can see
+    the following commands and options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`prompt`: It will let the bootloader know if it will show a LILO-style *boot:*
+    prompt. With this command-line prompt, you can input the option directly. All
+    the boot options are defined by the command `label`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`default`: It defines the default boot option.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`timeout`: If more than one `label` entry is available, this directive indicates
+    how long to pause at the boot: prompt until booting automatically, in units of
+    1/10 s. The timeout is cancelled when any key is pressed, the assumption being
+    that the user will complete the command line. A timeout of zero will disable the
+    timeout completely. The default is 0.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`label`: A human-readable string that describes a kernel and options. The default
+    label is `linux`, but you can change this with the `DEFAULT` keyword.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`kernel`: The kernel file that the boot image will boot.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`append`: The kernel command line that can be passed to the kernel during the
+    boot.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the preceding configuration file, we show two boot options. In the first
+    option, we can boot to a minimum Linux environment using the NFS root filesystem.
+    We can install the x86vbox images from that environment to the hard disk. In the
+    second option, we can boot x86vbox from the `/dev/sda1` disk partition. We will
+    explore these options in detail later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up a serial port for debugging
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The reason why we want to boot Android using PXE and NFS is because we want
+    to use a very simple bootloader and find an easier way to debug the system. In
+    order to see the debug log, we want to redirect the debug output from the video
+    console to a serial port so that we can separate the graphic user interface from
+    the debug output. We need to do two things in order to meet our goals.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Linux kernel debug message can be redirected to a specific channel using
+    kernel command-line arguments. We specify this in PXE boot configuration with
+    the `console=ttyS3,115200` option. This is defined in `pxelinux.cfg/default` as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will explain the details about kernel parameters in the `append` option
+    later in this chapter. The next thing is that we need to create a virtual serial
+    port that we can connect to. We configure this in the virtual machine settings
+    page, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: We use a host pipe to simulate the virtual serial port. We can set the path
+    as something like `/tmp/pxeAndroid_p`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The mapping between `COMx` to `/dev/ttySx` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To connect to the host pipe, we can use a tool such as `minicom`. If you don''t
+    have `minicom` installed, you can install and configure `minicom` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To set up `minicom`, we can use the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: After `minicom` starts, select Serial port setup, and set Serial Device as unix#/tmp/pxeAndroid_p.
+    Once this is done, select Save setup as dfl and Exit from Minicom as shown in
+    the following screenshot. Now we can connect to the virtual serial port using
+    `minicom`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_008.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'After we have made all the changes for the x86vbox configuration, we can power
+    on the virtual machine and test it. We should be able to see the following boot
+    up screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_009.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: We can see from the preceding screenshot that the virtual machine loads the
+    `pxelinux.cfg/default` file and waits on the boot prompt. We are ready to boot
+    from PXE ROM now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NFS filesystem
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We created the x86vbox device in [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml),
+    *Creating Your Own Device on VirtualBox*, and we were able to build it. However,
+    we did not discuss how to boot images. The issue here is the output from the build
+    is the standard AOSP images. They are not able to be used by VirtualBox directly.
+    For example, `system.img` can be used by the emulator, but not VirtualBox. VirtualBox
+    can use standard virtual disk images in VDI, VHD, or VMDK formats, but not a raw
+    disk image such as `system.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the Android-x86 build, the output is an installation image, such as ISO or
+    USB disk image formats. With an installation image, it can be burnt to a CDROM
+    and USB drive. Then, we can boot VirtualBox from CDROM or USB to install the system
+    just as we install Windows on our PC. It is quite tedious and not efficient to
+    use this method when we are debugging a system. As a developer, we want a simple
+    and quick way so that we can start the debugging immediately after we build the
+    system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The method that we will use here is to boot the system using the NFS filesystem.
+    The key point is that we will treat the output folder of the AOSP build as the
+    root filesystem directly so that we can boot the system using it without any additional
+    work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are an embedded system developer, you may have used this method in your
+    work already. When we work on the initial debugging phase of an embedded Linux
+    system, we often use the NFS filesystem as the root filesystem. With this method,
+    we can avoid flashing the images to the flash storage every time after the build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preparing the kernel
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To support NFS boot, we need a Linux kernel with NFS filesystem support. The
+    default Linux kernel for Android doesn''t have NFS boot support. In order to boot
+    Android and mount the NFS directory as the root filesystem, we have to recompile
+    the Linux kernel with the following options enabled:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can use `menuconfig` to change the kernel configuration or copy a configuration
+    file with NFS support.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To configure the kernel build using `menuconfig`, we can use the following
+    commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also use the configuration file with NFS enabled in my GitHub. We can
+    observe the difference between this configuration file and the default kernel
+    configuration file from Android-x86 as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can copy this configuration file and use it to build the Linux kernel. The
+    following commands just show how to build the kernel separately. You don''t have
+    to do this if you build x86vbox by checking out the source code of this chapter.
+    This is included in the x86vbox device Makefiles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: After the build, we can copy the kernel and ramdisk files to the `TFTP` root
+    at `$HOME/.VirtualBox/TFTP/x86vbox`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up the NFS server
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When we have a NFS-capable kernel, we need to set up the NFS server on our
+    development host so that we can mount to the NFS folders exported by our NFS server.
+    We can check whether the NFS server is already installed or not using the following
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the NFS server is not installed, we can install it using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once we have a NFS server ready, we need to export our root filesystem through
+    NFS. We will use the AOSP build output folder as we mentioned previously. We can
+    add the following line to the `/etc/exports` configuration file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After that, we execute the following command to export the `$AOSP/out/target/product`
+    folder. You need to replace `$AOSP` with the absolute path in your setup:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Configuring the PXE boot menu
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we have a real bootloader such as PXE Boot ROM, we have a way to support
+    the boot path like a real Android device. As we know, Android devices can boot
+    to three different modes--bootloader mode, recovery mode, and the normal start-up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With PXE Boot ROM, we can easily support the same and more. By configuring the
+    `pxelinux.cfg/default` file, we can allow x86vbox to boot in different paths.
+    We will configure multiple boot paths here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Booting to NFS installation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Since we cannot use AOSP image files to boot x86vbox directly, we need to install
+    AOSP images to the VirtualBox hard disk. This is very similar to Android-x86\.
+    In Android-x86, we need to use a CDROM or USB stick to install the system so that
+    we can boot Android after the installation. Instead of using a CDROM or USB image
+    for the installation, we can install the system from the NFS path directly. If
+    we set the NFS path to the `$AOSP/out/target/product` path, we can install the
+    system right after the completion of the build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can boot the system to an installation mode so that we can use the Android-x86
+    installation script that we discussed to install x86vbox images to the virtual
+    hard disk:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding configuration, we use the NFS-capable kernel from the `TFTP`
+    folder such as `$HOME/.VirtualBox/TFTP/x86vbox/kernel`. The `initrd.img` ramdisk
+    image is also stored in the same folder. Both files under the `TFTP` folder can
+    actually be symbolic links to the AOSP output. In this case, we don''t have to
+    copy them after the build, as we can see from the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_010.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We use the following three options to configure the NFS boot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ip=dhcp`: Use DHCP to get the IP address from the DHCP server. The DHCP server
+    can be the built-in DHCP server of VirtualBox or an external DHCP server.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`root=/dev/nfs`: Use the NFS boot.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ROOT=10.0.2.2:$AOSP/out/target/product`: The root is the AOSP output folder
+    in the development host. If we use the built-in PXE, the IP address `10.0.2.2`
+    is the default host IP address in the NAT network. It could be changed using the
+    VirtualBox configuration. In your configuration, you need to replace `$AOSP` with
+    an absolute path.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We want to monitor the debug output so we set the console to the virtual serial
+    port that we configured previously as `console=ttyS3,115200`. We can use a host
+    pipe to connect to it using `minicom`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We set three kernel parameters by using the Android-x86 init script and installation
+    script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`INSTALL=1`: Tells the init script that we want to install the system'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DEBUG=2`: This will bring us to the debug console during the boot process'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SRC=/x86vbox` : This is the directory for the root filesystem'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Finally, the `androidboot.hardware=x86vbox` option is passed to the Android
+    init process to tell it which init script to run. In this case, the device init
+    script `init.x86vbox.rc` will be executed as we discussed in the previous chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our PXE boot menu, we can add another configuration for the installation
+    without the `console=ttyS3,115200` option. In this case, all debug output will
+    print on the screen, which is the default standard output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To find out what is installed on the harddisk, you can refer to [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml),
+    *Debugging the Boot Up Process Using a Customized ramdisk*. The filesystem layout
+    on the hard disk is similar to the directory layout for `x86emu_x86.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Booting from a hard disk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We can have another option, as follows,to boot the system from the hard disk
+    after we install the system using the previous configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding configuration, we use the `/dev/sda1` device as the root and
+    we don't have the `INSTALL=1` option. With this configuration, the virtual machine
+    will boot to the Android system from the hard disk `/dev/sda1` and the debug output
+    will print to the virtual serial port.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use another similar configuration that prints the debug output to the
+    screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Booting to recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'With the PXE boot menu, we can configure the system to boot to recovery as
+    well. We can use the following configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: We will use a configuration similar to this in [Chapter 12](5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml),
+    *Introducing Recovery* to [Chapter 14](15628e05-2216-4855-8347-588f61c8f61a.xhtml),
+    *Customizing and Debugging Recovery*, when we explore recovery programming. The
+    difference here is that we use a recovery ramdisk instead of `initrd.img`. Since
+    recovery is a self-contained environment, we can set the `ROOT` variable to other
+    partitions as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Be aware that the `x86vbox recovery` configuration cannot be tested in this
+    chapter. We will test this in [Chapter 12](5eff5635-ac58-4b48-80d4-b7e69b464d8e.xhtml),
+    *Introducing Recovery* to [Chapter 14](15628e05-2216-4855-8347-588f61c8f61a.xhtml),
+    *Customizing and Debugging Recovery*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With all the preceding setup, we can boot to the PXE boot menu, as shown in
+    the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_011.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can select the first option from the preceding PXE boot menu to boot to
+    a debug console as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_09_012.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: From the preceding debug output, we can see that the virtual machine obtains
+    the IP address `10.0.2.15` from DHCP server `10.0.2.2`. The NFS root is found
+    at IP address `10.0.2.2`, which is the development host. In the default VirtualBox
+    NAT network setup, the IP address of the DHCP server or the host is `10.0.2.2`.
+    The IP address of the built-in TFTP server is `10.0.2.4`. The DNS server IP address
+    is `10.0.2.3`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It is possible to boot the Android system from the `$OUT/system` directory
+    using the NFS filesystem. However, we need to make changes to `netd` to disable
+    flushing the routing rules. The changes can be done in the following file in the
+    `flushRules` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`$AOSP/system/netd/server/RouteController.cpp`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Without this change, the network connection will be reset after the routing
+    rules are flushed. However, we can still use NFS boot to perform the first stage-boot
+    or install the system to hard disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learnt a debugging method using a combination of PXE boot
+    and the NFS root filesystem. This is a common practice in the embedded Linux development
+    world. We try to use a similar setup for Android system development. As we can
+    see, this setup can make the development and debugging process more efficient.
+    We can use this setup to remove the bootloader dependency. We can also reduce
+    the time to flash or provision build images to the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I wrote an article to discuss a more advanced case about the PXE/NFS setup
+    using an external DHCP/TFTP server running in the host-only network environment.
+    If you are interested in this topic, you can read it at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.packtpub.com/books/content/booting-android-system-using-pxenfs](https://www.packtpub.com/books/content/booting-android-system-using-pxenfs)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will continue our journey on the boot up process of
+    x86vbox. We will explore and learn how to enable the graphic system on VirtualBox
+    so that we can bring up the Android system eventually for the x86vbox device.
+  prefs: []
+  type: TYPE_NORMAL

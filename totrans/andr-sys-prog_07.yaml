@@ -1,0 +1,739 @@
+- en: Enabling Wi-Fi on the Android Emulator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the last three chapters, we have explored ways to customize and extend the
+    Android emulator. In this chapter, we will pursue this topic to add Wi-Fi support
+    in the Android emulator. If you are a developer using the Android emulator, you
+    may notice that there is only data connection in the Android emulator. Some applications
+    may be aware of the connection type and exhibit different behaviors according
+    to the connection type. In this case, you cannot use an emulator to test your
+    applications. In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Wi-Fi architecture in Android
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extending the x86emu device to support Wi-Fi connections
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing a Wi-Fi connection on the x86emu device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The topics in this chapter are at an advanced level. We will analyze the Wi-Fi
+    source code at the beginning of the chapter to help understand the Wi-Fi architecture.
+    I recommend that you open a source code editor and locate the functions under
+    discussion. This is a very efficient way to understand the source code analysis
+    part in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wi-Fi on Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 3](e0f861c2-5832-402f-89d3-cfc75785e759.xhtml), *Discovering Kernel,
+    HAL, and Virtual Hardware*, we discussed the porting layers related to the Android
+    system, we used goldfish lights as an example to depict the calling sequence from
+    an application to HAL to access the hardware. We will use a similar approach in
+    this chapter to explore the Wi-Fi architecture of Android. Based on what we understand
+    about Wi-Fi architecture, we will add Wi-Fi to the emulator later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Wi-Fi architecture
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we know from previous chapters, Android applications use managers to access
+    system services. The managers will use various system services to access **Hardware
+    Abstraction Layer** (**HAL**). The Wi-Fi architecture also follows the same approach
+    for applications to access Wi-Fi hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Android Wi-Fi architecture
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we can see from the preceding diagram showing Wi-Fi layers in the Android
+    system, **WifiSettings** is the application in the default AOSP build used to
+    control Wi-Fi connections. **WifiSettings** uses **WifiManager** to get access
+    to Wi-Fi services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**WifiManager** provides the following functionalities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Providing a list of configured networks--the attributes of individual entries
+    can be modified.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Monitoring the current active Wi-Fi network, if any. Connectivity can be established
+    or torn down, and dynamic information about the state of the network can be queried.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Providing the results of access point scans, containing enough information to
+    make decisions about what access point to connect to.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Defining the names of various intent actions that are broadcast upon any sort
+    of change in the Wi-Fi state.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When `WifiManager` is created, it gets an interface of `IWifiManager`, as shown
+    in the following code snippet. This interface is implemented by `WifiService`
+    through the binder mechanism:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`WifiManager` is defined in the `$AOSP/frameworks/base/wifi/java/android/net/wifi/WifiManager.java`
+    file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `WifiService` implementation, it uses `WifiStateMachine` to manage Wi-Fi
+    states:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`WifiServiceImpl` is defined in the `$AOSP/frameworks/opt/net/wifi/service/java/com/android/server/wifi/WifiServiceImpl.java`
+    file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can see how the Wi-Fi HAL is initialized through `WifiStateMachine` in the
+    following sequence diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is a very good Android source code cross-reference tool at [http://xref.opersys.com/](http://xref.opersys.com/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can search the definition of functions and locate the location of source
+    code using this cross reference tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Sequence diagram of Android Wi-Fi initialization
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`WifiStateMachine` processes requests from `WifiManager`. When the system initializes
+    Wi-Fi by sending a `CMD_START_SUPPLICANT` command, `WifiStateMachine` will call
+    its `processMessage` method to handle this request as shown in the following code
+    snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `processMessage` method calls to native methods through `WifiNative` to
+    load the Wi-Fi driver (`loadDriver`) and start the Wi-Fi HAL (`startHAL`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Pay attention to the function calls `mWifiNative.loadDriver`, and `WifiNative.startHal`,
+    as shown in the following flow diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The **WifiNative** implementation includes the Java part and the native part.
+    The Java implementation can be found at `$AOSP/frameworks/opt/net/wifi/service/java/com/android/server/wifi/WifiNative.java`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The native implementation can be found at `$AOSP/frameworks/opt/net/wifi/service/jni/com_android_server_wifi_WifiNative.cpp`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the instance of the `WifiNative` class is created, it loads the Wi-Fi
+    service shared library first and calls to a `registerNatives` function to register
+    all native functions as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The native implementation of `registerNatives` is shown in the following snippet.
+    It registers the native functions through a `gWifiMethods` global variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this function, it calls to another framework function, `registerNativeMethods`,
+    to register native methods at the Java layer so that the Java layer can call the
+    functions implemented in `WifiNative`. You might know the function `registerNativeMethods`,
+    if you have worked on Android NDK programming. We can look at the `gWifiMethods`
+    global variable in the following snippet. The `gWifiMethods` global variable includes
+    a list of native functions that are implemented in `WifiNative`, which should
+    be exported as Java native methods of the `WifiNative` class. We can see that
+    `loadDriver` and `startHalNative` are in the list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The `loadDriver` method is implemented in the `android_net_wifi_loadDriver`
+    function as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: It calls to a `wifi_load_driver` function, which is a part of Wi-Fi HAL at `$AOSP/hardware/libhardware_legacy/wifi/wifi.c`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `WIFI_DRIVER_MODULE_PATH` macro needs to be defined to specify the path
+    of the driver module, if there is a specific Wi-Fi driver that needs to be used.
+    After the driver has loaded successfully, a `wlan.driver.status` property is set
+    to the value `ok`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we will look at another method, `startHalNative`. It is implemented in
+    the `android_net_wifi_startHal` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Wi-Fi chip vendors usually provide two components the Wi-Fi implementations.
+    The first one is a kernel driver as we discussed in the `loadDriver` and the second
+    one is a vendor HAL library. The `startHalNative` function is used to hook vendor-implemented
+    functions to a pre-defined list of functions. As we can see in the preceding code
+    snippet, the `init_wifi_hal_func_table` function is called to initialize the list
+    of functions in `hal_fn`. After that, the `init_wifi_vendor_hal_func_table` function
+    is called to initialize the function pointers in `hal_fn`. If this operation is
+    successful, it will call to the vendor initialization function, `hal_fn.wifi_initialize`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: QEMU networking and wpa_supplicant in Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: At HAL, `wpa_supplicant` is used to support the authentication between the device
+    and access point. It starts as a native daemon in the Android system. Control
+    requests from the upper layer are sent to `wpa_supplicant` and `wpa_supplicant`
+    deals with device drivers and kernel networking systems to provide the network
+    connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since the Android emulator uses QEMU, the networking system is provided by
+    the QEMU networking system. QEMU provides multiple network backends including
+    TAP, VDE, socket, and SLIRP. The Android emulator uses user networking (SLIRP),
+    which is the default networking backend of QEMU. Since SLIRP is a software implementation
+    of TCP/IP networking stacks, it does not require root privileges to support networking
+    functionalities. As a software implementation, it has the following limitations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lot of overhead so the performance is poor
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In general, ICMP traffic does not work so you cannot use ping within a guest
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: On Linux hosts, ping can work within the guest if the initial setup is done
+    by root
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The guest is not directly accessible from the host or the external network
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following is a typical diagram of what SLIRP networking looks like in the
+    Android emulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: A QEMU SLIRP network
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the preceding diagram, the client has an IP address of **10.0.2.15** and
+    the gateway has an IP address of **10.0.2.2**. The default DNS IP address is **10.0.2.3**.
+    It may support SMB, which is optional. If you start an Android emulator, the default
+    network interface is `eth0` with an IP address of **10.0.2.15**. This is usually
+    used to simulate a cellular data connection. To simulate a Wi-Fi connection, we
+    can add one more network interface, `eth1`, using the following QEMU options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the `-device` QEMU option, we add a new network device, `mynet1`, which
+    uses virtio network hardware. QEMU can simulate many existing network hardware
+    types and we choose virtio network hardware in this chapter. You may choose others
+    if you like.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the `-netdev` QEMU option, we specify the attributes of this network device
+    by providing an IP address range and the starting address for DHCP protocol.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Be aware that the previous option can only work with ranchu not goldfish. To
+    start the Android emulator with the preceding QEMU option, we can run the following
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Adding Wi-Fi to the emulator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the introduction of Wi-Fi architecture in Android, we can now extend the
+    emulator to support Wi-Fi. To add Wi-Fi in the emulator, we need to build `wpa_supplicant`
+    for the emulator and choose the right device driver for the `eth1` network interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enabling wpa_supplicant in BoardConfig.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the default emulator build, `wpa_supplicant` is not built. To enable building
+    `wpa_supplicant` for the emulator, we can add the following lines in our `BoardConfig.mk`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When `BOARD_WPA_SUPPLICANT_DRIVER` is defined, the following configuration
+    in `external/wpa_supplicant_8/wpa_supplicant/Android.mk` will be changed to true:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The value of `BOARD_WPA_SUPPLICANT_DRIVER` tells which driver should be built.
+    Since we use a wired Ethernet connection to simulate Wi-Fi, we will choose the
+    *wired* driver, which can be found at `external/wpa_supplicant_8/src/drivers/driver_wired.c`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also define the `wpa_supplicant` version to use and the wired Ethernet interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Providing a proper wpa_supplicant configuration
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To make `wpa_supplicant` work correctly, we need to prepare a `wpa_supplicant.conf`
+    configuration file with the right permission. Wi-Fi-related configuration files
+    are stored in the `/data/misc/wifi/` directory. This directory is owned by the
+    `wifi` user, which is also the user that the `wpa_supplicant` runs as.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `wpa_supplicant.conf` configuration file for the `eth1` wired connection
+    can be found in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this configuration file, we defined the network SSID to be used and the authentication
+    method to establish the connection. Since this is a predefined wired connection,
+    we set the authentication method as `key_mgmt=NONE`, which means we don't need
+    to use any authentication method for this case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To copy `wpa_supplicant.conf` to the `/data/misc/wifi/` directory with the
+    right permission, we need to change `device.mk` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `device.mk`, we define the `wifi.interface` to `eth1` as we discussed previously.
+    After that, we add all Wi-Fi-related modules to `PRODUCT_PACKAGES` so that they
+    can be added to the system image. We copy the `wpa_supplicant.conf` configuration
+    file to the `/data/misc/wifi` directory so that it can be accessed with read and
+    write permissions by `wpa_supplicant`. This file is owned by the `wifi` user with
+    permission `0555`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the Android 6 release, the system permission for files from the vendor
+    is defined in an `android_filesystem_config.h` file under the `device` folder.
+    `PRODUCT_PACKAGES` must include `fs_config_dirs` and/or `fs_config_files` in order
+    to install them to `/system/etc/fs_config_dirs` and `/system/etc/fs_config_files`,
+    respectively. The generated `fs_config_dirs` and `fs_config_files` files are used
+    to set the runtime permission. We can see the owner and permission defined in
+    `android_filesystem_config.h` in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The last change in `device.mk` is related to the settings user interface. The
+    Wi-Fi settings user interface is not available in the emulator build. To enable
+    the Wi-Fi settings, we need to add `android.hardware.wifi.xml` to the `system/etc/permissions`
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating services in init scripts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To initialize network interface `eth1` and start `wpa_supplicant`, we need to
+    define related services in init scripts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initializing network interface eth1
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To initialize `eth1`, we can refer to the initialization of `eth0` in the emulator.
+    The network interface `eth0` is initialized in the `system/etc/init.goldfish.sh`
+    shell script as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, a fixed IP address `10.0.2.15` is assigned to the `eth0` interface.
+    We can add the following commands to initialize the interface `eth1`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding commands, we enable the interface `eth1` first using the `ifconfig`
+    command. Then, instead of using a fixed IP address, we use the DHCP client to
+    get the IP address for `eth1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we discussed when covering the init process of Android in [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml),
+    *Debugging the Boot Up Process Using a Customized ramdisk*, the init process will
+    process the `init.rc` script during the system startup. The `init.rc` script will
+    include a hardware-specific init script, `init.${ro.hardware}.rc`. In our case,
+    the `ro.hardware` is `ranchu`, so the hardware-specific init script is `init.ranchu.rc`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `init.ranchu.rc` init script, a service, as shown in the following snippet,
+    is defined to run the `init.goldfish.sh` shell script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: That's how the goldfish- or ranchu- related setup process is done in an emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting up wpa_supplicant
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We can add a service in the `init.ranchu.rc` script to start `wpa_supplicant`.
+    The following are the services that we added to the `init.ranchu.rc` script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This service is used to start or restart the `eth1` interface using the DHCP
+    client. For the service of `wpa_supplicant`, we start it with the following options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`-i`: Use the network interface `eth1` for Wi-Fi'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-D`: Use the wired driver for Wi-Fi on the interface `eth1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-c`: Use the configuration file at `/data/misc/wifi/wpa_supplicant.conf`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-e`: Define the path of the entropy file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-g`: Define the global `ctrl_interface` as `@android:wpa_eth1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'If we refer to the sequence diagram of Wi-Fi initialization earlier in this
+    chapter, the `wpa_supplicant` start sequence can be explained using the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`WifiStateMachine` processes the `CMD_START_SUPPLICANT` command.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`WifiStateMachine` calls the `startSupplicant` method of `WifiNative`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `startSupplicant` method is a native method implemented as the `android_net_wifi_startSupplicant`
+    native function. This native function calls the `wifi_start_supplicant` function
+    defined in Wi-Fi HAL `wifi.c`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The `wifi_start_supplicant` function starts the `wpa_supplicant` through setting
+    the `ctl.start` system property. `ctl.start` and `ctl.stop` are two system properties
+    implemented by the property service that can be used to start or stop a service
+    defined in the init scripts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Building the source code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have made all the changes required to support Wi-Fi in emulators now. Let's
+    build the AOSP source code for this chapter so that we can test the Wi-Fi connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting the source code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As we have done in previous chapters, we will have a look at the projects that
+    we have changed in this chapter. We can check this from the manifest file for
+    this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding code is the `default.xml` file at `https://github.com/shugaoye/manifests/blob/android-7.1.1_r4_ch07_aosp/default.xml`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can see that we have an `android-7.1.1_r4_x86emu_ch07_r2` tag for this chapter.
+    In this chapter, we have our own projects, `kernel`, `x86emu`, `newinstaller`,
+    and `goldfish`. We will use this manifest to download or update the source code
+    for this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we have the source code for this chapter, we can set the environment
+    and build the system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Enabling boot with initrd.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As we learnt in [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml), *Debugging
+    the Boot Up Process Using a Customized ramdisk*, we can boot the emulator in two
+    stages. This is very helpful to debug the init process and troubleshoot issues
+    at system level. in [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml), *Debugging
+    the Boot Up Process Using a Customized ramdisk*, we create a separate disk image,
+    `x86emu_x86.img`, to store all the necessary file images to support a first-stage
+    boot up similar to Android-x86\. The `x86emu_x86.img` image appears in the system
+    as `/dev/sda` and includes all images: `system.img`, `install.img`, `initrd.img`,
+    `ramdisk.img`, `kernel`, and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will change the Android-x86 `newinstaller` further to support
+    two-stages boot up just using `system.img` instead of creating a separate image.
+    We will use the first stage boot to help our debugging of Wi-Fi initialization
+    later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the first stage of boot-up, the init script in `initrd.img` will mount the
+    system image and extract `ramdisk.img` to a filesystem in memory. Since we will
+    use `system.img` directly, we need to put `ramdisk.img` inside the `system.img`.
+    We do this using the `Makefile` in the x86emu device instead of changing the AOSP
+    source code. The following is the build target that we add to `device/generic/x86emu/Makefile`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `qcow2_img` build target, we create an `x86emu_ch07` folder in the system
+    image and we copy `ramdisk.img` to this folder. After that, we build a system
+    image in QCOW2 format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To build the system image in QCOW2 format, we need to change `Android.mk` in
+    the `bootable/newinstaller` folder:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: diff in bootable/newinstaller/Android.mk
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the preceding diff tool output, we can see that we changed the `VER` variable
+    to `x86emu_ch07`. The init script of `initrd.img` uses this variable to find the
+    folder of images. The second change is to add a build target to generate the `QCOW2`
+    image using the `qemu-img` tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we need to change the init script in `initrd.img` as follows to extract
+    `ramdisk.img` inside `system.img`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The original script will try to find the system image in `SQUASH` format (`system.sfs`)
+    or a plain image (`system.img`). If none of the system images can be found, it
+    will try to find a `system/` folder as the system image. After that, it will mount
+    the image file or the folder to `/android/system`. In our case, the system image
+    is already mounted at `/mnt`, so we just move the mount point from `/mnt` to `/android/system`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second change to the init script is to define the `DEBUG` and `SRC` environment
+    variables. These two variables are passed from the kernel command line in [Chapter
+    6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml), *Debugging the Boot Up Process
+    Using a Customized ramdisk*. Here, we define them inside the script, so we don't
+    need to worry about the kernel command line in our test script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we have done all these changes, we can build the `initrd.img` and system
+    image as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see from the preceding output that `initrd.img` is created and `system-qcow2.img`
+    is generated from `system.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing Wi-Fi on an emulator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have now prepared all the images that we need for the testing process. The
+    prebuilt test images for this chapter can be downloaded from the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://sourceforge.net/projects/android-system-programming/files/android-7/ch07/ch07.zip/download](https://sourceforge.net/projects/android-system-programming/files/android-7/ch07/ch07.zip/download)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Booting an Android emulator using initrd.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We can execute the following command to boot the system using `initrd.img`
+    first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding command, we use QCOW2-format images for both system and user
+    data, since they are much smaller than the plain file images. We use `initrd.img`
+    as the ramdisk so that we can debug the configuration in the first stage of boot
+    up. We can also change this script to use `ramdisk.img` directly. In this case,
+    it is the normal start up process of the emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we start the emulator using `initrd.img`, we can enter the debug console,
+    in which we can check the configuration and make necessary changes before we move
+    forward.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_008.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: From the output, we can see that the system image on the device, `/dev/block/vda`,
+    is mounted to `/android/system`. At this point, we have an opportunity to check
+    and change any start up scripts before we launch them. For example, we can edit
+    `init.ranchu.rc` to increase the debug level of `wpa_supplicant` with the `-dd`
+    option before we start the Android system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Booting an Android emulator using ramdisk.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To boot the system using `ramdisk.img`, we can execute the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Debugging Wi-Fi start up processes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Once the system starts, we can check the `wpa_supplicant` debug message using
+    logcat as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![](img/image_07_009.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can see that `wpa_supplicant` started successfully using Ethernet `eth1`
+    and global control socket `wpa_eth1`. This global control socket is specified
+    in `init.ranchu.rc` as part of the `wpa_supplicant` service as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also check the network status using the `ifconfig` command in the following
+    snippet. We can see that `eth0` is assigned a fixed IP address, `10.0.2.15`, and
+    `eth1` is assigned the IP address `10.0.2.50` through DHCP:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_010.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Once the system starts up, we can go to Settings | Wi-Fi and we will see the
+    following screen. The access point SSID is WiredSSID and we can turn Wi-Fi on
+    or off as we expect:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_07_011.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we introduced the Wi-Fi architecture in Android and we also
+    did an analysis of the Wi-Fi initialization process. Based on that, we modified
+    our x86emu device to support simulated Wi-Fi through a wired Ethernet interface
+    `eth1`. We used the advanced features in QEMU to add the second network interface
+    to the ranchu emulator. With all these changes to x86emu, we built and tested
+    the image. In order to help with debugging, we reused the technique that we learnt
+    from [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml), *Debugging the Boot
+    Up Process Using a Customized ramdisk*, to boot the system using `initrd.img`
+    so that we can get a debug console before the Android system is started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With all the knowledge from [Chapter 4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml),
+    *Customizing the Android Emulator* to [Chapter 7](7ff9a111-96cb-44ed-b92d-435e73821306.xhtml),
+    *Enabling Wi-Fi on the Android Emulator*, we learnt how to create a new device
+    based on an existing one. We also learnt how to customize and extend the device
+    to support new features. From the next chapter to [Chapter 11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml),
+    *Enabling VirtualBox-Specific Hardware Interfaces*, we will take on a new challenge
+    to support a new platform that is not supported by AOSP. We will create and build
+    a new x86vbox device to explore more advanced topics in the Android system programming
+    world.
+  prefs: []
+  type: TYPE_NORMAL

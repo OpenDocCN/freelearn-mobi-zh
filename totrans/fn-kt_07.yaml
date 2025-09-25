@@ -1,0 +1,896 @@
+- en: Asynchronous Programming with Coroutines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Today's software development landscape makes asynchronous processing one of
+    the most important topics. The ever-increasing number of processors and cores
+    and the massive consumption of external services (which has grown in recent years
+    with the adoption of microservices architectures) are some of the factors that
+    we should keep an eye on and strive to use a good asynchronous approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kotlin's implementation of coroutines is an excellent tool to build asynchronous
+    applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''ll cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutines
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Alternative approaches
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Asynchronous processing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Channels and actors
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction to coroutines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s start with a simple example without coroutines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `thread` function executes a block of code in a different thread. Inside
+    the block, we are simulating an expensive I/O computation (such as accessing data
+    from a microservice over HTTP) with `Thread.sleep`. `Thread.sleep` will block
+    the current thread for the number of milliseconds passed as a parameter. In this
+    example, we don't wait until the computation finishes to keep working on other
+    things; we print another message, `"Hello"`, while the other computation is being
+    executed. At the end, we wait for two seconds until the computation is finished.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'That''s not a pretty code, and we can do better:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this version, we have a reference to our thread called, `computation`; at
+    the end, we wait for the `join()` method to finish. This is smarter than just
+    waiting for a fixed amount of time, as real-life computations could have different
+    execution times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding JVM threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Threads are the building blocks of asynchronous concurrent applications on JVM
+    (and other platforms, too). A JVM thread is, most of the time, backed by a hardware
+    thread (such as a core inside a processor). A hardware thread can support several
+    software threads (a JVM thread is a kind of software thread), but only one software
+    thread is executed at any given time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The OS (or the JVM) decides which software thread is executed on each hardware
+    thread and switches quickly among the live threads, thereby, giving the appearance
+    that there are several software threads executing at the same time, when in reality
+    there are as many active software threads being executed as there are hardware
+    threads. But, in most circumstances, it is useful to think that all software threads
+    are being performed at the same time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threads in JVM are very fast and responsive, but they come at a cost. Each `Thread`
+    has a cost in CPU time and memory on creation, disposal (when garbage is collected),
+    and context switch (the process to store and recover a thread's state when it
+    becomes the executing thread or stops being it). Because this cost is relatively
+    high, a JVM application can't have a significant number of threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A JVM application on a typical development machine can easily handle 100 threads:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you use any external application to monitor the JVM application, such as
+    VisualVM or JConsole (among others), you''ll see a graphic like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/8001e2a4-f132-429f-b70e-395a0d19f861.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can increase our threads to 1,000 as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/57378487-0433-49f3-9d6b-a949b372100f.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The amount of memory is growing at a fast rate, reaching more than 1.5 GB.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Can we increase our threads to 10,000? Take a look at the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/7ecf2a92-c546-463f-877c-77b1df3b49f4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The answer is a blunt no; around 2,020 threads were created when the application
+    died with `OutOfMemoryError` (this application was running with default settings;
+    those settings can be changed at startup time).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s try with 1,900, a fair estimate of what we can execute safely:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/9bb2bf52-dc3a-483d-8164-cae5b7ea75b2.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Yes, we can run 1,900 concurrent threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In modern JVM applications, creating and destroying threads is considered a
+    bad practice; instead, we use `Executor`, an abstraction that lets us manage and
+    reuse threads, reducing the cost of creation and disposal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We created an `executor` value that, internally, has a thread pool of up to
+    1,024 threads. Then, we submit 10,000 tasks; at the end, we shut down `Executor`.
+    When we shut down `Executor`, it can''t accept new tasks and executes all pending
+    ones as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/5908d8bf-a749-4bd4-b949-5f61661ef9e1.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: There are many options to fine-tune and play with, `Executor`, such as the number
+    of threads and the type of pool or its actual implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is a lot more theory on JVM threads than is possible to cover in this
+    book. If you want to read and learn more about threads and concurrency, we recommend
+    the classic book, *Java Concurrency in Practice (2006)* by Dough Lea, David Holmes,
+    Joseph Bower, Joshua Block, Tim Peierls, and Brian Goetz, from Addison-Wesley
+    Professional. We also recommend *Programming Concurrency on the JVM (2011)* by
+    Venkat Subramanian from Pragmatic Bookshelf, and the *Java Concurrency LiveLessons
+    (2015)* video by Douglas Schmidt from Addison-Wesley Professional. Last but not
+    least,  we suggest the series of books and videos, *Java Concurrency* by Javier
+    Fernández Gonzáles, published by Packt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hello, coroutine world!
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now, let's rewrite our `Hello World` application with coroutines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But, hey! What is a coroutine? Basically, a coroutine is a very light thread
+    that runs a block of code and has a similar life cycle, but can complete with
+    a return value or an exception. Technically, a coroutine is an instance of a suspendable
+    computation, a computation that may suspend. Coroutines aren''t bound to a particular
+    thread and can suspend in one `Thread` and resume execution in a different one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There are a few things to cover here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`runBlocking`: This function creates a coroutine and blocks the current `Thread`
+    until the coroutine finishes, returning its result value (`Unit` in this case).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`launch`: This function creates a new coroutine without blocking the current
+    `Thread` and returns `Job` (ignored here).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`delay`: This function is a suspending (more on this later) function that delays
+    the current coroutine without blocking the current thread.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`suspend`: A suspending function is a function that may suspend the execution
+    of a coroutine, without blocking the current `Thread`; therefore a suspending
+    function must be called inside a coroutine—it can''t be invoked from normal code.
+    The function must be marked with the `suspend` modifier. So, `delay` can be invoked
+    inside `runBlocking` and `launch`, both functions (among others) take a suspending
+    lambda as the last parameter—a suspending lambda is a lambda marked with the `suspend`
+    modifier.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let''s summarize what we know now, and a few other concepts before going further:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Concept** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Coroutine** | A very light thread that can return a value and can suspend
+    and resume. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Suspending function** | A function marked with a `suspend` modifier. It
+    can suspend a coroutine without blocking the thread. Suspending functions must
+    be invoked inside a coroutine, for example `delay`. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Suspending lambda** | A lambda function marked with a `suspend` modifier.
+    It can suspend a coroutine without blocking the thread. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Coroutine builder** | A function that takes a suspending lambda, creates
+    a coroutine and may return a result, for example `runBlocking`. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Suspension point** | A point where a suspending function is invoked. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Continuation** | The state of a suspended coroutine at a suspension point,
+    it represents the rest of its execution after suspension point. |'
+  prefs: []
+  type: TYPE_TB
+- en: Let's get back to business.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we discussed previously, computations can have different execution times.
+    So, `delay` isn''t ideal in our `Hello World` example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: As with our example with threads, we take the reference to the job created by
+    `launch`, and we suspend it at the end with the suspending function `join`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far, so good. But are coroutines so very light? Can we have 10,000 coroutines?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s try it by executing the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Oh, indeed! It works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/b4ef915b-0b6c-4500-ae98-3abd33dc1c36.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: They are orders of magnitude faster than the `Executor` solution, a lot less
+    memory, fewer threads (barely seven threads) and, on top of that, are very easy
+    to read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s go with 1 million coroutines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/976557d1-0cf2-4969-9415-6f931b29b2aa.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Less than 2,000 threads need more than 1.5 GB of memory. 1 million coroutines
+    need less than 700 MB of memory—I rest my case. The verdict is that the coroutines
+    are very, very light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using coroutines in real life
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Microbenchmarks are very funny and they give us an idea of the power of Kotlin
+    coroutines, but they don't represent a real-case scenario.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s introduce our real-case scenario:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our `UserService` interface has just one method—`getFact` will return a Chuck
+    Norris-style fact about our user, identified by the user ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The implementation should check first on a local database for a user; if the
+    user doesn't exist in the database, it should get it from the **RandomUser API**
+    service, ([https://randomuser.me/documentation](https://randomuser.me/documentation)),
+    and then store for future use. Once the service has a user, it should check again
+    in the database for a fact related to that user; if the fact doesn't exist in
+    the database, it should get it from The **Internet Chuck Norris Database API**
+    service, ([http://www.icndb.com/api/](http://www.icndb.com/api/)), and store it
+    in the database. Once the service has a fact, it could be returned. The service
+    must try to reduce the number of external calls (database, API services) without
+    using a cache.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s introduce other interfaces, HTTP clients—`UserClient` and `FactClient`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our clients will be implemented using `http4k` ([https://www.http4k.org/](https://www.http4k.org/))
+    for HTTP communication, and Kotson ([https://github.com/SalomonBrys/Kotson](https://github.com/SalomonBrys/Kotson))
+    for JSON processing. Both libraries are being designed for Kotlin, but any other
+    library should work fine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Both clients will extend a common parent class that contains `http4k ApacheClient`
+    and a `Gson` value configured with Kotson DSL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`Http4KUserClient` is very simple, both libraries are easy to use, and we move
+    a lot of code to the parent class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`Http4KFactClient` sets the user value inside the `Fact` instance, using the
+    `copy` method.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These classes are very nicely implemented, but to test the actual performance
+    of our algorithm, we will mock these interfaces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Take a look at the following database repositories, `UserRepository` and `FactRepository`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our repositories, we''ll use `JdbcTemplate` of Spring 5\. Spring 5 comes
+    with support for Kotlin, including extension functions for easy and idiomatic
+    Kotlin use (you can use `JdbcTemplate` in any application, it doesn''t need to
+    be a Spring one):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: As with the clients, both repositories will have a parent class—in this case,
+    with a function to transform, `EmptyResultDataAccessException`; (spring's way
+    to indicate a non-existing record) into a nullable—idiomatic Kotlin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Both implementations are straightforward, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our database, we are using the H2 in-memory database, but any database
+    will work (you can make this application work with some different persistence
+    mechanisms, such as NoSQL database or any cache):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The function `initJdbcTemplate` creates `JdbcTemplate` with an H2 `DataSource`,
+    and, once it is ready, it creates the tables inside the `apply` extension function.
+    The `apply` extension function is useful to configure properties and call initialization
+    code, returning the same value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As with the clients, for testing, we will use mocks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With these mocks, our worst case scenario is around 1,600 milliseconds:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`UserRepository.getUserById = 200ms ~`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`UserClient.getUser = 500ms ~`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`UserRepository = 200ms ~`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`FactClient.getFact = 500ms ~`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`FactRepository.insertRepository = 200ms ~`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now, we'll implement `UserService` with different styles of asynchronicity,
+    including a synchronous implementation, our baseline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Synchronous implementation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Synchronous code is easy to write, predictable, and easy to test, but in some
+    cases, it doesn''t use system resources in an optimal manner:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There''s nothing fancy here, just your normal, old boring code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: We execute the `UserService.getFact` method 10 times to warm up the JVM (JVM
+    optimizations make the application run faster after a while). Needless to say,
+    execution time is 1,600 milliseconds, no surprises here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Callbacks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A popular style of asynchronous code is to execute the code in a separate thread
+    and invoke a `callback` function when the aforementioned thread finishes its execution.
+    One downside of the callback style is that our asynchronous functions now need
+    an extra parameter. Callback style is easy to write in Kotlin with its support
+    for lambdas.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For our callback implementation, we''ll need adapters for our clients and repositories:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These adapters execute our code in a separate thread and invoke the callback,
+    lambda, once it is completed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Callback style tends to be very obscure and hard to read; when several callbacks
+    are nested, it is even worse (affectionately known in the community as callback
+    hell). The `while` block at the end with `Thread.sleep` looks very hacky. It is
+    also very fast with an execution time of 1,200 milliseconds but with many threads
+    created and memory consumption to match it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A callback implementation that creates a thread per function call will quickly
+    consume all the application's resources in a production scenario; therefore, it
+    should be based on some `Executor` implementation or similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Java Futures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As callback style tends to be hard to maintain, other styles have emerged in
+    recent years. One of these styles is futures. A **future** is a computation that
+    may complete in the future. When we invoke the `Future.get` method, it will obtain
+    its result, but we also block the thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The implementation with futures is very similar to our synchronous implementation,
+    but with those weird `submit` and `get` functions all over the place. We also
+    have `Executor` that we need to take care of. Total time is around 1,200 milliseconds,
+    with many threads created, more than in the callback example. One possible option
+    is to have `Executor` per instance or globally, but in that case, we also need
+    to have some way to manage its life cycle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Promises with Kovenant
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Another option to write asynchronous code is to use promises. A **promise**
+    is similar to a future (in many frameworks, futures and promises are synonymous),
+    as it represents a computation that may complete in the future. We have a blocking
+    method to obtain its result, but we can also react to its result, callback style.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Kovenant** ([http://kovenant.komponents.nl/](http://kovenant.komponents.nl/))
+    is an implementation of promises for Kotlin:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The function `task` creates `Promise<T, Exception>` (something that we didn''t
+    cover previously in our other implementations). We can interact with `Promise<T,
+    Exception>` in several ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`get(): T`: This blocks the current thread and returns the promise''s result.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`then(bind: (T) -> R): Promise<R, Exception>`: This is similar to `map` on
+    functional collections; it returns a new `Promise` value with a new type.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`success(callback: (T) -> Unit): Promise<T, Exception>`: This is callback on
+    successful `Promise` execution. It''s useful for side effects'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`fail(callback: (Exception) -> Unit): Promise<T, Exception>`: This is callback
+    on fail, like a `catch` block.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`always(callback: () -> Unit): Promise<T, Exception>`: This always executes,
+    like a `finally` block.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The codes feel difficult to grasp at first sight, but, once you get used to
+    the promise idioms, it is easy to read. Also, notice that a promise is a future,
+    so you can write something similar to our future's example but without messing
+    around with `Executors`. Java 8 includes a new type of future named `CompletableFuture<T>`
+    which can be considered a promise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Execution time is around 1,350 milliseconds for the first execution (Kovenant
+    initialization phase), and then it stabilizes around 1,200 milliseconds. On its
+    default configuration, Kovenant uses as many threads as possible, resulting in
+    a high use of memory, but Kovenant can be fine-tuned to use fewer threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now, let''s rework our example with coroutines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our code is more straightforward than our `Future` example, getting very close
+    to our synchronous code. We covered `runBlocking` and `launch` in the previous
+    section, but a new coroutine builder is introduced here, `async`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `async` coroutine builder takes a block of code and executes it asynchronously,
+    returning `Deferred<T>`. A `Deferred` is a `Future` with an `await` method that
+    blocks the coroutine until completion but not the thread; `Deferred` also extends
+    from `Job` so inherits all its methods, such as `join`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutine code feels natural yet it is explicit when we are using asynchronous
+    code, but due to the low cost on resources, we can use as many coroutines as we
+    want in our code; for example, `CoroutineUserService` uses less than half of threads
+    and memory than any other implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have all implementations, we can compare code complexity and resource
+    consumption:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '|  | **Code complexity** | **Resource consumption** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Synchronous** | There is very low code complexity. | The resource consumption
+    is very low with slow performance. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Callbacks** | Very high adapters are needed; duplication is expected; nested
+    callbacks are hard to read; and there are various hacks. | The resource consumption
+    is high. It could improve using a shared `Executor`, but it will add more code
+    complexity. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Futures** | Code complexity is medium. `Executors` and `get()` are noisy
+    but it is still readable. | Resource consumption is high, but it can be fine-tuned
+    using different `Executor` implementations and sharing executors but this adds
+    code complexity. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Promises** | Code complexity is medium using promise style (`then`, `success`).
+    Using a futures style (`get`), it can be as slick as coroutines without affecting
+    performance. | Resource consumption is very high, with top performance, but it
+    can be fine-tuned without altering the code. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Coroutines** | Code complexity is low; it''s the same size as synchronous
+    style with explicit blocks for asynchronous operations. | Resource consumption
+    is low, with top performance out of the box. |'
+  prefs: []
+  type: TYPE_TB
+- en: Overall, coroutines are a clear winner, with Kovenant promises coming in a close
+    second.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutine context
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Coroutines always run in a context. All coroutine builders have context specified
+    by default, and that context is available through the value `coroutineContext`,
+    inside the coroutine body:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each coroutine context also includes `CoroutineDispatcher` that decides which
+    thread the coroutine runs. Coroutines builders, such as `async` and `launch`,
+    use the `DefaultDispatcher` dispatcher as default (in the current coroutines version,
+    0.2.1, `DefaultDispatcher` is equal to `CommonPool`; however, this behavior can
+    change in the future).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The coroutine context can also hold values; for example, you can recover the
+    coroutine's job by using `coroutineContext[Job]`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Coroutine contexts can be used to control its children. Our 1 million coroutines
+    example can be reworked to join all its children:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Instead of each one of the million coroutines having its own context, we can
+    set a shared coroutine context that actually comes from the external `launch`
+    coroutine context. When we join the outer `launch` job, it joins all its coroutine
+    children, too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Channels
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'One way for two coroutines to communicate (or for a coroutine to the external
+    world as with `async`) is through `Deferred<T>`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Deferreds are fine for single values, but sometimes we want to send a sequence
+    or a stream. In that case, we can use `Channel`. `Channel` which is similar to `BlockingQueue`,
+    but with suspending operations instead of blocking ones, also `Channel` can be
+    `close`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s write our 1 million coroutines example with channels as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Of course, this isn''t the intended use case for channels. Usually, a single
+    coroutine (or many) sends messages to the channel:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: A channel is itself an Iterator, so it can be used on the `for` blocks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A simpler way to write this code is by using the `produce` builder as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `produce` builder returns `ReceiveChannel<T>`, a channel type just for receiving.
+    A `Channel<T>` extends both types, `SendChannel<T>` and `ReceiveChannel<T>`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Channel pipelines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we have channels, we can have related patterns, such as pipelines. A **pipeline**
+    is a series of channels connecting consumers and producers, similar to Unix pipes
+    or **Enterprise Integration Patterns** (**EIP**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s write our own sales system using EIPs. Let''s first take a look at the
+    models:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, let''s take a look at the patterns:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `calculatePriceTransformer` function receives quotes from a channel and
+    transforms it into `Pair<Bill, PickingOrder>`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `cheapBillFilter` function well filters the `bill` value below `100`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`splitter` splits `Pair<Bill, PickingOrder>` into their own channels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Both `accountingEndpoint` and `warehouseEndpoint` process their respective
+    messages by printing, but, in a real-life scenario, we could be storing these
+    messages into our database, sending emails or sending messages to other systems
+    using **JMS**, **AMQP**, or **Kafka**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `main` method assembles our sales system and tests it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Many other channel messages patterns can be implemented with coroutine channels,
+    such as fan-in, fan-out, and `actors`. We'll cover `actors` in our next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Managing mutable state
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The main concern (and nightmare fuel) when we deal with asynchronous code is
+    how to handle mutable state. We covered how to reduce mutable state with a functional
+    style in [Chapter 3](3d8794f8-c237-4d9e-992e-c54a1392a89c.xhtml), *Immutability
+    - It's Important*. But sometimes it is impossible to use a functional immutable
+    style. Coroutines offer some alternatives to this problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the following example, we''ll use several coroutines to update a counter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: On smaller numbers, `counter` is right, but once we start increasing the size,
+    we'll see wacky numbers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we can have a look at the alternatives that coroutines provide us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Switching contexts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Our first option is to use a different context for our update operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `withContext` function executes a block in a specific coroutine context—in
+    this case, a single-threaded one. Switching context is a powerful technique that
+    lets us manipulate, in a fine-grained way, how our code runs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thread safe structures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'From Java 5 and onwards, we have access to some atomic thread safe structures,
+    that are still useful with coroutines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`AtomicInteger` gives us many atomic operations that are thread safe. There
+    are more thread safe structures such as other atomic primitives and concurrent
+    collections.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mutexes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A `Mutex` (mutual exclusion) object allows access to multiple coroutines to
+    share the same resource but not simultaneously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: A `Mutex` object works similarly to a synchronized control structure, but, instead
+    of blocking the thread, it just blocks the coroutine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Actors
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'An `actor` is kind of object that interacts with other actors and with the
+    external world through messages. An `actor` object can have a private internal
+    mutable state that can be modified and accessed externally through messages, but
+    not directly. Actors are growing in popularity in recent years due to their consistent
+    programming model, and have been tested successfully in multi-million user applications,
+    such as **WhatsApp** that is built with **Erlang**, the language that brings actors
+    into the limelight:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: To write an `actor`, first, we need to define which messages we want to send.
+    Here, we are creating two messages, `IncCounter` and `GetCounter`. `GetCounter`
+    has a `CompletableDeferred<Int>` value that will let us know the counter value
+    outside the `actor`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can use the `actor<CounterMsg>` builder to create `actor`. Inside our `actor`
+    coroutine, we have access to the `channel` property, `ReceiveChannel<CounterMsg>`,
+    to receive the messages and react to them. The `counterActor(Int)` function will
+    return `SendChannel<CounterMsg>`; therefore, the only functions that we can call
+    are `send(CounterMsg)` and `close()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: Actors can be hard to grasp at the beginning but once, you understand, the `actor`
+    model is straightforward for creating complex and powerful systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the example code for this book, you can find an implementation of our `UserService`
+    example using `actors`. You can watch it online at [https://github.com/MarioAriasC/FunctionalKotlin/blob/master/Chapter07/src/main/kotlin/com/packtpub/functionalkotlin/chapter07/facts.kt#L377](https://github.com/MarioAriasC/FunctionalKotlin/blob/master/Chapter07/src/main/kotlin/com/packtpub/functionalkotlin/chapter07/facts.kt#L377).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Coroutines show a high potential to transform the way we think about asynchronous
+    code and execution. In this chapter, we covered how to write coroutines and how
+    to use coroutine contexts and channels. We also took a comprehensive look at how
+    to deal with asynchronous shared mutable state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our next chapter, we'll learn about functional collections and their operations.
+  prefs: []
+  type: TYPE_NORMAL

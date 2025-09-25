@@ -1,0 +1,974 @@
+- en: '*Chapter 10*: Putting It All Together'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will analyze what we have done so far in the previous chapters
+    and look at different ways we can improve the layers of the application. Later,
+    we will explore the benefit of clean architecture when we integrate instrumented
+    testing into the application, where we will swap the data source dependencies
+    with mock dependencies to ensure the reliability of the tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting module dependencies
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Instrumentation testing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By the end of the chapter, you will be able to identify and remove external
+    dependencies in the use case layer of the application to enforce the **Common
+    Closure Principle** (**CCP**) and know how to create instrumented tests on Android
+    with mock data sources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The hardware and software requirements are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android Studio Arctic Fox 2020.3.1 Patch 3
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The code files for this chapter can be found here: [https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter10](https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter10).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Check out the following video to see the Code in Action: [https://bit.ly/3sLr0HS](https://bit.ly/3sLr0HS)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting module dependencies
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will analyze the dependencies used across the different
+    modules in the application created in the previous chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Following *Exercise 09.01 – Transitioning to MVI* from [*Chapter 9*](B18320_09_ePub.xhtml#_idTextAnchor098),
+    *Implementing an MVI Architecture*, we now have a fully functioning application
+    split into separate modules, representing different layers. We can analyze the
+    relationship between the different modules by looking at the `dependencies` block
+    in the `build.gradle` file in each module and focusing in particular on the `implementation(project(path:
+    "{module}"))` lines. If we were to draw a diagram, it would look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.1 – A module dependency diagram for exercise 09.01'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_10.01_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 10.1 – A module dependency diagram for exercise 09.01
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the preceding figure, we can see that the `:domain` module, which is part
+    of the domain layer, is at the center, with the modules from the other layers
+    having a dependency toward it. The `:app` module is responsible for assembling
+    all of the dependencies, and this means that it will have a dependency on all
+    the other modules. This means that we are in a good clean architecture position
+    because we want the entities and use cases to have minimal dependencies on other
+    components. If we continue analyzing the `build.gradle` files for each module
+    and include the external dependencies as well, we will see additional dependencies
+    on external libraries for each module:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.2 – A module dependency diagram with external dependencies for
+    exercise 09.01'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_10.02_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 10.2 – A module dependency diagram with external dependencies for exercise
+    09.01
+  prefs: []
+  type: TYPE_NORMAL
+- en: In *Figure 10.2*, we can see some of the relevant external dependencies our
+    modules use. `:data-remote` uses dependencies toward Retrofit and OkHttp for networking,
+    the `:data-local` module has dependencies toward Room and DataStore, while the
+    presentation layer modules depend on things such as Compose, ViewModel, and the
+    Android framework. Dependencies that were used used across the entire project
+    were coroutines, flows, and Hilt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having dependencies on Hilt and coroutines might pose a problem for the `:domain`
+    and `:data-repository` modules. We want these two modules to be as stable as possible,
+    and having external dependencies will create problems every time we update the
+    versions for those libraries. We decided to use flows because of their threading
+    benefits, the reactive approach, and because they were developed as an extension
+    to the Kotlin framework. They might still pose a problem if we wanted to adapt
+    our use cases for multiple platforms using Kotlin Multiplatform. A solution for
+    this would be to develop a reactive plugin that would abstract the usage of flows
+    and use this abstraction across the different modules. This would allow us to
+    swap different reactive libraries without changing the code inside the module.
+    While this solution would fix the problem, it comes with lots of baggage because
+    we would need to abstract both the streams of data and the operators that the
+    project requires from the flows framework, which would give us more code to maintain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When it comes to the Hilt dependency, we can remove the references to Hilt from
+    the `:domain` and `:data-repository` modules and move the Hilt modules into `:app`.
+    Another solution would be to create new Gradle modules that would be responsible
+    for providing the necessary dependency. For example, a `:domain-hilt` module could
+    be created, where it would have a `@Module` annotated class that would provide
+    all of the dependencies that the `:domain` module would need to expose. This approach
+    can be used for other modules that we wish to export into applications that use
+    different dependency injection frameworks to avoid the dependency on Hilt in those
+    projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Module dependencies will increase as applications develop new features and evolve;
+    this means we should take time and assess the dependencies used in a project.
+    This will help us identify potential issues and whether we can scale an application
+    properly. We should also account for external dependencies and analyze the influence
+    they have over our project. In the following section, we will look at an exercise
+    on how to reduce the dependencies that the domain and repository modules have
+    on Hilt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercise 10.01 – Reduce dependencies
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Modify *Exercise 09.01 – transitioning to MVI* in [*Chapter 9*](B18320_09_ePub.xhtml#_idTextAnchor098),
+    *Implementing an MVI Architecture*, so that the `domain` and `data-repository`
+    modules will no longer depend on Hilt and instead provide the dependencies from
+    those modules inside the `app` module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before completing this exercise, you will need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remove Hilt from the `domain` module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the `@Inject` annotation from the `GetPostsWithUsersWithInteractionUseCase`,
+    `GetPostUseCase`, `GetUserUseCase`, and `UpdateInteractionUseCase` classes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Rename the `AppModule` class `UseCaseModule` and use `@Provides` to provide
+    dependencies to the preceding objects.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove Hilt from the `data-repository` module and delete the use of the `@Inject`
+    annotation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Move `RepositoryModule` from the `data-repository` module into `app` and use
+    `@Provides` to provide the dependencies to `PostRepository`, `UserRepository`,
+    and `InteractionRepository`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Follow these steps to complete the exercise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `build.gradle` file of the `domain` module, remove the use of the `kapt`
+    and Hilt plugins:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, delete the usages of Hilt from the `dependencies` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Delete the use of `@Inject` from `GetPostsWithUsersWithInteractionUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Delete the use of `@Inject` from `GetPostUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Delete the use of `@Inject` from `GetUserUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Delete the use of `@Inject` from `UpdateInteractionUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the app module, rename `AppModule` `UseCaseModule`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the app module in the `UseCaseModule` class, provide a dependency to `GetPostsWithUsersWithInteractionUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we need to use `@Provides` because we are no longer in the same module,
+    which means we should treat this as an external dependency, which needs the `@Provides`
+    annotation, similar to how we provided the Room and Retrofit dependencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same class, provide a dependency to `GetPostUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we follow the approach of the previous step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same class, provide a dependency to `GetUserUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we follow the approach of the previous step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same class, provide a dependency to `UpdateInteractionUseCase`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we follow the approach of the previous step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `build.gradle` file of the `data-repository` module, remove the use
+    of the `kapt` and Hilt plugins:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, delete the usages of Hilt from the `dependencies` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Move the `RepositoryModule` class from the injection package in the `data-repository`
+    module into the injection package in the `app` module and make the class not abstract.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Delete the use of `@Inject` from `InteractionRepositoryImpl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Delete the use of `@Inject` from `PostRepositoryImpl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Delete the use of `@Inject` from `UserRepositoryImpl`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `RepositoryModule` class, replace the `bindPostRespository` method with
+    a `@Provides` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we are no longer able to use the `@Binds` annotation because we removed
+    the `@Inject` annotation from the `PostRepositoryImpl` class, and because it is
+    an external dependency, we will need to use `@Provides`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same file, replace the `bindUserRepository` method with a `@Provides`
+    method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, replace `bindInteractionRepositorymethod` with a `@Provides`
+    method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we run the application, we should see the same output that we got in *Exercise
+    09.01 – Transitioning to MVI*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.3 – The output of exercise 10.01'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_10.03_B18320_Merged.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 10.3 – The output of exercise 10.01
+  prefs: []
+  type: TYPE_NORMAL
+- en: The project is now in a state where the `domain` and `data-repository` modules
+    no longer depend on Hilt. This means that all the other modules that depend on
+    these two will be less exposed to potential issues caused by updates to Hilt.
+    It also means that in the future, if we want to change the dependency injection
+    framework used across the application, the `domain` and `data-repository` modules
+    will remain unaffected by the change. In the section that follows, we will look
+    at how we can create instrumentation tests with mock data to test that the modules
+    are well integrated and that the data being passed is processed appropriately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instrumentation testing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will look at how to perform instrumentation testing for
+    an Android application and how we can take advantage of dependency injection to
+    inject either mock data or add test-related logic without modifying the structure
+    of an application's code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instrumentation testing is a set of tests that are run on an Android device
+    or emulator and is represented by the tests written in the `androidTest` directory.
+    Just like other parts of Android development, instrumentation testing evolved
+    across the years to improve the quality of test code and to provide the ability
+    to create better tests and assertions. Initially, testing was done using test
+    classes such as `ActivityTestCase`, `ContentProviderTestCase`, and `ServiceTestCase`,
+    which were mainly used to test individual components of an application in isolation.
+    The addition of the Espresso testing libraries allows us to easily test multiple
+    activities as part of the journey a user would undertake.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to add Espresso and the associated libraries into a project, the following
+    will need to be added to any module''s `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following is an example of a test written using Espresso:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding example, we use the `ActivityScenario` launch method to start
+    `MainActivity` and transition `Activity` to the `RESUMED` state. We then use `onView`,
+    which requires `ViewMatcher`, and `withId` looks up `View` by its ID and returns
+    `ViewMatcher` holding that information. We then have the option to use `perform`,
+    which requires `ViewAction`. This is for when we want to interact with certain
+    views. We can also perform `ViewAssertion` using the `check` method. In this case,
+    we are checking whether a view is displayed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another useful addition to help with testing is the orchestrator. The orchestrator
+    is useful when we want to delete the data generated by the tests that might be
+    kept in memory or persisted on the device and that in turn might impact other
+    tests and cause them to malfunction. What the orchestrator does is uninstall the
+    application before each executed test so that every test will be on a freshly
+    installed app. In order to add the orchestrator to the application, you will need
+    to add it to the module''s `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will add the orchestrator configuration into the test execution and pass
+    the instruction to delete the application data after each test. To add the orchestrator
+    dependency into the project, the following is required:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Espresso also comes with many extensions, one of which is the concept of `IdlingResource`.
+    When both local tests (tests that are run on the development machine) and instrumented
+    tests are run, they are run on a dedicated set of threads for testing. The Espresso
+    testing library will monitor the main thread of the application, and when it is
+    idle, it will make the assertions required. If the application uses background
+    threads, Espresso will need a way to be informed by this. We can use `IdlingResource`
+    to indicate to Espresso wait for an action to complete before continuing its execution.
+    An example of `IdlingResource` is `CountingIdlingResource`, which will hold a
+    counter for each operation Espresso will need to wait for. The counter is incremented
+    before each long-running operation and then decremented after the operation is
+    completed. Before each test, `IdlingResource` will need to be registered and then
+    unregistered when the test finishes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding example, we have `CountingIdlingResource` being incremented
+    at the beginning of the `doOperation` method and decremented after the long operation
+    we intend to perform. To register and unregister `IdlingResource`, we can perform
+    the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, we register `IdlingResource` in the `setUp` method, which is
+    called before each test because of the `@Before` annotation, and unregister it
+    in the `tearDown` method, which is called after each test because of the `@After`
+    annotation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because `IdlingResource` is a part of Espresso but needs to be used when operations
+    inside the application''s code are executed, we want to avoid using `IdlingResource`
+    alongside that code. A solution for this is to decorate the class that contains
+    the operation and then use dependency injection to inject the decorated dependency
+    into the test. To decorate the code, we will need to have an abstraction for the
+    operation. An example of this is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding example, we have created an interface that defines the `doOperation`
+    method, and then we implement the interface with the long-running operation into
+    a class. We can now create a class that will belong to the `androidTest` folder,
+    which will decorate the current implementation of the class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we have another implementation of `MyInterface`, which will hold a reference
+    to the abstraction and `CountingIdlingResource`. When `doOperation` is called,
+    we will increment `IdlingResource`, call the operation, and then, when it's done,
+    decrement `IdlingResource`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we want to inject the new dependency into the test, we will need first to
+    define a new class that extends `Application`, which will hold the dependency
+    graph containing the test dependencies. If we are using Hilt, it already provides
+    such a class in the form of `HiltTestApplication`. If we want to integrate Hilt
+    into the instrumented tests, we will need the following dependencies to be added
+    to the module''s `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To provide the `HiltTestApplication` class to the test, we will need to change
+    the instrumented test runner. An example of a new test runner will look like the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this example, we are extending from `AndroidJUnitRunner`, and in the `newApplication`
+    method, we invoke the `super` method, and we pass `HiltTestApplication` as the
+    `name`. This means that when the test is executed, `HiltTestApplication` will
+    be used instead of the `Application` class we defined in our main code. We will
+    now need to change the configuration in the module''s `build.gradle` file to use
+    the preceding runner:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This allows the instrumented test to use the runner we have created. Let''s
+    now assume that we have the following module, which will provide the initial dependency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we are using a simple binding to connect an implementation to the abstraction.
+    In the `androidTest` folder, we can create a new module in which we replace this
+    instance with the decorated one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this example, we use the `@TestInstallIn` annotation, which will make the
+    dependencies in this module live as long as the test application and replace the
+    dependencies in the previous module. We can then provide dependencies for `IdlingResource`
+    and `MyDecoratedClass`, which will wrap `MyClass` and use `IdlingResource`. If
+    we want these changes to take effect in the tests, we will need the following
+    changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, we have used the `@HiltAndroidTest` annotation because we want
+    to inject `CountingIdlingResources` into the test. We then used `HiltAndroidTestRule`
+    to perform the injection. We also gave it the highest priority in terms of the
+    order of execution for test rules. Finally, we were able to register and unregister
+    `CountingIdlingResources` for each test in the class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Jetpack Compose comes with its own testing libraries, which require the following
+    configuration to the module''s `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To write tests for Jetpack Compose components, we will need to define a Compose
+    test rule using `createComposeRule` when we want to test individual composable
+    methods, or `createAndroidComposeRule` if we want to test the Compose content
+    of an entire activity. An example would look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding example, we have defined a test rule that will be responsible
+    for testing the Compose content inside `MyActivity`. If we want the test to interact
+    with the user interface or assert that it displays the correct information, we
+    have the following structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this example we use the `onNode` method to locate a particular element,
+    such as `Text` or `Button`. We then have the `assertIsDisplayed` method, which
+    is used to check whether the node is displayed. Finally, we have the `performClick`
+    method, which will click on the element. Jetpack Compose uses its own `IdlingResource`
+    type, which can be registered in the Compose test rule, similar to the following
+    example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: From a clean architecture perspective, we should strive to make our application's
+    code as testable as possible. This applies to both local tests such as unit tests
+    and instrumented tests. We want to be able to ensure that the tests are reliable;
+    this usually means that we will need to remove the dependency on network calls,
+    which means we will need to provide a way to inject mock data into the application
+    without modifying the application's code. We also need to be able to either inject
+    `IdlingResources` into the application or use decorated dependencies to verify
+    that the data inserted by the user is the correct data received in the data layer.
+    This also involves the ability to decorate these dependencies to add extra logic
+    without modifying the application's code. In the following section, we will look
+    at an exercise in which we will inject various dependencies containing testing
+    logic into the application and assess the difficulty it takes to introduce them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercise 10.02 – Instrumented testing
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Add one instrumented test to *Exercise 10.01 – Reduce dependencies*, which
+    will assert that the following data is displayed onscreen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.4 – The expected output of exercise 10.02'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_10.04_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 10.4 – The expected output of exercise 10.02
+  prefs: []
+  type: TYPE_NORMAL
+- en: To achieve this, you will need to create a new implementation of `RemotePostDataSource`,
+    which will return a list of four posts; two posts will belong to one user and
+    the other two will belong to another user. The same thing will need to be done
+    for `RemoteUserDataSource`, which will return the two users. These implementations
+    will need to be injected into the test. To ensure that the test will wait for
+    the background work to complete, you will need to decorate each repository with
+    `IdlingResource`, which will also need to be injected into the test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before completing this exercise, you will need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrate the testing libraries into the app module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create `PostAppTestRunner`, which will be used to provide `HiltTestApplication`
+    to the Android instrumentation test runner.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a `ComposeCountingIdlingResource` class, which will wrap an Espresso
+    `CountingIndlingResource` and implement the Compose `IdlingResource`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create `MockRemotePostDataSource` and `MockRemoteUserDataSource`, which will
+    be responsible for returning the users and posts in presented in *Figure 10.4*.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create `IdlingInteractionRepository`, `IdlingUserRepository`, and `IdlingPostRespository`,
+    which will decorate `InteractionRepository`, `UserRepository`, and `PostRepository`,
+    and use the `ComposeCountingIdlingResource`, which will be incremented when new
+    data is loaded and decremented when data loading is done.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create `IdlingRepositoryModule` and `MockRemoteDataSourceModule`, which will
+    replace `RepositoryModule` and `RemoteDataSourceModule` respectively in the tests.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create `MainActivityTest`, which will have one test, and use `createAndroidComposeRule`
+    to assert that the list of mock data is displayed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Follow these steps to complete the exercise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the top-level `build.gradle` file, add the following library versions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, make sure that the following `androidTest` dependencies are
+    added:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we are defining the mappings for all the testing libraries we will be
+    using so that they will be available across multiple modules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `build.gradle` file of the app module, add the required test dependencies:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `androidTest` folder of the app module, create the `PostAppTestRunner`
+    class inside the `java/{package-name}` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `build.gradle` file of the app module, set the following test configuration.
+    Make sure to replace `{package-name}` with the package that the `PostAppTestRunner`
+    is in:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `androidTest` folder of the app module, create the following packages
+    inside the `java/{package-name}` folder – `idling`, `injection`, `remote`, `repository`,
+    and `test`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Inside the `idling` package, create a new class called `ComposeCountingIdlingResource`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have used the `CountingIdlingResource` class from Espresso to perform
+    the logic for incrementing, decrementing, and providing its current idling state
+    through the `isIdleNow` method, which is used by Jetpack Compose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same package, create a file called `IdlingUtils` with the following
+    method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This is an extension function that we can use to increment `IdlingResource`
+    before `Flow` is collected and decrement it when the first value of `Flow` is
+    being emitted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `repository` package, create a class called `IdlingInteractionRepository`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This class has a reference to the `ComposeCountingIdlingResource` object and
+    the `attachIdling` method created previously to increment when the data is loaded
+    or saved and to decrement when it's done performing these operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same package, create a class called `IdlingPostRepository`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we follow the approach of the previous step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same package, create a class called `IdlingUserRepository`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we follow the approach of the previous step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `injection` package, create the `IdlingRepositoryModule` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `IdlingRepositoryModule` class, provide a dependency for `ComposeCountingIdlingResource`,
+    which will be a single instance across all the repositories:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we are providing a single instance of `ComposeCountingIdlingResource`
+    so that when multiple repositories load data at the same time, the same counter
+    will be used for all of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same file, provide a dependency for `IdlingPostRepository`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we are providing an instance of the `IdlingPostRepository`,
+    which will wrap an instance of `PostRepositoryImpl` and have a reference to the
+    `ComposeCountingIdlingResource` instance defined previously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same file, provide a dependency for `IdlingUserRepository`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we are providing an instance of `IdlingUserRepository`, which
+    will wrap an instance of `UserRepositoryImpl` and have a reference to the `ComposeCountingIdlingResource`
+    instance defined previously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same file, provide a dependency for `IdlingInteractionRepository`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this snippet, we are providing an instance of `IdlingInteractionRepository`,
+    which will wrap an instance of `InteractionRepositoryImpl` and have a reference
+    to the `ComposeCountingIdlingResource` instance defined previously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `remote` package, create a class called `MockRemoteUserDataSource` and
+    create a list of `User` objects representing the test data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have created a list in which we return two users and put it into `Flow`
+    for the `getUsers` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same package, create a class called `MockRemotePostDataSource` and create
+    a list of `Post` objects representing the test data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Similar to what we did with the users, we create a list of posts and connect
+    the first two posts to the first user and the last two posts to the second user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `injection` package, create a class called `MockRemoteDataSourceModule`,
+    which will be responsible for binding the previous two implementations to the
+    abstractions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `test` package, create a class called `MainActivityTest`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we are initializing our test rules, which are for Hilt and Compose, in
+    that exact order. Then, we inject `ComposeCountingIdlingResource` into the test
+    class so that we can register it into the Compose test rule.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `MainActivityTest` class, add a test that will assert that the required
+    data is displayed on the screen:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have added a test that asserts that the header text is displayed, the
+    two users are displayed for each of their posts, and that each post is displayed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run the test, we should see the following output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.5 – The test output for exercise 10.02'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_10.05_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 10.5 – The test output for exercise 10.02
+  prefs: []
+  type: TYPE_NORMAL
+- en: As part of this exercise, we were able to provide mock data to the application
+    without changing any of its existing code by changing the remote data sources
+    and building upon existing functionality, by adding `IdlingResources` to our repositories.
+    Both techniques were possible using dependency injection, and because of abstractions,
+    we introduced different layers of the application when we performed dependency
+    inversion. This makes the application's code testable and provides us with the
+    opportunity to test different scenarios and create various types of tests to ensure
+    the integration of different components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we analyzed the exercises we've done in previous chapters and
+    found potential issues with the dependencies that the modules of the application
+    have. We looked at potential solutions for these problems. Then, we looked at
+    a practical application of clean architecture, which is the implementation of
+    instrumented tests, and how we can change the data sources of an application to
+    ensure testing reliability. We looked at how we can implement instrumented tests
+    using Jetpack Compose and Hilt to provide dependency injection, and then we applied
+    them in an exercise in which we changed the dependencies for the tests. This serves
+    as just one example of the benefits of clean architecture. Other benefits will
+    come in situations where multiple flavors are used to publish similar applications
+    and want to inject different implementations or configurations for each application
+    we want to build. Another benefit comes when dealing with multiple platforms (such
+    as Android and iOS), where we can define entities, use cases and repositories
+    agnostically of the platforms using cross platform frameworks and then inject
+    the implementations for retrieving and persisting the data for each platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [*Chapter 9*](B18320_09_ePub.xhtml#_idTextAnchor098), *Implementing an MVI
+    Architecture*, we showed how we can change an application's presentation layer
+    without impacting other layers. In a clean application, this should be possible
+    for the data layer as well. We saw how libraries have changed and evolved over
+    time. When networking libraries change, we should be able to transition to new
+    libraries without causing issues in the other modules of an application. The same
+    principle can be applied to local storage. We should be able to change from Room
+    to other ways of persisting data locally. A good rule of thumb for how modules
+    should be created is to view each module as a library that can be released and
+    imagine yourself as the end user. You should have now a good idea of how clean
+    architecture is supposed to work, the problems it is trying to solve, and how
+    you can apply it to an Android application.
+  prefs: []
+  type: TYPE_NORMAL

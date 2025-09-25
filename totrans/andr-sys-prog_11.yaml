@@ -1,0 +1,954 @@
+- en: Enabling VirtualBox-Specific Hardware Interfaces
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the last chapter, we did a deep analysis of Android Gralloc HAL modules.
+    We analyzed the default Gralloc module and the hardware GPU emulation Gralloc
+    HAL for the Android emulator. We don''t have time to walk through the boot up
+    process related to the graphics system yet. In this chapter, we will walk through
+    the boot up process of the graphics system and explore the VirtualBox-specific
+    hardware drivers. At the end of this chapter, we will have a relatively complete
+    system on VirtualBox. We will cover the following topics in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGL ES and graphics hardware initialization
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Integration of VirtualBox Guest Additions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: OpenGL ES and graphics hardware initialization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In Android systems, the initialization of the graphics system is done by SurfaceFlinger.
+    Besides the Gralloc HAL that we discussed in [Chapter 10](900f7c1a-7db8-4172-899a-8e9a167372ce.xhtml),
+    *Enabling Graphics*, another important part of graphics system initialization
+    is the loading of OpenGL ES libraries. In our VirtualBox implementation, we use
+    most of the HAL modules from Android-x86\. The graphics system support includes
+    the following components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Gralloc HAL
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mesa lib for OpenGL ES
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: uvesafb framebuffer driver or VirtualBox video driver
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have discussed Gralloc HAL in the last chapter. We will explore the loading
+    of the OpenGL ES library and uvesafb framebuffer driver in this chapter. We will
+    use the default uvesafb framebuffer driver in the introduction of graphics system
+    initialization. We will also introduce how to use the native graphic driver from
+    VirtualBox when we talk about the integration of VirtualBox Guest Additions later
+    in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading OpenGL ES libraries
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**OpenGL ES** stands for **Open GL Embedded System**, which is a subset of
+    OpenGL from Khronos. EGL is an interface between OpenGL ES and the underlying
+    native platform. The API of EGL is supposed to be platform-agnostic, but the implementation
+    of the EGL API is not.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The implementation of OpenGL ES in Android includes the Java API and native
+    implementation. These two parts can be found at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Java API: `$AOSP/frameworks/base/opengl`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'OpenGL ES native: `$AOSP/frameworks/native/opengl`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These two parts of the OpenGL implementation depend on a vendor implementation
+    to provide the full function of the OpenGL ES API. During the system start-up,
+    the system will search for paths `/system/lib/egl` or `/vendor/lib/egl` to find
+    the vendor OpenGL libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The OpenGL ES vendor libraries should follow the following naming conventions.
+    If the vendor library is a single library, it should use the name as `libGLES_*.so`.
+    In our case, the OpenGL ES library for VirtualBox is `libGLES_mesa.so`, which
+    is provided as a single library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the vendor libraries are provided as separate libraries, they must be something
+    like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`/system/lib/egl/libEGL_*.so`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`/system/lib/egl/libGLESv1_CM_*.so`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`/system/lib/egl/libGLESv2_*.so`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This is the case for the Android emulator hardware emulation libraries. We
+    can find the following ones for the Android emulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`/system/lib/egl/libEGL_emulation.so`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`/system/lib/egl/libGLESv1_CM_emulation.so`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`/system/lib/egl/libGLESv2_emulation.so`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The vendor libraries are loaded during the `SurfaceFlinger` initialization.
+    Before we go to the details about the start up process, let's have a look at the
+    message from the debug log first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I removed the timestamp from the following log so that we can have a better
+    format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, when the main thread of `SurfaceFlinger` is ready to run, it
+    loads the `/system/lib/egl/libGLES_mesa.so` library during the x86vbox device
+    boot up. After that, it loads and initializes the `gralloc.default.so` Gralloc
+    module:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, `SurfaceFlinger` initializes the EGL library as the preceding log message.
+    The EGL version in our environment is 1.4:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: After EGL initialization, the OpenGL ES library is initialized, as we can see
+    from the preceding log message. We can see that OpenGL ES 3.0 is supported by
+    the Mesa library. The rendering engine is a software implementation using Gallium
+    with `llvmpipe`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each graphics hardware vendor usually has their own implementation of OpenGL.
+    Mesa is an open source implementation of OpenGL. Mesa has multiple backends for
+    OpenGL support. It can support both hardware and software implementation according
+    to the hardware GPU. If you don''t have a hardware GPU, Mesa has three CPU-based
+    implementations: swrast, softpipe, and llvmpipe. The one that we used in x86vbox
+    is llvmpipe. There are two architectures for Mesa driver implementation. Gallium
+    is the new architecture for the Mesa driver implementation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyzing the loading process
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: After we have a general introduction about OpenGL ES implementation in x86vbox
+    (reuse from Android-x86), we will analyze the source code to have another level
+    of understanding. Since the detail implementation of graphics systems and OpenGL
+    ES is huge, we won't be able to cover them in a chapter. We will focus on the
+    loading process of graphics systems and the OpenGL ES library in our analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Again, you may feel frustrated while we walk through the source code. The best
+    way to help with this is to open your source code editor while you read this chapter.
+    If you don''t have AOSP source code at hand, you can always refer to the following
+    website:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://xref.opersys.com/](http://xref.opersys.com/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can just search for the function name that we discuss in this chapter to
+    locate the source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the preceding debug log, we will start from the point where we see the
+    first debug message related to the graphics system and `SurfaceFlinger`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first message is printed by the constructor of `SurfaceFlinger` and the
+    second message is printed out from the `init` method of `SurfaceFlinger`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The source code of `SurfaceFlinger` can be found at: `$AOSP/frameworks/native/services/surfaceflinger/SurfaceFlinger.cpp`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start our analysis from **SurfaceFlinger:init**, according to the flow
+    shown in the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_11_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Loading of OpenGL ES libraries
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `SurfaceFlinger:init`, as shown in the following code snippet, it calls
+    the EGL function `eglGetDisplay` first. After that, it tries to create a hardware
+    composer instance. With the instances of display `mEGLDisplay` and hardware composer
+    `mHwc`, it creates a rendering engine using the underlying OpenGL ES implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s analyze the EGL function `eglGetDisplay` first. The `eglGetDisplay`
+    function is implemented in the `frameworks/native/opengl/libs/EGL/eglApi.cpp`
+    file, as shown in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In `eglGetDisplay`, it checks the index of display to be initialized first.
+    In the current Android code, the `EGL_DEFAULT_DISPLAY` parameter is zero and the
+    definition of `NUM_DISPLAYS` is 1\. This means it can only support one display
+    in the current Android implementation. What does this mean here? For example,
+    if you have a laptop, you can connect it to a projector. In this case, you can
+    have two displays at the same time. Some new computers can even connect to three
+    displays at the same time nowadays. After checking the number of displays, it
+    calls the `egl_init_drivers` function to load the OpenGL ES libraries:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `egl_init_drivers` function acquires a mutex and calls to another function,
+    `egl_init_drivers_locked`, to load the OpenGL ES libraries. In the `egl_init_drivers_locked`
+    function, it gets an instance of a `Loader` class, which is defined using the
+    **singleton pattern**. After that, it initializes the global variable `gEGLImpl`,
+    which is defined as the data structure `egl_connection_t`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `egl_connection_t` data structure, it defines the following fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`dso`: This is a pointer that points to a `driver_t` data structure defined
+    inside the `Loader` class. This `driver_t` data structure stores the handle of
+    OpenGL ES libraries after they are loaded by the `Loader` class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`hooks`: This is an array of the pointers of the `gl_hooks_t` data structure.
+    The `gl_hooks_t` data structure is used to define all the function pointers of
+    the OpenGL ES API. After the OpenGL ES libraries are loaded, the OpenGL ES functions
+    inside the libraries will be initialized and assigned to the `hooks` field. There
+    are two OpenGL ES versions that are defined in `enum { GLESv1_INDEX , GLESv2_INDEX
+    }`. The `hooks[GLESv1_INDEX]` is used to store OpenGL ES version 1 APIs and it
+    points to the `gHooks[GLESv1_INDEX]` global variable. The same is for `GLESv2_INDEX`.
+    The list of OpenGL ES APIs can be found in the following file: `$AOSP/frameworks/native/opengl/libs/entries.in`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`major` and `minor`: These two are used to store the EGL version.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`egl`: This is defined as `egl_t`, which is used to store the EGL APIs. The
+    list of EGL APIs can be found in the following file: `$AOSP/frameworks/native/opengl/libs/EGL/egl_entries.in`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`libEgl`, `libGles1`, and `libGles2`: These are the handles of OpenGL ES wrapper
+    libraries. We will see the initialization of these libraries in a moment.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'After the `cnx` data structure is initialized, it calls the `loader.open` function
+    to load the libraries. Let''s look at the `loader.open` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `Loader::open`, it tries to load a single OpenGL ES library first. If it
+    fails, it tries to load the separated libraries one by one. If the libraries are
+    loaded successfully, it stores the handles to the `driver_t` data structure. We
+    explained about `driver_t` previously when we talked about the `dso` field in
+    the `egl_connection_t` data structure. The actual loading process is done in the
+    `load_driver` function and we will look at it soon. After the OpenGL ES libraries
+    are loaded, it also tries to load the wrapper libraries using the `load_wrapper`
+    function. The `load_wrapper` function just calls the `dlopen` system call and
+    returns the handle so we don't need to investigate it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading the driver
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s analyze the `load_driver` function, which is the one that finds and
+    loads the OpenGL ES user space driver:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `load_driver` function, it defines a `MatchFile` inner class. It uses
+    the `MatchFile::find` method to find the path of the libraries. The `load_driver`
+    function has three parameters: `kind`, `cnx`, and `mask`. According to the kind
+    of libraries, the parameter kind could be `GLES`, `EGL`, `GLESv1_CM`, or `GLESv2`.
+    Once it gets the absolute path of a library, it calls the `dlopen` system function
+    to open the shared library. The `mask` parameter is a bit map of the `kind` parameter.
+    Using the `mask` parameter, it can initialize the `cnx` parameter according to
+    the kind of library. As we mentioned before, the `cnx` parameter, which is an
+    instance of `egl_connection_t`, has an `egl` field to store all the EGL function
+    pointers. It has another field, `hooks[GLESv1_INDEX]/ hooks[GLESv2_INDEX]`, to
+    store all OpenGL ES functions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the library type is EGL, it gets the address of the `eglGetProcAddress` function
+    by first calling the `dlsym` system function. After that, it will loop through
+    all the function names defined in the `egl_names` global variable to find out
+    the addresses and store them in `cnx->egl`. During the process, it tries to get
+    the address using the `dlsym` system function first. If the call to `dlsym` fails,
+    it will try it again using the `eglGetProcAddress` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the library type is either `GLESv1_CM` or `GLESv2`, it calls another function,
+    `init_api`, to initialize all OpenGL ES function pointers. In the `init_api` function,
+    it will loop through all the function names defined in the `gl_names` global variable
+    to find out the addresses and store them in `cnx->hooks[egl_connection_t::GLESv?_INDEX]->gl`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we have done all the initialization of the OpenGL ES user space drivers
+    and we can use the `egl_connection_t` data structure to access all OpenGL ES vendor
+    APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the rendering engine
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After the OpenGL ES vendor libraries are loaded, `SurfaceFlinger:init` will
+    create the rendering engine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Inside `RenderEngine::create`, it will call `RenderEngine::chooseEglConfig`,
+    which will print out the debug message for EGL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the end of `RenderEngine::create`, it will print out the OpenGL ES initialization
+    information as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: The uvesafb framebuffer driver
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Th framebuffer driver is the third component that we need to support the graphics
+    system for x86vbox. Since you may run VirtualBox on different Intel devices, they
+    may use different graphics hardware, such as Nvidia, AMD, or Intel. To get the
+    best performance in a virtualization environment, you may want to explore various
+    GPU virtualization technologies, such as GPU passthrough, GPU sharing, GPU software
+    emulation, and so on. To have a simple solution, we use the default solution from
+    Android-x86, which is the uvesafb framebuffer driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What is uvesafb?
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The uvesafb is a user space VESA framebuffer driver that works with VESA 2.0-compliant
+    graphic cards. VESA BIOS extensions provide the primary functionality of VESA
+    standard through the BIOS interface. On Linux, uvesafb needs a user space daemon
+    called `v86d` as a backend for kernel drivers that need to execute x86 BIOS code.
+    Since BIOS code can only be executed in a controlled environment, the code executed
+    by `v86d` can be run either in a fully software-emulated environment or a virtualized
+    environment supported by the CPU. The `v86d` has been ported to Android by the
+    Android-x86 project. It can be found at `$AOSP/external/v86d`. Since the `v86d`
+    project needs additional system calls such as `ioperm` and `iopl`, the Android-x86
+    project changed the bionic library to support these system calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can refer to the following kernel document to find out more about uvesafb:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.kernel.org/doc/Documentation/fb/uvesafb.txt](https://www.kernel.org/doc/Documentation/fb/uvesafb.txt)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the uvesafb framebuffer driver
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we try to understand how uvesafb is loaded in our environment, we can
+    test it using two framebuffer testing tools, `fbset` and `fbtest`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we know, we can boot to a debug console using two stages boot of Android-x86
+    from [Chapter 9](c8d10155-cc8e-4b8c-a5e0-f359520c894a.xhtml), *Booting Up x86vbox
+    Using PXE/NFS*. We can test uvesafb in the debug console with `fbset` and `fbtest`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`fbset` is a system tool to show or change the settings of the framebuffer
+    device. You can refer to the help page of Linux commands to find out how to use
+    `fbset`. In our environment, we use `busybox` in the first stage boot and we use
+    `toybox` or `toolbox` in the Android environment. `fbset` is supported by `busybox`,
+    so we can use it in the first stage or the second stage boot through `busybox`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`fbtest` is a framebuffer test program that can be found at [https://git.kernel.org/pub/scm/linux/kernel/git/geert/fbtest.git](https://git.kernel.org/pub/scm/linux/kernel/git/geert/fbtest.git).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I cloned it from the kernel Git repository and ported it to the Android environment.
+    The source code for Android can be found at GitHub via the following link:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://github.com/shugaoye/fbtest](https://github.com/shugaoye/fbtest)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To build `fbtest`, we can get it from GitHub and build it in the AOSP build
+    environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we set up the AOSP build environment, we can check out and build the
+    `fbtest` source code using the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Be aware that I changed the Makefile and that it depends on the AOSP environment
+    variable `$OUT`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we look at the preceding `fbtest/Rules.make` Makefile, we use the `$OUT`
+    environment variable to find the right AOSP build environment. After that, we
+    can use prebuilt toolchains and the `bionic` library to build `fbtest`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we build `fbtest`, we can copy it to the `$OUT/system/bin` folder so that
+    we can use it in the test environment later. As we remember from [Chapter 9](c8d10155-cc8e-4b8c-a5e0-f359520c894a.xhtml),
+    *Booting Up x86vbox Using PXE/NFS*, we can boot to a debug console in the first
+    stage boot using PXE/NFS. In this case, we can change and test `fbtest` without
+    rebooting the x86vbox, since we can access the build result through NFS from x86vbox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s boot x86vbox to the debug console in the first stage boot and perform
+    the tests. As we recall, we have a minimal embedded Linux environment in the debug
+    console of the first stage boot. We have a built-in `busybox` available in this
+    environment. Before we test the framebuffer device, we must load the `uvesafb`
+    module manually, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_11_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We use the following command to load the `uvesafb` module:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: From the debug output, we can see that the underlying graphic hardware is `Oracle
+    VM VirtualBox VBE Adapter`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After the `uvesafb` module is loaded, we can find the `/dev/fb0` device. We
+    can use `fbset` to change the settings of the framebuffer device. For example,
+    we can switch to different supported resolutions as we want. Let''s just run the
+    `fbset` command and see what happens. If we run `fbset` without any parameters,
+    we can see the following output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: If `fbset` is run without any parameters, it just prints out the current settings
+    of the framebuffer device. As we can see from the output, if we load `uvesafb`
+    without any parameters, the default resolution is 640 x 480 in 16-bit colors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can try to change the resolution with the name of the resolution as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We got an error message that tells us that the resolution is not defined in
+    the `/etc/fb.modes` file. We need to create this file to change resolutions. We
+    can add the following resolutions in `/etc/fb.modes` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can test the resolution change. If we run the following command, we
+    can change to a higher resolution with true color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we load the framebuffer driver and test the configuration changes, we
+    can test the framebuffer by drawing something on the screen. Using the `fbtest`
+    command that we built in this section, we can run a set of framebuffer test cases.
+    First, let''s find out how many test cases `fbtest` can run:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run `fbtest` with the `-l` option, it prints out the list of test cases
+    available. We can see that we have 12 test cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: As an example, we can run test case 002 and we will see the following screen.
+    Feel free to test any of the preceding test cases yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_11_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Initializing uvesafb in x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The initialization of `uvesafb` in x86vbox is done in the start up script `init.sh`.
+    If we recall the discussion on HAL initialization in [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml),
+    *Creating Your Own Device on VirtualBox*, we can see the following code in `init.sh`.
+    We discussed the initialization of graphics HAL in [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml),
+    *Creating Your Own Device on VirtualBox* briefly, and we can look into the details
+    now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In our current setup, let''s see what the content of `/proc/fb` is. We can
+    check this from either the debug console or the adb console. Before a framebuffer
+    device is initialized, the content of `/proc/fb` is empty. In our case, it is
+    empty, since there is no framebuffer device available until the `init.sh` script
+    is executed. If the output is empty, the `init.sh` script will call the `init_uvesafb`
+    function to initialize `uvesafb`. After the framebuffer device is initialized,
+    we can see the content of `/proc/fb` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: If there is a framebuffer device available before `init.sh` is called, `init_hal_gralloc`
+    will set the `ro.hardware.gralloc` system property for DRM drivers. For the devices
+    that `init_hal_gralloc` cannot handle, it will do nothing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `init_uvesafb`, the actual command to load `uvesafb` can be extended to
+    the following one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The options of `uvesafb` are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`mtrr:n`: Set up memory type range registers for the framebuffer, where `n`
+    can be:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`0`: Disabled (equivalent to the `nomtrr` option)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`3`: Write-combining (default)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The memory type range registers are a set of processor supplementary capabilities
+    control registers in Intel processors. Write-combining allows bus write transfers
+    to be combined into a larger transfer before bursting them over the bus. This
+    can help to improve the graphics performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`redraw`: Scroll by redrawing the affected part of the screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`mode_option`: Set the resolution to a supported one.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'After `uvesafb` is loaded, we can find all the supported resolutions using
+    the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Integrating VirtualBox Guest Additions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Up to now, we can boot x86vbox to Android. What we can do further is integrate
+    VirtualBox Guest Additions to x86vbox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: VirtualBox is a virtualization environment. We can install a guest operating
+    system as it is in VirtualBox. However, there are some limitations to working
+    in this way. To run a guest operating system in a host environment, you may expect
+    more things than just hardware virtualization. For example, you may find the mouse
+    cursor to behave badly when you move between the host and guest system. You may
+    want to share data between the hosts and guests easily, such as shared clipboard,
+    shared folder, and so on. To meet these requirements, the host and guest need
+    to know each other and have a way to talk to each other. In VirtualBox architecture,
+    there is a component called **Host-Guest Communication Manager** (**HGCM**). On
+    the host side, VirtualBox implements a service called HGCM service that can serve
+    the requests from the guest. On the guest side, there are a few kernel drivers
+    from VirtualBox that can be used to communicate to the host.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The additional features that VirtualBox provides for the host and guest integration
+    are usually included in a package called **VirtualBox Extension Pack**. In the
+    VirtualBox Extension Pack, it includes the necessary files for both the host side
+    and the guest side. The VirtualBox Extension Pack can be download at [https://www.virtualbox.org/wiki/Downloads](https://www.virtualbox.org/wiki/Downloads).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For the guest side, there are binary tools and source code for device drivers,
+    which are included in a separate distribution package called VirtualBox Guest
+    Additions. There are separate VirtualBox Guest Additions for Windows, Linux, and
+    OS X. There are no Guest Additions for Android. However, since Android uses the
+    Linux kernel, we can build the kernel drivers for Android using the source code
+    for Linux. After we install the VirtualBox Extension Pack, we can find an image
+    file `VBoxGuestAdditions.iso`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can extract this image file and can find the following files inside VirtualBox
+    Guest Additions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There are two compressed files: `VBoxGuestAdditions-amd64.tar.bz2` and `VBoxGuestAdditions-x86.tar.bz2`.
+    As we can see its content from the following screenshot, this is a list of folders
+    and files of the Guest Additions for Intel x86 Linux guest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_11_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: VirtualBox Guest Additions
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are source codes for three drivers available in the Guest Additions:
+    `vboxguest`, `vboxsf`, and `vboxvideo`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`vboxguest`: This module provides the basic services in the guest operating
+    system to communicate to the host.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vboxsf`: This module is a kernel driver to provide the capability to share
+    files between host and guest.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vboxvideo`: This module is a video driver for the guest. With this driver,
+    we can use graphics hardware acceleration through the host.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will build and integrate these three drivers to x86vbox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building VirtualBox Guest Additions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The only dependency of the drivers in Guest Additions is the kernel source
+    code. It is very easy to build the drivers for Android. To build the Guest Additions,
+    you can get the source code from your VirtualBox installation, or you can get
+    a version from my GitHub as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we have built the drivers successfully, we can find the driver modules
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can store the kernel modules in a `vbox` folder under our `x86vbox` device
+    folder, so we can copy them to the filesystem in the build process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we have the loadable modules of Guest Additions, we can add them to our
+    x86vbox device Makefile `x86vbox.mk`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: These three modules will be copied to the `/system/vendor/vbox` folder in the
+    system image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating vboxsf
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the loadable module `vboxsf.ko`, we have the capability to exchange files
+    between the host and the guest at the runtime of the Android system. To create
+    a shared folder between the host and guest, we need to load the `vboxsf.ko` module
+    first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use `vboxsf.ko`, we need a tool called `mount.vboxsf`, which can be used
+    to mount a shared folder on the host filesystem to the Android filesystem. This
+    `mount.vboxsf` tool is part of the utilities provided by VirtualBox Guest Additions.
+    We put it under our x86vbox device folder as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It includes a C file and a header file. We created the following Android Makefile
+    to build it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To include it in the system image, we also need to add it to the `x86vbox.mk`
+    Makefile as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In order to load `vboxsf.ko` during the system boot up, we need to add the
+    loading of `vboxsf.ko` to the start up script in `initrd.img`. If we recall from
+    [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml), *Debugging the Boot Up
+    Process Using a Customized Ramdisk*, we discussed the init script in the `initrd.img`.
+    The shell script function `load_modules` is called to load most of the device
+    drivers in the first stage boot up. We can change this script to load VirtualBox
+    device drivers as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: We defined a `VBOX_GUEST_ADDITIONS` kernel parameter, which can be used to enable
+    the loading of VirtualBox-specific device drivers. If this kernel parameter is
+    defined, we will load both loadable modules, `vboxguest.ko` and `vboxsf.ko`. Another
+    kernel parameter, `SDCARD`, is also defined so that we can mount the shared folder
+    to be an external SD card storage. The `SDCARD` kernel parameter is used by the
+    shell script function `mount_sdcard` as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To define these two kernel parameters on the kernel command line, we need to
+    change the PXE boot script at `$HOME/.VirtualBox/TFTP/pxelinux.cfg/default` as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Pay attention to the two variables `SDCARD` and `VBOX_GUEST_ADDITIONS`. They
+    are the two new kernel parameters that we added to support the loading of VirtualBox
+    device drivers. To mount the shared folder, we add the following command in the
+    script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first parameter to `mount.vboxsf` is the shared folder that we defined
+    in the VirtualBox settings, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_11_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: With all the changes related to the shared folder, we can have a method that
+    can be used to share data between the host and the guest very easily.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating vboxvideo
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the VirtualBox Guest Additions, there is another device driver that can be
+    used in Android, which is `vboxvideo.ko`. This is a device driver for video hardware.
+    It provides a much more powerful video driver compared to the uvesafb that we
+    just discussed in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The uvesafb is a standard framebuffer driver based on VESA 2.0 standard and
+    it does not support hardware acceleration on VirtualBox. The `vboxvideo.ko` is
+    a DRM/DRI-based video driver with hardware acceleration support.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Direct Rendering Infrastructure** (**DRI**) is a new architecture of the
+    X Window system on the Linux platform to allow *X* clients to talk to the graphics
+    hardware directly. **Direct Rendering Manager** (**DRM**) is the kernel side of
+    the DRI architecture.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Android-x86 project is the first open source project that brought Mesa/DRM
+    to the Android platform. This is an open source OpenGL ES implementation for the
+    supported graphics hardware. With the following components, we should be able
+    to support hardware acceleration for OpenGL ES on Android:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`external_libdrm`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`external_mesa`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`external_drm_gralloc`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have the DRM driver with `vboxvideo` on VirtualBox, but the related implementation
+    still needs to add to `external_mesa` and `external_drm_gralloc` to support OpenGL
+    ES using the host GPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Without the VirtualBox-specific implementation in `external_mesa` and `external_drm_gralloc`,
+    we can only use the same software-based implementation in Mesa for OpenGL ES and
+    the default Gralloc module, `gralloc.default.so`. This is why most VirtualBox-based
+    emulator solutions such as Genymotion, Andy, or AMI DuOS are still using hardware
+    GPU emulation, which is similar to the one we discussed in the *Overview of hardware
+    GLES emulation* section in [Chapter 10](900f7c1a-7db8-4172-899a-8e9a167372ce.xhtml),
+    *Enabling Graphics*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To load `vboxvideo.ko`, we need to add these additional three lines in `load_modules`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `ttm` and `drm_kms_helper` kernel modules are two kernel modules needed
+    by `vboxvideo.ko`. We also use a `VBOX_VIDEO_DRIVER` kernel parameter to configure
+    the loading of `vboxvideo.ko`. With this kernel parameter, we can switch between
+    the uvesafb framebuffer and the VirtualBox framebuffer. After the system boot
+    up, we can see the following log message. We can see that `vboxvideo` is loaded
+    successfully:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From the log message, we can see that a `vboxdrmfb` framebuffer device is created
+    by `vboxvideo`. We can check the framebuffer settings using `fbset` as we did
+    before. We can see that the hardware acceleration is set to true for `vboxdrmfb`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also check the output from `/proc/fb`. Since the output is `0 vboxdrmfb`,
+    the `init_hal_gralloc` shell function in `init.sh` won''t load `uvesafb`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: With this setup, we can launch x86vbox using the `vboxvideo` driver instead
+    of `uvesafb`. As I mentioned, there is still a lot of work that needs to be done
+    before we can fully utilize all the potential capabilities from `vboxvideo`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building and testing images with VirtualBox Guest Additions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To build and test the image in this chapter, we can use the `repo` tool to
+    retrieve the source code in this chapter as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can get the source code from GitHub and AOSP using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we get the source code for this chapter, we can set the environment and
+    build the system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To build `initrd.img`, we can run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned the start up process of graphics systems. This includes
+    the OpenGL ES libraries, Gralloc module, and device driver. We discussed the Gralloc
+    module in the last chapter. In this chapter, we analyzed another two components,
+    OpenGL ES libraries and the framebuffer driver. With all this knowledge in mind,
+    we integrated the drivers from VirtualBox Guest Additions to the x86vbox device.
+    In the next chapter, we will start to work on another project to explore how recovery
+    works in Android systems.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,593 @@
+- en: 'Chapter 5: Managing the State of Your Composable Functions'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [*Chapter 4*](B17505_04_ePub.xhtml#_idTextAnchor076), *Laying Out UI Elements*,
+    I showed you how to set the red, green, and blue portions of a color by dragging
+    sliders. We used **state** to share these values among composable functions. Quite
+    a few other sample apps of the previous chapters dealt with state, too. In fact,
+    reacting to state changes is critical to how modern mobile apps work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far, I have described state as data that can change over time. You learned
+    about a few important functions, for example, `remember { }` and `mutableStateOf()`.
+    I also briefly touched on a concept called **state hoisting**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter builds on these foundations. For example, you will understand the
+    difference between stateless and stateful composables, and when to choose which.
+    Also, I will show you how events should flow in a well-behaving Compose app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main sections of this chapter are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding stateful and stateless composable functions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Hoisting state and passing events
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Surviving configuration changes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will start by exploring the differences between stateful and stateless composable
+    functions. You will learn their typical use cases and understand why you should
+    try to keep your composables stateless. Hoisting state is a tool to achieve that;
+    we will cover this important topic in the second main section. Also, I will show
+    you that you can make your composable functions reusable by passing logic as parameters,
+    rather than implementing it inside the composable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the *Surviving configuration changes* section will explore the integration
+    of a Compose UI hierarchy in activities, concerning how to retain user input.
+    If the user changes from portrait to landscape mode (or vice versa), activities
+    are destroyed and recreated. Of course, input should not be lost. We look at several
+    ways that a Compose app can achieve this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter includes three sample apps. Please refer to the *Technical requirements*
+    section in [*Chapter 1*](B17505_01_ePub.xhtml#_idTextAnchor014), *Building Your
+    First Compose App*, for information about how to install and set up Android Studio,
+    and how to get them. `StateDemo` contains all examples from the *Understanding
+    stateful and stateless composable functions* section. The *Hoisting state and
+    passing events* section discusses the `FlowOfEventsDemo` sample. Finally, `ViewModelDemo`
+    belongs to the *Surviving configuration changes* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the code files for this chapter can be found on GitHub at [https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_05](https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_05).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding stateful and stateless composable functions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this section, I will show you the difference between stateful and stateless
+    composable functions. To understand why this is important, let''s first focus
+    on the **state** term. In previous chapters, I described state as *data that can
+    change over time*. Where the data is held (an SQLite database, a file, or a value
+    inside an object) does not matter. What is important is that the UI must always
+    show the current data. Therefore, if a value changes, the UI must be notified.
+    To achieve this, we use **observable** types. This is not specific to Jetpack
+    Compose, but a common pattern in many frameworks, programming languages, and platforms.
+    For example, Kotlin supports observables through property delegates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`observable()` returns a delegate for a property that can be read and written
+    to. In the previous code snippet, the initial value is set to `-1`. The property
+    calls a specified function when its value is changed (`counter = i`). My example
+    prints the old and new values. In an imperative UI framework, state changes require
+    modifying the component tree. Such code could be put in the callback function.
+    Fortunately, Jetpack Compose doesn''t require this, because state changes automatically
+    trigger a recomposition of the relevant UI elements. Let''s see how this works.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `androidx.compose.runtime.State` base interface defines a value holder,
+    an object that stores a value of a particular type in a property named `value`.
+    If this property is read during the execution of a composable function, the composable
+    will be recomposed whenever `value` changes, because internally the current `RecomposeScope`
+    interface will be subscribed to changes of that value. Please note that to be
+    able to change the value, state must be an implementation of `MutableState`; unlike
+    its immediate predecessor (`State`), this interface defines `value` using `var`
+    instead of `val`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The easiest way to create `State` instances is to invoke `mutableStateOf()`.
+    This function returns a new `MutableState` instance, initialized with the value
+    that was passed in. The next section explains how to use `mutableStateOf()` to
+    create a stateful composable function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using state in a composable function
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A composable function is said to be `remember {}`. Let''s take a look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`SimpleStateDemo1()` creates a mutable state holding a random integer. By invoking
+    `remember {}`, we save the state, and in using `=`, we assign it to `num`. We
+    get the random number through `num.value`. Please note that although we defined
+    `num` with the `val` keyword, we could change the value with `num.value = …`,
+    because `num` holds the reference to a mutable value holder (whose `value` property
+    is writeable). Think of it as modifying an item in a list, not changing to another
+    list. We can slightly alter the code, as shown in the following snippet. Can you
+    spot the difference?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`SimpleStateDemo2()` creates a mutable state holding a random integer number,
+    too. Using `by`, we do not assign the state itself to `num` but the value it stores
+    (the random number). This spares us from using `.value`, which makes the code
+    a little shorter and hopefully more understandable. However, if we want to change
+    `num`, we must change `val` to `var`. Otherwise, we see a `Val cannot be reassigned`
+    error message.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You may be wondering what `remember {}` does under the hood. Let''s peek into
+    its code and find out:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 5.1 – The source code of remember {}'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17505_05_1.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 5.1 – The source code of remember {}
+  prefs: []
+  type: TYPE_NORMAL
+- en: The read-only, top-level `currentComposer` property belongs to the `androidx.compose.runtime`
+    package. It references an instance of `Composer`. This interface is targeted by
+    the Compose Kotlin compiler plugin and used by code generation helpers. You should
+    not call it directly, because the runtime assumes that calls are generated by
+    the compiler and therefore do not contain much validation logic. `Cache()` is
+    an extension function of `Composer`. It stores a value in the composition data
+    of a composition. So, `remember {}` creates internal state. Therefore, composable
+    functions that contain `remember {}` are stateful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`calculation` represents a lambda expression that creates the value to be remembered.
+    It is evaluated only once, during the composition. Subsequent calls to `remember
+    {}` (during recompositions) always return this value. The expression is not evaluated
+    again. But what if we need to reevaluate the calculation, that is, remember a
+    new value? After all, isn''t state data that can change over time? Here''s how
+    you can do this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The preview of `RememberWithKeyDemo()` is shown in *Figure 5.2*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 5.2 – Preview of RememberWithKeyDemo()'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17505_05_2.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 5.2 – Preview of RememberWithKeyDemo()
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`RememberWithKeyDemo()` emits `Column()` with two horizontally centered children:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Text()` shows the string representation of a remembered `Date` instance.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Button()` toggles a Boolean value (`key`).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Have you noticed that I pass `key` to `remember { mutableStateOf(Date()) }`?
+    Here's what happens – when `remember {}` is invoked for the first time, the result
+    of the calculation (`mutableStateOf(Date())`) is remembered and returned. During
+    recompositions, the calculation is not reevaluated unless `key` is *not* equal
+    to the previous composition. In this case, a new value is calculated, remembered,
+    and returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can pass any number of keys to `remember {}`. If one of them has changed
+    since the previous composition, the calculation is reevaluated, and the new value
+    is remembered and returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Passing keys to `remember {}` allows you to change remembered values. Please
+    keep in mind, though, that this makes the composable function less predictable.
+    Therefore, you should consider whether such logic needs to be composable or whether
+    you could pass all state to it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we turn to stateless composables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing stateless composable functions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '`remember {}` makes a composable function stateful. A stateless composable,
+    on the other hand, doesn''t hold any state. Here''s an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`SimpleStatelessComposable1()` doesn''t receive parameters and it always calls
+    `Text()`with the same parameters. Clearly, it doesn''t hold any state. But how
+    about the following one?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'While it receives state through the `text` parameter, it doesn''t store it,
+    and it doesn''t remember other state. Consequently, `SimpleStatelessComposable2()`
+    is stateless, too. It behaves the same way when called with the same argument
+    multiple times. Such functions are said to be `SimpleStatelessComposable2()` a
+    good blueprint for your own composable functions. They should be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Fast**: Your composable must not do heavy (that is, time-consuming) computations.
+    Never invoke a web service or do any other I/O. Data that is used by a composable
+    should be passed to it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Free of side-effects**: Do not modify global properties or produce unintended
+    observable effects (modifying state that has been passed to a composable is certainly
+    intentional).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`remember {}`, do not access global properties, and do not call unpredictable
+    code. For example, `SimpleStateDemo1()` and `SimpleStateDemo2()` use `Random.nextInt()`,
+    which, by definition, is (practically) not predictable.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Such composable functions are both easy to reuse and test because they don't
+    rely on anything that isn't passed in as parameters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When developing reusable composables, you may want to expose both a stateful
+    and a stateless version. Let''s see how this looks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This version is stateless because it receives state and does not remember anything.
+    Stateless versions are necessary for callers that need to control the state or
+    hoist it themselves:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This version is stateful because it remembers the state it creates. Stateful
+    versions are convenient for callers that don't care about the state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To conclude, try to make your composables stateless by not relying on `remember
+    {}` or other functions that remember state (for example, `rememberLazyListState()`
+    or `rememberSaveable()`). Instead, pass state to the composable. You will see
+    more use cases in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hoisting state and passing events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So, state is any value that can change over time. As Jetpack Compose is a declarative
+    UI framework, the only way to update a composable is to call it with new arguments.
+    This happens automatically when state a composable is using changes. State hoisting
+    is a pattern of moving state up to make a composable stateless.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Besides making a composable more easily reusable and testable, moving state
+    up is necessary to use it in more than one composable function. You have already
+    seen this in quite a few of my sample apps. For example, in the *Composing and
+    recomposing the UI* section of [*Chapter 3*](B17505_03_ePub.xhtml#_idTextAnchor054),
+    *Exploring the Key Principles of Compose*, we used three sliders to create and
+    display a color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While state controls the visual representation of a composable function (that
+    is, how it looks on screen), `FlowOfEventsDemo` app is a simple temperature converter.
+    The user enters a value, specifies whether it represents degrees Celsius or Fahrenheit,
+    and then hits the **Convert** button:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 5.3 – Sample FlowOfEventsDemo app'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17505_05_3.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 5.3 – Sample FlowOfEventsDemo app
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The UI consists of `Column()` with four children: a text input field, a group
+    of radio buttons with text, a button, and some result text. Let''s look at the
+    text input field first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: It receives `MutableState<String>`, to which it pushes changes to the text in
+    `onValueChange {}`. The virtual keyboard is configured to show a *Done* button.
+    If it is invoked, code passed to the composable through `callback` is executed.
+    As you will see a little later, that same code will run if the user clicks on
+    the *Convert* button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, I'll show you how to create radio buttons and put them
+    in groups so that only one button is selected at a time. The section also covers
+    the button and the result text, which you can see in *Fig. 5.3*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating radio button groups
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The app converts between degrees Celsius and Fahrenheit. Therefore, the user
+    must choose the target scale. Such selections can be implemented easily in Jetpack
+    Compose using `androidx.compose.material.RadioButton()`. This composable doesn''t
+    show some descriptive text, but it is easy to add some. Here''s how:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`RadioButton()` and `Text()` are simply added to `Row()` and vertically centered.
+    `TemperatureRadioButton()` receives a lambda expression with the `onClick` parameter.
+    That code is executed when the radio button is clicked. My implementation passes
+    the `resId` parameter to the lambda expression, which will be used to determine
+    the button in a group. Here''s how:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Two `TemperatureRadioButton()` are put in a `Row()`. The first one is configured
+    to represent degrees Celsius, the second one degrees Fahrenheit. Both receive
+    the same `onClick` lambda. It sets the `resId` parameter it received from `TemperatureRadioButton()`
+    as the new value of the `selected` parameter, a mutable state. So, what is happening
+    here? Clicks on a radio button are not handled inside `TemperatureRadioButton()`
+    but passed to the parent, `TemperatureScaleButtonGroup()`. The event, a button
+    click, is said to **bubble up**. This way, the parent can orchestrate its children
+    and notify its parent. In my example, this means changing some state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, let''s see what happens when the user clicks the `FlowOfEventsDemo()`.
+    Here''s the overall structure of this composable function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The conversion logic is assigned to a read-only variable called `calc`. It is
+    passed to `TemperatureTextField()` and `Button()`. Passing the code that is going
+    to be executed in response to an event to a composable function rather than hard
+    coding it inside makes the composable more easily reusable and testable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The text that is displayed after conversion is remembered and assigned to `result`.
+    It is re-evaluated when `convertedTemperature` changes. This happens inside the
+    `calc` lambda expression. Please note that I need to pass a key to `remember {}`;
+    otherwise, the result would be changed also if the user picks another scale.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we will look at how state can be persisted. To be more
+    precise, we turn to configuration changes. If the user rotates a device, the UI
+    should not be reset. Unfortunately, this is what happens with all sample apps
+    I have shown you so far. It's time to fix this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Surviving configuration changes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Please recall that our definition of state as data that may change over time
+    is quite broad. For example, we do not specify where the data is stored. If it
+    resides in a database, a file, or some backend in the cloud, the app should include
+    a dedicated persistence layer. However, until Google introduced the Android Architecture
+    Components back in 2017, there had been practically no guidance for developers
+    on how to structure their apps. Consequently, persistence code, UI logic, and
+    domain logic were often crammed into one activity. Such code was difficult to
+    maintain and often prone to errors. To make matters a little more complicated,
+    there are situations when an activity is destroyed and recreated shortly after.
+    For example, this happens when a user rotates a device. Certainly, data should
+    then be remembered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Activity` class has a few methods to handle this. For example, `onSaveInstanceState()`
+    is invoked when the activity is (temporarily) destroyed. Its counterpart `onRestoreInstanceState()`
+    method is called only when such an instance state has been saved before. Both
+    methods receive an instance of `Bundle`, which has getters and setters for various
+    data types. However, the concept of instance state has been designed for the traditional
+    view system. Most activities held references to UI elements and therefore could
+    be accessed easily inside `onSaveInstanceState()` and `onRestoreInstanceState()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Composables, on the other hand, are usually implemented as top-level functions.
+    So, how can their state be set or queried from inside an activity? To temporarily
+    save state in a Compose app, you can use `rememberSaveable {}`. This composable
+    function remembers the value produced by a factory function. It behaves similarly
+    to `remember {}`. The stored value will survive the activity or process recreation.
+    Internally, the `savedInstanceState` mechanism is used. The sample `ViewModelDemo`
+    app shows how to use `rememberSaveable {}`. Here''s what the main activity looks
+    like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We don''t need to override `onSaveInstanceState()` to temporarily save our
+    state used with composables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The app shows three text input fields that receive their values from states
+    assigned to `state1`, `state2`, and `state3`. For now, we will focus on the first
+    two. `state3` will be the subject of the *Using ViewModel* section. `state1` invokes
+    `remember {}`, whereas `state2` uses `rememberSaveable {}`. If you ran `ViewModelDemo`,
+    changed the content of the text input fields, and rotated the device, the first
+    one would be reset to the original text, whereas the second one would keep your
+    changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MyTextField` is a very simple composable. It looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Have you noticed that `value` is of `State<String?>`? Why would I need a value
+    holder whose value can be `null`, and therefore need to check with `value.value?.let
+    {}` that it isn't? We will be reusing the composable in the following section,
+    and you will find the answer to this question there. Please note, though, that
+    for both `state1` and `state2`, this would not have been necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using ViewModel
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While temporarily storing state with `rememberSaveable {}` works great, an app
+    still must get data that is persisted for a longer time (for example, in a database
+    or file) and make it available as state that can be used in composables. The Android
+    Architecture Components include `ViewModel` and `LiveData`. Both can be used seamlessly
+    with Jetpack Compose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, you need to add a few implementation dependencies to the module-level
+    `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next step is to define a `ViewModel` class. It extends `androidx.lifecycle.ViewModel`.
+    A `ViewModel` class stores and manages UI-related data in a lifecycle-conscious
+    way. This means that data will survive configuration changes, such as screen rotations.
+    `MyViewModel` exposes one property called `text` and a method named `setText()`
+    to set it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: My example shows a `ViewModel` class using `LiveData`. Depending on the architecture
+    of an app, you can utilize other mechanisms for working with observable data.
+    Going into more detail is, however, beyond the scope of this book. You can find
+    additional information in *Guide to app architecture* at [https://developer.android.com/jetpack/guide](https://developer.android.com/jetpack/guide#fetching_data).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To access the `ViewModel` class from inside a composable function, we invoke
+    the composable `viewModel()`. It belongs to the `androidx.lifecycle.viewmodel.compose`
+    package:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`LiveData` is made available as state like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s take a quick look at its source code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 5.4 – Source code of the observeAsState() extension function'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17505_05_4.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 5.4 – Source code of the observeAsState() extension function
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`observeAsState()` is an extension function of `LiveData`. It passes the `value`
+    property of its `LiveData` instance to a variant of `observeAsState()` that takes
+    parameters. Have you noticed that the return type is `State<T?>`? That is why
+    I defined `MyTextField()` in the previous section to receive `State<String?>`.
+    To be able to use `State<String>` as with `remember {}` and `rememberSaveable
+    {}`, we would need to define `state3` like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: In my opinion, this is less favorable than using `State<String?>` because we
+    use an unchecked cast.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To reflect changes in state in the `ViewModel` class, we need code like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Unlike using `MutableState`, we must explicitly invoke the `setText()` method
+    of `MyViewModel` and pass the changed text.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To conclude, `rememberSaveable {}` is simple and easy to use. For more complex
+    scenarios than presented in this chapter, you can provide `androidx.compose.runtime.saveable.Saver`
+    implementations, which make your data objects simpler and convert them to something
+    saveable. Bigger apps should use `ViewModel` classes, as recommended for quite
+    a while now by Google. The combination of `ViewModel` and `LiveData` classes can
+    be integrated nicely into composable apps using `observerAsState()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter aimed to give a more detailed look at state in Compose apps. We
+    started by exploring the differences between stateful and stateless composable
+    functions. You learned their typical use cases and why you should try to keep
+    your composables stateless. Hoisting state is a tool to achieve that. We covered
+    this important topic in the second main section. I also showed you that you can
+    make your composable functions more reusable by passing logic as parameters, rather
+    than implementing it inside the composable. The previous section explored the
+    integration of a Compose UI hierarchy in activities concerning how to retain user
+    input. We looked at the differences between `remember {}` and `rememberSaveable
+    {}`, and I gave you a glimpse of how bigger Compose apps can benefit from `ViewModel`
+    classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Chapters 1 to 5 introduced you to various aspects of Jetpack Compose, such as
+    composable functions, state, and layout. [*Chapter 6*](B17505_06_ePub.xhtml#_idTextAnchor105),
+    *Putting Pieces Together*, focuses on one app, providing you with a bigger picture
+    of how these pieces work together to form a real-world app. We will implement
+    a simple unit converter app, focusing on app architecture and UI, including theming
+    and navigation.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,559 @@
+- en: 'Chapter 7: Tips, Tricks, and Best Practices'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [*Chapter 6*](B17505_06_ePub.xhtml#_idTextAnchor105), *Putting Pieces Together*,
+    we combined several key techniques of Jetpack Compose such as state hoisting,
+    app theming, and navigation in a real-world example. `ComposeUnitConverter` stores
+    state in a `ViewModel` and eventually persists it using the *Repository* pattern.
+    In this chapter, I show you how to pass objects to a `ViewModel` upon instantiation
+    and use these objects to load and save data. In [*Chapter 3*](B17505_03_ePub.xhtml#_idTextAnchor054),
+    *Exploring the Key Principles of Compose*, we examined features of well-behaved
+    composable functions. Composables should be free of side effects to make them
+    reusable and easy to test. However, there are situations when you need to either
+    react to or initiate state changes that happen outside the scope of a composable
+    function. We will cover this at the end of this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These are the main sections of this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Persisting and retrieving state
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Keeping your composables responsive
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Understanding side effects
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We start by continuing the exploration of the `ViewModel` pattern we began in
+    the *Using a ViewModel* section of [*Chapter 5*](B17505_05_ePub.xhtml#_idTextAnchor089),
+    *Managing the State of Your Composable Functions*. This time, we will add business
+    logic to the `ViewModel` and inject an object that can persist and retrieve data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *Keeping your composables responsive* section revisits one of the key requirements
+    of a composable function. As recomposition can occur very often, composables must
+    be as fast as possible. This greatly influences what the code may and may not
+    do. Long-running tasks—for example, complex computations or network calls—should
+    not be invoked synchronously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *Understanding side effects* section covers situations when you need to
+    either react to or initiate state changes that happen outside the scope of a composable
+    function. For example, we will be using `LaunchedEffect` to start and stop complex
+    computations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The *Persisting and retrieving state* and *Keeping your composables responsive*
+    sections further discuss the sample `ComposeUnitConverter` app. The *Understanding
+    side effects* section is based on the `EffectDemo` sample. Please refer to the
+    *Technical requirements* section of [*Chapter 1*](B17505_01_ePub.xhtml#_idTextAnchor014),
+    *Building Your First Compose App* for information about how to install and set
+    up Android Studio and how to get the repository accompanying this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the code files for this chapter can be found on GitHub at [https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_07](https://github.com/PacktPublishing/Android-UI-Development-with-Jetpack-Compose/tree/main/chapter_07).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Persisting and retrieving state
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'State is app data that may change over time. In a Compose app, state is typically
+    represented as instances of `State` or `MutableState`. If such objects are used
+    inside composable functions, a recomposition is triggered upon state changes.
+    If a state is passed to several composables, all of them may be recomposed. This
+    leads to the *state hoisting* principle: state is passed to composable functions
+    rather than being remembered inside them. Often, such state is remembered in the
+    composable that is the parent of the ones using the state. An alternative approach
+    is to implement an architectural pattern called `ViewModel`. It is used in many
+    **user interface** (**UI**) frameworks on various platforms. On Android, it has
+    been available since 2017 as part of the **Android Architecture Components**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The general idea of a `ViewModel` is to combine data and access logic that is
+    specific to a certain part of an app. Depending on the platform, this may be a
+    screen, a window, a dialog, or another similar top-level container. On Android,
+    it's usually an activity. The data is observable, so UI elements can register
+    and get notified upon changes. How the observable pattern is implemented depends
+    on the platform. The Android Architecture Components introduced `LiveData` and
+    `MutableLiveData`. In the *Surviving configuration changes* section of [*Chapter
+    5*](B17505_05_ePub.xhtml#_idTextAnchor089), *Managing the State of Your Composable
+    Functions*, I showed you how to use them inside a `ViewModel` to store data that
+    survives device rotations and how to connect `LiveData` instances to composable
+    functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s a brief recap: to connect `LiveData` objects to the Compose world,
+    we first obtain a `ViewModel` instance using `androidx.lifecycle.viewmodel.compose.viewModel()`,
+    and then invoke the `observeAsState()` extension function on a property of the
+    `ViewModel`. The returned state is read-only, so if a composable wants to update
+    the property, it must call a setter that needs to be provided by the `ViewModel`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So far, I have not explained how to persist state and restore it later. To
+    put it another way: where do `ViewModel` instances get the initial values for
+    their data, and what do they do upon changes? Let''s find out in the next section.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Injecting objects into a ViewModel
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If a `ViewModel` wants to load and save data, it may need to access a database,
+    the local filesystem, or some remote web service. Yet, it should be irrelevant
+    for the `ViewModel` how reading and writing data works behind the scenes. The
+    Android Architecture Components suggest implementing the *Repository* pattern.
+    A repository abstracts the mechanics of loading and saving data and makes it available
+    through a collection-like interface. You can find out more about the Repository
+    pattern at [https://martinfowler.com/eaaCatalog/repository.html](https://martinfowler.com/eaaCatalog/repository.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: You will see shortly what the implementation of a simple repository may look
+    like, but first, I need to show you how to pass objects to a `ViewModel` upon
+    instantiation. `viewModel()` receives a `factory` parameter of type `ViewModelProvider.Factory`.
+    It is used to create `ViewModel` instances. If you pass `null` (the default value),
+    a built-in default factory is used. `ComposeUnitConverter` has two screens, so
+    its factory must be able to create `ViewModel` instances for each screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s what `ViewModelFactory` looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`ViewModelFactory` extends the `ViewModelProvider.NewInstanceFactory` static
+    class and overrides the `create()` method (which belongs to the parent `Factory`
+    interface). The `modelClass` represents the `ViewModel` to be created. Therefore,
+    if the following code is `true`, then we instantiate `TemperatureViewModel` and
+    pass `repository`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: This parameter was passed to the constructor of `ViewModelFactory`. Otherwise,
+    a `DistancesViewModel` instance is created. Its constructor also receives `repository`.
+    If your factory needs to differentiate between more `ViewModel` instances, you
+    will probably use a `when` instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, let''s look at my `Repository` class to find out how `ComposeUnitConverter`
+    loads and saves data. You can see this in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`Repository` uses Jetpack Preference. This library is a replacement for the
+    platform classes and interfaces inside the `android.preference` package, which
+    was deprecated with **application programming interface** (**API**) level 29.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Important Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both the platform classes and the library are designed for user settings. You
+    should not use them to access more complex data, larger texts, or images. Record-like
+    data is best kept in an SQLite database, whereas files are ideal for large texts
+    or images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To use Jetpack Preference, we need to add an implementation dependency to `androidx.preference:preference-ktx`
+    in the module-level `build.gradle` file. `getDefaultSharedPreferences()` requires
+    an instance of `android.content.Context`, which is passed to the constructor of
+    `Repository`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we move on, let''s recap what I showed you so far, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`TemperatureViewModel` and `DistancesViewModel` receive a `Repository` instance
+    in their constructor.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Repository` receives a `Context` object.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ViewModel` instances are decoupled from activities. They survive configuration
+    changes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The last bullet point has an important consequence regarding the context we
+    can pass to the repository. Let's find out more in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the factory
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here''s how both the repository and factory are created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Both `Repository` and `ViewModelFactory` are ordinary objects, so they are simply
+    instantiated, passing the required parameters to them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Important Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: It may be tempting to pass `this` (the calling activity) as the context. However,
+    as `ViewModel` instances survive configuration changes (that is, the recreation
+    of an activity), the context may change. If it does, the repository would be accessing
+    a no longer available activity. By using `applicationContext`, we make sure that
+    this issue does not occur.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ComposeUnitConverter()` is the root of the composable hierarchy. It passes
+    the factory to `ComposeUnitConverterNavHost()`, which in turn uses it inside `composable
+    {}` as a parameter for the screens, as illustrated in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this section, I showed you how to inject a repository object into a `ViewModel`
+    using simple constructor invocation. If your app relies on a `ViewModel` uses
+    the repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keeping your composables responsive
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When implementing composable functions, you should always keep in mind that
+    their main purpose is to declare the UI and to handle user interactions. Ideally,
+    anything needed to achieve this is passed to the composable, including state and
+    logic (such as click handlers), making it stateless. If state is needed only inside
+    a composable, the function may keep state temporarily using `remember {}`. Such
+    composables are called `ViewModel`, composables must interact with it. So, the
+    `ViewModel` code must be fast, too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Communicating with ViewModel instances
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Data inside a `ViewModel` should be observable. `ComposeUnitConverter` uses
+    `LiveData` and `MutableLiveData` from the Android Architecture Components to achieve
+    this. You can choose other implementations of the *Observer* pattern, provided
+    there is a way to obtain `State` or `MutableState` instances that are updated
+    upon changes in the `ViewModel`. This is beyond the scope of this book. `TemperatureViewModel`
+    is the `ViewModel` for the `TemperatureConverter()` composable function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s look at its implementation. In the following code snippet, I omitted
+    code related to the `scale` property for brevity. You can find the full implementation
+    in the GitHub repository:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`ViewModel` instances present their data through pairs of variables, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A public read-only property (`temperature`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A private writeable backing variable (`_temperature`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Properties are not changed by assigning a new value but by invoking some setter
+    functions (`setTemperature()`). You can find an explanation of why this is the
+    case in the *Using a ViewModel* section of [*Chapter 5*](B17505_05_ePub.xhtml#_idTextAnchor089),
+    *Managing the State of Your Composable Functions*. There may be additional functions
+    that can be invoked by the composable—for example, logic to convert a temperature
+    from °C to °F (`convert()`) should not be part of the composable code. The same
+    applies to format conversions (from `String` to `Float`). These are best kept
+    in the `ViewModel`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s how the `ViewModel` is used from a composable function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Have you noticed that `TemperatureConverter()` receives its `ViewModel` as a
+    parameter?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs: []
+  type: TYPE_NORMAL
+- en: You should provide a default value (`viewModel()`) for preview and testability,
+    if possible. However, this doesn't work if the `ViewModel` requires a repository
+    (as in my example) or other constructor values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`State` instances are obtained by invoking `observeAsState()` of `ViewModel`
+    properties (`temperature` and `scale`), which are `LiveData` instances. The code
+    assigned to `calc` is executed when either the `result`, a state being used in
+    a `Text()` composable. Please note that the `calc` lambda expression calls the
+    `convert()` function of `ViewModel` function to get the converted temperature.
+    You should always try to remove business logic from composables and instead put
+    it inside the `ViewModel`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So far, I showed you how to observe changes in the `ViewModel` and how to invoke
+    logic inside it. There is one piece left: changing a property. In the preceding
+    code snippet, `TemperatureTextField()` receives the `ViewModel`. Let''s see what
+    it does with it here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Whenever the text changes, `setTemperature()` is invoked with the new value.
+    Please recall that the setter does the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ViewModel` updates the value of the `_temperature` (`MutableLiveData`)
+    backing variable. As the `temperature` public property references `_temperature`,
+    its observers (in my example, the state returned by `observeAsState()` in `TemperatureConverter()`)
+    are notified. This triggers a recomposition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we focused on how communication flows between composable functions
+    and `ViewModel` instances. Next, we examine what can go wrong if the `ViewModel`
+    breaks the contract with the composable and what you can do to prevent this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling long-running tasks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Composable functions actively interact with a `ViewModel` by setting new values
+    for properties (`setTemperature()`) and by invoking functions that implement business
+    logic (`convert()`). As recompositions can occur frequently, these functions may
+    be called very often. Consequently, they must return very fast. This surely is
+    the case for simple arithmetic, such as converting between °C and °F.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the other hand, some algorithms may become increasingly time-consuming for
+    certain inputs. Here's an example. Fibonacci numbers can be computed recursively
+    and iteratively. While a recursive algorithm is simpler to implement, it takes
+    much longer for large numbers. If a synchronous function call does not return
+    in a timely fashion, it may affect how the user perceives your app. You can test
+    this by adding `while (true) ;` as the first line of code inside `convert()`.
+    If you then run `ComposeUnitConverter`, enter some number, and press **Convert**,
+    the app will no longer respond.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Important Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: Potentially long-running tasks must be implemented asynchronously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To avoid situations where the app is not responding because a computation takes
+    too much time, you must decouple the computation from delivering the result. This
+    is done with just a few steps, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Provide the result as an observable property.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Compute the result using a coroutine or a Kotlin flow.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Once the computation is finished, update the `result` property.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Here''s a sample implementation taken from `DistancesViewModel`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`viewModelScope` is available via an implementation dependency to `androidx.lifecycle:lifecycle-viewmodel-ktx`
+    in the module-level `build.gradle` file. `convert()` spawns a coroutine, which
+    will update the value of `_convertedDistance` once the computation is finished.
+    Composable functions can observe changes by invoking `observeAsState()` on the
+    `convertedDistance` public property. But how do you access `convertedDistance`
+    and `convert()`? Here''s a code snippet from `DistancesConverter.kt`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`result` receives the text to be output once a distance has been converted,
+    so it should update itself whenever `convertedValue` changes. Therefore, I pass
+    `convertedValue` as a key to `remember {}`. Whenever the key changes, the `mutableStateOf()`
+    lambda expression is recomputed, so `result` gets updated. `calc` is invoked when
+    the `convertedValue`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, I have often used the term *computation*. Computation does
+    not only mean arithmetic. Accessing databases, files, or web services may also
+    consume considerable resources and be time-consuming. Such operations must be
+    executed asynchronously. Please keep in mind that long-running tasks may not be
+    part of the `ViewModel` itself but be invoked from it (for example, a repository).
+    Consequently, such code must be fast too. My `Repository` implementation accesses
+    the `Preferences` API synchronously for simplicity. Strictly speaking, even such
+    basic operations should be asynchronous.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jetpack DataStore allows you to store key-value pairs or typed objects with
+    protocol buffers. It uses Kotlin coroutines and Flow to store data asynchronously.
+    You can find more information about Jetpack DataStore at [https://developer.android.com/topic/libraries/architecture/datastore](https://developer.android.com/topic/libraries/architecture/datastore).
+  prefs: []
+  type: TYPE_NORMAL
+- en: This concludes our look at the communication between composable functions and
+    `ViewModel` instances. In the next section, I will introduce you to composables
+    that do not emit UI elements but cause side effects to run when a composition
+    completes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding side effects
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the *Using Scaffold() to structure your screen* section of [*Chapter 6*](B17505_06_ePub.xhtml#_idTextAnchor105),
+    *Putting Pieces Together*, I showed you how to display a snack bar using `rememberCoroutineScope
+    {}` and `scaffoldState.snackbarHostState.showSnackbar()`. As `showSnackbar()`
+    is a suspending function, it must be called from a coroutine or another suspending
+    function. Therefore, we created and remembered `CoroutineScope` using `rememberCoroutineScope()`
+    and invoked its `launch {}` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Invoking suspending functions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `LaunchedEffect()` composable is an alternative approach for spawning a
+    suspending function. To see how it works, let''s look at the `LaunchedEffectDemo()`
+    composable. It belongs to the `EffectDemo` sample, as illustrated in the following
+    screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 7.1 – The EffectDemo sample showing LaunchedEffectDemo()'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17505_07_01.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 7.1 – The EffectDemo sample showing LaunchedEffectDemo()
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`LaunchedEffectDemo()` implements a counter. Once the **Start** button has
+    been clicked, a counter is incremented every second. Clicking on **Restart** resets
+    the counter. **Stop** terminates it. The code to achieve this is illustrated in
+    the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`clickCount` counts how often `0`. A value greater than `0` indicates that
+    another remembered variable (`counter`) should be increased every second. This
+    is done by a suspending function that is passed to `LaunchedEffect()`. This composable
+    is used to safely call suspend functions from inside a composable. Let''s see
+    how it works.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When `LaunchedEffect()` enters the composition (`if (clickCount > 0) …`), it
+    launches a coroutine with the block of code passed as a parameter. The coroutine
+    will be cancelled if `LaunchedEffect()` leaves the composition (`clickCount <=
+    0`). Have you noticed that it receives one parameter? If `LaunchedEffect()` is
+    recomposed with different keys (my example uses just one, but you can pass more
+    if needed), the existing coroutine will be canceled and a new one is started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you have seen, `LaunchedEffect()` makes it easy to start and restart asynchronous
+    tasks. The corresponding coroutines are cleaned up automatically. But what if
+    you need to do some additional housekeeping (such as unregistering listeners)
+    when keys change or when the composable leaves the composition? Let's find out
+    in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning up with DisposableEffect()
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `DisposableEffect()` composable function runs code when its key changes.
+    Additionally, you can pass a lambda expression for cleanup purposes. It will be
+    executed when the `DisposableEffect()` function leaves the composition. The code
+    is illustrated in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: A message starting with `init:` will be printed each time `clickCount` changes
+    (that is, when `dispose:` will appear when `clickCount` changes or when `DisposableEffect()`
+    leaves the composition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Important Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`DisposableEffect()` *must* include an `onDispose {}` clause as the final statement
+    in its block.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I have given you two hands-on examples that use side effects in a Compose app.
+    The `Effect` APIs contain several other useful composables—for example, you can
+    use `SideEffect()` to publish Compose state to non-Compose parts of your app,
+    and `produceState()` allows you to convert non-Compose state into `State` instances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find additional information about the `Effect` APIs at [https://developer.android.com/jetpack/compose/side-effects](https://developer.android.com/jetpack/compose/side-effects).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter covered additional aspects of the `ComposeUnitConverter` example.
+    We continued the exploration of the `ViewModel` pattern we began looking at in
+    the *Using a ViewModel* section of [*Chapter 5*](B17505_05_ePub.xhtml#_idTextAnchor089),
+    *Managing the State of Your Composable Functions*. This time, we added business
+    logic to the `ViewModel` and injected an object that can persist and retrieve
+    data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *Keeping your composables responsive* section revisited one of the key requirements
+    of a composable function. Recomposition can occur very often, therefore composables
+    must be as fast as possible, which dictates what code inside them may and may
+    not do. I showed you how a simple loop can cause a Compose app to stop responding,
+    and how coroutines counteract this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the final main section, *Understanding side effects*, we examined so-called
+    side effects and used `LaunchedEffect` to implement a simple counter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [*Chapter 8*](B17505_08_ePub.xhtml#_idTextAnchor135), *Working with Animations*,
+    you will learn how to show and hide UI elements with animations. We will spice
+    up transitions through visual effects and use animation to visualize state changes.
+  prefs: []
+  type: TYPE_NORMAL

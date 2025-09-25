@@ -1,0 +1,993 @@
+- en: Introduction to Backpressure and Flowables
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we were trying to understand the push-based architecture of reactive
+    programming. By now, we have gained a good understanding of `Observables`. We
+    now understand that an `Observable` emits items to be consumed by an `Observer`
+    for further processing. However, while going through previous chapters, did you
+    ever think of a situation where the `Observable` emits items faster than the `Observer`
+    can consume them? This whole chapter is devoted to this problem. We will start
+    by trying to understand how and when this problem may occur, and then we will
+    try to solve the problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, in this chapter, we will focus on the following topics, and by the end
+    of the chapter we should have a solution to the problem mentioned earlier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding backpressure
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Flowables and Subscriber
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating Flowables with `Flowable.create()`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using Observable and Flowables together
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Backpressure operators
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An `Flowable.generate()` operator
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: So, now, let's start with backpressure—the problem with Observables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding backpressure
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The only problem with `Observable` is when an `Observer` cannot cope with the
+    pace of an `Observable`. An `Observable`, by default, chains work by pushing items
+    synchronously to the `Observer`, one at a time. However, if the `observer` has
+    to perform some time-consuming computations, this may take longer than the interval
+    of each item emission of `Observable`. Confused? Let''s consider this example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The code is quite simple. We created `Observable` on comment `(1)`, then, we
+    created `BehaviorSubject`, and then, on comment `(3)` and `(6)`, we `subscribe`
+    to `BehaviorSubject`. On comment `(7)`, after subscribing to `BehaviorSubject`,
+    we will use `BehaviorSubject` to subscribe to the `Observable` so that `Observers`
+    of `BehaviorSubject` should get all the emissions. On comment `(4)`, inside the
+    first subscription, we used the `delay` method to simulate a time-taking subscriber.
+    There is a new code on comment `(2)` and `(6)`, `subject.observeOn(Schedulers.computation())`;
+    we will discuss this method in detail in the later chapters, but, for now, just
+    keep in mind that this `observeOn` method helps us specify a thread to run the
+    subscription, and `Scheduler.computation()` provides us a with a thread to perform
+    computations. On comment `(8)`, we used the `delay` method to wait for the execution,
+    as the execution will occur in the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Based on the knowledge we gathered from previous chapters, we can easily say
+    that subscriptions should print all the numbers from `1`-`9` in an interleaved
+    manner, or shouldn''t they? Let''s see the output first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/4ac5b382-cfbb-4287-852b-1563caf72f32.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Shocked to see the output? Instead of working in an interleaved manner, subscription
+    `2` completes printing all the numbers before subscription `1` prints even the
+    second number, even though it starts printing first. So, why did it break the
+    behavior of `Hot Observables`? Why didn't both the `Observers` work in an interleaved
+    manner? Let's inspect. The program actually didn't break the behavior of `Hot
+    Observables`, the `subject` actually emitted once for both of the `observers`;
+    however, as for the first `observer`, each computation took long, **the emissions
+    got queued**; and this is obviously not any good, as this could lead to a lot
+    of problems, including the `OutOfMemoryError` exceptions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Still have doubts? Let''s look at another example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, we eliminated the `Subject` and multiple `Subscribers` to make
+    the program simpler and easier to understand. We have already introduced the `map`
+    operator in the previous chapter that we used on comment `(2)` to convert the
+    `Int` items to the `MyItem` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you forgot the `map` operator from the previous chapter, it takes a source
+    observable, processes items emitted by them on runtime, and creates another observable
+    to observe on. Put simply, the `map` operator sits before subscribe to process
+    each item emitted by `observable` before passing the new generated item to `observer`.
+    We will also take a closer look at the `map` operator in the later chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, we used it to keep track of each emission. Whenever an emission will occur,
+    it will be passed instantly to the `map` operator, where we are creating an object
+    of the `MyItem` class. In the `init` block of the `MyItem` class, we are printing
+    the value passed to it; so, as soon as an item is emitted, it will be printed
+    by the `MyItem` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, the `MyItem` class is a `data class`, that is, it will have the getter
+    of `val id` and `toString` methods by default.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The remaining part of the program is almost the same; let''s take a look at
+    the output, then we will continue to discuss:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/e134d6db-0b28-4a7b-8a19-bf392981c0af.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we can see in the output, the creation of many `MyItem`, as known as emissions
+    was quite fast, and completed even before the `Observer` as known as consumer
+    can even start printing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, the problem is that the emissions get queued in the consumer, while the
+    consumer is busy processing previous emissions by the producer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A solution to this problem could be a feedback channel from consumer to producer,
+    through which the consumer can tell the producer to wait until it completes processing
+    the previous emission. This way, consumers or messaging middleware will not become
+    saturated and unresponsive under high load; instead, they may request fewer messages,
+    letting the producer decide how to slow down. This feedback channel is called
+    **backpressure**. Backpressure is not supported in `Observables` and `Observers`,
+    the solution could be using `Flowables` and `Subscribers` instead. Let's learn
+    what those are.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Flowable
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We may call Flowables a backpressured version of Observables. Probably, the
+    only difference between Flowables and Observables is that Flowable takes backpressure
+    into consideration. Observable does not. That's it. Flowable hosts the default
+    buffer size of 128 elements for operators, so, when the consumer is taking time,
+    the emitted items may wait in the buffer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that Flowables were added in ReactiveX 2.x (RxKotlin 2.X), and the previous
+    versions don't include them. Instead, in previous versions, Observables was retrofitted
+    to support backpressure that caused many unexpected `MissingBackpressureException`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is the release note if you are interested:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://github.com/ReactiveX/RxJava/wiki/What%27s-different-in-2.0#observable-and-flowable](https://github.com/ReactiveX/RxJava/wiki/What%27s-different-in-2.0#observable-and-flowable)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We had a long discussion so far; let''s now try our hands on code. At first,
+    we will try a code with Observable, and then we will do the same with Flowables
+    to see and understand the difference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: A simple code with the `Observable.range()` operator, which should emit numbers
+    from `1` to `1000`. On comment `(2)`, we used the `map` operator to create the
+    `MyItem3` object from `Int`. On comment `(3)`, we subscribed to `Observable`.
+    On comment `(4)`, we ran a blocking delay to simulate a long running subscription
+    code. On comment `(5)`, we, again, ran a blocking delay code to wait for the consumer
+    to complete processing of all items before the program stops execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The whole output will take some space, so we will put parts of outputs as screenshots
+    here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/8f03dbe5-272a-4067-aa5a-6f41a368da45.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If you take a closer look at the output (screenshots), you will notice that
+    the Observable (producer) continued to emit items, though the Observer (consumer)
+    was not at all in pace with it. Until the time Observer (producer) finished emitting
+    all the Items, the Observer (consumer) processed only the very first item (item
+    1). As mentioned earlier, this could lead to a lot of problems, including the
+    `OutOfMemory` error. Now, let''s replace `Observable` with `Flowable` in this
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The code is exactly the same as the previous one, just the single difference
+    is that we wrote `Flowable.range()` instead of `Observable`. Now, let''s see the
+    output and note the difference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/72fa4363-b05c-457c-93c3-05e2f646d968.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Have you noted the difference? Flowable, instead of emitting all the items,
+    emitted few items in a chunk, waited for the consumer to coup up then again continued,
+    and completed in an interleaved manner. This reduces a lot of problems itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When to use Flowables and Observables
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: By now, you may think Flowable is a handy tool to use, so you could replace
+    Observable everywhere. However, this may not always be the case. Although Flowable
+    provides us with backpressure strategies, Observables are here for a reason, and
+    both of them have their own advantages and disadvantages. So, when to use which?
+    Let's see.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When to use Flowables?
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The following are the situations when you should consider using Flowables.
+    Remember, Flowables are slower than Observables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Flowables and backpressure are meant to help deal with larger amounts of data.
+    So, use flowable if your source may emit 10,000+ items. Especially when the source
+    is asynchronous so that the consumer chain may ask the producer to limit/regulate
+    emissions when required.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you are reading from/parsing a file or database.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When you want to emit from network IO operations/Streaming APIs that support
+    blocking while returning results, which is how many IO sources work.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When to use Observables?
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now you know when to use Flowables, take a look at the conditions where you
+    should prefer Observables:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you are dealing with a smaller amount of data (less than 10,000 emissions)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When you are performing strictly synchronous operations or operations with limited
+    concurrency
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When you are emitting UI events (while working with Android, JavaFX, or Swing)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Also, keep in mind that Flowables are slower in comparison to Observables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Flowable and Subscriber
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Instead of Observer, Flowable uses Subscriber, which is backpressure compatible.
+    However, if you use lambda expressions, then you will not notice any differences.
+    So, why use Subscriber instead of Observer? Because Subscriber supports some extra
+    operations and backpressure. For instance, it can convey how many items it wishes
+    to receive as a message to upstream. Or rather, we can say while using Subscriber;
+    you must specify how many items you want to receive (request) from upstream; if
+    you don't specify it, you will not receive any emissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we already mentioned, using lambda with `Subscriber` is similar to Observe;
+    this implementation will automatically request an unbounded number of emissions
+    from the upstream. As with our last code, we didn't specify how many emissions
+    we want, but it internally requested unbounded number of emissions, and that's
+    why we received all the items emitted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s try replacing the previous program with a `Subscriber` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The output of the preceding program will be the same as for the previous one,
+    so we are skipping the output here. Instead, let's understand the code. The program
+    is almost identical to the previous one, until comment `(3)`, where we created
+    an instance of `Subscriber`. The methods of `Subscriber` are identical with `Observer`;
+    however, as I mentioned earlier, on the `subscribe` method, you have to request
+    for the number of emissions that you want initially. We did the same on comment
+    `(4)`; however, as we want to receive all emissions, we requested it with `Long.MAX_VALUE`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, how does the `request` method work? The `request()` method will request
+    the number of emissions the `Subscriber` should listen on from the upstream, counting
+    after the method is called. The `Subscriber` will ignore any further emissions
+    after the requested emissions until you request for more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s modify this program to understand the `request` method better:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, what are the tweaks we made in this program? Let''s go through it. On comment
+    `(1)`, we declared a `lateinit` variable of type `Subscription`, we initialized
+    that subscription inside the `onSubscribe` method, just before comment `(2)`.
+    On comment `(2)`, we requested for `5` items with `subscription.request(5)`. Then,
+    inside `onNext`, on comment `(3)`, we checked if the received item is the `5`^(th)
+    one (as we are using a range, the `5`^(th) item''s value will be `5`); if the
+    item is the `5`^(th) one, then we are again requesting for `2` more. So, the program
+    should print seven items instead of the `1`-`15` range. Let''s check the following
+    output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/aca45d47-71bd-43fd-ac4a-74f430a1cfe6.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: So, although `Flowable` emitted all the items for the range, it was never passed
+    to `Subscriber` after `7`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that the `request()` method just not goes all the way upstream, it just
+    conveys to the latest preceding operator, which, in turn, decides on whether to/how
+    to relay that information to further upstream.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, we got some understanding on `Flowable` and `Subscriber`. Now, it's time
+    to explore them in depth. We will start with creating a `Flowable` instance from
+    scratch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Flowable from scratch
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We learned about the `Observable.create` method in the previous chapter, but
+    to make things less complicated, let''s have a quick recap, and then we can continue
+    with `Flowable.create`. Take a look at the following piece of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, in this program, we created `Observable` with the `Observable.create` operator.
+    This operator let''s define our own custom `Observable`. We can write our own
+    rules to emit items from `Observable`. It provides really great freedom, but the
+    problem with `Observable` is here as well. It doesn''t support backpressure. Wouldn''t
+    it be great if we could create a similar version with backpressure support? We
+    will do it, but let''s see the output first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/b3578992-ead2-4a0c-aa26-51914541504d.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So, as expected, it prints all the numbers from `1` through `10`. Now, as discussed
+    earlier, let''s try with `Flowable`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: So, on comment `(1)`, we created an instance of `Subscriber`. Then, on comment
+    `(2)`, we created an instance of `Flowable` with the `Flowable.create()` method,
+    and, on comment `(3)`, we subscribed to it. However, focus on comment `(2)`—along
+    with the `lambda`, we also passed another argument to the `Flowable.create` method,
+    which is `BackpressureStrategy.BUFFER`. So, what is it? And what purpose does
+    `BackpressureStrategy.BUFFER` serve? Let's inspect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Flowable.create()` takes two parameters to create an instance of `Flowable`.
+    The following is the definition of the `Flowable.create()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First parameter is the source from where the emissions will generate, and the
+    second one is `BackpressureStrategy`; it is an `enum` that helps supporting backpressure
+    (it basically helps choosing which strategy to follow for backpressure) by caching/buffering
+    or dropping some of the emissions if the downstream can''t keep up. The `enum
+    BackpressureStrategy` has five underlying options for different kinds of implementations
+    of backpressure. In this example, `BackpressureStrategy.BUFFER` buffers all the
+    emissions until they are consumed by the downstream. This, obviously, is not an
+    optimal implementation of backpressure and can cause `OutOfMemoryError` while
+    handling too many emissions, but, at least it prevents `MissingBackpressureException`
+    and can make your custom `Flowable` workable to a small degree. We will learn
+    about a more robust way to implement backpressure later in this chapter using
+    `Flowable.generate()`; however, for now, let''s know about the options we can
+    choose from `BackpressureStrategyenum`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`BackpressureStrategy.MISSING`: This leads to no backpressure implementation
+    at all; downstream has to deal with backpressure overflows. This option is helpful
+    while using the `onBackpressureXXX()` operator. We will learn this example later
+    in this chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BackpressureStrategy.ERROR`: This, again, leads to no backpressure implementation
+    and signals `MissingBackpressureException` the very moment the downstream cannot
+    keep up with the source.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BackpressureStrategy.BUFFER`: This buffers all the emissions in an unbounded
+    buffer until the downstream is able to consume them. This can lead to `OutOfMemoryError`
+    if there are a lot of emissions to buffer.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BackpressureStrategy.DROP`: This strategy will let you drop all the emissions
+    while the downstream is busy and can''t keep up; when the downstream finishes
+    the previous operation, it''ll get the very first emission after its finishing
+    time, and will miss any emissions in between. For example, say the source is emitting
+    five values, `1`, `2`, `3`, `4`, and `5` respectively, the downstream got busy
+    after receiving `1` and while the source emitted `2`, `3`, and `4`, it got ready
+    just before the source emitted `5`; the downstream will receive `5` only and will
+    miss all remaining.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BackpressureStrategy.LATEST`: This strategy will let you drop all the emissions,
+    but keeps the latest one while the downstream is busy and can''t keep up; when
+    the downstream finishes the previous operation it''ll get the last emission just
+    before it finished, and will miss any emissions in between. For example, say the
+    source is emitting five values `1`, `2`, `3`, `4`, and `5` respectively, the downstream
+    got busy after receiving 1 and while the source emitted `2`, `3`, and `4`, it
+    got ready just before the source emitted `5`; the downstream will receive both
+    of them (if it didn''t again get busy after receiving `4`, that it can''t receive
+    `5`).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Let's implement some of these backpressure strategies as operators while creating
+    Flowables from Observables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Flowable from Observable
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `Observable.toFlowable()` operator provides you with another way to implement
+    `BackpressureStrategy` into non-backpressured source. This operator turns any
+    `Observable` into a `Flowable`, so let''s get our hands dirty, and, first, let''s
+    try converting an `Observable` into `Flowable` with the buffering strategy, then
+    we will try out a few other strategies in the same example to understand it better.
+    Please refer to the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, on comment `(1)`, we created an `Observable` with the `Observable.range()`
+    method. On comment `(2)`, we converted it to `Flowable` with `BackpressureStrategy.BUFFER`.
+    Then, we subscribed to it with a lambda as the `Subscriber`. Let''s see some portions
+    of the output as a screenshot (as the complete output will be too long to paste
+    here):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/76e322cc-775e-4395-bfac-e072f3fea9cc.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So, as expected, the downstream here processes all the emissions, as the `BackpressureStrategy.BUFFER`
+    buffers all the emissions until the downstream consumes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, now, let''s try with `BackpressureStrategy.ERROR` and check what happens:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/0d2e1672-ba50-4507-9990-f8c79e39bd9f.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It showed an error as the downstream couldn't keep up with the upstream, as
+    we described it earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What would happen if we use the `BackpressureStrategy.DROP` option? Let''s
+    check:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Everything is the same as in the previous example, except, here, we used the
+    `BackpressureStrategy.DROP` option. Let''s check the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/00d470ae-c820-4628-b4eb-783c975c50d8.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So, as we can see in the preceding output, `BackpressureStrategy.DROP` stopped
+    `Flowable` from emitting after `128`, as the downstream couldn't keep up with,
+    just as we described earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, as we have gained some grip on the options available in `BackpressureStrategy`,
+    let's focus on the `BackpressureStrategy.MISSING` option and how to use them with
+    the `onBackpressureXXX()` operators.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BackpressureStrategy.MISSING and onBackpressureXXX()
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`BackpressureStrategy.MISSING` implies that it''ll not implement any backpressure
+    strategy, so you need to explicitly tell `Flowable` which backpressure strategy
+    to follow. The `onBackpressureXXX()` operators help you achieve the same, while
+    providing you with some additional configuration options.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are mainly three types of `onBackpressureXXX()` operators available:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onBackpressureBuffer()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onBackpressureDrop()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onBackpressureLatest()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Operator onBackpressureBuffer()
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This operator serves the purpose of `BackpressureStrategy.BUFFER`; except that
+    here, you'll get some extra configuration options, such as buffer size, bounded
+    or unbounded, and more. You may omit the configurations as well to use the default
+    behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s look at some examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, we are using the previous program with little tweaks. On comment `(1)`,
+    we created the `Flowable` instance with the `BackpressureStrategy.MISSING` option.
+    On comment `(2)`, to deal with backpressure, we used `onBackpressureBuffer`; the
+    output is similar to the one in the `BackpressureStrategy.BUFFER` example, so
+    we are omitting this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can specify the buffer size by using `onBackpressureBuffer()`. So let''s
+    modify the `onBackpressureBuffer()` method call with `onBackpressureBuffer(20)`.
+    The following is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/0cda2981-c206-4f9f-8d0e-aabdc3e0c08d.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Yes, that change resulted in an error—the buffer is full. We defined `20` to
+    be the buffer size, but `Flowable` needed a lot more size. This could be avoided
+    by implementing the `onError` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Operator onBackpressureDrop()
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Like `onBackpressureBuffer` matches with `BackpressureStrategy.BUFFER`, `onBackpressureDrop`
+    matches with `BackpressureStrategy.DROP` in terms of backpressure strategy, with
+    some configuration options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s now try this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As shown in the previous program, we used `BackpressureStrategy.MISSING` on
+    comment `(1)`. On comment `(2)`, we used the `onBackpressureDrop()` operator.
+    This operator provides a configuration option to pass a consumer instance, which
+    will, in turn, consume the dropped emissions so you can further process it. We
+    used this configuration and passed a lambda, which will print the dropped emissions,
+    as shown in this screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/f97e804e-3a46-44ba-9946-b35e2a3cb8ca.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we can see from the output, `Flowable` dropped emissions after `128` (as
+    it has an internal buffer for `128` emissions). The consumer instance of `onBackpressureDrop`
+    completed processing even before the `Subscriber` instance started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Operator onBackpressureLatest()
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This operator works exactly the same as the `BackpressureStrategy.LATEST`-it
+    drops all the emissions keeping the latest one when the downstream is busy and
+    can't keep up. When the downstream finishes the previous operation, it'll get
+    the last emission just before it finished. Unfortunately, this doesn't provide
+    any configurations; you will probably not need it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at this code example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/24916162-a378-4542-a0c7-1be9b2dbea9a.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we can see, the `Flowable` dropped all emissions after `128`, keeping only
+    the last one (`1,000`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generating Flowable with backpressure at source
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we have learned to use standard libraries that handle backpressure at
+    the downstream. However, is this optimal? Is it always desirable to cache and
+    drop emissions whenever the downstream can't keep up? The answer to both questions
+    is simply NO. Instead, the better policy would be to backpressure the source at
+    the first place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Flowable.generate()` serves the exact same purpose. It''s somewhat similar
+    to `Flowable.create()`, but with a little difference. Let''s take a look at an
+    example, and then we will try to understand how it works and what are the differences
+    between `Flowable.create()` and `Flowable.generate()`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that use `Flowable.fromIterable()` as it respects backpressure. So, consider
+    using `Flowable.fromIterable()` whenever you can convert your source to an `Iterator`.
+    Use `Flowable.generate()` only where you need something more specific, as it is
+    way more complex.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Consider the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: In that program, we created `Flowable` with the `Flowable.generate()` method.
+    Unlike `Flowable.create()`, where `Flowable` emits items and `Subscriber` receives/waits
+    for/buffers/drops them, `Flowable.generate()` generates items on request and emits
+    them. `Flowable.generate()` accepts a lambda to use as the source, which may seem
+    similar to `Flowable.create`, and calls it every time you request an item (unlike
+    `Flowable.create`). So, for example, if you call the `onComplete` method inside
+    the lambda, `Flowable` will emit only once. Also, you can't call `onNext` multiple
+    times inside the lambda. If you called `onError`, then you will get an error on
+    the very first call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this program, we created `object`, `GenerateFlowableItem`, with `var item`;
+    the `var item` will automatically increment its value every time you access it
+    (using a custom getter). So, the program should work like `Flowable.range(1, Int.MAX_VALUE)`,
+    except that once the item reaches `Int.MAX_VALUE` instead of calling `onComplete`,
+    it'll again repeat itself, starting from `Int.MIN_VALUE`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the output (omitted here as it is too large), `Flowable` emitted `128` items
+    on the first go, then waited for the downstream to process `96` items, then `Flowable`
+    again emitted `128` items, and the cycle continued. Until you unsubscribe from
+    `Flowable` or the program execution stops, it will continue emitting items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ConnectableFlowable
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, in this chapter, we've dealt with `Cold Observables`. What if we want
+    to deal with hot source? Every type of Observable has their counterpart in Flowable.
+    In the previous chapter, we started hot source with `ConnectableObservable`, so
+    let's start with `ConnectableFlowable`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As with Observable, `ConnectableFlowable` resembles an ordinary Flowable, except
+    that it does not begin emitting items when it is subscribed, but only when its
+    `connect()` method is called. In this way, you can wait for all intended `Subscribers`
+    to `Flowable.subscribe()`, before `Flowable` begins emitting items. Please refer
+    to the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We tweaked the first example of `ConnectableObservable` from the previous chapter.
+    As with `Observable`, you can use the `Iterable<T>.toFlowable()` extension function
+    in the place of `Flowable.fromIterable()`. `Flowable.publish()` turns an ordinary
+    `Flowable` into a `ConnectableFlowable`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, on comment `(1)`, we used the `Iterable<T>.toFlowable()` extension
+    function to create `Flowable` from `List`, and on comment `(2)`, we used the `Flowable.publish()`
+    operator to create `ConnectableFlowable` from `Flowable`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/dcd29fcc-c333-4ed8-8ce5-3c680797db81.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we used `Flowable.fromIterable` (`Iterable<T>.toFlowable()` calls `Flowable.fromIterable`
+    internally), which respects backpressure at the source, we can see `Flowable`
+    waited for all the downstream to complete processing, then emitted the next item
+    so that the downstreams can work in an interleaved manner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By now, you may have been thinking of `Subjects`. It is a great tool, but, like
+    `Observable`, `Subjects` also lack backpressure support. So, what is the counterpart
+    for `Subjects` in Flowable?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Processor
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Processors are the counterparts for `Subjects` in Flowable. Every type of `Subject`
+    has its counterpart as processor with backpressure support.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous chapter ([Chapter 3](135f52d1-f19c-4f88-9299-d3c5bcec4898.xhtml), *Observables,
+    Observers, and Subjects*), we started exploring `Subject`, with the `PublishSubject`;
+    so, let's do the same here. Let's get started with `PublishProcessor`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is an example of `PublishProcessor`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: So, in this example, on comment `(1)`, we created a `Flowable` with the `Iterable<T>.toFlowable()`
+    method. On comment `(2)`, we created a `processor` instance with the `PublishProcessor.create()`
+    method. On comment `(3)` and `(4)`, we subscribed to the `processor` instance,
+    and, on comment `(5)`. we subscribed to the `Flowable` with the `processor` instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/d71c8b78-b195-42c4-b863-7a6a22243b94.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `processor` is waiting for all its `Subscribers` to complete before pushing
+    the next emission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Learning Buffer, Throttle, and Window operators
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we have learned about backpressure. We slowed down the source, dropped
+    items, or used buffer, which will hold items until the consumer consumes it; however,
+    will all these suffice? While handling backpressure at the downstream is not a
+    good solution always, we cannot always slow down the source as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While using `Observable.interval`/`Flowable.interval`, you cannot slow down
+    the source. A stop gap could be some operators that would somehow allow us to
+    process the emissions simultaneously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are the three operators that could help us in that way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Buffer`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Throttle`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Window`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The buffer() operator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Unlike the `onBackPressureBuffer()` operator, which buffers emissions until
+    the consumer consumes, the `buffer()` operator will gather emissions as a batch
+    and will emit them as a list or any other collection type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s look at this example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: On comment `(1)`, we created a `Flowable` instance with the `Flowable.range()`
+    method, which emits integers from `1` to `111`. On comment `(2)`, we used the
+    `buffer` operator with `10` as the buffer size, so the `buffer` operator gathers
+    `10` items from the `Flowable` and emits them as a list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is the output, which satisfies the understanding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/bc9ec64a-71c6-4d5f-9485-400fd44bd238.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `buffer` operator has quite good configuration options, such as the `skip`
+    parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It accepts a second integer parameter as the `skip` count. It works in a really
+    interesting way. If the value of the `skip` parameter is exactly the same as the
+    `count` parameter, then it will do nothing. Otherwise, it will first calculate
+    the positive difference between the `count` and `skip` parameters as `actual_numbers_to_skip`,
+    and, then, if the value of the `skip` parameter is greater than the value of the
+    `count` parameter, it will skip the `actual_numbers_to_skip` items after the last
+    item of each emission. Otherwise, if the value of the `count` parameter is greater
+    than the value of the `skip` parameter, you'll get rolling buffers, that is, instead
+    of skipping the items, it will skip the counts from the previous emissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Confused? Let''s look at this example to clear things up:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On comment `(1)`, we used buffer with count `10`, skip `15`, for the first
+    subscription. On comment `(2)`, we used it as `count 15`, `skip 8`, for the second
+    subscription. The following is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/555b2f1d-2c34-47aa-b7fa-b29f10d1631b.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: For the first subscription, it skipped `5` items after each subscription (`15`-`10`).
+    However, for the second one, it repeated items from the `8`^(th) item in each
+    emission (`15`-`7`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the preceding uses of the `buffer` operator were not enough for you, then
+    let me tell you the `buffer` operator also lets you do time-based buffering. Put
+    simply, it can gather emissions from a source and emit them at a time interval.
+    Interesting right? Let''s explore it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: To understand things better, we used `Flowable.interval` in this example to
+    create a `Flowable` instance on comment `(1)`. On comment `(2)`, we used the `buffer(timespan:Long,
+    unit:TimeUnit)` overload to instruct the operator to buffer all emissions for
+    a second and emit them as a list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/a2c36cf3-831d-4050-8c67-f7ebd8393791.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: As you can see in the example, each of the emissions contains `10` items as `Flowable.interval()`
+    is emitting one each `100` milliseconds and `buffer` is gathering emissions within
+    a second timeframe (1 second = 1000 milliseconds, emission with a 100 milliseconds
+    interval would result in 10 emissions in one second).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another exciting feature of the buffer operator is that it can take another
+    producer as the boundary, that is, the `buffer` operator will gather all the emissions
+    of the source producer between two emissions of the boundary producer, and will
+    emit the list on each boundary producer's emission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And the following is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/9ce6ae07-a8ca-4e01-af81-c1f7aecbcbb8.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `buffer` operator emits a gathered list whenever `boundaryFlowable` emits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The window() operator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `window()` operator works almost the same, except that, instead of buffering
+    items in a `Collection` object, it buffers items in another producer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s first see the output, as shown here, before we try to understand it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/4f3538c8-9afa-4578-9f38-8b8cc88388b2.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `window` operator buffers `10` emissions in a new `Flowable` instance, which
+    we will again subscribe to inside the `flowable.subscribe` lambda, and print them
+    with a comma as a suffix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `window` operator also has same functionality as the other overloads of
+    the `buffer` operator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The throttle() operators
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `buffer()` and `window()` operators gather emissions. The `throttle` operators
+    omit emissions. We will discuss it in greater detail in the later chapters, but
+    we will take a look at it right now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/6b13b98b-d740-4457-8bdd-6a09f049b4ae.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `throttleFirst` skips the first emissions in every `200` milliseconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are `throttleLast` and `throttleWithTimeout` operators as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned about backpressure. We learned how to support backpressure
+    and Flowables as well as `processors`. We also learned how to support backpressure
+    from consumers and producers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although we gained some grip on producers while working on real-time projects,
+    we need to do asynchronous operations. In the next chapter, we will focus on the
+    same. We will learn about asynchronous data operations, and we will learn more
+    about the `map` operator, which we are already using.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Curious? Turn to [Chapter 5](e395e42a-afc0-4424-9d0f-2de06e19989d.xhtml), *Asynchronous
+    Data Operators and Transformations* right now.
+  prefs: []
+  type: TYPE_NORMAL

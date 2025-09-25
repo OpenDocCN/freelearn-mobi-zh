@@ -1,0 +1,997 @@
+- en: Introducing Recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this book, we have completed two projects so far. With the first x86emu project,
+    we learnt how to extend an existing device to support additional features. After
+    that, we learnt how to create a new device using the second project, x86vbox.
+    There is another important topic at the system-level programming of Android, which
+    is how to patch or update a released system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In Android systems, the way to patch or update a released system is using a
+    tool called **recovery**. In the next three chapters, we will learn how to build
+    recovery on an x86vbox device. Since x86vbox is a built for VirtualBox, we will
+    use VirtualBox as virtual hardware for this chapter to [Chapter 14](32a9d777-755e-4758-a38a-f4e11d8ca2e9.xhtml),
+    *Creating OTA Update Packages*. We will also prepare and test a few update packages
+    using the recovery that we build. In this chapter, we will cover the following
+    topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recovery introduction
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Analyzing recovery source code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building recovery for x86vbox
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Recovery introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In Android, recovery is a minimal Linux environment including a kernel and a
+    dedicated ramdisk. When this minimal Linux environment boots up, it runs a binary
+    tool, recovery, to enter the so-called recovery mode. The Linux kernel and ramdisk
+    of recovery mode are usually stored in a dedicated bootable partition. In recovery
+    mode, both the kernel and the root filesystem are in memory so it can manage other
+    partitions without any dependencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two ways to update devices in the field. The first method is to use
+    fastboot protocol through bootloader. The devices can be reflashed using bootloader.
+    In this case, you can boot your device in fastboot mode and flash your device
+    using the fastboot tool from Android SDK. The second way to flash a device is
+    to use the recovery mode. If you boot the devices into recovery mode, you can
+    flash the device using an image file on the storage or providing an image through
+    USB in sideload mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The image files that can be used by bootloader and recovery are different. The
+    image files from the AOSP build output can be used by bootloader directly. We
+    can flash image files `system.img`, `userdata.img`, `boot.img` or `recovery.img`
+    directly using the `fastboot` tool in bootloader. We cannot use these image files
+    for recovery. We have to build image files for recovery specially using tools
+    provided in AOSP. We will cover this topic in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The key advantage of recovery mode over the fastboot protocol is the **over-the-air**
+    (**OTA**) update support. If an update is available from the OTA servers, the
+    users will receive a notification. The users can download the update to a cache
+    or data partition. After the update package is verified using its signature, the
+    users can respond to the update notification. After that, the device will reboot
+    into recovery mode. In recovery mode, the recovery binary is started and it will
+    use the command-line arguments stored in the `/cache/recovery/command` file to
+    find the update package to update the system image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android device partitions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To enable recovery on a device, we need to look at the device partitions again.
+    In Android SDK, we have the following image files that can be used by the emulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we boot up the emulator, we can see that the following partitions are
+    mounted:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that `system`, `data`, and `cache` partitions are mounted as virtio
+    block devices. Since virtio is a virtualization standard for network and disk
+    device drivers, the performance should be better than physical device drivers.
+    With only these partitions, we won''t be able to create a system that can use
+    the recovery tool. In the following figure, these are the minimum partitions that
+    we need to have on the storage device to support both fastboot and recovery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_12_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Android device partitions
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**boot**: This is the partition that contains the kernel and ramdisk image.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**system**: This is the partition that contains the Android system. It is usually
+    mounted as read-only and can only be changed during an OTA update.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**vendor**: This is the partition that contains the private system files from
+    the vendor. It is similar to the system partition, which is mounted as read-only
+    and can only be changed during an OTA update.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**userdata**: This partition contains the data saved by applications installed
+    by the user. This partition is usually not touched by the OTA update process.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**cache**: This partition holds temporary data. The OTA package installations
+    can use it as a workspace.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**recovery**: This partition contains a Linux kernel and a ramdisk for recovery.
+    It is similar to the boot partition except the ramdisk image is the one used by
+    recovery mode only.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**misc**: This partition is used by recovery to store information across different
+    boot sessions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In this chapter, we will build recovery for the x86vbox device. As we learnt
+    from [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml), *Creating Your Own
+    Device on VirtualBox*, to [Chapter 11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml),
+    *Enabling VirtualBox-Specific Hardware Interfaces*, we use only one partition
+    to store everything for the x86vbox device. We will extend the x86vbox device
+    to use multiple partitions according to the preceding explanation in this chapter
+    later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyzing recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we start to build recovery for our x86vbox device, we will analyze the
+    code flow of recovery to understand how it works. There are two ways to enter
+    recovery mode from the end user perspective. When users want to perform a factory
+    reset or an OTA update is available, the main system can write a recovery command
+    to the **bootloader control block** (**BCB**) and cache partition before resetting
+    the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second way to enter recovery mode is to use a key combination manually.
+    After turning off the phone, press a key combination at the same time to enter
+    the recovery mode manually. The key combination is defined by the device manufacturing,
+    for example, it can be a combination of volume down and power buttons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In both cases, entering the recovery mode is closely related to the implementation
+    of bootloader. The Android system, recovery, and bootloader communicate with each
+    other using two interfaces: the partitions `/cache` and `/misc`. We can depict
+    the communication interfaces using the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_12_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Interfaces of the Android system, recovery, and bootloader
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the preceding diagram, bootloader uses **BCB** in the **/misc** partition
+    to communicate with the Android system and recovery. The Android system and recovery
+    use the information in the **/cache** partition to talk to each other. Let's look
+    into the details of these two communication channels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BCB
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: BCB is the communication interface of bootloader to the main system and recovery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android system is also referred to as the main system in the recovery source
+    code. We use the term main system as equivalent to Android system in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BCB is stored in the `/misc` partition in a raw partition format, which means
+    this partition is used just like a binary file without any filesystem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Recovery uses a `recovery.fstab` file to mount all partitions in the system.
+    If we look at the filesystem type of the `/misc` partition in `recovery.fstab`,
+    it is `emmc` that is one of the raw filesystems used in recovery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are five supported filesystem types in recovery including two raw filesystems
+    and three normal filesystems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The two supported raw filesystems are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`mtd`: This is the partition used in old Android devices. These devices use
+    NAND flash and MTD partitions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`emmc`: This is a raw eMMC block device used in the recent Android devices.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The partitions for `boot`, `recovery`, and `misc` can be the `mtd` or `emmc`
+    filesystem types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The supported normal filesystem types are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`yaffs2`: A `yaffs2` filesystem is usually used for MTD devices for `system`,
+    `userdata`, or `cache` partitions. This is usually used in older Android devices.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ext4`: In the latest Android devices, the eMMC block devices are used. The
+    standard Linux `ext4` filesystem is usually used on top of eMMC block devices.
+    The same as the `yaffs2` filesystem type, `system`, `userdata`, or `cache` partitions
+    can use the `ext4` format.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vfat` : This is the filesystem type used for external storage such as SD card
+    or USB.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let''s come back to the topic of BCB. BCB is defined as a data structure as
+    follows in the `$AOSP/bootable/recovery/bootloader.h` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `command` field is used by the main system when it wants to reboot the device
+    into recovery. This can be the case when users select factory reset from the settings
+    or an OTA update is available. This field can be used by bootloader as well, when
+    the bootloader completes the firmware update it may want to boot to recovery for
+    any final clean up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `status` field is updated by the bootloader after it completes the firmware
+    update.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `recovery` field is used by the main system to send a message to recovery
+    or the recovery may use this field to send a message to the main system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `stage` field is used to indicate the stage of an update. In some cases,
+    the installation of an update package may require restarting multiple times. The
+    recovery UI can use this field to show the current stage of the installation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_12_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the preceding diagram, the bootloader logic related to the checking of key
+    combination and BCB is shown. The implementation can be vendor specific as long
+    as the bootloader processes BCB according to the AOSP recovery definition. Usually,
+    the bootloader checks the key combination first to decide whether the users want
+    to enter the recovery mode. If there is no key combination pressed, it checks
+    the BCB to decide the boot path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cache partition
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'There are three files in the cache partition, which can be used as the communication
+    channels between the main system and recovery tool. These three files are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`/cache/recovery/command`: This is a file for input parameters from the recovery
+    point of view. There is one command per line in this file. The arguments that
+    may be supplied in the file are:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-send_intent=anystring`: The main system may use this command to send a message
+    back to itself after recovery exit'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-update_package=path` : This command specifies a path to install an OTA package
+    file'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-wipe_data`: This command tells recovery to erase user data (and cache), and
+    then reboot'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-wipe_cache`: This command tells recovery to wipe cache (but not user data),
+    then reboot'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-set_encrypted_filesystem=on|off`: Enables/disables encrypted filesystems'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-just_exit`: Does nothing; exits and reboots'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`/cache/recovery/log`: The runtime log file of recovery is at `/tmp/recovery.log`.
+    Before recovery exits, it will back up the old log file and move the current log
+    file to `/cache/recovery/log`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`/cache/recovery/intent`: Before recovery exits, it will check if there is
+    any intent that needs to be sent to the main system using this file. The intent
+    can be the message that the main system sends to recovery using the `-send_intent`
+    command in the `/cache/recovery/command` file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Main flow of recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After we have all the background knowledge about recovery and the components
+    related to recovery, let''s have a look at the main workflow of recovery. We will
+    use the following diagram to explore the workflow of recovery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When recovery is started, it will set the log file to `/tmp/recovery.log` first.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After that, it checks the `--adbd` option. If this option is specified, it will
+    run a daemon for the sideloading using `adb`. You can refer to the source code
+    at `$AOSP/bootable/recovery/adb_install.cpp` about how to launch recovery as `adb`
+    daemon.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: It retrieves and processes the arguments from cache partition and BCB by calling
+    the `get_args` function.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Based on the commands retrieved from `get_args`, it may call the `install_package`
+    function to install an update, or call the `wipe_data` or `wipe_cache` functions
+    to erase user data or cache partition.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If there is no command for either updating a package or erasing data, it will
+    call the `prompt_and_wait` function to enter the recovery user interface. Based
+    on the user input, it may call `apply_from_adb` or `apply_from_sdcard` to update
+    packages from USB or SD card. It may call the `wipe_data` or `wipe_cache` functions
+    to erase user data or cache partition, and so on.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'After all the tasks are completed or the users select entries to exit from
+    recovery, it will call the cleanup function, `finish_recovery`, to do the final
+    clean up. After that, it will reboot or shut down the system:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/image_12_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Recovery workflow
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Based on the preceding flow analysis, we can look at the code snippet of the
+    `main` function at `$AOSP/bootable/recovery/recovery.cpp` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: After we have an overview of the recovery workflow, we will look at how recovery
+    retrieves arguments from either BCB or cache files in the `get_args` function.
+    After that, we will look at the two important workflows, factory reset and OTA
+    update, from the user's perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Retrieving arguments from BCB and cache files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we can see in the main function of recovery, it calls to the `get_args` function
+    to retrieve arguments from the main system or bootloader. The following is the
+    flow diagram of `get_args`. It is in the same `$AOSP/bootable/recovery/recovery.cpp`
+    file as the `main` function of recovery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_12_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Flow diagram of get_args
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the following code snippet, we can see that it calls to the `get_bootloader_message`
+    function to get the BCB data structure, `boot`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If there are no arguments, the value of `argc` will be less or equal to 1\.
+    It will try to get the arguments from BCB, as in the following code snippet. In
+    the `recovery` field of BCB, the command will start with `recovery\n`. The content
+    after `recovery\n` is the same format as the cache command file, `/cache/recovery/command`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the arguments can be retrieved from BCB, it will skip the cache command
+    file. Otherwise, it will try to read arguments from the cache command file as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After processing both BCB and the cache command file, it will write the BCB
+    block to the `/misc` partition so that if there is any error during the process
+    of update or erase, the same process will continue after the reboot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: From the preceding code analysis, we can see that the cache command file is
+    just a normal text file. It can be accessed by just using the standard C functions.
+    To access the `/misc` partition for BCB data structure, the `get_bootloader_message`
+    function is used to read BCB and the `set_bootloader_message` function is used
+    to write BCB. The BCB data structure `bootloader_message` is defined in the `bootloader.h`
+    file and related functions are implemented in the `bootloader.cpp` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `/misc` partition is a raw partition and it is used by the code in `bootloader.cpp`
+    as a normal file instead of a filesystem volume.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can have a quick look at the `get_bootloader_message` function and its support
+    function, `get_bootloader_message_block`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `get_bootloader_message` function, it will call another function according
+    to the type of partition, `/misc`. As we can see, the supported raw filesystem
+    types are `mtd` and `emmc`. We can look at the `emmc` version, `get_bootloader_message_block`,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, in the `get_bootloader_message_block` function, it accesses the
+    `/misc` partition as a normal file using C functions `fopen`, `fread`, and `fclose`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we have done the analysis of BCB and cache file processing. We will look
+    at the following two most important workflows of recovery in the next two sections:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Factory data reset
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: OTA update
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Factory data reset
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'One of the major functions of recovery is to support factory data reset. The
+    factory data reset can usually be selected by users from Settings on the device,
+    as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_12_006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Factory data reset
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The entire process can be divided into the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The user selects Factory data reset from Settings.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Main system writes `--wipe_data` to `/cache/recovery/command`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Main system reboots the device into recovery. We have done the analysis about
+    this when we talked about BCB in the previous section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery retrieves arguments from BCB or `/cache/recovery/command` in `get_args()`.
+    After read arguments, recovery will write BCB with `boot-recovery` and `--wipe_data`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery erases both `/data` and `/cache` partitions. After this point, any
+    following reboots will continue this step until the erase can be completed or
+    the user takes other actions from recovery user interfaces to exit from recovery.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After erasing `/data` and `/cache` partitions, recovery calls to the `finish_recovery`
+    function to erase BCB.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery reboots the device to the main system.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We have analyzed most of the preceding steps except `finish_recovery`. Let''s
+    look at the `finish_recovery` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `finish_recovery` function, it writes the intent to `/cache/recovery/intent`.
+    Then, it processes the local file and creates the log file backup. Finally, it
+    erases BCB by calling `set_bootloader_message` and removes `/cache/recovery/command`
+    to restore the normal boot process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: OTA update
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'OTA update is another major function of recovery. OTA packages can be updated
+    using the recovery user interface after entering the recovery mode manually. It
+    can also be updated automatically after an update notification is received. In
+    both cases, the path of the update package may be different, but the installation
+    process is the same. In this section, we will look at the flow after the device
+    received an OTA update notification. Then, we will look into the details of the
+    installation process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After an OTA update notification is received by the device, main system downloads
+    the OTA package to `/cache/update.zip`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Main system writes a `--update_package=/cache/update.zip` command to `/cache/recovery/command`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Main system reboots the device into recovery.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery retrieves arguments from BCB or `/cache/recovery/command` in `get_args()`.
+    After read arguments, recovery will write BCB with `boot-recovery` and `update_package=...`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery calls `install_package` to install the update. At this step, any following
+    reboots will continue this step until the installation can be completed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the installation is failed, the `prompt_and_wait` function is called to show
+    an error and wait for user action. If the installation completes successfully,
+    it will move to the next step.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery calls to the `finish_recovery` function to erase BCB and remove the
+    `/cache/recovery/command` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Recovery reboots the device to the main system.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Once the update package is downloaded, the installation is done by the `install_package`
+    function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `install_package` function, it sets the installation log file first.
+    The log file path is `/tmp/last_install`. Then, it calls to `setup_install_mounts`
+    to mount the relevant partitions. The actual installation is done in the `really_install_package`
+    function, as shown in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `really_install_package` function, it initializes the user interface
+    and shows the package location on the screen. Then, it creates a memory map for
+    the update package. This is needed by the `zip` functions. After that, it verifies
+    the update package using its signature. Finally, it calls to another function,
+    `try_update_binary,` to do the installation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `try_update_binary` function performs three tasks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extracts `update_binary` from the update package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Prepares the environment to execute `update_binary`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Monitors the progress of installation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Let''s look into the details of these three tasks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: It tries to extract `update_binary` from the update package. The path of `update_binary`
+    in the update package is predefined at `META-INF/com/google/android/update-binary`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If `update_binary` can be extracted successfully, it will be copied to `/tmp/update_binary`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see from the preceding code snippet, after extracting `update_binary`,
+    it will prepare the environment to execute `update_binary`. The installation of
+    the update package is actually done by `update_binary` using a script. The following
+    parameters are passed to `update_binary` for the execution:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The path of `update_binary`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Recovery version
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A pipe for the communication between the parent and child processes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The path of the update package
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'After the environment is ready, it will fork a child process to run `update_binary`.
+    The parent process will monitor the installation progress by talking to the child
+    process through a pipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see from the preceding code snippet, the parent process will receive
+    commands from the child process to show the progress, print out information to
+    the screen, or set the clean up configuration after the installation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building recovery for x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: After analyzing the workflow and key elements in the recovery source code, we
+    can now start to build it for our x86vbox device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The changes to support the recovery build include the changes to x86vbox devices
+    and the changes to `recovery` and `newinstaller`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building configuration
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before we look at the changes for this chapter, let''s look at the configuration
+    files first. As usual, we have a manifest file for each chapter. We make changes
+    for this chapter based on the source code of [Chapter 11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml),
+    *Enabling VirtualBox-Specific Hardware Interfaces*. The following are the projects
+    that we are going to change:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that we need to change four projects: `recovery`, `newinstaller`,
+    `common`, and `x86vbox`. We use an `android-7.1.1_r4_x86vbox_ch12_r1` tag to baseline
+    the source code in this chapter.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can get the source code from GitHub and AOSP using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we get the source code for this chapter, we can set the environment and
+    build the system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To build `initrd.img`, you can run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Changes to x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'For the x86vbox device, we need to change the Makefiles device first. Since
+    we inherited x86vbox from the common Android-x86 device, we have only the following
+    Makefiles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`AndroidProducts.mk` is the entry of the Android build system, which includes
+    our `x86vbox.mk` Makefile. In `x86vbox.mk`, we add the following recovery related
+    files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: These changes include two parts. The first part is related to the environment
+    setup specific for VirtualBox, since we run recovery on the virtual hardware of
+    VirtualBox. The x86vbox specific init script, `init.recovery.x86vbox.rc`, will
+    be executed by the init process during the system startup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second part is related to the partitions of the storage device. As we discussed
+    in previous chapters, we won''t be able to use recovery with a single partition
+    as we did in [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml), *Creating
+    Your Own Device on VirtualBox*, to [Chapter 11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml),
+    *Enabling VirtualBox-Specific Hardware Interfaces*. The partition table is defined
+    in the `recovery.fstab` file. Let''s look at the startup script, `init.recovery.x86vbox.rc`,
+    first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As the init script of Android, recovery also has a device specific init script,
+    `init.recovery.${ro.hardware}.rc`. In our case, it is `init.recovery.x86vbox.rc`.
+    Inside `init.recovery.x86vbox.rc`, it calls to the Android-x86 HAL initialization
+    script, `/system/etc/init.sh`. In the HAL initialization during the Android start
+    up section of [Chapter 8](acf2363a-2a0f-40b9-a35f-c8bb0e523737.xhtml), *Creating
+    Your Own Device on VirtualBox*, we had a detailed explanation about the `/system/etc/init.sh`
+    script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We added two services, `network_start` and `console`, in `init.recovery.x86vbox.rc`.
+    With these two services, we are able to enable VirtualBox-specific network interfaces
+    and we can also have a console after boot up. With this debug console, we are
+    able to debug recovery much easier later in this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another important part in `x86vbox.mk` is we add a `recovery.fstab` partition
+    table for recovery as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, we have six partitions now. We don't really have a bootloader
+    that can support fastboot protocol and recovery BCB now, so we don't really use
+    `/boot` and `/recovery` partitions. However, we do have a two stage boot process
+    from Android-x86 and we can have a workaround without bootloader support. We will
+    see this in a moment when we look at the changes to `newinstaller` later in this
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `recovery.fstab` partition table is used by recovery and we need to change
+    the related partition table for the Android main system as well, which is the
+    file at `device/generic/common/fstab.x86`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to add two entries in `device/generic/common/fstab.x86`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: This `fstab.x86` file will be copied to the system image as `fstab.x86vbox`
+    during the build process. The init process will process it to mount partitions.
+    You may be wondering why we don't have `/system` and `/data` in the partition
+    table. We use two stage boots and they are mounted in the first stage boot before
+    Android starts. The source of both `/system` and `/data` can be configured through
+    kernel parameters, as we discussed in previous chapters when we explained the
+    two-stage boot process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Be aware that both recovery and main system should mount the same block device
+    partitions. For example, if recovery and main system mount different partitions
+    for `/cache`, they won't be able to communicate with each other using the command
+    file at `/cache/recovery/command`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'That''s all about the changes to `x86vbox.mk`, so now let''s look at another
+    Makefile, `BoardConfig.mk`. To enable the build of recovery, we need to add the
+    following two macros in `BoardConfig.mk`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: The default values for both macros are set to true, which means both kernel
+    and recovery are not built in the default configuration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We added another macro that is related to the changes of recovery source code
+    and we will look at the source code changes later:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER` macro is borrowed from the latest
+    code of **Team Win Recovery Project** (**TWRP**). With the changes to x86vbox
+    Makefiles, we can actually build TWRP as well. This is a third-party recovery
+    commonly used by many third-party ROMs, such as LineageOS/CyanogenMod, Omnirom,
+    and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changes to recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The AOSP recovery code can work quite well on VirtualBox. There is only an issue
+    related to the display. To fix the display issue, we need to change two files
+    in the recovery source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We use the `RECOVERY_GRAPHICS_FORCE_SINGLE_BUFFER` macro as we mentioned earlier
+    to configure the frame buffer changes. We need to add it to the recovery Makefile
+    `minui/Android.mk` first as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since double buffer cannot work well on VirtualBox for the time being, we have
+    to disable it as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: With a similar change to TWRP, TWRP can be built for x86vbox as well. The branch
+    for building TWRP is included in the source code at GitHub and you can try it
+    yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changes to newinstaller
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As we discussed in the BCB section, bootloader decides the boot path according
+    to the arguments stored in BCB. The recovery command stored in BCB is the same
+    as the one in the `/cache` partition at `/cache/recovery/command`. We can actually
+    move the same logic to the first stage boot in `initrd.img`. In this case, we
+    can achieve the same result with the help of the first stage boot. The logic for
+    factory data reset and OTA update will become the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The user chooses factory data reset or an OTA update available.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Main system writes a command `--wipe_data` or `--update_package=/cache/update.zip`
+    to `/cache/recovery/command`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Main system reboots the device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the first stage boot, the init script will check whether the `/cache/recovery/command`
+    file exists in the `/cache` partition.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If `/cache/recovery/command` exists, it will load `ramdisk-recovery.img`, otherwise,
+    it will load `ramdisk.img`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The rest of the steps will be the same as the normal boot process or the recovery
+    boot process.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To implement the preceding logic, we added a shell function, `find_ramdisk`,
+    to the `$AOSP/bootable/newinstaller/initrd/init` file as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this function, we mount the cache partition to `/hd` and check whether `/hd/recovery/command`
+    exists or not. If it exists, we set the `RAMDISK` variable to `ramdisk-recovery.img`;
+    otherwise, we set it to `ramdisk.img`. The init script will extract the ramdisk
+    contained in the `RAMDISK` variable to the memory later as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is another variable called `RECOVERY` that is defined in `find_ramdisk`,
+    which can be passed to the init script from the kernel command line. With this
+    variable, we can force to boot to recovery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: After we build the recovery and AOSP images, we can test them in VirtualBox.
+    As we learnt from [Chapter 9](c8d10155-cc8e-4b8c-a5e0-f359520c894a.xhtml), *Booting
+    Up x86vbox using PXE/NFS*, we can use PXE boot to boot the system and use NFS
+    to access the AOSP images. To test recovery, we can add an option in the `$HOME/.VirtualBox/TFTP/pxelinux.cfg/default`
+    file to boot using `kernel` and `ramdisk/recovery.img`. Even though we can boot
+    the system to recovery now, we won't be able to update the system using the recovery
+    in this chapter. We will find out more in the next two chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have done all the analysis and implementation of recovery for the x86vbox
+    device. We have analyzed the workflow and key elements in the recovery source
+    code in the first part of this chapter. In the second part of this chapter, we
+    applied the knowledge that we gained in the first part to the implementation of
+    the recovery for the x86vbox device. We changed the x86vbox device itself to add
+    the recovery support. We also changed recovery source code to fix the display
+    issue. Finally, we modified newinstaller so that we can have a complete boot flow
+    for both main system and recovery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will discuss how to create a recovery package and explain
+    what is inside a recovery package.
+  prefs: []
+  type: TYPE_NORMAL

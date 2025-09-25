@@ -1,0 +1,700 @@
+- en: Understanding the Environment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Augmented reality applications are all about enhancing or augmenting the user''s
+    reality. In order to do this, we as AR app developers need a set of tools capable
+    of understanding the user''s environment. As we saw in the last chapter, ARCore
+    uses **visual-inertial odometry** (**VIO**) to identify objects and features in
+    the environment, which it can then use to obtain a pose of the device and track
+    motion. However, this technology can also help us identify objects and their pose
+    using the same toolkit. In this chapter, we will explore how we can use the ARCore
+    API to better understand the user''s environment. Here''s a quick overview of
+    the main topics we will cover in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tracking the point cloud
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Meshing and the environment
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interacting with the environment
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing with OpenGL ES
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Shader programming
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you have not downloaded the source code from GitHub, you will need to do
+    so for this chapter. Of course, you will also need to have completed the setup
+    and installation of Android covered in [Chapter 2](c5c4b444-3342-457a-b756-266772b70d06.xhtml),
+    *ARCore on Android*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tracking the point cloud
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As we discussed, motion tracking in ARCore is done by identifying and tracking
+    recognizable features around the user. It then uses those points with the device''s
+    orientation and accelerometer sensors to keep its tracking updated. Without doing
+    this, the ability to track accurately quickly falls apart. Additionally, we gain
+    the benefit of now tracking multiple points that ARCore identifies as object points.
+    Let''s see an example of what these tracking points look like by starting up the
+    sample ARCore Android app again. Follow the given steps to get started:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open Android Studio. If you haven't opened any other projects, then it should
+    immediately load the Android ARCore sample project. If not, load the project in
+    the `Android/arcore-android-sdk/samples/java_arcore_hello_ar` folder.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Open the `HelloArActivity.java` file and scroll down to the `OnDrawFrame` method,
+    as shown in the following excerpt:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/3134f94f-df62-41e5-bd03-25269bbb5463.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Opening the HelloArActivity.java file in Android Studio
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`OnDrawFrame` is the render method, exactly like the `update` function we have
+    seen in the web example. This method is called every frame, generally around 60
+    frames per second in the typical 3D app. We also call 60 fps as the frame rate.
+    Frame rates will vary depending on how much your code performs each frame. Therefore,
+    we want our `render` function and the code inside to be as fast as possible. We
+    will talk more about performance and rendering in [Chapter 11](e7c0bdd1-e380-4498-af5a-fe9e627eb6cb.xhtml),
+    *Performance Tips and Troubleshooting*.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The first line in this method, starting with `GLES20.glClear`, clears the render
+    buffer and prepares for drawing.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Depending on the 3D platform you are working with, you may or may not have to
+    worry about specific details such as clearing render buffers. Unity, for instance,
+    hides many of these details away from the developer, which can be good and bad.
+    Just understand that all 3D platforms will generally follow the same principals.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scroll down a bit to just inside the `try` block and add the following line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`Frame` represents the current AR view captured from the device''s camera.
+    We get access to an instance of `frame` by calling `mSession.update()`; `mSession`,
+    which is initialized earlier, represents our ARCore session service.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`Frame` also exposes a number of helper methods; scroll down until you see
+    the following lines:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Starting with `mPointCloud.update()`, this call gets the visible points in the
+    current `frame`. Then, `mPointCloud.draw()` draws the points based on the cloud's
+    pose, using the current view (`viewmtx`) and projection (`projmtx`) matrices.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: View and projection matrices represent the camera or combined scene view. With
+    `three.js`, this was handled for us. Likewise, when we get to Unity, we won't
+    need to worry about setting these matrices either.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connect your device to your machine, either through USB or remotely. Then, build
+    and run the app on your device. Pay particular attention to the drawing of the
+    point cloud.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note how the number of points increases the longer you hold the device in one
+    orientation. These points represent those identifiable and recognizable feature
+    points used for tracking and interpreting the environment. Those are the same
+    points that will help us identify objects or surfaces in the environment. In the
+    next section, we will look at how surfaces are identified and rendered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Meshing and the environment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So, being able to identify features or corners of objects is really just the
+    start of what we would like to know about the user''s environment. What we really
+    want to do is use those feature points to help us identify planes, surfaces, or
+    known objects and their pose. ARCore identifies planes or surfaces automatically
+    for us through a technique called **meshing**. We have already seen how meshing
+    works numerous times in the advanced samples, when ARCore tracks surfaces. Now,
+    before we get ahead of ourselves, let''s picture what a point cloud and mesh look
+    like in 3D, with the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/bb4166b5-8609-4c8f-b6c2-6a9ccd0bdfa6.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Point cloud and mesh in 3D
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you pay attention to the diagram, you will see an inset figure showing a
+    polygon and the ordered set of vertices that comprise it. Note how the order of
+    points goes counterclockwise. Yes, the order in which we join points makes a difference
+    to the way a surface is facing when a mesh is lit and shaded. When a scene is
+    rendered we only see surfaces that face the camera. Surfaces pointing away from
+    the camera are removed or back-face culled. The order in which we join points
+    is called winding and isn't something you have to worry about unless you plan
+    to create meshes manually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Meshing is the process of taking a collection of feature points and constructing
+    a mesh from it. The generated mesh is then often shaded and rendered into the
+    scene. If we run the sample right now and watch, we will see the surfaces or plane
+    meshes being generated and placed by ARCore. How about we open up the Android
+    sample project again in Android Studio to see where this meshing occurs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ensure that your code is open to where we left off last time. You should be
+    looking at the lines with `mPointCloud`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Scroll down just a little until you see this block of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This block of code just loops through the trackables of type **Plane** (a flat
+    mesh) identified in the session. When it identifies a tracked plane, of the correct
+    type, it hides the loading message and breaks out of the loop.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Then, it renders any planes it identifies with this line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `planeRenderer` helper class is for drawing planes. It uses the `drawPlanes`
+    method to render any of the identified planes the ARCore session has identified
+    using the view and projection matrices. You will notice it passes all the planes
+    in through a call to `getAllTrackables(Plane.class)`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Put your cursor on `drawPlanes` and type *Ctrl *+ *B* (*command* + *B* on Mac)
+    to go to the definition.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now you should see the `drawPlanes` method in the `PlaneRenderer.java` file—don't
+    panic. Yes, there is a lot of scary code here, which, thankfully, is already written
+    for us. As an exercise, just scroll through and read the code. We don't have time
+    to go through it in depth, but reading through this code will give you more insight
+    into the rendering process.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: From the menu, select Run - Run 'HelloArActivity'. Now, as the app runs, pay
+    special attention to the way the surfaces are rendered and how you can interact
+    with them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Okay, now we understand how surfaces are created and rendered. What we also
+    need to understand is how we interact with those surfaces or other objects in
+    the environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interacting with the environment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We know that ARCore will provide us with identified feature points and planes/surfaces
+    it recognizes around the user. From those identified points or planes, we can
+    attach virtual objects. Since ARCore keeps track of these points and planes for
+    us, as the user moves objects, those that are attached to a plane remain fixed.
+    Except, how do we determine where a user is trying to place an object? In order
+    to do that, we use a technique called **ray casting**. Ray casting takes the point
+    of touch in two dimensions and casts a ray into the scene. This ray is then tested
+    against other objects in the scene for collisions. The following diagram shows
+    how this works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/cfe88118-9755-4b72-831f-e7fe6063e945.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Example of ray casting from device screen to 3D space
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You, of course, have likely already seen this work countless times. Not only
+    the sample app, but virtually every 3D application uses ray casting for object
+    interaction and collision detection. Now that we understand how ray casting works,
+    let''s see how this looks in code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open up Android Studio, the sample project, and the `HelloArActivity.java` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Scroll down to the following block of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Read through the comments and pay attention to the highlighted lines of code.
+    The first highlighted line starts a loop based on the number of hits detected
+    in the scene using `frame.hitTest(tap)`. That call is doing the ray casting to
+    determine what objects may be hit by the tap. A **tap** represents the screen
+    touch in 2D.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The next highlighted line is inside the `if` statement that checks which of
+    the ARCore recognized planes are touched. If there is a hit, we first check that
+    the number of `anchors` is less than 20, where each anchor represents an attachment
+    point. Then we add a new `Anchor` to the collection of `anchors` `ArrayList`,
+    with a reference to a new anchor using `hit.createAnchor` .
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Scroll down some more to the following block of code in `onDrawFrame`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Take a quick read through the code. The first highlighted line starts by looping
+    through the `anchor` in the `anchors` list. We then check whether the anchor is
+    being tracked; if it is, we get its pose in the second highlighted line. Then,
+    we draw our `virtualObject` (Andy) in the last lines of code. Note that in this
+    case, we are also drawing shadows.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Change the first line of code to match the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This change will double the size of Andy. Run the app in your device and wait
+    for some surfaces to appear. Then, touch the screen to drop Andy. He should now
+    look double the size.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Touch for gesture detection
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So, that covers simple interactions. How about we add another gesture to allow
+    the user to clear all the attachment points and thus remove the Andy robot from
+    the scene. Follow along the given steps to add another touch gesture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scroll to the following section of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding section of code is in the `onCreate` method of the `HelloArActivity`.
+    It first sets up `gestureDetector` for interpreting the selected touch events.
+    Then, we set a listener with `setOnTouchListener` in order to capture touch events
+    and send them to the gesture detector. Just remember that the listener listens
+    for the touch, and the gesture detector interprets the type of touch. So what
+    we want to do is capture another form of gesture from the user.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following code right after the highlighted section:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That sends our event to a new method, `onLongPressDown`. Let''s add this new
+    method just below the other gesture handling method by adding the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: All that happens inside `onLongPressDown` is the collection of `anchors`, `anchors` is
+    cleared. By clearing the `anchors`, we clear the attachment points and thus any
+    rendering of Andy.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Save the file, connect your device, and run the sample. Try placing a few big
+    Andy's around the scene. Then, use the new long press gesture to remove them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Good, now we have a basic understanding of how we can interact with the environment.
+    In the next section, we will cover some basics of OpenGL ES, the 3D rendering
+    framework we are using for Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing with OpenGL ES
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'OpenGL ES or just GLES is the trimmed down mobile version of OpenGL. OpenGL
+    is a low-level and powerful 2D and 3D drawing API similar to DirectX. Since it
+    is a low-level library, it does require significant knowledge of 2D/3D maths.
+    Again, for our purposes, we will avoid most of the nasty math and just modify
+    some of the drawing code to change the way the sample app functions. What we will
+    do is modify the sample app to change the way objects are drawn. Load up Android
+    Studio with the sample project and let''s get started:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scroll down to the bottom of `PointCloudRenderer.java` and look at the following
+    section of code identified in the following screen excerpt:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/3a74943b-eabf-4290-982a-0c1e5cd97cbf.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: PointCloudRenderer.java open on the draw method
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now the code is straightforward, but a lot of what is going on assumes that
+    the developer has a good foundation in 3D maths and graphic rendering. We don't
+    have time to go through every step, but, essentially, all that the code is doing
+    is drawing the identified point cloud features (those blue points).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When we get to the chapters on Unity, you may start wondering why someone would
+    ever put themselves through the pain of writing an AR app with OpenGL ES. That's
+    a good question. Rendering realistic 3D graphics is all about speed and performance.
+    While Unity does an excellent job at rendering, it still is just another layer
+    of software on top of OpenGL ES. This means that Unity would typically run slower
+    than its native OpenGL ES counterpart. How much slower, really depends on what
+    you are trying to do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Take a look at the identified line in the following excerpt, as shown:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: This line sets the color of the rendered point cloud. It does this by normalizing
+    the RGB color values of `31.0`, `188.0`, and `210.0` by dividing them by `255.0`,
+    thus creating a uniform or normalized color vector of values from 0 to 1. With
+    the last value of `1.0` representing the alpha or transparency, where `1.0` means
+    the color is **opaque** and `0.0` means it is **transparent**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Let''s experiment a little by changing that line of code to the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we will change the size of points we draw so that they are clearly visible,
+    by changing the following line of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Save the file, connect up your device, and then deploy and run the app. As the
+    app runs, note the color of the points now. Is it what you expected?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now, we can clearly see how and where the feature points are being identified.
+    However, we still don't get a lot of information from the point data. What if
+    we color the points based on their distance to the viewer? This will allow us
+    to visualize our environment point cloud with some depth information. Doing this
+    in a low-level API such as OpenGL ES to manually subset points by color will require
+    substantial code changes. Fortunately, we can even go lower and write a program
+    called a **shader** to change the color of the point just before we draw it. We
+    will take a dive in to shader programming in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shader programming
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Shader programming is probably one of the most difficult and low-level development
+    tasks you can do as a graphics programmer. It requires an excellent knowledge
+    of 3D math and the graphics rendering process. Also, writing good shaders is a
+    skill that can take years to master. So why are we covering this in a book that
+    covers fundamentals? Simply put, coding a good shader may be difficult, but it
+    is also extremely rewarding, and it's a skillset that is essential to any serious
+    3D programmer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will be using shaders throughout the rest of this book for many things. If,
+    at this point, you are starting to feel overwhelmed, then take a break and study
+    some 3D math or jump ahead a chapter. Sometimes, you just need time for things
+    to sink in before you get that eureka moment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A shader program runs directly on the **graphic processing unit** (**GPU**)
+    of the device or computer. If the device doesn't have a GPU, then the program
+    is executed on the CPU, which is a much slower process. After all, the GPU has
+    been optimized to run shader code and do it extremely well. In fact, virtually
+    all 3D rendering done on the GPU runs the shader code. When we use Unity, a much
+    higher-level game engine, we will still write our own shaders because of the power
+    and flexibility it gives us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, what does a shader program look like? The following is an example of a
+    shader written in the **OpenGL Shading Language** (**GLSL**):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is the shader program we use for rendering our point cloud points or vertices.
+    Specifically, this shader is responsible for rendering a single vertex for each
+    call to `main`, and it's called a vertex shader. Later in the rendering process,
+    after the 3D scene is flattened to a 2D image with the vertex shaders, we have
+    the opportunity to run a fragment or pixel shader. A fragment shader is run for
+    every pixel/fragment that needs to be rendered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shader programs come in a few variations, but since they all derive from a C
+    language and share so many similar functions, switching from one language to another
+    isn't as difficult as you think. We will, in fact, learn some basics of the GLSL
+    and the form used in Unity called **High Level Shading Language** (**HLSL**),
+    which has its roots in DirectX.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you look in the `main` function, you will see we are setting three variables:
+    `v_Color`, `gl_Position`, and `gl_PointSize`. Those variables are global and just
+    determine the color, size, and position of the vertex. The first line sets the
+    color to an input variable—`u_Color`. Then, the position is calculated by multiplying
+    the `u_ModelViewProjection` matrix with a new vector representing the position.
+    That operation converts our vertex from world space to screen space. Finally,
+    we set the point size with another input—`u_PointSize`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What we want to do is modify that shader program so that it colorizes the points
+    based on the distance from the user. Before we do that, though, let''s take a
+    look at how the shader gets those inputs. Open up Android Studio to `PointCloudRenderer.java`
+    and follow along:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Scroll down to bottom of the `createOnGUIThread` method and look for the following
+    lines:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Those lines of code set up our shader input positions. What we are doing here
+    is determining the indexes we need for injecting data into the array buffer we
+    pass to the shader. We need to add another input, so add the following line at
+    the end of the preceding code snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This line adds another input variable called `u_FurthestPoint`. We need to
+    calculate the furthest point from the user (camera) in order to colorize the points
+    on a gradient. Before we do that, go back to the top of the file and declare the
+    following new variables under the line identified:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remember that `furthestPoint` is an index to the variable and `furthestPointLength`
+    will be used to hold the distance to the furthest point.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Scroll down to the `update` method and enter the following code after the identified
+    line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code first sets our minimum distance (`1`) to `mFurthestPointLength`. Then,
+    we check whether there are any observed points. If there are, we loop through
+    the points in the point cloud. In the loop, we use the `get` method to index into
+    the point buffer and extract the `x`, `y`, and `z` of the points. This allows
+    us to measure the length of the vector with `x`, `y`, and `z` of the point. You
+    make recognize the equation as the Pythagorean theorem, but in 3 dimensions rather
+    than the 2 you may be used to. We then check whether this new length (distance)
+    is greater than the current furthest length with `Math.max`. Keep in mind that
+    this code is run in the `update` method and thus executed every rendered frame.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We calculate the distance between two points in 3D space using the following
+    formulae:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/266792db-feb1-4454-86bb-0a0ca4a6ecfd.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Since our camera (user) is the origin, we can assume that one of our points
+    is (0,0,0), which is equal to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/8e4e34c9-fcd7-40b0-94e6-901180fd4ed4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This becomes the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/b0d0b8bd-d35b-4570-9293-3af04453ac62.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Scroll down to the `draw` method and add the following code beneath the identified
+    line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This call sets the `furthestPointLength` that we calculated in the `update`
+    method to the shader program.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Editing the shader
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Okay, so that''s all the Java code we need to write in order to calculate and
+    set our new distance variable. Next, we want to open up the shader program and
+    modify the code for our needs. Follow the given steps to modify the shader program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the `point_cloud_vertex.shader` file under the `res/raw` folder, as shown:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '>![](img/680efd8c-2119-4b27-bfaf-adef5eae725f.png)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Opening point_cloud_vertex.shader
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Make the highlighted code changes, as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first line of code is new. All we are doing is taking the length of the
+    `a_Position` vector, determining its length or distance to the camera, and then
+    normalizing that value between 0 and 1\. The second line then creates a new `vec4`
+    for color based on our calculations of the `t` variable. This new vector represents
+    the color in the form **red blue green alpha** (**RGBA**), where alpha is set
+    to a constant of `1.0`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Save the file, connect your device, and build and run the app on your device.
+    You should now see the cloud points colorized by distance to the camera, as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/03cccfa8-878f-4ce2-ae57-bd1f10574958.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Screenshot of colored point cloud points by depth
+  prefs: []
+  type: TYPE_NORMAL
+- en: Imagine if we had to write Java code in order to do the same colorization of
+    the points. We would certainly need a lot more code than what we wrote. Also,
+    any Java code we used would certainly be much slower than a shader. Now, for our
+    example, the app's performance is less critical, but when you develop a real AR
+    app, you will want to squeeze all the performance you can; that's why our discussion
+    and knowledge of shaders is so important.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The following exercises are meant to test your skills and the knowledge you
+    just earned in order to build on the work we just completed. Complete the following
+    exercises on your own:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change the color of the tracking line from blue to red, or another color.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Replace the straight line segments with a `SplineCurve`. Hint, you will need
+    to track more than one previous position.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Make the cube and/or audio follow the user along the tracked path. Hint—you
+    can use another `setInterval` timer function to move the box along the path every
+    1.1 seconds (1100 ms).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We began this chapter by first reviewing some concepts on environment tracking
+    and exploring how ARCore keeps track of the environment. Then, we moved on to
+    meshing and how it is used to generate planes and surfaces. From there, we moved
+    on to interacting with the environment, where we saw how a touch gesture is interpreted
+    and converted into a position in a 3D scene. After that, we learned some basics
+    about OpenGL ES and how our point cloud is rendered. We then took a deep dive
+    and introduced the low-level rendering process of shaders. With this, we then
+    modified the point cloud vertex shader in order to colorize the points by distance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lighting is a critical element to the whole illusion of augmented reality. In
+    the next chapter, we will dive back into Unity and learn about light estimation.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,942 @@
+- en: Taking Actions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Handling events is an essential part of any application; they are the raw input
+    data for a user interface and how we interact with our users (rather than just
+    presenting them with data). Android has an event model that will be instantly
+    familiar to anyone who has programmed Java on their desktop--you attach listener
+    objects to the widgets, and they deliver events to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Event listeners in Android take the form of interfaces that you need to implement
+    in order to receive the events. Each possible event type is declared as a method
+    on the relevant interface. To receive a notification that the user has *clicked*
+    or *tapped* on a widget, you use the `OnClickListener` interface, which declares
+    a method--`onClick(View)`--which will be invoked when the relevant widget receives
+    what it considers a click gesture from the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''ll take a look at events on Android, and how best to implement
+    them. Specifically, we''ll be taking a closer look at the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How Android dispatches events, and how it affects your program and user experience
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Different ways to implement event listeners and their pros and cons
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to wrap groups of events into logical classes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to make events always happen quickly
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Understanding Android event requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android has a number of requirements around events delivered from the user
+    interface that are important to be aware of, because they directly affect the
+    user''s experience and the perceived performance of your application. Android
+    runs the **main** thread of an application as an event loop, rather than having
+    a separate **event loop** or **event dispatcher** thread. This is an extremely
+    important concept to understand, because this thread and event queue are shared
+    between the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the events from the user interface
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The drawing requests from the widgets, where they paint themselves
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The layout system and all the calculations for positioning and sizing widget
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A variety of system-level events (such as network state changes)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This makes the *main* thread of the application a precious resource--every
+    frame of an animation has to run through this event loop as a separate event,
+    as does every layout pass, and every event from the user interface widget. On
+    the other side of this contract, there are three other important factors to know
+    and understand:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All method calls to user interface elements must be done on the main thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: No networking is allowed on the main thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Every event *slice* on the main thread is externally timed, and long-running
+    events may cause your application to be terminated through an Application Not
+    Responding dialog displayed to the user (which is as bad as crashing in most cases)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: So, it's vital that we have models in place to avoid using the main thread more
+    than is absolutely required. Every time you run something on the main thread,
+    you're taking time away from vital systems such as graphics rendering and input
+    events. This will cause your application to appear to stutter and become unresponsive.
+    Fortunately, Android has many utilities to help, and there are a few extra steps
+    that can be taken as a developer, which will reduce the complexity and help ensure
+    the best possible user experience.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Listening for some events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When listening for user-interface events in Android, you''ll typically hook
+    up a listener object of some sort to the widgets you want to receive events on.
+    However, how the listener object is defined may follow a number of different patterns,
+    and listeners can take a number of different forms. You''ll often see a simple
+    anonymous class being defined as the listener, which is something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'However, while this pattern is common (especially because the much shorter
+    lambda syntax was only introduced in Java 8, and Android didn''t properly support
+    it until 2017), it''s not always your best choice for several reasons:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This anonymous class is not reusable at all. It serves one purpose, for a single
+    object in the entire application.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You just allocated a new object that will also need to be garbage collected.
+    This is not a big deal, but can sometimes be avoided or minimized by grouping
+    listeners into classes that handle multiple related events.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Any local variables from `onCreate` that are captured by the anonymous inner
+    class must have references copied over into the new class as fields. You don't
+    see this happen, but the compiler does it automatically (it's why the fields must
+    be final).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'If Java 8 is available on your project, you can, of course, use lambdas, and
+    shorten the syntax. However, this still results in an anonymous inner class being
+    created. Another pattern for listening for events is to have the class that contains
+    the layout (typically an `Activity` or `Fragment`) implement the listener interfaces,
+    and use a `switch` statement to handle events from different widgets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This has two advantages: there are no new listener objects, and all the layout
+    and event logic is now encapsulated within the `Activity` class. The `switch`
+    statement carries a tiny overhead, but as the layout increases in size, it becomes
+    a lot of boilerplate to maintain and somewhat encourages you to place simple event
+    code directly into the `onClick` method, instead of always just dispatching to
+    another method. This simple event code almost always leads to more complex event
+    code, and eventually to a horrible mess in your code base.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, what is the right way to handle events? The answer is that there isn''t
+    one, but when deciding how to handle events, you should always consider how you
+    will reuse the event handler code--don''t repeat yourself. For the date selection
+    widget from the last chapter, the expectation is that when the user taps on the
+    date, they will see a calendar dialog open, allowing them to choose a new date.
+    This will need an event handler, and such a handler should be reusable since you
+    may want it elsewhere, so follow these steps to build the date-picker event listener:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Right-click on your default package (that is, `com.packtpub.claim`) and select
+    New| Java Class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/3b39a6a6-872e-41ca-b8a7-ec5badc6ee32.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Name the new class `ui.DatePickerWrapper`; Android Studio will create a new
+    package named `ui` automatically and place `DatePickerWrapper` inside it.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the Interfaces list, add the following listener interfaces (use commas "`,`"
+    to separate the interfaces):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`android.view.View.OnClickListener`: To receive an event when the user taps
+    on the date picker'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.view.View.OnFocusChangeListener`: To receive an event if the date
+    picker receives keyboard focus; this is important to handle if the user chooses
+    to navigate the form using the "next" button on the keyboard, or has a physical
+    keyboard attached to their device'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.app.DatePickerDialog.OnDateSetListener`: To receive an event when
+    the user selects a new date from `DatePickerDialog`:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '![](img/45838db5-91bb-4c6e-b3a1-bb60ae7cbb3a.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Click OK to create the new package and class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'If Android Studio has not created the skeleton methods for the listeners, select
+    class name as `DatePickerWrapper` in the source, and use the code assistant to
+    implement the methods:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/9cceaca6-0ba5-425b-9a6a-eb28cb70d41e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Now you''ll need a way to format the date string for the user, and it should
+    be localized, so declare a `java.text.DateFormat` for this purpose:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This class is a wrapper, and will also need some fields to keep track of what
+    it is wrapping, namely, the `TextView`, where it will display the date to the
+    user (and where the user can tap to open the date picker dialog), an instance
+    of `DatePickerDialog` to display to the user, and the currently selected/displayed
+    `Date`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we need a simple constructor that will capture `TextView` for display,
+    and set it up as a date display and configure the events:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we''ll need getter and setter-like methods to change and retrieve the
+    state of the date picker:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before we can actually handle the event, we need a method to display `DatePickerDialog`
+    that will allow the user to change the date:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we need to complete the event listener methods so that when the user
+    selects the displayed date, we open the `DatePickerDialog`, allowing them to change
+    the selected date:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we need to handle the event that comes back from the `DatePickerDialog`,
+    indicating that the user has chosen a date:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now you have a class that can turn any `TextView` object into a space where
+    the user can select a date via the standard `DatePickerDialog`. This is an ideal
+    example of a good place to encapsulate events; you actually have three different
+    event handlers that perform a related group of actions, and maintain user interface
+    state in a single class that can be reused throughout your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wiring the CaptureClaimActivity events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that we have a way for the user to pick a date for their travel expense
+    claims, we need to actually wire it into the `CaptureClaimActivity`, which is
+    where all the logic and wiring for the screen will live. To start wiring the events
+    for the `CaptureClaimActivity`, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the `CaptureClaimActivity.java` file in Android Studio.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now, declare a new field in the class (before the `onCreate` method) for the
+    `DatePickerWrapper` that you wrote (Android Studio can help by writing the import
+    for you):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You''ll note that (by default) the `FloatingActionButton` object is wired up
+    with a simple anonymous event handler that will look something like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is how many once off events get wired up (as discussed earlier in this
+    chapter), but it's not what we want to do here, so remove that entire block of
+    code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the end of the `onCreate` method instantiate the `DatePickerWrapper` object
+    by searching for the `date` `TextView` you added to the layout:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: You don't need to hold any other references to the `date` `TextView`, since
+    you'll only ever need to access it through the `DatePickerWrapper` class. Try
+    running your application now, and see how the date picker works.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the application, you''ll note that you can select the category icons, and
+    they will work exactly as expected. However, the label following them isn''t wired
+    up at all, and no labels will be displayed, leaving the user confused as to what
+    they are actually selecting. To fix this, you''ll need another event listener
+    that sets the content of the label when the state of the `RadioButton` widgets
+    is changed. This is another case where a specialized listener class will make
+    sense; since it''ll be usable anytime, you have a group of icon `RadioButton`
+    widgets and a single label for all of them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Right-click on the `ui` package and select New | Java Class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the new class as `IconPickerWrapper`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add `android.widget.RadioGroup.OnCheckedChangeListener` to the interfaces box.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a field for the `TextView` label, and a constructor to capture it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add a method to set the label text content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Complete the `onCheckedChange` method to set the label text from the `contentDescription`
+    field of the selected `RadioButton`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is a very straightforward class, but it also potentially serves other
+    purposes in your application, and it only makes two assumptions about the `RadioGroup`
+    it will be connected to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every `RadioButton` has a valid ID
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Every `RadioButton` has a `contentDescription` that will serve as a text label
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Going back to `CaptureClaimActivity`, you''ll want to wire this new listener
+    into the layout through the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before the `onCreate` method, create a new field to keep track of the `RadioGroup`,
+    where the user can select the category icon:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, at the end of the `onCreate` method, you''ll need to find this `RadioGroup`
+    in the layout, and instantiate its event handler:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, set the default selection to `other`; this action will also trigger
+    the event handler before the screen is presented to the user. This means the label
+    will also be populated when the user first sees the Capture Claim screen:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now if you run the application again, you'll see the labels defined to appear
+    beneath the selected icons as you toggle through the category icons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling events from other activities
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: On Android, you'll often find that you want to send your user to another `Activity`
+    to do something, and then return them to your current `Activity` with the result
+    of that action. Good examples are having the user pick a contact, or take a photo
+    with the camera app. In these cases, Android uses a system of special events that
+    are built into the `Activity` class. For capturing travel expense claims, your
+    user needs to be able to go select a file to attach things such as photos or email
+    attachments to their claim.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to present them with a familiar file chooser (and avoid writing a file
+    chooser ourselves), you'll need to use this mechanism. However, to read files
+    from outside of your application's private space, you'll need it to ask the user
+    for permissions. Anytime an application needs access to potentially sensitive
+    data (public directories, the device's camera or microphones, contact list, and
+    so on), you need permission from the user. In versions of Android prior to 6.0,
+    this was done during installation; the application declared what permissions it
+    needed, and the user could choose to not install it. However, this mechanism isn't
+    very flexible to users, and was changed in 6.0 so that applications must now ask
+    for permission at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to access the user''s files, the application will both declare that
+    it requires the permission, and will also include the code to ask for permission
+    while it''s running (covering both cases):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the `CaptureClaimActivity` class, and make the class implement the `View.OnClickListener`
+    interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Create two new constants to hold the request codes. Anytime your user leaves
+    your current `Activity`, and you are expecting a result, you need a request code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `onCreate` method, find the line where the Android Studio template captures
+    the `FloatingActionButton`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Rename the button to `attach`, as follows (use the Android Studio refactoring
+    to change the ID, and the ID in the layout file will be changed as well):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, set `OnClickListener` for the `FloatingActionButton` to `Activity`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, at the end of the `CaptureClaimActivity`, implement the `onClick` method,
+    and delegate the click from the `FloatingActionButton`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Your application will need permission to read the content from outside its
+    own private space. Open the `manifests` folder in the file browser, and open the
+    `AndroidManifest.xml` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/5210edbb-3122-4226-bd6d-1cddd9927762.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'At the top of the file within the `manifest` element, but before the application
+    element, add the following permission declaration:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The preceding permission only works for versions of Android where permissions
+    were requested during installation; on Android 6.0 and newer, you need to check
+    and request permissions at runtime. Doing this when the user taps on the `FloatingActionButton`
+    to attach a file is the best time, as this is just before they actually choose
+    a file that you will need permission to read. Implement the `onAttachClick` method,
+    starting with a check for the permission, and request the permission if it''s
+    not already granted:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now the app can request that the system start an `Activity`, allowing the user
+    to choose any openable file. This is where the `REQUEST_ATTACH_FILE` constant
+    you defined earlier starts getting used:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we failed the preceding permission check, the system will have launched
+    a dialog asking whether the user would grant permission to access external files.
+    When the user returns from this dialog, a method named `onRequestPermissionsResult`
+    will be invoked. Here, you need to check whether they granted your request, and
+    if so, you can simply trigger the `onAttachClick()` method to continue the process
+    smoothly:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now when the system returns from the file chooser `Activity`, it will invoke
+    a method called `onActivityResult`, which is very similar in structure to the
+    `onRequestPermissionResult` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding `onActivityResult`, you simply check whether it''s responding
+    to your request to attach a file, and then delegate the rest to a method that
+    will need to handle the resulting data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Verify that the `resultCode` was okay and that the data is valid:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For now, you''ll just want a `Toast` to pop up showing that this code has run;
+    later, you can build the complete logic to attach the selected file. A `Toast`
+    is a small message that appears and then disappears with no user interaction,
+    perfect for temporary messages or debugging:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, if you run the application and tap on the floating action *attach* button,
+    you''ll be rewarded with a permission request (if you''re running Android 6 or
+    higher, on earlier versions the permission is granted as part of the installation),
+    and then the option to select a file with whatever file selection systems you
+    might have available on your emulator or device. Once you have chosen a file,
+    you''ll be returned to the `CaptureClaimActivity` and the selected `Uri` will
+    be displayed in a `Toast` message on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/2278ca49-4dbc-4f1a-8529-437fb5493b50.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: This might not look like much, but it's all you need to access the file later
+    on and attach it to the claim that the user is capturing. When you need to send
+    your user to another Activity, you're hooking into Android's `Activity` to `Activity`
+    messaging systems through methods such as `onActivityResult` and `onRequestPermissionsResult`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making events quick
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android places very strict limits on the use of threads in applications: every
+    application has a main thread, where all user-interface related code must run,
+    but any long-running code will cause an error. Any attempt at networking on the
+    main thread will result in a `NetworkOnMainThreadException` immediately, as networking
+    by its very nature will block the main thread for too long, making the application
+    unresponsive.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This means most tasks that you will want to perform should take place on a background
+    worker thread. This will also provide you with a form of isolation from the user
+    interface, as typically you will capture the user interface state on the main
+    thread, pass the state to the background thread, process the event and then, send
+    the result back to the main thread where you will update the user interface. How
+    do we know that the state we capture will be consistent? The answer is that because
+    user interface code can only run on the main thread, while you read the state
+    of the widgets, any events that would change their state are blocked until you
+    are finished (because they must also occur on the main thread). The message queue
+    and threading rules avoid the need for locks and other thread protection mechanisms
+    by ensuring that only one unit of code (in the form of a message) is processed
+    at a time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android tasks that require larger amounts of background processing time are
+    usually written using the `AsyncTask` class provided by the Android platform (or
+    one of its child classes). `AsyncTask` has methods for running code on a background
+    worker, and publishing status updates to the main thread (and receiving these
+    update messages), along with several other utility structures. This makes it ideally
+    suited to tasks such as downloading large files, where the user needs to be kept
+    informed of the download's progress. However, most event handlers you will implement
+    won't need anywhere near to this level of complexity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Most event handlers are relatively lightweight, but that doesn''t mean that
+    it will perform quickly on all devices in all situations. You can''t control what
+    else the user is busy doing with their device, and a simple database query can
+    end up taking much longer than expected. As such, it''s better to push event processing
+    to background threads wherever the event is not purely a user-interface update
+    (that is, showing a dialog or similar). Even fairly small tasks should be moved
+    to a background thread so that the main thread can continue consuming the user''s
+    input; this will keep your application responsive. Here''s the pattern you should
+    try and follow when implementing event handlers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**On the Main Thread**: First, capture any required parameters'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**On a Background Worker**: Process the user''s event and data'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**On the Main Thread**: End by updating the user interface with the new state'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'If you keep to this pattern, the application will always appear responsive
+    to your users, since processing their data isn''t stopping their events from being
+    processed (events which may be them scrolling through a large list, for example).
+    However, `AsyncTask` is not a great fit for these smaller events (such as attaching
+    a file to a claim), so here''s how to write a simple class (in a similar style
+    to the command pattern) that will run first some code on the background and then
+    pass the result of that code to another method on the main thread, perfect for
+    carrying out smaller events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Right-click on your root package (that is, `com.packtpub.claim`) and choose
+    New| Java Class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the class `util.ActionCommand`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Change the Modifiers to make the new class `Abstract`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click OK to create the new package (`util`) and class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Change the class definition to include generic parameters for a "parameter"
+    and a "returned" type:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the top of the new class, create a static constant that refers to the application
+    main thread via an `android.os.Handler` object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: A `Handler` object is how you gain access to another thread's message-queue
+    in Android. In this case, any message or `Runnable` object posted to this `Handler`
+    will be run on the main thread as soon as possible. You can also post tasks to
+    be run at specific times or after a specified delay. This is the preferred method
+    of creating timers on Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create three method declarations for running code on the background worker,
+    the main thread, and one for handling errors (with a default implementation):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, create two variations of an exec method that will be used to start the
+    `ActionCommand` objects. The first one uses the standard `Executor` provided by
+    `AsyncTask` that uses a single background thread to process tasks (this is the
+    most common behavior you will want in an application):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding method, we submit an `ActionCommandRunner` object to the background
+    `Executor` object; this is a `private` inner class that will carry the state between
+    the background and main thread, which keeps the `ActionCommand` classes reusable
+    and stateless:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`ActionCommandRunner` will be in one of the three possible states: background,
+    foreground, or error. Declare three constants as names, and a field to keep track
+    of which state the object is in:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, you''ll need fields for the `ActionCommand` being run, and the current
+    value. The `value` field is a catch-all in this class holding either the input
+    parameter, the output from the background code, or the `Exception` thrown from
+    the background code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, create methods to handle each of the `ActionCommandRunner` states:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, create the `run` method that will call the preceding `onBackground`,
+    `onForeground` or `onError` method depending on the current execution state of
+    `ActionCommandRunner`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: This class makes it very easy to create and reuse small tasks, which can be
+    extended, composed, mocked, and tested in isolation. It's a good idea whenever
+    creating a new event handler to consider a command pattern or something similar
+    so that the event isn't coupled to the widget or even the screen that you are
+    busy with. This allows for better code reuse, and keeps code easier to test since
+    you can test the event handler without the screen that it will be part of later.
+    You can also make these classes even more modular by writing them as `abstract`
+    classes with only their `onBackground` methods implemented, allowing the result
+    to be processed in different ways by subclasses.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multiple event listeners
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Unlike many other event systems, however, many Android components only allow
+    a single event listener of certain types; this diverges from platforms such as
+    Java desktop, or JavaScript in the browser, where any number of **click** listeners
+    can be attached to a single element. In Android, click listeners are almost always
+    **set** rather than **added**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is actually a clever tradeoff--having multiple listeners for each event
+    means that you need at least an array of them; the array needs to be sized and
+    copied when it runs out of space, while it's actually very seldom that multiple
+    listeners are needed. Multiple listeners also means that the widgets must traverse
+    the list every time they want to dispatch events, so sticking to a single listener
+    simplifies the code, and reduces the amount of required memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you ever find yourself needing more than one listener for an event and widget
+    that only provides a single listener slot, simply write a simple delegate class,
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding pattern allows compact and flexible multilistener delegation in
+    the cases where you might need it. The `CopyOnWriteArrayList` class is an ideal
+    listener container, as its internal array is only ever as large as the number
+    of elements, so it remains compact (rather than having a buffer space like `ArrayList`
+    and similar implementations).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Test your knowledge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: What's the best way to implement event handlers?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: As an anonymous inner class
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By making the `Activity` a listener
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As a class per listener
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There isn't one
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: What are the conditions for any methods that change the state of a user-interface
+    widget?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: They must be called from a background thread
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They must be thread-safe
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They must be called from the main thread
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They must be called from the graphics thread
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Code running as part of an event handler should fulfill which of the following
+    conditions?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Be surrounded by a synchronized block
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Run as quickly as possible
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Only interact with the user interface
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When requesting data from another `Activity`, the data is returned through which
+    of these?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: An event listener you add to the `Activity` object
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A callback on your `Activity` object
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A message placed on your application's message queue
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android uses several different mechanisms when delivering events within its
+    applications, each one tailored to the type of event being delivered and the intended
+    recipient of the event. Most user-interface events are delivered to a single listener
+    registered to each widget, but that doesn't stop the same listener from handling
+    multiple event types from different widgets. This sort of design will reduce the
+    load on the system and the amount of memory used, and will often help in producing
+    more reusable code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Event handlers are often written badly and become anonymous inner classes that,
+    while starting life as a simple delegate to another method, eventually become
+    bloated and unmaintainable blocks of code. It's often better to isolate the event
+    handlers from their environment from the beginning as this encourages them to
+    be reused, and makes them easier to test and maintain. Some event handler classes
+    (such as `DatePickerWrapper`) handle different types of events in a way that is
+    related, allowing for a single class to encapsulate a small, reusable bit of logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll explore more of how to build reusable and more easily
+    testable user interfaces, by breaking down user interfaces into smaller components.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1156 @@
+- en: '8'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Persisting Data Locally and Doing Background Work
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To provide better user experiences, we must ensure that apps don’t fetch data
+    every time the user opens the app. At times, the user can be in areas that do
+    not have internet access, and this can be very frustrating when the user can’t
+    use your app in such situations. For such scenarios, we have to store data locally.
+    We also have to store and update the data in an efficient way that doesn’t drain
+    the device’s battery or block the user from doing other things on the app. In
+    this chapter, we will be exploring how to do so for our apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will learn how to save data to a local database, **Room**,
+    which is part of the Jetpack libraries. We will be able to save items and read
+    from the Room database. Additionally, we will learn how to do long-running operations
+    using **WorkManager** and some of the best practices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we’re going to cover the following main topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Saving and reading data from a local database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Handling updates and migrations in the Room database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using WorkManager to schedule background tasks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing your workers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To follow the instructions in this chapter, you will need to have Android Studio
+    Hedgehog or later ([https://developer.android.com/studio](https://developer.android.com/studio))
+    downloaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use the previous chapter’s code to follow the instructions in this chapter.
+    You can find the code for this chapter at [https://github.com/PacktPublishing/Mastering-Kotlin-for-Android/tree/main/chaptereight](https://github.com/PacktPublishing/Mastering-Kotlin-for-Android/tree/main/chaptereight).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Saving and reading data from a local database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We are going to build up on the Pets app, which displays a list of cute cats.
+    We will save our cute cats in a local database, Room, which is a part of the Android
+    Jetpack libraries and provides a wrapper and abstraction layer over SQLite. We
+    will also use the `ViewModel`. The Room database provides an abstraction layer
+    over SQLite to allow fluent database access while harnessing the full power of
+    SQLite. It also has inbuilt support for Kotlin coroutines and flows to allow for
+    asynchronous database access. Room is also compile-time safe and hence any errors
+    in SQL queries are caught at compile time. It allows us to do all this with concise
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use Room in our project, we need to add its dependency to our `libs.versions.toml`
+    file. Let us start by defining the Room version in the `versions` section as the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, let us add the dependencies in our `libraries` section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Sync the project for the changes to be added. Before we add these dependencies
+    to the app level `build.gradle.kts` file, we need to set up an annotation processor
+    for the room compiler. Room uses the `build.gradle.kts` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have added the `build.gradle.kts` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This allows us to use KSP in our app module. To finalize setting up Room, now
+    let us add the dependencies we declared earlier to the app level `build.gradle.kts`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have added our Room dependencies and the Room KTX library with the `implementation`
+    configuration and the Room compiler with the `ksp` configuration. We are now ready
+    to start using Room in our project. Let us start by creating an entity class for
+    our `Cat` object. This will be the data class that will be used to store our pets
+    in the database. Inside the `data` package, create a new file called `CatEntity.kt`
+    and add the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This data class represents the Room table for our cats. The `@Entity` annotation
+    is used to define the table for our cats. We have passed the `tableName` value
+    to specify the name of our table. The `@PrimaryKey` annotation is used to define
+    the `tags`, which is a list of strings. Room provides functionality to save non-primitive
+    types using the `@TypeConverter` annotation. Let us create a new file named `PetsTypeConverters.kt`
+    and add the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This class has two functions annotated with the `@TypeConverter` annotation.
+    The first function converts a list of strings to a string. The second function
+    converts a string to a list of strings. We have used the Kotlinx serialization
+    library to convert the list of strings to a string and vice versa. This class
+    will be referenced in our database class that we will create shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We are now ready to create our database. We need to create a `data` package,
+    create a new file called `CatDao.kt` and add the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The interface is annotated with the `@Dao` annotation to tell Room that we will
+    use this class as our DAO. We have defined two functions in our DAO. The `insert`
+    function is used to insert a cat into our database. Notice that this is a `suspend`
+    function. This is because we will be using coroutines to insert the cats into
+    our database. Inserting items into the database needs to happen on a background
+    thread since it is a resource-intensive operation. We also use the `@Insert` annotation
+    with the `onConflict` parameter set to `OnConflictStrategy.REPLACE`. This tells
+    Room to replace the cat if it already exists in the database. The `getCats` function
+    is used to get all the cats from our database. It has the `@Query` annotation,
+    which is used to define a query to get the cats from our database. We are using
+    `Flow` to return the cats from our database. `Flow` is a stream of data that can
+    be observed. This means that every time we update the database, the changes will
+    be emitted to the view layers immediately without us doing any extra work. Cool,
+    right?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We now need to create our database class. Inside the `data` package, create
+    a new file called `CatDatabase.kt` and add the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have defined an abstract class that extends the `RoomDatabase` class. We
+    passed the `entities` parameter to specify the entities or tables stored in our
+    database. We have also passed the `version` parameter to specify the version of
+    our database. We have used the `@TypeConverters` annotation to specify the type
+    converters that we will be using in our database. We have also defined an abstract
+    method that returns our `CatDao`. We need to provide an instance of the database
+    to classes that need it. We will do this by using the dependency injection pattern
+    we have been using in our project. Let us head over to the `di` package and in
+    the `Module.kt` file, add the Room dependency just below the Retrofit dependency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: First, we have created a single instance of our database. We have used the `databaseBuilder`
+    method to create our database. We have passed the `androidContext()` method from
+    Koin to get the context of our application. We have also passed `CatDatabase::class.java`
+    to specify the class of our database. We have also passed the `name` of our database.
+    We have then created a single instance of our `CatDao`. We are using the `get`
+    method to get the instance of our database and then calling the `catDao` function
+    to get our `CatDao`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our database is now ready to be used in our repository. We are going to modify
+    `PetRepository` and its implementation to be able to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Save items to our database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Read items from our database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Change our `getPets()` function to return a `Flow` of pets
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The modified `PetRepository.kt` file should look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have modified the `getPets` function to return a `Flow` of pets. Room does
+    not allow database access on the main thread, therefore, our queries have to be
+    asynchronous. Room provides support for observable queries that read data from
+    our database every time data in our database changes and emits new values to reflect
+    the changes. This is the reason we return a `Flow` instance type from the `getPets`
+    function. We have also added the `fetchRemotePets` function to fetch the pets
+    from the remote data source. Let us now modify `PetRepositoryImpl.kt` with a few
+    changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have made the following changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have added the `catDao` property to the constructor of the class.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have modified the `getPets` function to return a `Flow` of pets. Additionally,
+    we have added a `map` operator to map `CatEntity` to a `Cat` object. We have also
+    added an `onEach` operator to check if the list of pets is empty. If it is empty,
+    we call the `fetchRemotePets` function to fetch the pets from the remote data
+    source. This provides an **offline first experience** to our users; that is, we
+    first check if we have the data in our database and if we don’t, we fetch it from
+    the remote data source.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Lastly, we have modified the `fetchRemotePets` function that fetches the pets
+    from the remote data source. When the response is successful, we map the response
+    to a `CatEntity` instance type and insert it into our database.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We need to update the `PetsRepository` dependency in our `Module.kt` file to
+    add the `CatDao` dependency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In our `PetsRepositoryImpl` class, we have been able to read and fetch data
+    from the Room database. Next, we are going to modify the `getPets()` function
+    in `PetsViewModel` to accommodate these new changes. Head over to the `PetsViewModel.kt`
+    file and modify the `getPets()` function to look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have made a few minor changes. We have used the `asResult()` extension function
+    to convert the `Flow` of pets to a `Flow` of `NetworkResult`. This is because
+    we are now returning a `Flow` of pets from our repository. The rest of the code
+    remains the same as before. We will get an error since we have not created the
+    `asResult()` extension function. Let us create it in our `NetworkResult.kt` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is an extension function on the `Flow` class. It maps a `Flow` of items
+    to the `NetworkResult` class. We can now head back to our `PetsViewModel` class
+    and add the extension function imports to resolve the error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The last change we need to make is to provide the application context to our
+    Koin instance in the `Application` class. Head over to the `ChapterEightApplication.kt`
+    file and modify the `startKoin` block to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have provided the application context to our Koin instance. Now, we can run
+    the app. You should see the list of cute cats.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.1 – Cute cats](img/B19779_08_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.1 – Cute cats
+  prefs: []
+  type: TYPE_NORMAL
+- en: The app still works as before, but now we are reading items from the Room database.
+    If you turn off your data and Wi-Fi, the app still shows the list of cute cats!
+    Amazing, isn’t it? We have been able to make the app work offline. One of the
+    benefits of having an architecture in place for our app is that we can change
+    the different layers without necessarily affecting the other layers. We have been
+    able to change the data source from the remote data source to the local data source
+    without affecting the view layer. This is the power of having a good architecture
+    in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We know how to insert and read data from our Room database, but what about updating
+    it? In the next section, we will learn how to update the data that is in our Room
+    database. In the process, we will also learn how to migrate from one database
+    version to the other using the Room **automated** **migration** feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling updates and migrations in the Room database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`FavoritePetsScreen` doesn’t have any functionality yet. We are going to add
+    the functionality to favorite pets and update this information in the Room database.
+    To achieve this, we need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Set up a Room schema directory.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add a new column to our `CatEntity` class to store the favorite status of the
+    cat.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add a new function to `CatDao` to update the favorite status of the cat.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Update our UIs with a favorite icon and, once clicked, update the favorite status
+    of the cat. This means the ViewModel and repository classes will also be updated
+    in the process.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let’s get started with the steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us start by setting up the schema directory. In our app level `build.gradle.kts`
+    file, add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Do a Gradle sync and then build the project. This generates a `schema json`
+    file with the name of the current database version as shown in the following figure:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Figure 8.2 – Room schema directory](img/B19779_08_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.2 – Room schema directory
+  prefs: []
+  type: TYPE_NORMAL
+- en: As shown in the preceding image, you have to switch to the `CatEntity` interface
+    to store the favorite status of the cat.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will add this field to the `CatEntity` and the `Cat` data classes. Head
+    over to the `CatEntity.kt` file and add a new field called `isFavorite`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This is a Boolean whose default value is `false`. We have used the `@ColumnInfo`
+    annotation to specify the default value of the column in our database, too. We
+    will use this field to store the favorite status of the cat. Ensure you add the
+    `val isFavorite: Boolean = false` field to the `Cat` data class, too. We now need
+    to update our `CatDao` class to be able to update the favorite status of the cat.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Let us head over to the `CatDao.kt` file and add the following functions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We have two functions here. The first function will be used to update the favorite
+    status of the cat. We have used the `@Update` annotation to tell Room that this
+    function will be used to update the `CatEntity` class in our database. The second
+    function will be used to get the favorite cats from our database. We have used
+    the `@Query` annotation to define the query to get the favorite cats from our
+    database. We have used `Flow` to return the favorite cats from our database. Now,
+    we need to add a migration to our database to add the new column to our database.
+    This ensures that we don’t lose any data when we update our database. `CatDatabase`
+    to add `autoMigration` as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We have added the `autoMigrations` parameter to our database. We have passed
+    a list of `AutoMigration` objects to the parameter. We have passed the `from`
+    and `to` parameters to specify the version of our database. Ensure you add the
+    imports for the `AutoMigration` class. Notice that we have also increased the
+    `version` of our database. This is because we have added a new column to our database.
+    Build the project to be able to generate the `schema json` file. You should see
+    a new schema JSON file with the name of the new database version. Our schema directory
+    should look like the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Figure 8.3 – Updated Room schema directory](img/B19779_08_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.3 – Updated Room schema directory
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we open the `2.json` file, we will notice that the new `isFavorite` column
+    has been added to our table. That it’s for automated migration. We are now ready
+    to update our repository to be able to update the favorite status of the cat.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us head over to the `PetsRepository.kt` file and add the following functions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `updatePet(cat: Cat)` and `getFavoritePets()` functions will be used to
+    update the favorite status of the cat and get favorite cats.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us add the implementation of the two functions in our `PetsRepositoryImpl.kt`
+    class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here is an explanation of the functions:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: In the `updatePet` function, we have used the update method of our `CatDao`
+    interface to update the favorite status of the cat. We have also used `withContext`
+    to ensure that the update runs on a background thread. We have created a new `CatEntity`
+    class from the `Cat` object that we have passed to the function.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the `getFavoritePets` function, we have used the `getFavoriteCats` function
+    from our `CatDao` interface to get the favorite cats from our database. We have
+    also mapped the list of `CatEntity` to a list of `Cat`. We then returned a `Flow`
+    instance type of favorite cats.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In the `PetsRepositoryImpl.kt` file, we need to update the `fetchRemotePets`
+    and `getPets` functions to update the favorite status of the cat as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We add the `isFavorite` parameter to the `Cat` object when we are mapping the
+    `CatEntity` class to a `Cat`. This will ensure that we have the favorite status
+    of the cat when we are fetching the cats from the remote and local data sources.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Let us head over to the `PetsViewModel` class and add the following variables
+    below the `petsUIState` variable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have created a private `MutableStateFlow` of favorite cats and a public
+    `StateFlow` of favorite cats. We will use the `_favoritePets` variable to update
+    the favorite cats and the `favoritePets` variable to observe the favorite cats.
+    This pattern is normally recommended to prevent exposing mutable states to the
+    view layer.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, let us add these two functions below the `getPets()` function in the
+    `PetsViewModel`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `updatePet` function will be called from the UI to update the favorite status
+    of the cat. The `getFavoritePets` function will be called from the UI to fetch
+    the favorite cats from our database. We collect the favorite cats from our database
+    and update the `_favoritePets` variable. With these changes, we are now ready
+    to make changes to our views to be able to favorite a cat and see a list of favorite
+    pets.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We will start by adding our favorite icon to the `PetListItem` composable.
+    Let us head over to the `PetList.kt` file and update the `PetListItem` composable
+    to be the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We have added the `Icon` composable to the `PetListItem` composable. We have
+    used the `Icons.Default.Favorite` icon if the cat is favorited and the `Icons.Default.FavoriteBorder`
+    icon if the cat is not favorited. We have also used the `tint` parameter to change
+    the color of the icon depending on the favorite status of the cat. `Icon` is now
+    inside a `Row` together with `FlowRow`, which displays a list of tags. We have
+    also added the `onFavoriteClicked` parameter to the `PetListItem` composable.
+    We have used this parameter to update the favorite status of the cat.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Let us update the `PetList` composable to add a new callback parameter called
+    `onFavoriteClicked` and pass the parameter to the `PetListItem` composable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, we will add the `onFavoriteClicked` callback as a parameter to the `PetsScreenContent`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can now pass the parameter to the `PetList` composable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Let us update the `PetAndDetails` composable to add the `onFavoriteClicked`
+    parameter:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can now pass the parameter to the `PetList` composable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Back in the `PetsScreenContent.kt` file, we need to pass the `onFavoriteClicked`
+    parameter to the `PetListAndDetails` composable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The final `PetScreenContent.kt` file with all the changes we have made so far
+    should look like this:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Figure 8.4 – Updated PetscreenContent](img/B19779_08_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.4 – Updated PetscreenContent
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, in the `PetsScreen` composable, which is in the `PetsScreen.kt` file,
+    we need to add the `onFavoriteClicked` parameter to the `PetsScreenContent` composable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We have passed the `onFavoriteClicked` callback to the `PetsScreenContent`
+    composable. We have called the `updatePet` method of our `PetsViewModel` class
+    with the updated cat object. Let us run the app; it now has a new favorite icon.
+    If we click on the icon, the icon changes to a filled heart icon with a red color:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Figure 8.5 – Cute cats with favorite](img/B19779_08_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.5 – Cute cats with favorite
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lastly, we are going to update `FavoritePetsScreen` to display a list of favorite
+    cats. Let us head over to the `FavoritePetsScreen.kt` file and update the `FavoritePetsScreen`
+    composable to be the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here is an explanation of the changes:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: We have added a new parameter, `onPetClicked` to the `FavoritePetsScreen` composable.
+    We will use this parameter to navigate to the `PetDetailsScreen` composable.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have created a new instance of our `PetsViewModel` class using the `koinViewModel()`
+    method.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have called the `getFavoritePets` function from our `PetsViewModel` class
+    to get the favorite cats from our database. We used `LaunchedEffect` to call this
+    method when the composable was first launched. This is to ensure that we do not
+    call the function every time the composable recomposes.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have a new variable called `pets`, which is a `StateFlow` of favorite cats.
+    We have used the `collectAsStateWithLifecycle` method to collect the favorite
+    cats from our database. This method is lifecycle aware and hence it will only
+    collect the favorite cats when the composable is active.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We have added a check to see if the list of favorite cats is empty. If it is
+    empty, we display a message to the user. If it is not empty, we display a list
+    of favorite cats.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We need to update the `AppNavigation.kt` file to pass the `onPetClicked` callback
+    to the `FavoritePetsScreen` composable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This logic is like what we had in the `PetsScreen` and it handles navigation
+    to `PetDetailsScreen` when we are in `FavoritePetsScreen`. Build and run the app.
+    Tap the favorite icon on the bottom bar and you should see a list of your favorite
+    cute cats. If you tap the favorite icon, the cat is immediately removed from the
+    list of favorite cats. This is because the list of favorite cats is a `Flow` and
+    every time Room updates the data, they are immediately emitted to the view layer.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Figure 8.6 – Favorite Pets Screen](img/B19779_08_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.6 – Favorite Pets Screen
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have been able to add the functionality to favorite cats and update this
+    information in the Room database. We have also been able to handle updates and
+    migrations in the Room database. In the next section, we will see how to use WorkManager
+    to schedule background tasks. In this case, we will use WorkManager to fetch the
+    cats from the remote data source and save them to our database. This improves
+    our first offline experience since we will always have the latest data in our
+    database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using WorkManager to schedule background tasks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: WorkManager is a Jetpack library that is best suited for performing long-running
+    tasks in the background. It ensures that background tasks are completed even when
+    your app restarts or the phone restarts. With WorkManager, you can either schedule
+    one-time jobs or recurring jobs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start by adding the WorkManager dependency to our project. Follow these
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us head over to the `libs.versions.toml` file and define the work version
+    in our `versions` section as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the libraries section, add the following dependencies:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here, we have two dependencies: the `work-runtime-ktx` dependency, which is
+    the core dependency for WorkManager, and the `koin-androidx-workmanager` dependency,
+    which is used to integrate WorkManager with Koin. Sync the project for the changes
+    to be added.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, we need to add the dependencies to the app-level `build.gradle.kts` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Do a Gradle sync to add these dependencies to our project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We are now ready to start using WorkManager in our project. We will use WorkManager
+    to fetch the cats from the remote data source and save them to our database. We
+    will use the `OneTimeWorkRequest` class to schedule a one-time job to fetch the
+    cats from the remote data source and save them to our database. Let’s get started
+    with the steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us create a new package named `workers` and create a new file inside it
+    called `PetsSyncWorker.kt` and add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the preceding code block, we have created a class that implements the `CoroutineWorker`
+    class. We implement this class when we want to perform a long-running task in
+    the background. It uses coroutines to perform long-running tasks. We have passed
+    the `appContext` and `workerParams` parameters to the constructor of the class.
+    We have also passed the `petsRepository` parameter to the constructor of the class.
+    We have overridden the `doWork` method, which is a `suspend` function that will
+    be called when the work is scheduled. We have called `fetchRemotePets` from `PetsRepository`
+    to fetch the cats from the remote data source and save them to our database. We
+    are also returning `Result.success()` if the work is successful and `Result.failure()`
+    if the work fails.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, let us create an instance of `PetsSyncWorker` in our `Module.kt` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We are using the `worker` Koin DSL to create an instance of `PetsSyncWorker`.
+    This is from the Koin WorkManager library that we just added. We have passed the
+    `appContext`, `workerParams`, and `petsRepository` parameters to the constructor
+    of `PetsSyncWorker`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, let us add this function in our `MainActivity.kt` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the preceding code, we created a new `OneTimeWorkRequest` using `PetSyncWorker`.
+    We have also set some constraints on our work request. We have set the network
+    type to `NetworkType.CONNECTED` to ensure that the work request is only executed
+    when the device is connected to the internet. We also have other network types,
+    which are as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`NOT_REQUIRED`: For this type, a network is not required. This is useful for
+    tasks that do not need any internet connection to work.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`UNMETERED`: An unmetered network connection such as Wi-Fi is required for
+    this type of network. This is suitable for tasks that involve large data transfers.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`METERED`: A metered network connection is required for this type of network.
+    Tasks that require a significant amount of data might be deferred when the device
+    is on a metered connection to avoid unnecessary costs.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`NOT_ROAMING`: For this type of work, a non-roaming connection is required.
+    This is relevant for tasks that might incur additional costs when executed when
+    the device is roaming.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We have also set the `BatteryNotLow constraint` to `true` to ensure that the
+    work request is only executed when the battery is not low. We then used `WorkManager.getInstance(applicationContext)`
+    to get an instance of the WorkManager and then called the `enqueueUniqueWork`
+    method to enqueue our work request. We have passed the name of our work request,
+    `ExistingWorkPolicy`, and the work request to the `enqueueUniqueWork` method.
+    `ExistingWorkPolicy` is used to specify what should happen if there is already
+    a work request with the same name. We have used `ExistingWorkPolicy.KEEP` to ensure
+    that the work request is not replaced if there is already a work request with
+    the same name. The following are other available policies:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`REPLACE`: This cancels existing work with the same unique name and enqueues
+    the new work. This is suitable when we want only the latest version of the work
+    to be executed, discarding previous instances.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`APPEND`: Enqueues the new work even if there is existing work with the same
+    unique name. Both new and existing work will be executed independently. This is
+    appropriate when we want multiple instances of the same work to coexist.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We are now ready to start our work request. We will start the work request in
+    the `onCreate` method of `MainActivity`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the `MainActivity.kt` file, add the following code in the `onCreate` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Since we are using Koin, we need to disable the default WorkManager initialization
+    in our app manifest.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Let us head over to the `AndroidManifest.xml` file and add the following code
+    inside the application tag:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Adding the preceding code prevents WorkManager from being initialized automatically.
+    Not doing this causes an app to crash once you set up Koin initialization. The
+    crash is caused by a conflict between Koin’s dependency injection and WorkManager’s
+    default initialization. Lastly, we have also removed App Startup ([https://developer.android.com/topic/libraries/app-startup](https://developer.android.com/topic/libraries/app-startup)),
+    which is used internally within WorkManager from WorkManager 2.6.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'To set up a custom WorkManager instance, head over to the `ChapterEightApplication.kt`
+    file and add the following code inside the `startKoin` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build and run the app, and nothing changes. However, we have scheduled a background
+    task to fetch the cats from the remote data source and save them to our database.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![Figure 8.7 – Cute cats](img/B19779_08_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.7 – Cute cats
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have created our `PetsSyncWorker` class and learned how to do work in the
+    background. In the next section, we are going to write tests for our `PetsSyncWorker`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing your workers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Testing the code is very important. It ensures that our code works as expected
+    and it also helps us to catch bugs early. We will be writing tests for our workers
+    in this section. To test our workers, we first need to set up WorkManager testing
+    dependencies with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us head over to the `libs.versions.toml` file and add the following dependency
+    to the `libraries` section:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Sync your project. This will add the `work-testing` artifact that helps in testing
+    workers to our project.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, we need to add the dependency to our app level `build.gradle.kts` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We have used `androidTestImplementation` because we will be writing our tests
+    in the `androidTest` folder. Do a Gradle sync to add the dependency to our project.
+    We are now ready to start writing our tests.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Since our `PetsSyncWorker` class requires some dependencies, we will create
+    a test rule that provides the Koin dependencies that we need. Let us head over
+    to the `androidTest` folder, create a new file called `KoinTestRule.kt`, and add
+    the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`KoinTestRule` implements the `TestRule` interface. We have used this rule
+    to provide the Koin dependencies that we need in our tests. We have used the `startKoin`
+    method to provide the Koin dependencies that we need. We have used the `androidContext(ApplicationProvider.getApplicationContext())`
+    method to get the application context. We have also used the `modules(appModules)`
+    method to provide the Koin modules that we need. Now, we are ready to start writing
+    our tests. Let us create a new file called `PetsSyncWorkerTest.kt` and add the
+    following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have created a test class called `PetsSyncWorkerTest`. We have annotated
+    the class with the `@RunWith(AndroidJUnit4::class)` annotation. We have also created
+    a `KoinTestRule` instance and annotated it with the `@get:Rule` annotation to
+    provide the `KoinTestRule` to our test class. We have also created a `setup` function
+    and annotated it with the `@Before` annotation. This function will be executed
+    before each test. We are using the `WorkManagerTestInitHelper` class to initialize
+    WorkManager for instrumentation tests. We are using the `SynchronousExecutor`
+    class to ensure that the work is executed synchronously. This is to ensure that
+    our tests are deterministic. We are now ready to start writing our tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Follow these steps to create our test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start by creating a test function that will test the functionality
+    of our worker. Add the following code to the `PetsSyncWorkerTest.kt` file below
+    the `setup` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This is an empty function annotated with the `@``Test` annotation.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Create a work request as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the preceding code, we have created a one-time request using our `PetsSyncWorker`
+    class. We have also set the constraints to our work request. We have set the network
+    type to `NetworkType.CONNECTED` to ensure that the work request is only executed
+    when the device is connected to the internet. We have also set the `BatteryNotLow`
+    constraint to `true` to ensure that the work request is only executed when the
+    battery is not low.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, set up the test drivers:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have set up the test drivers that help us simulate conditions needed
+    for our tests. For example, it simulates that constraints are met.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Enqueue the work request:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We have used the `enqueueUniqueWork` method to enqueue our work request. We
+    have passed the name of our work request, `ExistingWorkPolicy`, and the work request
+    to the `enqueueUniqueWork` method. We have used `ExistingWorkPolicy.KEEP` to ensure
+    that the work request is not replaced if there is already a work request with
+    the same name. We have also used the `result.get()` method to get the result of
+    our work request.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Get the information about our work request using the `WorkInfo` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We are getting `WorkInfo` for our work request. We have used the `getWorkInfoById`
+    method to get `WorkInfo` for our work request. We are using the `result.get()`
+    method to get the result of our work request.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, let us get the worker state and assert that our work is enqueued:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We have used the `assertEquals` method to assert that our work is enqueued.
+    We have used the `WorkInfo.State.ENQUEUED` to check if our work is enqueued.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, let us simulate our constraints being met by using the `testDriver` instance
+    that we created earlier:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We use `testDriver` to simulate that the constraints are met. We have used the
+    `setAllConstraintsMet function` to simulate that the constraints are met. We have
+    passed the `id` of our work request to the `setAllConstraintsMet` method. The
+    work request `id` has an instance type of `Universally Unique` `Identifier (UUID)`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Lastly, let us get the output and state of our workers:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This is the final step of our test. We have used the `getWorkInfoById` method
+    to get the `WorkInfo` of our work request. We have used the `result.get()` method
+    to get the result of our work request. We have used `WorkInfo.State.RUNNING` to
+    check if our work is running. Our final test function should look like the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Figure 8.8 – PetsSyncWorker test](img/B19779_08_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.8 – PetsSyncWorker test
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Click the green run icon on the left of our test to run the test. The test
+    runs and it’s all green! Our test passes, as seen in the following screenshot:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![Figure 8.9 – Test results](img/B19779_08_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 8.9 – Test results
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making all these tests work together is amazing work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned how to save data to a local database, Room, which
+    is part of the Jetpack libraries. We also saved items and read from the Room database.
+    In the process, we also learned how to update items in the Room database and how
+    to handle automated migrations in our database. Additionally, we learned how to
+    do long-running operations using WorkManager, its best practices, and how to write
+    tests for our workers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will learn about runtime permissions and how to request
+    them in our app.
+  prefs: []
+  type: TYPE_NORMAL

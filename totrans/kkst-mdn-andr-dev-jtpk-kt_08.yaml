@@ -1,0 +1,1580 @@
+- en: '*Chapter 6*: Adding Offline Capabilities with Jetpack Room'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we're starting our journey of exploring ways to architecture
+    our apps by first making sure that our application can be used without an internet
+    connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the *Introducing Jetpack Room* section, we will briefly note the various
+    caching mechanisms that are on Android. Then, we will introduce the Jetpack Room
+    library and its core elements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, in the *Enabling offline usage by implementing Room* section, we will
+    implement Room in our Restaurants app and allow users to use the application without
+    an internet connection. In the *Applying partial updates to the Room database*
+    section, we will learn how to partially update data inside Room so that we can
+    save selections such as whether the restaurants were favorited by the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, in the *Making local data the single source of truth for app content*
+    section, we will understand why having a single source of truth for app data is
+    beneficial, and then we will set the Room database as the single source of content
+    for our app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To summarize, in this chapter, we''re going to cover the following main topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Jetpack Room
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enabling offline usage by implementing Room
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Applying partial updates to the Room database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Making local data the single source of truth for app content
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Before jumping in, let's set up the technical requirements for this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Usually, building Compose-based Android projects with Jetpack Room will require
+    your day-to-day tools. However, to follow along with the examples smoothly, make
+    sure you have the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Arctic Fox 2020.3.1 version of Android Studio. You can also use a newer
+    Android Studio version or even Canary builds but note that the IDE interface and
+    other generated code files might differ from the ones used throughout this book.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Kotlin 1.6.10, or newer, plugin installed in Android Studio
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Restaurants app code from the previous chapter.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Minimal knowledge of SQL databases and queries
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The starting point for this chapter is represented by the Restaurants application
+    that was developed in the previous chapter. If you haven't followed the implementation
+    described in the previous chapter, access the starter code for this chapter by
+    navigating to the `Chapter_05` directory of the repository. Then, import the Android
+    project entitled `chapter_5_restaurants_app`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To access the solution code for this chapter, navigate to the `Chapter_06`
+    directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://github.com/PacktPublishing/Kickstart-Modern-Android-Development-with-Jetpack-and-Kotlin/tree/main/Chapter_06/chapter_6_restaurants_app](https://github.com/PacktPublishing/Kickstart-Modern-Android-Development-with-Jetpack-and-Kotlin/tree/main/Chapter_06/chapter_6_restaurants_app).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Jetpack Room
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Modern applications should be available for use in any conditions, including
+    when the user is missing an internet connection. This allows apps to provide a
+    seamless user experience and usability even when the user's device cannot access
+    the network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this section, we will discuss the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploring the caching mechanism on Android
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introducing Jetpack Room as a solution for local caching
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: So, let's begin!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploring the caching mechanism on Android
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To cache specific content or application data, reliable Android apps make use
+    of the various offline caching mechanisms that are suitable for different use
+    cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shared preferences are used to store lightweight data (such as user-related
+    selections) as key-value pairs. This option shouldn't be used to store objects
+    that are part of the app's content.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Device storage (either internal or external) is used for storing heavyweight
+    data (such as files, pictures, and more).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: SQLite database is used for storing app content in a structured manner inside
+    a private database. **SQLite** is an open source SQL database that stores data
+    in private text files.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In this chapter, we will focus on learning how to cache structured content (which
+    is, usually, held by Kotlin `data class` objects) within a SQLite database. In
+    this way, we allow the user to browse the app's data while remaining offline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android comes with a built-in SQLite database implementation that allows us
+    to save structured data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our app, we can consider the array of restaurants to be a perfect candidate
+    for app content that can be saved inside a SQLite database. Since the data is
+    structured, with SQLite, we get the advantage of being able to perform different
+    actions such as searching for restaurants within the database, updating particular
+    restaurants, and more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By caching app content in this way, we can allow users to browse the app's restaurants
+    while offline. However, for this to work, the users need to have previously opened
+    the app using an active internet connection, thereby allowing the app to cache
+    the contents for future offline use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, to save the restaurants to the SQLite private database, we need to make
+    use of the SQLite APIs. These APIs are powerful. However, by using them, you face
+    quite a few disadvantages:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The APIs are of a low level and are relatively difficult to use.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The SQLite APIs provide no compile-time verification of SQL queries, which can
+    lead to unwanted runtime errors.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There is a lot of boilerplate code involved in creating a database, performing
+    SQL queries, and more.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: To mitigate these issues, Google provides the Jetpack Room library. This library
+    is nothing more than a wrapper library that simplifies the way we access and interact
+    with the SQLite database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Jetpack Room as a solution for local caching
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Room** is a persistence library that is defined as an abstraction layer over
+    SQLite and provides simplified database access while taking advantage of the power
+    of the SQLite APIs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As opposed to using the raw SQLite APIs, Room abstracts most of the complexity
+    associated with working with SQLite. The library removes most of the unpleasant
+    boilerplate code that is required to set up and interact with SQLite databases
+    on Android while also providing the compile-time checking of SQL queries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make use of the Room library and cache contents using its API, you need
+    to define three primary components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Restaurant` data class as an entity. This means that we will have a table
+    populated with `Restaurant` objects. In other words, the rows of the table are
+    represented by instances of our restaurants.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A database class that will contain and expose the actual database.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Data Access Objects** (**DAOs**) that represent an interface. This allows
+    us to get, insert, delete, or update the actual content within the database.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The database class provides us with a reference to the DAO interface associated
+    with the SQLite database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 6.1 – The interaction between the application and the Room database'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17788_06_1.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 6.1 – The interaction between the application and the Room database
+  prefs: []
+  type: TYPE_NORMAL
+- en: As previously illustrated, we can use the DAO to retrieve or update the data
+    from the database in the form of entity objects – in our case, the entity is the
+    restaurant, so we will be applying such operations to restaurant objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have a basic understanding of how Room works and how we can interact
+    with it, it's time to see it in action for ourselves and implement Room in our
+    Restaurants app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enabling offline usage by implementing Room
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We want to locally cache all the restaurants that we receive from our Firebase
+    database. Since this content is structured, we want to use Room to help us with
+    this task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Essentially, we are trying to save the restaurants when the user is browsing
+    our Restaurants app while online. Then, we will reuse them when the user browses
+    the app while being offline:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/B17788_06_2.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 6.2 – Data retrieval for the Restaurants app with two sources of truth
+  prefs: []
+  type: TYPE_NORMAL
+- en: When online, we retrieve the restaurants from our web API. Before displaying
+    them to the user, first, we will cache them to our Room database. If offline,
+    we will retrieve the restaurants from the Room database and then display them
+    to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Essentially, we are creating two sources of truth for our app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The remote API for when the user is online
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The local Room database for when the user is offline
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the next section, we will discuss why this approach is not ideal. However,
+    until then, we are content with the fact that we will be able to use the app while
+    remaining offline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start implementing Room, and then let''s cache those restaurants! Perform
+    the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the `build.gradle` file in the app module, add the dependencies for
+    Room inside the `dependencies` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'While you are still inside the `build.gradle` file, add the `kotlin-kapt` plugin
+    for Room inside the `plugins` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `kapt` plugin stands for **Kotlin Annotation Processing Tool**. This allows
+    Room to generate annotated code at compile time while hiding most of the associated
+    complexity from us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After updating the `build.gradle` files, make sure to sync your project with
+    its Gradle files. You can do that by pressing on the **File** menu option and
+    then by selecting **Sync Project with Gradle Files**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since we want to store restaurant objects inside our local database, let''s
+    instruct Room that the `Restaurant` data class is an entity that must be saved.
+    Head inside the `Restaurant.kt` file, and add the `@Entity` annotation on top
+    of the class declaration:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Inside the `@Entity` annotation, we have passed the name of the table via the
+    `tableName` parameter. We will use this name when making queries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that Room will create a table with `Restaurant` objects as rows, it''s
+    time to define the columns (or fields) of the entity. While we are still inside
+    the `Restaurant.kt` class, let''s add the `@ColumnInfo` annotation on top of each
+    field that we''re interested in, and that should represent a column:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: For each field we're interested in saving, we've added the `@ColumnInfo` annotation
+    and passed a `String` value to the `name` parameter. These names will correspond
+    to the name of the table's columns. Right now, we are not interested in saving
+    the `isFavorite` field; we will do that a bit later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The entity that represents a table should have a primary key column that ensures
+    uniqueness within the database. For this, we can use the `id` field that was configured
+    from our Firebase database to be unique. While still inside the `Restaurant.kt`
+    class, let''s add the `@PrimaryKey` annotation to the `id` field:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now we have defined the entity for our database and configured the table's columns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's time to create a DAO that will serve as the entry point to our database,
+    allowing us to perform various actions on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a DAO by clicking on the application package, selecting `RestaurantsDao`
+    as the name, and select **Interface** as the type. Inside the new file, add the
+    following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Since Room will take care of implementing any actions that we need to interact
+    with the database, the DAO is an interface, just like Retrofit also had an interface
+    for the HTTP methods. To instruct Room that this is a DAO entity, we've added
+    the `@Dao` annotation on top of the interface declaration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the `RestaurantsDao` interface, add two `suspend` functions that will
+    help us to both save the restaurants and retrieve them from the database:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, let''s analyze the two methods that we''ve added:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`getAll()` is a query statement that returns the restaurants that were previously
+    cached inside the database. Since we need to perform a SQL query when calling
+    this method, we''ve marked it with the `@Query` annotation and specified that
+    we want all the restaurants (by adding `*`) from the `restaurants` table defined
+    in the `Restaurant` entity data class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`addAll()` is an `insert` statement that caches the received restaurants inside
+    the database. To mark this as a SQL `insert` statement, we''ve added the `@Insert`
+    annotation. However, if the restaurants being inserted are already present in
+    the database, we should replace the old ones with the new ones to refresh our
+    cache. We instructed Room to do so by passing the `OnConflictStrategy.REPLACE`
+    value into the `@Insert` annotation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Both methods are marked as `suspend` functions because any interaction with
+    the Room database can take time and is an async job; therefore, it shouldn't block
+    the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, we have defined an entity class and a DAO class, we must define the last
+    component that Room needs in order to function, the database class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a Room database class by clicking on the application package. Select
+    `RestaurantsDb` as the name, and select **File** as the type. Inside the new file,
+    add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, let''s analyze the code that we''ve just added:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`RestaurantsDb` is an abstract class that inherits from `RoomDatabase()`. This
+    will allow Room to create the actual implementation of the database behind the
+    scenes and hide all the heavy implementation details from us.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For the `RestaurantsDb` class, we''ve added the `@Database` annotation so that
+    Room knows that this class represents a database and provides an implementation
+    for it. Inside this annotation, we''ve passed the following:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Restaurant` class to the `entities` parameter. This parameter tells Room
+    which entities are associated with this database so that it can create corresponding
+    tables. The parameter expects an array, so you can add as many entity classes
+    as you wish, as long as they are annotated with `@Entity`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`1` as the `version` number of the database. We should increment this version
+    number whenever the schema of the database changes. The `Restaurant` class, since
+    it''s an entity, we might change the schema of the database, and Room needs to
+    know that for migration purposes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`false` to the `exportSchema` parameter. Room can export the schema of our
+    database externally; however, for simplicity, we chose not to do so.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Inside the `RestaurantsDb` class, add an abstract `RestaurantsDao` variable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We know that the database class should expose a DAO object so that we can interact
+    with the database. By leaving it abstract, we allow Room to provide its implementation
+    behind the scenes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Even though we declared a variable to hold our DAO object, we still need to
+    find a way to build the database and obtain a reference to the `RestaurantsDao`
+    instance that Room will create for us. Inside the `RestaurantsDb` class, add `companion
+    object` and then add the `buildDatabase` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Essentially, this method returns a `RestaurantsDb` instance. To construct a
+    Room database, we need to call the `Room.databaseBuilder` constructor, which expects
+    the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `Context` object that we provided from the `context` input argument of our
+    `buildDatabase` method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The class of the database you're trying to build, that is, the `RestaurantsDb`
+    class.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A name for the database – we named it `"restaurants_database"`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The builder returns a `RoomDatabase.Builder` object on which we called `.fallbackToDestructiveMigration()`.
+    This means that, in the case of a schema change (such as performing changes in
+    the entity class and modifying the table columns), the tables would be dropped
+    (or deleted) instead of trying to migrate the contents from the previous schema
+    (which would have been a bit more complex).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we called `build()` on the builder object so that our `buildDatabase()`
+    method returns a `RestaurantsDb` instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's time to finally get a reference to our DAO so that we can start using the
+    database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While still inside the `companion object` of the `RestaurantsDb` class, add
+    the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, let''s break down what we''ve done:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We added an `INSTANCE` variable of type `RestaurantsDao`. Since this variable
+    is inside the companion object, `INSTANCE` is static. Additionally, we marked
+    it with `@Volatile`. This means that writes to this field are immediately made
+    visible to other threads. Don't worry too much about these multithreading concepts
+    – we will get rid of this boilerplate code soon enough.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We created a `getDaoInstance()` method where we added a block of code that calls
+    the `buildDatabase()` method and gets the DAO object by calling the `.dao` accessor.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Since we want only one memory reference to our database (and not create other
+    database instances in other parts of the app), we made sure that our `INSTANCE`
+    variable conforms to the singleton pattern. Essentially, the **singleton pattern**
+    allows us to hold a static reference to an object so that it lives as long as
+    our application does.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By following this approach, anytime we need to access the Room database from
+    different parts of the app, we can call the `getDaoInstance()` method, which returns
+    an instance of `RestaurantsDao`. Additionally, we can be sure that it's always
+    the same memory reference and that no concurrency issues will occur since we have
+    wrapped the instance creation code inside a `synchronized` block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You might have noticed that to get a reference to our DAO and cache our restaurants
+    in the database, the `RestaurantsDb.getDaoInstance()` method expects a `Context`
+    object. This is needed to create the instance of the database. However, we want
+    to get our DAO in the `RestaurantsViewModel` class, and we have no context there,
+    so what should we do?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Let''s expose the application context from the application class! Create the
+    application class by clicking on the application package, selecting `RestaurantsApplication`
+    as the name, and select **File** as the type. Inside the new file, add the following
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: This class now inherits from `android.app.Application` and exposes its context
+    through the static `getAppContext()` method. The only issue is that even though
+    we have an application class, we still haven't configured the project to recognize
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `AndroidManifest.xml` file, inside the `<application>` element, add
+    the `android:name` identifier that sets our `RestaurantsApplication` class as
+    the application class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: It's time to finally start working on caching those restaurants in our database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the `RestaurantsViewModel` class, add a `restaurantsDao` variable. Then,
+    instantiate it via the static `RestaurantsDb.getDaoInstance` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Make sure that you pass the application context through the newly created `getAppContext()`
+    method inside the application class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we''re ready to save the restaurants locally! While you are still in the
+    `RestaurantsViewModel` class, inside the `getRemoteRestaurants()` method, add
+    these new lines of code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Essentially, what we are doing is the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I. Getting the restaurants from the remote API (here, it's the Retrofit `restInterface`
+    variable).
+  prefs: []
+  type: TYPE_NORMAL
+- en: II. Caching those restaurants inside the local database through Room by calling
+    `restaurantsDao.addAll()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: III. Finally, returning the restaurants to the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the app while you have a working internet connection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In terms of the UI, nothing should change – you should still see the restaurants.
+    That said, behind the scenes, the restaurants should now have been cached.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the app again but without internet.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The chances are that you won't see anything. The restaurants are not there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This happens because, while we are offline, we never try to get the previously
+    cached restaurants from the Room database. Moreover, when offline, the `restInterface.getRestaurants()`
+    suspending function throws an error because the HTTP call that fetches the restaurants
+    has failed – this exception should arrive inside `CoroutineExceptionHandler`.
+    The exception is thrown by Retrofit because the associated network request has
+    failed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s leverage the fact that, while we''re offline, the `restInterface.getRestaurants()`
+    function call throws an exception. This is so that we can wrap the whole block
+    of code inside `getRemoteRestaurants()` inside a `try-catch` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Essentially, what happens now is that if the user is offline, we catch the exception
+    thrown by Retrofit. Alternatively, we return the cached restaurants from the Room
+    database by calling `restaurantsDao.getAll()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an extra, we also check whether the exception we've caught has been thrown
+    because of the user's poor or inexistent internet connectivity. If the `Exception`
+    object is of type `UnknownHostException`, `ConnectException`, or `HttpException`,
+    we're loading the restaurants from Room through our DAO; otherwise, we propagate
+    the exception so that it's caught later by `CoroutineExceptionHandler`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before running the app, let's refactor our `getRemoteRestaurants()` method a
+    bit. Now, the name of the method implies that it retrieves restaurants from a
+    remote source. However, in reality, it also retrieves restaurants from Room if
+    the user is offline. Room is a local data source, so the name of this method is
+    no longer appropriate.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Rename the `getRemoteRestaurants()` method to `getAllRestaurants()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Additionally, remember to rename its usage in the `getRestaurants()` method
+    where the coroutine is launched:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Run the app again without an internet connection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Because the restaurants were previously cached and now the user is offline,
+    we are fetching them from Room. You should see the restaurants even without the
+    internet. Success!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Even though we''ve come a long way and have managed to make the Restaurants
+    app usable even without internet, there is still something that we''ve missed.
+    To reproduce it, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Try running the application (either online or offline), and then mark a couple
+    of restaurants as favorites.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Disconnect your device from the internet and make sure you are now offline.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Restart the application while remaining offline.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You will get to see the restaurants, but your previous selections have been
+    lost. More precisely, even though we have marked some restaurants as favorites,
+    all restaurants now appear as not favorites. It's time to fix this!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applying partial updates to the Room database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Right now, our application is saving the restaurants that we receive from the
+    remote web API directly inside the Room database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is not a bad approach; however, whenever we are marking a restaurant as
+    a favorite, we aren''t updating the corresponding restaurant inside Room. If we
+    take a look inside the `RestaurantsViewModel` class and we check its `toggleFavorite()`
+    method, we can see that we''re only updating the `isFavorite` flag of a restaurant
+    inside the `state` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: We aren't updating the corresponding restaurant's `isFavorite` field value inside
+    Room. So, whenever we use the application offline, the restaurants will no longer
+    appear as favorites, even though when we were online, we might have marked some
+    as favorites.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To fix this, whenever we mark a restaurant as a favorite or not a favorite,
+    we need to apply a partial update on a particular `Restaurant` object inside our
+    Room database. The partial update should not replace the entire `Restaurant` object,
+    but it should only update its `isFavorite` field value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s get started! Perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a partial entity class by clicking on the application package, selecting
+    `PartialRestaurant` as the name, and select **File** as the type. Inside the new
+    file, add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In this `@Entity` annotated class, we''ve only added two fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An `id` field with a `@ColumnInfo()` annotation that has the same value (`"r_id"`)
+    passed to the `name` parameter as the `Restaurant` object's `id` field. This allows
+    Room to match the `Restaurant` object's `id` field with the one from `PartialRestaurant`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An `isFavorite` field with a `@ColumnInfo()` annotation that has the name set
+    to `"is_favorited"`. So far, Room can't match this field with the one from `Restaurant`,
+    because inside `Restaurant`, we haven't annotated the `isFavorite` field with
+    `@ColumnInfo` – we'll do that next.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Now that our partial entity, called `PartialRestaurant`, has a column corresponding
+    to the `isFavorite` field, it''s time to also add a `@ColumnInfo()` annotation
+    with the same value (`"is_favorite"`) for the `isFavorite` field of the `Restaurant`
+    entity:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As a good practice, we've also made the `isFavorite` field `val` instead of
+    `var` to prevent its value from being changed once the object has been created.
+    Because `Restaurant` is an object passed to a Compose `State` object, we want
+    to promote immutability across its fields to ensure recomposition events happen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: By having a data class field as `var`, we can easily change its value at runtime
+    and risk having Compose miss a well-needed recomposition. Immutability ensures
+    that whenever an object field's value changes, a new object is created (just as
+    we do with the `.copy()` function), and Compose is notified so that it can trigger
+    recomposition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since the `isFavorite` field is now `val`, the `restoreSelections()` extension
+    function inside `RestaurantViewModel` has broken. Update its code as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Essentially, what we have done is make sure our `restaurantsMap` of type `Map<Int,
+    Restaurant>` is mutable so that we can replace elements inside it. With this approach,
+    we are now replacing the restaurant at entry `id` by passing a new object reference
+    with the `copy` function. We are not going to go into much detail since this portion
+    of the code will soon be removed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have a partial entity defined, we need to add another function
+    inside our DAO that will update a `Restaurant` entity through a `PartialRestaurant`
+    entity. Inside `RestaurantsDao`, add the `update()` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Let''s understand, step by step, how the new `update()` function works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I. It's a `suspend` function because, as we know by now, any interaction with
+    the local database is a suspending job that should not run on the main thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: II. It receives a `PartialRestaurant` entity as an argument and returns nothing.
+    The partial entity's field values correspond to the restaurant that we're trying
+    to update.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'III. It''s annotated with the `@Update` annotation to which we passed the `Restaurant`
+    entity. The update process has two steps, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: i. First, `PartialRestaurant` exposes the `id` field, whose value matches the
+    `id` field's value of the corresponding `Restaurant` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ii. Once the match is complete, the `isFavorite` field's value is set to the
+    `isFavorite` field of the matched `Restaurant` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These matches are possible because the `id` and `isFavorite` fields of both
+    entities have the same `@ColumnInfo` name values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that our DAO knows how to partially update our `Restaurant` entity, it's
+    time to perform the update.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'First, inside `RestaurantsViewModel`, add a new suspending function, called
+    `toggleFavoriteRestaurant()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s understand, step by step, what this new method does:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I. It receives the `id` field of the restaurant that we're trying to update,
+    along with the `oldValue` field which represents the value of the `isFavorite`
+    field just before the user has toggled the heart icon of the restaurant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: II. To partially update a restaurant, it needs to interact with the Room DAO
+    object. This means that the `toggleFavoriteRestaurant` method must be a `suspend`
+    function. As a good practice, we wrapped it inside a `withContext` block that
+    specifies its work must be done inside the `IO` dispatcher. While Room ensures
+    that we wrap our suspending work with a special dispatcher, we explicitly specified
+    the `Dispatchers.IO` dispatcher to better highlight that such heavy work should
+    be done in an appropriate dispatcher.
+  prefs: []
+  type: TYPE_NORMAL
+- en: III. It builds a `PartialRestaurant` object, which it then passes to the DAO's
+    `update()` method that was created earlier. The `PartialRestaurant` object gets
+    the `id` field of the restaurant we're updating, along with the negated value
+    of the `isFavorite` flag. If the user previously didn't have the restaurant marked
+    as favorite, upon clicking the heart icon, we should negate the old (`false`)
+    value and obtain `true`, or vice versa.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have the method in place to update a restaurant, it's time to call
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While you are still in `RestaurantsViewModel`, make the `toggleFavorite` method
+    launch a coroutine at the end of its body. Then, inside it, call the new `toggleFavoriteRestaurant()`
+    suspending function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To the `toggleFavoriteRestaurant()` function, we''ve passed the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `id` parameter, which represents the ID of the restaurant the user is trying
+    to mark as favorite or not favorite
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The old value of the favorite status of the restaurant, as defined by the `isFavorite`
+    flag of the `item` field
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now, whenever the user presses on the heart icon, we not only update the UI
+    but also cache this selection inside the local database through a partial update.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Build and run the application because it''s time to test what we''ve just implemented!
+    Unfortunately, the app crashes. Can you think of one reason why this happens?
+    If we look at the stack trace of the error, we will see the following message:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This error message makes total sense because we've changed the schema of the
+    database, and now Room doesn't know whether to migrate the old entries or delete
+    them. But how did we change the schema?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Well, we changed the schema when we defined a new column for the Restaurants
+    table by adding the `@ColumnInfo()` annotation to the `isFavorite` field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To mitigate this issue, we must increase the `version` number of the database.
+    Inside the `RestaurantsDb` class, increase the `version` number from `1` to `2`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, Room knows that we've changed the schema of the database. In turn, because
+    we haven't provided a migration strategy, and instead, we've called the `fallbackToDestructiveMigration()`
+    method in the `Room.databaseBuilder` constructor when we initially instantiated
+    the database, Room will drop the old contents and tables and provide us with a
+    fresh start.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Try running the application online, and then mark a couple of restaurants as
+    favorites.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Disconnect your device from the internet and make sure you are now offline.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Restart the application while remaining offline.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Great news! The selections were now kept, and we can see which restaurants were
+    previously marked as favorites!
+  prefs: []
+  type: TYPE_NORMAL
+- en: To continue testing, while you are offline, you can try marking other restaurants
+    as favorites.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, still in offline mode, restart the app and you will notice that these
+    new selections have also been saved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connect your device to the internet and run the application – while you are
+    online.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Oops! The restaurants that we have previously marked as favorites no longer
+    appear as such, even though we previously cached these selections inside the Room
+    database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Essentially, every time we open the application while being connected to the
+    internet, we lose all the previous selections, and no restaurant is marked as
+    favorite anymore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two issues in our code that are causing this! Can you think of why
+    this is happening?
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we will identify and address them. Additionally, we will
+    make sure that Room is the single source of truth for the content of our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making local data the single source of truth for app content
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Whenever we launch the app with the internet, all the restaurants appear as
+    not favorites, even though we previously marked them as favorites and cached the
+    selections in the Room database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To identify the issue, let''s navigate back inside `RestaurantsViewModel` and
+    inspect the `getAllRestaurants()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, when we launch the app while online, we do three things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We load the restaurants from the server by calling `restInterface.getRestaurants()`.
+    For these restaurants, we don''t receive the `isFavorite` flag, so we automatically
+    have it set to `false`. This happens because our `Restaurant` class defaults the
+    value of `isFavorite` to false if no value is passed from the Gson deserialization:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Then, we save those restaurants to Room by calling `restaurantsDao.addAll(restaurants)`.
+    However, because we've used the `REPLACE` strategy inside our DAO's `addAll()`
+    function, and because we received the same restaurants from the server, we override
+    the `isFavorite` flags of the corresponding restaurants inside the database to
+    `false`. So, even though our restaurants in Room might have had the `isFavorite`
+    flag set to `true`, because we receive restaurants with the same `id` fields from
+    the server, we end up overriding all those values to `false`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Next, we pass the `restaurants` list that we've received from the server to
+    the UI. As we already know, these restaurants have the `isFavorite` field's value
+    of `false`. So, anytime we start the app while connected to the internet, we will
+    always see no restaurants marked as favorites.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'If we think about it, there are two main issues here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our application has two sources of truth:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When online, it displays the restaurants from the remote server.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When offline, it displays the restaurants from the local database.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Whenever we cache restaurants that already exist inside the local database,
+    we override their `isFavorite` flag to `false`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If we can fix these two issues by having our UI receive content from a single
+    source of data, we will also be able to remove the need for `SavedStateHandle`
+    and all the special handling related to process recreation – we will see why in
+    a moment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Essentially, in this section, we will be doing the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Refactoring the Restaurants app to have a single source of truth for data
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Removing the logic of persisting state inside `SavedStateHandle` in the case
+    of process recreation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: So, let's begin with the first issue at hand!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Refactoring the Restaurants app to have a single source of truth for data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The approach of having multiple sources of data can lead to many inconsistencies
+    and subtle bugs – just like how our app is now inconsistent in terms of what data
+    it displays when the user is either online or offline.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: The concept of designing systems to rely on only one data source used for storing
+    and updating content is related to a practice that is called **Single Source of
+    Truth** (**SSOT**). Having multiple sources of truth for data that the UI consumes
+    can lead to inconsistencies between what's expected to be shown to the UI and
+    what is actually shown. The SSOT concept helps us to structure the data access
+    so that only one data source is trusted to provide the app with data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's make sure that our application only has one source of truth, but which
+    one should we choose?
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the one hand, we cannot control the data that is being sent from our Firebase
+    database, and we also can't update the restaurants stored inside it when the user
+    marks one as a favorite.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the other hand, we can do that with Room! In fact, we are already doing that
+    – every time a user marks a restaurant as a favorite or not a favorite, we're
+    applying a partial update to that restaurant inside the local database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s make the local Room database our only source of data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/B17788_06_3.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 6.3 – Data retrieval for the Restaurants app with the local database
+    as an SSOT
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the user is online, we should get the restaurants from the server, cache
+    them into Room, and then obtain the restaurants again from Room to finally send
+    them to the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, if the user is offline, we simply obtain the restaurants from Room
+    and display them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alternatively, instead of always asking your Room database for the most up-to-date
+    content, you could update the DAO interface to provide you with a reactive data
+    stream that we can observe. This way, upon every data update, you would automatically
+    be notified with the most up-to-date content in a reactive manner, without having
+    to manually ask for it. To achieve that, you must use special data holders provided
+    by libraries such as Jetpack LiveData, Kotlin Flow, or RxJava. We will explore
+    Kotlin Flow in [*Chapter 11*](B17788_11_ePub.xhtml#_idTextAnchor317), *Creating
+    Infinite Lists with Jetpack Paging and Kotlin Flow*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The similarity between our two scenarios is that now, regardless of the internet
+    connectivity of the user, our UI always displays the restaurants from inside our
+    Room database. In other words, the local database is our SSOT!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start implementing! Perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside `RestaurantsViewModel`, refactor the `getAllRestaurants()` function
+    to always return the restaurants from the Room database:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, our app tries to display the restaurants from the local database in any
+    condition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, it's time to refactor the `try – catch` block inside the `getAllRestaurants()`
+    method! Essentially, what we want to do is to get the restaurants from the server
+    and then cache them locally.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Replace the contents within the `try { }` block with a new `refreshCache()`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Additionally, we want to define the `refreshCache()` function to get the restaurants
+    from the remote server and then cache them inside the local database, thereby
+    refreshing their contents:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We know that if the refresh of the cache fails, we will still show the local
+    restaurants from Room. But what if the local database is empty?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Continue refactoring the `getAllRestaurants()` method by updating its `catch`
+    block. You can do this by removing the `return@withContext restaurantsDao.getAll()`
+    call (which is now redundant) from the `is UnknownHostException, is ConnectException,
+    is HttpException` branch and by replacing it with the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Essentially, if a network exception has been thrown, we can check whether we
+    have any local restaurants saved in the Room database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the list is empty, we return from the parent method early by throwing a custom
+    exception to inform the user that we have no data to display.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: However, if the local database has elements, we do nothing and let the `getAllRestaurants()`
+    method return the cached restaurants to the UI.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Now, inside the `toggleFavorite()` function of `ViewModel`, whenever we toggle
+    a restaurant as a favorite or not, we can observe that we''re updating the Room
+    database with a partial update. However, we''re not fetching the restaurants again
+    from Room and so the UI is never informed of this change:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Instead, we're updating the `state` variable's value – so the UI receives the
+    updated restaurants in-memory. This means that we are not conforming to the SSOT
+    practice in which we opt to always feed the UI with restaurants from the local
+    database. Let's fix this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Make the `toggleFavoriteRestaurant()` function return the restaurants from
+    our local database. You can do this by calling the `restaurantsDao.getAll()` function
+    from inside the `withContext()` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Inside the `toggleFavorite()` method, store the updated restaurants returned
+    by the `toggleFavoriteRestaurant()` method inside an `updatedRestaurants` variable,
+    and then move the `state.value = restaurants` line from outside the coroutine
+    to inside it while, this time, making it receive the value stored by the `updatedRestaurants`
+    variable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have not updated the `state` object value with the `restaurants` value
+    from the previous state value. Instead, we passed the restaurants from the local
+    database, which were obtained from the `toggleFavoriteRestaurant()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have made our local database the single source of truth for data,
+    we might assume that our issues have been solved. However, remember that we are
+    still overriding the `isFavorite` field values of the local restaurants whenever
+    we cache restaurants with the same IDs from the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'That''s why the final problem lies in the `refreshCache()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: We must find a way to preserve the `isFavorite` field of the restaurants whenever
+    we call `restaurantsDao.addAll(remoteRestaurants)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can fix this issue by complicating the logic that is happening inside the
+    `refreshCache()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the `refreshCache()` function, add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, let''s break down what we''ve just done:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: i. First, just as before, we got the restaurants from the server (which will
+    all have the `isFavorite` fields set to `false` as their default values) by calling
+    `restInterface.getRestaurants()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ii. Then, from Room, we obtained all the restaurants that were favorited by
+    calling `restaurantsDao.getAllFavorited()` – we haven't added this function yet
+    so don't worry if your code doesn't compile yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: iii. Next, just as before, we saved the remote restaurants in Room by calling
+    `restaurantsDao.addAll(remoteRestaurants)`. With this, we override the `isFavorite`
+    field (to `false`) of the existing restaurants that have the same ID as `remoteRestaurants`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: iv. Finally, we partially updated all the restaurants within Room by calling
+    `restaurantsDao.updateAll()`. To this method (which we have yet to implement),
+    we are passing a list of `PartialRestaurant` objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These objects resulted from mapping the previously cached `favoriteRestaurants`
+    objects of type `Restaurant` to objects of type `PartialRestaurant`, which have
+    their `isFavorite` fields set to `true`. With this approach, we have now restored
+    the `isFavorite` field's value for those favorited restaurants that were initially
+    cached.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside `RestaurantsDao`, we must implement the two methods used earlier:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We have added the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `updateAll()` method: This is a partial update that works in the same way
+    as the `update()` method. Here, the only difference is that we update the `isFavorite`
+    field for a list of restaurants instead of only one.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `getAllFavorited()` method: This is a query just like the `getAll()` method
+    but more specific, as it obtains all the restaurants that have their `isFavorite`
+    field values equal to `1` (which stands for `true`).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We are finally done! It's time to test out the app!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Try running the application offline and then mark a couple of restaurants as
+    favorites.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect your device to the internet and run the application – while you are
+    online.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You should now be able to see the previous selections – all the restaurants
+    that were originally marked as favorites are now persisted across any scenario.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, we have one more thing to address!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Removing the logic of persisting state in the case of process recreation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now our application has a single source of truth, that is, the local database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Whenever we receive restaurants from the server, we cache them to Room and then
+    refresh the UI with the restaurants from Room.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Whenever we mark a restaurant as a favorite or not, we cache the selection to
+    Room, and similarly, we then refresh the UI with restaurants from Room.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This means that if a system-initiated process death occurs, we should be able
+    to restore the UI state easily because, now, the restaurants in Room also have
+    the `isFavorite` field cached.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In other words, our app no longer needs to rely on `SavedStateHandle` to restore
+    the restaurants that have been favorited or not; the local source of data for
+    our application will now handle this automatically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s remove our special handling for a system-initiated process death:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside `RestaurantsViewModel`, remove the `stateHandle: SavedStateHandle` parameter:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Inside `RestaurantsViewModel`, remove the `storeSelection()` and the `restoreSelections()`
+    methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the `companion object` of the `RestaurantsViewModel` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'While you are still inside `ViewModel`, remove all the logic related to the
+    `stateHandle` variable from within the `toggleFavorite()` method. The method should
+    now look like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The issue is that we no longer have the `item` variable, so we don't know what
+    to pass to the `toggleFavoriteRestaurant()` function's `oldValue` parameter instead
+    of `item.isFavorite`. We need to fix this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add a new parameter to the `toggleFavorite()` method, called `oldValue`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This `Boolean` argument should tell us whether the restaurant was previously
+    marked as favorite or not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Following this, refactor the `getRestaurants()` method to no longer use the
+    `restoreSelections()` method. The method should now look like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, navigate to the `RestaurantsScreen` file. Then, inside the `RestaurantItem`
+    composable, add another `oldValue` parameter to the `onFavoriteClick` callback
+    function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Also, make sure that you pass the `item.isFavorite` value to the newly added
+    parameter when the `onFavoriteClick` function is called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the `RestaurantsScreen()` composable, make sure you register and then
+    pass the newly received `oldValue` function parameter to the `toggleFavorite`
+    method of `ViewModel`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We're done! Now it's time to simulate the system-initiated process death scenario.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Build the project and run the application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Mark some restaurants as favorites.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Place the app in the background by pressing the home button on the device/emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Select the **Logcat** window and then press the red rectangular button on the
+    left-hand side to terminate the application:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![Figure 6.4 – Simulating a system-initiated process death'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/B17788_06_4.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 6.4 – Simulating a system-initiated process death
+  prefs: []
+  type: TYPE_NORMAL
+- en: Relaunch the application from the application drawer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Because the app relies on the content saved in the local database, it should
+    now correctly display the UI state with the previously favorited restaurants from
+    before the system-initiated process death.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assignment
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we made sure to cache the restaurants in Room so that the first
+    screen of the application could be accessed without the internet. As a homework
+    assignment, you can try to refactor the details screen of the application (where
+    the details of a specific restaurant are displayed) to obtain its own data from
+    Room if the user enters the app without the internet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we gained an understanding of how Room is an essential Jetpack
+    library because it allows us to offer offline capabilities to our applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we explored the core elements of Room to see how a private database is
+    set up. Second, we implemented Room inside our Restaurants application and explored
+    how to save and retrieve cached content from the local database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Afterward, we discovered what partial updates are and how to implement them
+    to preserve a user's selections within the app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Toward the end of the chapter, we understood why having a single source of truth
+    for the application's content is beneficial and how that helps us in edge cases
+    such as a system-initiated process death.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we're going to dive deeper into various ways of defining
+    the architecture of our applications by exploring architectural presentation patterns.
+  prefs: []
+  type: TYPE_NORMAL

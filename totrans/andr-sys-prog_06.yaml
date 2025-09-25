@@ -1,0 +1,976 @@
+- en: Debugging the Boot Up Process Using a Customized ramdisk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the last chapter, we learnt to enable Houdini in the Android emulator using
+    our own x86emu device. With that, we can move on to more challenging tasks in
+    the next few chapters. Most device- or system-level customization will involve
+    changes to the Android system start up sequence. In this chapter, we will analyze
+    the Android system start up sequence and learn the knowledge related to the customization
+    and debugging of the start up sequence. In this chapter, we will cover the following
+    topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android start up process analysis
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Starting up process for the Android-x86
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a filesystem for the Android-x86 `initrd.img`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will start with the analysis of a normal Android boot up process. After that,
+    we will introduce the Android-x86 two-stage boot up. We will build a filesystem
+    for the Android emulator that can work with Android-x86 `initrd.img`. This method
+    provides a flexible way to help the debugging of start up process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyzing the Android start up process
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The Android system boot up sequence is similar to other embedded Linux systems
+    that start from the Boot ROM inside the processor. The Boot ROM will find the
+    bootloader. The bootloader will load the kernel and ramdisk image. The kernel
+    uses the ramdisk as the root filesystem. In a desktop Linux environment, once
+    the kernel initializes the essential devices, it will remount the root filesystem
+    on physical storage such as a hard disk. In Android, the various partitions (system,
+    data, cache, and so on) will be mounted to the root filesystem in memory instead
+    of a storage device. The kernel will invoke the i**nit** process in the ramdisk
+    to start the rest of the system, as shown in the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Bootloader and the kernel
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we can see, we won't be able to avoid the bootloader when we build our own
+    devices. However, we won't spend too much time on this topic, since the bootloader
+    is not our focus in this book. In the Android emulator, it is not necessary to
+    have a bootloader, since there is a minimal bootloader built inside the emulator
+    itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A very small bootloader in QEMU to boot LinuxIf you are interested in the small
+    bootloader in QEMU, you can refer to the AOSP source code at `$AOSP/external/qemu/hw/arm/boot.c`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the bootloader is hardware platform-specific, the bootloader implementation
+    in QEMU is different for various hardware architectures, such as ARM, x86, or
+    MIPS. The reason why I refer to the ARM implementation is because it is the cleanest
+    and easiest to understand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can refer to the book *Embedded Programming with Android* written by myself
+    and published by Addison-Wesley Professional to find out more about bootloader
+    for the Android emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For VirtualBox, which we will use as the virtual hardware from Chapter 8, *Creating
+    Your Own Device on VirtualBox* till Chapter 11, *Enabling VirtualBox-Specific
+    Hardware Interfaces*, we will use the network boot to resolve the bootloader issue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Linux kernel is one of the key elements to support various hardware devices.
+    We will discuss the customization and configuration of the Linux kernel throughout
+    this book. In this chapter, we will focus on the init process and see how it works
+    in the Android system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyzing the init process and ramdisk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The implementation of the init process can be found in the `$AOSP/system/core/init`
+    directory. If we look at the `main` function in `init.cpp`, it includes the code
+    for `ueventd` and `watchdogd`, as shown in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We won''t discuss `ueventd` and `watchdogd`, since they are not related to
+    our topics. We will focus on the mainline code of `init.cpp`. The mainline code
+    of init implements the following logic:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preparation for the environment, such as creating system folders, setting up
+    the standard I/O, initialization of logging systems, and so on. The environment
+    setup also includes the SELinux setup and loading the SELinux policy.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Parsing init scripts `init.rc`, `init.${ro.hardware}.rc`, and so on. Add items
+    from the init scripts to the action or service in `action_list` and `service_list`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Execute the `early-init` action in `action_list`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Execute the `init` action in `action_list`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Execute the `late-init` action in `action_list`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Enter an infinite loop to perform the following tasks:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Execute the action in `action_queue`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Restart the service marked as `SVC_RESTARTING` in `service_list`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Provide the property service, handling `/dev/keychord` events.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Monitor system property changes, signals, and keyboard events.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The init scripts are stored in the ramdisk and are loaded in memory by the
+    bootloader during boot up. If we look at the content of the x86emu `ramdisk.img`,
+    we will see the following files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The init scripts define two types of element: **actions** and **services**.
+    The init process parses all the scripts and runs the tasks depending on the type
+    of element.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Actions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The action syntax is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Actions begin with the keyword `on`, followed by a trigger. Actions are left-aligned
+    and the commands that follow are indented, as shown in the preceding snippet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, we mount all partitions for the emulator using `fstab.goldfish`
+    on trigger `fs`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '**Triggers** are strings that can be used to match certain kinds of event and
+    they are used to cause an action to occur. There are two types of action triggers:
+    **predefined triggers** and **triggers activated on property-value changes**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Predefined triggers could be `early-init`, `init`, `early-fs`, `fs`, `post-fs`,
+    `early-boot`, or `boot` as defined in the init scripts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Property-value triggers are in the following form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Triggers of this form occur when the `<name>` property is set to a specific
+    value `<value>`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, when the `sys.init_log_level` property is changed, we need to
+    reset the log level as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Commands in init scripts reassemble the shell commands and also add init-specific
+    ones.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Services
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Services are programs that init launches and (optionally) restarts when they
+    exit. Services take the form of:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The service will be known by init as `<name>`. The actual name of the binary
+    that is pointed to by `<pathname>` will not be recognized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Options are modifiers to services. They affect how and when init runs the service.
+    We can use the following goldfish-specific service as an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The name of the service is `goldfish-setup` and it runs the `init.goldfish.sh`
+    script as the root user. The `oneshot` option means that this service won't restart
+    when it exits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A complete list of `init` commands and `service` options can be found in the
+    following file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`$AOSP/system/core/init/readme.txt`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Device-specific actions and services
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The source code of system-generated init scripts is located in the `$AOSP/system/core/rootdir`
+    folder. They are copied to `$OUT/root` in the build process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The init process parses the `init.rc` script first. All other scripts are imported
+    by `init.rc` and then parsed by the init process. If we look at the following
+    code snippet of `init.rc`, we can see that there are a few scripts that are imported
+    by `init.rc`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `init.${ro.hardware}.rc` script is the one that can be used to customize
+    for device-specific changes. The `ro.hardware` property is passed to init at runtime
+    so that init can load the right one for the device. We should try to avoid changes
+    to other init scripts and keep the device-specific changes in `init.${ro.hardware}.rc`
+    only.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we look at the goldfish or ranchu device specifically, there are `init.goldfish.rc`
+    and `init.ranchu.rc` scripts for them, respectively. Both scripts are part of
+    the goldfish device, which can be found at `$AOSP/device/generic/goldfish`, as
+    we can see in the following snippet. They are copied to `$OUT/root` in the build
+    process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Inside `init.goldfish.rc` or `init.ranchu.rc`, a `goldfish-setup` service is
+    defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the last chapter, we added Houdini initialization to the `init.goldfish.sh`
+    script and this is how Houdini can be initialized during boot up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The hardware name in the Android emulator is passed by the kernel command line.
+    When you start the emulator with `-verbose` and `-show-kernel`, you will see the
+    following command-line parameters in the console:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: These parameters are passed to the kernel as kernel command-line parameters
+    and then used by init to decide the hardware name. Since we cannot change the
+    kernel parameters in the emulator, we cannot use our own script such as `init.x86emu.rc`
+    in our device. If we want to customize the start up sequence, we should change
+    the code in `$AOSP/device/generic/goldfish` and this is what we did in the last
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ideal approach to customizing the start up sequence is to keep all customizations
+    under our own `device` folder, such as `$AOSP/device/generic/x86emu`. In that
+    case, we can upgrade to the newer Android version very easily. The more general
+    AOSP code we change, the more difficult it is to move to a new Android version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we can have control of the bootloader, we can pass our own kernel parameters
+    through the bootloader. We will see this when we work on the x86vbox device in
+    Chapter 8, *Creating Your Own Device on VirtualBox* till Chapter 11, *Enabling
+    VirtualBox-Specific Hardware Interfaces*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you really need to change `init.rc` so that you can fully customize the boot
+    up sequence, you can define the `TARGET_PROVIDES_INIT_RC := true` variable in
+    your `BoardConfig.mk`. With this definition, you can copy `init.rc` to your `device`
+    folder and change it for your device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Source code and manifest changes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have been introduced to Android start up processes, we will now
+    apply the two-stage boot up process from the Android-x86 project to the Android
+    emulator. Before we talk about the two-stage boot up process, let's have a look
+    at the changes for the AOSP source code and manifest file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we look at the following manifest file that we will use for this chapter,
+    we can see that we only changed `kernel`, the `x86emu` device, and `newinstaller`
+    from the Android-x86 project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the `newinstaller` project, we will build another ramdisk image, `initrd.img`,
+    which will be used in the two stage boot up process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Git tag, `android-7.1.1_r4_x86emu_ch06_r1`, is used to baseline the source
+    code changes in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android-x86 start up process
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 1](4ddc5eff-b4d7-452c-b83c-0c3c1d40da57.xhtml), *Introduction to
+    Android System Programming*, we introduced the Android-x86 project, which is an
+    open source project to provide the Android **Board Support Package** (**BSP**)
+    for Intel devices. It uses an approach similar to Microsoft Windows or Linux distributions
+    for desktops by using universal media to boot all kinds of Intel devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to achieve the goal of using one medium to boot all devices, it splits
+    the boot sequence into two stages. The first stage is to boot a minimum embedded
+    Linux environment to enable hardware devices. In the second stage, it switches
+    to the Android system through `chroot` or `switch_root`. The second stage of the
+    boot process is the same as we discussed previously. Let's look at the first stage
+    of the Android-x86 boot process in detail. We will reuse it for the Android emulator
+    in this chapter. This approach can help to simplify the start up process and it
+    can also help us a lot with the debugging of start up processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first-stage boot using initrd.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The first stage of the start up process in Android-x86 uses a specific ramdisk
+    `initrd.img`. The source code can be found at `$AOSP/bootable/newinstaller`. This
+    project is duplicated from the Android-x86 project. As it is hosted in GitHub,
+    I can make my own changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we look at the contents in this `newinstaller` folder, we can see the preceding
+    folders and files. The following is the explanation about the content of `newinstaller`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`boot`: This is the bootloader for the installation media. The images of Android-x86
+    can be built into different formats (ISO, UEFI, and so on)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`editdisklbl`: A host tool used to edit system image partitions'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`initrd`: The ramdisk for the first-stage boot'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`install` : The installer for Android-x86'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Android.mk` : Android Makefile for `newinstaller`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'If we build `newinstaller`, it can generate a few different image formats,
+    such as ISO, USB, or UEFI. To build a specified image, you can run the following
+    command after you set up the environment and choose a build target:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Besides an installation image, it also produces another two images, `initrd.img`
+    and `install.img`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`initrd.img` : The ramdisk image for the first stage boot up'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`install.img` : The image contains the Android-x86 installer'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will look at the details about both `initrd.img` and `install.img` to understand
+    how the first stage boot works in Android-x86.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inside initrd.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'If we look at the `initrd` folder, we can see the following contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The content of `initrd.img` consists of a minimal Linux environment based on
+    busybox. We can find busybox at `bin/busybox` and shared libraries required by
+    busybox at `lib/`. There is an executable `init` file and a few folders inside
+    the `initrd` folder. We know that the init process is the first process invoked
+    by the kernel when the system starts. Android-x86 provides a separate init process
+    to start the system inside `initrd.img`. This version of init is actually a shell
+    script instead of a binary executable file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This shell script will perform the tasks shown in the preceding figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the kernel invokes the script, it prepares the environment first. This
+    includes the controlling tty setup, the initialization of debug logs, and the
+    debug level.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After the environment is ready, it will try to find either an existing Android
+    system or an installation media on the storage devices. In this step, `ramdisk.img`
+    must be found, otherwise, it will return with an error.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Once an Android system or installation media is found; it will extract `ramdisk.img`
+    to the working folder `/android`. If the `INSTALL` variable is set, it will extract
+    `install.img` to the filesystem root as well. The working folder `/android` is
+    used as the root of the Android system, while the current root is the image of
+    `initrd.img`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: It now loads all additional scripts to prepare for the next steps. If the environment
+    variable `INSTALL` is set to `1`, it will invoke the installation script to install
+    Android-x86 to a storage device such as a hard disk.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Before it switches to the Android system, it will load all the kernel modules
+    for the devices, mount data and SD card partitions, set up the touch screen and
+    display DPI, and so on.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Once everything is ready, it switches to the Android system using `/android`
+    as the new root and invokes `/init` under the new root. The Android system will
+    be started from this point onwards.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Let''s look at a few important code snippets in the script to get a real feel
+    for it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding code snippet, we can see that it invokes the shell function
+    `check_root` to find the root of the Android system in an infinite loop. If it
+    could not find the root file system, it is stuck in this loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the following `check_root` function, the environment variable `SRC` is passed
+    from the kernel command line and specifies the path of the filesystem root. It
+    will check whether a `ramdisk.img` can be found in this path or not. If a `ramdisk.img`
+    can be found, it will be extracted to the `/android` path, which is the current
+    directory, otherwise; it will return an error:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the root filesystem is detected, it will check the environment variable
+    `INSTALL`. This `INSTALL` variable is also passed from the kernel command line.
+    If `INSTALL` is set, it will extract `install.img` to the current root. This will
+    overwrite some of the files in `initrd.img` and we will discuss this in more detail
+    later:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then it will load all other shell scripts from either the `/scripts` or `/src/scripts`
+    folders:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once all the shell scripts are loaded in memory, it will check the `INSTALL`
+    variable again to see whether it should execute the installation script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: No matter whether it executes the installation script or not, it will prepare
+    the environment for the Android system to start. It will load kernel modules,
+    mount `data/sdcard` partitions, and set up all other environment-related requirements.
+    Lastly, it will execute `switch_root` or `chroot` to switch to the Android system.
+    The Android system will be started from this point onwards.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main difference between switch_root and chroot**switch_root** is intended
+    to switch the complete system over to a new root directory and remove dependencies
+    on the old one, so that you can unmount the original root directory and proceed
+    as if it had never been in use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**chroot** is intended to be applied for the lifetime of a single process,
+    with the rest of the system continuing to run in the old root directory, and the
+    system being unchanged when the chrooted process exits.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Android-x86, `switch_root` is used in release mode and `chroot` is used in
+    debug mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inside install.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have analyzed most of the first stage start up processes for Android-x86\.
+    One thing that we want to do more analysis on is how `install.img` works in the
+    first stage start up process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the `INSTALL` environment variable is set, `install.img` will be extracted.
+    This will overwrite some of the contents from `initrd.img`. Let''s take a look
+    at this now. If we list the contents of both directories `initrd` and `install`,
+    we can see that `bin/`, `lib/`, `sbin/`, and `scripts/` are duplicated in both
+    images in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the `bin/`, `sbin/`, and `lib/` folders, there are tools such as `cfdisk`,
+    `cgdisk`, `mkntfs`, `grub`, and so on. These are the tools used to partition hard
+    disks, format extra filesystems, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `scripts/` folder includes the installation script and we will look at `scripts/`
+    to explore how the Android-x86 installation works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we look at the script files in both the `initrd` and `install` folders,
+    we find that both include a `1-install` script. `initrd.img` is used as the root
+    filesystem in the first stage boot. If the `INSTALL` variable is set, `install.img`
+    will be extracted to the root as well. In that case, the one in the `install`
+    folder will overwrite the one in the `initrd` folder. We can see from the following
+    figure how `initrd.img`, `ramdisk.img`, and `install.img` are integrated to form
+    the first stage and the second-stage filesystem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If we look at `1-install` under the `initrd/scripts` folder, we will see the
+    following shell script function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It implements a `do_install` function, which will return an error message.
+    If this script is not overwritten by the one from `install.img`, it means the
+    installer is not available. If `install.img` is extracted, the real `do_install`
+    function will be invoked to start the installation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `do_install` function will call another function, `install_hd`, and `install_hd`
+    will call an `install_to` function to perform the actual installation. The `install_to`
+    function takes a parameter that is the target device for the installation. It
+    will perform the following installation tasks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It will format the target device first and then mount the device to the `/hd`
+    folder.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It will install GRUB as the bootloader.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It will create a folder using the `android-$VER` naming convention in the `/hd`
+    folder as the target installation folder. For example, as our device is x86emu,
+    the installation target will be `/hd/android-x86emu`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It will use the `cpio` command to copy the files from the installation media
+    to the installation target. These files include `kernel`, `initrd.img`, `ramdisk.img`,
+    and everything under the `system` folder from the AOSP build. It depends on the
+    configuration; it may either copy the `system.sfs` or `system.img` image file,
+    or it may copy everything in the `system` folder directly to `/hd/android-$VER/system`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the following sections, we need to repeat the installation procedure to create
+    a filesystem that can be used for the Android-x86 two-stage boot sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building x86emu with initrd.img
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: After we did all the analysis of `initrd.img` for Android-x86, we can build
+    a similar one for the Android emulator now. Be aware that this can work only with
+    ranchu, but not with goldfish. The goldfish emulator uses an older version of
+    QEMU and it doesn't support the additional storage devices for the emulator. To
+    support the boot from `initrd.img`, we have to change the layout of the filesystem.
+    It is not good to change the original filesystem image in AOSP. We will create
+    another file image to be used for the boot with `initrd.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the ranchu emulator, the images are emulated as virtio block devices. After
+    we start the emulator, we can inspect the mount points, as shown in the following
+    screenshot. We can see that `system.img` is mounted as `/dev/block/vda`, `userdata.img`
+    as `/dev/block/vdb`, and `cache.img` as `/dev/block/vdc`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: ranchu images emulated as virtio block devices
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All partitions in the ranchu emulator are mounted using the `fstab.ranchu`
+    file, as we can see in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: With the ranchu emulator, we can easily add another storage device with the
+    `-hda` QEMU option. With this option, we can see that a new block device, `/dev/block/sda`,
+    is available after the emulator starts. We will discuss this in more detail later.
+    Before we can test this idea, we need to create the disk image first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a filesystem image
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'There are many ways that we can create disk images. QEMU can support many disk
+    image formats. If you want to find details about the image formats that can be
+    supported by QEMU, you can check using the following Linux command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The supported image formats are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**raw**: This plain disk image format has the advantage of being simple and
+    easily exportable to all other emulators.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**qcow2**: This is the QEMU image format, which is the most versatile format.
+    It is a compressed image format, so it has a smaller image size and can support
+    snapshots.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**qcow**: This is the old QEMU image format.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**cow**: This is the User Mode Linux Copy-On-Write image format.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**vdi**: This is the VirtualBox 1.1-compatible image format.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**vmdk**: This is the VMware 3- and 4-compatible image format.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**vpc**: This is the VirtualPC-compatible image format (VHD).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**cloop**: This is the Linux compressed loop image, useful only to reuse directly
+    compressed CD-ROM images present, for example, in Knoppix CD-ROMs.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We will use the qcow2 file format to test our `initrd.img` for the Android
+    emulator. In order to create a file image in qcow2 format, we need to add the
+    following code in the `Android.mk` Makefile of `bootable/newinstaller`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first thing that we have to do in the preceding Makefile is to create a
+    directory layout that can be used by `initrd.img`, as shown in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_007.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Directory layout of x86emu_x86.img
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create a `data` folder to be used as data storage. Then, we move existing
+    image files in the AOSP output folder to the `$OUT/x86emu_tmp/x86emu_x86` directory
+    in order to create the preceding directory structure. These file images will be
+    moved back after the file image is generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we have the right directory structure, we can use the `make_ext4fs` command
+    to create a raw filesystem image with the following options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: The size of the filesystem is `BOARD_SYSTEMIMAGE_PARTITION_SIZE`; additionally,
+    `X86EMU_EXTRA_SIZE`. `BOARD_SYSTEMIMAGE_PARTITION_SIZE` is defined in the board
+    configuration file for the system image size. `X86EMU_EXTRA_SIZE` is for the space
+    of ramdisk and kernel images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next step is to generate the qcow2 format from the raw file image using
+    the `qemu-img` command. Both raw and qcow2 format images can be used by the emulator,
+    but the raw file image is much larger than the qcow2 image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since the qcow2 image can support the snapshot feature, we can also generate
+    a snapshot image (`x86emu_x86.img`) based on the qcow2 image (`x86emu_x86-qcow2.img`).
+    If we use the snapshot image, we can restore to the original qcow2 image at any
+    time. The snapshot image can be created using the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the image is generated, we can inspect it using the `qemu-img` command
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: We see that the `x86emu_x86.img` image is the snapshot image of `x86emu_x86-qcow2.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the image that we just created, there are no partitions created. When we
+    mount it in the Android emulator, it will appear as a `/dev/sda` or `/dev/block/sda`
+    device. If we want to create partitions for the image file, we need to use the
+    `edit_mbr` tool to do so. You can explore this option on your own. With multiple
+    partitions, we can put the system, data, and cache into different partitions,
+    which is closer to the disk layout in most mobile devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kernel changes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With effect from Android 4.4, SELinux is on by default. When we change the filesystem
+    in Android, we have to take care of the SELinux settings as well. This will make
+    the configuration more complicated than what we expect. If you are interested
+    in this, you can do your homework to configure SELinux for this case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this book, we will disable SELinux by default so that we can concentrate
+    on our topics. To disable SELinux, we have to make some changes the kernel configuration
+    file. You can check the changes using the `git` command as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see the changes in the `android-x86emu-3.10` branch using `gitk`, as
+    shown in the following screenshot. We can see that we set the default security
+    to DAC and removed the SELinux setting, `CONFIG_SECURITY_SELINUX=y`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_008.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Disabling SELinux in the ranchu kernel
+  prefs: []
+  type: TYPE_NORMAL
+- en: Booting a disk image on the Android emulator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Once we have done all the changes, we can build the qcow2 image using the following
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see from the preceding command-line output, `system.img` will be
+    built as usual. After that, the ramdisk image, `initrd.img`, will be created as
+    follows. Pay attention to the `VER` environment variable. We changed the script
+    to set it as `x86emu`. The original one in Android-x86 is the current date, such
+    as 2016-11-11:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This variable is used as part of the installation folder name. Let''s continue
+    reviewing the build log:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After ramdisk `initrd.img` is created, the raw and qcow2 file images will be
+    created as we have added in the `Android.mk` file for `bootable/newinstaller`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have the `x86emu_x86-qcow2.img` qcow2 image and the `x86emu_x86.img` snapshot
+    image now. In order to test the images, we can use a shell script to help us.
+    The shell script can be downloaded from GitHub at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://github.com/shugaoye/asp-sample/blob/master/scripts/test-initrd.sh](https://github.com/shugaoye/asp-sample/blob/master/scripts/test-initrd.sh)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To run this script, you should set up your SDK environment first so that we
+    can find the emulator in the `$PATH` environment variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To launch this script, you can use the AOSP build result directly or you can
+    download the images from SourceForge at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://sourceforge.net/projects/android-system-programming/files/android-7/ch06/ch06.zip/download](https://sourceforge.net/projects/android-system-programming/files/android-7/ch06/ch06.zip/download)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you use the AOSP build result, the script will use the `$OUT` environment
+    variable to look for the images. If the `$OUT` environment variable is not set,
+    it will assume that the images are stored in the current directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To run the Android emulator in a remote *X* window session, we need to use VirtualGL
+    for OpenGL ES support. With any command-line parameter, the script will launch
+    the emulator using VirtualGL. If you use a Linux machine with a local *X* window
+    session, you don't have to do this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use `initrd.img` as the ramdisk, we can see that we specify `initrd.img`
+    in the `-ramdisk` option in the emulator command line. The next thing that we
+    need to pay attention to is the QEMU options. We can specify QEMU options after
+    the `-qemu` Android emulator option. We use two QEMU options, `-append` and `-hda`.
+    With the `-hda` option, we can add the `x86emu_x86-qcow2.img` image or the `x86emu_x86.img`
+    snapshot image as another hard disk for the emulator. With the `-append` option,
+    we can provide kernel parameters that we want to pass to the ranchu kernel. All
+    other kernel parameters are the same as the one provided by the emulator except
+    for the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`DEBUG=2`: This option sets the debug level to `2` so that we can get the debug
+    console during boot up'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`root=/dev/sda`: This option specifies the root device as `/dev/sda`, which
+    is the `x86emu_x86-qcow2.img` image or the `x86emu_x86.img` snapshot image that
+    we provide as a QEMU option'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SRC=x86emu_x86`: This option defines the folder name on the root device that
+    init can use to find all images'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'You can launch the script from the command line and you will see the following
+    screen output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the command-line log and the following screenshot, you can see that the
+    `/dev/sda` root device is found and mounted at `/mnt`. The Android system image
+    is mounted as a loop device to `/dev/loop0`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_06_009.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Debug console of initrd.img
+  prefs: []
+  type: TYPE_NORMAL
+- en: After you exit the shell console, the Android system will start up as usual.
+    With this approach, you can get a debug console at the point when you want to
+    troubleshoot any issues. You can also change any Android startup scripts on-the-fly
+    without rebuilding a new image to test. All the flexibilities in this setup will
+    help debugging of the boot up process a lot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learnt about the startup process for the Android system.
+    After that, we dived deep into the startup process for Android-x86\. We found
+    a new way to boot up the system to a minimum Linux environment first and then
+    use that environment to boot the Android system. In this process, we can gain
+    control by obtaining a shell console so that we can examine the system at a given
+    point. To support this kind of boot, we learnt how to build a system image that
+    can be used together with `initrd.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will continue exploring how to customize the Android
+    emulator by adding a Wi-Fi connection to it.
+  prefs: []
+  type: TYPE_NORMAL

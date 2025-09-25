@@ -1,0 +1,1011 @@
+- en: Customizing the Android Emulator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the last chapter, we spent some time exploring the details of the Android
+    system architecture. With our knowledge about kernel, HAL, and system service,
+    we can start to customize the Android system ourselves. In this chapter, we will
+    cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Why customize the Android emulator?
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a new x86emu device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building and testing the new x86emu device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Why customize the Android emulator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You may be wondering why we want to customize Android emulator. Google already
+    provides it in the Android SDK and we can just use it without any additional effort.
+    However, as a developer, you may find that it may not be good enough to meet your
+    expectations. For example, in the most recent Android Studio or SDK releases,
+    the Intel x86 emulator is recommended for developers, since it is much faster
+    than the ARM version. One problem with using the Intel x86 emulator is that many
+    Android applications with native code cannot run properly, because the x86 native
+    library is not built into these applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To resolve this issue, we can integrate Houdini libraries from Intel to the
+    emulator. With Houdini libraries, we can execute ARM native code on the Intel
+    x86 platform. Another common request for Android emulator is that **Google Mobile
+    Services** (**GMS**) is not included in it. Many developers develop applications
+    with the assumption that GMS should be available on the device. In the next few
+    chapters, we will learn how to create a x86emu device to customize Android emulator
+    so that we can integrate components such as Houdini or enable additional hardware
+    interfaces, such as Wi-Fi, in Android emulator. Armed with the knowledge about
+    how to create the x86emu device, you can create your own Android emulator to meet
+    your requirements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is possible, we always avoid changing too much AOSP code directly. This is
+    because the more we change, the harder it is for us to port it to the latest version
+    of Android. Google constantly releases new Android code from time to time. Sometime,
+    new releases may be difficult to merge because of the architecture change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From this chapter to [Chapter 7](7ff9a111-96cb-44ed-b92d-435e73821306.xhtml),
+    *Enabling Wi-Fi on the Android Emulator*, we will teach a way to customize existing
+    devices with minimal changes to the AOSP source code. From Chapter 8, *Creating
+    Your Own Device on VirtualBox* to [Chapter 11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml),
+    *Enabling VirtualBox-Specific Hardware Interfaces*, we will discuss the porting
+    to a new platform that we have to change to AOSP code directly. Even in that case,
+    we still have to plan and consider the merge effort to a new Android release.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding build layers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The AOSP build system includes the abstraction layers to build a device. After
+    we understand the ideas behind these layers, it will help us to understand the
+    relationship of the various Makefiles for a device. It is always good to refer
+    to the original Google document at the following URL, when you start to create
+    a new device. The information will usually be updated when a new Android release
+    is available: [http://source.android.com/source/add-device.html](http://source.android.com/source/add-device.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we will apply the information from the previous Google document
+    to the specific Android emulator virtual hardware that we are going to work on.
+    In this way, we can derive all device-specific Makefiles according to the general
+    guidance from the previous Google document. Throughout the process from generic
+    to specific, we can apply the inheritance of object-oriented concepts to the Makefile
+    system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are three layers, **Product**, **Board/Device**, and **Architecture**,
+    in the device build system. These layers can be considered as different dimensions
+    to measure the characteristic of a product. Each layer relates to the one above
+    it in a one-to-many relationship, which is similar to the inheritance or composition
+    relationship in the object-oriented terms. For example, one kind of hardware architecture
+    can have more than one board and each board can have more than one product. We
+    will see how this method works when we create a new device in this chapter later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following table is a list of layers used in an AOSP build system. I created
+    this table by modifying the one from the Google document and added my comments
+    specific to the x86emu device, which we are going to work on in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Layer** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Product | The Product layer defines the feature specifications of the shipping
+    product such as the modules to build, locales supported, and the configuration
+    for various locales. In other words, this is the name of the overall product.
+    Product-specific variables are defined in **product definition Makefiles**. A
+    product can inherit from other product definitions, which simplifies maintenance.
+    A common method is to create a base product that contains features that apply
+    for all products, then creating product variants based on that base product.In
+    this chapter, we inherit from a generic device for an Android emulator in AOSP
+    to create our x86emu device. For the x86emu device, we can also create two products
+    that differ only by their architecture variants (we can have different builds
+    for x86 or x86_64). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Board/Device | The Board/Device layer represents the physical layer of plastic
+    on the device (that is, the industrial design of the device). For example, North
+    American devices probably include QWERTY keyboards, whereas devices sold in France
+    probably include AZERTY keyboards.This layer also represents the bare schematics
+    of a product. These include the peripherals on the board and their configuration.
+    In the x86emu device, we need to define the size of the filesystem, the graphics
+    hardware and camera, and so on. In [Chapter 7](7ff9a111-96cb-44ed-b92d-435e73821306.xhtml),
+    *Enabling Wi-Fi on the Android Emulator*, we want to support Wi-Fi in the emulator.
+    We need to specify it in the board configuration file. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Arch | The Architecture layer describes the processor configuration and **Application
+    Binary Interface** (**ABI**) running on the board. |'
+  prefs: []
+  type: TYPE_TB
+- en: Build variants
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When building for a particular product, it's often useful to have minor variations
+    on what is ultimately the final release build. By using different build variants,
+    it can help the different parties in the product development cycle. There are
+    primarily three kinds of build variant in the AOSP so far. The **engineering build**
+    is the default one and is suitable for development work. In this type of build,
+    the product security policy is not fully enforced and the debugging mechanisms
+    are turned on. It is easy for engineers to test and fix issues with an engineering
+    build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second flavor is **user build**, which is used for the final release. All
+    debugging mechanisms are turned off and the product security policy is fully enforced.
+    The third flavor is **userdebug,** which is in between the engineering build and
+    user build. This type of build can be used in the field test, which is also used
+    by the end users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All components in the AOSP build are called **modules**. In a module definition,
+    the module can specify tags with `LOCAL_MODULE_TAGS`, which can be one or more
+    values of `optional` (default), `debug`, or `eng`. With a tag, we can define the
+    usage of a module. For example, all debug tools will only be included in the engineering
+    build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a module doesn't specify a tag (by `LOCAL_MODULE_TAGS`), its tag defaults
+    to `optional`. An `optional` module is installed only if it is required by product
+    configuration with `PRODUCT_PACKAGES`. We usually specify packages needed by a
+    product in the device Makefile using the `PRODUCT_PACKAGES` variable. This way,
+    we can easily define modules that are only suitable for a particular build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following table shows the AOSP-defined build variants documented in the
+    preceding Google URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Build variants** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `eng` | This is the default flavor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Installs modules tagged with: `eng` and/or `debug`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Installs modules according to the product definition files, in addition to tagged
+    modules
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ro.secure=0`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ro.debuggable=1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ro.kernel.android.checkjni=1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb` is enabled by default'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| `user` | This is the flavor intended to be the final release:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installs modules tagged with `user`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Installs modules according to the product definition files, in addition to tagged
+    modules.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ro.secure=1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ro.debuggable=0`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb` is disabled by default'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| `userdebug` | The same as `user`, except:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also installs modules tagged with `debug`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ro.debuggable=1`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb` is enabled by default'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a new x86emu device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To customize Android emulator, we need to create a new device based on Android
+    emulator and make our customization on this new device. We will work on this from
+    the original AOSP source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking out from the AOSP
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As I mentioned before, I try to avoid unnecessary changes to the AOSP source
+    code as much as I can. In this chapter, in order to set up the build environment,
+    you can check out the `android-7.1.1_r4` version of the AOSP source code and clone
+    the kernel and x86emu source to the AOSP source tree as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we have retrieved the source code step by step. The project x86emu is the
+    new device that we create in this chapter and can be used to customize Android
+    emulator in the next few chapters. The goldfish project is the kernel that I forked
+    from the AOSP goldfish kernel: [https://android.googlesource.com/kernel/goldfish/](https://android.googlesource.com/kernel/goldfish/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `android-7.1.1_r4_x86emu_ch04_r1` tag is the baseline of this chapter''s
+    source code release. All source code created or changed in this book is baselined
+    using the naming convention `{Android version}_{project}_{chapter number}_{release
+    number}`. Here is the explanation of this naming convention:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Android version` is the original AOSP version number'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`project` can be x86emu or x86vbox'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`chapter number` is what chapter we create a baseline for the source code'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`release number` is used to indicate the number of releases'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These can work in the simple configuration of this chapter. This method is not
+    good enough when we use source code from multiple sources as we will do in other
+    chapters later in this book. We will use our own manifest file to manage the source
+    code in this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking out from a local mirror
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To use our own manifest file, we can use either a local mirror or a remote
+    repository. If we use a local mirror, we have to change `manifest.xml` of `android-7.1.1_r4`
+    a little to make our own. We copy `.repo/manifest.xml` to our `manifests/default.xml`
+    and make the following changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This manifest file has an assumption that our local mirror has the following
+    directory structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The AOSP mirror is created under the `android` folder. GitHub mirror is created
+    under the `github` folder. We need to use android-x86 source code as well later.
+    We can put it under the `android-x86` folder. Our own manifest is stored at `github/manifests`
+    and the preceding manifest file is `github/manifests/default.xml`. In this file,
+    we add additional lines to retrieve the Android kernel and x86emu device from
+    GitHub.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this manifest, we can get the source code using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also retrieve all source code from the remote repository directly using
+    our own manifest file. With that, we need to change the manifest file a little
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see, we changed the URL of the remote `aosp` to use the absolute
+    path in this revision of the manifest file. To check out the source code using
+    this revision, we can run the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because there are multiple repositories involved in this book, I strongly encourage
+    you to use a local mirror. This can make the build and debug process more efficient.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is also possible to use `local_manifests` to set up your workspace. You can
+    refer to Appendix B, *Using Repo in This Book*, in the book *Embedded Programming
+    with Android*. A sample file can be found at [https://github.com/shugaoye/build/blob/master/local_manifest.xml](https://github.com/shugaoye/build/blob/master/local_manifest.xml).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this book, I use branches for the manifest file to manage the different
+    versions of source code. To create a baseline of the source code in a chapter,
+    I use the following naming convention:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`{Android version}_{chapter number}_{remote (optional)}`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Android version` is the original AOSP version number'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`chapter number` is what chapter we create a baseline for the source code'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`remote` is used to indicate how to check out the source code from the remote
+    repositories'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: For example, from the following screenshot, we can see that the branch `android-7.1.1_r4_ch04`
+    is used to check out the source code of chapter 4 from a local mirror. The branch
+    `android-7.1.1_r4_ch04_aosp` is used to check out the source code for chapter
+    4 from the remote repository. Since I am in China, I don't have access to the
+    AOSP source code all the time. I created revisions (`android-7.1.1_r4_ch04_tuna`
+    and `android-7.1.1_r4_ch04_ustc`) for chapter 4 to check out the source code from
+    AOSP mirrors in China and GitHub. You may change the manifest file according to
+    your needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_04_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Creating x86emu device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'After we check out the source code, we can look at how to create a new x86emu
+    device in the `$AOSP/device` folder. The hierarchy in the `device` folder is in
+    the `vendor-name/device-name` format. For example, the Nexus S from Samsung can
+    be found in the `samsung/crespo` folder. The device name of Nexus S is `crespo`.
+    We can create our device under a common folder, `generic`, as follows. The folder
+    name for our device is `generic*/*x86emu`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is the project that we create in this chapter and you can find the source
+    code at [https://github.com/shugaoye/x86emu.git](https://github.com/shugaoye/x86emu.git).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will create a list of Makefiles in this folder to build the device. Refer
+    to the build layers in the previous section. Here is a list of Makefiles that
+    need to be included in the device skeleton:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`AndroidProducts.mk`: This is a Makefile to describe the various products that
+    can be built for this device'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BoardConfig.mk`: This is a board configuration Makefile for the hardware board'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`device.mk`: This is the device Makefile that is used to declare the files
+    and modules needed for the device'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vendorsetup.sh`: This is a shell script that can be used to add your product
+    (a "lunch combo") to the build along with a build variant separated by a dash'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`{Product Makefile}.mk`: This is the product definition Makefile and it is
+    used to create a specific product based on the device'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now we can create Makefiles for our device one by one according to the preceding
+    list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AndroidProducts.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We included all product definition Makefiles in this file. The AOSP build system
+    will start to search all product definitions using this file. The following is
+    the content of `AndroidProducts.mk:`
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, we defined two product variants for x86 and x86_64 builds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both `x86emu_x86.mk` and `x86emu_x86_64.mk` are very similar. They define the
+    same set of product definition variables for 32 bit and 64 bit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following table compares the product definition Makefiles for 32-bit and
+    64-bit build:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| `x86emu_x86.mk` | `x86emu_x86_64.mk` |'
+  prefs: []
+  type: TYPE_TB
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You may notice that we inherit the common product definition files for 32-bit
+    and 64-bit first at the beginning:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There are many generic product definitions defined by the AOSP build system.
+    You can find them at `$AOSP/build/target/product`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After that, a set of product definition variables `PRODUCT_BRAND`, `PRODUCT_NAME`,
+    `PRODUCT_DEVICE`, and `PRODUCT_MODEL` are defined with different values. `TARGET_ARCH`
+    and `TARGET_KERNEL_CONFIG` are also defined for 32 bit and 64 bit separately.
+    Pay attention to `PRODUCT_MODEL`. Since we will change Makefiles in each chapter,
+    in this book we use `PRODUCT_MODEL` to indicate the build for each chapter. In
+    this chapter, we define `PRODUCT_MODEL` as `x86emu_x86_ch4` for the build in this
+    chapter. At the end of the file, we also include a common `Makefile x86emu_base.mk`
+    for both 32-bit and 64-bit products. This file includes additional configurations
+    for the kernel build:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The kernel build is usually not included in the AOSP build. You have to build
+    them separately according to the instructions from Google. In this book, we integrate
+    the kernel build in our own Makefile here. The kernel `AndroidKernel.mk` Makefile
+    is created based on the Makefile of the Qualcomm kernel source at [https://android.googlesource.com/kernel/msm/](https://android.googlesource.com/kernel/msm/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are many product definition variables used in the preceding Makefiles.
+    Let''s review the product definition variables that we used here. Refer to the
+    Google documents for the complete list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PRODUCT_BRAND`: This is the brand that the software is customized for. We
+    just defined it as our device name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRODUCT_NAME`: This is the product name that we give to the device. We set
+    it to `x86emu_x86` in this book. It is also the prefix that we can select in the
+    lunch combo, such as `x86emu_x86-eng`. The suffix is the build variants.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRODUCT_DEVICE`: The name of the actual product. `TARGET_DEVICE` derives from
+    this variable. This is also the board name that the build system uses to locate
+    `BoardConfig.mk`. It is the x86emu for our device and it is also the directory
+    name of our device at `$AOSP/device/generic/x86emu`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRODUCT_MODEL`: This is the name that we can see in the settings in Model.
+    As I mentioned earlier, we use this variable to differentiate the build of each
+    chapter in this book.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRODUCT_OUT`: This is the output folder of the build result. It is the same
+    as the environment variable `$OUT`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRODUCT_COPY_FILES`: This is a list of specific files that we would like to
+    copy to the target''s filesystem. The list of words looks like `source_path:destination_path`.
+    The file at the source path should be copied to the destination path during the
+    build process.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: BoardConfig.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`BoardConfig.mk` defines the board-specific configurations. We define CPU/ABI,
+    the target architecture, OpenGLES configurations, and so on in this file. We also
+    define the image file size, format, and so on:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This file is copied from a predefined AOSP board configuration at `$AOSP/build/target/board/generic_x86/BoardConfig.mk`
+    with minor changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can also use the system-defined board configuration directly and overwrite
+    predefined variables as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we look at the folder of `$AOSP/build/target/board/generic_x86`, it contains
+    a few other files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We need to copy `system.prop` to our `device` folder as well, since this file
+    defines the **Radio Interface Layer** (**RIL**) configuration for the emulator
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Without this, you will find that the data connection cannot work properly in
+    the build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: device.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'You may notice that there is a `device.mk` file in the `generic_x86` folder.
+    Yes, we can reuse that file directly. The following is our `device.mk` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, in our `device.mk` file, we simply inherit the common `device.mk`
+    from the `generic_x86` device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can look at the `device.mk` file for the `generic_x86` device as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding `device.mk` file for the `generic_x86` device, it overwrites
+    a few properties and copies configuration files to the `system` folder. It also
+    includes the HAL layers for the goldfish device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we can add our device build to the build system using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Such as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To automatically add this to the build system, we can add a script `vendorsetup.sh`.
+    In this script, we can create all the build variants for `x86emu_x86`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Be aware that the 64-bit build for the x86emu device is not tested in this book.
+    You must make the necessary changes by yourself if you want to test a 64-bit build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this section, besides product-level variables as I explained before, there
+    are also variables for the target device and board-level variables. The following
+    is a list of variables for the target devices that are defined in `BoardConfig.mk`,
+    `device.mk`, or product definition Makefiles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`TARGET_ARCH`: This is the architecture of the device. It is usually something
+    such as `arm`, `x86`, and so on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TARGET_USERIMAGES_USE_EXT4`: This variable needs to be set as `true` to build
+    a filesystem in ext4 format. The filesystem can be built into other formats such
+    as yaffs2 in the older Android version prior to Android 4.4.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TARGET_KERNEL_SOURCE`: This is the path for the kernel source code. In our
+    case, the kernel source code can be found at `$AOSP/kernel`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TARGET_KERNEL_CONFIG` : The kernel configuration file that we use to build
+    the kernel source.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following is a list of board-level variables that we used in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`BOARD_SYSTEMIMAGE_PARTITION_SIZE`: The size of the filesystem partition for
+    the system image (`system.img`)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BOARD_USERDATAIMAGE_PARTITION_SIZE`: The size of the filesystem partition
+    for the user data (`userdata.img`)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE`: The filesystem format of cache partition'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BOARD_FLASH_BLOCK_SIZE`: The block size of the flash device'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building and testing x86emu
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Once we have the source code, we can start to build and test our x86emu device
+    in this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building x86emu
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before we start to build x86emu, let''s have a quick look at the Android build
+    system first. The major difference between the Android build system from other
+    make-based build systems is that the Android build system doesn''t rely on recursive
+    Makefiles. Android Makefiles end in the extension `.mk`; the main Makefile for
+    a particular source directory is named `Android.mk`. The build system imports
+    all `Android.mk` from various folders to create one large Makefile to start the
+    build, as we can see from the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before we start the build, we must set up the build environment first. The
+    Android build system provides a `build/envsetup.sh` script for the build environment
+    setup. We can set up the build environment by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After this, we need to specify the target that we want to build. In Android
+    build system terms, this is called a lunch-combo. We can specify a lunch-combo
+    directly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Or select it from a list in a menu:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: We learnt this in [Chapter 2](984e0cef-7bf6-4454-bede-bb34c553be12.xhtml), *Setting
+    Up the Development Environment*, when we built the Android emulator image. You
+    may notice that the difference here in the menu items is that the menu includes
+    the device configurations added by us in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The lunch-combo that we select here is `x86emu_x86-eng`. We can start to build
+    the target now using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Or:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `-j4` option is used to specify the number of concurrent make sessions.
+    It is related to the number of CPU cores that you have on your system, for example,
+    you may choose `-j8` in a more powerful hardware platform. The `m` command is
+    available after we execute `source build/envsetup.sh`. It is equivalent to `croot;
+    make -j4`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you want to see the actual commands in the build, you can use the `showcommands`
+    option on the command line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You may use other frequently used build targets. Here is a list of them that
+    you may refer to in your build:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`make sdk`: Build the tools that are part of an SDK (`adb`, `fastboot`, and
+    so on).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make snod`: Build the system image from the current software binaries.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make all`: Make everything, whether it is included in the product definition
+    or not.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make clean`: Remove all built files (prepare for a new build). It is the same
+    as `rm -rf out/<configuration>/`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make modules`: Shows a list of submodules that can be built (a list of all
+    `LOCAL_MODULE` definitions).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make <local_module>`: Make a specific module (note that this is not the same
+    as the directory name. It is the `LOCAL_MODULE` definition in the `Android.mk`
+    file).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make clean-<local_module>`: Clean a specific module.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make bootimage TARGET_PREBUILT_KERNEL=/path/to/bzImage`: Create a new boot
+    image with custom `bzImage`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`make recoveryimage`: Make the recovery in `bootable/recovery/`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Besides the build targets, there are some helper macros and functions that
+    are installed when you source `envsetup.sh`. You can find out what they are by
+    using the `hmm` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we build the target successfully, we can find the images at `out/target/product/x86emu`
+    in our case. We can also use the environment variable `$OUT` as follows to list
+    the build output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Testing x86emu
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To test x86emu, we can use the AVD `a25x86` that we created in [Chapter 2](984e0cef-7bf6-4454-bede-bb34c553be12.xhtml),
+    *Setting Up the Development Environment*. To use our own system images, we can
+    create a shell script `~/bin/test-ch04.sh` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can see from the preceding shell script that the images for x86emu are
+    used to start the AVD `a25x86`. You need to set your Android SDK path so you can
+    use the emulator from Android SDK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After you start the emulator, you can go to Settings | About phone to check
+    the build information, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/6099_04_01.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: x86emu build information
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can see from About phone that Model is x86emu_android-7.1.1_r4_ch04, which
+    we specified in the product definition Makefile `x86emu_x86.mk`. Kernel version
+    is 3.10.0 and Build number is the build target x86emu_x86-eng.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to test the images in this chapter without setting up your own build,
+    you can download the images from SourceForge at [https://sourceforge.net/projects/Android-system-programming/files/android-7/ch04/](https://sourceforge.net/projects/Android-system-programming/files/android-7/ch04/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating with Eclipse
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You may use an **Integrated Development Environment** (**IDE**) for your development
+    work. It is possible to integrate the AOSP build environment and selected projects
+    into your favorite IDE. Here, I will use Eclipse as an example to explain how
+    to integrate our projects and AOSP build environment in Eclipse. Be aware that
+    since AOSP can only be built in the Linux environment, this can only work for
+    Linux as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even though Android Studio is the default IDE for Android application development,
+    I prefer Eclipse for Android system programming. With Eclipse, we can build both
+    native and Java applications. We can also integrate AOSP builds in Eclipse projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To set up the Eclipse environment, you can use the latest Eclipse with ADT plugin
+    or you can download an old ADT bundle from Google.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For Linux x86 or x86_64:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://dl.google.com/Android/adt/adt-bundle-linux-x86_64-20140702.zip](http://dl.google.com/Android/adt/adt-bundle-linux-x86_64-20140702.zip)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[http://dl.google.com/Android/adt/adt-bundle-linux-x86-20140702.zip](http://dl.google.com/Android/adt/adt-bundle-linux-x86-20140702.zip)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To use Eclipse, we need to create a Makefile for our x86emu device build as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We need to define a few build targets that can be used in Eclipse. Let''s see
+    how to import an x86emu device build into the Eclipse project. We will use Eclipse
+    from the ADT bundle to explain the process. To integrate the AOSP build with Eclipse,
+    we must launch Eclipse in the AOSP build environment. Let''s start Eclipse as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we have installed the ADT bundle, we can find Eclipse in the preceding
+    directory under the SDK installation path. After we launch Eclipse, select the
+    C/C++ Perspective, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_04_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Select the C/C++ perspective
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can import the x86emu directory as an existing Makefile project to Eclipse
+    by selecting File | Import... | Existing Code as Makefile Project, as shown in
+    the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_04_004.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Importing existing code as a Makefile project
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Click on Next and navigate to the `$AOSP/device/generic/x86emu` folder to import
+    the source code, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_04_005.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Import existing code
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we import the project, we should be able to see that all files under the
+    `x86emu` folder are shown on the right-hand side in Project Explorer, as we can
+    see in the following screenshot. Then we can click the right mouse button to see
+    the menu list for the project and select Make Targets | Create... | Create Make
+    Target. We can add the build target that we defined in the Makefile in the Target
+    name field. If we define the default build target `all`, the default build in
+    Eclipse will trigger the build target `all` in our `Makefile`. This is what we
+    defined for build target `all`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: What we do here is launch the AOSP build at the AOSP root directory. We also
+    generate a log file for the build using a naming convention, `x86emu-{$DATE}.txt`,
+    and you can find this log file at the AOSP root folder after the build is completed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_04_006.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Creating a Make Target in Eclipse
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we create all build targets, we can build AOSP from Eclipse by selecting
+    Project | Build All or use the shortcut *Ctrl* + *B* to launch the build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learnt how to create a new device based on the Android emulator
+    build for Intel x86 architecture. We explained the different build layers in the
+    AOSP built system and how these build layers associate with Makefiles for a device.
+    After that, we build and tested the new x86emu device. Finally, to improve the
+    efficiency of development work, we integrated the AOSP build in Eclipse. In the
+    next chapter, we will extend Android emulator to support ARM binary translation
+    using the x86emu device.
+  prefs: []
+  type: TYPE_NORMAL

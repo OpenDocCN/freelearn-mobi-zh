@@ -1,0 +1,993 @@
+- en: Threads and Coroutines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we'll discuss how our application can efficiently serve thousands
+    of requests per second. In the previous chapter, we already had one glimpse at
+    it—**reactive streams** use a number of different threads (exposed by the `Schedulers`
+    API), and we even had to create a thread once or twice with the `thread()` function.
+    But before we dive into nuances, let's first discuss what kind of problems threads
+    are able to solve.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In your laptop, you have a CPU with multiple cores, probably four of them. That
+    means that it can do four different computations *in parallel*, which is pretty
+    amazing, considering that 10 years ago, a single-core CPU was the default and
+    even two cores were only for enthusiasts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But even back then, you were not actually limited to doing only a single task
+    at a time, right? You could listen to music and browse the internet at the same
+    time, even on a single-core CPU. How does your CPU manage to pull that off? Well,
+    the same way your brain does. It juggles tasks. When you're reading a book while
+    listening to your friend talking, part of the time you're not really reading and
+    part of the time you're not really listening. That is until we get at least two
+    cores in our brains.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The servers you run your code on have pretty much the same CPU. Which still
+    means they can serve four requests simultaneously. But what if you have 10,000
+    requests per second? You can't serve them in parallel, because you don't have
+    10,000 CPU cores. But you can try and serve them concurrently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threads
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Coroutines
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Channels
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The most basic concurrency model is provided by JVM threads. Threads allow us
+    to run code concurrently (but not necessarily in parallel), making better use
+    of multiple CPU cores, for example. They are more lightweight than processes.
+    One process may spawn hundreds of threads. Unlike processes, sharing data between
+    threads is easy. But that also introduces a lot of problems, as we'll see later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how we create two threads in Java first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The output will look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the output will vary between executions, and at no point is it guaranteed
+    to be interleaved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The same code in Kotlin would look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In Kotlin, there''s less boilerplate, because there''s a function that helps
+    us create a new thread. Notice that unlike Java, we don''t need to call `start()`
+    to launch the thread. It starts by default. If we would like to postpone it for
+    later, we can set the `start` parameter to `false`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Another useful concept from Java is *daemon threads*. These threads don't prevent
+    JVM from exiting and are very good for non-critical background tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In Java, the API is not fluent, so we''ll have to assign our thread to a variable,
+    set it to be a daemon thread, and then start it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In Kotlin, this is much simpler:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that although we asked this thread to print numbers up to one million,
+    it prints only a few hundred. That's because it's a daemon thread. When the parent
+    thread stops, it stops too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thread safety
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are many books written about thread safety and there are good reasons
+    for that. Concurrency bugs that are caused by lack of thread safety are the ones
+    hardest to track. They're hard to reproduce, because you'll usually need a lot
+    of threads competing on the same resource for an actual race to happen. Because
+    this book is about Kotlin and not thread safety in general, we'll only scratch
+    the surface of this topic. If you're interested in the topic of thread safety
+    in the JVM language, you should check out the book *Java Concurrency in Practice* by
+    Brian Goetz.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll start with the following example, which creates 100,000 threads to increment
+    a counter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you have a bit of experience with concurrent programming, you'll understand
+    right away why this code prints a number that is less than 100,000\. The reason
+    is the `++` operation is not atomic. So the more threads that try to increment
+    our counter, the more chances for data races.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But, unlike Java, there''s no `synchronized` keyword in Kotlin. The reason
+    is that Kotlin designers believe that a language shouldn''t be tailored to a particular
+    concurrency model. Instead, there''s a `synchronized()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now our code prints `100000`, as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you really miss the synchronized methods from Java, there's the `@Synchronized` annotation
+    in Kotlin. There's also no `volatile` keyword, but the `@Volatile` annotation
+    instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threads are expensive
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There is a price to pay whenever we create a new thread. Each thread needs a
+    new memory stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What if we simulate some work inside each thread by putting it to sleep?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the following piece of code, we''ll attempt to create 10,000 threads, each
+    sleeping for a relatively short period of time:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Depending on your operation system, this will result in either `OutOfMemoryError`
+    or the entire system becoming very slow. Of course, there are ways to limit how
+    many threads are run at once, using the **executors API** from Java 5.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We create a new thread pool of a specified size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we would like to submit a new task. We''re doing this by calling `pool.submit()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then we need to make sure that the pool terminates, by using the following
+    lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that it took us 20 seconds to complete. That's because a new task cannot
+    begin until previous tasks *woke up* and completed their job.
+  prefs: []
+  type: TYPE_NORMAL
+- en: And that's exactly what happens in multithreaded systems, which is not concurrent
+    enough.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we'll discuss how coroutines try to solve this problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In addition to the threading model provided by Java, Kotlin also introduces
+    a coroutines model. Coroutines might be considered lightweight threads, and we’ll
+    see what advantages they provide over an existing model of threads shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing you need to know is that coroutines are not part of the language.
+    They are simply another library provided by JetBrains. For that reason, if we
+    want to use them, we need to specify so in our Gradle configuration file, `build.gradle`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: As of Kotlin 1.2, coroutines are still considered experimental. This doesn't
+    mean that they don't work well, though, as some might think. It only means that
+    some parts of the API may still change in the next versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What could change? For example, in 0.18, an Actor, which we'll discuss later
+    in this chapter, exposed a channel member. In 0.21, this member was made private
+    and a method was added instead. So instead of calling `actor.channel.send()`,
+    you would call `actor.send()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's fine if you're not aware what *actor* or *channel* mean at this point.
+    We'll cover those terms in the following sections shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For that reason, after you add this dependency and start using them, you may
+    get warnings during compilation or in your IDE:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can hide those warnings with the following Gradle configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, let's get started with coroutines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting coroutines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've already seen how to start a new thread in Kotlin. Now let's start a new
+    coroutine instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll create almost the same example we did with threads. Each coroutine will
+    increment some counter, sleep for a while to emulate some kind of IO, and then
+    increment it again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first way of starting a new coroutine is by using the `launch()` function.
+    Again, note that this is simply another function and not a language construct.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This function receives one argument: `context: CoroutineContext`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Under the hood, coroutines still use a thread pool. For that reason, we can
+    specify which thread pool to use. `CommonPool` is a singleton provided by the
+    library out of the box.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another interesting point here is called to the `delay()` function we use to
+    simulate some IO bound work, like fetching something from a database or over the
+    network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like the `Thread.sleep()` method, it puts the current coroutine to sleep. But
+    unlike `Thread.sleep()`, other coroutines can work while this one sleeps soundly.
+    This is due to the fact that `delay()` is marked with a suspend keyword, which
+    we'll discuss in the section *Waiting for coroutines*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you run this code, you'll see that the task takes about 200 ms with coroutines,
+    while with threads it either took 20 seconds or ran out of memory. And we didn't
+    have to change our code that much. That's all thanks to the fact that coroutines
+    are highly concurrent in their nature. They can be suspended without blocking
+    the thread that runs them. Not blocking a thread is great, because we can use
+    less OS threads (which are expensive) to do more work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But of course, they''re not magical. Let''s create a **Factory** for our coroutines,
+    which will be able to produce either a short-running or long-running coroutine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We don't actually need the **Factory Method** design pattern here, but it's
+    a nice reminder. You'll understand why the long-running coroutine is called **greedy**
+    very soon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you don't remember what the Factory Method is about, you should check [Chapter
+    2](part0054.html#1JFUC0-6704093aa34748cfa77c54bdc1a20dc7), *Working with Creational
+    Patterns*, section *Factory method* again. In short, it's a method that returns
+    an object. Which object does it return in our case? It's a job representing a
+    coroutine, of course! We'll explain what job is for shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jobs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The result of running an asynchronous task is called a job. Much like the `Thread`
+    object represents an actual OS thread, the `job` object represents an actual coroutine.
+    A job has a simple lifecycle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It can be either as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'New: Created, but not started yet.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Active: Just created by `launch()` function, for example. This is the default
+    state.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Completed: Everything went well.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Canceled: Something went wrong.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'There are two more states relevant to jobs that have child jobs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Completing: Waiting to finish executing children before completing'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Canceling: Waiting to finish executing children before canceling'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you want to understand more about parent and child jobs, just jump to the
+    *Parent jobs* section in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Job also has some useful methods, which we'll discuss in the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutine starvation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We''ll call both the `greedyLongCoroutine()` and `shortCoroutine()` methods 10
+    times each and wait until they finish:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It''s obvious that since coroutines are asynchronous, we''ll see first 10 lines
+    of the short coroutine then 10 lines of the long coroutine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Oops... That's not what you would expect. It seems like the long coroutines
+    block the short coroutines somehow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The reason for this behavior is that there is still an *event loop* based on
+    the *thread pool* behind the coroutines. Since the CPU of my laptop has four cores,
+    four long coroutines took all its resources, and until they finish their CPU-bound
+    task, no other coroutine can start. To understand this better, let's dive deeper
+    into how coroutines work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutines under the hood
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So, we''ve mentioned a couple of times the following facts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coroutines are like light-weight threads. They need less resources that regular
+    threads, so you can create more of them.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Coroutines use thread pool behind the scenes.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Instead of blocking an entire thread, coroutine suspends.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: But how does that actually work?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's see an abstract example. How would we compose a user profile?
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summing up, our function now takes around 1.6 seconds to complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But we've learned about threads. Let's refactor this function to use them instead!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now our function takes on average 1 second, the slowest of the three requests.
+    But since we created a thread for each request, our memory footprint is three
+    times larger. And we risk running out of memory quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s use a thread pool to limit the memory footprint:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: But what happens if we call this function 100 times now? If we have a thread
+    pool of 10 threads, the first 10 requests will get into the pool and the 11th
+    will get stuck until the first one finishes. That means we can serve three users
+    simultaneously, and the fourth one will wait until the first one gets his/her
+    results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How is that different with coroutines? Coroutines break your methods into even
+    smaller methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s dive deeper into one of the functions to understand how it''s done:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: That's one function that will take 1 second to execute.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What we can do, though, is mark `httpCall()` with the `suspend` keyword:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When Kotlin compiler sees this keyword, it knows it can split and rewrite the
+    function into two like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: By doing that rewrite, we are able to release the thread that executes coroutines
+    much sooner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For a single user, that doesn't matter much. He will still get the results after
+    1 second.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But looking at the bigger picture, it means that by using the same amount of
+    threads, we can serve 20 times more users, all thanks to the smart way Kotlin
+    has rewritten our code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fixing starvation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s add another method to our Factory using the extension methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We call this method instead in the first loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And when we run it now, we get the output we expected in the first place:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now let's understand what actually happened. We used a new function: `yield()`.
+    We could have called `yield()` on every loop iteration, but decided to do that
+    every 100th one. It *asks* the pool whether there is anybody else that wants to
+    do some work. If there's nobody else, the execution of the current coroutine will
+    resume. Otherwise, another coroutine will start or resume from the point where
+    it stopped earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Note that without the `suspend` keyword on our function or a coroutine generator,
+    such as `launch()`, we can''t call `yield()`. That''s true for any function marked
+    with `suspend`: it should be called either from another `suspend` function or
+    from a coroutine.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Waiting for a coroutine
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Up until now, to let our asynchronous code complete, we've used either `Thread.sleep()`
+    or `CountDownLatch`. But there are better options with threads and coroutines.
+    Much like Thread, a job has the `join()` function. By invoking it, we can wait
+    for the execution of the coroutine to complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Take a look at the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Although it should have printed 10 lines, it doesn't print anything, actually.
+    That's because our main thread terminates before giving a coroutine a chance to
+    start.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By adding the following lines, our example will print the expected results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: What about this `runBlocking`, you ask? Remember that we could call `yield()`
+    only from another coroutine because it's a *suspending function*? The same is
+    true for `join()`. Since our main method is not a coroutine, we need to have a
+    **bridge** between our regular code, that is not a suspending function and coroutines.
+    This function does exactly that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Canceling a coroutine
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If you are a Java developer, you may know that stopping a thread is quite complicated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, the `Thread.stop()` method is deprecated. There's `Thread.interrupt()`,
+    but not all threads are checking this flag, not to mention setting your own `volatile`
+    flag, which is often suggested but is very cumbersome.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you're using a thread pool, you'll get `Future`, which has the `cancel(boolean
+    mayInterruptIfRunning)` method. In Kotlin, the `launch()` function returns a job.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This job can be canceled. The same rules as the previous example apply, though.
+    If your coroutine never calls another `suspend` method or yields, it will disregard
+    `cancel()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To demonstrate that, we''ll create one *nice* coroutine that yields once in
+    a while:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And another one that doesn''t yield:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll try to cancel both:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And wait for the results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A few interesting points:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Canceling the *nice* coroutine doesn't happen immediately. It may still print
+    a line or two before getting canceled.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We can catch `CancellationException`, but our coroutine will be marked as canceled
+    anyway.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Returning results
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Calling `launch()` is much like calling a function that returns `Unit`. But
+    most of our functions return some kind of result. For that purpose, we have the `async()`
+    function. It also launches a coroutine, but instead of returning a job, it returns
+    `Deferred<T>`, where `T` is the type you expect to get later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Think of a situation where you would like to fetch the user's profile from one
+    source and their history from another. It may be two DB queries, or a network
+    call to two remote services, or any combination.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You must show both the profile and the history, but you don't know which returns
+    first. Usually, retrieving the profile is faster. But sometimes there may be a
+    delay, since profiles are updated often and the history will return first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We run one coroutine that will return the user''s profile string in our case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll run another to return the history. For simplicity, we''ll just return
+    a list of Ints:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To wait for the results, we use the `await()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: Setting timeouts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: What if, as happens in some cases, fetching the user's profile takes too long?
+    What if we decided that if the profile takes more than 0.5 seconds to return,
+    we'll just show *no profile*?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This can be achieved using the `withTimeout()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: We set the timeout to be 500 milliseconds, and our coroutine will delay for
+    between 0 and 1,000 milliseconds, giving it a 50 percent chance to fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll await results from the coroutine and see what happens:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we benefit from the fact that `try` is an expression in Kotlin. So we can
+    return a result immediately from it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the coroutine manages to return before the timeout, the value of `result`
+    becomes *profile*. Otherwise, we receive `TimeoutCancellationException`, and set
+    the value of `result` to *no profile*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The interesting part is that our coroutine always receives `TimeoutCancellationException`,
+    which we can handle. And in case of a timeout, *returning profile* will never
+    be printed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A combination of timeouts and try-catch expressions is a really powerful tool
+    that allows us to create robust interactions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parent jobs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: What if we want to cancel more than one coroutine at the same time? That's where
+    parent jobs come into play. Remember that `launch()` receives `CoroutineContext`,
+    that's usually `CommonPool`? It can also receive other parameters, which will
+    see shortly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll start with a suspending function that works for some time:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: We would like to launch 10 of these and cancel them after only 100 ms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For that, we''ll use a parent job:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see, a parent job is simply a job. We pass it to the `async()` function.
+    We can use the `+` sign due to the fact that `CoroutineContext` has overloaded
+    the `plus()` function. You can also specify it using named arguments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once we invoke `cancel()` on parent job, all of its children are canceled too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Channels
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Up until now, we learned how to spawn coroutines and control them. But what
+    if two coroutines need to communicate with each other?
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Java, threads communicate either by using the `wait()`/`notify()`/`notifyAll()`
+    pattern or by using one of the rich set of classes from the java.util.concurrent
+    package. For example: `BlockingQueue` or `Exchanger`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Kotlin, as you may have noticed, there are no `wait()`/`notify()` methods.
+    But there are channels, which are very similar to `BlockingQueue`. But instead
+    of blocking a thread, channels suspend a coroutine, which is a lot cheaper.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To understand channels better, let''s create a simple game of two players that
+    will throw random numbers at each other. If your number is greater, you win. Otherwise,
+    you lose the round:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: Each player has two channels. One is used to receive data, the other to send
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can iterate over a channel with a regular for-loop, which will suspend until
+    the next value is received.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we want to send our results to the other player, we simply use the `send()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s play this game for one second:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our output may look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, channels are a convenient and type-safe way to communicate between
+    different coroutines. But we had to define the channels manually, and pass them
+    in the correct order. In the next two sections, we'll see how this can be further
+    simplified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Producers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 7](part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7), *Staying
+    Reactive*, which was dedicated to reactive programming, we discussed `Observable` and
+    `subject` that were producing streams of values. Much in the same way, Kotlin
+    provides us with the `produce()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This function creates coroutine is backed up by `ReceiveChannel<T>`, where
+    `T` is the type the coroutine produces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: In Rx there's the `onNext()` method that we covered in [Chapter 7](part0176.html#57R300-6704093aa34748cfa77c54bdc1a20dc7),
+    *Staying Reactive*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Producers have a  `send()` function, which is very similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Much like the Rx `Observable` that provided the `subscribe()` method, this
+    channel, has the `consumeEach()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It prints the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: Another great ability that channels provide is `select()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we have more than one producer, we can `subscribe` to their channels, and
+    take the first result available:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will randomly print `First` or `Second`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Note that `select()` happens only once. A common mistake is to have select
+    on two coroutines that produce a stream of data, without wrapping it in a loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: Instead of printing the alphabet, this will only print either "a" or "A," and
+    then exit. Make sure your `select()` is wrapped in a loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This will print the first 10 characters it receives:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another option is to signal using the `close()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And use `onReceiveOrNull()` inside the receiver:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: This option will print characters until the first of the producers decide to
+    close the channel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Actors
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The last *building block* introduced in this chapter is actors. Similar to `producer()`,
+    `actor()` is a coroutine bound to a channel. But instead of a channel going *out*
+    of the coroutine, there's a channel going *into* the coroutine. If you think that
+    was too academic, read on for another explanation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So what is an actor, anyway? Let's look at an interaction between Michael and
+    me, an imaginary product manager, who happens to be a canary, as you may remember
+    from [Chapter 4](part0112.html#3APV00-6704093aa34748cfa77c54bdc1a20dc7), *Getting
+    Familiar with Behavioral Patterns*. Michael has a list of tasks that need to be
+    completed before the end of the sprint/week/month. And he simply throws them at
+    me, in the hope that I'll do my magic and translate some vague specifications
+    into a working code. He's not waiting for my response. He just expects that eventually,
+    it will happen—and sooner rather than later. For Michael, I'm an actor. Not because
+    I attended an acting school, but because I act upon his request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you've worked with Scala, or some other programming language that has actors,
+    you may be familiar with a slightly different actor model from what we've described.
+    In some implementations, actors have both inbound and outbound channels (often
+    called mailboxes). But it Kotlin, an actor has only an inbound mailbox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create a new actor, we use the `actor()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the same way that `select()` works, unless we wrap an actor's `receive()`
+    into some kind of loop, it will execute only once. If you'll attempt to send it
+    to a closed channel, you get `ClosedSendChannelException`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You communicate with actors using `send()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another pattern for an actor is to use the `receiveOrNull()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, instead of checking whether the actor's channel has been closed,
+    our cue is receiving null on the channel. This approach may be preferable, if
+    the actor receives tasks from many *managers*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The third option, which is the most preferable one usually, is to iterate over
+    the channel:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, this is the cleanest implementation of the three.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Actors are a very useful for background tasks that need to maintain some kind
+    of state. For example, you could create an actor that would generate reports.
+    It will receive what kind of report to generate, and will make sure that only
+    one report is generated at the same time:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is often a good idea to limit the capacity of messages the actor can receive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then we can send this actor what type of report to produce:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we covered how to create threads and coroutines in Kotlin,
+    and the benefits of coroutines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kotlin has simplified syntax for creating threads, compared to Java. But they
+    still have the overhead of memory and often performance. Coroutines are able to
+    solve these issues; use coroutines whenever you need to execute some code concurrently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to communicate between two coroutines, use channels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Kotlin also offers actors with the `actor()` function, which also spins a coroutine
+    that has an inbound stream attached to it to process events. And if you need to
+    create a stream of values, you can use the `produce()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll discuss how we can use these concurrency primitives
+    to create scalable and robust systems that suit our needs.
+  prefs: []
+  type: TYPE_NORMAL

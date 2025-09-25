@@ -1,0 +1,983 @@
+- en: Binding Data to Widgets
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, you've been copying the data from your data model into your presentation
+    layer by hand, and then copying it back as well. This shifting data back and forth
+    between stateful widgets is something that you always need to do at some level.
+    Where and how the data is copied can change, but it has to be done to make applications
+    work. In this chapter, we'll look at a system provided by Android called data
+    binding. **Data binding** provides an alternative to the copying back and forth
+    of data, but also opens several other design opportunities to allow more reuse
+    of code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data binding offers you a way to dramatically reduce the amount of boiler-plate
+    code in your application, while remaining type-safe and providing excellent performance.
+    The data binding engine allows you to provide user interface logic that is clearly
+    separated from the layout resources, and can be easily reused by many screens
+    in the application, while reducing the complexity of both the application code
+    and the layout resource files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''ll look at the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Why data binding exists
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to write data-bound layouts
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to use data binding in an MVP design
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Reactive programming and your data model
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to use data binding in Activities, Fragments, and widgets
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exploring data models and widgets
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In theory, the widgets can directly reference the memory that they are manipulating
+    by holding points to the data, rather than copying the data back and forth, but
+    more often than not, it doesn't make sense to use the same data format for storage
+    and for editing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Take strings of text for example; the best way to store a string is as a character
+    array; whenever you need to send the text anywhere, over the network or to a display,
+    you can simply read from the first character until the last one, and each one
+    can be transmitted as-is. For example, "Hello World" can be stored as the string
+    length followed by each of the characters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/0ddc7071-e47a-498d-8e0c-fb1680324ca4.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This is not a good way to store a string that is being edited; however, for
+    editing, it''s best to have some buffer space around the cursor to avoid having
+    to copy large amounts of data back and forth as the user types and corrects themselves.
+    For example, if the user places their cursor right after the word "Hello", the
+    same array might look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/fdc672fc-3230-4556-852b-443d2c376cb1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This tension between how data should be stored when it'll only be read, and
+    how it should be edited, is an important part of why modern user-interface widgets
+    tend to be complex pieces of machinery in their own right. They don't just need
+    to look pretty; they need to be fast, and for that, they need to internally represent
+    the data in a way that suits their implementation best. As a result, instead of
+    being able to have an `EditText` widget just manipulate an array of characters,
+    we're forced to copy the strings in and out of its internal structures, as you've
+    been doing so by hand thus far.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The data binding system in Android allows you to reference your object model
+    directly from your layout files, and then generate all the Java code required
+    to wire the object model to the widgets. This system is called data-binding, and
+    its core classes can be found in the `android.databinding` package. The data binding
+    system also allows for *reactive programming*; when the data model is changed,
+    it can directly reflect in the user interface widgets, allowing the application
+    to keep what is on the screen up to date without having to explicitly update the
+    widgets. The data binding system is also completely type-safe, because it generates
+    all the code when your application is compiled, so any type errors are produced
+    then and there, rather than possibly at runtime, where your users might see them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Observer pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The data binding framework in Android makes use of the **Observer pattern**
+    to allow for *reactive programming*. Any object that is referenced by a layout
+    file that implements the `Observable` interface is watched, and when it signals
+    that it has changed, the user interface updates accordingly. As the data binding
+    system can be used on any attribute or setter of any widget, this means that you
+    can control far more than just the content or state of the user interface. You
+    can control whether widgets are visible or invisible, and you can control which
+    image is used for the background of a widget. At its core, the Observer pattern
+    looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/2941af8c-4d23-493f-971f-51385c6399cd.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In the Android Observer pattern, the data model classes expose themselves as
+    Observable by implementing the `android.databinding.Observable` interface and
+    notifying a list of event-listeners (observers) of any changes to their state.
+    Android provides several convenience classes that make implementing this pattern
+    much easier. There are three ways in which you can implement this pattern for
+    Android:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implement Observable in your object model
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implement an Observable model on top of your object model
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implement Observable in a presentation layer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at these three ways in detail:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Implementing Observable directly in your object model** is common, but has
+    the side effect of polluting your object model with the Observable pattern and
+    Android classes that will effectively stop you from using the same code base in
+    other parts of the system (for example, on the server side). This is a good approach
+    when your object model code will only ever be used by your Android application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Implementing an Observable layer on top of the object model** is sometimes
+    a better option, but can also lead to complications; every object referenced through
+    the observable layer also needs to be wrapped in an Observable object. This leads
+    to much greater complexity in the model implementation, and doesn''t cover changes
+    made outside of the Observable layer. This approach is useful when you are generating
+    the code for your object model with a tool, or need an additional application-specific
+    layer for your Android application code.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Implementing the Observer pattern at the presentation layer** means that
+    the root references held by the data binding layer are themselves Observable,
+    but the object model is not. This will technically allow you to have an immutable
+    data model if you wanted to. The data binding engine will never see the changes
+    to the individual fields in the data model, but instead is notified that the whole
+    model has changed. This can also be a very expensive model, as the data binding
+    layer will reevaluate every part of the data model for every change made to it.
+    However, this is a good approach when your application tends to update several
+    fields in a model simultaneously, or is heavily multithreaded.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: None of these options are always better than the others; rather, it's worth
+    considering each of them when it comes to ensuring that your user interface will
+    stay in-sync with the application's overall state. In some screens, this reactive
+    behavior may even be undesirable, since it can easily disrupt the user. In these
+    cases, it's worth using data binding just to populate the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The data binding system is not bidirectional; changes in the model reflect in
+    the user interface, but input in the user interface widgets are not pushed into
+    the model automatically. This means that your application must still handle events
+    and capture the changes in the user interface, as shown earlier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enabling data binding
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'By default in an Android project, the data binding capabilities are turned
+    off. You''ll need to enable them in your project''s `build.gradle` file by hand.
+    Follow these quick steps to enable the data binding system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by locating the `build.gradle` file for your application module in the
+    Android panel in Android Studio:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/e7bfab0a-4ee0-4099-bf6e-91e87c3b20a6.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Open this file and locate the `android` block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the end of the `android` block, add the following snippet to enable data
+    binding:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once you save this file, Android Studio will open a banner at the top of the
+    file, telling you that it needs to sync the project. Click on the Sync Now link
+    on the right-hand side of the banner and wait for the sync to complete.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Congratulations! You've just enabled the data binding framework on your project.
+    Now you can get started, making use of the data binding system in your layout
+    files, which will simplify the application and open doors to new ways to reuse
+    your code base.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data binding a layout file
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Data binding works primarily through code generation, and there is very little
+    in the way of runtime overhead. It permits you to use a special expression language
+    in your layout XML files, which gets converted into Java code before your application
+    is compiled. These expressions can call methods, access properties, and are even
+    useful for triggering events. They do have a few restrictions, however: they cannot
+    directly reference the widgets in your user interface, and they cannot create
+    any new objects (they have no `new` operator). As a result, you''ll need to provide
+    your layout files with some utility methods in order to keep things simple, and
+    there are a few guidelines to follow when working with expressions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Keep the expressions simple**: Don''t write application logic into the expressions;
+    rather, create a utility method that can be reused'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Avoid manipulating data directly**: As tempting as it might be, ensure that
+    your data is always ready for presentation before it''s given to the layout binding.
+    Keep default values in your model, `Activity`, or `Fragment` classes, and not
+    in the layout XML files'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Use presenter objects**: When you have simple transformations that need to
+    be done on the data (such as formatting a date or number), put these into objects.
+    The expression language can reference static methods, but presenter objects are
+    much more powerful and flexible'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Pass events in**: Avoid using the expressions language for more than a method
+    call when you''re writing events, and try to pass the events into the layout as
+    objects, either as a presenter, or as command objects. This keeps the events flexible
+    and reusable'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By sticking to these guidelines, you'll find that working with the data binding
+    system not only frees you from some of the most common user interface boilerplate
+    code, but also improves the quality of your layouts and overall application. By
+    using objects in your layout files rather than static methods, you'll end up with
+    modular classes that can be easily reused throughout your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that your app can capture people''s expenses as claims, it''s time to start
+    thinking about how the information will be displayed. There are two major components
+    to this: the list of claim items the user has created, and their overall travel
+    allowance that they''re supposed to keep to. So far, you have the capture screen,
+    and while in many ways it''s the most important screen in the app, it''s not the
+    first one that the user will see--that will be the overview screen.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The overview screen's main job is to display the claim items in order, from
+    most recent to the oldest. However, to keep the user's life simple, we'll also
+    display a summary card at the top of the screen, which will help them stay on
+    track with their spending. For this example, we'll assume that the allowance is
+    specified as an amount per day that they are traveling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating an Observable model
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To get things started on this part of the project, you''ll need a new model
+    class to encapsulate the allowance and spending of the user. We''ll call the new
+    class `Allowance`, and build in some utility methods to fetch useful information
+    (such as how much the user spent between two dates). Most importantly, this new
+    model needs to tell us when it changes. This can technically be done in several
+    ways: through an event-bus, or specialized listeners, but for this example, we''ll
+    go with an Observer pattern. To make this work, the `Allowance` class will extend
+    from `BaseObservable`, a convenience class that is part of the data binding API.
+    Whenever the `Allowance` class changes, it''ll emit events notifying its observers
+    of the change. Let''s get started building the `Allowance` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Right-click on the `model` package and select New| Java Class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the new class `Allowance`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Change the Superclass to `android.databinding.BaseObservable`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add `android.os.Parcelable` to the Interfaces field.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click OK to create the new class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the top of the class, declare the following fields and constructors, and
+    a getter method for the `amountPerDay`, which represents the allowance the user
+    is aiming for:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now comes the first bit of the Observable implementation; when we change the
+    `amountPerDay` field, we need to notify any Observers that the `Allowance` object
+    has changed:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Allowance` class will always ensure that all the `ClaimItem` objects are
+    sorted from the newest to the oldest; knowing this, we can add some convenience
+    methods to find the *start* and *end* dates for the `Allowance` object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, create a simple calculation method to determine how much has been spent
+    in total for this `Allowance`. This method simply adds up all the amounts in all
+    the `ClaimItem` objects:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, add another calculation method to calculate the amount spent between
+    two dates. This can be used to find out how much was spent on a specific day,
+    week, month, and so on:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, you''ll need a method to add a `ClaimItem` to the `Allowance`. The `Allowance`
+    always maintains the list of `ClaimItem` objects sorted from newest to oldest,
+    so this method simply sorts the list each time an item is added, and then notifies
+    observers that the `Allowance` has changed:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Sorting a list like this is a very poor implementation, but very simple to write.
+    In practice, you should binary-search for the correct position to add the `ClaimItem`.
+    Android provides classes to help with this, which we'll explore later in the book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also need to be able to remove `ClaimItem` objects from the `Allowance`.
+    This is also a mutative operation, so we notify any observers when it''s done:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add the accessor methods for the `ClaimItem` objects:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finish the `Allowance` class by writing its `Parcelable` implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `Allowance` class is the first (and currently, the only) part of your object
+    model that needs to be observed, as you can see; building an `Observable` model
+    is not difficult, and being able to watch your model state for changes opens some
+    fantastic opportunities, such as automatic network synchronization or statistics
+    aggregation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you have an event bus in your application, pushing object model changes through
+    there rather than direct observation is often a better option as it will offer
+    better decoupling. There are a large number of event-bus APIs compatible with
+    Android, and it's worth checking them out. A well-known API with an Event Bus
+    implementation is Google's Guava API ([https://github.com/google/guava](https://github.com/google/guava)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Establishing the AllowanceOverviewFragment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The allowance overview will be presented as a card at the top of an overview
+    screen. The overview card will be populated by a new `Fragment` class that will
+    encapsulate the first part of the data binding. The `AllowanceOverviewFragment`
+    will depend on the data binding system to do most of the heavy lifting, and will
+    provide the layout binding with a special `AllowanceOverviewPresenter` object
+    that can be queried for statistics and data. The `AllowanceOverviewPresenter`
+    will, in turn, reference the `Allowance` object, and listen for any changes on
+    it in order to update and cache the statistics data. The relationship between
+    these entities can be best explained with the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/3245c549-f1eb-415b-99cc-2aabe02a972f.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Encapsulating the statistics in a `Fragment` means that it''s easier to include
+    in other layouts that might include different information to the overview screen.
+    Follow these quick steps to create the `AllowanceOverviewFragment` and `AllowanceOverviewPresenter`
+    skeleton:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Right-click on the `ui` package and select New | Fragment |Fragment (Blank).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the Fragment `AllowanceOverviewFragment`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Turn off the Include fragment factory methods? and Include interface callbacks?
+    options:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '![](img/02627d0a-6201-4c2d-9d07-38982df1a481.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Click on Finish to create the new `Fragment` and its default layout file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `ui` package again and select New| Java Class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the new class `presenters.AllowanceOverviewPresenter`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click OK to create the new package and class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The first thing the `AllowanceOverviewPresenter` needs is an inner class to
+    hold the cached spending statistics that will be displayed to the user. This will
+    be an immutable structure; when the statistics change, we refresh all of them
+    at the same time:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: You'll note that the fields in the `SpendingStats` class are `public final`,
+    and have no getters. When dealing with data binding, the coupling is typically
+    very tight, so introducing getter methods can actually create more complexity.
+    It's better to avoid getter methods until they're needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to expose the `SpendingStats` outside of the class in such a way that
+    the data binding will watch for changes. Android data binding, again, has a helper
+    class; when you have a field that needs to be observed, you can use the `ObservableField`
+    class. When an expression in the data binding layout file references one of these,
+    it will automatically listen for changes and reevaluate when the field is changed:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When using `ObservableField` (and its cousins: `OvservableString`, `ObservableInt`,
+    and such), it''s best to declare them as `final` and initialized. The data binding
+    system can''t watch for changes on the field itself, but instead, will attach
+    a listener to the `ObservableField` object.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `AllowanceOverviewPresenter` also requires an `Allowance` object that it
+    will encapsulate, and a constructor:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, the `AllowanceOverviewPresenter` needs a method to allow the user
+    to update the amount they''re permitted to spend each day. In this case, the presenter
+    acts as a helper to keep some of the logic out of the layout files; the `EditText`
+    widget will provide a number as a `CharSequence`, so `AllowanceOverviewPresenter`
+    needs to parse it and handle any errors if it''s invalid in some way:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `AllowanceOverviewPresenter` class will serve as an intermediary system
+    between the raw data-bound layout file, and the raw object model. This allows
+    you to keep any rendering logic out of the object model, while also keeping the
+    data model requirements out of the layout XML file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the AllowanceOverview layout
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now, it''s time to create the layout file and bind it to the `AllowanceOverviewPresenter`
+    class. A data-bound layout file is a little different from a normal Android layout.
+    As each layout XML file results in its own binding class, they have a root element
+    of `layout`, followed by a `data` section that declares the variables that they
+    will bind to. Each variable is named and typed with its Java class, because during
+    compilation, these are all turned into Java variables in a generated binding class.
+    Ultimately, you want to create a layout that will look like this at the top of
+    the overview screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/1bed86f5-8506-4873-ad01-1162e9b6b0be.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The Daily Allowance field will allow the user to directly edit how much they
+    are allocated per day, while the labels to the right will display their spending
+    today, this week, and in total. Follow these steps to construct the preceding
+    layout; unlike previous examples, these steps don''t use the Design view for editing,
+    and the layout is built from right to left:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the `fragment_allowance_overview.xml` layout file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Change the editor to Text mode.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Change the root element from `FrameLayout` to layout, and remove the contents:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, declare a data section within the `layout` and declare a presenter variable
+    for the `AllowanceOverviewPresenter` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Unlike the `data` section, the widget elements have no special root, so directly
+    after the `data` section (and still nested within the `layout` element), declare
+    the root element of this layout, which will be a `ConstraintLayout`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Within the `ConstraintLayout`, create a `TextView` that will serve as the label
+    with the word `Total` in it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: On the line specifying the `android:text` attribute, Android Studio will complain
+    that the `@string/label_total` resource doesn't exist. Use the code assistance
+    (usually *Alt* + *Enter*), and select Create string value resource 'label_total'.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: A dialog will open, prompting you for the resource value; enter `Total` and
+    click on the OK button.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the same code assistance to create a dimension resource on the following
+    line, specifying the minimum width. Give the new `allowance_overview_label_min_width`
+    resource a value of `50dp` and click OK.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Below the Total label widget, create a `TextView` that will contain the actual
+    amount of money the user has spent in their `Allowance`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Note that here, you haven''t specified an `android:text` attribute. This will
+    be the first data-bound attribute in the layout file, and we want to display the
+    total field of the `SpendingStats` object from the presenter. Write this `android:text`
+    attribute into the `TextView` above the `app:layout_constraintEnd_toEndOf` attribute:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Data-bound expressions are all wrapped in `@{..}` to signal their difference
+    from normal attributes. The code looks like Java, but it's not. Note the `??`
+    operator; it's a very useful "null-safe" operator. If any part of the left-hand
+    side is null, the right-hand side (in this case, the `"0"` string) will be used
+    instead (like a very specific ternary operator). Also, make note of the single
+    quotes around the `android:text` attribute; data-bound layouts must still be a
+    valid XML file, and the preceding code needs to specify a Java string that uses
+    double quotes. Rather than escaping the Java string as `&quot;0&quot;`, it's cleaner
+    to use single quotes for the XML attribute.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another important factor is how you need to use `Integer.toString` to ensure
+    that the correct method is invoked on the `TextView`. Leaving it as an `int` will
+    cause `TextView.setText(int)` to be invoked, and this expects a string-resource
+    identifier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, you''ll need to declare very similar `TextView` elements for the weekly
+    label and amount display. These are virtually identical to the total `TextView`
+    elements, except for their labels, IDs, and constraints. You''ll also need to
+    create a `label_week` string resource with a value of `Week`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You''ll need to repeat the same for the Today numbers. Again, you''ll want
+    to change the labels, IDs, and constraints, and create a `label_today` string
+    resource with a value of `Today`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The last element of this card is the daily allowance input area, where the
+    user can enter how much they are allowed to spend each day. It consists of a `TextInputLayout`
+    and a `TextInputEditText` widget bound to the amount per day. In this element,
+    you''ll also be binding the `TextInputEditText` widget to an event handler, which
+    looks a lot like a Java lambda, but like all the binding expressions, it''s not.
+    However, it is translated into Java:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Use the Android Studio code assistant to create the `label_daily_allowance`
+    string resource with a value of `Daily Allowance`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now, if you go back to the Design mode, you'll be able to see what your new
+    fragment will look like on the screen of the user's device. The event-handler
+    is hooked up and will be triggered every time the user changes any text in the
+    Daily Allowance input box. The event trigger will invoke the `presenter.updateAllowance`
+    method, which in turn will attempt to parse the value and set it on the `Allowance`
+    object (assuming that it can be parsed as an integer).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Updating the SpendingStats class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You've already created the `SpendingStats` class and bound it to your layout,
+    but it won't ever have any data in it because it's never actually created, and
+    the `ObservableField<SpendingStats>` field in the `AllowanceOverviewPresenter`
+    is never populated. There's a good reason for that--the stats take time to calculate.
+    Even if we had a database to do the heavy lifting, there is potentially a substantial
+    overhead to calculate these three numbers before you can put them on the screen,
+    while you can directly invoke the `Allowance.getTotalSpent()` method as part of
+    your layout XML that will block the main thread for the entire time it took to
+    calculate that number. That's not a good idea, as that time delay can quickly
+    add up and lead to degraded user experience or even Application Not Responding
+    errors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The answer is to listen for changes to the `Allowance` object, and recalculate
+    the values on a worker thread before updating the `SpendingStats` field in the
+    `AllowanceOverviewPresenter`. The data binding system will take care of the rest
+    and populate the values on the screen. There are two structures that are needed
+    for this part of the example: an observer to watch for any changes on the `Allowance`
+    object, and an `ActionCommand` to calculate and update the `SpendingStats` in
+    the `AllowanceOverviewPresenter`. Let''s create them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the `AllowanceOverviewPresenter` source file in Android Studio.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the bottom of the `AllowanceOverviewPresenter` class, start a new `ActionCommand`
+    inner class to update the `SpendingStats`, named `UpdateSpendingStatsCommand`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `UpdateSpendingStatsCommand` will need two utility methods to calculate
+    the date ranges for *this week*, and *today*. Unfortunately, Android doesn''t
+    support the new Java 8 time APIs; you''ll need to use the `Calendar` class. On
+    the other hand, Android provides a very useful utility class named `Pair`, that
+    is perfect for defining a date range:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: You'll find that there are two different `Pair` implementations available to
+    your application. One is part of the core Android platform (`android.util.Pair`),
+    and the other is provided by the support packages (`android.support.v4.util.Pair`).
+    The support implementation is intended for applications targeting API version
+    4 and lower, and your application is targeting API version 16 and higher; so,
+    you should use the platform (`android.util.Pair`) implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then, you need to implement the `onBackground` method to process the data in
+    the `Allowance` object into the `SpendingStats`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, the `UpdateSpendingStatsCommand` needs its `onForeground` to set the
+    `SpendingStats` field on the `AllowanceOverviewPresenter`, which will cause the
+    user interface to update with the new data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That completes the `UpdateSpendingStatsCommand`; now, in the `AllowanceOverviewPresenter`
+    class, you''ll need an instance of the `UpdateSpendingStatsCommand` that you can
+    invoke when the `Allowance` object changes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, you need `AllowanceOverviewPresenter` to be able to watch for changes
+    to the `Allowance` object. This will involve an observer that Android''s data
+    binding API calls an `OnPropertyChangedCallback`. The problem is that `OnPropertyChangedCallback`
+    is a class and not an interface, so for the `AllowanceOverviewPresenter`, use
+    an anonymous-inner class for the `OnPropertyChangedCallback`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `AllowanceOverviewPresenter` needs to connect the observer to the `Allowance`
+    object in its constructor:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'References held by `Observable` objects to their observers are strong references,
+    so if care isn''t taken, you can find yourself with memory leaks. To avoid that,
+    it''s a good idea to detach the listener when the `AllowanceOverviewPresenter`
+    will no longer be needed; however, this will need to be done from outside:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of the code for the `UpdateSpendingStatsCommand` is taken up by the date-range
+    calculations; it's otherwise a very simple class. The important aspects are that
+    it both encapsulates the calculations, and runs them on a background worker thread
+    that keeps the user interface running smoothly while it adds up the numbers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data binding and fragments
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When working with the data binding framework, it''s important to put some additional
+    thought into where to encapsulate the various parts of your user interface. As
+    you can hook the logic directly into the layout files, it will often be a better
+    idea to use classes similar to the `DatePickerWrapper` you wrote in [Chapter 3](75335d7f-3cda-4985-b992-965f46adc335.xhtml),
+    *Taking Actions*, with an `<include>` and `<merge>` tag, rather that wrapping
+    groups of components in classes. Data-bound layouts that are included in other
+    layouts still have variables, and it''s the responsibility of the outer layout
+    to pass those variables downward, into the included layout file. For example,
+    a layout including a date picker might look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: As long as either `user` or its `dateOfBirth` is `Observable`, the layout will
+    automatically reflect any changes to it. This pattern allows you to not only modularize
+    your layouts, but also ensure that they only receive the data that they actually
+    require in order to work. The other advantage is that using it with `<merge>`
+    elements plays very nicely with the `ConstraintLayout`, allowing you to build
+    complex and reusable layout elements that nest in your code, but are flat (not
+    nested) in the component hierarchy. Flat layouts using `ConstraintLayout` are
+    often easier to build, are typically faster to render, and allow for more flexible
+    animations than deeply nested layouts. They can be harder to modularize for reuse;
+    data-binding makes this much easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you're wondering whether it's a good idea to still introduce fragments and
+    widget classes, look at logical boundaries, where you will be forced to nest your
+    components. An excellent example of a good boundary is a `CardView`. A `CardView`
+    requires a nested layout, so its contents are perfect candidates for a widget
+    or fragment, which can further help with encapsulation of your layout and logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's also important to consider your "presenter" classes and objects when you
+    build them. A single layout can have any number of variables, and the presenter
+    classes don't have to be shallow structures. It's common to build presenter classes
+    in levels by inheritance, where you might build an application level presenter
+    with global rules (how to format dates and numbers), with children for things
+    like displaying dialogs; remember that some of the logic might not be used directly
+    by the layout, but rather by an event handler method. Breaking the presenter classes
+    up in this way allows you to further confine logic to where it's needed, and improve
+    your code reusability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Test your knowledge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android's data binding framework follows what sort of binding?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Model-View View-Model (bidirectional) binding
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Model-View-Presenter pattern
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Model-View (unidirectional) binding
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Data Bound Layouts have variables that must be which of the following?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Any Java Object
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Observable by the data binding framework
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Presenter objects
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Model objects
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Which of the following features belongs to data binding expressions?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: They must be written in single quotes
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They are Java expressions
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They are a special expression language
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They're only evaluated at runtime
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: To trigger an update of a data-bound user interface, you must do which of these?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Listen for object model changes with an event bus
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extend the `PropertyChangeCallback` class
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Call refresh on the generated `Binding` object
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Make a change that the `Binding` object can observe
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Data binding can not only massively reduce the amount of boilerplate code required
+    to write a user interface, but can actively improve your code base and increase
+    how much code you can reuse. By avoiding complex binding expressions and encapsulating
+    the display logic in your presenter classes, you can build highly modular layouts
+    that are fast, type-safe, and reusable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's sometimes useful to think of the data-bound layout files as Java classes
+    in their own right; after all, they will each result in a generated Binding class.
+    It's useful to keep in mind that the Binding classes themselves are also observable,
+    so any changes to them through their generated setter methods will automatically
+    trigger an update in the user interface as well. Also, remember that when you
+    include a data-bound layout in another, you need to pass all of its variables
+    downward, which is just like specifying arguments on a constructor, and those
+    variables don't need to be directly contained within the parent layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far, you've been building an in-memory data model, but this means that when
+    your application is terminated, all the data is lost. In the next chapter, we'll
+    take a look at long-term data storage on Android, and find out how to integrate
+    it with your user interface without degrading the user experience and perceived
+    performance.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1263 @@
+- en: '10'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Idempotency, Replication, and Recovery Models
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Distributed systems are very common in modern software architectures. The challenges
+    of ensuring data consistency, fault tolerance, and availability become critical.
+    This chapter is going to cover three key concepts that help address these challenges:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Idempotency
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Replication
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Recovery models
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Idempotency** is a fundamental non-functional system property that ensures
+    operations can be executed safely and repeatedly without causing unintended side
+    effects. In a distributed system, network failures and system crashes are common.
+    Idempotency is essential for maintaining data integrity and consistency. By designing
+    operations to be idempotent, engineers can build more resilient and fault-tolerant
+    systems that can recover from partial failures without compromising the overall
+    system state.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Replication**, on the other hand, is a technique that’s used to improve the
+    availability and durability of data in distributed systems. By maintaining multiple
+    copies of data across different nodes, replication provides redundancy and helps
+    ensure that the system can continue to operate even if one or more nodes fail.
+    However, replication introduces its own set of challenges, such as ensuring consistency
+    between replicas and efficiently managing the replication process.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, **recovery models** define the strategies and mechanisms that are used
+    to restore the state of a distributed system after a failure or disruption. These
+    models can range from simple backup-and-restore approaches to more sophisticated
+    techniques. Choosing the right recovery model is crucial for building resilient
+    distributed systems that can weather unexpected events and maintain high levels
+    of availability and responsiveness.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we’ll explore each of these topics in greater depth, discussing
+    their underlying principles, trade-offs, and best practices for applying them
+    in real-world distributed applications. After this chapter, you should be able
+    to implement idempotency, replication, and recovery models at a level suitable
+    for your system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'You can find the code files used in this chapter on GitHub: [https://github.com/PacktPublishing/Software-Architecture-with-Kotlin/tree/main/chapter-10](https://github.com/PacktPublishing/Software-Architecture-with-Kotlin/tree/main/chapter-10)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Idempotency
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Idempotency is a concept in software engineering that refers to the non-functional
+    property of operations that can be performed multiple times while still having
+    the same effect as performing it only once. In other words, an idempotent operation
+    can be safely repeated without side effects. Let’s cover a short scenario where
+    idempotency is required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A use case where idempotency is required
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Imagine that we’re building an online banking application. A key capability
+    is **Transfer Funds**, in which a user transfers money from one account to another.
+    This capability is a fundamental yet critical part of the system, and it needs
+    to be implemented in a way that ensures the integrity and reliability of the user’s
+    financial transactions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the **Transfer Funds** operation isn’t idempotent, then the user could accidentally
+    click the **Transfer** button multiple times, and the system would execute the
+    transfer operation multiple times, resulting in an unintended debit from the source
+    account and a corresponding credit to the destination account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most mature user interfaces can avoid this situation by blocking the button
+    once it’s pushed until a response is received. However, there are also API integrations
+    that require idempotency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This result isn’t intended by the user, and it has multiple consequences. First,
+    if the user has insufficient funds from the second and subsequent transfer, the
+    user will have overdraft funds and be subject to interest charges. Second, these
+    incidents trigger user complaints and can result in the potential involvement
+    of financial regulatory bodies. Not only the user experience but also the unintended
+    side effect results in reputational damage to the bank.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To prevent these issues, the **Transfer Funds** operation should be designed
+    to be idempotent. This means that no matter how many times the user clicks the
+    **Transfer Funds** button, the system will only execute the transfer once, ensuring
+    that the final state of the accounts is correct and matches the user’s intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Key aspects of idempotency
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Idempotency is an important concept in software development, particularly in
+    the context of distributed systems, APIs, and data processing pipelines. Here
+    are some key aspects of idempotency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Constant outcomes**: An idempotent operation always produces the same result,
+    regardless of how many times it’s executed. If an operation isn’t idempotent,
+    each subsequent execution might produce a different outcome.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Error handling and retries**: Idempotency helps in handling errors and retries
+    gracefully. If an operation fails, the system can safely retry the operation without
+    causing unintended side effects.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Data consistency**: Idempotent operations ensure data consistency by preventing
+    accidental data modifications or duplications, which can occur when retrying non-idempotent
+    operations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Scalability and reliability**: Idempotency is crucial in distributed systems,
+    where multiple instances of an application may be processing the same request
+    concurrently. Idempotent operations allow the system to scale and handle failures
+    without compromising data integrity.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Let’s cover a few practical scenarios where idempotency can be applied.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scenario 1 – evolutionary database migration script
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Evolutionary databases aim to create database systems that can evolve and adapt
+    to changes over time. They aren’t defined by static and rigid models. The database
+    schema is defined by incremental changes that build the target schema.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Consider Flyway, an open source database migration tool. The incremental changes
+    are specified by SQL scripts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For simplicity’s sake, let’s assume that the `V1` script only contains the
+    following statement for creating a table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `CREATE` SQL statement will create a new table called `HOUSEHOLD` if it
+    doesn’t already exist. Otherwise, an error will be reported and the `V1` script
+    will fail. In other words, it isn’t idempotent, and repeated executions don’t
+    have the same outcome. Here’s an idempotent version of the script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `IF NOT EXIST` syntax ensures the table is created if it doesn’t exist,
+    or nothing is performed if the table already exists. The outcome is the same in
+    either case, which is that the `HOUSEHOLD` table exists in the database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The execution of the `V2` script will add a new column to this table as a non-null
+    column. Some database vendors support clever SQL statements that create a non-null
+    column and populate values in the same statement. For the sake of this argument,
+    let’s assume that this isn’t supported. We’ve resorted to the classic approach
+    of adding a nullable column, populating the value, and then setting the column
+    to non-null. Like the modified `V1` script, we can make it idempotent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `IF EXISTS` syntax ensures that the table or columns will be altered if
+    they exist, or nothing is performed if they don’t. The outcome is the same and
+    therefore it’s idempotent. The classic guideline would have suggested that the
+    `ALTER TABLE` is DDL and `UPDATE` is DML. This was suggested because DDL is immediately
+    committed while DML requires an explicit commit. However, with idempotency, this
+    is no longer an issue as each statement can be repeated to produce the same outcome.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scenario 2 – create/update operations
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Using the real-life example of villagers exchanging services, there’s a business
+    case to ensure households are kept in the system record. However, the household
+    users don’t know if the household has already been persisted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A CRUD-based system may define create and update as two independent operations.
+    These operations are well-suited as users want the household records to persist
+    regardless of whether they exist. There could have been a network outage, so users
+    may not know if their previous requests were successful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In other words, users want an operation that can be repeated and yet generate
+    the same outcome. They need an idempotent operation to ensure the household records
+    have been stored, despite whether they already exist.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This operation is often referred to as **upsert**, which means **update or
+    insert**. The key characteristics of an upsert operation are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Idempotent**: It can be executed repeatedly with the same outcome. If the
+    record already exists, the record is updated; if the record doesn’t exist, the
+    record is created.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Atomic**: The operation is executed in a transaction of serialized isolation.
+    This means the operation was either completed or it didn’t happen.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Option 1 – pessimistic**: The pessimistic approach would check if the record
+    already exists or not to determine whether it’s an update or a create operation.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Option 2 – optimistic**: The optimistic approach would assume the record
+    either exists or not and perform an update or create operation, respectively.
+    If the update operation hasn’t found the record, it switches to the create operation.
+    Alternatively, if the create operation fails due to a unique constraint violation,
+    it switches to the update operation.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Here’s an example of the upsert operation for a household in an SQL statement.
+    It’s implementing the optimistic approach:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This SQL statement attempts to insert a new household record. If the record
+    doesn’t exist, a new row is inserted. If the execution hits a duplicate key violation,
+    it becomes an update operation to `name` and `email`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If this operation is exposed as an external API – that is, as a REST endpoint
+    – the contract can be expressed in the following ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GET`: Multiple invocations of the `GET` endpoint shall return the same result,
+    given the system state remains unchanged.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`PUT`: The `PUT` endpoint implies creating a new resource or replacing a representation
+    of the household with the request payload.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`DELETE`: The `DELETE` endpoint intends to remove the resource, regardless
+    of whether it already exists. If the resource isn’t found, then it should return
+    a successful **Hypertext Transfer Protocol** (**HTTP**) status code.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The HTTP method itself doesn’t bring idempotency. For example, if the response
+    payload of the `GET` endpoint contains the current time or random values, then
+    multiple invocations don’t return the same result, and therefore it’s not idempotent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `POST` and `PATCH` endpoints aren’t defined as idempotent. The `POST` endpoint
+    in REST architecture implies the request to create a resource and assumes the
+    resource was absent. The `PATCH` endpoint assumes the resource already exists
+    so that the resource can be partially updated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HTTP methods
+  prefs: []
+  type: TYPE_NORMAL
+- en: HTTP defines a few methods to categorize the request to perform an action on
+    a resource. The `GET` method is a read-only operation that returns data from the
+    server. The `POST` method creates resources in a server. The `PUT` method replaces
+    or creates a resource. The `PATCH` method partially updates an existing resource.
+    The `DELETE` method removes a resource from the server. The `HEAD` method returns
+    the header of the resource without the body content. The `OPTIONS` method describes
+    the options to communicate with the specific resource. Finally, the `TRACE` method
+    is a diagnosis operation that echoes the final receipt of the request to provide
+    information for troubleshooting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scenario 3 – processing events in sequence
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Something that consumes events from a stream or a topic usually takes an event
+    one at a time and processes them sequentially. If the sequence of events that’s
+    processed is important, then there’s a need to gracefully process events in the
+    face of duplication and out of sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two levels where an event sequence could be compromised. The first
+    level is the transport level, where the offset of the last consumed event is reset
+    to older events due to network issues, partition changes, or consumer group changes.
+    The second level is the application level and is where the publisher has sent
+    older events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application-level deduplication at the consumer level could handle event sequences
+    being compromised at the transport or application level. However, that would require
+    publishers to provide sequential information on each event. This could be a sequence
+    number on the event or a timestamp where an event occurred.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The consumer can maintain the last processed sequence number or timestamp per
+    publisher. If the consumer receives an event where the sequence number is lower
+    than the last to be processed, or where the timestamp is older than the last to
+    be processed, then the consumer skips this event until a newer event is received.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here’s an example implementation of an event listener that prevents older events
+    from being processed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `HouseholdEventListener` keeps the timestamp of the last processed event.
+    The incoming events from Kafka have a header field, `kafka_eventTime`, that’s
+    provided by the publisher. The value is when the event occurred, not when the
+    event was published.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first event process wouldn’t perform any timestamp check. Subsequently,
+    the listener would skip processing if the event timestamp from the header is earlier
+    than the last processed timestamp. This indicates that the incoming event is old
+    and can be skipped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the event isn’t skipped and has finished processing, the last processed timestamp
+    is updated, and the event is acknowledged by the Kafka broker. The listener is
+    now ready to consume another event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a production system, the last processed time should be persisted in the database
+    and be in the same transaction where business processing takes place. The last
+    processed time should be restored when the listener starts. This would allow the
+    listener to resume its consumption of events after a restart.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This implementation illustrates how a consumer can detect an older event with
+    the help of the publisher. The older event isn’t processed, and the consumer can
+    keep the last processed timestamp as an offset to verify the next event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To extend to this example, the timestamp of the last processed event can be
+    persisted in a database so that the value is restored after a restart.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scenario 4 – the multiple bounded context saga
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A **saga** is a pattern in **domain-driven design** (**DDD**) that involves
+    distributed transactions. The challenge is to maintain data consistency across
+    multiple bounded contexts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s use our bank transfer example, where we need idempotent operations to
+    ensure the fund is only transferred once and only once. The banking phone application
+    intends to send a request to the backend service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, there are multiple backend services involved in this operation. First,
+    there’s **Transfer Service**, which validates the request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once validated, it needs to reserve the amount in the withdrawing account until
+    the transfer has been completed. This is done by another service called **Account
+    Service**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Account Service** orchestrates reserving funds by moving funds from a customer
+    account to the corporate account. Later, it orchestrates adding funds by moving
+    funds from the corporate account to a customer account. This is done by communicating
+    with the legacy **Core** **Banking System**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the funds have been reserved, **Transfer Service** can request the second
+    part of the transfer by moving the funds from the corporate account to the customer
+    account. The request is handled by **Account Service**, which communicates with
+    the legacy **Core Banking System** to transfer the funds. Once this has been acknowledged
+    and completed by **Core Banking System**, **Account Service** returns the result
+    to **Transfer Service** and thus completes the transfer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This interaction is demonstrated in *Figure 10**.1*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.1 – Example sequence for a bank transfer](img/B21737_10_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 10.1 – Example sequence for a bank transfer
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making the whole transfer operation idempotent is complex because transactions
+    are distributed among services. Moreover, we need a way to identify that the user
+    only wants the transfer funds once, despite multiple attempts from the banking
+    application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Often, some parts of the system are legacy systems that may not be enhanced
+    so easily. In this case, let’s assume **Core Banking System** can’t take the idempotency
+    key in the request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let’s explore how each component involved in this process can work toward idempotency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Banking application
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The first step should be the banking application generating an **idempotency
+    key**, which can identify multiple attempts belonging to the same user intent.
+    Ideally, the idempotency key should be carried to all services involved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Transfer Service
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Transfer Service** can cache these idempotency keys for a certain period.
+    Within that period, the same idempotency keys are treated as duplicated requests.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To avoid consistency issues under concurrent requests, many systems use explicit
+    locks to ensure the requests of the same idempotency keys are processed only one
+    at a time, across multiple instances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The service can decide to skip the remaining interactions with other services
+    and return the response that was sent previously to the banking service. This
+    approach is OK if we are sure the remaining services have acknowledged completion
+    of the request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If, for example, there was a timeout when **Transfer Service** communicated
+    with **Account Service**, then it may be sensible to repeat the interaction with
+    **Account Service**. This allows the operation to be repaired and continue until
+    completion. This approach also assumes that **Account Service** can handle duplicated
+    requests in an idempotent manner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Account Service
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'In this operation, **Account Service** provides two functionalities: reserve
+    funds and add funds. To be able to identify duplicate requests, the idempotency
+    keys should be persisted alongside the records related to holding and moving funds.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When **Account Service** handles the requests of reserving or adding funds,
+    it must check whether duplicate requests already exist by using the idempotency
+    keys. If they do, **Account Service** returns the response from the records, as
+    if it had been processed this time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the reserve fund request is rejected by **Core Banking System** due to insufficient
+    funds, **Account Service** needs to roll back the operation by reversing the fund
+    back to the withdrawal account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like **Transfer Service**, there should be some form of explicit locking to
+    ensure only one request for a given idempotency key is processed at a time across
+    multiple instances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Core Banking System
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Core Banking System** is a legacy system that doesn’t support idempotency.
+    It isn’t able to take idempotency keys or process them. Since **Account Service**
+    is the service that communicates with **Core Banking System**, **Account Service**
+    should persist the response from **Core Banking System** together with the corresponding
+    idempotency key.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the record of the response already exists with the idempotency key, **Account
+    Service** skips communication with **Core Banking System** and uses the previously
+    persisted response from **Core Banking System** to complete the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is getting complex as there could be a timed-out request for **Core Banking
+    System**. **Account Service** doesn’t know whether **Core Banking System** has
+    processed the transfer or not. **Account Service** would need to query the recent
+    transaction history to identify the previous request to **Core Banking System**,
+    either success or failure, to recover and resume the transfer operation. Otherwise,
+    retrying may still result in an inconsistent state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sometimes, this recovery may even involve manual correction, which is error-prone.
+    You can see when a process can’t be idempotent as it becomes substantially more
+    complex, inefficient, and expensive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With that, we’ve run through four scenarios where idempotency is required, and
+    we’ve explored multiple approaches for these scenarios. Now, let’s delve into
+    a concept related to idempotency – replication.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Replication
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Replication** serves as a safeguard against potential failures, allowing
+    the system to maintain continuity of service even when individual components malfunction
+    or become unavailable.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This aspect of replication has a close relationship with recovery, which will
+    be covered later in this chapter. In short, some replication techniques can prevent
+    system downtime, which requires recovery. Also, some replication techniques enable
+    and enhance recovery processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another aspect of replication is that it can improve system performance by distributing
+    load to multiple nodes, as well as by allowing the system to scale based on traffic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The copy of the data or running instances is usually called a *replica*. There
+    are many areas where replication is applicable. Let’s take a look.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data redundancy
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Multiple replicas are distributed across different nodes or servers. If one
+    node fails, the data can still be accessed from the replicated copies on other
+    nodes. It also prevents data loss if some nodes become permanently unavailable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This redundancy ensures that the overall system can continue to function, even
+    if some nodes or components are unavailable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This can apply to relational databases, NoSQL databases, durable message brokers,
+    distributed object caches, and nodes in **peer-to-peer** (**P2P**) networks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Service redundancy
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Having the running service instances of the system distributed and replicated
+    brings a few key benefits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, requests can be routed to the most available and responsive replica,
+    reducing the risk of overloading a single node and improving overall system performance.
+    This load balancing helps maintain availability by preventing bottlenecks and
+    ensuring that the system can handle increased traffic or workloads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Second, it enables the system to scale out by adding more replicas or instances
+    as demand increases. This horizontal scalability allows the system to handle higher
+    loads and maintain availability as the number of requests or resources required
+    grows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moreover, if a primary node becomes unavailable, the system can automatically
+    failover to a secondary or backup replica, ensuring a seamless transition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The secondary replica can take over the workload, maintaining service continuity
+    and high availability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Replication also facilitates faster recovery as the system can restore services
+    by promoting a healthy replica to become the new primary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s also common for data and services to be replicated across multiple geographical
+    locations and data centers. This practice can improve availability in the event
+    of regional failures or disasters. If one data center or region experiences an
+    outage, the system can continue to operate using the replicas in other locations,
+    ensuring that the service remains available to users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CAP theorem
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let’s look at a couple of replication and recovery models that we should discuss.
+    They cater to various levels of consistency, availability performance, and scalability
+    non-functional requirements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'According to the **CAP theorem**, also known as **Brewer’s theorem**, it’s
+    impossible for a distributed system to provide all three of the following non-functional
+    properties simultaneously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Consistency (C)**: All nodes in the system have the same data at the same
+    time. Consistency ensures that the data is always in a valid state'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Availability (A)**: Every request receives a non-error response, but there’s
+    no guarantee that it contains the most recent data'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Partition tolerance (P)**: The system continues to operate despite arbitrary
+    message loss or failure of part of the system'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The theorem states that when communication between nodes fails, a distributed
+    system can only satisfy two of the three properties (C, A, or P) at the same time.
+    This is known as the **CAP trade-off**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The history of the CAP theorem
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CAP theorem was proposed by Eric Brewer in 2000 during the Symposium on
+    **Principles of Distributed Computing** (**PODC**). The theorem was later proved
+    by Seth Gilbert and Nancy Lynch of Massachusetts Institute of Technology in 2002,
+    in their paper *Brewer’s Conjecture and the Feasibility of Consistent, Available,
+    Partition-Tolerant* *Web Services*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The three possible choices are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Consistency and partition tolerance (CP)**: The system sacrifices availability
+    to uphold strong consistency in the face of a network partition. This is common
+    in traditional database systems, such as relational databases.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Availability and partition tolerance (AP)**: The system remains available
+    but forgoes maintaining consistency during network failure. This is common in
+    NoSQL databases.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Consistency and availability (CA)**: The system offers both consistency and
+    availability, but this is only possible in a fully connected system with no network
+    partitions. In practice, it rarely happens, and the system must choose between
+    consistency and availability.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Although there are three combinations, the choice is more fluid and situational.
+    For example, a system may be initially AP, but as more nodes fail, it may fall
+    back to a single node running with CA.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CAP theorem is a concept that helps developers understand the trade-offs
+    they need to make when designing a distributed system. It’s an important consideration
+    when you’re choosing the appropriate data storage and processing solutions for
+    a particular application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When exploring these models, it’s important to understand and discover the non-functional
+    properties your system should aim for. Not all models are suitable for all systems.
+    It’s about finding the most suitable models based on your needs and anticipated
+    scenarios.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Model 1 – primary-secondary
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The **primary-secondary** (also known as **single-leader**) replication has
+    a **Primary** node (the “leader”) that handles all write operations and replicates
+    data changes to the **Secondary** nodes (the “followers”). Single-leader replication
+    is demonstrated in *Figure 10**.2*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.2 – Primary-secondary replication](img/B21737_10_2.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 10.2 – Primary-secondary replication
+  prefs: []
+  type: TYPE_NORMAL
+- en: Read and write operations
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The **Primary** node is responsible for all write operations. Whether the **Primary**
+    or **Secondary** nodes should serve read operations has a profound impact on system
+    quality attributes such as consistency, throughput, availability, and resilience.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the **Primary** node serves all read operations, then the **Secondary** nodes
+    can be either cold backup or hot standby. Cold backup implies the **Secondary**
+    nodes aren’t running but the data files are being replicated. Hot standby implies
+    the **Secondary** nodes are up but not serving any request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This setup provides strong consistency, but serving both read and write operations
+    means the **Primary** node takes all the load. This increases resource consumption
+    and makes it more challenging to achieve high performance. Moreover, if the **Primary**
+    node fails, it may take some time for the cold backup to start up and cause an
+    outage. The hot standby would have better availability as the **Secondary** nodes
+    are already running, but all read requests to the failed primary node are still
+    impacted. This will cause a “blip” until one of the **Secondary** nodes becomes
+    the **Primary** node.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If **Secondary** nodes serve read requests, the throughput of read operations
+    is increased. More nodes are available to handle read requests. If some of the
+    **Secondary** nodes fail, others can continue to operate. This approach comes
+    with the trade-off of potential inconsistency issues. Imagine if one of the **Secondary**
+    nodes failed to connect to the **Primary** node; this **Secondary** node would
+    have outdated data but still performs a read operation and provides outdated data,
+    something that’s inconsistent with other nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Replication
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'When you’re replicating data changes from the **Primary** node to **Secondary**
+    nodes, you have two options: synchronous or asynchronous replication. An example
+    sequence diagram of the synchronization process is shown in *Figure 10**.3*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.3 – Primary-secondary synchronization – synchronous (left)/asynchronous
+    (right)](img/B21737_10_3.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 10.3 – Primary-secondary synchronization – synchronous (left)/asynchronous
+    (right)
+  prefs: []
+  type: TYPE_NORMAL
+- en: This diagram is split vertically into two approaches. On the left-hand side,
+    we have synchronous replication. Here, a write request is sent to the primary
+    node. The primary node updates the data in its local storage but doesn’t commit
+    the transaction. Then, it sends the data change to all secondary nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a blocking and synchronous process where the primary node waits for
+    responses from all secondary nodes. If all responses are successful, then the
+    primary node commits the transaction and flushes the changes to local storage.
+    Finally, a response is returned to the original requester. The synchronized approach
+    maintains strong data consistency across all nodes at the cost of higher latency
+    due to synchronous communication between the primary and secondary nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the right-hand side, after the primary node completes the write request,
+    the data change is committed to local storage, and the response is returned to
+    the requester. The data changes are synchronized in the background without blocking.
+    This is either done as a scheduled background process or as an event that’s published
+    to the secondary nodes. This approach has reduced latency as replication isn’t
+    required to return a response. However, it introduces scenarios where data could
+    be inconsistent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the communication between the primary and some secondary nodes fails, some
+    of the secondary nodes will have the latest data and some won’t. Meanwhile, all
+    secondary nodes serve read operations that return different versions of the same
+    data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The risk of inconsistency can be mitigated by stamping the data with a version
+    number or timestamp. Any outdated data can be spotted and then skipped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The requester can also have a sticky connection with the secondary nodes serving
+    read requests. The data that’s returned to the requester will change in tandem
+    with the secondary node. This provides some level of reliability that a request
+    won’t get one version of the data, and then get an older version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Failover
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If the primary node fails, one of the secondary nodes needs to become the primary
+    node. The new primary node can be determined by the round-robin rule, or a potentially
+    more complex leader election algorithm.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If data is replicated asynchronously, losing a primary node may result in losing
+    the latest data. This happens if the primary node has updated its local storage
+    and returned the result, but then fails before it can notify secondary nodes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s even worse if the failed primary node gets backed up but loses the connection
+    to some of the secondary nodes. Here, a new primary node may have been assigned.
+    We now have a split-brain situation where there are two primary nodes, and secondary
+    nodes are fragmented. This usually requires manual intervention to shut down one
+    of the primary nodes and reconnect all secondary nodes to the one primary node.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Primary-secondary replications are commonly used in highly available databases
+    and message brokers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Model 2 – partitioned and distributed
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Partitioned and distributed** (known as **multi-leader**) replication distributes
+    data management into partitions. It allows multiple nodes to serve requests at
+    the same time. These nodes replicate the changes to the other nodes, enabling
+    higher write throughput and availability.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It’s typically used when data and services are replicated across multiple geographical
+    locations, often in different data centers or cloud regions. This provides availability
+    and resilience against regional failures or disasters. This is illustrated in
+    *Figure 10**.4*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.4 – Partitioned and distributed replication](img/B21737_10_4.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 10.4 – Partitioned and distributed replication
+  prefs: []
+  type: TYPE_NORMAL
+- en: Requests are geographically partitioned so that users of a given region can
+    access the corresponding services in that region. Within this region, this partitioned
+    and distributed replication can behave exactly like primary-secondary replication,
+    where primary nodes serve write requests and secondary nodes serve read requests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Across regions, an additional synchronization process occurs so that the data
+    in one region is copied to another. Some data is fully partitioned and regional,
+    which means that all requests for the data are served within the designated region
+    in normal circumstances. Some data is shared and may need to be fully replicated.
+    This introduces the need to resolve conflicts if it’s updated in both regions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This setup is more complex compared to primary-secondary replication. However,
+    it can be justified if there are non-functional requirements such as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Serve requests coming from multiple geographic regions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Recover in the face of total data center failure
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Decouple from a particular cloud provider architecturally and operationally
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Support offline operations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Support collaborative update operations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: On the other hand, it will become difficult to uphold strong consistency if
+    the same data across multiple regions can’t be updated at the same time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If a data center has failed, requests for the corresponding partition should
+    be routed to the running data center. Data that hasn’t been replicated in the
+    running data center would be lost. In this situation, clients may need to roll
+    back to the last replicated state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resolving write conflicts and avoiding lost updates
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Partitioned and distributed replication requires some mechanisms to resolve
+    write conflicts in which the same piece of data is updated simultaneously, and
+    perhaps differently. Let’s illustrate the resolution of write conflicts with a
+    real-life example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Imagine that each household in a village has a record of its name and a contact
+    email address. The *Whittington* household has a record in the repository with
+    an email address of *info@whittington.com*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This record is exposed to two different clients. Each client has read the email
+    address, *info@whittington.com*. One client has updated the email address to *query@whittington.com*,
+    while the other one has updated it to *contact@whittington.com*. The two clients
+    attempt to update the value in the repository by providing their updated ones.
+    The repository is going to receive the write requests from these two clients.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Both clients determine the new value based on the current value they receive:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Client A**: Update the current email address from *info@whittington.com*
+    to *query@whittington.com*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Client B**: Update the current email address from *info@whittington.com*
+    to *contact@whittington.com*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If Client A requests an update earlier than Client B does, then the process
+    of updating the email address to *query@whittington.com* would be lost. This is
+    because Client B almost immediately overwrote the value with *contact@whittington.com*
+    without knowing Client A had also requested an update. This problem is called
+    the **lost** **update** problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This problem is typically solved by having a version number or timestamp on
+    the data. If an incoming request update is identified as older than the one in
+    the system record, then it’s safe to skip the update. Having a monotonic increasing
+    version number is a preferred method compared to timestamps due to the risk that
+    the system clock on each machine can be different.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can model this situation with the following data class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, the `Household` class has a `version` field as an integer. This will
+    be used for comparison during the update operation. There’s also a repository
+    class for `Household` to handle the update request. Here’s the scenario simulated
+    in code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, a `household` record is created as a version, after which there are
+    two updates based on it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this situation, we would expect the second update to be skipped because it
+    was based on version zero. The second update would require refreshing the `household`
+    record to version one and computing the potential update.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A version check should be in place in the repository to prevent the lost update
+    problem. Here’s an example implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `HouseholdRepository` class holds a `ConcurrentMap` interface that uses
+    the household name as the key. The `create` function makes use of the atomic `putIfAbsent`
+    function to ensure the value won’t be overwritten by mistake:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `update` function checks that the updated value must be one version higher
+    than the existing value by using the atomic `computeIfPresent` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For completeness, there’s also a `get` function so that we can get what’s kept
+    in the map after the run:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The output of the program is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This means the second update is skipped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Model 3 – quorum-based replication
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Quorum-based** (also known as **leaderless**) **replication** requires nodes
+    to agree on the state of the data before committing a write operation. This ensures
+    consistency and availability, even if some nodes have failed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The key difference of quorum-based replication is the lack of a primary node,
+    a leader, or a central coordinator. Instead, the data is decentralized and distributed
+    among the nodes in the cluster:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.5 – Quorum-based replication](img/B21737_10_5.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 10.5 – Quorum-based replication
+  prefs: []
+  type: TYPE_NORMAL
+- en: A write operation is only considered successful if it’s acknowledged by the
+    majority (quorum) of the participating nodes in the system. This quorum requirement
+    ensures that a write is only committed if it’s been replicated to enough nodes,
+    making the system resilient to individual node failures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The quorum size is typically set to at least more than half of the total nodes,
+    ensuring that even if some fail, the system can still make progress and maintain
+    a consistent state. The data that’s synchronized among the nodes is versioned
+    for a couple of reasons:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The data synchronization process needs to identify an older version of the data,
+    as well as increment the version to indicate an update
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Clients can read the version to understand whether the data that’s received
+    is outdated
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: For example, in a five-node cluster, a quorum size of three would be required
+    for a write operation to succeed. This way, the system can tolerate the failure
+    of up to two nodes without compromising data consistency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since all the nodes have the same state, there’s no actual failover mechanism.
+    Instead, each request would need to be able to remove duplicated or older responses.
+    This can be done if the data is versioned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Quorum-based replication is commonly used in distributed databases, key-value
+    stores, P2P networks, blockchains, and coordination services, where maintaining
+    strong consistency and availability in the face of node failures is of utmost
+    importance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Comparing the three replication models
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Choosing the appropriate replication mode in a database or data system depends
+    on several factors, including non-functional requirements regarding consistency,
+    availability, performance, and fault tolerance. Here’s a summary and use case
+    for each model:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Primary-Secondary** | **Partitioned** **and Distributed** | **Quorum-Based**
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Strong consistency | Eventual consistency | Configurable consistency |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Simple and easy to maintain | Increased complexity | Complex quorum maintenance
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Low tolerance for data loss | Challenges in conflict resolution | Fault tolerance
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Performance is limited by the capacity of the leader and replication lag
+    | Performance is limited by the capacity of the leader and replication lag | Additional
+    latency to achieve consensus for each changeHigher resource usage |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Less available | Highly available; load balancer options are available |
+    Depends on the number of nodes available |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Single point of failure | No single point of failure | No single point of
+    failure |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Suitable for traditional databases and systems that read more often than
+    write (for example, content management systems) | Suitable for systems spread
+    across different regions and collaborative applications | Suitable for distributed
+    data stores and critical systems that aren’t latency-sensitive |'
+  prefs: []
+  type: TYPE_TB
+- en: The failover mechanism is part of the recovery process, but it focuses on shifting
+    the workload to other running nodes. Recovery also covers bringing up nodes that
+    weren’t running. These approaches will be covered in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recovery
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The recovery process of a system heavily relies on accessible data replicas,
+    except stateless systems. This implies that the recovery approach heavily relies
+    on the replication approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Snapshots and checkpoints
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The most common approach for recovery is to have a snapshot of the last known
+    system state. Periodically saving the state of the distributed system is known
+    as **checkpointing**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the event of a failure, the system can be rolled back to the last known good
+    checkpoint to restore the system to a consistent state. Data that didn’t persist
+    in the snapshot will be lost. The amount of data loss would depend on how often
+    the snapshots are taken.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change logs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A system state can also be restored by replaying the change logs of all operations
+    and transactions within the distributed system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It’s common to recover distributed systems using a combination of checkpoints
+    and change logs. This is similar to the event sourcing recovery method mentioned
+    in [*Chapter 9*](B21737_09.xhtml#_idTextAnchor307), where an aggregate is stored
+    by replaying all related events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This approach helps recover from failures by replaying the missed or lost operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Re-route and re-balance
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: After a node is brought up, it needs to create or join a network of nodes. Requests
+    may need to be re-routed and partitions may need to be re-balanced.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This may also trigger the election of a new primary node. Consensus protocols
+    such as **Raft** ([https://raft.github.io/](https://raft.github.io/)) and **Paxos**
+    ([https://www.microsoft.com/en-us/research/publication/part-time-parliament/](https://www.microsoft.com/en-us/research/publication/part-time-parliament/))
+    may be used to coordinate the actions of the other nodes, ensuring the system
+    remains operational even when individual nodes fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Case study – Raft leader election
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To demonstrate the details of recovery, we’re going to walk through a simplified
+    **Raft** leader election process, as demonstrated in *Figure 10**.5*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.6 – Node state transition in Raft leader election](img/B21737_10_6.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Figure 10.6 – Node state transition in Raft leader election
+  prefs: []
+  type: TYPE_NORMAL
+- en: Raft uses primary-secondary replication in which the primary node replicates
+    data changes to all secondary nodes. The primary node keeps an integer called
+    **Terms**; this number increments for each election. Each request that’s received
+    by the primary node is stamped by Terms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The primary node broadcasts heartbeat messages to all secondary nodes. They’re
+    like pulses to keep announcing that the primary node has been up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a secondary node hasn’t received heartbeat messages over the configured
+    time, it becomes a candidate and calls other secondary nodes to vote for itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other secondary nodes can either accept or reject their votes. When a candidate
+    has been accepted by receiving the most votes, they become the primary node, and
+    others revert to followers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This mechanism happens concurrently and means there will be conflicts to resolve:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Conflicting elections**: Conflicting elections can happen if the timed-out
+    configurations for heartbeat messages are the same among all secondary nodes.
+    This can be avoided by randomizing the timed-out configuration in each node. Moreover,
+    if there are ties of conflicting elections, all elections are called off, after
+    which another election can be called.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Multiple leaders**: If a part of the network is disconnected from another,
+    we can end up with a split-brain situation, where each inter-connected portion
+    starts its own election. Since the majority should be more than half of the total
+    number of nodes, only one part can reach majority votes and elect a leader.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If the original leader is in the smaller part of the split network, there will
+    be multiple leaders when the whole network has recovered. At this point, the value
+    *Terms* can be used to make the original leader step down because the new leader
+    will have a higher term value than the original.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Outdated candidates**: Some secondary nodes could be behind others in replication
+    but would still call for an election and put themselves as candidates. If one
+    of them became the primary node, its outdated data became the source of truth,
+    and some updates could be lost.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: To avoid this situation, the secondary nodes will reject candidates whose Terms
+    are lower than other candidates, and whose data isn’t up to date. A candidate
+    who has outdated data can be spotted by the number of items in the change log.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we covered three topics: idempotency, replication, and recovery.
+    First, we discussed four scenarios where idempotency is useful and how it can
+    be achieved with reference implementation.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we briefly mentioned how to replicate data and services. We brought up
+    the CAP theorem, in which trade-offs need to be considered for each system. We
+    also delved into three models of replication, namely primary-secondary, partitioned
+    and distributed, and quorum-based.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we covered some common mechanisms of recovery, outlining how a newly
+    launched node can become operational in the context of distributed systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we’ll cover the audit and monitoring aspects of a distributed
+    system.
+  prefs: []
+  type: TYPE_NORMAL

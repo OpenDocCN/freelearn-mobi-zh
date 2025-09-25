@@ -1,0 +1,731 @@
+- en: Creating Your Own Device on VirtualBox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have learned how to customize and enhance an existing device to support
+    new features using x86emu. The x86emu device is a device created on top of the
+    following Android emulators: goldfish and ranchu. From this chapter to [Chapter
+    11](3c6453e9-98bb-4979-9c61-f0df071b1255.xhtml), *Enabling VirtualBox-Specific
+    Hardware Interfaces*, we will move to an advanced topic: porting Android systems.
+    What can we do with a hardware platform that is not supported by AOSP?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will move to a new device, x86vbox. We will create this
+    new x86vbox device to run it on VirtualBox. Since VirtualBox is virtual hardware
+    that is not supported by AOSP directly, we have to create the HAL layer by ourselves.
+    Creating the HAL layer by ourselves doesn''t mean we have to create everything
+    from scratch. As I mentioned earlier, porting and customization are the art of
+    integration. We can integrate device drivers for the devices that we need from
+    other open source projects. In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analyzing the HAL of the Android-x86 project and using the Android-x86 HAL for
+    the x86vbox device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating the x86vbox device based on the analysis of Android-x86 HAL
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Analyzing the start-up process for x86vbox
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: HAL of x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before we create the new x86vbox device, we need to resolve a key issue: creating
+    the HAL for x86vbox. What this means is that we need to support the hardware devices
+    that appear on VirtualBox. As we said previously, the Android-x86 project is a
+    project that aims to provide **Board Support Package** (**BSP**) for any x86-based
+    computing devices. Even though VirtualBox is a virtualized x86 hardware environment,
+    we can still use part of Android-x86 projects to support it. In the following
+    table, we can see a list of projects that we reused from Android-x86\. There are
+    three project categories that we need to include in our build from Android-x86:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Linux kernel**: Android-x86 provides a kernel that can work with Android
+    for Intel x86 architecture.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**HAL for Intel x86 architecture**: Android-x86 includes HAL support on most
+    devices that you can find on your PC.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Android system projects and framework projects**: Android-x86 changed some
+    projects under the `system/` and `frameworks/` directories to meet x86 architecture-specific
+    requirements. For example, `init` and `init.rc` under `system/core` have been
+    changed to work with the two-stage start up of Android-x86.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In the following table, we can also look at the projects in another dimension:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: AOSP projects changed by Android-x86.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android-x86 only projects.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: x86vbox--only projects.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In this chapter and the following chapters, we will create the x86vbox device
+    and make changes to some of the following projects to run x86vbox on VirtualBox.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the following table, all kernel- and HAL-related projects from AOSP, Android-x86,
+    and x86vbox are listed. The projects that are created or changed by them are marked
+    with **X**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Project** | **AOSP** | **Android-x86** | **x86vbox** | **HAL module** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `kernel` | X | X | X |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `device/generic/x86vbox` |  |  | X |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `bionic` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `bootable/newinstaller` |  | X | X |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `device/generic/common` | X | X | X |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `device/generic/firmware` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/alsa-lib` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/alsa-utils` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/bluetooth/bluez` |  | X |  | `bluetooth.default` `audio.a2dp.default`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/bluetooth/glib` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/bluetooth/sbc` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/busybox` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/drm_gralloc` | X | X |  | `gralloc.drm` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/drm_hwcomposer` | X | X |  | `hwcomposer.drm` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/e2fsprogs` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/ffmpeg` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/libdrm` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/libpciaccess` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/libtruezip` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/llvm` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/mesa` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/s2tc` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/stagefright-plugins` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `external/v86d` |  | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `frameworks/av` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `frameworks/base` | X | X | X |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `frameworks/native` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/broadcom/wlan` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/gps` |  | X |  | `gps.default` `gps.huawei` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/intel/audio_media` | X | X |  | `audio.primary.hdmi` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/intel/libsensors` |  | X |  | `sensors.hsb` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/libaudio` |  | X |  | `audio.primary.x86` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/libcamera` |  | X |  | `camera.x86` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/libhardware` | X | X |  | `libhardware` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/libhardware_legacy` | X | X |  | `audio_policy.default` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/liblights` |  | X |  | `lights.default` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/libsensors` |  | X |  | `sensors.hdaps` `sensors.iio`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`sensors.kbd`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`sensors.s103t`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`sensors.w500` |'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| `hardware/ril` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `hardware/x86power` |  | X |  | `power.x86` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `system/core` | X | X |  |  |'
+  prefs: []
+  type: TYPE_TB
+- en: The manifest for x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Based on an analysis of the preceding table, we can create the manifest file
+    for x86vbox. From the preceding table, we can see that we reuse 39 projects from
+    Android-x86 to form the HAL of VirtualBox. Out of these 39 projects, 16 of them
+    are from AOSP and changed by Android-x86\. To run our x86vbox device on VirtualBox,
+    we need to create the device x86vbox at `device/generic/x86vbox`. We also need
+    to change four projects: `kernel`, `bootable/newinstaller`, `device/generic/common`,
+    and `frameworks/base`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the manifest of the x86vbox, we will include the preceding projects for
+    the x86 kernel, HAL, and have modified `system/` as well as `frameworks/`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see that the manifest of x86vbox includes two parts. The first part includes
+    the x86 kernel, x86vbox HAL, and modified AOSP projects that are all in GitHub.
+    The second part includes the original AOSP projects. All the projects in the second
+    part are not touched by either Android-x86 or x86vbox. The majority of projects
+    in the first part are changed by Android-x86 only so we don't have to do anything
+    for these projects as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the first part of manifest, all the projects in the `external/` or `hardware/`
+    directory are x86 HAL-related projects. The only AOSP project that you may have
+    questions is **bionic**. You may be wondering why it is changed by Android-x86,
+    since it is the C library of Android. You may know that system calls are implemented
+    in the C library in the Linux system. There are two system calls `ioperm` and
+    `iopl` missing from the original bionic and they are needed by the `external/v86d`
+    project, which is the user space daemon for the `vesafb` frame buffer driver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the preceding analysis helps us to clarify the scope of work. As we can
+    see, the scope of work is not as big as we thought at the beginning. There are
+    many open source projects available nowadays. If we can reuse them as much as
+    possible, the amount of work usually can be reduced dramatically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All Android-x86 projects in GitHub are forked from the Android-x86 mirror so
+    that we can change them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a new x86vbox device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Once we have the HAL for VirtualBox, we can create a new device named x86vbox
+    now. If we review how we created the x86emu device in [Chapter 4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml),
+    *Customizing the Android Emulator*, we know that we need to have a board/device
+    configuration Makefile and a product definition Makefile for a new device. We
+    can also create a new device by inheriting it from an existing device. If we look
+    at the preceding table of x86 HAL, we can see that there is a common x86 device
+    project, `device/common`, which can be found in Android-x86\. We will create our
+    new device x86vbox by inheriting from this common device for x86\. The x86vbox
+    that we create in this chapter is a 32-bit x86 device. You can follow the same
+    instructions to create an x86_64 device by yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we did in [Chapter 4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml), *Customizing
+    the Android Emulator*, we create an `AndroidProducts.mk` Makefile to include the
+    product definition Makefile for x86vbox as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Product definition Makefile of x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As we know, the AOSP build system will look for `AndroidProducts.mk` to find
+    the product definition Makefile for a particular device. Let''s review the product
+    definition Makefile `x86vbox.mk` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, the product definition Makefile is very simple. It does the
+    following things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It includes the general x86 product definition Makefile, `device/generic/common/x86.mk`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It defines product definition variables such as `PRODUCT_NAME`, `PRODUCT_BRAND`,
+    `PRODUCT_DEVICE`, `PRODUCT_MODEL`, and so on
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It specifies how to build the kernel for x86vbox
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It looks even simpler than the one we created in [Chapter 4](f69f330a-932c-4a32-bb78-e427c860b65e.xhtml),
+    *Customizing the Android Emulator* for x86emu. The inherited `x86.mk` Makefile
+    did most actual work and we will analyze it in greater depth later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Board configuration of x86vbox
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Another Makefile that we will create for x86vbox is the board configuration
+    Makefile `BoardConfig.mk` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This looks very simple as well. It defines the target architecture--specific
+    variables `TARGET_ARCH`, `TARGET_CPU_ABI`, `TARGET_CPU_ABI_LIST_32_BIT`, and `TARGET_CPU_ABI_LIST`.
+    Then it defines the parameters for the system image file. Finally, it includes
+    the common board configuration the Makefile `device/generic/common/BoardConfig.mk`
+    and we will look at this in a moment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Common x86 devices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the Android-x86 project, it defines a common x86 device so that everybody
+    can create a specific x86 device based on it. The inherited device can be either
+    a 32-bit or a 64-bit x86 device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can have a look at the content of `device/generic/common` first as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_08_001.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: We can see that there are a lot of files and directories. We will start the
+    analysis from the `BoardConfig.mk` and `x86.mk` Makefiles first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `BoardConfig.mk`, the variables needed by the build system are defined as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is a long list. It defines audio, Wi-Fi, GPU, and Bluetooth-related features.
+    It is also a disabled emulator-related build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s have a look at `x86.mk`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `x86.mk`, it includes two generic Makefiles, `full.mk` and `locales_full.mk`,
+    from the AOSP build system. If we recall the device definition Makefile for x86emu,
+    it also includes these two Makefiles from the build system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are another two local Makefiles, `device.mk` and `packages.mk`, imported
+    by `x86.mk`. In `packages.mk`, the HAL module packages are defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is not an exhaustive list of packages. There are more components added
+    to `PRODUCT_PACKAGES` in `device.mk` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: In `device.mk`, it defines the properties for x86 devices and it is followed
+    by a long list of files to be copied. At the end, it includes individual Makefiles
+    for various components, such as firmware, touchscreen a calibration tool, audio,
+    GPS, a sensor and native bridge, and so on. You can find and investigate each
+    of them in the respective folders by yourself. In this chapter, we just give an
+    overview about how we can create the x86vbox device. We will delve into the details
+    of some hardware interfaces in later chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting the source code and building the x86vbox device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To build the x86vbox device, we can get the source code from GitHub and AOSP
+    using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `android-7.1.1_r4_ch08_aosp` tag is used to baseline the changes in this
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After we get the source code for this chapter, we can set the environment and
+    build the system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Boot up process and device initialization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Since we use the Android-x86 kernel and HAL for x86vbox, we will further analyze
+    about the start-up process of x86vbox in this section. From the analysis, we can
+    understand how Android-x86 supports multiple devices using one codebase. You can
+    review the two-stage start-up process that we discussed in [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml),
+    *Debugging the Boot Up Process using a Customized ramdisk*. We will work on a
+    more detailed analysis on top of that introduction now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The kernel of Android-x86 is different from the kernel that we used in [Chapter
+    6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml), *Debugging the Boot Up Process
+    using a Customized ramdisk* for emulators. The Android-x86 kernel does not have
+    any idea about what hardware interfaces it needs to support, so it builds as many
+    device drivers as possible with it. On the other hand, the goldfish kernel does
+    know what hardware it needs to support. This difference means they are built in
+    two different ways. The goldfish kernel includes all devices supported inside
+    the kernel, so it does not use kernel modules at all. However, it is impossible
+    for Android-x86 kernel to do this, since it would make the size of the kernel
+    too big. The kernel of Android-x86 uses kernel modules extensively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will focus on an analysis about how device nodes are created and how the
+    kernel modules are loaded during the start-up process in this chapter. Since Android-x86
+    boots up in two stages, the device initialization is also split into two stages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Device initialization before Android start-up
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The boot-up process will start with an embedded Linux environment as the first
+    stage. Most devices will be initialized during this stage. The good thing is that
+    Android-x86 can enter a shell environment with a debug console using a defined
+    environment variable. In this console, we can check the system status to find
+    out whether we have the right configuration that we want to create. The default
+    init script comes with two debug checkpoints. The first checkpoint is after the
+    root device is mounted. The second checkpoint is entered after all the drivers
+    are loaded. Of course, you can set up as many checkpoints as you want by changing
+    the init script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is the part of the init script that we want to look at before
+    we enter the first checkpoint:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the early boot stage, the init script mounts the `/proc` and `/sys` filesystems
+    using by kernels. After that, it sets up the symbolic links of `busybox` so that
+    we can use all the commands of `busybox`. Then, it will set `/sbin/mdev` as the
+    handler for hotplug. The `mdev` command is a minimal implementation of `udev`.
+    `mdev` can dynamically manage the device nodes under `/dev`, when a new device
+    is detected by the kernel. `mdev` is part of `busybox` so we need to create all
+    `busybox` symbolic links first. It also requires the `/proc` and `/sys` filesystem.
+    After the hotplug is set, the script runs the command `mdev -s` to find all existing
+    devices currently found by the kernel. At this point, all device nodes under `/dev`
+    are created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: udev and **mdev** **udev** is a device manager for the Linux kernel. As the
+    successor to devfsd and hotplug, udev primarily manages device nodes in the `/dev`
+    directory. At the same time, udev also handles all user space events raised while
+    hardware devices are added into the system or removed from it, including firmware
+    loading as required by certain **devices.**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**mdev** is a minimum implementation of udev in `busybox`. It is used in embedded
+    systems to replace udev. mdev lacks some features in udev, such as completed implementation
+    of device driver loading, and so on. We can see that Android-x86 uses mdev in
+    the first start up stage.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s look at the kernel modules and device nodes at this stage:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_08_002.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Kernel modules and device nodes
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we can see from the preceding screenshot, all device nodes are created under
+    `/dev`. However, there is only one kernel module loaded at this time. We are in
+    the first checkpoint now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's move on and see what happens in the script before we hit another checkpoint
+    in the following code snippet. To exit from the first checkpoint, we need to run
+    the `exit` command to continue executing the script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After exit from the first checkpoint, it will continue to execute the following
+    script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that the init script performs the following tasks before it enters
+    the next checkpoint:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loads kernel modules.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Mounts the data partition.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Mounts the SD card.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Sets up the touch screen calibration tool.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Sets up the screen DPI.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Performs any other post-boot detection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'You can study the script for tasks 2 to 6 by yourself, since they are very
+    straightforward and easy to understand. We want to look at the first task in more
+    detail here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `load_modules` script function is implemented in the script file `0-auto-detect`,
+    as shown in the preceding snippet. It calls another function, `auto-detect`, to
+    do the actual work. This function is not that easy to understand. Let's explain
+    what it does now. The purpose of this function is to create a shell command called
+    `dev2mod` on-the-fly. What this `dev2mod` function does is take the module alias
+    as a parameter and load the respective driver module according to the module alias.
+    After the `dev2mod` command is created, `auto_detect` will call this function
+    using the devices found by the kernel under the `/sys/bus` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'All the kernel modules of the Android-x86 kernel can be found in the `/lib/modules/4.x.x-android-x86/modules.alias`
+    file. This file is processed to add the `modprobe` command at the end of each
+    line so that the kernel module can be loaded with the module alias as a parameter.
+    The temporary script file can be found at `/tmp/dev2mod` and it looks like the
+    following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before the devices in the `/sys` filesystem are passed to the `dev2mod` function,
+    we can take a look at how the output looks like on my system as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see from the preceding output, it includes all module aliases found
+    by the kernel. The preceding output of module aliases will be passed to the shell
+    script function `dev2mod` through a pipe. The `dev2mod` function will load all
+    respective kernel modules found by the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After the `load_modules` are executed, we enter the second checkpoint and we
+    can take a look at the system status now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/image_08_003.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Kernel modules are loaded
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can see from the preceding screenshot that there are many kernel modules
+    loaded in the system now. From the kernel module name, we can see that the audio,
+    mouse, and keyboard drivers are loaded. This is how the device drivers are loaded
+    automatically by the Android-x86 init script in `initrd.img`. At the end of the
+    init script, it will invoke `chroot` or `switch_root` according to the setting
+    of the environment variable `DEBUG`. In either case, the root filesystem will
+    be changed to the Android `ramdisk.img` and will start the Android init process
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The Android init process will perform the hardware initialization for these
+    devices that cannot be detected by the kernel automatically. The init process
+    will also initialize the HAL of Android-x86.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HAL initialization during the Android start-up
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's look in greater detail into the hardware initialization of devices that
+    cannot be detected by the kernel automatically, and the initialization of Android-x86
+    HAL, in this section. One of the peripherals that haven't been initialized is
+    the frame buffer for the graphic user interface in Android. We will use it as
+    an example to explain how hardware is initialized by the init process in Android's
+    `ramdisk.img`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we recall the analysis of the init process in [Chapter 6](b6a6462f-1c3d-46fd-89e9-a543423c576d.xhtml),
+    *Debugging the Boot Up Process Using a Customized ramdisk*, the init process will
+    execute the `init.rc` script, which is general for all Android devices. In the
+    `init.rc` script, it will import a device-specific script `init.${ro.hardware}.rc`.
+    In our case, this script is `init.x86vbox.rc` on the target device. The `ro.hardware`
+    property is set according to the kernel command-line parameter, `androidboot.hardware`,
+    which we set it to `x86vbox`. The source code of `init.x86vbox.rc` can be found
+    at `device/generic/common/init.x86.rc`. It is copied to the target output using
+    the following line in `device.mk`. Be aware that the script name is changed after
+    the copy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Another thing that we can see from the preceding code snippet is that a shell
+    script, `init.sh`, is also copied to the system image at `/system/etc/init.sh`.
+    This is the script used to load device drivers and initialize HAL in `init.x86vbox.rc`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `init.x86vbox.rc`, an action trigger is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the predefined trigger, `post-fs`, the `init.sh` script will be executed
+    as part of the initialization process. The following is the code snippet of `init.sh`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see from the preceding code snippet, the `init.sh` script processes
+    the kernel command line first. After that, it runs into a multi-selection statement.
+    It executes a function according to the first parameter passed to it. This parameter
+    is used to let the `do_init` function initialize a particular HAL module. In the
+    case of the first parameter, it''s `init` or without parameter, it will execute
+    the `do_init` function. In this case, all HAL modules will be initialized and
+    this is the case that we want to investigate now. We can see what the `do_init`
+    function does as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `do_init` function will call individual HAL module initialization functions
+    one by one. We won''t look at all of them here. We will take a look at how the
+    frame buffer device is initialized in the `init_hal_gralloc` function. This is
+    the one that we will investigate more in Chapter 10, *Enabling Graphics*, since
+    graphic support is one of the most important tasks when it comes to porting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `init_hal_gralloc` function, it will perform the respective tasks according
+    to the content of `/proc/fb`. From `/proc/fb`, it can detect the type of graphic
+    hardware on the device. If the type of graphic hardware cannot be detected, it
+    will use a general VESA frame buffer (uvesafb), which is used in our case for
+    VirtualBox. It will call another shell function, `init_uvesafb`, to load the VESA
+    frame buffer driver. The uvesafb driver will start a user space daemon `v86d`
+    to execute the x86 BIOS code. The code is executed in a controlled environment
+    and the results are passed back to the kernel via the netlink interface. This
+    is how the graphic driver is initialized in our environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we analyzed the Android-x86 HAL and integrated it to x86vbox
+    so that we are able to boot x86vbox over the next few chapters. We also analyzed
+    the start-up process of Android-x86\. We used the debug console in the first stage
+    of the start-up process to analyze the kernel module loading process. Before we
+    can actually boot the x86vbox on VirtualBox, one issue that we haven't resolved
+    is which bootloader we should use. Unlike the emulator, it does not need a bootloader,
+    since the emulator uses a built-in mini bootloader to load the kernel and ramdisk.
+    VirtualBox is very similar to real hardware. We won't be able to boot up an operating
+    system without a proper bootloader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will discuss this issue and we will explain how we can
+    resolve it using PXE boot supported by VirtualBox.
+  prefs: []
+  type: TYPE_NORMAL

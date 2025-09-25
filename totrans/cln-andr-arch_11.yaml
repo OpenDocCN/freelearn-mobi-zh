@@ -1,0 +1,1181 @@
+- en: '*Chapter 8*: Implementing an MVVM Architecture'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will look at how data can be presented by Android applications
+    to end users. We will look over the available architecture patterns for data presentation
+    and analyze the differences between them. Later, we will look at the **Model-View-ViewModel
+    (MVVM)** pattern, the role it plays in separating business logic and user interface
+    updates, and how we can implement it using **Android Architecture Components**.
+    Finally, we will look at how we can split the presentation layer across multiple
+    library modules. In the exercises of this chapter, we will integrate the layers
+    built in the previous chapters with a presentation layer built using MVVM, we
+    will create a presentation layer that will plug into the domain layer to fetch
+    and update the data, and we will also look at how we handle common logic between
+    different modules in the presentation layer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Presenting data in Android applications
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Presenting data with MVVM
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Presenting data in multiple modules
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By the end of the chapter, you will be able to implement the MVVM architecture
+    pattern in an Android application using the ViewModel architecture component and
+    be able to split the presentation layer into separate library modules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This chapter has the following hardware and software requirements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android Studio Arctic Fox 2020.3.1 Patch 3
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The code files for this chapter can be found here: [https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter8](https://github.com/PacktPublishing/Clean-Android-Architecture/tree/main/Chapter8).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Check out the following video to see the Code in Action: [https://bit.ly/3FZJWIl](https://bit.ly/3FZJWIl)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Presenting data in Android applications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will look at various architecture patterns suitable for
+    presenting data in an Android application and analyze their benefits and drawbacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Early Android applications relied on a pattern similar to the `android.widget.View`
+    hierarchy, and the Model is responsible for managing the application''s data.
+    The relationship between the components would look something like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.1 – Android MVC relationship'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.01_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.1 – Android MVC relationship
+  prefs: []
+  type: TYPE_NORMAL
+- en: From *Figure 8.1*, we can see that the Controller represented by the activity
+    would interact with the Model to fetch and manipulate the data, and then it would
+    update the View with the relevant information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The idea is to have each `Activity` sandboxed as much as possible so that they
+    can be offered and shared between multiple applications (like how the Camera application
+    is opened by other applications to take photos and offer those photos to those
+    applications). Because of this, activities need to be started using intents and
+    not by instantiating them. By removing the ability to instantiate an `Activity`
+    directly, we lose the ability to inject dependencies through the constructor.
+    Another factor we need to consider is that activities have life cycle states,
+    and we inherit these states in each `Activity` in our application. All these factors
+    combined make an `Activity` very hard or next to impossible to unit test unless
+    we use a library such as **Robolectric** or rely on instrumented tests on an Android
+    device or emulator. Both options are slow and, in the case of instrumented tests,
+    can be expensive when we need to run the tests in testing clouds such as **Firebase
+    Test Lab**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To solve the problem of unit testing logic that was present in activities and
+    later fragments, various adaptations of the `Activity` along with the `android.widget.View`
+    hierarchy becomes the View, the Presenter is responsible for fetching the data
+    from the model and performing the logic required, updating the View, and the Model
+    has the same responsibility as in MVC to handle the application''s data. The relationship
+    between these components looks like the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.2 – MVP relationship'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.02_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.2 – MVP relationship
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The interesting aspect of the relationship between the components is the relationship
+    between the Presenter and the View, which goes both ways. The Presenter will update
+    the View with the relevant data, but the View will also invoke the Presenter,
+    if necessary for user interactions. Because of the relationship between the two
+    components, the definition of a contract is required, which looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we have a `View` interface and a `Presenter` interface. The implementation
+    of the `Presenter` might look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, the `PresenterImpl` class has a dependency on the `View` and on a `GetUsersUseCase`
+    object, which will return a `Flow` object containing a list of users. When the
+    `Presenter` receives the list of users, it will call the `showUsers` method from
+    the `View`. When the `validateInput` method is called, the `Presenter` will check
+    whether the text is empty and invoke the `showInputError` method from the `View`
+    with an error message. The implementation of the `View` might look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we implement the `View` interface in `MainActivity`; in the implementation
+    of the methods, we call the appropriate `View-` related classes to show the relevant
+    data, such as showing the error message for an invalid input in a `TextView` object
+    and setting the data in a `RecyclerView.Adapter` object. For validating the input,
+    when the text changes in an `EditText` object, it will invoke the `Presenter`
+    to validate the new text. The `Presenter` dependency will be injected using some
+    form of dependency injection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because presenters will end up performing background operations, we run the
+    risk of causing `Context` leaks. This means that we need to factor the life cycle
+    of the `Activity` into the MVP contract. To achieve this, we will need to define
+    a `close` method in the `Presenter`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding snippet, we added the `close` method, which will be called
+    in the `onDestroy` method of the `Activity` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The implementation of the `close` method will have to clean up all the resources
+    that might cause any leaks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we are canceling the subscription to the `Flow` object so that we will
+    not receive any updates after the `Activity` is destroyed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we have looked at previous architecture patterns used in Android
+    applications, from the MVC-like approach that was used in early Android applications
+    to MVP, which aimed to solve some of the problems of the initial approach. Although
+    MVP was popular in the past and is still present in some Android applications,
+    it has slowly been phased out, mainly because of the release of Android Architecture
+    Components, which rely on the MVVM pattern, and additionally, Jetpack Compose,
+    which works better with data flows, which are more suited to MVVM. In the section
+    that follows, we will look at the MVVM architecture pattern and how it is different
+    from MVP as a concept.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Presenting data with MVVM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will analyze the **Model-View-ViewModel** architecture pattern
+    and how it is implemented for Android applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'MVVM represents a different approach to the Humble Object pattern, which attempts
+    to extract the logic out of activities and fragments. In MVVM, the View is represented
+    by activities and fragments as it was in MVP, the Model plays the same role, managing
+    the data, and the ViewModel sits between the two by requesting the data from the
+    Model when the View requires it. The relationship between the three is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.3 – MVVM relationship'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.03_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.3 – MVVM relationship
+  prefs: []
+  type: TYPE_NORMAL
+- en: In *Figure 8.3*, we see a unidirectional relationship between the three components.
+    The View has a dependency on the ViewModel, and the ViewModel has a dependency
+    on the Model. This allows for more flexibility because multiple Views can use
+    the same ViewModel. For the data to be updated in the View, MVVM requires an implementation
+    of the **Observer** pattern. This means that the ViewModel uses an **Observable**,
+    which the View will subscribe to and react to changes in the data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To develop Android applications, we have the possibility of using the Android
+    Architecture Components libraries, which provide a `ViewModel` class that solves
+    the issue of activity and fragment life cycles, combined with coroutine extensions
+    useful for subscribing to flows or coroutines to stop the emission of data when
+    the activities and fragments are in invalid states for data to be displayed and
+    to avoid context leaks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the perspective of `LiveData` (which acts as the observable that the View
+    can subscribe to). An example of a `ViewModel` class might look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we load a list of `User` objects and then keep that list inside a `StateFlow`
+    object. This `StateFlow` object replaces `LiveData` and represents the observable
+    that the View will subscribe to. When the View requires the list of users, it
+    will invoke the `load` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we have analyzed the MVVM architecture pattern and the difference
+    between it and the MVP pattern. In the following section, we will look at how
+    we can present data using MVVM inside an Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercise 08.01 – Implementing MVVM
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Modify *Exercise 07.02*, *Building a local data source*, of [*Chapter 7*](B18320_07_ePub.xhtml#_idTextAnchor082),
+    *Building Data Sources*, so that a new module called `presentation-posts` is created.
+    The module will be responsible for displaying the data from `GetPostsWithUsersWithInteractionUseCase`
+    using MVVM. The data will be displayed in the following format:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A header with the following text: "Total click count: x" where x is the number
+    of clicks taken from the `totalClicks` field in the `Interaction` class'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A list of posts where each row contains the following: "Author: x" and "Title:
+    y" where x is the `name` field in the `User` class, and y is the `title` field
+    in the `Post` class'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A loading view for when the data is being loaded
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `Snackbar` view for when there is an error
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To complete this exercise, you will need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `presentation-post` module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new sealed class called `UiState`, which will have as subclasses `Loading`,
+    `Error` (which will hold an error message), and `Success` (which will hold the
+    post data).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new class called `PostListItemModel`, which will have `id`, `author`,
+    and `name` as fields.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new class called `PostListModel`, which will have a `headerText` field
+    and a list of `PostListItemModel` objects.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new class called `PostListConverter`, which will convert a `Result.Success`
+    object into a `UiState.Success`, which holds the `PostListModel` object and will
+    convert a `Result.Error` object into a `UiState.Error` object.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new class called `PostListViewModel`, which will load the data from
+    `GetPostsWithUsersWithInteractionUseCase`, convert the data using `PostListConverter`,
+    and store `UiState` in `StateFlow`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new Kotlin file, which will contain `@Composable` methods responsible
+    for drawing the UI.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify `MainActivity` in the `app` module so that it will display the list of
+    posts.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Follow these steps to complete the exercise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new module called `presentation-post`, which will be an Android library
+    module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Make sure that in the top-level `build.gradle` file, the following dependencies
+    are set:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, add the persistence libraries to the library mappings:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we have added dependencies for the ViewModel library as well as the Navigation
+    library (which will be used in later exercises).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `build.gradle` file of the `presentation-post` module, make sure that
+    the following plugins are present:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, change the configurations to the ones defined in the top-level
+    `build.gradle` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we keep the same configuration consistent with the other modules in the
+    application, and we integrate the Jetpack Compose configuration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same file, add the dependencies to the networking libraries and domain
+    modules:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `presentation-post` module, create a package called `list`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `list` package, create the `UiState` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the same package, create a file called `PostListModels`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `PostListModels` file, create the `PostListItemModel` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, create the `PostListModel` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `presentation-post` module, in the `src/main` folder, create a folder
+    called `res`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the `res` folder, create a new folder called `values`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the `values` folder, create a file called `strings.xml`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `strings.xml` file, add the following strings:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `list` package, create the `PostListConverter` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we convert the `Result.Success` and `Result.Error` objects into equivalent
+    `UiState` objects, which will be used to display the information to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `list` package, create the `PostListViewModel` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we get the list of posts and users from the `GetPostsWithUsersInteractionUseCase`
+    object, then we convert it to the `UiState` object, and finally, we update `StateFlow`
+    with the `UiState` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `list` package, create a file called `PostListScreen`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `PostListScreen` file, add a method to display a loading widget and
+    a `Snackbar` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, add a method to display the list of posts and the header:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, add a method that will monitor the value of `postListFlow`
+    and invoke one of the preceding three methods, depending on the value of the state:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `build.gradle` file of the `app` module, make sure that the following
+    plugins are added:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same file, make sure that the following dependencies are added:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `app` module, create a package called `injection`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `injection` package, create a class called `AppModule`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we provide a `UseCase.Configuration` dependency, which will be injected
+    into all the `UseCase` subclasses.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `app` module, create a class called `PostApplication`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `PostApplication` class to the `AndroidManifest.xml` file of the `app`
+    module:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Modify the `MainActivity` class so that it will use the navigation library
+    to go to the `PostListScreen` function from the `presentation-post` module:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we run the application, we should see the following screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.4 – Output of Exercise 08.01'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.04_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.4 – Output of Exercise 08.01
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can see the list of post titles and the author's name for each post. The
+    total click count is, for now, 0 because we haven't connected any logic and are
+    yet to modify that value. We will add that logic in the exercises that follow.
+    If an error occurs while loading this list, then we will see a snackbar with the
+    description of the `Exception` object, and while the data is loaded, an indeterminate
+    progress bar will be displayed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we have implemented the presentation layer of an Android application
+    using the MVVM architecture pattern and connected the layer to the domain layer
+    of the application to display data to the user. In the section that follows, we
+    will expand this layer across multiple modules and see how we can navigate between
+    screens in different modules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Presenting data in multiple modules
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will look at how we can separate the presentation layer
+    into multiple modules, how we can handle the interaction between these modules,
+    and how they can share the same data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When developing Android applications, we can group screens into different modules.
+    For example, we can group a login or registration flow inside a library module
+    called *authentication*, or if we have a settings section, we can group those
+    screens inside a separate module. Sometimes these screens will have commonalities
+    with the rest of the application, such as using the same loading progress bar
+    or the same error mechanism. Other times, these screens must navigate to screens
+    from other modules. The question we now need to ask is how this can happen without
+    creating a dependency between the two modules or other modules that are on the
+    same level. Having a direct dependency on these modules will risk creating a cyclic
+    dependency as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.5 – Module cyclic dependency'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.05_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.5 – Module cyclic dependency
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In *Figure 8.5*, we show what might happen if we want to navigate from the
+    `:auth` module to the `:settings` module and vice versa. This currently is impossible
+    because of the cyclic dependency between the two modules. To solve this issue,
+    we will need to create a new module. This module will hold the common logic shared
+    between the two modules and common data. This will look like the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.6 – Common presentation module'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.06_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.6 – Common presentation module
+  prefs: []
+  type: TYPE_NORMAL
+- en: In *Figure 8.6*, we added the `:common` module, which will hold reusable views
+    or `@Composable` functions and the navigation data from the app. Over time, this
+    module will grow, so it can be split into different modules holding different
+    common features of the app (navigation, UI, common logic, and so on).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we are using Jetpack Compose for our application, then we can rely on the
+    work done in *Exercise 03.02 – Navigating using Jetpack Compose* of [*Chapter
+    3*](B18320_03_ePub.xhtml#_idTextAnchor055), *Understanding Data Presentation on
+    Android*, where we defined the following structure for the app navigation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `routeForName` method was called from the `Users` screen when a user in
+    the list was clicked, and then the `NavHost` method would use that route to open
+    the `User` screen. When dealing with multiple modules, the routes that will be
+    shared by the modules can be stored in the `:common` module so that each module
+    will have access to the route. The `:app` module, which will have `NavHost`, will
+    then be able to navigate between each screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When it comes to handling common logic between different modules, such as displaying
+    the same error or loading views, we can declare the composable functions inside
+    the `:common` module:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the same state is shared between the different screens in the different
+    modules, we can have something like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we will check the current state and display the common error and loading
+    views, leaving the screens themselves to only concern themselves with the successful
+    state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we have looked at how we can split the presentation layer into
+    multiple modules and how to handle the common elements between these modules.
+    In the following section, we will look at an exercise on how to achieve this.
+    Splitting the presentation layer into multiple modules will decrease application
+    build times because Gradle caching will only rebuild modules that contain changes.
+    Another benefit comes in the form of drawing boundaries around the application's
+    scope, which will be beneficial when it comes to exporting only certain features
+    of an application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercise 08.02 – Multi-module data presentation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Modify *Exercise 08.01 – Implementing MVVM* so that two new modules are created:
+    `presentation-post` and `presentation-common`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `presentation-common` module will have the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `UiState` class, which will be moved from the `presentation-post` module.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CommonResultConverter`, which will be an abstract class with two methods:
+    `convert`, which is a concrete method that will convert the `Result` object into
+    a `UiState` object, and `convertSuccess`, which is an abstract method used to
+    convert the data from `Result.Success`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CommonScreen`, which will have the `@Composable` method for displaying the
+    different types of `UiState` and two additional methods for displaying the error
+    snackbar and the progress bar. The two methods will be moved from `PostListScreen`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AppNavigation`, which will hold the routes to navigate to the list of posts,
+    a single post, and a single user.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `presentation-post` module will have an additional package to display the
+    information of a single post in the following format: Title: x and Body: y, where
+    x is the title of a post and y is the body of the post. To display this information,
+    a new `ViewModel` and `Converter` class will need to be created, which will convert
+    the data from `GetPostUseCase`. When the author text is clicked, the app will
+    navigate to the user screen, and when the `Post` list item is clicked, the app
+    will navigate to the post screen. When either of these is clicked, `UpdateInteractionUseCase`
+    is invoked to increase the number of clicks, which will then be reflected in the
+    list header.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`presentation-user` will display the information about a single user in the
+    following format: Name: x, Username: y, and Email: z, where x, y, and z are represented
+    by the information inside the `User` entity. The user data will be loaded from
+    `GetUserUseCase`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `app` module will be updated to handle the navigation between all these
+    screens.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To complete this exercise, you will need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `presentation-common` module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Move the `UiState` class and the `Error` and `Loading` `@Composable` functions
+    and create a new `@Composable` function, which will handle each type of `UiState`
+    object inside the `CommonScreen` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the `CommonResultConverter` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the `AppNavigation` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the classes in `presentation-post` to reuse the preceding classes and
+    methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the `PostScreen`, `PostViewModel`, `PostConverter`, and `PostModel` classes
+    responsible for displaying the information about a single post.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the `presentation-user` module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the `UserScreen`, `UserViewModel`, `UserConverter`, and `UserModel` classes
+    responsible for displaying the information about a single post.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Implement the navigation between the screens.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the logic to update the number of clicks inside `PostListViewModel`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Follow these steps to complete the exercise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `presentation-common` and `presentation-user` Android library modules.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Apply steps 3–5 from *Exercise 08.01 – Implementing MVVM* for each of these
+    new modules.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `build.gradle` file of the `presentation-post` and `presentation-user`
+    modules, make sure that the dependency to `presentation-common` is added:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `presentation-common` module, create a new package called `state`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Move the `UiState` class into the preceding package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the same package, create the `CommonResultConverter` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we return `UiState.Error` for any `Result.Error` object with the exception
+    message, and for `Result.Success`, we return `UiState.Success` and use an abstraction
+    for the data inside the `Result.Success` object. This represents a solution for
+    how we can extract the common logic for displaying the error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Modify the `PostListConverter` class from the `presentation-post` module so
+    that it will extend `CommonResultConverter` and provide an implementation for
+    the `convertSuccess` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we only deal with converting `GetPostsWithUsersWithInteractionUseCase.Response`
+    into `PostListModel`, allowing the parent class to handle the error only.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `state` package from the `presentation-common` module, create a new file
+    called `CommonScreen`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `CommonScreen` file, add a `CommonScreen` `@Composable` method, which
+    will check `UiState` and invoke `Error` for `UiState.Error` and `Loading` for
+    `UiState.Loading`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Move the `Error` and `Loading` `@Composable` functions from `PostListScreen`
+    into the `CommonScreen` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Modify the `PostListScreen` `@Composable` method from the `presentation-post`
+    module so that it will use the `CommonScreen` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now the entire logic for converting and showing the list of posts will only
+    deal with the associated objects, leaving the error and loading scenarios in the
+    `presentation-common` module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In `presentation-common`, create a new package called `navigation`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `navigation` package, create a class called `PostInput`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This class is meant to represent the input that the post screen will require
+    to load its data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same package, create a class called `UserInput`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This class is meant to represent the input that the user screen will require
+    to load its data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the same package, create a new class called `NavRoutes`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we define the paths for each screen. The posts screen will have no arguments,
+    but the user and post screens will require the `postId` and `userId` values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create the `Posts` class in the `NavRoutes` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the `Post` class in the `NavRoutes` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we will need to break down the `Post` input into the arguments for the
+    URL. The `routeForPost` method will create a `/posts/1` URL for a `Post` object
+    that has the ID `1`. The `fromEntry` method will re-assemble the `PostInput` object
+    from the navigation entry object. The reason we are taking this approach is that
+    the navigation library discourages the use of `Parcelable`, which means that passing
+    data between different screens will have to be done through the URL. To avoid
+    any issues with keeping track of the arguments across multiple modules, we can
+    instead use objects and keep the logic to read from arguments and construct the
+    arguments isolated to this class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create the `User` class inside the `NavRoutes` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we apply the same principle as we did for the `Post` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new package called `single` in the `presentation-post` module.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `single` package, create the `PostModel` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `single` package, create the `PostConverter` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `body` string to `strings.xml` of the `presentation-post` module:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `single` package, create the `PostViewModel` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we are using `GetPostUseCase` to load the information about a particular
+    post and are using the converter defined earlier to convert the data into `PostModel`,
+    which will be set in the `Flow` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `single` package, create the `PostScreen` file, which will display the
+    post information:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we follow the same principle as for the `PostListScreen` file, where we
+    split into two methods, `PostScreen` for observing the `UiState` object and `PostListScreen`
+    to deal with drawing the user interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `presentation-user` module, create a new package called `single`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `single` package, create a new class called `UserModel`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `single` package, create a new class called `UserConverter`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the `res/values/strings.xml` file inside the `main` folder in the `presentation-user`
+    module:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Inside the `single` package, create `UserViewModel`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we take the user data from `GetUserUseCase`, convert it using `UserConverter`,
+    and post the result in the `Flow` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `single` package, create the `UserScreen` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we take the same approach as the other screens, where in one method, we
+    subscribe to changes in `UiState`, and in the other, we display the user information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the click listeners in `PostListScreen`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the preceding snippet, we specify click listeners for when the row is clicked
+    and for when the author is clicked. Because we are applying state hoisting, we
+    want to propagate the click listeners to the caller of the `PostList` method.
+    To achieve this, we define a parameter for each click listener as a lambda function
+    that has as input the row data and requires no result. More information about
+    lambdas can be found here: [https://kotlinlang.org/docs/lambdas.html#function-types](https://kotlinlang.org/docs/lambdas.html#function-types).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Modify the `PostListScreen` `@Composable` method so that when the user is clicked,
+    we navigate to the user screen, and when the row is clicked, we navigate to the
+    post:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In `build.gradle` of the `app` module, make sure that the dependencies to `presentation-common`
+    and `presentation-user` are added:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `MainActivity` file, modify the `App` method so that the navigation
+    between the different screens is implemented:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we add all the screens in the application to the navigation graph, and
+    in the case of `UserScreen` and `PostScreen`, we extract the `UserInput` and `PostInput`
+    objects from the navigation graph entries. We will now need to add the interaction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add an `Interaction` field inside `PostListModel`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Modify `PostListConverter` to include the `interaction` field:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a reference to `UpdateInteractionUseCase` in `PostListViewModel` and a
+    method to update the interaction:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Modify the `PostListScreen` `@Composable` method so that it will call to update
+    the interaction for each click:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we run the application, we will see an output like the one in the following
+    figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 8.7 – Output of Exercise 08.02'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_8.07_B18320.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 8.7 – Output of Exercise 08.02
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can see from *Figure 8.7* that when the row is clicked, we are taken to the
+    screen displaying the post information, and when the author is clicked, we are
+    taken to the user information. By placing the `NavRoutes` class in the `presentation-common`
+    module, we can navigate from the post list on a screen located in the same module
+    (post) and a screen located in a different module (user). The solution of creating
+    additional modules is a good way to avoid cyclic dependencies not only for modules
+    in the presentation layer but also for modules in the other layers as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this exercise, we have learned how to split the presentation layer into separate
+    modules and how we can use a common module to hold shared logic and data required
+    by all the modules in the layer. This is a technique that can be used for other
+    layers in the application if we want them split up as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we explored the presentation layer of an Android application
+    and a few different approaches for implementing this layer, such as MVC, MVP,
+    and MVVM. We decided to focus on the MVVM approach because of the many benefits
+    involving the life cycle and the compatibility with Jetpack Compose. We then looked
+    at what happens when we want to split the presentation layer across multiple modules
+    and how we can solve the common logic between these modules. In the chapter that
+    follows, we will further build upon the MVVM pattern and study the **Model-View-Intent**
+    (**MVI**) pattern, which further takes advantage of the Observable pattern to
+    incorporate the user actions into states that can be observed.
+  prefs: []
+  type: TYPE_NORMAL
