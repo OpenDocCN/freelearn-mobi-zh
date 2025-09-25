@@ -1,34 +1,50 @@
 - en: Chapter 12. Real-time Shadows and Particle System
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第12章 实时阴影和粒子系统
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下菜谱：
 - en: Creating shadows with shadow mapping
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用阴影映射创建阴影
 - en: Softening the shadow edges using PCF
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用PCF软化阴影边缘
 - en: Using variance shadow mapping
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用方差阴影映射
 - en: Simulating the particle system
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 模拟粒子系统
 - en: Transform feedback particle system with sync objects and fences
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用同步对象和栅栏的变换反馈粒子系统
 - en: Introduction
+  id: totrans-7
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 简介
 - en: Shadows play an important role in real-time rendering; they add depths to a
     rendering scene. The perceived light information on the 3D object looks much more
     realistic when rendered with shadows. Overall, shadows improve the realism of
@@ -38,16 +54,20 @@
     to render it must be a balanced trade-off between quality and performance. This
     even becomes more challenging on the embedded-side due to limited constraints
     on the memory and performance.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 阴影在实时渲染中扮演着重要的角色；它们为渲染场景增添了深度。当使用阴影渲染3D对象上的感知光信息时，看起来更加逼真。总的来说，阴影提高了渲染场景的真实感，并在物体之间提供了空间关系。渲染平滑且逼真的阴影是计算机图形学领域的一个研究热点。渲染过程消耗了大量的性能。因此，渲染它的方法必须在质量和性能之间进行平衡的权衡。由于内存和性能的限制，这在嵌入式端变得更加具有挑战性。
 - en: In this chapter, we will implement shadows using shadow mapping. This technique
     is relatively cheap as far as performance is considered and produces good results
     on embedded devices. We will make these shadows appear smoother using another
     technique called percentile closer filtering (PCF). In another technique called
     variance shadow mapping, we will improve the performance and quality of the generated
     real-time shadow.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将使用阴影映射实现阴影。从性能的角度来看，这种技术相对便宜，并在嵌入式设备上产生良好的效果。我们将使用另一种称为百分位数最近过滤（PCF）的技术来使这些阴影看起来更加平滑。在另一种称为方差阴影映射的技术中，我们将提高生成实时阴影的性能和质量。
 - en: This chapter will also help us understand the basics of particle rendering.
     We will implement two techniques to render the particle system. The first technique
     is bound to the CPU, whereas particles are updated and processed on the CPU-side
@@ -57,22 +77,31 @@
     frame rendering. The particle system is processed and rendered on the GPU-side.
     This way, it avoids the CPU intervention and makes the rendering process highly
     efficient.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章还将帮助我们理解粒子渲染的基础。我们将实现两种渲染粒子系统的技术。第一种技术绑定在CPU上，粒子在CPU端更新和处理，仅为了渲染目的发送到GPU。第二种技术利用OpenGL
+    ES 3.0的新特性——变换反馈。这个特性允许你捕获顶点着色器的输出，并将其反馈回GPU进行下一帧的渲染。粒子系统在GPU端进行处理和渲染。这样，它避免了CPU的干预，使得渲染过程非常高效。
 - en: Creating shadows with shadow mapping
+  id: totrans-11
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用阴影映射创建阴影
 - en: In this recipe, we will bring more realism to scenes with shadows using a simple
     and widely accepted shadowing technique called shadow mapping to produce real-time
     shadows. This technique is called shadow mapping because it uses the depth information
     of the scene stored or mapped to a dynamically created depth buffer to produce
     real-time shadows.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个菜谱中，我们将使用一种简单且广泛接受的阴影技术——阴影映射，为场景添加更多真实感，以产生实时阴影。这种技术被称为阴影映射，因为它使用场景的深度信息，这些信息存储或映射到一个动态创建的深度缓冲区中，以产生实时阴影。
 - en: 'This technique works in two passes:'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种技术分为两个步骤：
 - en: '**First pass**: During the first pass, a scene is rendered from the perspective
     of light. Here, the scene is viewed from the position of light in the 3D space.
     In this way, it''s clear to figure out what objects fall under the path of light.
@@ -84,109 +113,145 @@
     be in the shadow. This technique heavily relies on the depth information captured
     in the shadow map; it stores the distance or depth of visible objects from the
     light position.'
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**第一次遍历**：在第一次遍历期间，从光源视角渲染场景。在这里，场景是从3D空间中光源的位置观看的。这样，就可以清楚地确定哪些物体位于光线的路径上。换句话说，它提供了从光源视角直接可见的物体的信息。场景的深度信息记录在FBO纹理中；这个纹理被称为阴影图。当然，如果从光源位置发出的光线穿过一个或多个物体，那么从光源视角看深度更高的物体（位于第一个物体后面）将处于阴影中。这种技术严重依赖于阴影图中捕获的深度信息；它存储了可见物体从光源位置的距离或深度。'
 - en: '**Second pass**: In the second pass, the scene is rendered from the intended
     camera position. Here, first the depth of each fragment is compared with the depth
     stored in the shadow map. This comparison checks whether or not the incoming fragment
     is under the light or not. If the fragment does not fall under the light, then
     fragment is colored with the ambient shadow color.'
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**第二次遍历**：在第二次遍历中，场景从预期的相机位置渲染。在这里，首先将每个片段的深度与存储在阴影图中的深度进行比较。这种比较检查传入的片段是否在光源下。如果片段不在光源下，则用环境阴影颜色着色该片段。'
 - en: 'The following image shows the rendering of shadows as a result of the shadow
     mapping technique:'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下图像展示了阴影映射技术产生的阴影渲染效果：
 - en: '![Creating shadows with shadow mapping](img/5527OT_12_01.jpg)'
+  id: totrans-17
   prefs: []
   type: TYPE_IMG
+  zh: '![使用阴影映射创建阴影](img/5527OT_12_01.jpg)'
 - en: 'This section provides a high-level overview on how to implement shadow mapping:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 本节提供了关于如何实现阴影映射的高级概述：
 - en: '**Create cameras**: This creates two cameras, one is placed at the light source
     position called light camera and another is placed for normal scene rendering.'
+  id: totrans-19
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**创建相机**：这创建了两个相机，一个放置在光源位置，称为光源相机，另一个用于正常场景渲染。'
 - en: '**Shadow map**: This creates a FBO with depth texture, as we are only interested
     in recording the depth and do not require any color buffer here. The dimension
     of the depth texture is user-defined as per application requirements. In the current
     recipe, we have used dimensions similar to the render buffer, which is same as
     viewport dimensions.'
+  id: totrans-20
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**阴影图**：这创建了一个带有深度纹理的FBO，因为我们只对记录深度感兴趣，这里不需要任何颜色缓冲区。深度纹理的尺寸根据应用程序需求由用户定义。在当前配方中，我们使用了与渲染缓冲区相似的尺寸，这等同于视口尺寸。'
 - en: '**Render from light''s view**: This attaches the FBO as a current framebuffer
     and renders the scene from the perspective of light using the first pass and records
     the depth information in the shadow map. As we are only interested in the depth
     value, we can avoid the rasterization process in the first pass.'
+  id: totrans-21
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**从光源视角渲染**：这会将FBO附加为当前帧缓冲区，并从光源视角使用第一遍渲染场景，并将深度信息记录在阴影图中。由于我们只对深度值感兴趣，我们可以在第一遍中避免光栅化过程。'
 - en: '**Render normal scene**: This again renders the scene, but this time from the
     normal camera view and shares the produced shadow map with the fragment shader
     during the second pass.'
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**渲染正常场景**：这再次渲染场景，但这次是从正常相机视图渲染，并在第二次遍历期间与片段着色器共享生成的阴影图。'
 - en: '**Vertex transformation**: During the second pass, vertex coordinates are transformed
     twice in the vertex shader to produce the following:'
+  id: totrans-23
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**顶点变换**：在第二次遍历期间，顶点坐标在顶点着色器中变换两次，以产生以下内容：'
 - en: '**Normal scene''s eye coordinates**: The MVP matrix of the normal scene is
     used to produce eye coordinates to be used in `gl_position`.'
+  id: totrans-24
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**正常场景的视点坐标**：正常场景的MVP矩阵用于生成用于`gl_position`的视点坐标。'
 - en: '**Eye coordinates from light''s perspective**: Use the MVP matrix from the
     perspective of light (use light''s camera) to produce eye coordinates, which is
     exactly the same as the one stored in the shadow map. These eye coordinates are
     called as shadow coordinates.'
+  id: totrans-25
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**从光源视角的视点坐标**：使用光源视角的MVP矩阵来生成视点坐标，这与存储在阴影图中的坐标完全相同。这些视点坐标被称为阴影坐标。'
 - en: '**Homogeneous to texture coordinates**: Shadow coordinates are in the normalize
     coordinate system [-1, 1]. These are converted to the texture coordinate space
     [0, 1]. This is done by using premultiplied-based matrix in which a unit matrix
     is scaled by a factor of half and displaced by half-logical dimensions in the
     positive direction:![Creating shadows with shadow mapping](img/5527OT_12_02.jpg)'
+  id: totrans-26
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**齐次到纹理坐标**：阴影坐标位于归一化坐标系[-1, 1]中。这些坐标被转换为纹理坐标空间[0, 1]。这是通过使用基于预乘的矩阵来完成的，其中单位矩阵按因子0.5缩放，并在正方向上以半逻辑尺寸偏移：![使用阴影映射创建阴影](img/5527OT_12_02.jpg)'
 - en: '**Depth comparison**: This transformed shadow coordinate is shared with the
     fragment shader, where the current fragment determines whether it falls under
     the shadow or not using the `textureProj` API.'
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**深度比较**：此转换后的阴影坐标与片段着色器共享，其中当前片段使用`textureProj` API确定它是否位于阴影下。'
 - en: 'The following image on the left-hand side of the following image shows the
     rendering of the scene from the light''s perspective, which produces the shadow
     map represented by the right-hand side image. The shadow map contains the depth
     information on a scale of 0.0 to 1.0\. The values closer to 0.0 represents nearby
     objects. On the grayscale image, objects appearing darker are closer to the light
     camera:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下图像的左侧显示了从光线视角渲染场景的渲染效果，这产生了右侧图像表示的阴影图。阴影图包含0.0到1.0的深度信息。接近0.0的值表示附近的物体。在灰度图像中，出现较暗的物体更靠近光源：
 - en: '![Creating shadows with shadow mapping](img/5527OT_12_03.jpg)'
+  id: totrans-29
   prefs: []
   type: TYPE_IMG
+  zh: '![使用阴影映射创建阴影](img/5527OT_12_03.jpg)'
 - en: Getting ready
+  id: totrans-30
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Unlike previous recipes, this recipe contains two custom classes for scene and
     model called `CustomScene` and `CustomModel`. The custom model contains other
     mesh models, which makes handling of model rendering very easy in the `NativeTemplate.cpp`.
     Similarly, the custom scene class simplifies the job of the scene, it's responsible
     for creating the shadow map, managing the light and normal view camera, and performing
     rendering in a two pass way.
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 与之前的配方不同，此配方包含两个用于场景和模型的自定义类，分别称为`CustomScene`和`CustomModel`。自定义模型包含其他网格模型，这使得在`NativeTemplate.cpp`中处理模型渲染变得非常容易。同样，自定义场景类简化了场景的工作，它负责创建阴影图、管理光线和法线视图相机，并以两次遍历的方式执行渲染。
 - en: 'This recipe uses Phong shading. There are two new uniform variables added:
     `LightCoordMatrix` and `ModelMatrix`. The former contains the product of the bias
     matrix, projection matrix and the view matrix from the perspective of light, whereas
@@ -194,64 +259,92 @@
     are stored in `shadowCoord` and shared with the fragment shader. The `isLightPerspectivePass`
     uniform variable tells the fragment shader if it''s in the first or second pass.
     The fragment shader contains the shadow map in `ShadowMap`.'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 此配方使用Phong着色。增加了两个新的统一变量：`LightCoordMatrix`和`ModelMatrix`。前者包含从光线视角的偏置矩阵、投影矩阵和视图矩阵的乘积，而后者包含模型变换。这两个变量的乘积存储在`shadowCoord`中，并与片段着色器共享。`isLightPerspectivePass`统一变量告诉片段着色器它是在第一次还是第二次遍历中。片段着色器包含在`ShadowMap`中的阴影图。
 - en: How to do it...
+  id: totrans-33
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何做...
 - en: 'Here are the steps to implement shadow mapping:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 实现阴影映射的步骤如下：
 - en: 'Make the following changes in the Phong vertex shader. Here, shadow coordinates
     are calculated in the `shadowCoord` variable:'
+  id: totrans-35
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Phong顶点着色器中进行以下更改。在这里，阴影坐标在`shadowCoord`变量中计算：
 - en: '[PRE0]'
+  id: totrans-36
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Similarly, implement the Phong fragment shader as follows. Here, fragments
     are colored based on their displace from the light and scene perspective:'
+  id: totrans-37
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 类似地，按照以下方式实现Phong片段着色器。在这里，片段根据其与光线和场景视角的位移着色：
 - en: '[PRE1]'
+  id: totrans-38
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'In the `CustomScene` function''s constructor, create the shadow map buffer.
     For this, use the `FrameBufferObjectSurface` class to create an FBO with the depth
     texture. This is a high-level FBO class that encapsulates the creation of FBO:'
+  id: totrans-39
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`CustomScene`函数的构造函数中，创建阴影图缓冲区。为此，使用`FrameBufferObjectSurface`类创建一个具有深度纹理的FBO。这是一个高级FBO类，封装了FBO的创建：
 - en: '[PRE2]'
+  id: totrans-40
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Initialize light and normal view cameras in the `initializeScene()` function:'
+  id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`initializeScene()`函数中初始化光线和法线视图相机：
 - en: '[PRE3]'
+  id: totrans-42
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Render the scene to the first pass using the perspective of light and the second
     pass as normal:'
+  id: totrans-43
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用光线视角进行第一次遍历，正常进行第二次遍历渲染场景：
 - en: '[PRE4]'
+  id: totrans-44
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: How it works...
+  id: totrans-45
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: 'In shadow mapping, a scene is constructed in the `CustomScene` class. This
     class creates an offscreen surface (FBO) to record the depth information of the
     scene. During the initialization (`InitializeScene`) phase, two camera objects
@@ -262,8 +355,10 @@
     In order to let the rendering objects know about the current pass, the `ObjLoader::setLightPass`
     function is used; this function ensures that the object level states under these
     two passes.'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: '在阴影映射中，场景在`CustomScene`类中构建。这个类创建一个离屏表面（FBO）来记录场景的深度信息。在初始化（`InitializeScene`）阶段，创建了两个摄像机对象（`lightPerspective`和`viewersPerspective`）。前者摄像机放置在全局光线位置，从该位置对场景进行照明，后者摄像机放置在观众的位置。场景使用两次遍历进行渲染：一次是从光线的视角，另一次是从观众的视角。为了使渲染对象了解当前的遍历，使用`ObjLoader::setLightPass`函数；这个函数确保在这些两个遍历下的对象级别状态。 '
 - en: The given scene is first rendered using the light's perspective pass, where
     it's bound to a FBO containing the depth buffer (`depthTexture`). The depth buffer
     captures the z-level or depth information of all rendering objects from the view
@@ -281,18 +376,25 @@
     API. This API turns off the rasterization process. For more information on the
     working of this API please refer to *Transform feedback particle system with sync
     objects and fences* recipe later in this chapter.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 给定场景首先使用光线的透视遍历进行渲染，其中它绑定到一个包含深度缓冲区（`depthTexture`）的FBO。深度缓冲区捕获由放置在光线位置的摄像机生成的视图中的所有渲染对象的z级或深度信息。在这个遍历过程中，需要裁剪前表面并启用多边形偏移填充，以避免阴影边缘伪影。有关更多信息，请参阅本食谱末尾的*更多内容…*部分。在顶点着色器中，在`gl_position`中计算眼睛坐标位置并捕获到深度缓冲区。这个着色器还包含计算阴影坐标的计算，这些坐标对于第一次遍历不是必需的，可以避免。我们将这视为一种优化，并将其留给读者来实现。由于第一次遍历只捕获深度信息，因此任何片段着色器操作都是不必要的，因此可以避免光栅化；我们使用一个统一变量（`isLightPerspectivePass`）来绕过片段着色器的渲染。然而，用户也可以使用`glEnable`（`GL_RASTERIZER_DISCARD`）API。此API关闭光栅化过程。有关此API工作原理的更多信息，请参阅本章后面的*使用同步对象和栅栏的变换反馈粒子系统*食谱。
 - en: During the second pass, the viewer's camera is used to render the scene. This
     scene is rendered normally with back face culled and disabled polygon offset filling.
     The scene shares the captured depth information from the first pass to the fragment
     shader in the `sampler2DShadow ShadowMap` uniform variable.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第二次遍历中，使用观众的摄像机来渲染场景。这个场景以正常方式渲染，背面裁剪和禁用多边形偏移填充。场景从第一次遍历中共享捕获的深度信息到`sampler2DShadow
+    ShadowMap`统一变量中的片段着色器。
 - en: Note
+  id: totrans-49
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The `sampler2DShadow` is a special type of sampler. A sampler in a program represents
     a single texture of a specific type. The `sampler2DShadow` is used to represent
     the depth texture type, which contains the depth information of scene objects.
@@ -300,8 +402,10 @@
     shadow map may give unpredictable results as the lookup function is different
     in this case. Each sampler has a different lookup function that is responsible
     for computing results based on input texture coordinates.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sampler2DShadow`是一种特殊类型的采样器。程序中的采样器代表一个特定类型的单个纹理。`sampler2DShadow`用于表示深度纹理类型，其中包含场景对象的深度信息。正确使用采样器非常重要；使用带有阴影图的普通纹理可能会给出不可预测的结果，因为在这种情况下查找函数是不同的。每个采样器都有一个不同的查找函数，该函数负责根据输入纹理坐标计算结果。'
 - en: During this pass, normalize coordinates from the light (already contains projection
     and view info) are converted to the texture coordinate space using a premultiplied
     bias matrix, as mentioned in the introduction of this recipe. This coordinate
@@ -312,26 +416,37 @@
     resulting third component (z) of `shadowCoord` in the shadow forms is used as
     the depth reference. After these values are computed, the texture lookup proceeds
     as in texture.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个过程中，从光源（已经包含投影和视图信息）归一化的坐标使用本食谱介绍中提到的预乘偏移矩阵转换为纹理坐标空间。这个坐标被输入到`textureProj`
+    API中，该API执行带有投影的纹理查找。从`shadowCoord`消耗的纹理坐标是纹理坐标形式。在`textureProj` API中，这些坐标被转换为齐次形式，其中`shadowCoord.xyz`被除以最后一个组件，即`shadowCoord.w`。在阴影图中，`shadowCoord`的第三个组件（z）用作深度参考。计算这些值后，纹理查找过程与纹理相同。
 - en: If the z value is greater than the value stored in the shadow map at a given
     position (x, y), the object is considered to be behind some surface. In this case,
     it renders to the shadow color (ambient); otherwise, it's rendered in the respective
     Phong shading.
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果z值大于在给定位置（x，y）存储在阴影图中的值，则认为该物体位于某个表面后面。在这种情况下，它渲染为阴影颜色（环境光）；否则，它将以相应的Phong着色渲染。
 - en: There's more...
+  id: totrans-53
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: This section will describe some important aspects and limitations of shadow
     mapping.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 本节将描述阴影映射的一些重要方面和局限性。
 - en: The shadow map resolution
+  id: totrans-55
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 阴影图分辨率
 - en: 'The quality of the shadow generated is highly dependent on the resolution of
     the texture to which the shadow map is constructed. The choice of the resolution
     depends on various factors. For example, a low-spec hardware may have limited
@@ -339,15 +454,21 @@
     the performance. In another case, the requirement is of higher quality in which
     only the high resolution shadow map makes sense. The following image shows the
     quality of shadows generated using various screen resolutions:'
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 生成的阴影质量高度依赖于构建阴影图所使用的纹理的分辨率。分辨率的选择取决于各种因素。例如，低规格的硬件可能内存有限或处理能力慢，选择高分辨率阴影图可能会降低性能。在另一种情况下，需要更高的质量，只有高分辨率阴影图才有意义。以下图像显示了使用各种屏幕分辨率生成的阴影质量：
 - en: '![The shadow map resolution](img/5527OT_12_04.jpg)'
+  id: totrans-57
   prefs: []
   type: TYPE_IMG
+  zh: '![阴影图分辨率](img/5527OT_12_04.jpg)'
 - en: Aliasing affects
+  id: totrans-58
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 采样失真影响
 - en: The shadow mapping technique suffers from an aliasing effect, which can be easily
     notified in various given images in this recipe. The reason for this aliasing
     is the sharp transition from the object color to ambient shadow color. There are
@@ -358,12 +479,16 @@
     fix aliasing artefacts is called **percentage closer filtering** (**PCF**). In
     this technique, edges soften by means of sampling. For more information, refer
     to the next recipe *Softening the shadow edges using PCF*.
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 阴影映射技术存在采样失真问题，这在本食谱中给出的各种图像中很容易察觉。这种采样失真的原因是物体颜色到环境阴影颜色的急剧过渡。有各种方法可以减少采样失真，例如增加阴影图的分辨率。参见前面的图像。当分辨率变低时，阴影的质量会下降。这里的缺点是，随着采样次数的增加，性能会降低。另一种有效且流行的修复采样失真伪影的技术称为**百分比更近过滤**（**PCF**）。在这种技术中，通过采样使边缘变软。有关更多信息，请参阅下一食谱*使用PCF软化阴影边缘*。
 - en: Shadow acne
+  id: totrans-60
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 阴影噪点
 - en: A very common problem that arises as a result of implementing the current technique
     is called shadow acne. The following image shows how the acne effect looks. This
     is caused when the first pass is executed with the back face culling enabled.
@@ -371,8 +496,10 @@
     compared with the second pass produces large differences in depth values. These
     large differences are responsible for the shadow acne effect. This can be eliminated
     by rendering only back faces, which will result in more accurate depth comparison.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为实现当前技术结果的一个非常常见的问题是所谓的阴影痤疮。以下图像显示了痤疮效果的外观。这是当第一次遍历启用后向面剔除时发生的。记录的深度纹理存储了前向面的z值，后来当与第二次遍历比较时，产生了深度值的大差异。这些大差异是导致阴影痤疮效果的原因。这可以通过仅渲染后向面来消除，这将导致更准确的深度比较。
 - en: 'Therefore, the first pass must be performed using the front face culling. The
     depth texture formed using the front face culling in the first pass may still
     not be the same or close enough that are generated with the second pass. As a
@@ -381,28 +508,41 @@
     the (`glEnable( GL_POLYGON_OFFSET_FILL)`) polygon offset. This polygon offset
     adds an appropriate offset (`glPolygonOffset(2.5f, 20.0f)`) to force resultant
     z values (in pass 1) to be closer enough (to pass 2) to mitigate the problem:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，第一次必须使用前向面剔除来执行。在第一次遍历中使用前向面剔除形成的深度纹理可能仍然与第二次遍历生成的深度纹理不同或足够接近。因此，这导致渲染伪影，其中面显示出淡入淡出的效果。这种视觉上的不愉快可以通过使用(`glEnable(
+    GL_POLYGON_OFFSET_FILL)`)多边形偏移来消除。这个多边形偏移添加了一个适当的偏移(`glPolygonOffset(2.5f, 20.0f)`)，以强制结果z值（在遍历1中）足够接近（遍历2）以减轻问题：
 - en: '![Shadow acne](img/5527OT_12_05.jpg)'
+  id: totrans-63
   prefs: []
   type: TYPE_IMG
+  zh: '![阴影痤疮](img/5527OT_12_05.jpg)'
 - en: See also
+  id: totrans-64
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: Refer to the *Phong shading – the per-vertex shading technique* recipe in [Chapter
     5](ch05.html "Chapter 5. Light and Materials"), *Light and Materials*
+  id: totrans-65
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参阅[第5章](ch05.html "第5章。光和材料")中的*Phong着色 - 每个顶点的着色技术*菜谱，*光和材料*
 - en: '*Transform feedback particle system with sync objects and fences*'
+  id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*具有同步对象和栅栏的转换反馈粒子系统*'
 - en: Softening the shadow edges using PCF
+  id: totrans-67
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用PCF软化阴影边缘
 - en: PCF stands for percentage-closer filtering. It is a well-known and simple technique
     to produce smooth shadow edges. The shadow mapping technique implemented in the
     previous recipe shows very sharp transitions among light and shadow pixels, thereby
@@ -412,84 +552,116 @@
     color of a texture-mapped pixel, unfortunately, such filtering techniques cannot
     be applied to shadow mapping. Alternatively, multiple comparisons are made per
     pixels and averaged together.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: PCF代表百分比更接近过滤。这是一种众所周知且简单的技术，用于生成平滑的阴影边缘。在之前菜谱中实现的阴影映射技术，在光和阴影像素之间显示了非常尖锐的过渡，从而产生了走样效应。PCF技术对这些尖锐的过渡进行平均，从而得到更平滑的阴影。与其他提供纹理过滤能力的纹理不同，这基本上是一种平滑方法，用于确定纹理映射像素的颜色，遗憾的是，这种过滤技术不能应用于阴影映射。相反，对每个像素进行多次比较并将它们平均在一起。
 - en: As the PCF name depicts, it samples the shadow map using the current fragment
     and compares it with surrounding samples. The rule is to give more weightage to
     samples closer to the light source. In order words, it calculates the percentage
     of the area closer to the illuminated surface and not in the shadow. This is how
     the technique got its name.
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 如PCF的名称所描述的，它使用当前片段对阴影图进行采样，并将其与周围样本进行比较。规则是给予靠近光源的样本更多的权重。换句话说，它计算靠近照亮表面而不是在阴影中的面积百分比。这就是这项技术得名的原因。
 - en: '![Softening the shadow edges using PCF](img/5527OT_12_06.jpg)'
+  id: totrans-70
   prefs: []
   type: TYPE_IMG
+  zh: '![使用PCF软化阴影边缘](img/5527OT_12_06.jpg)'
 - en: Getting ready
+  id: totrans-71
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'For this recipe, we have reused the shadow mapping. The following steps provide
     a high-level overview on how to implement this recipe:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于这个菜谱，我们重用了阴影映射。以下步骤提供了一个高级概述，说明如何实现这个菜谱：
 - en: '**The prefiltered shadow map**: This shadow map needs to be prefiltered before
     using it in the PCF. Therefore, apply the linear texture filtering for texture
     minification and magnification. In the previous recipe, this corresponds to step
     two of the same section. This time, the 2D depth texture is created using the
     `GL_LINEAR` filter.'
+  id: totrans-73
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**预过滤阴影图**：在使用之前，需要对这个阴影图进行预过滤。因此，应用线性纹理过滤进行纹理缩小和放大。在上一个配方中，这对应于同一节中的第二步。这次，使用`GL_LINEAR`过滤器创建2D深度纹理。'
 - en: '**Depth comparison with PCF**: Shared transformed shadow coordinates in the
     fragment shader are used to produce multiple samples based on the filter size;
     multiple samples are always surrounded by the current fragment. Calculate the
     average result of all samples and use this value to scale the intensity of diffuse
     and specular components computed from Phong shading in the present recipe.'
+  id: totrans-74
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**与PCF的深度比较**：在片段着色器中共享变换后的阴影坐标用于根据过滤器大小产生多个样本；多个样本总是围绕当前片段。计算所有样本的平均结果，并使用此值来调整当前配方中从
+    phong 着色计算出的漫反射和镜面反射组件的强度。'
 - en: '**The filter size**: The choice of dimension of the kernel filter makes a great
     impact on the quality of the anti-aliased edge, but this comes at the cost of
     performance. Bigger the filter size, better the quality and slower will be the
     performance. For embedded platforms, the processing capability is a considerable
     factor. Therefore, based on our needs, the present recipe produces acceptable
     results with 2 x 2 filter (four samples).'
+  id: totrans-75
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**过滤器大小**：内核滤波器维度的选择对抗锯齿边缘的质量有很大影响，但这会以性能为代价。过滤器尺寸越大，质量越好，性能越慢。对于嵌入式平台，处理能力是一个重要的因素。因此，根据我们的需求，当前配方使用2
+    x 2的过滤器（四个样本）可以得到可接受的结果。'
 - en: How to do it...
+  id: totrans-76
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何做到这一点...
 - en: 'As this technique is based on the shadow map, we will advise you to reuse previous
     recipes and add a few changes addressed in this section. Here are the steps to
     implement the shadow mapping source:'
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于这项技术基于阴影图，我们建议您重用之前的配方，并在此节中添加一些更改。以下是实现阴影映射源码的步骤：
 - en: 'In the `CustomScene` constructor, create the depth texture with linear filtering
     this time; the last recipe uses the nearest option. This linear filtering samples
     depth values in an interpolated manner, which reduces the sharpness of the stored
     values based on the sampling of nearby depth samples:'
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`CustomScene`构造函数中，这次创建具有线性过滤的深度纹理；上一个配方使用的是最近邻选项。这种线性过滤以插值方式采样深度值，根据附近深度样本的采样来降低存储值的锐度：
 - en: '[PRE5]'
+  id: totrans-79
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Take the average of neighboring shadow coordinates. Make the following changes
     in the main function under `PhongFragment.glsl`:'
+  id: totrans-80
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 取相邻阴影坐标的平均值。在`PhongFragment.glsl`下的主函数中进行以下更改：
 - en: '[PRE6]'
+  id: totrans-81
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: How it works...
+  id: totrans-82
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: In the percentile close filtering technique for each incoming fragment, a set
     of samples are obtained from the filtering region. Each of these samples are projected
     to a shadow map with the reference depth to obtain binary depth results from the
@@ -497,118 +669,166 @@
     from the light source. These depth comparisons are combined to compute the percentage
     of texels in the filtered region that are closer to the reference path. This percentage
     is used to attenuate the light.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 在对每个传入片段的百分位数接近过滤技术中，从过滤区域获得一组样本。这些样本中的每一个都投影到包含参考深度的阴影图上，以从底层查找函数中获得二进制深度结果。阴影图纹理包含来自光源的最接近片段。将这些深度比较组合起来，计算过滤区域中比参考路径更近的texels的百分比。这个百分比用于衰减光线。
 - en: See also
+  id: totrans-84
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: '*Using variance shadow mapping*'
+  id: totrans-85
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用方差阴影映射*'
 - en: Using variance shadow mapping
+  id: totrans-86
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用方差阴影映射
 - en: In the previous recipe, we understood the implementation of PCF. It produces
     good quality soft shadows. The problem with PCF is that it requires more samples
     to produce better quality results. In addition, like standard textures, it's impossible
     to use prefiltered mipmapping to boost the process. Therefore, we must sample
     multiple texels to average out the resultant to compute the light attenuation
     on the current texel. The overall process to render the shadow can be slow.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一个配方中，我们了解了PCF的实现。它产生高质量的柔和阴影。PCF的问题在于它需要更多的样本来产生更好的结果。此外，像标准纹理一样，无法使用预过滤的米普映射来加速过程。因此，我们必须采样多个texels来平均结果，以计算当前texel上的光衰减。渲染阴影的整体过程可能会很慢。
 - en: 'Such drawbacks of PCF can be overcome by using variance shadow mapping. This
     technique relies on Chebyshev Probabilist Prediction, which makes use of mean
     and variation. The mean can be simply get from the shadow map texture and the
     (**σ²**) variance can be calculated from the average value (**E(x)**) and the
     average square value (**E(x²)**):'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过使用方差阴影映射可以克服PCF的这些缺点。这项技术依赖于切比雪夫概率预测，它利用了平均值和方差。平均值可以从阴影映射纹理中简单地获得，而方差（**σ²**）可以从平均值（**E(x)**）和平均平方值（**E(x²)**）计算得出：
 - en: '![Using variance shadow mapping](img/5527OT_12_07.jpg)'
+  id: totrans-89
   prefs: []
   type: TYPE_IMG
+  zh: '![使用方差阴影映射](img/5527OT_12_07.jpg)'
 - en: Getting ready
+  id: totrans-90
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'To implement this recipe, we will reuse our first recipe on shadow mapping.
     The following guidelines will help you to understand the overall concept of variance
     shadow mapping:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了实现这个配方，我们将重用我们关于阴影映射的第一个配方。以下指南将帮助您理解方差阴影映射的整体概念：
 - en: Create the color buffer. In contrast to generic shadow mapping, this recipe
     uses the color buffer instead of the depth buffer. Therefore, the FBO now contains
     the color buffer instead of the depth buffer.
+  id: totrans-92
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建颜色缓冲区。与通用的阴影映射相比，这个配方使用颜色缓冲区而不是深度缓冲区。因此，现在FBO包含的是颜色缓冲区而不是深度缓冲区。
 - en: This is the pass one phase, where the depth of the scene will be recorded in
     the color buffer, which will store the **E(x)** and **E(x²)** values.
+  id: totrans-93
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这是第一遍阶段，场景的深度将被记录在颜色缓冲区中，该缓冲区将存储**E(x)**和**E(x²)**值。
 - en: Compute variance and quantity. Use the preceding equation and calculate the
     variance and quantity for pass two.
+  id: totrans-94
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 计算方差和数量。使用前面的方程式，为第二遍计算方差和数量。
 - en: How to do it...
+  id: totrans-95
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'In this recipe, we will create a new shader to record the depth information.
     Here are the steps to implement the shadow mapping source:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个配方中，我们将创建一个新的着色器来记录深度信息。以下是实现阴影映射源码的步骤：
 - en: 'In the `CustomScene` class, define a new `Texture` variable called `colorTexture`
     for the color buffer. In the constructor, create a color buffer with a linear
     filtering of 16-bit floating precision. The format type must be in the RGB format:'
+  id: totrans-97
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`CustomScene`类中，定义一个新的`Texture`变量`colorTexture`用于颜色缓冲区。在构造函数中，创建一个具有16位浮点精度线性过滤的颜色缓冲区。格式类型必须是RGB格式：
 - en: '[PRE7]'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Create a new vertex shader called `VSMDepthVertex.glsl` and share the computed
     vertex positions with the fragment shader:'
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个新的顶点着色器`VSMDepthVertex.glsl`，并将计算出的顶点位置与片段着色器共享：
 - en: '[PRE8]'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Similarly, create a fragment shader called `VSMDepthFragment.glsl` and store
     the depth square information in the first two coordinates of the output fragment:'
+  id: totrans-101
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 同样，创建一个名为`VSMDepthFragment.glsl`的片段着色器，并将深度平方信息存储在输出片段的前两个坐标中：
 - en: '[PRE9]'
+  id: totrans-102
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Execute pass one and render the scene to FBO. This will use the preceding shaders
     and the depth value from the color buffer.
+  id: totrans-103
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 执行第一遍并渲染场景到FBO。这将使用前面的着色器和颜色缓冲区中的深度值。
 - en: 'Modify the existing `PhongFragment.glsl` as follows. This time, instead of
     `sampler2DShadow`, we will use sample 2D as we will use the color buffer to store
     the depth information:'
+  id: totrans-104
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 修改现有的`PhongFragment.glsl`如下。这次，我们将使用sample 2D而不是`sampler2DShadow`，因为我们将使用颜色缓冲区来存储深度信息：
 - en: '[PRE10]'
+  id: totrans-105
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: How it works...
+  id: totrans-106
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: The variance shadow mapping overcomes the limitation of PCF by providing the
     depth data in a form where it can be filtered linearly and can be used with algorithms
     and modern graphics hardware that support linear data. Like our first recipe,
@@ -617,8 +837,10 @@
     During the first pass, this color buffer stores the M1 and M2 moments sampled
     in the depth distribution of the filtered region. This computation takes place
     in the `VSMDepthFragment.glsl` fragment shader.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 方差阴影映射通过提供可以线性过滤并可用于支持线性数据的算法和现代图形硬件的深度数据形式，克服了PCF的限制。像我们的第一个配方一样，整体算法是相同的，除了现在我们将使用两个分量深度及其平方，并将其存储在16位精度颜色缓冲区中。在第一遍中，这个颜色缓冲区存储了在过滤区域深度分布中采样的M1和M2矩。这种计算发生在`VSMDepthFragment.glsl`片段着色器中。
 - en: In the second pass, the color buffer is shared with the `phongFragment.glsl`
     fragment shader as a sample 2D uniform. Incoming shadow coordinates are converted
     to the homogenous form before performing any texture lookup. The z component of
@@ -629,24 +851,34 @@
     the quantity that is exactly the same quantity we wish to compute in order to
     perform percentile close filtering. The returned quantity or weight value from
     this function is used to produce shadows as per the shadow mapping.
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第二次遍历中，颜色缓冲区与`phongFragment.glsl`片段着色器共享作为样本2D均匀量。在执行任何纹理查找之前，将传入的阴影坐标转换为齐次形式。此变换坐标的z分量给出了从片段到光线的深度。此深度值用于`chebyshevComputeQuantity`函数中查找纹理。查找值用于根据之前提到的方程式查找方差，即方程3。最后，使用方程5找到精确的量，这是我们希望计算以执行百分位数接近过滤的量。此函数返回的量或权重值用于根据阴影映射产生阴影。
 - en: See also
+  id: totrans-109
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: '*Creating shadows with shadow mapping*'
+  id: totrans-110
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用阴影映射创建阴影*'
 - en: '*Softening the shadow edges using PCF*'
+  id: totrans-111
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用PCF软化阴影边缘*'
 - en: Simulating the particle system
+  id: totrans-112
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 模拟粒子系统
 - en: In computer graphics, the simulating particle system is a simulation of the
     natural phenomena, such as dust, smoke, rain, fireworks, and so on. This particle
     system contains large number of tiny particles, which can vary from few hundreds
@@ -655,214 +887,300 @@
     every frame. During the update, the respective characteristics of particles are
     computed and updated. As a result, it makes them move or appear to change its
     color.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 在计算机图形学中，模拟粒子系统是对自然现象的模拟，例如灰尘、烟雾、雨、烟花等。此粒子系统包含大量的小粒子，数量可以从几百到几百万不等。每个单元粒子具有相同的特征，如速度、颜色、寿命等。这些粒子每帧更新一次。在更新过程中，计算并更新粒子的相应特征。因此，它们会移动或看起来改变其颜色。
 - en: 'In this recipe, we will implement the particle systems. Each particle is made
     up of a quad and textured with translucent texture. Each particle possesses a
     specific color that changes with the update of time. Let''s take an overview of
     this recipe to understand the implementation of the simulation of the particle
     system:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个配方中，我们将实现粒子系统。每个粒子由一个四边形组成，并使用半透明纹理进行纹理化。每个粒子具有特定的颜色，该颜色会随着时间的更新而变化。让我们概述这个配方，以了解粒子系统模拟的实现：
 - en: '**Define particle attributes**: This creates the data structure, which contains
     the important attributes of the vertex that includes particle position, color,
     and so on.'
+  id: totrans-115
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**定义粒子属性**：这创建了一个数据结构，其中包含顶点的重要属性，包括粒子位置、颜色等。'
 - en: '**Particle geometry**: This defines the geometry of a single particle. It''s
     represented by four vertices in the shape of a perfect square and contains respective
     texture coordinates. This particle object is used in conjunction with the view-projection
     matrix to produce several instances of particle in the 3D space.'
+  id: totrans-116
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**粒子几何形状**：这定义了单个粒子的几何形状。它由四个构成完美正方形的顶点表示，并包含相应的纹理坐标。此粒子对象与视图-投影矩阵结合使用，在3D空间中产生多个粒子实例。'
 - en: '**Initialization**: This allocates the space for each particle''s respective
     attribute and loads the texture. Compile the vertex and fragment shader.'
+  id: totrans-117
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**初始化**：此操作为每个粒子的相应属性分配空间并加载纹理。编译顶点和片段着色器。'
 - en: '**Update**: This updates particles on each frame, calculates the new position
     of the particles and the remaining life of each, spawns new particle on each frame
     as the older particles dies'
+  id: totrans-118
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**更新**：此操作在每个帧上更新粒子，计算粒子的新位置和剩余寿命，当较老的粒子死亡时，在每个帧上生成新的粒子'
 - en: '**Render**: This renders the updated particles:![Simulating the particle system](img/5527OT_12_08.jpg)'
+  id: totrans-119
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**渲染**：此操作渲染更新后的粒子：![模拟粒子系统](img/5527OT_12_08.jpg)'
 - en: Getting ready...
+  id: totrans-120
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备中...
 - en: 'This recipe uses the following data structures to manage particle properties
     and geometries:'
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 此配方使用以下数据结构来管理粒子属性和几何形状：
 - en: 'The `Particle` data structure:'
+  id: totrans-122
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Particle`数据结构：'
 - en: '`pos`: This represents the current particle position.'
+  id: totrans-123
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pos`：这代表当前粒子的位置。'
 - en: '`vel`: This contains the current velocity of the particle.'
+  id: totrans-124
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`vel`：这包含粒子的当前速度。'
 - en: '`life`: This represents the remaining life of the particle.'
+  id: totrans-125
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`life`：这代表粒子的剩余生命周期。'
 - en: '`transform`: This contains the transformation information.'
+  id: totrans-126
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`transform`：这包含变换信息。'
 - en: 'The `Vertex` data structure:'
+  id: totrans-127
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Vertex`数据结构：'
 - en: '`pos`: This contains the vertex position in the 3D space.'
+  id: totrans-128
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pos`：这包含3D空间中的顶点位置。'
 - en: '`texCoord`: This is the texture coordinate that corresponds to `pos`.'
+  id: totrans-129
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`texCoord`：这是与`pos`对应的纹理坐标。'
 - en: 'The `MeshParticle` data structure:'
+  id: totrans-130
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MeshParticle`数据结构：'
 - en: '`vertices`: This contains the list of vertex objects.'
+  id: totrans-131
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`vertices`：这包含顶点对象的列表。'
 - en: '`vertexCount`: This represents the number of vertices in the list.'
+  id: totrans-132
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`vertexCount`：这表示列表中的顶点数量。'
 - en: How to do it...
+  id: totrans-133
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何实现...
 - en: 'Here are the steps to implement the particle system:'
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 实现粒子系统的步骤如下：
 - en: 'Create a class called `ParticleSystem` derived from the `Model` class. In the
     constructor, load the texture image that needs to be textured on the particle
     quad surface. All the particles will share the same texture image:'
+  id: totrans-135
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`ParticleSystem`的类，它从`Model`类派生。在构造函数中，加载需要纹理化的粒子四边形表面的纹理图像。所有粒子将共享相同的纹理图像：
 - en: '[PRE11]'
+  id: totrans-136
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Create the `ParticleVertex.glsl` vertex shader. This shader is responsible
     for updating vertice positions with the transformation information and sharing
     the remaining lifetime and texture coordinate information with the fragment shader:'
+  id: totrans-137
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建`ParticleVertex.glsl`顶点着色器。此着色器负责使用变换信息更新顶点位置，并将剩余的生命周期和纹理坐标信息与片段着色器共享：
 - en: '[PRE12]'
+  id: totrans-138
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Create the `ParticleFragment.glsl` fragment shader. This shader renders the
     textured quad. In addition, it uses a lifetime to control the opacity of the particle.
     The particle diminishes as it reaches its end:'
+  id: totrans-139
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建`ParticleFragment.glsl`片段着色器。此着色器渲染纹理四边形。此外，它使用生命周期来控制粒子的不透明度。当粒子达到其末端时，它会逐渐消失：
 - en: '[PRE13]'
+  id: totrans-140
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'During the initialization of the particle system, compile and link the shader
     program using `DrawShader()`. Also, initialize particles with `InitParticles()`:'
+  id: totrans-141
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在粒子系统的初始化过程中，使用`DrawShader()`编译和链接着色器程序。同时，使用`InitParticles()`初始化粒子：
 - en: '[PRE14]'
+  id: totrans-142
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Implement the `DrawShader` function; this function compiles and links the shader.
     It loads necessary uniform variables from the vertex and fragment shader program:'
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现`DrawShader`函数；此函数编译和链接着色器。它从顶点和片段着色器程序中加载必要的统一变量：
 - en: '[PRE15]'
+  id: totrans-144
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The `InitParticles` function defines the geometry of particles. There is no
     need to create `N` number of geometries for `N` particles. We will create one
     and reuse it for all the particles. Additionally, this function also initializes
     all the particles. It provides random velocities to each particle, which varies
     from `-2` to `2` units per microsecond in the horizontal direction and `4` to
     `8` in the vertical direction:'
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`InitParticles`函数定义粒子的几何形状。不需要为`N`个粒子创建`N`个几何形状。我们将创建一个并重复使用它来处理所有粒子。此外，此函数还初始化所有粒子。它为每个粒子提供随机速度，水平方向上从`-2`到`2`单位每微秒，垂直方向上从`4`到`8`：'
 - en: '[PRE16]'
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Define the geometry of the particle in the `CreateQuadrilateral` function:'
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`CreateQuadrilateral`函数中定义粒子的几何形状：
 - en: '[PRE17]'
+  id: totrans-148
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'In the `Update()` function, calculate the relative difference between the current
     and last frame. This time, the difference is used by the `EmitParticles` function
     to update new position of a given particles based on its velocity:'
+  id: totrans-149
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`Update()`函数中，计算当前帧和上一帧之间的相对差异。这次，这个差异被`EmitParticles`函数用来根据粒子的速度更新给定粒子的新位置：
 - en: '[PRE18]'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Implement the `EmitParticles()` function, as given in the following code. This
     function is responsible for updating particles. This function iterates each and
     every particle and updates its position and reduces the life span. As the life
     span of a particle becomes zero or less, it''s considered to be dead. In the event
     of particles death, new particles are respawned:'
+  id: totrans-151
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现如以下代码所示的`EmitParticles()`函数。此函数负责更新粒子。该函数遍历每个粒子并更新其位置和减少其生命周期。当粒子的生命周期变为零或更少时，它被认为是死亡的。在粒子死亡的情况下，新的粒子将被重新生成：
 - en: '[PRE19]'
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Implement the `RenderParticles()`. This function first updates the particles
     before rendering:'
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现`RenderParticles()`。此函数在渲染之前首先更新粒子：
 - en: '[PRE20]'
+  id: totrans-154
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: How it works...
+  id: totrans-155
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: 'The `ParticleSystem` class manages the life cycle of the particle system. During
     the initialization of the program, each particle is given a specific position,
     velocity, life time, and color. The particles in the system are stored as an array
@@ -873,47 +1191,66 @@
     learn an efficient way of how to render the particle system with the transform
     feedback. Here, we will also implement particles using point sprites instead of
     treating them as textured quadrilaterals:'
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ParticleSystem` 类管理粒子系统的生命周期。在程序初始化过程中，每个粒子被赋予一个特定的位置、速度、寿命和颜色。系统中的粒子以数组格式存储，形成一个数据池。CPU
+    负责更新粒子信息，并将更新后的信息发送到 GPU 以在屏幕上渲染。这不是一个非常高效的机制，因为 CPU 在处理粒子并将它们发送到 GPU 上非常忙碌。在下一个菜谱中，你将学习如何使用变换反馈高效地渲染粒子系统。在这里，我们将使用点精灵而不是将它们作为纹理四边形来实现粒子：'
 - en: '![How it works...](img/5527OT_12_09.jpg)'
+  id: totrans-157
   prefs: []
   type: TYPE_IMG
+  zh: '![工作原理...](img/5527OT_12_09.jpg)'
 - en: During the initialization process, all particles are distributed with random
     velocities along the `X-Y` direction in the range of `[-2 2]` and `[4 8]` respectively.
     The next position of the particle is updated by adding the current position with
     the product of the delta time (difference with respect to the last time the particle
     was updated) and its respective velocity. Blue arrows show the random distribution
     of velocity vectors in the 2D space.
+  id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 在初始化过程中，所有粒子在 `X-Y` 方向上以随机速度分布，范围分别为 `[-2 2]` 和 `[4 8]`。粒子的下一个位置通过将当前位置与时间差（相对于粒子上次更新的时间差）和相应速度的乘积相加来更新。蓝色箭头显示了二维空间中速度向量的随机分布。
 - en: Each particle's life span get condensed every time it's updated and finally
     reaches to its extinct point where the particles are no more active or visible
     onscreen. The dead particles still remains in the data pool and can be reinitiated
     again. This way, we reuse the same memory efficiently instead of allocating a
     new one. In this recipe, we respawn 10 particles in a go while rendering.
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次更新时，每个粒子的生命周期都会缩短，最终达到其消亡点，此时粒子不再活跃或可见于屏幕上。死亡的粒子仍然保留在数据池中，可以重新初始化。这样，我们可以有效地重用相同的内存，而不是分配新的内存。在这个菜谱中，我们在渲染时一次性重新启动
+    10 个粒子。
 - en: The size of particles are made to scale as they rise up in the `Y` direction.
     This information is gathered from the *y* component of the current position of
     the particle. We have used some adjustments in the code with some constants to
     control the scaling in a controlled manner mechanism. Finally, as the positions
     are updated and transformations are applied, particles can be sent to the GPU-side
     for rendering purposes.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 粒子的大小会随着它们在 `Y` 方向上的上升而缩放。这个信息是从粒子当前位置的 *y* 分量中收集的。我们使用一些常数和一些调整来控制缩放，以实现可控的机制。最后，当位置更新并应用变换时，粒子可以发送到
+    GPU 端进行渲染。
 - en: See also
+  id: totrans-161
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: Refer to *Applying texture with UV mapping* recipe [Chapter 7](ch07.html "Chapter 7. Textures
     and Mapping Techniques"), *Textures and Mapping Techniques*
+  id: totrans-162
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参阅 *使用 UV 映射应用纹理* 菜谱 [第 7 章](ch07.html "第 7 章。纹理和映射技术")，*纹理和映射技术*
 - en: Transform feedback particle system with sync objects and fences
+  id: totrans-163
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用同步对象和栅栏的变换反馈粒子系统
 - en: The previous example of the particle system demonstrated that the animation
     of the particles with highly CPU bounded operations. Typically, the core parameters
     of the vertex, such as color, position, and velocity are always computed on the
@@ -921,8 +1258,11 @@
     data information is always sent from the CPU to the GPU and is repeated for subsequent
     frames. This fashion incurs delays as one has to pay for the latency it takes
     from the CPU to the GPU.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的粒子系统示例演示了具有高度 CPU 绑定的操作的粒子动画。通常，顶点的核心参数，如颜色、位置和速度，总是在 CPU 端计算。顶点信息以正向流动。在这里，数据信息始终从
+    CPU 发送到 GPU，并在后续帧中重复。这种做法会产生延迟，因为必须为从 CPU 到 GPU 的延迟付费。
 - en: However, it will be wonderful if the vertices got processed on the GPU and reused
     in the next frame. This is where the new OpenGL ES 3.0 feature called transform
     feedback comes into play. It's the process to capture the output from the vertex
@@ -932,19 +1272,25 @@
     to the vertex shader and collects the transformed primitives' vertices in it.
     In addition, we can also decide whether the primitives will continue their regular
     route to the rasterizer.
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，如果顶点在GPU上处理并在下一帧中重用，那将是非常棒的。这就是新OpenGL ES 3.0功能变换反馈发挥作用的地方。这是从顶点着色器捕获输出并将其反馈到GPU以供下一帧使用的过程。这样，它避免了CPU干预，并通过大量的GPU并行处理使渲染效率更高。通常，在这个过程中，VBO缓冲区充当特殊缓冲区，连接到顶点着色器，并在其中收集变换后的原语顶点。此外，我们还可以决定原语是否将继续其常规路线到光栅化器。
 - en: In this recipe, we will implement the particle system using the transform feedback
     feature where vertex parameters, such as velocity, life time, acceleration, and
     so on are computed on the vertex shader. The translated parameters are stored
     in the GPU memory and are fed to the next frame iteration. In addition, we will
     make it more efficient by using point sprites instead of quads.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个配方中，我们将使用变换反馈功能实现粒子系统，其中顶点参数，如速度、寿命、加速度等，在顶点着色器上计算。翻译后的参数存储在GPU内存中，并馈送到下一帧迭代。此外，我们将通过使用点精灵而不是四边形来提高效率。
 - en: Note
+  id: totrans-167
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: This recipe also implements another new feature of OpenGL ES 3.0 called Sync
     Object and Fences. Fence is a mechanism by which an application informs the GPU
     to wait until a certain OpenGL ES specific operation is not completed. This way,
@@ -952,218 +1298,307 @@
     fence command can be inserted into the GL command stream like any other command.
     It needs to be associated with the sync object to be waited on. Sync objects are
     highly efficient as they allow you to wait on partial completion of GL commands.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 此配方还实现了OpenGL ES 3.0的另一个新功能，称为同步对象和栅栏。栅栏是一种机制，通过该机制应用程序通知GPU等待直到某个OpenGL ES特定操作未完成。这样，可以防止GPU将更多操作堆积到命令队列中。栅栏命令可以像任何其他命令一样插入到GL命令流中。它需要与等待的同步对象关联。同步对象非常高效，因为它们允许您等待GL命令的部分完成。
 - en: Getting ready
+  id: totrans-169
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'This section provides a high-level overview on how to implement the particle
     system using the transform feedback:'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 本节提供了使用变换反馈实现粒子系统的高级概述：
 - en: 'There are two shaders required: `Update` and `Draw`. The former updates or
     processes the data for the particle emission and the latter uses the updated data
     to render particles.'
+  id: totrans-171
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 需要两个着色器：`Update`和`Draw`。前者更新或处理粒子的发射数据，后者使用更新后的数据来渲染粒子。
 - en: At the initialization process, allocate two buffer objects to hold the particle
     data. It includes position, size, velocity, color, and life time. These buffers
     will be used in a ping-pong fashion, where one output of one buffer becomes the
     input of other in the next cycle or frame and vice versa.
+  id: totrans-172
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在初始化过程中，分配两个缓冲区对象来存储粒子数据。这包括位置、大小、速度、颜色和寿命。这些缓冲区将以乒乓方式使用，其中一个缓冲区的输出成为下一个循环或帧中另一个缓冲区的输入，反之亦然。
 - en: While rendering, use one VBO as the input and the other as the output by bounding
     the former as `GL_ARRAY_BUFFER` and latter as `GL_TRANSFORM_FEEDBACK`.
+  id: totrans-173
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在渲染时，使用一个VBO作为输入，另一个作为输出，通过将前者绑定为`GL_ARRAY_BUFFER`，后者绑定为`GL_TRANSFORM_FEEDBACK`。
 - en: Prohibits the drawing of fragments by disabling `GL_RASTERIZER_DISCARD`.
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过禁用`GL_RASTERIZER_DISCARD`禁止绘制片段。
 - en: Executes the update shader with point primitives (`GL_POINTS`). Each particle
     is represented as a point. The vertex shader takes input from the first VBO and
     sends the processed data to the second VBO, which acts as a transform feedback
     output buffer.
+  id: totrans-175
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用点原语（`GL_POINTS`）执行更新着色器。每个粒子都表示为一个点。顶点着色器从第一个VBO接收输入，并将处理后的数据发送到第二个VBO，该VBO充当变换反馈输出缓冲区。
 - en: This enables `GL_RASTERIZER_DISCARD` for fragments draw.
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这启用了`GL_RASTERIZER_DISCARD`以丢弃片段绘制。
 - en: This uses the second VBO, which contains the processed data and sends it to
     draw shader by bounding as `GL_ARRAY_BUFFER`, render the particles.
+  id: totrans-177
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这使用第二个VBO，其中包含处理后的数据，并将其作为`GL_ARRAY_BUFFER`边界发送到绘制着色器，以渲染粒子。
 - en: Finally, once the frame is rendered, swap the two VBOs.![Getting ready](img/5527OT_12_11.jpg)
+  id: totrans-178
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，一旦渲染了帧，交换两个 VBO。
 - en: How to do it...
+  id: totrans-179
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Here are the steps to implement the transform feedback recipe:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 实现变换反馈食谱的步骤如下：
 - en: 'Create the update vertex shader called `TFUpdateVert.glsl` with the following
     code. This shader defines various attributes used for particle system; each attribute
     is given a specific location. This shader is responsible for receiving the attributes
     data and update them. The updated attributes are sent to the next stage using
     out variables:'
+  id: totrans-181
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下代码创建名为 `TFUpdateVert.glsl` 的更新顶点着色器。这个着色器定义了用于粒子系统的各种属性；每个属性都分配了特定的位置。这个着色器负责接收属性数据并更新它们。更新后的属性通过输出变量发送到下一个阶段：
 - en: '[PRE21]'
+  id: totrans-182
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Create the update fragment shader called `TFUpdateFrag.glsl`. This shader is
     only a place holder for fragment shading so that the compilation of shader can
     be performed. This shader never comes into picture as the rasterization is turned
     off during the update:'
+  id: totrans-183
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建名为 `TFUpdateFrag.glsl` 的更新片段着色器。这个着色器仅作为片段着色的占位符，以便可以执行着色器的编译。这个着色器永远不会出现，因为在更新期间关闭了光栅化：
 - en: '[PRE22]'
+  id: totrans-184
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'Create a vertex shader called `TFDrawVert.glsl` for the render phase. This
     shader is responsible for rendering the updated data onscreen:'
+  id: totrans-185
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为渲染阶段创建一个名为 `TFDrawVert.glsl` 的顶点着色器。这个着色器负责在屏幕上渲染更新的数据：
 - en: '[PRE23]'
+  id: totrans-186
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Shade the fragment while rendering to `TFDrawFrag.glsl`:'
+  id: totrans-187
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在渲染到 `TFDrawFrag.glsl` 时着色片段：
 - en: '[PRE24]'
+  id: totrans-188
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'Create `ParticleSystem.h`/`.cpp` derived from the `Model` base class and implement
     the `EmitShader()` function. This function will compile the `TFUpdateVert.glsl`
     and `TFUpdateFrag.glsl` shader files:'
+  id: totrans-189
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从 `Model` 基类派生 `ParticleSystem.h`/`.cpp` 并实现 `EmitShader()` 函数。这个函数将编译 `TFUpdateVert.glsl`
+    和 `TFUpdateFrag.glsl` 着色器文件：
 - en: '[PRE25]'
+  id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'After the shader is compiled, specify the attribute that you want to capture
     in the transform feedback using the `glTransformFeedbackVaryings` API:'
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 着色器编译完成后，使用 `glTransformFeedbackVaryings` API 指定在变换反馈中要捕获的属性：
 - en: '**Syntax**:'
+  id: totrans-192
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**语法**：'
 - en: '[PRE26]'
+  id: totrans-193
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: '| Variable | Description |'
+  id: totrans-194
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_TB
+  zh: '| 变量 | 描述 |'
 - en: '| --- | --- |'
+  id: totrans-195
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_TB
+  zh: '| --- | --- |'
 - en: '| `program` | This is the handle of the program object. |'
+  id: totrans-196
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_TB
+  zh: '| `program` | 这是程序对象的句柄。 |'
 - en: '| `count` | This specifies the number of the vertex output variable used in
     the transform feedback process. |'
+  id: totrans-197
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_TB
+  zh: '| `count` | 这指定了在变换反馈过程中使用的顶点输出变量的数量。 |'
 - en: '| `varying` | This is an array of count zero-terminated strings that specifies
     the names of varying variables to be used for the transform feedback. |'
+  id: totrans-198
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_TB
+  zh: '| `varying` | 这是一个零终止字符串数组，指定了用于变换反馈的变量名称。 |'
 - en: '| `bufferMode` | This specifies the mode under which vertex the output variable
     data is captured when the transform feedback is active. This variable can accept
     two enum: `GL_INTERLEAVED_ATTRIBS` or `GL_SEPARATE_ATTRIBS`. The former specifies
     how to capture the output variables in a single buffer. However, the latter captures
     each vertex variable output in its own buffer. |'
+  id: totrans-199
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_TB
+  zh: '| `bufferMode` | 这指定了变换反馈激活时顶点输出变量数据捕获的模式。这个变量可以接受两个枚举：`GL_INTERLEAVED_ATTRIBS`
+    或 `GL_SEPARATE_ATTRIBS`。前者指定如何在一个缓冲区中捕获输出变量。然而，后者在每个缓冲区中捕获每个顶点变量的输出。 |'
 - en: 'We are interested in capturing five vertex output variables: `position`, `velocity`,
     `size`, `currentTime`, and `lifeTime` in the transform feedback.'
+  id: totrans-200
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们感兴趣的是在变换反馈中捕获五个顶点输出变量：`position`、`velocity`、`size`、`currentTime` 和 `lifeTime`。
 - en: Note
+  id: totrans-201
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The `glTransformFeedbackVarying` is always called before linking the program.
     Therefore, it's necessary to link the program object using `glLinkProgram`.
+  id: totrans-202
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`glTransformFeedbackVarying` 总是在链接程序之前调用。因此，有必要使用 `glLinkProgram` 链接程序对象。'
 - en: 'In the same file, implement the `DrawShader()` function. This function will
     compile `TFDrawVert.glsl` and `TFDrawFrag.glsl`:'
+  id: totrans-203
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在同一文件中实现 `DrawShader()` 函数。这个函数将编译 `TFDrawVert.glsl` 和 `TFDrawFrag.glsl`：
 - en: '[PRE27]'
+  id: totrans-204
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Initialize the particle system in `ParticleSystem::InitParticles()`. This function
     initializes the array of particle object containing various particle properties.
     After initialization, these objects are stored in two different VBO buffer objects
     particle VBOs. These buffers are used by the transform feedback to update elements
     in VBOs in a ping-pong fashion, as mentioned in the preceding code:'
+  id: totrans-205
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `ParticleSystem::InitParticles()` 中初始化粒子系统。这个函数初始化包含各种粒子属性的粒子对象数组。初始化后，这些对象存储在两个不同的
+    VBO 缓冲对象粒子 VBO 中。这些缓冲区由变换反馈以乒乓方式更新 VBO 中的元素，如前述代码所述：
 - en: '[PRE28]'
+  id: totrans-206
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'In `InitModel`, initialize the system as follows:'
+  id: totrans-207
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `InitModel` 中，初始化系统如下：
 - en: '[PRE29]'
+  id: totrans-208
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'Use the time and update the particle system in the `Emitparticles()` function:'
+  id: totrans-209
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `Emitparticles()` 函数中使用时间和更新粒子系统：
 - en: '[PRE30]'
+  id: totrans-210
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: The `Emitparticles()` function flips the two VBO buffers each time the frame
     is rendered. This way, one VBO becomes the input (called source VBO) to the update
     shader. However, the other captures the processed output variables (called the
@@ -1171,41 +1606,60 @@
     VBO data and set up the destination VBO as the transform feedback buffer to capture
     results with the `glBindBuffer` API using `GL_TRANSFORM_FEEDBACK` and `glBindBufferBase`
     to bound to and index in the destination VBO.
+  id: totrans-211
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Emitparticles()` 函数在每帧渲染时翻转两个 VBO 缓冲区。这样，一个 VBO 成为更新着色器的输入（称为源 VBO），而另一个则捕获处理过的输出变量（称为目标
+    VBO），反之亦然。使用更新的着色器程序，通过 `glBindBuffer` API 使用 `GL_TRANSFORM_FEEDBACK` 和 `glBindBufferBase`
+    将源 VBO 数据绑定到目标 VBO 并设置为变换反馈缓冲区，以捕获结果。'
 - en: 'During the update phase, we are only interested in computing the particle data.
     Therefore, we can disable the rasterization process:'
+  id: totrans-212
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在更新阶段，我们只对计算粒子数据感兴趣。因此，我们可以禁用光栅化过程：
 - en: '[PRE31]'
+  id: totrans-213
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'The transform feedback can begin and end with the help of the following APIs
     syntax:'
+  id: totrans-214
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 变换反馈可以使用以下 API 语法开始和结束：
 - en: '[PRE32]'
+  id: totrans-215
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: '| Variable | Description |'
+  id: totrans-216
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| 变量 | 描述 |'
 - en: '| --- | --- |'
+  id: totrans-217
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| --- | --- |'
 - en: '| `primitiveMode` | This specifies the type of the primitive that needs to
     be captured in the transform feedback attached buffer. The acceptable parameters
     are `GL_POINT`, `GL_LINES`, and `GL_TRIANGLES`. |'
+  id: totrans-218
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| `primitiveMode` | 这指定了需要在附加到变换反馈缓冲区的变换中捕获的原始类型。可接受的参数是 `GL_POINT`、`GL_LINES`
+    和 `GL_TRIANGLES`。 |'
 - en: It's very important to ensure that vertex output variables are written in the
     transform feedback attached buffers, so that the drawing command can use it safely.
     This requirement to ensure consistency between the update and drawing operation
@@ -1213,52 +1667,71 @@
     feedback operation is activated. This fence is associated with a sync object,
     which waits in the rendering routine until the transform feedback operation is
     not completed.
+  id: totrans-219
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 确保顶点输出变量写入变换反馈附加缓冲区非常重要，这样绘图命令才能安全地使用它。通过创建栅栏来实现更新操作和绘图操作之间的一致性要求。变换反馈操作激活后立即创建一个栅栏。这个栅栏与一个同步对象相关联，它在渲染例程中等待，直到变换反馈操作未完成。
 - en: 'The `RenderParticles()` function performs the drawing job. It waits for the
     sync object to ensure the successful completion of the transform feedback operation.
     Once done, the sync object is deleted and the drawing API are called to render
     the scene with the particle system:'
+  id: totrans-220
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`RenderParticles()` 函数执行绘图任务。它等待同步对象以确保变换反馈操作成功完成。一旦完成，同步对象被删除，并调用绘图 API 使用粒子系统渲染场景：'
 - en: '[PRE33]'
+  id: totrans-221
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: How it works...
+  id: totrans-222
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: 'The transform feedback is a special stage in the OpenGL ES programmable pipeline.
     It exists right after the vertex shader, as shown in the following image. When
     the transform feedback is activated, it diverts the output from the vertex shader
     to the transform feedback. The transform feedback is registered with all the vertex
     output variables in which it needs to be captured. Data variables are captured
     in the special ping-pong VBO buffers:'
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 变换反馈是 OpenGL ES 可编程管道中的一个特殊阶段。它位于顶点着色器之后，如下面的图像所示。当变换反馈被激活时，它将顶点着色器的输出重定向到变换反馈。变换反馈注册了所有需要捕获的顶点输出变量。数据变量在特殊的乒乓
+    VBO 缓冲区中捕获：
 - en: '![How it works...](img/5527OT_12_10.jpg)'
+  id: totrans-224
   prefs: []
   type: TYPE_IMG
+  zh: '![它是如何工作的...](img/5527OT_12_10.jpg)'
 - en: During the initialization process, two vertex buffer objects are created and
     set with the necessary particle data in it. These VBOs are attached to the transformed
     feedback and swapped with each frame. In this manner, one VBO contains the input
     data and captures processed variables and vice versa.
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 在初始化过程中，创建了两个顶点缓冲对象，并在其中设置了必要的粒子数据。这些 VBOs 被附加到变换反馈中，并且每帧进行交换。这样，一个 VBO 包含输入数据并捕获处理过的变量，反之亦然。
 - en: Each time the transform feedback is executed, a corresponding fence is created
     to acknowledge the completion of the transform feedback. This fence is associated
     with a sync object, which waits in the rendering function for the fence. When
     the fence is signaled, the wait is finished and the rendering commands are executed
     to render the particle system.
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次执行变换反馈时，都会创建一个相应的栅栏来确认变换反馈的完成。这个栅栏与一个同步对象相关联，它在渲染函数中等待栅栏。当栅栏被信号时，等待结束，并执行渲染命令以渲染粒子系统。
 - en: Note
+  id: totrans-227
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Particles are represented with `GL_POINTS`, where each point represents a tiny
     square. This command tells the GPU to draw each vertex as a square. The size of
     the point can be adjusted using `gl_PointSize`. Compared to the previous recipe,
@@ -1266,24 +1739,34 @@
     from four to one. A point sprite is a GPU built-in feature, where each point (representing
     a square) faces the camera. These can be textured with images without supplying
     texture coordinates explicitly, making it highly efficient for particle rendering.
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 粒子用`GL_POINTS`表示，其中每个点代表一个微小的正方形。这个命令告诉GPU将每个顶点绘制为一个正方形。点的大小可以通过`gl_PointSize`进行调整。与之前的配方相比，精灵方法将表示四边形所需的顶点数量从四个减少到一个。点精灵是GPU内置功能，其中每个点（代表一个正方形）面向相机。这些可以不提供纹理坐标而使用图像进行纹理化，这使得它在粒子渲染中非常高效。
 - en: See also
+  id: totrans-229
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: Refer to the *Procedural texture shading with texture coordinates* recipe in
     [Chapter 6](ch06.html "Chapter 6. Working with Shaders"), *Working with Shaders*
+  id: totrans-230
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[第6章](ch06.html "第6章. 使用着色器")中的*使用纹理坐标进行过程纹理着色*配方，*使用着色器*
 - en: Refer to the *Introduction* section in [Chapter 3](ch03.html "Chapter 3. New
     Features of OpenGL ES 3.0"), *New features of OpenGL ES 3.0*
+  id: totrans-231
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[第3章](ch03.html "第3章. OpenGL ES 3.0 新特性")中的*简介*部分，*OpenGL ES 3.0 新特性*
 - en: Refer to the *Swizzling* recipe *in* [Appendix](apa.html "Appendix A. Supplementary
     Information on OpenGL ES 3.0"), *Supplementary Information on OpenGL ES 3.0*
+  id: totrans-232
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[附录](apa.html "附录 A. OpenGL ES 3.0 补充信息")中的*Swizzling*配方，*OpenGL ES 3.0 补充信息*
