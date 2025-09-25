@@ -1,0 +1,339 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;3.&#xA0;Managing Task"><div class="titlepage"><div><div><h1 class="title"><a id="ch03"/>Chapter 3. Managing Task</h1></div></div></div><p>In this chapter, we will discuss the basic unit of Gradle build script, that is, Task. We will have a detailed look into the Task framework, how to create your own tasks, overwrite tasks provided by Gradle, tasks configurations, and creating custom tasks using different approaches provided by Gradle. We will also discuss the task dependencies. This chapter will also give insight view of controlling the execution of tasks, how to enable or disable task execution, and skip task execution based on some conditions. Gradle provides one additional feature known as incremental build support, which skips the execution of tasks if it is up to date, that is, if there are no changes in the input and output of the tasks. It helps in reducing the build time of the scripts if you are running the build repeatedly. We will try to understand this feature with some examples. Gradle supports this functionality by default. We will see how to extend this feature to user-defined tasks. Additionally, we will also explore the <code class="literal">Project</code> object provided by Gradle to control the build scripts.</p><div class="section" title="Build script basics"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec28"/>Build script basics</h1></div></div></div><p>A build script is nothing<a id="id139" class="indexterm"/> but a set of actions that execute in some predefined order and perform certain operations. In Gradle, we call these actions or group of actions a <span class="strong"><strong>Task</strong></span>, which is part of the parent entity called <span class="strong"><strong>Project</strong></span>. The atomic unit of execution in the Gradle build file is called a Task. The outcome of the build file might be some assets such as JAR, WAR, and so on, or it might perform certain operations such as deployment of assets and configuration of assets. Each build file that is <code class="literal">build.gradle</code> represents at least one project. It might contain more than one project also in case of multiproject or multimodule build. We will discuss multiproject build in <a class="link" href="ch06.html" title="Chapter 6. Working with Gradle">Chapter 6</a>, <span class="emphasis"><em>Working with Gradle</em></span>. The execution of the build represents the execution of the <code class="literal">Project</code> object, which internally calls different tasks to perform the operations.</p><p>When you execute any build script, Gradle instantiates the <code class="literal">org.gradle.api.Project</code> object for the build file and gives an implicit project object. You can use this object to access the Project API in the build file either through <code class="literal">project.&lt;methodname | property&gt;</code> or simply <code class="literal">&lt;methodname | property&gt;</code>. For example; to print the name of the project in your build file, you can use the following code:</p><div class="informalexample"><pre class="programlisting">println "Project name is "+project.name
+println "Project name is "+name // here project object is implicit
+println "Project name is $project.name"
+println "Project name is $name"</pre></div><p>All the preceding statements<a id="id140" class="indexterm"/> will return the same output, that is, the project name. The project name is the name of the parent directory of the <code class="literal">build.gradle</code> file. Consider that <code class="literal">build.gradle</code> is under the <code class="literal">Chapter3</code> directory; thus, the output of the preceding statements would be <code class="literal">Project name is Chapter3</code>. You can change the name of the project by providing <code class="literal">rootProject.name=&lt;New Project Name&gt;</code> in the <code class="literal">settings.gradle</code> file. We will discuss further usage of the <code class="literal">settings.gradle</code> file in <a class="link" href="ch06.html" title="Chapter 6. Working with Gradle">Chapter 6</a>, <span class="emphasis"><em>Working with Gradle</em></span>.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note05"/>Note</h3><p>To get the output <code class="literal">Project name is Chapter3</code>, you need to write the statements outside of a task block. If you write it inside a task, and if we are using the name or <code class="literal">$name</code> variable, it will show the task name. This is because inside a task block, the scope of the <code class="literal">name</code> variable will be different.</p></div></div><p>The following are some of the properties of the project object, which can be used to configure the build file using the getter and setter methods:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">name // readonly</code>, you can only change using <code class="literal">settings.gradle</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">parent // readonly</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">version</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">description</code></li></ul></div><p>Some of the properties are read-only, which are directly set by Gradle runtime.</p><p>Gradle also provides some default tasks, which can be used without applying any plugin such as copy task and zip task. It is also possible to define your own custom properties and custom tasks for the <a id="id141" class="indexterm"/>
+<span class="strong"><strong>project</strong></span> object.</p><p>For each task in the build file, Gradle instantiates one of the implementations of Task object. There are different implementations <a id="id142" class="indexterm"/>of the Task interface; you can find further details of it at <a class="ulink" href="https://docs.gradle.org/current/javadoc/org/gradle/api/Task.html">https://docs.gradle.org/current/javadoc/org/gradle/api/Task.html</a>. Similar to the <code class="literal">Project</code> object, you can also control tasks programmatically using the Task API. You will see more details on this when we will create custom tasks using Groovy in a later section. In summary:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">A task is a collection of actions and properties. It can depend on some other tasks</li><li class="listitem" style="list-style-type: disc">A task can accept input and return output</li><li class="listitem" style="list-style-type: disc">A task also provides certain predefined properties such as name and description enabled</li></ul></div><p>We will start with a simple build file example to explain the existing project properties, provide custom<a id="id143" class="indexterm"/> properties, create tasks, and so on.</p><p>Consider the file location <code class="literal">/Chapter3/build.gradle</code>:</p><div class="informalexample"><pre class="programlisting">// Section 1: Project object existing properties
+version = '1.0'
+description = 'Sample Java Project'
+// Section 2: Project level custom properties
+ext {
+  startDate="Jan 2015"
+}
+ext.endDate = "Dec 2015"
+println "This is project configuration part, description is $description"
+// Section 3: Task
+task sampleTask1 {
+  // Section 3.1: Task existing properties
+  description = "This is task level description"
+  // Section 3.2: Task level custom properties
+  ext {
+    taskDetail=" This is custom property of task1"
+
+  }
+println "This is sampleTask1 configuration statements, taskDetail is $taskDetail"
+
+// Section 3.3: Task actions
+doFirst {
+println "Project name is $project.name, description is $project.description"
+println "Task name is $name, description is $description"
+    println "Project start date is $startDate"
+  }
+  doLast {
+      println "Project endDate is $endDate"
+  }
+
+}
+// Section 4: Task
+task sampleTask2 {
+  println "This is sampleTask2 configuration statements"
+
+doFirst {
+println "Task getProjectDetailsTask properties are: "+sampleTask1.taskDetail
+  }
+}</pre></div><p>To execute the preceding <code class="literal">build.gradle</code> file:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle sampleTask1 sampleTask2</strong></span>
+<span class="strong"><strong>This is project configuration part, description is Sample Java Project</strong></span>
+<span class="strong"><strong>This is sampleTask1 configuration statements, taskDetail is  This is custom property of task1</strong></span>
+<span class="strong"><strong>This is sampleTask2 configuration statements</strong></span>
+<span class="strong"><strong>:sampleTask1</strong></span>
+<span class="strong"><strong>Project name is chapter3, description is Sample Java Project</strong></span>
+<span class="strong"><strong>Task name is sampleTask1, description is This is task level description</strong></span>
+<span class="strong"><strong>Project start date is Jan 2015</strong></span>
+<span class="strong"><strong>Project endDate is Dec 2015</strong></span>
+<span class="strong"><strong>:sampleTask2</strong></span>
+<span class="strong"><strong>Task getProjectDetailsTask properties are:  This is custom property of task1</strong></span>
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+
+<span class="strong"><strong>Total time: 6.892 secs</strong></span>
+</pre></div><p>In the preceding example, in Section 1, we have overwritten some of the existing properties of the project object. In Section 2, we have added custom properties to the project object. Note that the syntax of adding custom properties is to add the <code class="literal">&lt;name=value&gt;</code> pair inside<a id="id144" class="indexterm"/> the <code class="literal">ext</code> closure, or we can define it as <code class="literal">ext.&lt;propertyname&gt; = value</code>. Then, we have added two tasks to this build script in Section 3 and 4 and added custom properties to the <code class="literal">sampleTask1</code> task. To add/update properties of the project, you do not need to add the <code class="literal">def</code> keyword. <code class="literal">def</code> is used to define the user-defined variables. However, here we are defining project properties. If you use <code class="literal">def startDate=&lt;Value&gt;</code>, it would be treated as a variable not a project property.</p><p>We are able to print the <code class="literal">startDate</code> and <code class="literal">endDate</code> in <code class="literal">sampleTask1</code> as we added these two as project properties, which can be directly accessed throughout the build file. To call task methods or to use task properties outside the task, we can use <code class="literal">task.&lt;property name&gt;</code> or <code class="literal">task.&lt;method name&gt;</code>. As in the preceding example, inside the <code class="literal">sampleTask2</code> task, we are printing <code class="literal">sampleTask1.taskDetail</code>.</p><p>There are multiple ways to specify the properties of any project. We will see this in detail when we discuss properties in <a class="link" href="ch06.html" title="Chapter 6. Working with Gradle">Chapter 6</a>, <span class="emphasis"><em>Working with Gradle</em></span>.</p></div></div>
+<div class="section" title="Task configuration"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec29"/>Task configuration</h1></div></div></div><p>We discussed in first chapter that a build file consists of three phases: initialization, configuration, and execution, which are explained briefly as follows:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Initialization<a id="id145" class="indexterm"/> creates the project object.</li><li class="listitem" style="list-style-type: disc">The configuration phase configures the project object, creates <span class="strong"><strong>DAG</strong></span> (<span class="strong"><strong>Directed Acyclic Graph</strong></span>) based on task <a id="id146" class="indexterm"/>dependencies. It also executes the project and the task configuration statements.</li><li class="listitem" style="list-style-type: disc">The execution phase finally executes the actions mentioned in the task body.</li></ul></div><p>The task API mainly defines two types of closures: <code class="literal">doFirst</code>(Closure closure) and <code class="literal">doLast</code>(Closure closure), which internally calls <code class="literal">doFirst(Action action)</code> and <code class="literal">doLast(Action action)</code>. You can mention either one or both of them.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="tip06"/>Tip</h3><p>Statements mentioned outside of these actions are part of your configuration, which are executed during the configuration phase.</p></div></div><p>To verify the configuration phase of a task, you can execute the build script using the <code class="literal">--dry-run</code> or <code class="literal">–m</code> option. The <code class="literal">--dry-run</code> ( or <code class="literal">–m</code>) option only goes through the initialization and configuration phase, not the execution phase. Try to execute the preceding build file with the <code class="literal">--dry-run</code> option and you will find all the configuration statements printed on the console:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle --dry-run</strong></span>
+<span class="strong"><strong>This is project configuration part, description is Sample Java Project</strong></span>
+<span class="strong"><strong>This is sampleTask1 configuration statements, taskDetail is  This is custom property of task1</strong></span>
+<span class="strong"><strong>This is sampleTask2 configuration statements</strong></span>
+<span class="strong"><strong>:help SKIPPED</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>In Gradle 2.4 version, there are<a id="id147" class="indexterm"/> some performance improvements implemented in the configuration phase. For more details, refer to the release note at <a class="ulink" href="https://docs.gradle.org/2.4/release-notes#significant-configuration-time-performance-improvements">https://docs.gradle.org/2.4/release-notes#significant-configuration-time-performance-improvements</a>.</p></div>
+<div class="section" title="Task execution"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec30"/>Task execution</h1></div></div></div><p>As mentioned earlier, a task is<a id="id148" class="indexterm"/> nothing but a single or group of actions that is executed to perform certain operations. You can add multiple actions to <code class="literal">doFirst</code> or <code class="literal">doLast</code> closures if needed. The <code class="literal">doFirst</code> closure will always execute before the <code class="literal">doLast</code> closure. You can add the actions to the task even after task definition.</p><p>For example, add the following statements after the <code class="literal">sampleTask2</code> task is mentioned in the preceding script.</p><div class="informalexample"><pre class="programlisting">sampleTask2.doFirst { println "Actions added separately" }
+sampleTask2.doLast { println " More Actions added " }</pre></div><p>The preceding statement<a id="id149" class="indexterm"/> will add two more additional actions to <code class="literal">sampleTask2</code>. Gradle provides one short notation for <code class="literal">doLast</code>, which is <code class="literal">&lt;&lt;</code>.</p><p>In Groovy, <code class="literal">&lt;&lt;</code> is the left shift operator to append elements to a list:</p><div class="informalexample"><pre class="programlisting">task sampleTask3 &lt;&lt; {
+        println "Executing task3"
+}
+sampleTask3.doFirst {println "Adding doFirst action" }</pre></div><p>Try to execute <code class="literal">sampleTask3</code> and review the output:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle sampleTask3</strong></span>
+<span class="strong"><strong>...</strong></span>
+<span class="strong"><strong>:sampleTask3</strong></span>
+<span class="strong"><strong>Adding doFirst action</strong></span>
+<span class="strong"><strong>Executing task3</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>If multiple tasks are mentioned on the command line, they will be executed in the order defined (unless some dependency is applied on the tasks).</p></div>
+<div class="section" title="Task dependency"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec31"/>Task dependency</h1></div></div></div><p>When we talk about build lifecycle or test lifecycle of any build tool, what does actually happen internally? It <a id="id150" class="indexterm"/>does not execute only one task; it basically executes a group of tasks, which are defined in a certain order and this order is nothing but the task dependencies. Consider the example of building any Java project. You can build a Java project by executing the <code class="literal">gradle build</code> task. This will do everything, such as compiling the source code, package classes into JAR file and copy the JAR file to a location. Does it mean that all these processes are only part of the <span class="strong"><strong>build</strong></span> task?  The message we want to convey here is that Gradle's <code class="literal">build</code> task does not execute only one task, but it executes the series of tasks from <code class="literal">compileJava</code>, <code class="literal">classes</code>, <code class="literal">compiileTestJava</code> and so on until the building of the JAR file.</p><div class="mediaobject"><img src="graphics/B02000_03_01.jpg" alt="Task dependency"/><div class="caption"><p>Figure 3.1</p></div></div><p>The preceding figure is nothing but the representation of the DAG after applying the Java plugin. It represents different tasks and how they are dependent on each other.</p><p>If a task, Task1, depends on another task, Task2, then Gradle makes sure that Task2 is always executed before Task1. In the preceding example, the <span class="strong"><strong>compileJava</strong></span>, <span class="strong"><strong>classes</strong></span>, and <span class="strong"><strong>jar</strong></span> tasks will always execute before the build task. A task can depend on one or more tasks. Two or more tasks<a id="id151" class="indexterm"/> can also depend on the same prerequisite task. For example, in the preceding DAG the <span class="strong"><strong>javadoc</strong></span>,<span class="strong"><strong> compileTestjava</strong></span>, and <span class="strong"><strong>jar</strong></span> tasks depends on the <span class="strong"><strong>classes</strong></span> task. It does<a id="id152" class="indexterm"/> not mean that the <span class="strong"><strong>classes</strong></span> task will execute three times. It will execute only once in the<a id="id153" class="indexterm"/> <span class="strong"><strong>build</strong></span> lifecycle. If a task has already been executed due to some other dependency, it will not execute again. It will just inform the other dependent task about its status so that dependent task will continue to execute without calling it again.</p><p>In the build file, a task dependency can be defined in any of the following ways:</p><div class="informalexample"><pre class="programlisting">task task1(dependsOn: task2)
+task task1(dependsOn: [task2,task3]) // in case of more than one dependency
+task1.dependsOn task2, task3  //Another way of declaring dependency</pre></div><p>Many plugins provide tasks with default dependencies. As we have seen in the preceding diagram, the <code class="literal">classes</code> task has the <code class="literal">compileJava</code> dependency. If you add any other dependency (for example, <code class="literal">task1</code>) to the <code class="literal">classes</code> task, it will append the task (<code class="literal">task1</code>) with the <code class="literal">compileJava</code> task. This means, executing the <code class="literal">classes</code> task will execute both <code class="literal">compileJava</code> and <code class="literal">task1</code>. To exclusively override the existing dependencies with a new set of dependencies, use the following syntax:</p><div class="informalexample"><pre class="programlisting">classes {dependsOn = [task1, task2]
+}</pre></div><p>Here, executing the <code class="literal">classes</code> task will execute both <code class="literal">task1</code> and <code class="literal">task2</code> as dependent tasks and it will ignore the <code class="literal">compileJava</code> task.</p></div>
+<div class="section" title="Task ordering"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec32"/>Task ordering</h1></div></div></div><p>If <span class="strong"><strong>Task1</strong></span> depends on <span class="strong"><strong>Task2</strong></span>, then Gradle makes sure that <span class="strong"><strong>Task2</strong></span> will always execute before <span class="strong"><strong>Task1</strong></span>. However, it does not make sure the ordering of tasks. That is, it will not ensure that <span class="strong"><strong>Task2</strong></span> will execute immediately<a id="id154" class="indexterm"/> before <span class="strong"><strong>Task1</strong></span>. Between the execution of <span class="strong"><strong>Task2</strong></span> and <span class="strong"><strong>Task1</strong></span>, other tasks might be executed.</p><div class="mediaobject"><img src="graphics/B02000_03_02.jpg" alt="Task ordering"/><div class="caption"><p>Figure 3.2</p></div></div><p>As shown in the preceding diagram, <span class="strong"><strong>Task1</strong></span> depends on <span class="strong"><strong>Task2</strong></span> and <span class="strong"><strong>Task3</strong></span>. <span class="strong"><strong>Task4</strong></span> is an independent task. If you execute <code class="literal">gradle Task1 Task4</code>, the execution flow will be <span class="strong"><strong>Task2</strong></span>, <span class="strong"><strong>Task3</strong></span>, <span class="strong"><strong>Task1</strong></span>, and then <span class="strong"><strong>Task4</strong></span>, as if a task depends on multiple tasks. Gradle executes the dependent tasks in alphabetical order.</p><p>Along with <code class="literal">dependsOn</code>, Gradle provides some additional categories of ordering. For example, after the execution of the last task, you might want to clean the temporary resources, which were created during the build process. To enable this type of ordering, Gradle provides the following options:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">shouldRunAfter</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">mustRunAfter</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">finalyzedBy</code> (more strict in nature)</li></ul></div><p>Let's take a look at the following example. Create the <code class="literal">build_ordering.gradle</code> file:</p><div class="informalexample"><pre class="programlisting">(1..6).each {
+  task "sampleTask$it" &lt;&lt; {
+        println "Executing $name"
+    }
+  }
+
+sampleTask1.dependsOn sampleTask2
+sampleTask3.dependsOn sampleTask2
+
+sampleTask5.finalizedBy sampleTask6
+sampleTask5.mustRunAfter sampleTask4</pre></div><p>In the script, we have created six tasks named <code class="literal">sampleTask</code> with an integer suffix. Now, to understand task ordering, execute the preceding build script with different task names:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle –b build_ordering.gradle sampleTask1</strong></span>
+</pre></div><p>This will execute <code class="literal">sampleTask2</code> and <code class="literal">sampleTask1</code>:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle –b build_ordering.gradle sampleTask1 sampleTask3</strong></span>
+</pre></div><p>This will execute <code class="literal">sampleTask2, sampleTask1</code>, and <code class="literal">sampleTask3</code>. Task <code class="literal">sampleTask2</code> will execute only once:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle –b build_ordering.gradle sampleTask5</strong></span>
+</pre></div><p>This will execute <code class="literal">sampleTask5</code> and <code class="literal">sampleTask6</code>.</p><p>Note that the <code class="literal">sampleTask5</code> task will not execute <code class="literal">sampleTask4</code>, since the <code class="literal">mustRunAfter</code> ordering <a id="id155" class="indexterm"/>will come into effect when both tasks (<code class="literal">sampleTask4</code> and <code class="literal">sampleTask5</code>) are part of the execution process. This is explained in the following command. Here, you have also seen the use of the <code class="literal">finalizedBy</code> operation. It provides the concluded by order, that is, <code class="literal">sampleTask5</code> should be immediately followed by <code class="literal">sampleTask6</code>:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle –b build_ordering.gradle sampleTask5 sampleTask4</strong></span>
+</pre></div><p>This will execute <code class="literal">sampleTask4</code>, <code class="literal">sampleTask5</code>, and <code class="literal">sampleTask6</code> in sequence. This is because <code class="literal">sampleTask5</code> must run after <code class="literal">sampleTask4</code>, and <code class="literal">sampleTask5</code> should be concluded by <code class="literal">sampleTask6</code>.</p><p>The difference between <code class="literal">mustRunAfter</code> and <code class="literal">shouldRunAfter</code> is that <code class="literal">mustRunAfter</code> is strict ordering, whereas <code class="literal">shouldRunAfter</code> is lenient ordering. Consider the following code:</p><div class="informalexample"><pre class="programlisting">sampleTask1.dependsOn sampleTask2
+sampleTask2.dependsOn sampleTask3
+sampleTask3.mustRunAfter sampleTask1</pre></div><p>In this case, for the first two statements, the execution order is <code class="literal">sampleTask3</code>, <code class="literal">sampleTask2</code>, and then <code class="literal">sampleTask1</code>. The next statement <code class="literal">sampleTask3.mustRunAfter sampleTask1</code>, which says <code class="literal">sampleTask3</code> must execute after <code class="literal">sampleTask1</code> introduces cyclic dependency. Thus, the execution of <code class="literal">sampleTask1</code> will fail:</p><div class="informalexample"><pre class="programlisting">$ gradle –b build_ordering.gradle sampleTask1
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Circular dependency between the following tasks:
+:sampleTask1
+\--- :sampleTask2
+     \--- :sampleTask3
+          \--- :sampleTask1 (*)
+
+(*) - details omitted (listed previously)
+. . .</pre></div><p>If you replace <code class="literal">mustRunAfter</code> with <code class="literal">shouldRunAfter</code>, then it will not throw any exception and will ignore<a id="id156" class="indexterm"/> strict ordering in this scenario.</p></div>
+<div class="section" title="Task operations"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec33"/>Task operations</h1></div></div></div><p>If you are tired <a id="id157" class="indexterm"/>of typing complete task names in the command-line; here is a good option for you. If you have defined task names in camel case (<span class="emphasis"><em>camelCase</em></span>) format, you can just<a id="id158" class="indexterm"/> execute the task by mentioning the first letter of each word. For example, you can execute the <code class="literal">sampleTask1</code> task with shorthand <code class="literal">sT1</code>:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -q –b build_ordering.gradle sT1 sT2</strong></span>
+</pre></div><p>This will execute <code class="literal">sampleTask1</code> and <code class="literal">sampleTask2</code>.</p><p>If the shorthand of camel case matches more than one task, it will result in ambiguity:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>  $ gradle -q -b build_ordering.gradle sT</strong></span>
+
+<span class="strong"><strong>FAILURE: Build failed with an exception.</strong></span>
+
+<span class="strong"><strong>* What went wrong:</strong></span>
+<span class="strong"><strong>Task 'sT' is ambiguous in root project 'Chapter3'. Candidates are: 'sampleTask1', 'sampleTask2', 'sampleTask3', 'sampleTask4', 'sampleTask5', 'sampleTask6'.</strong></span>
+
+<span class="strong"><strong>* Try:</strong></span>
+<span class="strong"><strong>Run gradle tasks to get a list of available tasks. Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.</strong></span>
+</pre></div><p>Now, we will explore some other task operations such as conditional execution, build optimization, and force execution.</p><div class="section" title="Conditional execution"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec33"/>Conditional execution</h2></div></div></div><p>There are different scenarios <a id="id159" class="indexterm"/>when you want to execute some tasks based on certain properties. For example, you have a property named <code class="literal">environment</code> in the <code class="literal">build</code> file. If the value of the property is set to <code class="literal">prod</code>, you want to execute production specific tasks and if it is <code class="literal">qa</code>, you want to execute test-specific tasks. Create a <code class="literal">build</code><a id="id160" class="indexterm"/> file <code class="literal">build_condition.gradle</code> with the following code snippet:</p><div class="informalexample"><pre class="programlisting">ext {
+  environment='prod'
+// can set this value from property file or command line using -Pname=value option
+}
+
+task prodTask &lt;&lt; {
+  println 'Executing prod tasks '+ environment
+}
+prodTask.onlyIf {project.hasProperty('environment') &amp;&amp; project.environment=='prod' }
+
+task qaTask &lt;&lt; {
+  println 'Executing qa tasks '+ environment
+}
+qaTask.onlyIf { project.hasProperty('environment') &amp;&amp; project.environment== 'qa '}</pre></div><p>Execute the preceding <code class="literal">build</code> file with both the tasks:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_condition.gradle prodTask qaTask</strong></span>
+<span class="strong"><strong>:prodTask</strong></span>
+<span class="strong"><strong>Executing prod tasks prod</strong></span>
+<span class="strong"><strong>:qaTask SKIPPED</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>Here, Gradle skipped <code class="literal">qaTask</code> and executed only <code class="literal">prodTask</code> based on the environment property set in the <code class="literal">build</code> file. You can also remove the environment value in the preceding <code class="literal">ext</code> closure and directly set the property from the command-line option and try to execute the following commands:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_condition.gradle -Penvironment=qa qaTask prodTask</strong></span>
+<span class="strong"><strong>:qaTask</strong></span>
+<span class="strong"><strong>Executing qatasks qa</strong></span>
+<span class="strong"><strong>:prodTask SKIPPED</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>There might be another scenario when a task is outdated and you do not want to execute it, even if some other task depends on this task. This feature is supported by the <code class="literal">enabled</code> option in the task configuration phase:</p><div class="informalexample"><pre class="programlisting">task sampleTask12 &lt;&lt; {
+println " This task is disabled"
+}
+task sampleTask13 (dependsOn: sampleTask12) &lt;&lt; {
+println "This task depends on sampleTask12"
+}
+sampleTask12.enabled = false</pre></div><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_enabled.gradle sT12 sT13</strong></span>
+
+<span class="strong"><strong>:sampleTask12 SKIPPED</strong></span>
+<span class="strong"><strong>:sampleTask13</strong></span>
+<span class="strong"><strong>This task depends on task12</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>Note that you can set <a id="id161" class="indexterm"/>
+<code class="literal">enabled</code> in the configuration phase itself. It should not be part of the <code class="literal">doFirst</code> or <code class="literal">doLast</code> closure:</p><div class="informalexample"><pre class="programlisting">task sampleTask12 {
+   //enabled = false    // valid statement
+   doLast {
+      enabled = false   // Invalid statement
+      println 'Task execution' 
+   }   
+}</pre></div><p>In the preceding example, if we try to set <code class="literal">enabled = false</code> in the <code class="literal">doLast</code> closure, the task will not execute. Build will fail with the <code class="literal">Cannot call Task.setEnabled(boolean) on task ':sampleTask12' after task has started execution</code> error.</p></div><div class="section" title="Build optimization"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec34"/>Build optimization</h2></div></div></div><p>Consider a scenario where your <code class="literal">build</code> file consists of 10 tasks, which execute as per the task dependencies order. Out of 10 tasks, five tasks are modifying five different files on the filesystem. Let's say these<a id="id162" class="indexterm"/> five files are some property files and these build tasks are setting some values to the property:</p><div class="informalexample"><pre class="programlisting">envproperty.txt
+  env=prod
+sysproperty.txt
+  memory=1024
+……</pre></div><p>After first execution, the property files are modified with the respective values. When you run the <code class="literal">build</code> script again, although the files are already modified, the build script modifies those files again.</p><p>Gradle provides a mechanism of skipping the execution of these kinds of tasks based on the input and output parameters of the task, which is also known as<a id="id163" class="indexterm"/> <span class="strong"><strong>incremental build</strong></span>. It helps in reducing the build time. You might have observed when you apply Java plugin and build your project couple of times, some tasks are marked with UP-TO-DATE keyword (execute without <code class="literal">-q</code> option). This means there is no change in the input and output compared to the last execution of these tasks and those tasks are ignored.</p><p>By default, Gradle provides this feature to its in-built tasks. You can also enhance your tasks with this capability, with the help of inputs and outputs of the task. Task inputs and outputs are of type <code class="literal">TaskInputs</code> and <code class="literal">TaskOuputs</code>. We will explain this behavior with help of one example:</p><p>Consider the <code class="literal">PropDetails.xml</code> file:</p><div class="informalexample"><pre class="programlisting">&lt;properties&gt;
+  &lt;property&gt;
+    &lt;filedetail&gt;
+      &lt;name&gt;envproperty.txt&lt;/name&gt;
+      &lt;key&gt;env&lt;/key&gt;
+      &lt;value&gt;prod&lt;/value&gt;
+    &lt;/filedetail&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;filedetail&gt;
+      &lt;name&gt;sysproperty.txt&lt;/name&gt;
+      &lt;key&gt;memory&lt;/key&gt;
+      &lt;value&gt;1024&lt;/value&gt;
+    &lt;/filedetail&gt;
+  &lt;/property&gt;
+&lt;/properties&gt;</pre></div><p>Consider the <code class="literal">build_optimization.gradle</code> file:</p><div class="informalexample"><pre class="programlisting">task updateExample {
+ext {
+propXml = file('PropDetails.xml')
+}
+File envFile = file('envproperty.txt')
+File sysFile = file('sysproperty.txt')
+
+inputs.file propXml
+outputs.files (envFile, sysFile)
+
+doLast {
+println "Generating Properties files"
+def properties = new XmlParser().parse(propXml)
+properties.property.each { property -&gt;
+def fileName = property.filedetail[0].name[0].text()
+def key = property.filedetail[0].key[0].text()
+def value = property.filedetail[0].value[0].text()
+def destFile = new File("${fileName}")
+destFile.text = "$key = ${value}\n"
+}
+}
+}
+
+$ gradle –b build_optimization.gradle updateExample</pre></div><p>If you run this task for the first time, it will read the <code class="literal">PropDetail.xml</code> file and will create two files <code class="literal">envproperty.txt</code> and <code class="literal">sysproperty.txt</code> with <code class="literal">key=value</code> pair mentioned in the <code class="literal">property</code> file. Now, if you<a id="id164" class="indexterm"/> run this command again, you will see the following output:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>:updateExample UP-TO-DATE</strong></span>
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>This implies that there is no change in the input and output of this task; thus, there is no need to execute the task again.</p><p>Try to change either the XML file or the generated property files or delete the output files. If you run the <code class="literal">Gradle</code> command again, this time, the task will execute and it will recreate the files. Gradle internally generates snapshots of input parameters and output parameters (Gradle generates a hash code to avoid duplicates) and stores it. Next time onwards, Gradle generates the snapshots of input and output parameters, and if both are the same, it avoids the execution of tasks.</p><p>Also, an important point to remember, if no output is defined for tasks, then it will not be considered for optimization (<code class="literal">UP-TO-DATE</code>). The task will always execute. There can be a scenario where the output of a task is not a file or a directory, it could be some other logical build steps or system-related check. In this situation, you can use the <code class="literal">TaskOutputs.upToDateWhen()</code> method or the <code class="literal">outputs.upToDateWhen</code> closure to check the specific scenario and mark tasks <code class="literal">UP-TO-DATE</code>.</p><p>To skip the optimization technique and force full execution of the task, the <code class="literal">--rerun-tasks</code> command line option can be used. It will execute the task forcefully, even if it is <code class="literal">UP-TO-DATE</code>.</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle –b build_optimization.gradle updateExample --rerun-tasks</strong></span>
+</pre></div><p>The <code class="literal">--rerun-tasks</code> option will always execute the task without checking the input and output parameters.</p></div><div class="section" title="Task rules"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec35"/>Task rules</h2></div></div></div><p>We discussed the <code class="literal">methodMissing</code> concept in Groovy. You can define some method patterns in Groovy, which can respond to method calls at runtime with the predefined patterns. Task rules<a id="id165" class="indexterm"/> provide the same flexibility with tasks. It allows executing a task, which does not exist. Gradle checks the task rule and creates the task if the rules have been defined. We will see the usage with the help of a simple example. For example, you have different assets, which are synced from different repository servers. Rather than creating different tasks for each sync, you can create the task rule as follows:</p><div class="informalexample"><pre class="programlisting">tasks.addRule("Pattern: sync&lt;repoServer&gt;") { String taskName -&gt;
+  if (taskName.startsWith("sync")) {
+    task(taskName) &lt;&lt; {
+      println "Syncing from repository: " + (taskName - 
+'sync')
+      }
+    }
+}
+</pre></div><p>Here you can call different tasks for each repository servers as <code class="literal">gradle sync&lt;repoServer&gt;</code> and it will sync the assets from that repository.</p><p>A very common example of task rules can be found in the Java plugin. Add <code class="literal">apply plugin: 'java'</code> as the first line in the <code class="literal">build</code> file and run the following command:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_rule.gradle tasks</strong></span>
+
+<span class="strong"><strong>…………….</strong></span>
+<span class="strong"><strong>Rules</strong></span>
+<span class="strong"><strong>-----</strong></span>
+<span class="strong"><strong>Pattern: clean&lt;TaskName&gt;: Cleans the output files of a task.</strong></span>
+<span class="strong"><strong>Pattern: build&lt;ConfigurationName&gt;: Assembles the artifacts of a configuration.</strong></span>
+<span class="strong"><strong>Pattern: upload&lt;ConfigurationName&gt;: Assembles and uploads the artifacts belonging to a configuration.</strong></span>
+<span class="strong"><strong>Pattern: sync&lt;repoServer&gt;</strong></span>
+
+<span class="strong"><strong>To see all tasks and more detail, run with --all.</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+
+<span class="strong"><strong>Total time: 4.021 secs</strong></span>
+</pre></div><p>As of now, do not worry much about the plugin. We will discuss plugins in detail in <a class="link" href="ch04.html" title="Chapter 4. Plugin Management">Chapter 4</a>, <span class="emphasis"><em>Plugin Management</em></span>.</p><p>In the above output, you can find the rules defined in the Java plugin. Gradle provides three in-built rules <code class="literal">clean&lt;TaskName&gt;</code>, <code class="literal">build&lt;sConfigurationName&gt;</code>, and <code class="literal">upload&lt;ConfigurationName&gt;</code> and the newly created <code class="literal">sync&lt;repoServer&gt;</code> rule. For all the tasks that are available in your <code class="literal">build</code> file (Java plugin tasks and user-defined tasks), you can execute one additional task using <code class="literal">clean&lt;TaskName&gt;</code>. For example, you have assemble, classes, and jar tasks available in the<a id="id166" class="indexterm"/> Java plugin. Apart from executing normal clean task, which deletes the build directory, you can also execute tasks such as <code class="literal">cleanClasses, cleanJar</code>, and so on, which cleans only the result of one particular task.</p></div></div>
+<div class="section" title="Gradle's in-built tasks"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec34"/>Gradle's in-built tasks</h1></div></div></div><p>For day-to-day build-related activities, Gradle provides a variety <a id="id167" class="indexterm"/>of tasks. We will take a look at some of<a id="id168" class="indexterm"/> Gradle's in-built tasks.</p><div class="section" title="The Copy Task"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec36"/>The Copy Task</h2></div></div></div><p>This task is used to <a id="id169" class="indexterm"/>copy file(s) or directories from one location to the other:</p><div class="informalexample"><pre class="programlisting">task copyTask(type: Copy) {
+  from "."
+  into "abc"
+  include('employees.xml')
+}</pre></div><p>In <code class="literal">copyTask</code>, we have configured the <code class="literal">from</code> location and <code class="literal">into</code> location, and have also added the condition to include only <code class="literal">employees.xml</code>.</p></div><div class="section" title="The Rename Task"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec37"/>The Rename Task</h2></div></div></div><p>This task is an extended <a id="id170" class="indexterm"/>version of the copy task, which is used to rename files or directories:</p><div class="informalexample"><pre class="programlisting">task copyWithRename(type: Copy) {
+  from "."
+  into "dir1"
+  include('employees.xml')
+  rename { String fileName -&gt;
+  fileName.replace("employees", "abc")
+  }
+}</pre></div><p>In the <code class="literal">copyWithRename</code> task, an additional <code class="literal">rename</code> closure was added.</p></div><div class="section" title="The Zip task"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec38"/>The Zip task</h2></div></div></div><p>This task is used to<a id="id171" class="indexterm"/> zip a group of file(s) or directories and copy the zip to the destination directory:</p><div class="informalexample"><pre class="programlisting">task zipTask(type: Zip) {
+  File destDir = file("dest")
+  archiveName "sample.zip"
+  from "src"
+  destinationDir destDir
+}</pre></div><p>In the <code class="literal">ziptask</code> task, another <code class="literal">destinationDir</code> configuration was added. You can refer to the online documentation for more a detailed API for these tasks.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note06"/>Note</h3><p>Note that here we have not mentioned any actions for these tasks. Tasks themselves know what to do. We only need to configure the tasks to define them.</p></div></div><p>Most of the time, you use tasks that are part of plugins. Mostly, a plugin is a group of tasks bound together for some specific functionality. For example; we use the <code class="literal">java</code> plugin to build the Java project, the <code class="literal">war</code> plugin to create web archives, and so on. When you apply the <code class="literal">java</code> plugin to a build script, Java tasks are automatically included. We will discuss about plugins in detail in <a class="link" href="ch04.html" title="Chapter 4. Plugin Management">Chapter 4</a>, <span class="emphasis"><em>Plugin Management</em></span>.</p><p>To execute the Java tasks, we do not need to mention even the configurations. For these tasks, Gradle applies conventions, that is, the default configuration. If a project follows a certain convention, it can directly execute these tasks without any configurations. If not, it should define its own configurations. To add the <code class="literal">java</code> plugin to a <code class="literal">build</code> file, just add the following line of code:</p><div class="informalexample"><pre class="programlisting">apply plugin: 'java'</pre></div><p>By default, the <code class="literal">java</code> plugin assumes that the project's source files are located at <code class="literal">src/main/java</code>. If the source files are present in this directory, you can execute the <code class="literal">gradle compileJava</code> or <code class="literal">gradle build</code> task without any configuration. We will discuss more on Java plugins and tasks in the next chapter.</p><p>Until now in this chapter, we have got some idea about how to create tasks and how to use Gradle's in-built tasks. In the next section, we will explore how to create custom tasks.</p></div></div>
+<div class="section" title="Custom tasks"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec35"/>Custom tasks</h1></div></div></div><p>Gradle supports a variety of tasks for build automation, either from Gradle's in-house plugins or from third-party plugins. As we know the software adage, change is the only constant thing in software; the requirements and complexity change over the time. Many a times we come across different automation requirements for which no task or plugin is available in Gradle. In such cases, you can extend Gradle by adding custom tasks to the build.</p><p>A custom task is <a id="id172" class="indexterm"/>an enhanced task, which you add to Gradle to fulfill custom requirements. It can have input, output, configurations and more. Its scope is not only limited to the <code class="literal">build</code> file where it is defined; it can be reused in other projects by adding custom task JAR in the classpath. You can write custom tasks in Groovy, Java, and Scala. In this section, we will create custom task examples in Groovy.</p><p>Gradle provides different ways to add custom tasks in the build script:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The <code class="literal">build</code> file</li><li class="listitem" style="list-style-type: disc">The <code class="literal">buildSrc</code> directory inside the project directory</li><li class="listitem" style="list-style-type: disc">Create a standalone Groovy project</li></ul></div><p>A custom task is a Java or Groovy class that extends from <code class="literal">DefaultTask</code>. We can use the <code class="literal">@TaskAction</code> annotation to define the task actions. You can add multiple actions in a single task. They will execute in the order they are defined. Let's start with a simple custom task in the <code class="literal">build</code> file.</p><p>Consider the file located at <code class="literal">Chapter3/Customtask/build.gradle</code>:</p><div class="informalexample"><pre class="programlisting">println "Working on custom task in build script"
+
+class SampleTask extends DefaultTask {
+  String systemName = "DefaultMachineName"
+  String systemGroup = "DefaultSystemGroup"
+  @TaskAction
+  def action1() {
+    println "System Name is "+systemName+" and group is "+systemGroup
+  }
+  @TaskAction
+    def action2() {
+      println 'Adding multiple actions for refactoring'
+    }
+
+}
+
+task hello(type: SampleTask)
+
+hello {
+  systemName='MyDevelopmentMachine'
+  systemGroup='Development'
+}
+hello.doFirst {println "Executing first statement "}
+hello.doLast {println "Executing last statement "}</pre></div><p>The output of the following file will be:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -q hello</strong></span>
+<span class="strong"><strong>Executing first statement</strong></span>
+<span class="strong"><strong>System Name is MyDevelopmentMachine and group is Development</strong></span>
+<span class="strong"><strong>Adding multiple actions for refactoring</strong></span>
+<span class="strong"><strong>Executing last statement</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>In the preceding<a id="id173" class="indexterm"/> example, we have defined a custom task type, <code class="literal">SampleTask</code>. We have added two action methods <code class="literal">action1()</code> and <code class="literal">action2()</code>. You can add more actions as per the requirement. We have added two task variables <code class="literal">systemName</code> and <code class="literal">systemGroup</code> with some default values. We can reinitialize these variables in the project scope again while configuring the task (hello). Gradle also provides the flexibility to add more actions to a task with the help of the <code class="literal">doFirst</code> and <code class="literal">doLast</code> closures like any other task.</p><p>Once a task type is defined, you can create a task by using <code class="literal">task &lt;taskname&gt;(type: &lt;TaskType&gt;)</code>.</p><p>You can configure the task in configuration closure either while declaring the task or as a separate closure, as mentioned in the preceding file.</p><div class="section" title="Using buildSrc"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec39"/>Using buildSrc</h2></div></div></div><p>If you want to keep the <a id="id174" class="indexterm"/>custom task code separate from the build file, but you do not want to create a separate project for it, you can achieve this by adding the custom task in the <code class="literal">buildSrc</code> directory.</p><p>Create a <code class="literal">buildSrc</code> directory in the project base directory and create the following mentioned folder hierarchy: <code class="literal">buildSrc/src/main/groovy/ch3/SampleTask.groovy</code>.</p><p>Move the preceding <code class="literal">SampleTask</code> class in the file. You also need to import two packages: <code class="literal">org.gradle.api.DefaultTask</code> and <code class="literal">org.gradle.api.tasks.TaskAction</code>. Now, the <code class="literal">build</code> file is left with the following code snippet:</p><div class="informalexample"><pre class="programlisting">task hello(type: com.test.SampleTask)
+hello {
+  systemName='MyDevelopmentMachine'
+  systemGroup='Development'
+}
+hello.doFirst {println "Executing first statement "}
+hello.doLast {println "Executing last statement "}</pre></div><p>On executing the <code class="literal">hello</code> task, you will find the same output that was displayed earlier.</p><p>After execution, you will find the following folder structure in the project. Note that you do not need to compile the <code class="literal">SampleTask</code> class. All the required steps would be performed by Gradle. It will<a id="id175" class="indexterm"/> compile the classes, create JAR, and will automatically add the required class to the build class path. You can just define the task and execute it.</p><div class="mediaobject"><img src="graphics/B02000_03_03.jpg" alt="Using buildSrc"/><div class="caption"><p>Figure 3.3</p></div></div><p>The limitation is that the <code class="literal">SampleTask</code> task is only available in the current project and its subprojects only. You cannot use this task in other projects.</p></div><div class="section" title="The standalone task"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec40"/>The standalone task</h2></div></div></div><p>To overcome the limitations of the <code class="literal">buildSrc</code> way of creating custom tasks, you need to create an independent<a id="id176" class="indexterm"/> Groovy project. Move the <code class="literal">SampleTask</code> class in a new project (<code class="literal">SampleTaskProj</code>), and then compile and package the project. You can even use Gradle to build this Groovy project. Just add <code class="literal">build.gradle</code> with the following statements to the <code class="literal">SampleTaskProj</code> project:</p><div class="informalexample"><pre class="programlisting">apply plugin: 'groovy'
+apply plugin: 'eclipse'
+version=1.0 // to generate jar with version
+dependencies {
+compile gradleApi() // It creates dependency on the API of current Gradle version
+compile localGroovy() // it will use the Groovy shipped with Gradle
+// these dependencies comes along with groovy plugin
+}</pre></div><p>If you are creating the project in Eclipse, you can run the following command to generate the Eclipse classpath:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle clean cleanEclipse eclipse</strong></span>
+</pre></div><p>Now, execute the<a id="id177" class="indexterm"/> <code class="literal">gradle build</code> command to build the project. A JAR file will be created in the build directory. To use the tasks, in the build file (think of it as a new <code class="literal">build.gradle</code> file in another project), we need to reference the JAR file path in the<a id="id178" class="indexterm"/> <span class="strong"><strong>repositories</strong></span> closure.</p><p>Create a new project and update the <code class="literal">build.gradle</code> file with the following content:</p><div class="informalexample"><pre class="programlisting">buildscript {
+repositories {
+  // relative path of sampleTaskProject jar file
+  flatDir {dirs "../SampleTaskProj/build/libs"}
+}
+dependencies {
+classpath group: 'ch3', name: 'SampleTaskProj',version: '1.0'
+}
+}
+task hello(type: ch3.SampleTask)
+
+hello {
+  systemName='MyDevelopmentMachine'
+  systemGroup='Development'
+}
+
+hello.doFirst {println "Executing first statement "}
+hello.doLast {println "Executing last statement "}</pre></div><p>Execute the <code class="literal">hello</code> task again and you will find the same output:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle hello</strong></span>
+<span class="strong"><strong>:hello</strong></span>
+<span class="strong"><strong>Executing first statement</strong></span>
+<span class="strong"><strong>Adding multiple actions for refactoring</strong></span>
+<span class="strong"><strong>System Name is MyDevelopmentMachine and group is Development</strong></span>
+<span class="strong"><strong>Executing last statement</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec36"/>Summary</h1></div></div></div><p>In this chapter, we have discussed Gradle task in detail. We learned how to create simple tasks in Gradle and add actions to it. Along with it, we looked into task dependencies. We also looked into strict ordering of tasks if needed, using <code class="literal">mustRunAfter</code> and <code class="literal">FinalyzedBy</code>. We also discussed incremental build feature in Gradle, which improves build execution time. One of the important extensions is the custom task. We also saw how to create custom tasks and reuse the same task across different projects.</p><p>As mentioned, a task could fulfill a simple build requirement. However, requirements keep growing and we need more number of tasks. It is also required to group certain related tasks to perform a specific behavior. This grouping of tasks is done in a plugin. A plugin is a group of different tasks bonded together. So, our next chapter is dedicated to plugin management. We will discuss how to bind tasks to a plugin and how to utilize plugins to enhance build capabilities.</p></div></body></html>

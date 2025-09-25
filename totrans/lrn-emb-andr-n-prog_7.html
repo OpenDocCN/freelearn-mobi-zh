@@ -1,0 +1,818 @@
+<html><head></head><body>
+		    <div class="readerChapterContent">
+		      <div>
+  <h1 class="Title-1"><span>Chapter 7. Tailoring Your Personal Android System</span></h1>
+
+  <p><span>In the previous chapter, you learned about the most popular custom Android ROMs. We started to dive deep and analyze those parts of the system involved in the modding process, to effectively understand where to customize and how to do it, mastering the Android modding toolset.</span></p>
+
+  <p><span>In this chapter, we will go even further, diving deeper into every single aspect of a ROM, using practical examples to show how to customize and increase the performance of your ROM.</span></p>
+
+  <p><span>The main topics of this chapter are:</span></p>
+
+  <ul>
+    <li><span>Hacking the Android framework</span></li>
+
+    <li><span>Adding new Android applications to the build system</span></li>
+
+    <li><span>Adding new Linux-native apps, using the Android source code, or editing an existing binary ROM image</span></li>
+
+    <li><span>Optimizing the system to better support custom hardware, with focus on the application layer and on the kernel layer.</span></li>
+  </ul>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Receiving over the air updates – OTA</span></h2>
+
+  <p><span>Every Android device is, by design, able to receive updates over time. These can be system updates—when a new Android version has been released, or security updates—when some critical vulnerability has been fixed and Google is distributing the patch. Once the update has been received, every device is able to decompress and apply this update, following the required procedure.</span></p>
+
+  <p><span>These types of updates are called OTA, or over the air updates, because they can be downloaded and applied by the Android device itself, without the support of a host PC. These updates are typically going to patch operating system features, working in the so-called </span><span class="emphasis"><em><span>read-only</span></em></span><span> part of the system. No user app will ever be affected by these updates— apps installed via the Google Play Store are completely safe.</span></p>
+
+  <p><span>Android will asynchronously notify you when a new OTA is available. Most of the time you will receive a notification if connected to a Wi-Fi network and if your battery is above 50% to ensure a possible fast download and a safe updating process. When an update is available, a new system notification will appear in the Status Bar notification area. Once the notification is clicked, Android will show you details about the update, as shown in the following image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_106.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_106" style="max-width:578px;max-height:1026px"/></div>
+
+  <p><span>OTA updates can be grouped into these three categories:</span></p>
+
+  <ul>
+    <li><span>Full system updates</span></li>
+
+    <li><span>Incremental system updates</span></li>
+
+    <li><span>Single update packages</span></li>
+  </ul>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Updating the whole system</span></h3>
+
+  <p><span>As you can guess, this family of updates will bring up the whole system to a new version. They contain a whole system image, with </span><code class="literal"><span>system</span></code><span>, </span><code class="literal"><span>boot</span></code><span>, and </span><code class="literal"><span>recovery</span></code><span> partitions.</span></p>
+
+  <p><span>To install these updates, the system needs to be able to properly boot the Recovery system and simply read and apply the update file.</span></p>
+
+  <p><span>Even if it is a full system update, the user partition is not affected and no app or user data is erased.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Updating the system incrementally</span></h3>
+
+  <p><span>These updates are somewhat smaller than the full system ones and their goal is to apply patches to specific system components. Being tailored for a specific version of the operating system and a specific version of the file to be patched, these updates cannot be randomly applied to available devices.</span></p>
+
+  <p><span>To enforce this constraint, before installing such update files, the system checks for the correct file versions and any other possible requirement needed by the update. If some requirement is not satisfied, Android notifies the user with an error icon and the update procedure is aborted.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Applying a single component update</span></h3>
+
+  <p><span>An OTA update package is a standard </span><code class="literal"><span>.zip</span></code><span> file containing a </span><code class="literal"><span>META-INF/com/Google/Android/update-binary</span></code><span> file. Once Android has verified the ZIP file signature, it decompresses the file in </span><code class="literal"><span>/tmp</span></code><span> and executes it. A few arguments are passed to the command line. These are:</span></p>
+
+  <ul>
+    <li><span>Update-binary API version number</span></li>
+
+    <li><span>The command line file descriptor, to communicate with the command line, to send progress updates to the UI</span></li>
+
+    <li><span>The filename</span></li>
+  </ul>
+
+  <p><span>In the same folder as </span><code class="literal"><span>update-binary</span></code><span>, there is another interesting file—</span><code class="literal"><span>updater-binary</span></code><span>. This file contains the sequence of actions to perform to install the update. All these actions are expressed in </span><code class="literal"><span>Edify</span></code><span>, a custom </span><span class="strong"><strong><span>Domain Specific Language</span></strong></span><span> (</span><span class="strong"><strong><span>DSL</span></strong></span><span>) that Google created for this task. As is usual in the open source world, Google documented everything about this language and you can find the documentation in </span><code class="literal"><span>/bootable/recovery/edify</span></code><span>.</span></p>
+
+  <p><span>The truth is that Recovery can execute every statically-linked binary named </span><code class="literal"><span>update-library</span></code><span>. Leveraging this opportunity, lots of developers prefer to use different languages, which they are more familiar with, to perform all the operations needed to apply the update.</span></p>
+
+  <p><span>In the next pages we will see examples of both possible scenarios, using Google's Edify or a custom solution.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Creating over the air updates</span></h2>
+
+  <p><span>Google provided plenty of developer tools to generate the different types of OTA. If you want to generate a </span><span class="emphasis"><em><span>Full Update OTA</span></em></span><span>, the following two steps are required:</span></p>
+
+  <ol>
+    <li><span>Generate a ZIP file containing the full update files</span></li>
+
+    <li><span>Generate the OTA package with all the necessary toolsets for the update</span></li>
+  </ol>
+
+  <p><span>To generate the </span><code class="literal"><span>zip</span></code><span> file containing the chosen target files, navigate to the </span><code class="literal"><span>root</span></code><span> folder of the AOSP sources and run the following commands:</span></p>
+  <pre><span class="strong"><strong>. build/envsetup.sh &amp;&amp; lunch aosp-shamu</strong></span>
+<span class="strong"><strong>mkdir dist_output</strong></span>
+<span class="strong"><strong>make dist DIST_DIR=dist_output</strong></span>
+</pre>
+
+  <p><span>If the process has been successful, we should have the </span><code class="literal"><span>zip</span></code><span> file containing the target files in the directory </span><code class="literal"><span>dist_output</span></code><span>. As an example, let's try listing the folder content with the following command:</span></p>
+  <pre><span class="strong"><strong>ls -l dist_output/*target_files*</strong></span>
+</pre>
+
+  <p><span>Now we should see a </span><code class="literal"><span>.zip</span></code><span> file that will also have in its name the name of the target we are compiling for.</span></p>
+
+  <p><span>At this point, you only need to generate the OTA package containing all the necessary files for the update. Among the available tools, there's a utility that will help us do so, through the following command:</span></p>
+  <pre><span class="strong"><strong>./build/tools/releasetools/ota_from_target_files \</strong></span>
+<span class="strong"><strong>    dist_output/aosp_shamu-target_files-eng.esteban.zip ota_update.zip</strong></span>
+</pre>
+
+  <p><span>As shown here, you'll find the screen with the generated OTA package and the command output:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_107.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_107" style="max-width:777px;max-height:218px"/></div>
+
+  <p><span>Now we have our OTA package ready to be installed on </span><span class="emphasis"><em><span>development devices</span></em></span><span>, because the default OTA is signed with </span><span class="emphasis"><em><span>test keys</span></em></span><span>. If you want to provide your users with an installable OTA package, you need to sign the OTA with your </span><span class="emphasis"><em><span>own private keys</span></em></span><span>, using the specific option provided by the OTA-generation tool.</span></p>
+
+  <p><span>In order to generate an </span><span class="strong"><strong><span>incremental OTA</span></strong></span><span>, the procedure is nearly the same, except that you also need to indicate the ZIP file containing the previous OTA version. The command will be something like the following:</span></p>
+  <pre><span class="strong"><strong>./build/tools/releasetools/ota_from_target_files \</strong></span>
+<span class="strong"><strong>    -i PREVIOUS-aosp-shamu-target_files.zip \ </strong></span>
+<span class="strong"><strong>    dist_output/aosp-shamu-target_files.zip incremental_ota_update.zip</strong></span>
+</pre>
+
+  <p><span>As for our previous example, you'll get a ZIP file containing the incremental backup.</span></p>
+
+  <p><span>Finally, there are no predefined tools for the composition of the </span><code class="literal"><span>Update OTA</span></code><span> package, as it's up to us to decide what to install/update through the update script, which we will examine in detail later.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>OTA internals</span></h3>
+
+  <p><span>As anticipated in the previous section, an OTA package contains a binary file in its folder tree:</span></p>
+  <pre>META-INF/com/google/android/update-binary</pre>
+
+  <p><span>This binary file is generated by Android's build system, in the </span><code class="literal"><span>bootable/recovery/updater</span></code><span> folder, and it is used to properly perform the update.</span></p>
+
+  <p><span>The binary contains internal routines and an interpreter for the scripting language called </span><code class="literal"><span>Edify</span></code><span>. This language supports a set of ad hoc commands in order to allow the correct execution of a system update without affecting the integrity of the system itself. You can find an example of an Edify script in one of the OTA ZIP files you have just generated, at:</span></p>
+  <pre>META-INF/com/google/android/updater-script</pre>
+
+  <p><span>Shown here is an example screenshot for an Edify script:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_108.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_108" style="max-width:1000px;max-height:487px"/></div>
+
+  <p><span>Usually, we don't need to manually write any Edify code, because in a standard scenario there are automated tools that generate the correct OTA packages containing all the necessary files, but it could be useful to manually modify them when debugging, or in case we are building our custom ROM from binaries and we need to customize the installation on the flash memory of the relative files.</span></p>
+
+  <p><span>Let's have a look at the Edify syntax in the next section.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Edify syntax</span></h4>
+
+  <p><span>The first thing to know is that Edify evaluates every expression as all string type values. An empty string is considered as </span><code class="literal"><span>false</span></code><span> in a Boolean context, while any other value is considered as </span><code class="literal"><span>true</span></code><span>. To recapitulate, Edify supports all the following expression types:</span></p>
+  <pre>(expr )
+ expr + expr  # string concatenation, not integer addition
+ expr == expr
+ expr != expr
+ expr &amp;&amp; expr
+ expr || expr
+ ! expr
+ if expr then expr endif
+ if expr then expr else expr endif
+ function_name(expr, expr,...)
+ expr; expr</pre>
+
+  <p><span>Every string that contains the following type of character, which of course are not reserved words, are considered as string literal:</span></p>
+  <pre>a-z, A-Z, 0-9, _, :, /, .</pre>
+
+  <p><span>With reserved words, we refer to words such as </span><code class="literal"><span>if else</span></code><span>, and </span><code class="literal"><span>endif</span></code><span>.</span></p>
+
+  <p><span>Constant strings can also be written using </span><span class="emphasis"><em><span>double-quotes</span></em></span><span>, in order to create strings with spaces or other characters not listed in the previous example, such as the following:</span></p>
+  <pre>\n, \t,</pre>
+
+  <p><span>It can also be respectively written as follows for the new line and tab:</span></p>
+  <pre>\", \\ </pre>
+
+  <p><span>As an escape character, we use </span><code class="literal"><span>"</span></code><span> and </span><code class="literal"><span>\</span></code><span> in a string written with </span><span class="emphasis"><em><span>double-quotes</span></em></span><span>.</span></p>
+
+  <p><span>The operators are simply short-circuiting, that is, the right side isn't even considered if the logic result is determined by the left side of the expression. The syntax can be very concise, as shown in the following snippet; the two lines are equivalent:</span></p>
+  <pre>a1 &amp;&amp; a2
+if a1 then a2 endif</pre>
+
+  <p><span>The </span><code class="literal"><span>;</span></code><span> character is a sequence point, meaning that what's at its left is considered before, and what's at its right is considered after.</span></p>
+
+  <p><span>Let's see a richer example:</span></p>
+  <pre>show_progress(0.750000, 0);
+ui_print("Android Shamu");
+mount("ext4", "EMMC", "/dev/block/…/system", "system");
+unmount("/system");</pre>
+
+  <p><span>The interpreter contains all the functions that are necessary to complete a correct update. Unless differently specified, the functions usually render </span><code class="literal"><span>true</span></code><span> in case of success and </span><code class="literal"><span>false</span></code><span> in case of error.</span></p>
+
+  <p><span>The language provides utility methods to control the flow and manage edge situations. If, for example, we want to trigger an error to block the installation, we can use the following functions:</span></p>
+  <pre>abort();
+assert();</pre>
+
+  <p><span>As you can expect, in case you want to add a new feature, you can do that by modifying the sources, but before that, let's have a look at some of the most useful functions already available:</span></p>
+
+  <ul>
+    <li><code class="literal"><span>abort([msg])</span></code><span>: This method gives you the opportunity to abort the currently running script. It also takes a string argument, </span><code class="literal"><span>msg</span></code><span>, that can be shown to the user as further information about the abort.</span></li>
+
+    <li><code class="literal"><span>assert(expr[, expr, ...])</span></code><span>: This method takes a list of expressions as argument and evaluates them one by one. If any of these expressions fail, or returns </span><code class="literal"><span>false</span></code><span>, the whole script execution stops. The system also shows an "Assert failed" message and the assert text that just failed.</span></li>
+
+    <li><code class="literal"><span>apply_patch(src_file, tgt_file, tgt_sha1, tgt_size, patch1_sha1, patch1_blob, [...])</span></code><span>: This method takes a </span><code class="literal"><span>patch1_blob</span></code><span> file and applies it as a binary patch to the source file </span><code class="literal"><span>src_file</span></code><span> to produce the target </span><code class="literal"><span>tgt_file</span></code><span>.</span></li>
+
+    <li><code class="literal"><span>delete_recursive([dirname, ...])</span></code><span>: This function takes a list of folder names as argument and deletes them, also deleting every single file they contain.</span></li>
+
+    <li><code class="literal"><span>file_getprop(filename, key)</span></code><span>: This method can be considered as a properties file inspector. It takes a couple of arguments, a filename and a key, and scans the file as if it were a property file, looking for the provided key. If the key is found, its value is returned.</span></li>
+
+    <li><code class="literal"><span>format(fs_type, partition_type, location, fs_size, mount_point)</span></code><span>: This method provides a powerful way to format partitions.</span></li>
+
+    <li><code class="literal"><span>ifelse(cond, e1[, e2])</span></code><span>: This method represents the common </span><code class="literal"><span>it-then-else</span></code><span> computer science statement.</span></li>
+
+    <li><code class="literal"><span>is_mounted(mount_point)</span></code><span>: This method helps to detect mounted partitions.</span></li>
+
+    <li><code class="literal"><span>mount(fs_type, partition_type, name, mount_point)</span></code><span>: This method mounts a filesystem of </span><code class="literal"><span>fs_type</span></code><span> at </span><code class="literal"><span>mount_point</span></code><span>.</span></li>
+
+    <li><code class="literal"><span>rename(src_filename, tgt_filename)</span></code><span>: This method takes two arguments, to perform a renaming from </span><code class="literal"><span>src_filename</span></code><span> to </span><code class="literal"><span>tgt_filename</span></code><span>.</span></li>
+
+    <li><code class="literal"><span>run_program(path[, arg, ...])</span></code><span>: This method executes the binary at path, passing </span><code class="literal"><span>args</span></code><span>, and it returns the program's exit status.</span></li>
+
+    <li><code class="literal"><span>sleep(secs)</span></code><span>: This method takes an integer, </span><code class="literal"><span>secs</span></code><span>, as an argument and pauses the execution for </span><code class="literal"><span>secs</span></code><span> seconds.</span></li>
+
+    <li><code class="literal"><span>symlink(target[, source, ...])</span></code><span>: This method takes a </span><code class="literal"><span>target</span></code><span> file and a list of </span><code class="literal"><span>sources</span></code><span> and creates all sources as </span><span class="emphasis"><em><span>symlinks</span></em></span><span> to target.</span></li>
+
+    <li><code class="literal"><span>unmount(mount_point)</span></code><span>: This is the counterpart of </span><code class="literal"><span>mount</span></code><span>. This method unmounts the filesystem mounted at </span><code class="literal"><span>mount_point</span></code><span>.</span></li>
+
+    <li><span>This is just a subset of all the available commands. If you are curious about the whole list, you can check the official Google documentation at </span><a class="ulink" href="http://source.android.com/devices/tech/ota/inside_packages.html"><span>http://source.android.com/devices/tech/ota/inside_packages.html</span></a><span>.</span></li>
+  </ul>
+
+  <p><span>We are now able to modify—or create from scratch—an </span><span class="emphasis"><em><span>Edify</span></em></span><span> script for an Update installation. This knowledge will turn out to be very useful with the custom ROM, especially when the sources are not available, in case you want to modify the system through a custom recovery, installing specific files in the read-only system partitions.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>OTA for custom ROM</span></h3>
+
+  <p><span>As already anticipated, out of the OTA concept we get a convenient system for the custom ROM installation. The reason for this is that most custom ROMs are distributed as </span><span class="emphasis"><em><span>Update</span></em></span><span> ZIP packages, to be fed to the custom Recovery, which will then take care of the package installation in the system. Analyzing the OTA structure—as we did in the previous section—we can intuitively understand how to organize a specific package to install a modified version of Android. In fact, through an ad hoc Edify script, it is possible to format and reinstall all the files that are contained in any system partition, in order to distribute your own modified Android version.</span></p>
+
+  <p><span>This task is left as an exercise to the reader as it can be achieved with the knowledge acquired so far.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Advanced ROM customization</span></h2>
+
+  <p><span>In the previous chapters, you have made your first steps within the custom ROMs world; we have discovered what's already available online and analyzed the most characteristic aspects in detail. In this chapter we will go in deep and learn how to modify the most internal parts of Android's framework.</span></p>
+
+  <p><span>Custom ROMs are often associated with those "</span><span class="emphasis"><em><span>hackers</span></em></span><span>" who add the most unexpected features and then share everything online, but it doesn't always happen like that.</span></p>
+
+  <p><span>As explained in the previous chapters, many device manufacturers propose their own modified Android version, which is nothing but an Android custom ROM.</span></p>
+
+  <p><span>This is a very important aspect, as this book is addressed both to the previously mentioned </span><span class="emphasis"><em><span>hackers</span></em></span><span> and to those who use all this knowledge in their daily work—a </span><span class="emphasis"><em><span>hacker</span></em></span><span> will often work with binary ROM, and rarely with sources, while the professional will certainly have the sources at their disposal, as well as all the relevant tools to make the development of additional features possible.</span></p>
+
+  <p><span>In the following section, we will try to explain the two different approaches to customization in a simple way. These are: from the sources and from binary.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>ROM customization from binary</span></h3>
+
+  <p><span>To modify a ROM starting from binary, we regrettably have few available choices. As we don't have the sources to generate the different images, we can only modify the filesystem, adding utilities and new apps, or making aesthetic changes to colors and icons, starting from the framework binary.</span></p>
+
+  <p><span>We can use the tools we saw in the previous chapter and apply all the required changes, then, when we are done, we can generate a package </span><code class="literal"><span>update.zip</span></code><span> with the correct Edify script, that allows the installation of new features.</span></p>
+
+  <p><span>Furthermore, we can also add new applications both in </span><span class="emphasis"><em><span>Java</span></em></span><span> and </span><span class="emphasis"><em><span>C</span></em></span><span>, or enhance the system image adding a </span><code class="literal"><span>BASH</span></code><span> environment, or copy in the </span><code class="literal"><span>/system</span></code><span> partition updated application like </span><span class="emphasis"><em><span>Gmail</span></em></span><span> or </span><span class="emphasis"><em><span>Maps</span></em></span><span>, that might eat space in the </span><code class="literal"><span>/data</span></code><span> partition.</span></p>
+
+  <p><span>Even if the possibilities are limited in this kind of scenario, starting from a binary image, we can try some optimization and tweak, as we will see in the upcoming sections.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Customizing ROM from source</span></h3>
+
+  <p><span>If you have the source code, you can do almost anything, but as you know,</span></p>
+
+  <div class="blockquote">
+    <blockquote class="blockquote">
+      <p><span class="emphasis"><em><span>"With great power comes great responsibility"—Uncle Ben, Spider-Man.</span></em></span></p>
+    </blockquote>
+
+    <p><span>The first step is to identify the part we want to modify, and consequently, its repository. Let's take, for example Android's </span><code class="literal"><span>Settings</span></code><span> menu, which we will keep as a master example to modify our ROM. The source code of </span><code class="literal"><span>Settings.apk</span></code><span> is in the following path:</span></p>
+    <pre>packages/apps/Settings</pre>
+
+    <p><span>Once the source code path, and so, the repository, have been identified, the best way to start your customization is to mirror the repository on your server, where you will then operate the changes to the code.</span></p>
+
+    <p><span>In order to make sure your repository is part of the Android system, you need to update the </span><code class="literal"><span>manifest.xml</span></code><span>, so that when you sync again with "</span><span class="emphasis"><em><span>repo</span></em></span><span>", you will clone your own </span><code class="literal"><span>Settings</span></code><span> version, and not Android's.</span></p>
+
+    <p><span>After that, you need to create another personal repository, where you'll keep your manifest, modifying the following line:</span></p>
+    <pre>&lt;project path="packages/apps/Settings" name="platform/packages/apps/Settings" groups="pdk-fs" /&gt;</pre>
+
+    <p><span>Here you see where the code will be locally downloaded:</span></p>
+    <pre>project path="packages/apps/Settings"</pre>
+
+    <p><span>And here, its remote location:</span></p>
+    <pre>name="platform/packages/apps/Settings"</pre>
+
+    <p><span>You'll notice that there isn't a link in the remote position, because we'll use the default one, defined at the top as follows:</span></p>
+    <pre>&lt;remote name="aosp" fetch=".." /&gt;
+&lt;default revision="refs/tags/android-6.0.0_r6" remote="aosp" sync-j="4" /&gt;</pre>
+
+    <p><span>As you can see, </span><code class="literal"><span>fetch</span></code><span> refers to the parent folder "</span><code class="literal"><span>..</span></code><span>" instead of an absolute path. The best thing to do to simplify our work is to add a remote as follows:</span></p>
+    <pre>&lt;remote  name="my_repo-github" fetch="git://github.com/my_personal_repo/" /&gt;</pre>
+
+    <p><span>In this way, we have defined our remote, and we only have to fix the </span><code class="literal"><span>Settings</span></code><span> line like this:</span></p>
+    <pre>&lt;project path="packages/apps/Settings" name="my_repo_Settings" remote="my_repo-github" /&gt;</pre>
+
+    <p><span>We now have all the necessary configuration in place to proceed with the development: we have our separate repository, where we can develop the code, but most importantly, thanks to the modification in the manifest, we don't have to touch the remaining managed parts of the system managed by Google, so that the update of other components of Google is made simple and smooth.</span></p>
+
+    <h3 class="Title-2 sigil_not_in_toc"><span>Adding new packages to Android's build system</span></h3>
+
+    <p><span>The first step is to add a package to Android's build system, so that, when we perform our build, it will be automatically compiled and added to the ROM, just as it happens with other applications. We can work on two levels: adding a system app as a compiled binary app, written in </span><span class="emphasis"><em><span>C</span></em></span><span>, or adding a system app as an </span><span class="emphasis"><em><span>Application Layer</span></em></span><span> that runs on Android Dalvik Machine and ships as an APK.</span></p>
+
+    <p><span>In order to create an Android application, the first thing to do is to prepare the environment for writing the code and generate the APK file that will be executed by Android's internal virtual machine. We are going to develop a standard Android app using Java, Android Studio, and Android SDK.</span></p>
+
+    <h4 class="Title-3 sigil_not_in_toc"><span>Adding a package by binary</span></h4>
+
+    <p><span>While developing a custom ROM, you might need to add binary executables or applications you don't have the source code for. For example, you might want to add a particular application as the default application for a specific task, so that when the user boots the ROM, the application is already installed into the system. We can refer to the </span><code class="literal"><span>Facebook</span></code><span> application as an example of this.</span></p>
+
+    <p><span>To successfully add a new application to your system image, you just need to get the </span><code class="literal"><span>APK</span></code><span> file and copy it in the right ROM directory. You can do that with an </span><code class="literal"><span>update.zip file</span></code><span>, adding the right Edify script, which will install the new APK—as we'll see later in more detail—or, as already anticipated in the previous chapters, you can perform the entire operation through Android's build system.</span></p>
+
+    <p><span>The first step is to write the correct </span><code class="literal"><span>Android.mk</span></code><span>; let's imagine we have our APK file at the following path:</span></p>
+    <pre><span class="strong"><strong>&lt;aosp-root&gt;/package/app/myapkfolder/</strong></span>
+</pre>
+
+    <p><span>Once your APK is in place, you need to create an </span><code class="literal"><span>Android.mk</span></code><span> file and add the following snippet:</span></p>
+    <pre>LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE := &lt; your app folder name &gt;
+LOCAL_SRC_FILES := &lt; app apk filename &gt;
+LOCAL_MODULE_CLASS := APPS
+LOCAL_MODULE_SUFFIX := $(COMMON_ANDROID_PACKAGE_SUFFIX)
+include $(BUILD_PREBUILT)</pre>
+
+    <p><span>Analyzing the snippet, you will notice a couple of placeholders you will need to replace with your actual values. After that you'll need to create a new entry in the </span><code class="literal"><span>commons.mk</span></code><span> file, situated in:</span></p>
+    <pre>build/target/product</pre>
+
+    <p><span>Add the new APK installation-related line, as follows:</span></p>
+    <pre>PRODUCT_PACKAGES += &lt; what you have defined in LOCAL_MODULE &gt;</pre>
+
+    <p><span>At this point, you only have to recompile the AOSP to find the new APK in the system, preinstalled among the other system apps.</span></p>
+
+    <p><span>Another very common and handy way to add a precompiled app to our ROM is doing it with the help of the Android update system. Provided that you have already installed a custom recovery image—which will make all your operations easier—to add a new binary to Android's </span><code class="literal"><span>/system/xbin</span></code><span> directory, you only need to create an </span><code class="literal"><span>update.zip</span></code><span> with an Edify script inside to perform the right operations.</span></p>
+
+    <p><span>Here you'll see an Edify script that performs a precompiled app installation in the target folder </span><code class="literal"><span>/system/xbin</span></code><span>. The script is contained in:</span></p>
+    <pre>META-INF/com/google/android/</pre>
+
+    <p><span>The script contains the following code:</span></p>
+    <pre>ui_print("Edify Script for binary installation");
+ui_print("Flashing a binary");
+show_progress(0.700000, 0);
+ui_print("mounting /system");
+mount("ext4", "EMMC", "/dev/block/system", "/system");
+ui_print("");
+ui_print("Installing binary");
+package_extract_dir("system", "/system");
+ui_print("unmounting system");
+unmount("/system");
+ui_print("unmounted system");
+ui_print("Operations completed!");</pre>
+
+    <p><span>The internal structure of the </span><code class="literal"><span>update.zip</span></code><span> file will look like this:</span></p>
+    <pre>update.zip
+---&gt; META-INF/com/google/android/update-script
+---&gt; META-INF/com/google/android/updater-script
+---&gt; system/xbin/mybinary</pre>
+
+    <p><span>Once the update package has been created, you only need to apply it through the recovery custom that is installed on your device. As you have surely noted, the same approach, "</span><span class="emphasis"><em><span>edify script + update.zip + recovery</span></em></span><span>", is used over and over, and this shows how Android's update system is solid and flexible and comes in handy for a huge number of tasks and scenarios; but we can go even further.</span></p>
+
+    <p><span>There's yet another procedure, that we might define as "</span><span class="emphasis"><em><span>dirty</span></em></span><span>", which allows even more complex installations. You would still use the procedure of the update package, but instead of using the Edify syntax, which might often be inconvenient and not so powerful for advanced scenarios, you will redefine the content of the </span><code class="literal"><span>update-script</span></code><span> binary.</span></p>
+
+    <p><span>As you know, this binary, that by default contains the interpreter to execute the Edify script, is launched by the system. This "</span><span class="emphasis"><em><span>dirty</span></em></span><span>" technique consists of replacing this binary with a shell script that performs the operations you need. With this alternative approach, you have the very powerful shell scripting language at your disposal, and let's consider that some recovery custom includes the Bash—as shell—which will hence work as the interpreter.</span></p>
+
+    <p><span>The following is an example of the </span><code class="literal"><span>busybox</span></code><span> installation in the Android system, using an ad hoc </span><code class="literal"><span>update.zip</span></code><span>, with a shell script that operates the installation:</span></p>
+    <pre>#!/sbin/sh
+
+FD=$2
+
+ui_print() {
+  echo -n -e "ui_print $1\n" &gt; /proc/self/fd/$FD
+  echo -n -e "ui_print\n" &gt; /proc/self/fd/$FD
+}
+
+set_perm() {
+  chown $1:$2 $4
+  chmod $3 $4
+}
+
+ui_print "- Mounting /system"
+mount /system
+
+ui_print "- Installing BusyBox"
+unzip -o "$3" busybox -d /system/xbin
+
+ui_print "- Setting right permissions -"
+set_perm 0 2000 0755 /system/xbin/busybox
+
+ui_print "- Symlinking BB applets"
+for i in $(/system/xbin/busybox --list); do
+  busybox ln -sf busybox "/system/xbin/$i"
+done
+
+ui_print "- Unmounting /system"
+umount /system
+
+ui_print "- BusyBox Installation complete -"</pre>
+
+    <p><span>This script will replace our </span><code class="literal"><span>update-script</span></code><span> and will operate the binary installation. As a result, the update package will have the following structure:</span></p>
+    <pre>update.zip
+---&gt; META-INF/com/google/android/update-script
+---&gt; busybox</pre>
+
+    <p><span>Thus, we can perform the most complex installations, and it turns out to be one of the most used methods by the Android ROM "modders".</span></p>
+
+    <h4 class="Title-3 sigil_not_in_toc"><span>Adding packages by source code</span></h4>
+
+    <p><span>In system from source. In this section, we will make a real example by creating a </span><code class="literal"><span>Hello World</span></code><span> application, with the help of Android Studio, which we will import and compile together with the entire Android system.</span></p>
+
+    <p><span>First, we need to create a base application with Android Studio.</span></p>
+
+    <p><span>For the installation instructions, please read the following link: </span><a class="ulink" href="http://developer.android.com/sdk/index.html"><span>http://developer.android.com/sdk/index.html</span></a><span>.</span></p>
+
+    <p><span>When your system is ready, launch the IDE and create a new project:</span></p>
+
+    <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_109.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_109" style="max-width:809px;max-height:714px"/></div>
+
+    <p><span>The previous image shows how to specify an app name, a domain, and a path folder for our Android project. Once you have entered all the data, you can click </span><span class="strong"><strong><span>Next</span></strong></span><span> and move to the API level selection, as shown here:</span></p>
+
+    <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_110.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_110" style="max-width:809px;max-height:714px"/></div>
+
+    <p><span>As shown in the previous image, by default Android Studio will target API 16 to cover more than 95% of the market. This value doesn't really matter in our scenario, because this app will be installed only in our custom ROM, that is probably Android 6. Let's move to the next screen—Activity Picker:</span></p>
+
+    <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_111.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_111" style="max-width:811px;max-height:715px"/></div>
+
+    <p><span>The previous image shows the plethora of possible activities we can easily add to our apps. For this example, we will use just an </span><span class="strong"><strong><span>Empty Activity</span></strong></span><span>, to keep things simple:</span></p>
+
+    <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_112.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_112" style="max-width:810px;max-height:712px"/></div>
+
+    <p><span>The previous image shows how to rename our brand new activity—</span><code class="literal"><span>MainActivity</span></code><span> will do the job flawlessly. Just click </span><span class="strong"><strong><span>Finish</span></strong></span><span> and Android Studio will bring you to the editor screen to add some code to your </span><code class="literal"><span>Hello, World</span></code><span> app:</span></p>
+
+    <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_113.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_113" style="max-width:800px;max-height:311px"/></div>
+
+    <p><span>The previous image shows how to display a </span><code class="literal"><span>Toast</span></code><span> message when our app starts; nothing fancy, but it's enough to give you an idea about how things can be made easy with the proper tool set and knowledge.</span></p>
+
+    <p><span>When your app is ready, just click the </span><span class="strong"><strong><span>Run</span></strong></span><span> button and start building your APK file. Test it as much as you can and when you are satisfied with the results, copy the source code to the AOSP source code folder:</span></p>
+    <pre>&lt;aosp&gt;/package/apps/Myapp</pre>
+
+    <p><span>With your current know-how, you are able to update the manifest file to add this app to the Android build system.</span></p>
+
+    <p><span>The final touch is the </span><code class="literal"><span>Android.mk</span></code><span> file. For this </span><code class="literal"><span>Hello,World</span></code><span> example, just create a new file as follows:</span></p>
+    <pre>&lt;aosp&gt;/package/apps/Myapp/Android.mk</pre>
+
+    <p><span>Add the following snippet:</span></p>
+    <pre>  LOCAL_PATH := $(call my-dir)
+  include $(CLEAR_VARS)
+  
+  # Build all java files in the java subdirectory
+  LOCAL_SRC_FILES := $(call all-subdir-java-files)
+  
+  # Name of the APK to build
+  LOCAL_PACKAGE_NAME := LocalPackage
+  
+  # Tell it to build an APK
+  include $(BUILD_PACKAGE)</pre>
+
+    <p><span>Using Android's build system, you are now able to build and package your own Android apps for your custom ROM.</span></p>
+  </div></div>
+<div><div class="blockquote"/>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Hacking the Android framework</span></h2>
+
+  <p><span>In these customizations were related to the User Interface. UI customization is a tricky topic due to the </span><span class="emphasis"><em><span>personal taste</span></em></span><span> factor involved: many users love a "</span><span class="emphasis"><em><span>pure Android</span></em></span><span>" UI, many other users love the idea of a "</span><span class="emphasis"><em><span>different Android</span></em></span><span>" UI, far from the mainstream UI experience.</span></p>
+
+  <p><span>In this section, we are giving you free will and the chance to choose between a vanilla Android and a customized one. You will learn how to make small customizations, to the status bar or to the colors, for example, or big customizations, like adding a new item to the </span><span class="strong"><strong><span>Settings</span></strong></span><span> menu to properly set up the custom features of your custom ROM.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Customizing the boot sequence UI</span></h3>
+
+  <p><span>The graphical appearance of the ¾¦+ boot sequence is definitely one of the most popular customizations you'd like to do and often the one that your users will ask for and will love.</span></p>
+
+  <p><span>During the boot sequence, a standard Android device will show:</span></p>
+
+  <ul>
+    <li><span>The Splash image</span></li>
+
+    <li><span>The Boot animation</span></li>
+  </ul>
+
+  <p><span>The Splash image is a static image that the system shows in the first seconds after Power On. On a Google Nexus device, the Splash image looks like the following image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_114.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_114" style="max-width:656px;max-height:1164px"/></div>
+
+  <p><span>The image shows the Google brand and a lock. As we already learned, the lock represents the status of the </span><span class="emphasis"><em><span>bootloader</span></em></span><span>—locked or unlocked. The Splash image is associated to the initial phases of the boot—typically, the system shows the Splash image from the Power On to the completion of the bootloader and Linux kernel setup sequence.</span></p>
+
+  <p><span>Customizing the ¾¦+ Splash image is no easy thing, because even if theoretically it's just an image, or a sequence of images, stored on the NAND memory, every manufacturer uses a custom approach to accomplish this goal and they are very unwilling to document how we could revert their work. What is extremely easy for them, having plenty of tools and knowledge about their system, becomes hours and hours of reverse engineering for us, with unpredictable results and effects on the stability of the whole system.</span></p>
+
+  <p><span>Turning our attention to the boot animation, we can see that the boot animation is that sequence of images, most of the time animated, that any Android device shows during the startup sequence, right after the Splash image and until the Android system completes boot. Many manufacturers customize this animation to enforce their brand, and you will do the same with your </span><span class="emphasis"><em><span>own brand</span></em></span><span>. From a technical point of view, the moment you see the boot animation, the kernel has been loaded, the partitions have been mounted, and Android is starting to boot.</span></p>
+
+  <p><span>This sequence of images is way easier to customize compared to the Splash image. This is due to the fact that, even if the majority of the device has a custom boot animation, every single one of them respect very strict known requirements—that means that we have documentation for this!</span></p>
+
+  <p><span>As with lots of Android components, the boot animation comes as a standard </span><code class="literal"><span>.zip</span></code><span> file and is placed in the </span><code class="literal"><span>/system/media/</span></code><span> folder or in the </span><code class="literal"><span>/data/local/</span></code><span>. All we need to customize the boot animation is to grab it, edit it as we like, and place it back—piece of cake!</span></p>
+
+  <p><span>To retrieve the file, we can use our trusted </span><code class="literal"><span>adb</span></code><span>. Fire up your terminal and run the following command:</span></p>
+  <pre>adb pull /system/media/bootanimation.zip .</pre>
+
+  <p><span>Of course, if the file is not there, try the second possible location, as we said previously. Once you have the file on your host computer, you can decompress it and you will see the same folder structure as shown in the following image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_115.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_115" style="max-width:678px;max-height:354px"/></div>
+
+  <p><span>All those </span><code class="literal"><span>part*</span></code><span> folders contain the images that create the animation, and the </span><code class="literal"><span>desc.txt</span></code><span> file contains the instructions to properly perform the animation.</span></p>
+
+  <p><span>Open the </span><code class="literal"><span>desc.txt</span></code><span> file with your preferred text editor and you will see something like the following image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_116.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_116" style="max-width:691px;max-height:269px"/></div>
+
+  <p><span>The first row specifies the resolution and the frame rate at which the animation will be displayed. Lines </span><code class="literal"><span>2</span></code><span> to </span><code class="literal"><span>6</span></code><span> specify how to show the different parts of the animation.</span></p>
+
+  <p><span>The first letter, "</span><code class="literal"><span>c</span></code><span>", stands for "continue", and instructs the system to keep playing the sequence even if the boot sequence is completed.</span></p>
+
+  <p><span>The first number specifies how many times the part has to be repeated. In the example, just once, or infinite time (using 0 as the value to indicate an infinite loop). The second number specifies how many seconds will be waited before starting the next part. The last token of the row specifies the folder containing the images to show to create the animated sequence.</span></p>
+
+  <p><span>Now that you know about the inner structure of the </span><code class="literal"><span>bootanimation.zip</span></code><span> file and how to set up the sequence, it's time to be creative and replace all those boring images to create your own awesome animation!</span></p>
+
+  <p><span>Once you are satisfied, it's time to create a new </span><code class="literal"><span>bootanimation.zip file</span></code><span>. Fire up your terminal and run the following command:</span></p>
+  <pre><span class="strong"><strong>zip -r -0 bootanimation.zip part0 part1 partX desc.txt</strong></span>
+</pre>
+
+  <p><span>Carefully, replace </span><code class="literal"><span>partx</span></code><span> with the correct sequence of folders you have in your animated sequence. To try out your brand new boot animation, just upload the </span><code class="literal"><span>zip</span></code><span> file to </span><code class="literal"><span>/data/local/</span></code><span> folder using </span><code class="literal"><span>adb</span></code><span>. You could even create a custom </span><code class="literal"><span>update.zip</span></code><span> and flash it to your device using Recovery. It's up to you.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Note</span></h4>
+
+  <p><span>FFMPEG is a handy tool to extract images from a video to create your animated sequence. Fire up a terminal and run the following:</span></p>
+  <pre><span class="strong"><strong>ffmpeg -i "path_file" -r 1 -s 1024x768 -f image2 "path_images-=.jpg"</strong></span>
+</pre>
+
+  <p><span>The previous command specifies a few interesting parameters: </span><code class="literal"><span>-r 1</span></code><span> to capture a frame every second, </span><code class="literal"><span>-s</span></code><span> to specify a resolution for the final images, and </span><code class="literal"><span>-f image2</span></code><span> to actually capture a frame and save it as an image. As always, you can refer to </span><code class="literal"><span>–h</span></code><span> for further documentation.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Customizing the Android Settings menu</span></h3>
+
+  <p><span>One great feature of Android is modularity: most of the system features are actually Android apps, developed and maintained separately. The Android </span><code class="literal"><span>Settings</span></code><span> menu, for instance, is just an Android app itself, called </span><code class="literal"><span>Settings.apk</span></code><span>, and, being part of the AOSP, can be freely customized, according to our needs. In the next pages, you will learn how to work on </span><code class="literal"><span>Settings.apk</span></code><span> to add your custom menu item.</span></p>
+
+  <p><span>Open your terminal emulator, and from your </span><code class="literal"><span>WORKING_DIRECTORY</span></code><span> containing Android source code, navigate to:</span></p>
+  <pre>WORKING_DIRECTORY/packages/apps/Settings</pre>
+
+  <p><span>This folder contains the source code of the vanilla </span><code class="literal"><span>Settings</span></code><span> menu; this is your starting point for the customization.</span></p>
+
+  <p><span>This is a crucial example, because, when you are working on a custom ROM, you are improving the system, adding new features, or enhancing existing ones. Your new features will probably need some level of setup and placing all the possible configuration options where the user expects them, that is, the </span><code class="literal"><span>Setting</span></code><span>s menu, which is a fundamental point for a great user experience.</span></p>
+
+  <p><span>The following image shows the vanilla Android </span><code class="literal"><span>Settings</span></code><span> menu, the object of our customization:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_117.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_117" style="max-width:600px;max-height:1066px"/></div>
+
+  <p><span>Once you are in the </span><code class="literal"><span>Settings</span></code><span> menu app folder, </span><code class="literal"><span>packages/apps/Settings</span></code><span>, you can start editing files to add your new menu item. Let's start with adding a few strings. With your preferred editor—Android Studio, Atom, SublimeText, and so on—edit </span><code class="literal"><span>res/values/strings.xml</span></code><span> and add the following lines:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_118.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_118" style="max-width:800px;max-height:108px"/></div>
+
+  <p><span>The </span><code class="literal"><span>strings.xml</span></code><span> file contains the list of every text string used in the </span><code class="literal"><span>Settings</span></code><span> app; it's the perfect starting point for your customization and gives you an idea about naming conventions and structure.</span></p>
+
+  <p><span>Once you are satisfied with the string file, create a new </span><code class="literal"><span>.java</span></code><span> file named </span><code class="literal"><span>CustomSettings.java</span></code><span> and place it in the </span><code class="literal"><span>src/com/android/settings</span></code><span> folder. This will contain all the logic we need. The following image shows a snippet of a custom </span><code class="literal"><span>PreferenceFragment</span></code><span> you can create:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_119.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_119" style="max-width:800px;max-height:431px"/></div>
+
+  <p><span>This </span><code class="literal"><span>Fragment</span></code><span> will load a specific layout file that you need to create. Let's call it </span><code class="literal"><span>custom_settings.xml</span></code><span> and populate it as shown in the next image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_120.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_120" style="max-width:800px;max-height:152px"/></div>
+
+  <p><span>Now you need to add a few lines to the </span><code class="literal"><span>AndroidManifest.xml</span></code><span>. Navigate to the </span><code class="literal"><span>root</span></code><span> folder and edit the </span><code class="literal"><span>AndroidManifest.xml</span></code><span> file as follows:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_121.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_121" style="max-width:800px;max-height:287px"/></div>
+
+  <p><span>Navigate to the main </span><code class="literal"><span>src/</span></code><span> folder and open </span><code class="literal"><span>Settings.java</span></code><span>. This file contains every </span><code class="literal"><span>Activity</span></code><span> available in the </span><code class="literal"><span>Settings</span></code><span> menu. Here you can add your own </span><code class="literal"><span>Activity</span></code><span>, as shown in the next image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_122.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_122" style="max-width:1000px;max-height:782px"/></div>
+
+  <p><span>The </span><code class="literal"><span>src/</span></code><span> contains a </span><code class="literal"><span>SettingsActivity.java</span></code><span> file. At the beginning of this you will find a field, </span><code class="literal"><span>String</span></code><span> array, named </span><code class="literal"><span>ENTRY_FRAGMENTS</span></code><span>. These are all the </span><code class="literal"><span>Fragment</span></code><span>s that can be loaded by the </span><code class="literal"><span>Activity</span></code><span> files in the </span><code class="literal"><span>Settings</span></code><span> menu. The list is quite impressive, and on Android Marshmallow, it contains about 70 </span><code class="literal"><span>Fragments</span></code><span>; in your Android version, it will contain one more entry: yours. Add your </span><code class="literal"><span>CustomSettings</span></code><span> class to the array, as shown in the following screenshot:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_123.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_123" style="max-width:695px;max-height:259px"/></div>
+
+  <p><span>We are almost there. The next thing we need to do is compile the new package with the following command:</span></p>
+  <pre><span class="strong"><strong>:$ mm</strong></span>
+</pre>
+
+  <p><span>Once we have created the new package, we can create a new update file and flash it using Recovery. On the next boot, we will see our brand new menu item in the </span><span class="strong"><strong><span>Settings</span></strong></span><span> screen, as shown in the next screenshot:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_124.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_124" style="max-width:802px;max-height:482px"/></div>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Enhancing the system performance</span></h2>
+
+  <p><span>Lots of the custom ROMs that you can find on the Net bring performance enhancements, extended battery life, and lots of small tweaks. Most of these enhancements can be achieved with a surgical tuning of the </span><code class="literal"><span>build.prop</span></code><span> file.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Customizing the system property file</span></h3>
+
+  <p><span>The Android </span><code class="literal"><span>build.prop</span></code><span> file contains details about a variety of system settings that are applied to the system during the boot sequence. Before diving into its customization, we need an overview about its internal structure.</span></p>
+
+  <p><span>Open a terminal and connect to your device using the following command:</span></p>
+  <pre><span class="strong"><strong>:$ adb shell</strong></span>
+</pre>
+
+  <p><span>Navigate to the </span><code class="literal"><span>/system</span></code><span> folder and open the </span><code class="literal"><span>build.prop</span></code><span> file. The content will look like the following snippet:</span></p>
+  <pre>ro.product.model=Nexus 6
+ro.product.brand=google
+ro.product.name=shamu
+ro.product.device=shamu
+ro.product.board=shamu
+[…]</pre>
+
+  <p><span>As you can guess, parts of these instructions are specific for every device, but a few of them are quite common. We surely have device model name, brand, codename for product, device and board, and so on.</span></p>
+
+  <p><span>Some of these common values can be easily edited to obtain interesting behavioral changes in our system. For instance, you have probably noticed the tiny, but perceivable, delay that happens right before the smartphone starts ringing, when you receive a phone call. That delay can be removed by editing just a few lines in the </span><code class="literal"><span>build.prop</span></code><span> file. Scan the file and look for these two lines:</span></p>
+  <pre>ro.telephony.call_ring.delay=0
+ring.delay=0</pre>
+
+  <p><span>Simply replace whatever value is assigned to them with a nice </span><code class="literal"><span>0</span></code><span> (zero) and you can say goodbye to the delay.</span></p>
+
+  <p><span>Ever wondered why you cannot rotate the screen when the phone is displaying the lock screen or the application launcher? No more wondering. Look for these two lines and replace the existing properties with the new one:</span></p>
+  <pre>log.tag.launcher_force_rotate=VERBOSE
+lockscreen.rot_override=true</pre>
+
+  <p><span>Do you want to rotate your device more than 180 degrees? Enable a 270 degree rotation with the following line:</span></p>
+  <pre>windowsmgr.support_rotation_270=true</pre>
+
+  <p><span>Another UI trick we can achieve with a single line edit is changing the LCD density value. Search for the following line:</span></p>
+  <pre>ro.sf.lcd_density=XXX</pre>
+
+  <p><span>Replace </span><code class="literal"><span>XXX</span></code><span> with the value you want to try. Changing this value will produce a resizing of the system icons and an increase of the screen space: the smaller the value you set, the bigger the amount of free space you get. Unfortunately, there is no exact science here and a little </span><span class="emphasis"><em><span>trial-and-error</span></em></span><span> is inevitable, so try to experiment with a few values until you find your preferred setup.</span></p>
+
+  <p><span>Android devices are getting more powerful every day, but, back in the day, the available CPU power was very limited. To guarantee satisfactory performance and user experience, Android used smart tweaks, like the next one:</span></p>
+  <pre>ro.media.enc.jpeg.quality=xxx</pre>
+
+  <p><span>The previous value alters the rendering quality of JPEG files. Even if it was useful in the past, we can consider it unnecessary on last generation smartphones, and we can safely set it to </span><code class="literal"><span>100</span></code><span> and enjoy images at 100% of their original quality.</span></p>
+
+  <p><span>If your smartphone has physical navigation buttons, you can increase screen estate, removing the navigation softkeys at the bottom of the screen by setting the next property as follows:</span></p>
+  <pre>qemu.hw.mainkeys=1</pre>
+
+  <p><span>If your device has no physical key, you can still remove the softkeys and use gesture to navigate; check out the Google Play Store for gesture apps, like </span><span class="emphasis"><em><span>All in one Gestures</span></em></span><span>. Continuing on the "screen estate" topic, you can remove the </span><code class="literal"><span>debug mode</span></code><span> icon in the system notification bar with the following property:</span></p>
+  <pre>persist.adb.notify=0</pre>
+
+  <p><span>These last two tweaks refer to networking settings. The first one is as follows:</span></p>
+  <pre>wifi.supplicant_scan_interval=300</pre>
+
+  <p><span>This line configures how many seconds will be between every automatic Wi-Fi scan. Android performs automatic Wi-Fi scans by default, looking for an open network to connect or just to increase the precision of the navigation system. You can increase or decrease the frequency of these scans, trying to achieve the perfect balance between a higher precision of navigation and a longer battery life. The second networking tweak gives you the opportunity to set a default DNS server:</span></p>
+  <pre>net.dns1=8.8.8.8
+net.dns2=8.8.4.4</pre>
+
+  <p><span>This is extremely useful in countries in which the government filters Internet websites according to their IP addresses. Using the DNS IPs shown in the previous snippet, Google's DNS servers, you will be able to bypass this kind of censorship.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Adding a custom init sequence</span></h3>
+
+  <p><span>Linux legacy is still strong in a few key aspects of the Android architecture. One of the most interesting ones is the possibility to execute custom scripts during initialization time. If you are familiar with Linux systems, you know about the </span><code class="literal"><span>/etc/init.d</span></code><span> folder. This system folder contains a collection of scripts that can be executed during system startup. To achieve the same behavior on Android, we can use </span><code class="literal"><span>busybox</span></code><span> and its </span><code class="literal"><span>run-parts</span></code><span> utility. This utility takes a folder as an argument and executes every script contained in this folder. For instance, the following command will execute every script contained in </span><code class="literal"><span>the /system/etc/init.d folder</span></code><span>:</span></p>
+  <pre>run-parts /system/etc/init.d</pre>
+
+  <p><span>To properly copy Linux </span><code class="literal"><span>init.d</span></code><span> behavior, we want to be able to execute the scripts in a rigorous order. You can achieve this with clever file naming. Just rename your scripts and prepend a number, like in the following example:</span></p>
+  <pre>01settings
+02optimizations</pre>
+
+  <p><span>In the previous example, the </span><code class="literal"><span>01settings</span></code><span> script will be executed before the </span><code class="literal"><span>02optinimations</span></code><span> script, and so on. Now that you have a collection of ordered scripts and you know how to execute them one by one, you need to edit the </span><code class="literal"><span>install-recovery.sh</span></code><span> file we saw in the previous chapters and add the following line:</span></p>
+  <pre>run-parts /system/etc/init.d</pre>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Advanced Linux kernel modding</span></h2>
+
+  <p><span>When you think about customizing the core of an Android system, you immediately think about customizing the Linux kernel. It manages CPU, sensors, radio, and display, and it's the starting point of every great system customization. As we already saw, modifying the kernel is no easy job, but with the right mindset, knowledge, and toolset, it can be a satisfying experience.</span></p>
+
+  <p><span>Every embedded system has its own customization possibilities and, when it comes to Android, most of the effort is focused on customizing the following:</span></p>
+
+  <ul>
+    <li><span>Governors</span></li>
+
+    <li><span>I/O schedulers</span></li>
+
+    <li><span>CPU overclocking/underclocking</span></li>
+  </ul>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Diving into CPU frequency management</span></h3>
+
+  <p><span>In work, and how you can pick a different one for different scenarios. In this section, you will learn how to customize existing governors and how to add new ones to your systems.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Note</span></h4>
+
+  <p><span>A </span><span class="emphasis"><em><span>governor</span></em></span><span>, or CPU frequency manager, describes how the CPU behaves, based on specific environmental factors.</span></p>
+
+  <p><span>A typical general purpose governor would decrease the number of active cores and their working frequency when the system load is low and push the CPU to full power and full speed when the system is in need of high performance.</span></p>
+
+  <p><span>A standard Linux kernel provides the following governors:</span></p>
+
+  <ul>
+    <li><span class="strong"><strong><span>On-demand</span></strong></span><span>: This is the default governor on most of the kernels on the market. It's considered a </span><span class="emphasis"><em><span>balanced</span></em></span><span> governor because it can guarantee the system to be reactive, quickly increasing the CPU frequency when needed. The truth is that, being so eager to increase the CPU frequency, this governor makes no real evaluation about the CPU power that is actually needed. The on-demand governor does not consider the actual system load; instead it just increases the CPU frequency to the max when it is triggered and then slowly decreases it if not needed. As you can see, this does not work well in a "battery saving" scenario: it is pushing to top speed every time the system thinks it is going to need more power, without a deeper analysis. This approach will surely guarantee a reactive device, but will definitely drain the battery very quickly.</span></li>
+
+    <li><span class="strong"><strong><span>Powersave</span></strong></span><span>: This is definitely the most effective way to save battery life, in a way. This governor sets the maximum CPU frequency to the lowest possible value. The battery will surely last "</span><span class="emphasis"><em><span>an eternity</span></em></span><span>", but the device will be unusable: a 2 GHz Quad-core CPU can easily go down to 200 MHz, and if it stays there all the time, that's just nonsense.</span></li>
+
+    <li><span class="strong"><strong><span>Performance</span></strong></span><span>: This governor behaves as the exact opposite of the </span><span class="emphasis"><em><span>Powersave</span></em></span><span> one: it sets the minimum CPU frequency to the maximum possible value to achieve maximum performance. Battery-wise, this will drain the battery in no time: a 2 GHz Quad-core running all the time at full power is surely performing well, but the smartphone won't last long.</span></li>
+
+    <li><span class="strong"><strong><span>Interactive</span></strong></span><span>: This is a smarter version of the </span><span class="emphasis"><em><span>On-demand</span></em></span><span> governor. Its goal is to provide a reactive CPU scaling without falling into on-demand pitfalls. The On-demand governor changes the CPU frequency according to preset values, without any specific analysis. The interactive governor, instead, continuously evaluates the system load and adjusts the CPU frequency accordingly, with a more linear CPU scaling curve: definitely a big pro. The whole CPU scaling analysis is not based on raw workload, but is performed according to the requested time. This approach guarantees system fluidity and better performance in a multimedia scenario, because the CPU won't jump up and down in frequency, but will be steady during the whole necessary time, providing a constant framerate when required.</span></li>
+
+    <li><span class="strong"><strong><span>Conservative</span></strong></span><span>: This governor is a smoother version of the On-demand governor. Unlike On-demand, the Conservative governor won't push the CPU to the top frequency every single time, but will proceed through a series of CPU frequency steps, according to the CPU load.</span></li>
+
+    <li><span class="strong"><strong><span>Userspace</span></strong></span><span>: This is the most customizable and least "automatic" governor. It provides the user with the possibility to manually pick the desired frequency.</span></li>
+  </ul>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Adding a custom CPU frequency governor</span></h3>
+
+  <p><span>If you need a specific CPU behavior, or you simply want to dig deeper into kernel customization, you can create your own CPU governor.</span></p>
+
+  <p><span>For this task, you will need the kernel source code and to navigate to:</span></p>
+  <pre>&lt;root-source&gt;/drivers/cpufreq</pre>
+
+  <p><span>This folder contains every governor we saw in the previous section and every possible custom governor you are going to add or that your device manufacturer already added.</span></p>
+
+  <p><span>Let's create a new governor, creating a </span><code class="literal"><span>.c</span></code><span> file in this folder, for example:</span></p>
+  <pre>&lt;root-source&gt;/drivers/cpufreq/cpufreq_mygovernor.c</pre>
+
+  <p><span>Once you have the file in place, you need to add it to the file mentioned here:</span></p>
+  <pre> &lt;root-source&gt;/drivers/cpufreq/Kconfig </pre>
+
+  <p><span>We make changes as shown in the following snippet:</span></p>
+  <pre>config CPU_FREQ_GOV_MYGOVERNOR
+ tristate "'mygovernor' cpufreq governor"
+ depends on CPU_FREQ
+ help
+ 'mygovernor' - my optimized governor!
+
+config CPU_FREQ_DEFAULT_GOV_ MYGOVERNOR
+ bool "mygovernor"
+ select CPU_FREQ_GOV_MYGOVERNOR
+ help
+ Use the CPUFreq governor 'mygovernor' as default.</pre>
+
+  <p><span>Once you are done with the </span><code class="literal"><span>Kconfig</span></code><span>, edit the </span><code class="literal"><span>Makefile</span></code><span> and add the following line:</span></p>
+  <pre>obj-$(CONFIG_CPU_FREQ_GOV_ MYGOVERNOR) += cpufreq_mygovernor.o</pre>
+
+  <p><span>As a last step, edit the following file:</span></p>
+  <pre>&lt;root-source&gt;/include/linux/cpufreq.h</pre>
+
+  <p><span>Around line 400, there is a list of currently available governors, as shown in the following image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_125.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_125" style="max-width:763px;max-height:484px"/></div>
+
+  <p><span>Following the same pattern, let's add your new governor reference, using the following snippet:</span></p>
+  <pre>#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_MYGOVERNOR)
+extern struct cpufreq_governor cpufreq_gov_mygovernor;
+#define CPUFREQ_DEFAULT_GOVERNOR (&amp;amp;cpufreq_gov_mygovernor)</pre>
+
+  <p><span>Mission completed: your new governor is now available and ready to be integrated in your next kernel build. Try to run </span><code class="literal"><span>menuconfig</span></code><span> and navigate to the governor screen; you will be able to enable it and set it as the default governor.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Exploring I/O schedulers</span></h3>
+
+  <p><span>I/O schedulers specify how I/O-bound operations must be performed and balanced among CPU cores. Android comes with a default set of I/O schedulers:</span></p>
+
+  <ul>
+    <li><span class="strong"><strong><span>Noop</span></strong></span><span>: This can be barely considered a scheduler. Practically speaking, it has no effect on the tasks list: it just queues them as they come in.</span></li>
+
+    <li><span class="strong"><strong><span>SIO</span></strong></span><span>: This is the first real scheduler. Even if it does no task reordering, it guarantees the smallest possible latency from the moment the task is enqueued and the moment it is performed.</span></li>
+
+    <li><span class="strong"><strong><span>CFQ</span></strong></span><span>: This scheduler orders tasks in separated queues, according to specific categories, and assigns an execution time window to every queue. The window size depends on the priority assigned to the tasks involved.</span></li>
+
+    <li><span class="strong"><strong><span>BFQ</span></strong></span><span>: This scheduler is similar to the CFQ scheduler, but it uses disk bandwidth windows instead of time windows to group and schedule tasks.</span></li>
+
+    <li><span class="strong"><strong><span>Anticipatory</span></strong></span><span>: This scheduler uses prediction techniques to group and schedule tasks, pausing executions for a short time period and waiting for a possible new task to be added to a specific queue.</span></li>
+
+    <li><span class="strong"><strong><span>ROW</span></strong></span><span>: This scheduler is based on the "</span><span class="emphasis"><em><span>read over write</span></em></span><span>" rule: every reading task has priority over writing tasks.</span></li>
+
+    <li><span class="strong"><strong><span>Deadline</span></strong></span><span>: This scheduler guarantees termination for the enqueued tasks, trying to avoid "starvation" scenarios. </span><span class="emphasis"><em><span>Starvation</span></em></span><span> is a well-known concept in computer science and applies to resource management. Imagine that </span><span class="emphasis"><em><span>N</span></em></span><span> processes want to use the same shared resource. The shared resource can be used by one process at a time, and processes alternate according to their priority. What is going to happen if a low-priority process is asking for the resource, but the resource never becomes available due to other high-priority processes using it? The low-priority process will wait forever for the resource and never get to enjoy it. In computer science terminology, it will </span><span class="emphasis"><em><span>starve</span></em></span><span>.</span></li>
+  </ul>
+
+  <p><span>Every available scheduler is stored in the following folder:</span></p>
+  <pre>&lt;root-source&gt;/block</pre>
+
+  <p><span>Creating an I/O scheduler can be challenging and it's beyond the purpose of this book. What we can do is point you in the right direction and get you curious about the topic.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Looking forward</span></h2>
+
+  <p><span>During the writing of this book, we were lucky enough to have a look at the upcoming Android N. The new version will probably be available at the end of 2016 as a stable release, after a few months of public </span><span class="emphasis"><em><span>developer preview</span></em></span><span>.</span></p>
+
+  <p><span>Android N introduces a few interesting features, like the "</span><span class="emphasis"><em><span>Multi-Window</span></em></span><span>" mode shown in the next image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_126.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_126" style="max-width:900px;max-height:628px"/></div>
+
+  <p><span>At Google, they are very focused on user feedback, and they decided to introduce this feature into the official version after a few months of testing by Samsung. Most of us will recognize the Multi-Windows mode from the already-available Android ROM, by Samsung. In Android N, this will be available for everybody, on every Android device, with full support for both orientations, portrait and landscape, and even the possibility to </span><span class="emphasis"><em><span>resize</span></em></span><span> the split windows by dragging the "separator line".</span></p>
+
+  <p><span>According to lots of blog posts, one of the most popular categories for Google Play Store apps is Caller ID filters. With Android N, this feature will be already available as a system feature as for the new "mobile data saving" feature that aims to reduce background data consumption for specific apps.</span></p>
+
+  <p><span>One of the new UI enhancements that comes with Android N is the possibility to add and remove action icons in the scroll down </span><code class="literal"><span>quick settings</span></code><span> menu, as shown in the next image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_127.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_127" style="max-width:802px;max-height:1424px"/></div>
+
+  <p><span>Furthermore, the scroll down </span><code class="literal"><span>notification</span></code><span> menu comes with a new notification design, that enables richer interactions, with quicker access to common actions, as shown in the next image:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_128.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_128" style="max-width:402px;max-height:233px"/></div>
+
+  <p><span>The </span><span class="strong"><strong><span>Settings</span></strong></span><span> section received a bit of love as well, with the new in-place notifications, like the one shown in the next image, that gives you the opportunity to disable or enable settings without navigating to the specific location:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_129.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_129" style="max-width:900px;max-height:534px"/></div>
+
+  <p><span>The next image shows, also, the new </span><code class="literal"><span>Navigation Drawer</span></code><span> that has been added to the </span><code class="literal"><span>Setting</span></code><span> section, for a quicker navigation to the deeper menu levels:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_130.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_130" style="max-width:842px;max-height:1495px"/></div>
+
+  <p><span>An incredible amount of small fixes will be available in this new version, and lots of improvements are aiming to increase performance and battery life, as the most wanted </span><span class="emphasis"><em><span>doze on the go</span></em></span><span>, that promises to be a game changer for Android devices.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Summary</span></h2>
+
+  <p><span>In this chapter you learned how to effectively customize Android at different levels, following real-world examples. You now know how to programmatically create a custom ROM from source code, preparing a customized folder structure with every piece in place, ready to be assembled by Android's build system. You also know how to approach the customization task if you have an already-assembled system image, and how to customize and reassemble a binary image.</span></p>
+
+  <p><span>The next chapter will bring you </span><span class="emphasis"><em><span>outside</span></em></span><span> the pure smartphone experience and will show you how Android is effectively becoming ubiquitous in our lives: Internet of Things, Android Auto and Android Wear, domotics, and entertainment are just a few of the scenarios in which we can currently find the </span><span class="emphasis"><em><span>green droid</span></em></span><span>.</span></p>
+</div>
+		    </div>
+		  </body></html>

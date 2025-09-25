@@ -1,0 +1,397 @@
+<html><head></head><body><h1 id="e-KVa9">Chapter 8. Creating Data Storage Mechanisms</h1>
+<p id="e-XmPV">We now turn our attention to data storage requirements. We need a way to store a list of <strong>Point of Interest</strong> (<strong>POI</strong>) data fetched from the server and make the list accessible when a device runs offline. This chapter shows how to use the built-in SQLite database engine to store and retrieve the POI data in a cross-platform way. The following topics will be covered in this chapter:</p>
+<ul id="e-HDOp">
+<li id="e-D173">Approaches to data storage solutions</li>
+<li id="e-XKQD">Different app storage options in Android</li>
+<li id="e-rV9F">Using preferences to store key-value pairs</li>
+<li id="e-yrMx">SQLite database storage in Xamarin.Android</li>
+<li id="e-ZFrg">Using the SQLite.NET ORM component</li>
+<li id="e-xpWM">Performing database CRUD operations</li>
+<li id="e-QSf3">Unit testing the Android app using NUnitLite</li>
+<li id="e-bOPj">Implementing caching to <code>POIApp</code>
+</li>
+</ul>
+<p id="e-LbgJ">Data storage solutions mainly fall into two general categories: storing in Cloud using web services or using the device's local storage. Saving data in the Cloud provides great advantages over local data storage options, but in certain cases, such as apps that run offline or for games, generally you are required to store the data locally in the device's storage.</p>
+<p id="e-IVax">The current <code>POIApp</code> uses web services to store the POI list in the server, and the mobile app retrieves the list by making REST API calls. So far, it works great. However, it always requires an Internet connection to fetch and display the POI list. Let's overcome this problem by storing the list of POIs locally and accessing them even when the device is offline.</p>
+<h1 id="e-xcik">Data storage in Android</h1>
+<p id="e-aLnD">Android supports several solutions that can be used for persisting data locally. The persisted data can be accessible even when the application shuts down or when a device restarts. The examples of such data include the device settings, contacts list, browser bookmarks, or any such app-specific data.</p>
+<p id="e-l0eA">The following table depicts the different data storage options available in the Android platform:</p>
+<p id="e-ezrm">Storage options</p>
+<p id="e-ZRF6">Description</p>
+<p id="e-Nljp">Shared preferences</p>
+<p id="e-qpym">This is the private data storage for your application that persists primitive key-value data pairs only. When the user uninstalls the application, this data is removed.</p>
+<p id="e-nH0W">Internal storage</p>
+<p id="e-SDv4">This stores data in the device internal memory and is available until the app is uninstalled from the device. This data is private to your application and other apps cannot access it.</p>
+<p id="e-bsGv">External file storage</p>
+<p id="e-rIUF">This stores data in shared external storage such as an external SD card. The data stored is public. Other applications or users can access these files by connecting the device to a computer.</p>
+<p id="e-nHrt">SQLite storage</p>
+<p id="e-rPTn">This is a structured private data store. SQLite databases created from an app can only be accessed from the same application.</p>
+<p id="e-TFTE">This chapter briefly covers the shared preferences and SQLite storage options only. You can research the internal and external storage options on your own from the official Xamarin website.</p>
+<h2 id="e-j25z">Shared preferences</h2>
+<p id="e-OyAV">Shared preferences are persistence <strong>key/value</strong> data pairs that are used to store primitive data pairs, such as <strong>bool</strong>, <strong>float</strong>, <strong>int</strong>, <strong>string</strong>, and <strong>long</strong>. The data saved in the Android preference is persisted across different app sessions and is private to the application it has created. Any other application cannot access it.</p>
+<p id="e-h4lZ">For using shared preferences to save data pairs, you first need to get an instance of the <code>ISharedPreferences</code> interface. A shared preference can be specific to an activity or made global to all the activities in the application. If you want to create a single preference file specific to an activity, you can use <code>Activity.GetPreferences</code> to get an instance of the <code>ISharedPreferences</code> interface, or you can call the <code>GetSharedPreferences</code> method on the application context by passing the preference name and mode of operation to get the application level preference:</p>
+<pre id="e-OYyW">ISharedPreferences prefs = Application.Context.GetSharedPreferences ("PREF_NAME", FileCreationMode.Private);</pre>
+<p id="e-BKBo">Now, let's call the <code>Edit()</code> method to get an instance of <code>ISharedPreferencesEditor</code>. This matches all of the changes made to values in shared preferences and only saves when a call to <code>Commit()</code> or <code>Apply()</code> is made:</p>
+<pre id="e-ziz4">ISharedPreferencesEditor editor = prefs.Edit();
+editor.PutInt("your_key1" ,10);
+editor.PutString("your_key2", "Xamarin Example");
+editor.Apply();</pre>
+<p id="e-XN3l">To read values from shared preferences, we can use the <code>GetXX()</code> methods by providing the same key that was used while saving data, where <code>XX</code> represents the supported primitive types. The following code snippet retrieves the values stored in the previous step:</p>
+<pre id="e-NLw5">var value1 = prefs.GetInt ("your_key1", 0);
+var value2 = prefs.GetString ("your_key2", null);</pre>
+<h2 id="e-wB8h">The SQLite database storage</h2>
+<p id="e-cxTz">SQLite is an open source, lightweight, and transactional database engine shipped with mobile platforms including Android, iOS, and Windows phones. According to the official documentation, Android is using <strong>SQLite Version 3.4.0</strong>. It is a widely used, standalone, relational database engine that requires no separate server process.</p>
+<p id="e-DS52">The following are some of the advantages that make the SQLite database engine one of the most shipped database engines today:</p>
+<ol id="e-Jyje">
+<li id="e-UfcK">It is an open source project and a large open source community is actively working on it.</li>
+<li id="e-mwGR">It doesn't have a server, so it requires no server infrastructure.</li>
+<li id="e-gY1R">It is a lightweight engine that provides a set of classes to perform database transactions.</li>
+<li id="e-xZCa">The complete database is a single file stored in the device memory that is private to your application. The privacy of the SQLite database boils down to the platform filesystem privacy.</li>
+</ol>
+<p id="e-FeOz">As such, we have decided to go with SQLite for caching the POI list. When the list is downloaded successfully, we will save the POI in the database and update it periodically whenever the download is successful. When a device runs offline or is unable to fetch the updated list from the server, the cached POI list can be presented on the screen.</p>
+<p id="e-egoF">Although SQLite is built in Android and provides a set of APIs to perform all the database CRUD (Create, Read, Update, and Delete) operations, we will use the SQLite.ORM component from the component store. The following section walks you through the steps to perform different database operations using the SQLite.ORM component.</p>
+
+<h1 id="e-Bpi7">Using the SQLite.net ORM component</h1>
+<p id="e-z5E5">SQLite.NET <strong>Object Relational Mapping</strong> (<strong>ORM</strong>) is an open source library that allows .NET and Mono applications to store data objects in the SQLite database. It is a lightweight and easy to use component that allows you to save and retrieve data objects, without having to worry about writing any SQL query. This is a free component available in the Xamarin Component Store. It was earlier designed to work for MonoTouch on iPhone, but later it was extended to support other platforms, including Android, Windows, and Silverlight platforms. Thanks to <strong>Frank A. Krueger</strong> for developing and maintaining this component.</p>
+<p id="e-IPdg">There are three ways to add SQLite.NET ORM to the Xamarin application. Either you can add it by downloading the required files from the GitHub open source code repository, NuGet, or the Xamarin Component Store:</p>
+<ul id="e-jv3O">
+<li id="e-knik">SQLite.NET is a very thin library with a single file. Download the <code>SQLite.cs</code> file from GitHub and add it to your application. The SQLite.NET library binds directly to the SQLite database engine on each platform.</li>
+<li id="e-y653">To add it from the Xamarin Component Store, you need to follow the same steps we used while adding the <code>UrlImageViewHelper</code> component in Chapter 4, <em>Adding a List View</em>.</li>
+<li id="e-ygX2">To add it as a NuGet package bundle, you can navigate to <strong>Packages</strong> | <strong>Add packages</strong> from your Solution Explorer to open the NuGet gallery window. Search for <code>SQlite.NET</code> and select it to add it to your project.</li>
+</ul>
+<p id="e-Sb5a">Once the reference to the SQlite.NET ORM component is added to the project, we can focus on performing database operations.</p>
+<h2 id="e-Twv7">Using attributes to mark POIApp to be persisted</h2>
+<p id="e-Aica">SQLite.NET ORM brings a set of attributes that allows you to mark classes and fields that are to be persisted to the database. You can apply any of the following attributes to control the construction of a table:</p>
+<p id="e-K1LD">Attribute</p>
+<p id="e-CFB7">Usage</p>
+<p id="e-FsOw"><code>Table</code></p>
+<p id="e-cuLh">By default, the class names are used as table names. You can use this attribute if you want to specify your own table name. This is an optional attribute applied to a class.</p>
+<p id="e-BNbz"><code>Column</code></p>
+<p id="e-jkXD">By default, the property names are used as column names. This attribute provides you the control to specify your own column name.</p>
+<p id="e-C5IV"><code>PrimaryKey</code></p>
+<p id="e-ip1Y">This property is the primary key of the table. Only single-column primary keys are supported.</p>
+<p id="e-C5my"><code>AutoIncrement</code></p>
+<p id="e-K59I">This property is automatically generated by the database upon insert. The property type should be an integer and should also be marked with the <code>PrimaryKey</code> attribute.</p>
+<p id="e-w8x4"><code>Indexed</code></p>
+<p id="e-GTem">This property should have an index created for it.</p>
+<p id="e-UU0v"><code>Unique</code></p>
+<p id="e-n05X">This property will be unique in the table.</p>
+<p id="e-cEaI"><code>MaxLength</code></p>
+<p id="e-Ri8F">This property specifies the <code>varchar</code> max size. The default max length is <code>140</code>.</p>
+<p id="e-vLaY"><code>Ignore</code></p>
+<p id="e-pFCP">This property will not be in the table.</p>
+<p id="e-A8xf"><code>NotNull</code></p>
+<p id="e-BHBW">This property cannot be left null.</p>
+<p id="e-HFYH">For <code>POIApp</code>, let's use some of the attributes from the preceding list of the <code>PointOfInterest</code> class:</p>
+<pre id="e-RecI">using SQLite;
+namespace POIApp
+{
+  [Table("POITable")]
+  public class PointOfInterest
+  {
+    [PrimaryKey, AutoIncrement, Column("_id")]
+    public int Id { get; set;}
+     [NotNull]
+    public string Name { get; set; }
+     [MaxLength(1000)]
+    public string Description { get; set; }
+     [MaxLength(150)]
+    public string Address { get; set; }
+     public string Image { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+  }
+}</pre>
+<p id="e-Pb0l">In the preceding code snippet, notice that we declared that the table name will be <code>POITable</code>, the <code>Id</code> field is marked as the primary key, and the <code>Name</code> field cannot be null.</p>
+<h2 id="e-DsQU">Adding a database helper class</h2>
+<p id="e-sdLh">Now we need to create a standard class that will define the set of methods to allow basic CRUD operations. This class is likely to be accessed multiple times; therefore, we will mark this class as a singleton class to prevent multiple instances of the same class.</p>
+<p id="e-FS0n">To create the database helper implementation class, perform the following steps:</p>
+<ol id="e-avb0">
+<li id="e-xVO8">Create a class called <code>DBManager</code>.</li>
+<li id="e-rMFc">To make the <code>DBManager</code> class a singleton class, first declare the default constructor private:<pre id="e-WBd0">public class DBManager
+{
+  private DBManager() 
+    {
+  }
+}</pre>
+</li>
+</ol>
+<p id="e-GZDr">Now declare a private static instance of the <code>DBManager</code> class and do the early initialization. We need to add a static getter method to make the <code>DBManager</code> class accessible. Add the following code snippet to the <code>DBManager</code> class:</p>
+<pre id="e-GY8J">private static readonly DBManager instance = new DBManager();
+public static DBManager Instance
+{
+  get 
+  {
+    return instance;
+  }
+}</pre>
+<p id="e-JoV8">Note that there are different ways to create a singleton class. I have chosen to use the singleton class using the <em>early initialization</em> method. For more information on singleton class implementation, follow the MSDN developer site.</p>
+<p id="e-hMu7">Before saving the data, we need to first create a database. Let's create a blank database or open an existing one by passing the file path to the <code>SQLiteConnection</code> class constructor. Add the following <code>CreateTable()</code> method to your <code>DBManager</code> class:</p>
+<pre id="e-C2YM">SQLiteConnection dbConn;
+private const string DB_NAME = "PointOfInterest_DB.db3";
+ public void CreateTable()
+{
+  var path = System.Environment.GetFolderPath (System.Environment.SpecialFolder.Personal);
+  dbConn = new SQLiteConnection (System.IO.Path.Combine (path, DB_NAME));
+  dbConn.CreateTable&amp;lt;PointOfInterest&amp;gt; ();
+}</pre>
+<p id="e-aFaF">Notice the following in the preceding code:</p>
+<ul id="e-OZev">
+<li id="e-BYOS">The <code>DB_NAME</code> constant defines a name for the database. The database file will be created with this name and saved to the location specified in the path variable.</li>
+<li id="e-EMhX">The SQLite database file path can be different for different platforms. Both Android and iOS use the environment class to construct a valid path.</li>
+<li id="e-NenR">The <code>SQLiteConnection</code> class constructor opens the database if it already exists with the specified name, or else it creates a new database.</li>
+<li id="e-cUlo">The <code>CreateTable()</code> method opens the table if it exists, or else it creates a new table.</li>
+</ul>
+<h3 id="e-TPDR">Creating or updating the POI record</h3>
+<p id="e-trsP">Once your database connection is open, we can perform different database operations. To begin with, let's create a method named <code>SavePOI()</code> to save the POI object in the database. The <code>SQLiteConnection</code> class provides methods, such as <strong>Insert</strong>, <code>InsertOrReplace</code>, <code>InsertAll</code>, <code>Update</code>, and <code>UpdateAll</code>, to create or update a record in the database.</p>
+<p id="e-TYNf">We will use the <code>InsertOrReplace</code> method, as it is convenient for us. This method looks up for the same record in the database, updates it if it already exists, or else inserts a new one. For the <code>InsertOrReplace()</code> method to work, your table must have a primary key.</p>
+<p id="e-a7Nk">Let's add the following code snippet to the <code>DBManager</code> class in the <code>SavePOI</code> method:</p>
+<pre id="e-BtWE">public int SavePOI(PointOfInterest poi) 
+{
+  int result = dbConn.InsertOrReplace (poi);
+  Console.WriteLine ("{0} record updated!", result);
+  return result;
+}</pre>
+<h3 id="e-JQsg">Reading POI details from the database</h3>
+<p id="e-kVWw">The <code>POIApp</code> reads the list of POI objects while the device runs in the offline mode, or if the app has failed to download the POI list data from the server. Add the following <code>GetPOIListFromCache()</code> method to retrieve all the records from the database:</p>
+<pre id="e-Vngc">public List&amp;lt;PointOfInterest&amp;gt; GetPOIListFromCache() 
+{
+  var poiListData = new List&amp;lt;PointOfInterest&amp;gt; ();
+  IEnumerable&amp;lt;PointOfInterest&amp;gt; table = dbConn.Table&amp;lt;PointOfInterest&amp;gt; ();
+  foreach (PointOfInterest poi in table) 
+  {
+    poiListData.Add (poi);
+  }
+  return poiListData;
+}</pre>
+<p id="e-e64l">The <code>GetPOIListFromCache</code> method returns the list of all POIs available in the database. The following method will help you if you are looking for a particular POI by its ID:</p>
+<pre id="e-r7nL">public PointOfInterest  GetPOI(int poiId)
+{
+  PointOfInterest poi = dbConn.Table&amp;lt;PointOfInterest&amp;gt;().Where(a =&amp;gt; a.Id.Equals(poiId)).FirstOrDefault();
+  return poi;
+}</pre>
+<h3 id="e-EjHh">Deleting the POI data from the database</h3>
+<p id="e-zGvT">Like reading records from a database, we can either clear all of the database records or delete records one by one by the POI ID. Add the following methods to the <code>DBManager</code> class. They are straightforward and quite self-explanatory:</p>
+<pre id="e-kggN">public int DeletePOI(int poiId) 
+{
+  int result = dbConn.Delete&amp;lt;PointOfInterest&amp;gt;(poiId);
+  Console.WriteLine("{0} record effected!", result);
+  return result;
+}
+ public int ClearPOICache()
+{
+  int result = dbConn.DeleteAll&amp;lt;PointOfInterest&amp;gt;();
+  Console.WriteLine("{0} records effected!", result);
+  return result;
+}</pre>
+<p id="e-r4rf">Now that we have defined all the methods to perform different database operations. The next step is to validate each method by writing unit test cases before using them in <code>POIApp</code>.</p>
+
+<h1 id="e-TiEg">Using the Xamarin.Android NUnitLite</h1>
+<p id="e-X8b4">You may be familiar with a process called <strong>test-driven development</strong> (<strong>TDD</strong>). At a high-level, the approach proposes that you create automated unit test cases to test the features that your software will need to support, and use these test cases to drive the development and unit testing cycle.</p>
+<p id="e-t1Kl">This chapter will not cover the concepts behind test-driven development in detail, but we will introduce a feature delivered with Xamarin.Android, which supports teams using TDD. This feature is <strong>NUnitLite</strong>. NUnitLite is a lightweight, open source testing framework, which is based on the same ideas as <strong>NUnit</strong>. This has been designed to use minimal resources, making it ideal for embedded and mobile software development.</p>
+<p id="e-gLUQ">When working with NUnitLite, you create classes called test fixtures. These classes contain test methods that are used to test the various facets of the testing target; in our case, the <code>DBManager</code> class. To designate a class as a test fixture or a method as a test method, NUnitLite uses the .NET attributes. Once the test fixtures and test methods have been created, Xamarin.Android provides a user interface that allows the tests to be executed within the Android emulator or on a device.</p>
+<p id="e-Lij4">To start using NUnitLite, we need to create a test project in the Solution pad that we have been working with.</p>
+<p id="e-bTna">To create a test project, perform the following steps:</p>
+<ol id="e-IfDq">
+<li id="e-Z3vN">Select the <code>POIApp</code> solution from the <strong>Solution</strong> pad in Xamarin Studio.</li>
+<li id="e-LVQv">Right-click on it and select <strong>Add New Project</strong>.</li>
+<li id="e-iNDx">On the left-hand side of the <strong>New Project</strong> dialog box, go to <strong>C#</strong> | <strong>Android</strong>.</li>
+<li id="e-xtMG">In the template list, in the middle of the dialog box, select the <strong>Android Unit Test</strong> project.</li>
+<li id="e-ut1C">Enter <code>POITestApp</code> for the name and click on <strong>OK</strong>. The new unit test project is created and added to the <code>POIApp</code> solution.</li>
+<li id="e-JeNB">Go to the <strong>Options</strong> dialog box for the new project, and set the <strong>Package</strong> name to <code>POITestApp</code>, and verify that the <strong>Target framework</strong> is set to the latest available Android SDK framework.</li>
+</ol>
+<p id="e-lMaj">You will notice that the new unit test project has the following files:</p>
+<ul id="e-jCfq">
+<li id="e-SbM2">
+<code>MainActivity.cs</code>: This activity inherits from <code>TestSuiteActivity</code> and provides a test suite user interface when we run our tests. Basically, it allows us to run our tests and see the results.</li>
+<li id="e-dldG">
+<code>TestsSample.cs</code>: This class acts as a test fixture and allows us to add test methods that will exercise the features provided by <code>DBManager</code>.</li>
+</ul>
+<p id="e-Ipp6">Now, we need to create the test methods in order to exercise the features of our database operation performed by the <code>DBManager</code> class.</p>
+<h2 id="e-eZV3">Setting up for tests</h2>
+<p id="e-mgQg">NUnitLite provides a place to execute any initialization code that may be required by the tests. In our case, we need to create an instance of the <code>DBManager</code> class, which the test methods will later interact with. The <code>Setup()</code> method is the perfect place since it will be called before each test. The following will steps help you to set up a new test case in Xamarin Studio:</p>
+<ol id="e-MDOo">
+<li id="e-k6Nb">Rename the <code>TestsSample.cs</code> file <code>POITestFixture.cs</code>. Rename the corresponding class inside the file as well.</li>
+<li id="e-Y0lr">In <code>POITestApp</code>, select <strong>References</strong>, right-click on it, and select <strong>Edit References</strong>. Select the <strong>Projects</strong> tab in the <strong>Edit References</strong> dialog box, check on the <code>POIApp</code> project, and click on <strong>OK</strong>. <code>POITestApp</code> needs to reference <code>POIApp</code> so that it can work with the <code>DBManager</code> class.<h3 id="e-zLCO">Tip</h3>
+<p id="e-BcWg">Some version of Xamarin Studio have a bug, where the project references are not linked even after adding them to a test project. In such cases, you need go to the .NET Assembly tab in the <strong>Edit References</strong> dialog box and browse manually to the <code>POIApp/bin/Debug/POIApp.dll</code> file.</p>
+</li>
+<li id="e-JLr2">Open the <code>POITestFixture</code> class and delete all the other methods except <code>Setup()</code>.</li>
+<li id="e-HDfV">In the <code>Setup()</code> method, call the <code>CreateTable()</code> method from the <code>DBManager</code> class:<pre id="e-FDGf">[TestFixture]
+public class POITestFixture
+{
+  [SetUp]
+  public void Setup ()
+  {
+    DBManager.Instance.CreateTable ();
+  }
+}</pre>
+</li>
+</ol>
+<h2 id="e-ciwc">Creating the test methods</h2>
+<p id="e-gUGe">Now the real work begins; we need to create test methods to test each significant scenario. In the case of the data service, we need to be sure that we cover the following topics:</p>
+<ul id="e-ZdNf">
+<li id="e-ncMt">Creating a new POI</li>
+<li id="e-iube">Updating an existing POI</li>
+<li id="e-myhw">Deleting an existing POI</li>
+</ul>
+<p id="e-nfg9">There are many more scenarios we could choose to test, but the preceding small set should help you verify that the basics of our database logic are functioning.</p>
+<h3 id="e-n9Fh">The CreatePOI test</h3>
+<p id="e-fiiP">The first test method we will start with is <code>CreatePOI()</code> and, as the name implies, we will test the process of creating and saving a new POI. To accomplish this, we need to perform the following steps:</p>
+<ol id="e-J1KM">
+<li id="e-Tl6d">Create a new instance of <code>PointOfInterest</code> and fill out some attributes.</li>
+<li id="e-jdHE">Call the <code>SavePOI()</code> method on the <code>DBManager</code> class.</li>
+<li id="e-hVBX">The <code>save</code> method returns an integer, indicating the number of records updated. Ensure that it returns the value <code>1</code>.</li>
+<li id="e-i4AM">Call <code>GetPOI()</code> to retrieve the POI, based on the saved ID.</li>
+<li id="e-dbxy">Use the <code>Assert</code> class to ascertain that the POI was retrieved (the reference is not null) and the name of the POI is what it was expected to be.</li>
+</ol>
+<p id="e-fehw">The following code shows an implementation of <code>CreatePOI()</code>:</p>
+<pre id="e-YclX">[Test]
+public void CreatePOI ()
+{
+  int testId = 1091;
+  PointOfInterest newPOI = new PointOfInterest ();
+  newPOI.Id = testId;
+  newPOI.Name = "New POI";
+  newPOI.Description = "POI to test creating a new POI";
+  newPOI.Address = "100 Main Street\nAnywhere, TX 75069";
+   //Saving poi record
+  int recordsUpdated = DBManager.Instance.SavePOI (newPOI);
+   //Check if the number of records updated are same as expected
+  Assert.AreEqual (1, recordsUpdated);
+   // verify if the newly create POI exists
+  PointOfInterest poi = DBManager.Instance.GetPOI (testId);
+  Assert.NotNull (poi);
+  Assert.AreEqual (poi.Name, "New POI");
+}</pre>
+<h3 id="e-FuZQ">The DeletePOI test</h3>
+<p id="e-VuJi">Next, we will implement <code>DeletePOI()</code>. Again, we want <code>DeletePOI()</code> to be independent of other tests, so we will first need to create a POI which will be deleted later.</p>
+<p id="e-tbYX">On calling <code>DeletePOI()</code>, the following steps will be performed:</p>
+<ol id="e-YtDV">
+<li id="e-hHwI">Create a new instance of <code>PointOfInterest</code> and fill out some attributes.</li>
+<li id="e-g8nc">Call the <code>SavePOI()</code> method on the <code>DBManager</code> class.</li>
+<li id="e-R8f0">
+<code>GetPOI()</code> to retrieve the POI, based on the saved ID.</li>
+<li id="e-MIvj">
+<code>DeletePOI()</code> to delete the POI file and remove it from the database.</li>
+<li id="e-wZLm">
+<code>GetPOI()</code> to retrieve the POI, based on the saved ID.</li>
+<li id="e-GhwN">Use the <code>Assert</code> class to ensure that the POI is not found (the reference is null).</li>
+</ol>
+<p id="e-uw8x">The following code shows an implementation of <code>DeletePOI()</code>:</p>
+<pre id="e-kVAr">[Test]
+public void DeletePOI ()
+{
+  int testId = 1019;
+  PointOfInterest testPOI = new PointOfInterest ();
+  testPOI.Id = testId;
+  testPOI.Name = "Delete POI";
+  testPOI.Description = "POI being saved so we can test delete";
+  testPOI.Address = "100 Main Street\nAnywhere, TX 75069";
+  DBManager.Instance.SavePOI (testPOI);
+   PointOfInterest deletePOI = DBManager.Instance.GetPOI (testId);
+  Assert.NotNull (deletePOI);
+  
+  DBManager.Instance.DeletePOI(testId);  
+  
+  PointOfInterest poi = DBManager.Instance.GetPOI (testId);
+  Assert.Null (poi);
+}</pre>
+<p id="e-KhVe">Additionally, we will implement <code>ClearCache()</code> to verify that the call to <code>ClearPOICache()</code> clears all the database records. We will perform the following steps will be performed in the <code>ClearCache</code> test method:</p>
+<ol id="e-glSE">
+<li id="e-IGK0">Call <code>ClearPOICache()</code> on the <code>DBManager</code> class to delete all records from the database.</li>
+<li id="e-PRCU">Call <code>GetPOIListFromCache</code> on the <code>DBManager</code> class to get a list of records from the database.</li>
+<li id="e-qz6u">Use the <code>Assert</code> class to ensure that the number of records fetched from the server is <code>0</code>.</li>
+</ol>
+<p id="e-dnTK">The following code shows an implementation of <code>ClearCache()</code>:</p>
+<pre id="e-uN4p">[Test]
+public void ClearCache ()
+{
+  DBManager.Instance.ClearPOICache ();
+  List&amp;lt;PointOfInterest&amp;gt; poiList = DBManager.Instance.GetPOIListFromCache ();
+  Assert.AreEqual (0, poiList.Count);
+}</pre>
+<h2 id="e-plK2">Executing the tests</h2>
+<p id="e-CvhH">Now that the tests have been developed, we are ready to execute them. To do this, we simply run the test app using the Android emulator or a physical device. To execute the tests in an emulator, perform the following steps:</p>
+<ol id="e-w8aD">
+<li id="e-LHTr">Run <code>POITestApp</code> using the Android emulator. Note that <code>POITestApp</code> is not set as the startup project, so you will need to select the project when you select <strong>Run</strong>. You can make <code>POITestApp</code> the startup project by selecting it, right-clicking on it, and choosing <strong>Set as Startup Project</strong>. Once <code>POITestApp</code> is running, you should see the following screen when the app has been deployed and started:<img data-width="450" data-height="800" src="U0zngXrn.jpg"/>
+</li>
+<li id="e-qJ53">Execute the tests by clicking on the <strong>Run Tests</strong> label. You should see a green message label, indicating that all the tests have passed.</li>
+<li id="e-m5QS">If the test case fails, the message will be shown in red, and you can further drill down into the tests to see the failure details.</li>
+</ol>
+<p id="e-IUsh">So far, we have created the <code>DBManager</code> class and have a suite of automated tests to test the CRUD methods. It is now time to focus on filling in the logic so that <code>POIApp</code> can save and fetch the data from the database.</p>
+<p id="e-oivd">NUnitLite is a great framework to implement the unit testing strategy for the Android application development, but it's not all about testing. You need to implement some sort of UI automation testing framework to test most of your application components, including the user interfaces.</p>
+<p id="e-LXQB">Xamarin brings yet another platform; Xamarin Test Cloud makes it possible to test mobile apps written in any language on a collection of real devices from around the world. You can write your test scripts using the Xamarin testing framework and automate your app testing from CI systems. This book doesn't cover the UI automation frameworks and Xamarin Test Cloud service. You can visit the official <a href="http://xamarin.com/">http://xamarin.com/</a> website for more information.</p>
+
+<h1 id="e-PxI0">Implementing the caching logic to POIApp</h1>
+<p id="e-yhVU">The <code>DBManager</code> class is now tested and ready to use straightaway on <code>POIApp</code>. The <code>POIApp</code> will save the POI records when the download is completed, and the list will be retrieved later when the app is unable to fetch the updated list from the server. Perform the following steps to integrate the <code>DBManager</code> class with <code>POIApp</code>:</p>
+<ol id="e-uaMK">
+<li id="e-bwNi">Call the <code>CreateTable()</code> method on the <code>POIListActivity</code> class to initiate the database:<pre id="e-C4qy">DBManager.Instance.CreateTable();</pre>
+</li>
+<li id="e-P0wQ">Open the <code>POIListFragment</code> class and go to the <code>DownloadPoisListAsync()</code> method. We have used this method to download the POI list from the server. The following updates are required here:<ol id="e-PbHm">
+<li id="e-jJwa">Clear the database cache when the POI downloads from the server are successful.</li>
+<li id="e-oDgG">Save the newly fetched POI data to the database.</li>
+<li id="e-rXEK">When a device is not connected to the network, return the cached data from the database.</li>
+</ol>
+</li>
+</ol>
+<p id="e-Przx">The following code snippet depicts the the updated version of the <code>DownloadPoisListAsync()</code> method:</p>
+<pre id="e-lCHx">public async void DownloadPoisListAsync(){
+      POIService service = new POIService ();
+      if (!service.isConnected (activity)) {
+        Toast toast = Toast.MakeText (activity, "Not conntected to internet. Please check your device network settings.", ToastLength.Short);
+        toast.Show ();
+        poiListData = DBManager.Instance.GetPOIListFromCache ();
+      } else {
+        progressBar.Visibility = ViewStates.Visible;
+        poiListData = await service.GetPOIListAsync ();
+         //Clear cached data
+        DBManager.Instance.ClearPOICache ();
+         //Save updated POI data
+        DBManager.Instance.InsertAll (poiListData); progressBar.Visibility = ViewStates.Gone;
+      }
+       poiListAdapter = new POIListViewAdapter (activity, poiListData);
+      this.ListAdapter = poiListAdapter;
+      ListView.Post(() =&amp;gt; {
+        ListView.SetSelection(scrollPosition);
+      });
+}</pre>
+<p id="e-V9GQ">In the preceding code block, we save all of the POI list data received from the server. However, when a user edits and saves any of the POI data, we need to update the local database for that POI.</p>
+<p id="e-wGBl">To do this, let's call the <code>SavePOI()</code> method from the <code>POIDetailFragment</code> class in the <code>CreateOrUpdatePOIAsync()</code> method:</p>
+<pre id="e-sSJd">private async void CreateOrUpdatePOIAsync(PointOfInterest poi){
+      .....
+      .....
+      if (!string.IsNullOrEmpty (response)) {
+        Toast toast = Toast.MakeText (activity, String.Format ("{0} saved.", _poi.Name), ToastLength.Short);
+        toast.Show();
+         DBManager.Instance.SavePOI (poi);
+         if(!POIListActivity.isDualMode)
+          activity.Finish ();
+      } else {
+        Toast toast = Toast.MakeText (activity, "Something went Wrong!", ToastLength.Short);
+        toast.Show();
+      }
+}</pre>
+<p id="e-nvCh">When the POI record is deleted from the server in the <code>POIDetailFragment</code> class, in the <code>DeletePOIAsync()</code> method we need to call the <code>DeletePOI()</code> method to delete the same POI from the local device database.</p>
+<p id="e-wdb4">The following code snippet depicts the updated version of the <code>DeletePOIAsync()</code> method:</p>
+<pre id="e-wbZe">public async void DeletePOIAsync(){
+     .....
+     ....
+      string response = await service.DeletePOIAsync (_poi.Id);
+      if (!string.IsNullOrEmpty (response)) {
+        Toast toast = Toast.MakeText (activity, String.Format ("{0} deleted.", _poi.Name), ToastLength.Short);
+        toast.Show();
+         DBManager.Instance.DeletePOI (poi);
+       if(!POIListActivity.isDualMode)
+          activity.Finish ();
+      
+      } else {
+        Toast toast = Toast.MakeText (activity, "Something went Wrong!", ToastLength.Short);
+        toast.Show();
+      }
+}</pre>
+<p id="e-P7vn">Now we have implemented the database logic for the <code>POIApp</code> to work offline. Run the app; when connected to the network, it will download and cache the POI list. Now restart the application while the device is offline and notice that the same old cached POI list is presented on the screen.</p>
+
+<h1 id="e-HAdH">Summary</h1>
+<p id="e-mDAe">In this chapter, we used SQLite.ORM to save the POI records to the database and created a series of unit tests to verify that the database operations were functioning well.</p>
+<p id="e-pucz">In the next chapter, we will continue integrating with device capabilities by adding camera support to capture and save the POI image.</p>
+</body></html>

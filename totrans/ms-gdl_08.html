@@ -1,0 +1,832 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;8.&#xA0;Migration"><div class="titlepage"><div><div><h1 class="title"><a id="ch08"/>Chapter 8. Migration</h1></div></div></div><p>If you are coming from an Ant or Maven background, the first question that comes to mind is: why Gradle? We have already discussed this topic in the initial chapters. Then, another important question comes up. We already have lots of build code written in Ant or Maven; now, if a new script needs to be written into Gradle, wouldn't it be tough to manage two build tools? In this chapter, we will explain different techniques to migrate existing Ant or Maven script to Gradle build script. In the first section of this chapter, we will discuss different strategies that can be applied to migrate from Ant to Gradle and later sections will cover strategies from Maven to Gradle migration.</p><div class="section" title="Migration from Ant"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec62"/>Migration from Ant</h1></div></div></div><p>Ant is one of the initial build tools that became very popular among developers because they can control each and every step of the build process. But writing each and every step means a lot of boilerplate code in the build file. Another feature which was lacking in the initial Ant releases was complexity<a id="id431" class="indexterm"/> in dependency management, which was later simplified by introducing an Ivy dependency manager. For Ant users, it is very simple and easy to switch to using Gradle as their build tool. Gradle provides direct integration with Ant using Groovy's <code class="literal">AntBuilder</code>. Ant tasks are treated as first class citizens in the Gradle world. In the next sections, we will discuss three different strategies: importing Ant file into Gradle, script use of <code class="literal">AntBuilder</code> class and rewriting to Gradle. These strategies can be followed to migrate from Ant to Gradle.</p><div class="section" title="Importing Ant file"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec94"/>Importing Ant file</h2></div></div></div><p>This is one of the <a id="id432" class="indexterm"/>simplest ways of integrating the Ant script with Gradle script. It is very useful as the first step of migration where you have lots of build scripts, all written in<a id="id433" class="indexterm"/> Ant, and you want to start with Gradle without making any big changes to the current build structure initially. We will start with a sample Ant file. Consider we have the <code class="literal">build.xml</code> Ant file for a Java project and we perform the following tasks:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Build project (compile code and generate a JAR file).</li><li class="listitem">Generate checksum of the JAR file.</li><li class="listitem">Create a ZIP file that contains the JAR file and checksum file.</li></ol></div><p>The following<a id="id434" class="indexterm"/> is the <code class="literal">build.xml</code> file to perform all three preceding mentioned operations:</p><div class="informalexample"><pre class="programlisting">&lt;project name="sampleProject" default="makeJar" basedir="."&gt;
+
+&lt;property name="src" location="src/main/java"/&gt;
+&lt;property name="build" location="build"/&gt;
+&lt;property name="classes" location="build/classes"/&gt;
+&lt;property name="libs" location="build/libs"/&gt;
+&lt;property name="distributions" location="build/distributions"/&gt;
+&lt;property name="version" value="1.0"/&gt;
+
+&lt;target name="setup" depends="clean"&gt;
+   &lt;mkdir dir="${classes}"/&gt;
+   &lt;mkdir dir="${distributions}"/&gt;
+&lt;/target&gt;
+
+&lt;target name="compile" depends="setup" description="compile the source"&gt;
+   &lt;javac srcdir="${src}" destdir="${build}/classes"  includeantruntime="false"/&gt;
+&lt;/target&gt;
+&lt;target name="makeJar" depends="compile" description="generate the distributions"&gt;
+   &lt;jar jarfile="${libs}/sampleproject-${version}.jar" basedir="${classes}"/&gt;
+&lt;/target&gt;
+&lt;target name="clean" description="clean up"&gt;
+   &lt;delete dir="${build}"/&gt;
+&lt;/target&gt;
+
+&lt;target name="zip" description="zip the jar and checksum" depends="makeJar,checksum"&gt;
+   &lt;zip destfile="${distributions}/sampleproject.zip" filesonly="true" basedir="${libs}" includes="*.checksum,*.jar"  /&gt;
+&lt;/target&gt;
+
+&lt;target name="checksum" description="generate checksum and store in file" depends="makeJar"&gt;
+   &lt;checksum file="${libs}/sampleproject-${version}.jar" property="sampleMD5"/&gt;
+   &lt;echo file="${libs}/sampleproject.checksum" message="checksum=${sampleMD5}"/&gt;
+&lt;/target&gt;
+
+&lt;target name="GradleProperties"&gt;
+&lt;echo message="Gradle comments are:: ${comments}"/&gt;
+&lt;/target&gt;
+
+&lt;/project&gt;</pre></div><p>To build the project, you <a id="id435" class="indexterm"/>need to run the following target (in Ant, we execute a target that can be compared to a Gradle task):</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>SampleProject$ ant makeJar</strong></span>
+<span class="strong"><strong>Buildfile: &lt;path&gt;/Chapter8/SampleProject/build.xml</strong></span>
+
+<span class="strong"><strong>clean:</strong></span>
+<span class="strong"><strong>   [delete] Deleting directory &lt;path&gt;/Chapter8/SampleProject/build</strong></span>
+
+<span class="strong"><strong>setup:</strong></span>
+<span class="strong"><strong>    [mkdir] Created dir: &lt;path&gt;/Chapter8/SampleProject/build/classes</strong></span>
+<span class="strong"><strong>    [mkdir] Created dir: &lt;path&gt;/Chapter8/SampleProject/build/distributions</strong></span>
+
+<span class="strong"><strong>compile:</strong></span>
+<span class="strong"><strong>    [javac] Compiling 2 source files to &lt;path&gt;/Chapter8/SampleProject/build/classes</strong></span>
+
+<span class="strong"><strong>makeJar:</strong></span>
+<span class="strong"><strong>      [jar] Building jar: &lt;path&gt;/Chapter8/SampleProject/build/libs/sampleproject-1.0.jar</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+<span class="strong"><strong>Total time: 0 seconds</strong></span>
+</pre></div><p>The target will execute other required targets such as compile, clean, setup, and so on. This will generate the <code class="literal">sampleproject-1.0.jar</code> file in the <code class="literal">build/libs</code> directory. Now, to generate checksum for JAR and to bundle it along with the JAR file, we can run the following target:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ ant zip</strong></span>
+</pre></div><p>This target will run<a id="id436" class="indexterm"/> the <code class="literal">makeJar</code> target and all the other dependent targets to create the JAR file and then it will execute the checksum target to generate the <code class="literal">md5</code> checksum for the JAR file. Finally, ZIP task will bundle the checksum file and the JAR file, and creates a ZIP file inside the <code class="literal">build/distributions</code> directory.</p><p>This is a sample build file for a Java project; you can have additional targets for customized requirements. We can simply import this <code class="literal">Ant</code> build file in a Gradle build file and will be able to execute Ant targets as Gradle tasks. The content of the build file will look as follows:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>ant.importBuild 'build.xml'</strong></span>
+</pre></div><p>This one line is<a id="id437" class="indexterm"/> sufficient to import the Ant build file and go ahead with <a id="id438" class="indexterm"/>Gradle. Now try to execute the following:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_import.gradle zip</strong></span>
+<span class="strong"><strong>::clean</strong></span>
+<span class="strong"><strong>:setup</strong></span>
+<span class="strong"><strong>:compile</strong></span>
+<span class="strong"><strong>:makeJar</strong></span>
+<span class="strong"><strong>:checksum</strong></span>
+<span class="strong"><strong>:zip</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>Here we have named the build file as <code class="literal">build_import.gradle</code>. The preceding command executed all Ant tasks, one after another. You can find the ZIP file created in the <code class="literal">build/distributions</code> directory.</p><p>This is one of the first steps to migrate from Ant to Gradle. This will help initially, if you do not want to play with the existing build script and want to use Gradle. Just importing the Ant file in the Gradle build help you to get started.</p><div class="section" title="Accessing properties"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec15"/>Accessing properties</h3></div></div></div><p>Gradle also<a id="id439" class="indexterm"/> enable you to access existing Ant properties and add new properties. To access existing Ant properties, you can use <code class="literal">ant.properties</code>, as shown here:</p><div class="informalexample"><pre class="programlisting">ant.importBuild 'build.xml'
+
+def antVersion = ant.properties['version']
+def src = ant.properties['src']
+
+task showAntProperties &lt;&lt; {
+      println "Ant Version is "+ antVersion
+      println "Source location is "+ src
+
+}</pre></div><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_import.gradle sAP</strong></span>
+
+<span class="strong"><strong>:showAntProperties</strong></span>
+<span class="strong"><strong>Ant Version is 1.0</strong></span>
+<span class="strong"><strong>Source location is D:\Chapter8\SampleProject\src\main\java</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>Here, Gradle script has fetched properties value from the Ant file and we are printing the value in the Gradle task. In a similar fashion, we can set Ant properties in Gradle and access these properties in the Ant build file.</p><p>Update the build file with the following statement:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>ant.properties['comments'] = "This comment added in Gradle"</strong></span>
+</pre></div><p>This property will be read by the <code class="literal">GradleProperties</code> target in the Ant file, as follows:</p><div class="informalexample"><pre class="programlisting">&lt;target name="GradleProperties"&gt;
+   &lt;echo message="Gradle comments are ${comments}"/&gt;
+&lt;/target&gt;</pre></div><p>Now, on <a id="id440" class="indexterm"/>executing the <code class="literal">GradleProperties</code> target, we can find the comments property printed in the console as shown in this code snippet:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle  -b build_import.gradle GradleProperties</strong></span>
+
+<span class="strong"><strong>Starting Build</strong></span>
+<span class="strong"><strong>...</strong></span>
+<span class="strong"><strong>Executing task ':GradleProperties' (up-to-date check took 0.015 secs) due to:</strong></span>
+<span class="strong"><strong>  Task has not declared any outputs.</strong></span>
+<span class="strong"><strong>[ant:echo] Gradle comments are:: This comments added in Gradle</strong></span>
+<span class="strong"><strong>:GradleProperties (Thread[main,5,main]) completed. Took 0.047 secs.</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div></div><div class="section" title="Update Ant tasks"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec16"/>Update Ant tasks</h3></div></div></div><p>Gradle also<a id="id441" class="indexterm"/> enables you to enhance an existing Ant task. In the same way, we enhance any existing<a id="id442" class="indexterm"/> Gradle tasks using the <code class="literal">doFirst</code> or <code class="literal">doLast</code> closures; Ant tasks can be extended in a similar fashion. Add the following statements in the build file (file: <code class="literal">build_import.gradle</code>) to add the <code class="literal">doFirst</code> and <code class="literal">doLast</code> closures to the <code class="literal">GradleProperties</code> task:</p><div class="informalexample"><pre class="programlisting">GradleProperties.doFirst {
+   println "Adding additional behavior before Ant task operations"
+}
+GradleProperties.doLast {
+   println "Adding additional behavior after Ant Task operations"
+}</pre></div><p>Now, the <code class="literal">GradleProperties</code> target executes the <code class="literal">doFirst</code> and <code class="literal">doLast</code> closures, and the console output is<a id="id443" class="indexterm"/> displayed as follows:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_import.gradle GP</strong></span>
+
+<span class="strong"><strong>Starting Build</strong></span>
+<span class="strong"><strong>……</strong></span>
+<span class="strong"><strong>:GradleProperties (Thread[main,5,main]) started.</strong></span>
+<span class="strong"><strong>:GradleProperties</strong></span>
+<span class="strong"><strong>Executing task ':GradleProperties' (up-to-date check took 0.003 secs) due to:</strong></span>
+<span class="strong"><strong>  Task has not declared any outputs.</strong></span>
+<span class="strong"><strong>Adding additional behavior before Ant task operations</strong></span>
+<span class="strong"><strong>[ant:echo] Gradle comments are:: This comments added in Gradle</strong></span>
+<span class="strong"><strong>Adding additional behavior after Ant Task operations</strong></span>
+<span class="strong"><strong>:GradleProperties (Thread[main,5,main]) completed. Took 0.158 secs.</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div></div></div><div class="section" title="Using AntBuilder API"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec95"/>Using AntBuilder API</h2></div></div></div><p>We have seen how easy it is to just import the Ant <code class="literal">build.xml</code> into Gradle and use Ant targets as Gradle tasks. Another approach is to use the <code class="literal">AntBuilder</code> class. With <code class="literal">AntBuilder</code> you can <a id="id444" class="indexterm"/>call Ant tasks from the Gradle script. An instance of <code class="literal">AntBuilder</code> class called 'ant' is available in the Gradle build file. Using this<a id="id445" class="indexterm"/> instance, when we call a method, it actually executes an Ant task.</p><p>In the following examples, we will use the same <code class="literal">build.xml</code> file and will explain how to rewrite the tasks to Gradle using <code class="literal">AntBuilder</code>:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Setting the properties:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;project 
+name="qualitycheck" default="makeJar" 
+basedir="."&gt;
+
+&lt;property name="src" location="src/main/java"/&gt;
+&lt;property name="build" location="build"/&gt;
+&lt;property name="lib" location="lib"/&gt;
+&lt;property name="dist" location="dist"/&gt;
+&lt;property name="version" value="1.0"/&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">defaultTasks "makeJar"
+
+def src = "src/main/java"
+def build = "build"
+def libs = "build/libs"
+def classes = "build/classes"
+def distributions = "build/distributions"
+def version = 1.0</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Cleaning the build directories:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;delete dir="${build}"/&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">ant.delete(dir:"${build}")</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Creating<a id="id446" class="indexterm"/> new directories:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;mkdir dir="${classes}"/&gt;
+&lt;mkdir dir="${distributions}"/&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">ant.mkdir(dir:"${libs}")
+ant.mkdir(dir:"${classes}")</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Compiling<a id="id447" class="indexterm"/> the Java code:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;javac srcdir="${src}"
+destdir="${build}/classes" 
+includeantruntime="false"/&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">ant.javac(srcdir:"${src}",
+destdir:"${classes}",
+includeantruntime:"false")</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Create JAR file from the compiled source code:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;jar jarfile 
+="${libs}/sampleproject-${version}.jar" 
+basedir="${classes}"
+/&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">ant.jar(
+destfile: "${libs}/sampleproject-${version}.jar",
+basedir:"${classes}") </pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Generate the checksum for JAR:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;checksum file="${libs}/sampleproject-${version}.jar" 
+property="sampleMD5"/&gt;
+
+&lt;echo file ="${libs}/sampleproject.checksum" message="checksum=${sampleMD5}"
+/&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">ant.checksum(
+file:"${libs}/sampleproject-${version}.jar",
+property:"sampleMD5"
+)
+
+ant.echo(file:"${libs}/sampleproject.checksum",
+message:"checksum=${ant.sampleMD5}"
+)</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Bundle<a id="id448" class="indexterm"/> the checksum file and JAR file into a ZIP file:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>With AntBuilder</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;zip 
+destfile ="${distributions}/sampleproject.zip" 
+filesonly="true" basedir="${libs}" includes="*.checksum,*.jar" 
+ /&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">ant.zip(destfile: "${dist}/sampleproject.zip",
+basedir:"dist") </pre></div><p>
+</p>
+</td></tr></tbody></table></div></li></ol></div><p>So the complete<a id="id449" class="indexterm"/> build file will look as follows:</p><div class="informalexample"><pre class="programlisting">defaultTasks "makeJar"
+
+def src="src/main/java"
+def build="build"
+def libs="build/libs"
+def classes = "build/classes"
+def distributions="build/distributions"
+def version=1.0
+
+task setup(dependsOn:'clean') &lt;&lt; {
+   ant.mkdir(dir:"${libs}")
+   ant.mkdir(dir:"${classes}")
+}
+
+task clean &lt;&lt; {
+   ant.delete(dir:"${build}")
+}
+
+task compileProject(dependsOn:'setup') &lt;&lt; {
+   ant.javac(srcdir:"${src}",destdir:"${classes}",
+includeantruntime:"false")
+}
+
+task makeJar &lt;&lt; {
+   ant.jar(destfile: "${libs}/sampleproject-${version}.jar",
+basedir:"${classes}") 
+}
+
+task zip(dependsOn:'checksum') &lt;&lt; {
+   ant.zip(destfile: "${distributions}/sampleproject.zip",
+basedir:"${libs}")
+}
+
+task checksum(dependsOn:'makeJar') &lt;&lt; {
+   ant.checksum(file:"${libs}/sampleproject-${version}.jar",
+property:"sampleMD5")
+   ant.echo(file:"${libs}/sampleproject.checksum",
+message:"checksum=${ant.sampleMD5}")
+}
+
+makeJar.dependsOn compileProject</pre></div><p>Now, execute the ZIP<a id="id450" class="indexterm"/> task and check the distributions directory. You<a id="id451" class="indexterm"/> will find the <code class="literal">sampleproject.zip</code> file, created as follows:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_ant.gradle zip</strong></span>
+<span class="strong"><strong>:clean</strong></span>
+<span class="strong"><strong>:setup</strong></span>
+<span class="strong"><strong>:compileProject</strong></span>
+<span class="strong"><strong>:makeJar</strong></span>
+<span class="strong"><strong>:checksum</strong></span>
+<span class="strong"><strong>:zip</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>Note here that <code class="literal">AntBuilder</code> is most useful for the custom Ant <code class="literal">taskdef</code> tasks that have not been ported over to Gradle.</p></div><div class="section" title="Rewriting to Gradle"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec96"/>Rewriting to Gradle</h2></div></div></div><p>Until now, we<a id="id452" class="indexterm"/> have seen how easy it is to import an Ant file to a Gradle script. We also looked into a different approach, where we used <code class="literal">AntBuilder</code> instance to replicate the same behavior while migrating from Ant to Gradle. Now, in the third approach, we will rewrite the Ant script in Groovy.</p><p>We will continue with the same Ant <code class="literal">build.xml</code> file and we will convert this to a Gradle build script. In this example, we are building a Java project. As we know, to build a Java project Gradle already provides us with a Java plugin; you just need to apply the Java plugin in the build file and that is all. The Java plugin will take care of all the standard conventions and<a id="id453" class="indexterm"/> configurations.</p><p>The following are<a id="id454" class="indexterm"/> some of the conventions of the Java plugin that we have already discussed in <a class="link" href="ch04.html" title="Chapter 4. Plugin Management">Chapter 4</a>, <span class="emphasis"><em>Plugin Management</em></span>:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Convention used</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">build </code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Default build directory name</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">build/libs</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Default jar location</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">src/main/java; src/test/java </code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Java source files location</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Project name </p>
+</td><td style="text-align: left" valign="top">
+<p>Archive filename</p>
+</td></tr></tbody></table></div><p>If the project also follows these conventions, we do not need to write any additional configurations for the project. The only configuration needed is to define the version property; otherwise the JAR will be created without the version information.</p><p>So, our new build script will look as follows:</p><div class="informalexample"><pre class="programlisting">apply plugin :'java'
+version = 1.0</pre></div><p>Now, we are done. No need to write any script to create and delete directories, compile files, create JAR tasks, and so on. You can find <code class="literal">&lt;projectname&gt;-&lt;version&gt;.jar</code> in the <code class="literal">build/libs</code> directory after executing the build command:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle build</strong></span>
+
+<span class="strong"><strong>:clean</strong></span>
+<span class="strong"><strong>:compileJava</strong></span>
+<span class="strong"><strong>:processResources UP-TO-DATE</strong></span>
+<span class="strong"><strong>:classes</strong></span>
+<span class="strong"><strong>:jar</strong></span>
+<span class="strong"><strong>:assemble</strong></span>
+<span class="strong"><strong>:compileTestJava UP-TO-DATE</strong></span>
+<span class="strong"><strong>:processTestResources UP-TO-DATE</strong></span>
+<span class="strong"><strong>:testClasses UP-TO-DATE</strong></span>
+<span class="strong"><strong>:test UP-TO-DATE</strong></span>
+<span class="strong"><strong>:check UP-TO-DATE</strong></span>
+<span class="strong"><strong>:build</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>It is so easy to trim around 30 lines of Ant code to two lines of Gradle code. It allowed us to escape all the boilerplate code and concentrate on the main logic. However, all projects can't be simply converted just by applying a plugin or following some convention. You might need to configure <code class="literal">sourceSets</code> and other configurations if the project does not follow Gradle or Maven conventions.</p><p>Coming back to the example, we have only created the JAR file; two more tasks are pending. We have to generate a file to store the checksum and we need to bundle the checksum file and <a id="id455" class="indexterm"/>JAR file in to a ZIP file. We can define two additional<a id="id456" class="indexterm"/> tasks to accomplish this, as follows:</p><div class="informalexample"><pre class="programlisting">apply plugin:'java'
+version = 1.0
+
+task zip(type: Zip) {
+    from "${libsDir}"
+    destinationDir project.distsDir
+}
+
+task checksum &lt;&lt; {
+	ant.checksum(file:"${libsDir}/${project.name}-${version}.jar",property:"sampleMD5")
+	ant.echo(file:"${libsDir}/${project.name}.checksum",message:"checksum=${ant.sampleMD5}")
+}
+
+zip.dependsOn checksum
+checksum.dependsOn build</pre></div><p>In the preceding build script, checksum task will create the checksum for the jar file. Here we are again using Ant. The checksum task creates checksum, as this is the simplest way in Gradle. We have configured the ZIP task (of type ZIP) to create a ZIP file. Gradle already provides a convention for the build/distributions directory as <code class="literal">project.distsDir</code>:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle clean zip</strong></span>
+
+<span class="strong"><strong>:clean</strong></span>
+<span class="strong"><strong>:compileJava</strong></span>
+<span class="strong"><strong>:processResources UP-TO-DATE</strong></span>
+<span class="strong"><strong>:classes</strong></span>
+<span class="strong"><strong>....</strong></span>
+<span class="strong"><strong>:check UP-TO-DATE</strong></span>
+<span class="strong"><strong>:build</strong></span>
+<span class="strong"><strong>:checksum</strong></span>
+<span class="strong"><strong>:zip</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><div class="section" title="Configuration"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec17"/>Configuration</h3></div></div></div><p>If you do not <a id="id457" class="indexterm"/>want to follow the convention, Gradle provides an easy way to configure projects as per requirement. We will show how to configure previously created Ant tasks in Gradle:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Cleaning<a id="id458" class="indexterm"/> the build directories:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;target 
+name="clean" description="clean up"&gt;
+
+   &lt;delete dir =   "${build}"/&gt;
+
+    &lt;delete dir = "${dist}"/&gt;
+&lt;/target&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">task cleanDir(type: Delete) {
+  delete "${build}"
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Creating new directories:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;target 
+name="setup" depends="clean"&gt;
+
+   &lt;mkdir dir =  "${build}"/&gt;
+&lt;/target&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">task setup(dependsOn:'cleanDir') &lt;&lt; {
+        def classesDir = file("${classes}")
+        def distDir = file("${distributions}")
+        classesDir.mkdirs()
+        distDir.mkdirs()
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Compiling the Java code:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;target name="compile" depends="setup" description="compile the source"&gt;
+    &lt;javac srcdir="${src}" destdir="${build}" /&gt;
+&lt;/target&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">compileJava {
+        File classesDir = file("${classes}")
+        FileTree srcDir = fileTree(dir: "${src}")
+        source srcDir
+        destinationDir classesDir
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">JAR the compiled classes:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Ant way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;target name="dist" depends="compile" description="generate the distribution"&gt;
+   &lt;mkdir dir="${dist}"/&gt;
+   &lt;jar jarfile="${dist}/sampleproject-${version}.jar" basedir="${build}"/&gt;
+&lt;/target&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">task myJar(type: Jar) {
+        manifest {
+        attributes 'Implementation-Title': 'Sample Project',
+                'Implementation-Version': version,
+                'Main-Class': 'com.test.SampleTask'
+    }
+    baseName = project.name +"-" +version
+    from "build/classes"
+    into project.libsDir
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li></ol></div><p>So the final build<a id="id459" class="indexterm"/> file (<code class="literal">build_conf.gradle</code>) with configuration <a id="id460" class="indexterm"/>will look as follows:</p><div class="informalexample"><pre class="programlisting">apply plugin:'java'
+
+def src="src/main/java"
+def build="$buildDir"
+def libs="$buildDir/libs"
+def classes = "$buildDir/classes"
+def distributions="$buildDir/distributions"
+def version=1.0
+
+task setup(dependsOn:'cleanDir') &lt;&lt; {
+   def classesDir = file("${classes}")
+   def distDir = file("${distributions}")
+   classesDir.mkdirs()
+   distDir.mkdirs()
+}
+
+task cleanDir(type: Delete) {
+  delete "${build}"
+}
+
+compileJava {
+   File classesDir = file("${classes}")
+   FileTree srcDir = fileTree(dir: "${src}")
+   source srcDir
+   destinationDir classesDir
+}
+task myJar(type: Jar) {
+   manifest {
+        attributes 'Implementation-Title': 'Sample Project',  
+        	'Implementation-Version': version,
+        	'Main-Class': 'com.test.SampleTask'
+    }
+    baseName = project.name +"-" +version
+    from "build/classes"
+    into project.libsDir
+}
+task zip(type: Zip) {
+    from "${libsDir}"
+    destinationDir project.distsDir
+}
+task checksum &lt;&lt; {
+   ant.checksum(file:"${libsDir}/${project.name}-${version}.jar",
+   property:"sampleMD5")
+   ant.echo(file:"${libsDir}/${project.name}.checksum",
+   message:"checksum=${ant.sampleMD5}")
+}
+
+myJar.dependsOn setup
+compileJava.dependsOn myJar
+checksum.dependsOn compileJava
+zip.dependsOn checksum</pre></div><p>Now, try to<a id="id461" class="indexterm"/> execute the ZIP command. You can find the JAR file and<a id="id462" class="indexterm"/> checksum file created in the <code class="literal">build/libs</code> directory, and the ZIP file inside the build/distributions directory:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle -b build_conf.gradle zip</strong></span>
+<span class="strong"><strong>:cleanDir</strong></span>
+<span class="strong"><strong>:setup</strong></span>
+<span class="strong"><strong>:myJar</strong></span>
+<span class="strong"><strong>:compileJava</strong></span>
+<span class="strong"><strong>:checksum</strong></span>
+<span class="strong"><strong>:zip</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div></div></div></div></div>
+<div class="section" title="Migration from Maven"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec63"/>Migration from Maven</h1></div></div></div><p>As the size<a id="id463" class="indexterm"/> and complexities of Ant files started to increase for enterprise software, developers started searching for better solutions. Maven easily fitted as a solution, as it introduced the concept of conventions over configurations. If you follow certain conventions, it saves a lot of time by skipping boilerplate code. Maven also provided a dependency management solution that was one of the major drawbacks of the Ant tool. Ant didn't provide any dependency management solution whereas Maven came with a built-in dependency manager.</p><p>When we discussed<a id="id464" class="indexterm"/> migration strategies from Ant to Gradle, you learned  that the simplest solution is to import the Ant <code class="literal">build.xml</code> file and use it as it is. For Maven migration, we do not have such a feature. Maven users might find it easy to migrate from Maven to Gradle, as both follow these common principles:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Convention over configurations</li><li class="listitem" style="list-style-type: disc">Dependency management solution</li><li class="listitem" style="list-style-type: disc">Repositories configuration</li></ul></div><p>To migrate from Maven to Gradle, we will need to write a new Gradle script that mimics the functionality. If you have already worked on Maven, you might have noticed that Gradle uses most of the Maven concepts; thus, it would not be very difficult to migrate from Maven to Gradle. One of the main differences is that Gradle uses Groovy as a build script language, whereas Maven uses XML. In this section, we will discuss some of the most common tasks to convert a Maven script to a Gradle script.</p><div class="section" title="Build filename and project properties"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec97"/>Build filename and project properties</h2></div></div></div><p>The <code class="literal">GroupId</code>, <code class="literal">artifactId</code>, and <code class="literal">version</code> are the minimum required properties that the user needs to<a id="id465" class="indexterm"/> provide in the Maven <code class="literal">pom</code> file, whereas in Gradle these are not mandatory. Default values are assumed if the user does not configure them. It is <a id="id466" class="indexterm"/>always recommended to specify these values to avoid any conflicts:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">&lt;<code class="literal">groupId&gt;ch8.example&lt;/groupId&gt;</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">&lt;artifactId&gt;SampleMaven&lt;/artifactId&gt;</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">&lt;version&gt;1.0&lt;/version&gt;</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">&lt;packaging&gt;jar&lt;/packaging&gt;</code></li></ul></div>
+</td><td style="text-align: left" valign="top">
+<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">groupid</code>: Not required.</li><li class="listitem" style="list-style-type: disc"><code class="literal">artifactId</code>: Default is the project directory name. </li><li class="listitem" style="list-style-type: disc"><code class="literal">version</code>: If not mentioned, artifact will be created without a version.</li><li class="listitem" style="list-style-type: disc">Packaging depends on the plugin that you apply in the build script.</li></ul></div>
+</td></tr></tbody></table></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="tip11"/>Tip</h3><p>If packaging is not mentioned in Maven, by default it will be JAR. The other core packaging are: <code class="literal">pom</code>, <code class="literal">jar</code>, <code class="literal">maven-plugin</code>, <code class="literal">ejb</code>, <code class="literal">war</code>, <code class="literal">ear</code>, <code class="literal">rar</code>, and <code class="literal">par</code>.</p></div></div></div><div class="section" title="Properties"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec98"/>Properties</h2></div></div></div><p>The following<a id="id467" class="indexterm"/> are the ways in which you can define properties in Maven and <a id="id468" class="indexterm"/>Gradle:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;properties&gt;
+     &lt;src&gt;src/main/java
+     &lt;/src&gt;
+    &lt;build&gt;build&lt;/build&gt;
+     &lt;classes&gt;
+       build/classes
+    &lt;/classes&gt;
+    &lt;libs&gt;
+        build/libs
+    &lt;/libs&gt;
+&lt;distributions&gt;
+     build/distributions
+     &lt;/distributions&gt;
+    &lt;version&gt;
+        1.0
+     &lt;/version&gt;
+&lt;/properties&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">def src="src/main/java"
+def build="build"
+def lib="lib"
+def dist="dist"
+def version=1.0</pre></div><p>
+</p>
+</td></tr></tbody></table></div></div><div class="section" title="Dependency management"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec99"/>Dependency management</h2></div></div></div><p>Both Maven and <a id="id469" class="indexterm"/>Gradle provide a dependency management feature. They manage dependency on their own. You do not need to worry about any second- or third-level dependencies for your project. Similar to the Maven scope (such as compile and runtime), Gradle also provides different configurations such as compile, runtime, <code class="literal">testCompile</code>, and so on. The following table lists the scope supported by both Maven and Gradle:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven scopes</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle scopes</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">compile</li><li class="listitem" style="list-style-type: disc">provided</li><li class="listitem" style="list-style-type: disc">runtime</li><li class="listitem" style="list-style-type: disc">test</li><li class="listitem" style="list-style-type: disc">system</li></ul></div>
+</td><td style="text-align: left" valign="top">
+<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">compile</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">providedCompile</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">runtime</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">providedRuntime</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">testCompile</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">testRutime</code></li></ul></div>
+</td></tr></tbody></table></div><p>As compared to provided scope in Maven, the Gradle <code class="literal">war</code> plugin adds two additional scopes, <code class="literal">providedCompile</code> and <code class="literal">providedRuntime</code>. For test cases also Gradle provides two scopes, <code class="literal">testCompile</code> and <code class="literal">testRuntime</code>. The following is an example of how you use scope while <a id="id470" class="indexterm"/>defining dependencies:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;dependency&gt;
+&lt;groupId&gt;org.apache.commons&lt;/groupId&gt;
+&lt;artifactId&gt;commons-lang3&lt;/artifactId&gt;
+&lt;version&gt;3.1&lt;/version&gt;
+&lt;scope&gt;compile&lt;/scope&gt;
+&lt;/dependency&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">dependencies {
+    compile group:  'org.apache.commons', name: 'commons-lang3', version:'3.1'
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div><div class="section" title="Exclude transitive"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec18"/>Exclude transitive</h3></div></div></div><p>In <a class="link" href="ch05.html" title="Chapter 5. Dependency Management">Chapter 5</a>, <span class="emphasis"><em>Dependency Management</em></span>, you learned how to work with dependency management. Maven doesn't differ much in<a id="id471" class="indexterm"/> terms of dependency management features. Here is a sample<a id="id472" class="indexterm"/> to exclude transitive <a id="id473" class="indexterm"/>dependencies in both the build tools:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;
+          commons-httpclient
+      &lt;/groupId&gt;
+      &lt;artifactId&gt;
+          commons-httpclient
+       &lt;/artifactId&gt;
+      &lt;version&gt;3.1&lt;/version&gt;
+      &lt;exclusions&gt;
+        &lt;exclusion&gt;
+          &lt;groupId&gt;
+            commons-codec
+           &lt;/groupId&gt;
+          &lt;artifactId&gt;
+             commons-codec
+          &lt;/artifactId&gt;
+        &lt;/exclusion&gt;
+      &lt;/exclusions&gt;
+    &lt;/dependency&gt;
+    ...
+  &lt;/dependencies&gt;
+</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">dependencies{
+
+compile('commons-httpclient:commons-httpclient:3.1') {
+ exclude group:'commons-codec',
+module:'commons-codec'
+}
+
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></div></div><div class="section" title="Plugin declaration"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec100"/>Plugin declaration</h2></div></div></div><p>A <code class="literal">maven</code> plugin is a collection of one or more goals that can be applied to a project using the plugins element. A goal in <a id="id474" class="indexterm"/>a plugin is executed by the <code class="literal">mvn [plugin-name]:[goal-name]</code> command. In Maven, generally we have two types of plugins: build plugins and reporting plugins. Build plugin will executed during build process, and should be configured in the <code class="literal">&lt;build/&gt;</code> element of <code class="literal">pom.xml</code>. Reporting plugins will be executed during site generation, and are configured using the <code class="literal">&lt;reporting/&gt;</code> element. Examples of reporting plugins are Checkstyle, PMD, and so on. In Gradle, you just need to apply a plugin statement in the Gradle script or you need to define it in the <code class="literal">buildscript</code> closure.</p><p>The following<a id="id475" class="indexterm"/> is a sample code, which describes how to include plugins in Maven and how we define the same in Gradle:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;build&gt;
+&lt;plugins&gt;
+&lt;plugin&gt;
+&lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;
+&lt;version&gt;2.3.2&lt;/version&gt;
+&lt;configuration&gt;
+&lt;source&gt;1.7&lt;/source&gt;
+&lt;target&gt;1.7&lt;/target&gt;
+&lt;/configuration&gt;
+&lt;/plugin&gt;
+&lt;/plugins&gt;
+&lt;/build&gt;</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">apply plugin:'&lt;pluginid&gt;'</code></li><li class="listitem" style="list-style-type: disc">For custom plugin:</li></ul></div>
+<p>
+</p><div class="informalexample"><pre class="programlisting">buildscript {
+ext {
+springBootVersion = '1.2.2.RELEASE'
+}
+repositories {
+jcenter()
+maven { url "http://repo.spring.io/snapshot" }
+maven { url "http://repo.spring.io/milestone" }
+}
+dependencies {
+classpath("org.springframework.boot:spring-boot-gradle-plugin:1.2.2.RELEASE")
+}
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></div><div class="section" title="Repository configuration"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec101"/>Repository configuration</h2></div></div></div><p>Repositories are used to download assets and artifacts, and also to publish the artifacts. In Maven, you can<a id="id476" class="indexterm"/> define repositories in <code class="literal">pom.xml</code> or in <code class="literal">settings.xml</code>. In Gradle, you can add repositories in the <code class="literal">init</code> script (<code class="literal">init.gradle</code>) or in the <code class="literal">build.gradle</code> file:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;repositories&gt;
+    &lt;repository&gt;
+      &lt;id&gt;rep1&lt;/id&gt;
+      &lt;name&gt;org repo1&lt;/name&gt;
+      &lt;url&gt;
+       http://company.repository1
+       &lt;/url&gt;
+    &lt;/repository&gt;
+&lt;/repositories&gt;
+</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">repositories {
+maven {
+url "http://company.repository1"
+}
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></div><div class="section" title="Multi-module declaration"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec102"/>Multi-module declaration</h2></div></div></div><p>Maven and Gradle<a id="id477" class="indexterm"/> both provide ways to create multi-module projects, as<a id="id478" class="indexterm"/> follows:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+</p><div class="informalexample"><pre class="programlisting">&lt;project&gt;
+  &lt;groupId&gt;
+    com.test.multiproject
+   &lt;/groupId&gt;
+   &lt;artifactId&gt;
+     rootproject
+  &lt;/artifactId&gt;
+  &lt;version&gt;
+     1.0
+  &lt;/version&gt;
+  &lt;packaging&gt;
+     Pom
+  &lt;/packaging&gt;
+  &lt;modules&gt;
+    &lt;module&gt;subproject1&lt;/module&gt;
+    &lt;module&gt;subproject2&lt;/module&gt;
+  &lt;/modules&gt;
+&lt;/project&gt;
+</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Add <code class="literal">settings.gradle</code> under root project and include subprojects as follows:</p>
+<p>
+</p><div class="informalexample"><pre class="programlisting">include 'subproject1', 'subproject2',</pre></div><p>
+</p>
+</td></tr></tbody></table></div></div><div class="section" title="Default values"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec103"/>Default values</h2></div></div></div><p>Gradle and Maven <a id="id479" class="indexterm"/>both provide default values for certain properties. You can use them as they are, if you want to follow convention and update them if required:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom"> </th><th style="text-align: left" valign="bottom">
+<p>Maven way</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Gradle way</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>Project directory</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.basedir}</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.rootDir}</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Build directory</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.basedir}/target</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.rootDir}/build</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Classes directory</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.build.directory}/classes</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.rootDir}/build/classes</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>JAR name</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.artifactId}-${project.version}</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.name}</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Test output directory</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.build.directory}/test-classes</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.testResultsDir}</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Source directory</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.basedir}/src/main/java</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.rootDir}/src/main/java</code>
+</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>Test source directory</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.basedir}/src/test/java</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">${project.rootDir}/src/test/java</code>
+</p>
+</td></tr></tbody></table></div></div><div class="section" title="Gradle init Plugin"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec104"/>Gradle init Plugin</h2></div></div></div><p>
+<code class="literal">Build init</code> plugin can be<a id="id480" class="indexterm"/> used to generate the <code class="literal">build.gradle</code> file from a <code class="literal">pom</code> file. Command <code class="literal">gradle init --type pom</code> or <code class="literal">gradle init</code> creates Gradle build files and other artifacts<a id="id481" class="indexterm"/> if executed from a project or directory that has a valid <code class="literal">pom.xml</code><a id="id482" class="indexterm"/> file.</p><p>We created one project, <code class="literal">SampleMaven</code>, that contains Java files in the <code class="literal">src\main\java\ch8</code> directory and the <code class="literal">pom.xml</code> file under the root project directory. The following is the content of the <code class="literal">pom.xml</code> file:</p><div class="informalexample"><pre class="programlisting">&lt;project 
+   
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+   http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+   &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+   &lt;groupId&gt;ch8.example&lt;/groupId&gt;
+   &lt;artifactId&gt;SampleMaven&lt;/artifactId&gt;
+   &lt;version&gt;1.0&lt;/version&gt;
+   &lt;packaging&gt;jar&lt;/packaging&gt;
+   &lt;dependencies&gt;
+     &lt;dependency&gt;
+       &lt;groupId&gt;org.apache.commons&lt;/groupId&gt;
+       &lt;artifactId&gt;commons-lang3&lt;/artifactId&gt;
+       &lt;version&gt;3.1&lt;/version&gt;
+       &lt;scope&gt;compile&lt;/scope&gt;
+     &lt;/dependency&gt;
+   &lt;/dependencies&gt;
+ &lt;/project&gt;</pre></div><p>Now, execute the following command:</p><div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong>$ gradle init --type pom</strong></span>
+<span class="strong"><strong>:wrapper</strong></span>
+<span class="strong"><strong>:init</strong></span>
+<span class="strong"><strong>Maven to Gradle conversion is an incubating feature.</strong></span>
+
+<span class="strong"><strong>BUILD SUCCESSFUL</strong></span>
+</pre></div><p>Note that Maven to Gradle is an incubating feature. Current DSL and other configurations might change in future. On executing the preceding command, you will find <code class="literal">build.gradle</code>, <code class="literal">settings.gradle</code>, and Gradle wapper files created in the project directory. The auto-generated <code class="literal">build.gradle</code> file has the following content. It automatically<a id="id483" class="indexterm"/> adds plugin details, and group and version information.</p><p>The content of a <a id="id484" class="indexterm"/>system-generated build file is shown in the following code snippet:</p><div class="informalexample"><pre class="programlisting">apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'ch8.example'
+version = '1.0'
+description = """"""
+
+sourceCompatibility = 1.5
+targetCompatibility = 1.5
+
+repositories {
+     maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+dependencies {
+    compile group: 'org.apache.commons', name: 'commons-lang3', version:'3.1'
+}</pre></div><p>This plugin also supports multiproject build, repository configuration, dependency management, and a lot of other features.</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec64"/>Summary</h1></div></div></div><p>In this chapter, we discussed migration to Gradle from Ant and Maven. This is a very common scenario in any organization where the existing build script is written in Ant or Maven and it is trying to upgrade to Gradle. This chapter gives some analysis and different approaches, which might help to plan the Gradle migration in a better and more organized way.</p><p>In the next chapter, we will discuss the deployment aspect of build automation with Docker.</p></div></body></html>

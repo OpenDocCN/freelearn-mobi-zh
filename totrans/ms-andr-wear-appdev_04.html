@@ -1,0 +1,266 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;4.&#xA0; Developing Watch UI" id="aid-10DJ41"><div class="titlepage"><div><div><h1 class="title"><a id="ch04"/>Chapter 4.   Developing Watch UI  </h1></div></div></div><div class="blockquote"><table border="0" cellspacing="0" cellpadding="0" class="blockquote" summary="Block quote"><tr><td valign="top"> </td><td valign="top"><p>
+<span class="emphasis"><em>"To create something exceptional, your mindset must be relentlessly focused on the smallest detail."</em></span>
+</p></td><td valign="top"> </td></tr><tr><td valign="top"> </td><td colspan="2" align="right" valign="top" style="text-align: center">--<span class="attribution"><span class="emphasis"><em>Giorgio Armani</em></span></span></td></tr></table></div><p>In this chapter, we will be extending the <code class="literal">Today</code> app, we started in the previous chapter using the UI components available in the Android Wear SDK. We will also be looking into building custom UI components using custom layouts that would fit into the watch's form factor.</p><p>We will be developing the <code class="literal">Today</code> app iteratively and incrementally as we go through the chapters in this book. We will be introducing various concepts and features of Android Wear SDKs and APIs when it's relevant, and utilizing them to make this app as feature-rich as possible.</p><p>Please note that by no means will the <code class="literal">Today</code> app be finished when we complete this chapter. It will be improved as we introduce more API concepts in further chapters.</p><div class="note" title="Note"><h3 class="title"><a id="note8"/>Note</h3><p>The code accompanying this chapter is available for reference on GitHub (<a class="ulink" href="https://github.com/siddii/mastering-android-wear/tree/master/Chapter_4">https://github.com/siddii/mastering-android-wear/tree/master/Chapter_4</a>).</p><p>For the sake of brevity, only code snippets are included as needed. The reader is encouraged to download the referenced code from GitHub and follow along as they progress through the chapter.</p></div><div class="section" title="Wearable UI"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec27"/>Wearable UI</h1></div></div></div><p>By now, you probably realize that an Android Wear watch is not just a smaller form factor than its predecessors, such as the phone and tablet. There are various nuances and characteristics that make the Android Wear watch different to the other big screen devices.</p><p>First and foremost, there is no such thing as keyboard input, at least, not currently. That brings a major challenge in how you design apps for Android Wear platform. There is not much of interactivity available from the user due to the lack of keyboard (physical or virtual) data inputs.</p><p>On top of that, we also don't have the <span class="emphasis"><em>ubiquitous</em></span> back button that is available on all other Android devices. The button for going back on the Android platform makes navigating inside an app and switching between apps a lot easier. Without that, it would be a lot harder to navigate within and between apps. The swipe gestures on the Android Wear watch are used like back buttons.</p><p>Before we start writing UI components and navigation code for the Android Wear app, if you are not very familiar with the Android Wear watch platform component and navigation flow, this would be a good time to spend some time on a physical device or emulator to see how they work. Poke around various stock apps and see how the swipe gestures and navigation work.</p><p>The important point to remember here is that, although the Android Wear device works differently to phones and tablets, it is running the same Android platform (operating system) available on every device. However, not all the UI components and widgets will be available or relevant to the Android Wear platform. It will be a subset of components, and in some cases, it will be a slimmed-down version of what is available on phones and tablets.</p></div></div>
+<div class="section" title="The Android manifest file" id="aid-11C3M1"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec28"/>The Android manifest file</h1></div></div></div><p>The <code class="literal">Today</code> app currently has two activities. The main activity is called <code class="literal">TodayActivity</code>, and the another one is <code class="literal">DayOfYearActivity</code>, which is used to display data specific to days of the year.</p><p>Note the use of the <code class="literal">uses-feature</code> tag, which makes it an Android Wear watch app:</p><pre class="programlisting">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+
+&lt;manifest 
+package="com.siddique.androidwear.today"&gt;     
+
+  &lt;uses-feature android:name="android.hardware.type.watch" /&gt;
+
+  &lt;application
+    android:allowBackup="true"
+    android:icon="@mipmap/ic_launcher"
+    android:label="@string/app_name"
+    android:supportsRtl="true"
+    android:theme="@android:style/Theme.DeviceDefault"&gt;         
+ 
+  &lt;activity
+    android:name=".TodayActivity"
+    android:label="@string/app_name"&gt;             
+    &lt;intent-filter&gt;                 
+      &lt;action android:name="android.intent.action.MAIN" /&gt;                   
+      &lt;category android:name="android.intent.category.LAUNCHER" /&gt;               
+    &lt;/intent-filter&gt;         
+  &lt;/activity&gt;         
+
+  &lt;activity
+    android:name=".DayOfYearActivity"
+    android:label="@string/day_of_year_card_title"&gt;         
+  &lt;/activity&gt;     
+  &lt;/application&gt; 
+&lt;/manifest&gt;</pre></div>
+<div class="section" title="The TodayActivity activity" id="aid-12AK81"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec29"/>The TodayActivity activity</h1></div></div></div><p>Let's see what we have in the main activity—<code class="literal">TodayActivity</code>. In the <code class="literal">onCreate</code> method, we set the <code class="literal">activity_main.xml</code> layout as the content view. And we have <code class="literal">WearableListView </code> with <code class="literal">action_list</code> tied to the <code class="literal">ListViewAdapter</code> class.</p><p>Note that the <code class="literal">TodayActivity</code> activity also implements the click listener for the <code class="literal">WearableListView</code> class, which is why you see the <code class="literal">onClick</code> handler method implemented right next to the <code class="literal">onCreate</code> method<span class="emphasis"><em>.</em></span>
+</p><p>At this point, the <code class="literal">onClick</code> listener method is handling only the first item in the list view. It launches <code class="literal">DayOfYearActivity</code> when it's clicked, and when the default <code class="literal">Intent</code> bundle is passed:</p><pre class="programlisting">public class TodayActivity extends Activity implements WearableListView.ClickListener 
+{
+  private static final String <span class="emphasis"><em>TAG </em></span>= TodayActivity.class.getName();
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState)   
+  {
+    super.onCreate(savedInstanceState);   
+    setContentView(R.layout.activity_main);
+    WearableListView listView = (WearableListView) findViewById(R.id.action_list); 
+    listView.setAdapter(new ListViewAdapter(this));  
+    listView.setClickListener(this); 
+  }
+
+  @Override
+  public void onClick(WearableListView.ViewHolder viewHolder) 
+  { 
+    Log.i(<span class="emphasis"><em>TAG</em></span>, "Clicked list item" + viewHolder.getAdapterPosition());
+    if (viewHolder.getAdapterPosition() == 0) 
+    { 
+      Intent intent = new Intent(this, DayOfYearActivity.class); 
+      startActivity(intent); 
+    } 
+  }
+
+  @Override
+  public void onTopEmptyRegionClick() 
+  {
+    .. .
+  }
+  
+  private static final class ListViewAdapter extends WearableListView.Adapter 
+  {
+    private final Context mContext;
+    private final LayoutInflater mInflater;
+    private String[] actions = null;
+    private ListViewAdapter(Context context) 
+    {
+      mContext = context;
+      mInflater = LayoutInflater.from(context);
+      actions = mContext.getResources().getStringArray(R.array.<span class="emphasis"><em>actions</em></span>); 
+    }
+  
+    @Overridepublic 
+    WearableListView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) 
+    {
+      return new   
+      WearableListView.ViewHolder(mInflater.inflate(R.layout.<span class="emphasis"><em>list_item</em></span>, null)); 
+    }
+  
+    @Overridepublic 
+    void onBindViewHolder(WearableListView.ViewHolder holder, int position) 
+    { 
+      TextView view = (TextView) holder.itemView.findViewById(R.id.<span class="emphasis"><em>name</em></span>);   
+      view.setText(actions[position]); 
+      holder.itemView.setTag(position); 
+    }
+
+    @Overridepublic 
+    int getItemCount() 
+    {
+      return actions.length; 
+    } 
+  }
+}</pre><div class="section" title="Actions inside the arrays.xml file"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec6"/>Actions inside the arrays.xml file</h2></div></div></div><p>The string values for the list view actions are declared inside the <code class="literal">arrays.xml</code> file<span class="emphasis"><em>. </em></span>We can add more actions to this file as we improve or add features to this app:</p><pre class="programlisting">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt; 
+  &lt;string-array name="actions"&gt; 
+    &lt;item&gt;Day of Year&lt;/item&gt; 
+    &lt;item&gt;On this day...&lt;/item&gt; 
+  &lt;/string-array&gt; 
+&lt;/resources&gt;</pre></div></div>
+<div class="section" title="Main activity layout file" id="aid-1394Q1"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec30"/>Main activity layout file</h1></div></div></div><p>The layout file for the main activity, <code class="literal">activity_main.xml</code> is pretty simple. All it contains is the <code class="literal">WearableListView </code> component defined in the layout. As we mentioned earlier, the <code class="literal">WearableListView</code> component is an optimized version of the <code class="literal">ListView</code> method that is suitable for small screen devices. It handles all the scrolling and transitions needed while scrolling:</p><pre class="programlisting">&lt;?xml version="1.0" encoding="utf-8"?&gt;&lt;android.support.wearable.view.WearableListView
+  
+  android:id="@+id/action_list"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:scrollbars="none"
+  android:dividerHeight="0dp"/&gt;</pre><p>When you launch the app using an Android Wear emulator, you should see the app listed with a custom launch icon, as shown in the following screenshot. Please note the icons for various device resolutions are placed in the <code class="literal">app/src/main/res/mipmap-*</code> folders:</p><p>
+</p><div class="mediaobject"><img src="../Images/image00161.jpeg" alt="Main activity layout file"/></div><p style="clear:both; height: 1em;"> </p><p>
+</p></div>
+<div class="section" title="The WearableListItemLayout component" id="aid-147LC1"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec31"/>The WearableListItemLayout component</h1></div></div></div><p>The <code class="literal">WearableListView</code> component<span class="emphasis"><em> </em></span>is used to display a list of available actions in the app, whereas the <code class="literal">WearableListItemLayout</code> component is used to style or layout components in an individual list item.</p><p>In this specific case, we have <code class="literal">ImageView</code> and <code class="literal">TextView</code> tags<span class="emphasis"><em>. </em></span>Note the usage of <code class="literal">android:src="@drawable/wl_circle"</code> line. It is essentially a drawable file available in the <code class="literal">res/drawable/wl_circle.xml</code> directory.</p><p>The <code class="literal">TextView</code> tag is used to display individual action strings that come from the <code class="literal">arrays.xml</code> file:</p><pre class="programlisting">&lt;com.siddique.androidwear.today.WearableListItemLayout
+
+
+android:gravity="center_vertical"
+android:layout_width="match_parent"
+android:layout_height="80dp"&gt;     
+
+&lt;ImageView
+  android:id="@+id/circle"
+  android:layout_height="25dp"
+  android:layout_margin="16dp"
+  android:layout_width="25dp"
+  android:src="@drawable/wl_circle"/&gt;     
+
+&lt;TextView
+  android:id="@+id/name"
+  android:gravity="center_vertical|left"
+  android:layout_width="wrap_content"
+  android:layout_marginRight="16dp"
+  android:layout_height="match_parent"
+  android:fontFamily="sans-serif-condensed-light"
+  android:lineSpacingExtra="-4sp"
+  android:textColor="@color/text_color"
+  android:textSize="16sp"/&gt;
+ 
+&lt;/com.siddique.androidwear.today.WearableListItemLayout&gt;</pre><p>Here is the implementation of the <code class="literal">WearableListItemLayout</code> class. It is basically an extension of the <code class="literal">LinearLayout</code> class with some handler methods for the <code class="literal">OnCenterProximityListener</code> component of the <code class="literal">WearableListView</code> component. Take a moment to understand how the <code class="literal">colors</code> and <code class="literal">alpha</code> characteristics of the components are updated when the list items are scrolled and brought into the center position:</p><pre class="programlisting">package com.siddique.androidwear.today;
+
+import android.content.Context;
+import android.graphics.drawable.GradientDrawable;
+import android.support.wearable.view.WearableListView;
+import android.util.AttributeSet;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+public class WearableListItemLayout extends LinearLayoutimplements WearableListView.OnCenterProximityListener 
+{
+  private final float mFadedTextAlpha;private final int mFadedCircleColor;
+  private final int mChosenCircleColor;
+  private ImageView mCircle;
+  private TextView mName;
+  public WearableListItemLayout(Context context) 
+  {
+    this(context, null);     
+  }
+
+  public WearableListItemLayout(Context context, AttributeSet attrs)   
+  {
+    this(context, attrs, 0);     
+  }
+
+  public WearableListItemLayout(Context context, AttributeSet attrs, int defStyle) 
+  {
+    super(context, attrs, defStyle);
+    mFadedTextAlpha = getResources().getInteger(R.integer.action_text_faded_alpha) / 10f;
+    mFadedCircleColor = getResources().getColor(R.color.wl_gray);
+    mChosenCircleColor = getResources().getColor(R.color.wl_orange);     
+  }
+
+  @Override
+  protected void onFinishInflate() 
+  {
+    super.onFinishInflate();
+    mCircle = (ImageView) findViewById(R.id.circle);
+    mName = (TextView) findViewById(R.id.name);     
+  }
+
+  @Override
+  public void onCenterPosition(boolean animate) 
+  {
+  mName.setAlpha(1f);         
+  ((GradientDrawable)   mCircle.getDrawable()).setColor(mChosenCircleColor);     
+  }
+
+  @Override
+  public void onNonCenterPosition(boolean animate) 
+  {         
+  ((GradientDrawable) mCircle.getDrawable()).setColor(mFadedCircleColor);mName.setAlpha(mFadedTextAlpha);     
+  } 
+}</pre><p>Here is a screenshot of the action list we can see:</p><p>
+</p><div class="mediaobject"><img src="../Images/image00162.jpeg" alt="The WearableListItemLayout component"/></div><p style="clear:both; height: 1em;"> </p><p>
+</p></div>
+<div class="section" title="The DayOfYearActivity&#xA0;class"><div class="titlepage" id="aid-1565U2"><div><div><h1 class="title"><a id="ch04lvl1sec32"/>The DayOfYearActivity class</h1></div></div></div><p>The <code class="literal">DayOfYearActivity</code> activity is a very simple class that uses Java's default <code class="literal">java.util.Calendar</code> instance to calculate how many days have passed and how many days are remaining until the end of the year:</p><pre class="programlisting">import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
+import java.util.Calendar;
+
+public class DayOfYearActivity extends Activity 
+{
+  @Override
+  protected void onCreate(Bundle savedInstanceState) 
+  {
+  super.onCreate(savedInstanceState);         
+  setContentView(R.layout.activity_day_of_year);         
+  Calendar calendar = Calendar.getInstance();         
+  String dayOfYearDesc = getString(R.string.day_of_year_card_desc,                   
+    calendar.get(Calendar.DAY_OF_YEAR),  
+    calendar.getActualMaximum(Calendar.DAY_OF_YEAR) - 
+    calendar.get(Calendar.DAY_OF_YEAR));         
+  TextView desc = (TextView) findViewById(R.id.day_of_year_desc);         
+  desc.setText(dayOfYearDesc);     
+  } 
+}</pre><div class="section" title="The activity_day_of_year.xml file"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec7"/>The activity_day_of_year.xml file</h2></div></div></div><p>An interesting thing about the <code class="literal">BoxInsetLayout</code> component is that it's a screen-aware component that boxes its children in the center square. It's a safe component that tries to fit nicely on square or circular screens:</p><pre class="programlisting">&lt;android.support.wearable.view.BoxInsetLayout
+  
+  
+  android:layout_height="match_parent"
+  android:layout_width="match_parent"
+  android:background="@drawable/sunrise"&gt;
+
+  &lt;android.support.wearable.view.CardScrollView
+    android:id="@+id/card_scroll_view"
+    andoid:layout_height="match_parent"
+    android:layout_width="match_parent"
+    app:layout_box="bottom"&gt;
+
+    &lt;android.support.wearable.view.CardFrame
+       android:layout_height="wrap_content"
+       android:layout_width="fill_parent"&gt;
+
+      &lt;LinearLayout
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:orientation="vertical"
+        android:paddingLeft="5dp"&gt; 
+
+        &lt;TextView
+          android:fontFamily="sans-serif-light"
+          android:layout_height="wrap_content"
+          android:layout_width="match_parent"
+          android:text="@string/day_of_year_card_title"
+          android:textColor="@color/black"
+          android:textSize="18sp"/&gt; 
+
+        &lt;TextView
+          android:id="@+id/day_of_year_desc"
+          android:fontFamily="sans-serif-light"
+          android:layout_height="wrap_content"
+          android:layout_width="match_parent"
+          android:text="@string/day_of_year_card_desc"
+          android:textColor="@color/black"
+          android:textSize="12sp"/&gt; 
+      &lt;/LinearLayout&gt; 
+
+    &lt;/android.support.wearable.view.CardFrame&gt; 
+  &lt;/android.support.wearable.view.CardScrollView&gt; 
+&lt;/android.support.wearable.view.BoxInsetLayout&gt;</pre><p>You can see the following action in the emulator:</p><p>
+</p><div class="mediaobject"><img src="../Images/image00163.jpeg" alt="The activity_day_of_year.xml file"/></div><p style="clear:both; height: 1em;"> </p><p>
+</p><div class="note" title="Note"><h3 class="title"><a id="note9"/>Note</h3><p>As we build layout components it's a good idea to preview them in both circular and square profiles to see how good they look.</p></div><p>Take a look at the following screenshot to see how the day of year activity layout is displayed on a circular screen. Since we used the <code class="literal">BoxInsetLayout</code> layout component, it is rendered pretty decently on both square and circular screens:</p><p>
+</p><div class="mediaobject"><img src="../Images/image00164.jpeg" alt="The activity_day_of_year.xml file"/></div><p style="clear:both; height: 1em;"> </p><p>
+</p><p>Here is the <code class="literal">DayOfYearActivity</code> activity in action. You can swipe right to go back to the previous activity, which is the main activity in this case:</p><p>
+</p><div class="mediaobject"><img src="../Images/image00165.jpeg" alt="The activity_day_of_year.xml file"/></div><p style="clear:both; height: 1em;"> </p><p>
+</p></div></div>
+<div class="section" title="Summary" id="aid-164MG1"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec33"/>Summary</h1></div></div></div><p>We discussed how we could utilize list views and layouts that are specific to wearable devices. We developed a list of actions in our <code class="literal">Today</code> app and implemented actions for list items. We created an action handler that launches an activity from the main activity to display components in the <code class="literal">BoxInsetLayout</code> layout.</p><p>This is just a tiny use case that shows how we can utilize Android Wear UI components and customize them for our needs. We couldn't discuss all the files that were used in the sample app. Spend some time studying the sample code from this chapter. This will help you connect the dots and understand how the individual pieces come together.</p><p>We are now ready to step into more advanced topics in Wear development. This would be a good time to review the basics of how UI and layout components work together in general on the Android platform.</p></div></body></html>

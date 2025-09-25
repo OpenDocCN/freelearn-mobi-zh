@@ -1,0 +1,636 @@
+<html><head></head><body>
+		    <div class="readerChapterContent">
+		      <div>
+  <h1 class="Title-1"><span>Chapter 5. Customizing Kernel and Boot Sequence</span></h1>
+
+  <p><span>In the previous chapter, we created and deployed our first custom version of Android. We created a version for a commercial smartphone, the Google Nexus 6, and a more hard-core version for a development board, the Udoo Quad. We learned about more development tools, such as ADB and Fastboot. We focused on the debugging tools, mastering the serial connection, and the boot sequence.</span></p>
+
+  <p><span>In this chapter, we will dive into the system—from the kernel customization to the boot sequence. You will learn how to retrieve the proper source code for Google devices, how to set up the build environment, how to build your first custom version of the Linux kernel, and deploy it to your device. You will learn about:</span></p>
+
+  <ul>
+    <li><span>Toolchain overview</span></li>
+
+    <li><span>How to configure the host system to compile your own Linux kernel</span></li>
+
+    <li><span>How to configure the Linux kernel</span></li>
+
+    <li><span>Linux kernel overview</span></li>
+
+    <li><span>Android boot sequence</span></li>
+
+    <li><span>The </span><code class="literal"><span>Init</span></code><span> process</span></li>
+  </ul>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>An overview of the Linux kernel</span></h2>
+
+  <p><span>In and built around the Linux kernel. One of the reasons to choose the Linux kernel was its unquestioned flexibility and the infinite possibilities to adjust it to any specific scenario and requirement. These are the features that have made Linux the most popular kernel in the embedded industry.</span></p>
+
+  <p><span>Linux kernel comes with a GPL license. This particular license allowed Google to contribute to the project since the early stages of Android. Google provided bug fixing and new features, helping Linux to overcome a few obstacles and limitations of the 2.6 version. In the beginning, Linux 2.6.32 was the most popular version for the most part of the Android device market. Nowadays, we see more and more devices shipping with the new 3.x versions.</span></p>
+
+  <p><span>The following screenshot shows the current build for the official Google Motorola Nexus 6, with kernel 3.10.40:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_73.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_73" style="max-width:569px;max-height:786px"/></div>
+
+  <p><span>The Android version we created in the previous chapters was equipped with a binary version of the Linux kernel. Using an already compiled version of the kernel is the standard practice: as we have seen, AOSP provides exactly this kind of experience.</span></p>
+
+  <p><span>As advanced users, we can take it a step further and build a custom kernel for our custom Android system. The Nexus family offers an easy entry into this world as we can easily obtain the kernel source code we need to build a custom version. We can also equip our custom Android system with our custom Linux kernel and we will have a full-customized ROM, tailored for our specific needs.</span></p>
+
+  <p><span>In this book, we are using Nexus devices on purpose—Google is one of the few companies that formally make available the kernel source code. Even if every company producing and selling Android devices is forced by law to release the kernel source code, very few of them actually do it, despite all the GPL license rules.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Obtaining the kernel</span></h3>
+
+  <p><span>Google provides the kernel source code and binary version for every single version of Android for every single device of the Nexus family.</span></p>
+
+  <p><span>The following table shows where the binary version and the source code are located, ordered by device code name:</span></p>
+
+  <div class="qrbodyPic"><img class="width60" src="imgs/epub_36702041_74.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_74" style="max-width:968px;max-height:1058px"/></div>
+
+  <p><span>As in </span><a class="link" href="" title="Chapter 4. Moving to Real-World Hardware"><span>Chapter 4</span></a><span>, </span><span class="emphasis"><em><span>Moving to real-world hardware</span></em></span><span>, we are going to work with the Motorola Nexus 6, code name </span><code class="literal"><span>Shamu</span></code><span>.</span></p>
+
+  <p><span>Both the kernel binary version and the kernel source code are stored in a git repository. All we need to do is compose the proper URL and clone the corresponding repository.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Retrieving the kernel's binary version</span></h4>
+
+  <p><span>In this section, we are going to obtain the kernel as a binary, prebuilt file. All we need is the previous table that shows every device model, with its codename and its binary location that we can use to compose the download of the URL. We are targeting Google Nexus 6, codename </span><code class="literal"><span>shamu</span></code><span> with binary location:</span></p>
+  <pre>device/moto/shamu-kernel</pre>
+
+  <p><span>So, to retrieve the binary version of the Motorola Nexus 6 kernel, we need the following command:</span></p>
+  <pre><span class="strong"><strong>$ git clone https://android.googlesource.com/device/moto/shamu-kernel</strong></span>
+</pre>
+
+  <p><span>The previous command will clone the repo and place it in the </span><code class="literal"><span>shamu-kernel</span></code><span> folder. This folder contains a file named </span><code class="literal"><span>zImage-dtb</span></code><span>—this file is the actual kernel image that can be integrated in our ROM and flashed into our device.</span></p>
+
+  <p><span>Having the kernel image, we can obtain the kernel version with the following command:</span></p>
+  <pre><span class="strong"><strong>$ $ dd if=kernel bs=1 skip=$(LC_ALL=C grep -a -b -o $'\x1f\x8b\x08\x00\x00\x00\x00\x00' kernel | cut -d ':' -f 1) | zgrep -a 'Linux version'</strong></span>
+</pre>
+
+  <p><span>Output:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_75.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_75" style="max-width:831px;max-height:310px"/></div>
+
+  <p><span>The previous screenshot shows the command output: our kernel image version is 3.10.40 and it has been compiled with GCC version 4.8 on October the the twenty-second at 22:49.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Obtaining the kernel source code</span></h4>
+
+  <p><span>As for the binary version, the previous table is critical also to download the kernel source code. Targeting the Google Nexus 6, we create the download URL using the source location string for the device codename </span><code class="literal"><span>shamu</span></code><span>:</span></p>
+  <pre><span class="strong"><strong>kernel/msm.git</strong></span>
+</pre>
+
+  <p><span>Once we have the exact URL, we can clone the GIT repository with the following command:</span></p>
+  <pre><span class="strong"><strong>$ git clone https://android.googlesource.com/kernel/msm.git</strong></span>
+</pre>
+
+  <p><span>Git will create an </span><code class="literal"><span>msm</span></code><span> folder. The folder will be strangely empty—that's because the folder is tracking the </span><code class="literal"><span>master</span></code><span> branch by default. To obtain the kernel for our Nexus 6, we need to switch to the proper branch.</span></p>
+
+  <p><span>There are a lot of available branches and we can check out the list with the following command:</span></p>
+  <pre><span class="strong"><strong>$ git branch -a</strong></span>
+</pre>
+
+  <p><span>The list will show every single branch, targeting a specific Android version for a specific Nexus device. The following screenshot shows a subset of these repositories:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_76.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_76" style="max-width:1000px;max-height:1084px"/></div>
+
+  <p><span>Now that you have the branch name, for your device and your Android version, you just need to checkout the proper branch:</span></p>
+  <pre><span class="strong"><strong>$ git checkout android-msm-shamu-3.10-lollipop-release</strong></span>
+</pre>
+
+  <p><span>The following screenshot shows the expected command output:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_77.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_77" style="max-width:831px;max-height:226px"/></div>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Setting up the toolchain</span></h2>
+
+  <p><span>The toolchain is the set of all the tools needed to effectively compile a specific software to a binary version, enabling the user to run it. In our specific domain, the toolchain allows us to create a system image ready to be flashed to our Android device. The interesting part is that the toolchain allows us to create a system image for an architecture that is different from our current one: odds are that we are using an x86 system and we want to create a system image targeting an ARM (Advanced RISC Machine) device. Compiling software targeting an architecture different from the one on our host system is called </span><span class="strong"><strong><span>cross-compilation</span></strong></span><span>.</span></p>
+
+  <p><span>The Internet offers a couple of handy solutions for this task—we can use the standard toolchain, available with the AOSP (Android Open Source Project) or we can use an alternative, very popular toolchain, the Linaro toolchain. Both toolchains will do the job—compile every single C/C++ file for the ARM architecture.</span></p>
+
+  <p><span>As usual, even the toolchain is available as precompiled binary or as source code, ready to be compiled. For our journey, we are going to use the official toolchain, provided by Google, but when you need to explore this world even more, you could try out the binary version of Linaro toolchain, downloadable from </span><a class="ulink" href="http://www.linaro.org/download"><span>www.linaro.org/download</span></a><span>. Linaro toolchain is known to be the most optimized and performing toolchain in the market, but our goal is not to compare toolchains or stubbornly use the best or most popular one. Our goal is to create the smoothest possible experience, removing unnecessary variables from the whole building a custom Android system equation.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Getting the toolchain</span></h3>
+
+  <p><span>We are going to use the official toolchain, provided by Google. We can obtain it with Android source code or downloading it separately. Having your trusted Android source code folder at hand, you can find the toolchain in the following folder:</span></p>
+  <pre><span class="strong"><strong>AOSP/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/</strong></span>
+</pre>
+
+  <p><span>This folder contains everything we need to build a custom kernel—the compiler, the linker, and few more tools such as a debugger.</span></p>
+
+  <p><span>If, for some unfortunate reason, you are missing the Android source code folder, you can download the toolchain using the following git command:</span></p>
+  <pre><span class="strong"><strong>$ git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8</strong></span>
+</pre>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Preparing the host system</span></h2>
+
+  <p><span>To successfully compile our custom kernel, we need a properly configured host system. The requirements are similar to those we satisfied to build the whole Android system in the previous chapter:</span></p>
+
+  <ul>
+    <li><span>Ubuntu</span></li>
+
+    <li><span>Linux kernel source code</span></li>
+
+    <li><span>Toolchain</span></li>
+
+    <li><span>Fastboot</span></li>
+  </ul>
+
+  <p><span>Ubuntu needs a bit of love to accomplish this task: we need to install the </span><code class="literal"><span>ncurses-dev</span></code><span> package:</span></p>
+  <pre><span class="strong"><strong>$ sudo apt-get install ncurses-dev</strong></span>
+</pre>
+
+  <p><span>Once we have all the required tools installed, we can start configuring the environment variables we need. These variables are used during the cross-compilation and can be set via the console. Fire up your trusted Terminal and launch the following commands:</span></p>
+  <pre><span class="strong"><strong>$ export PATH=&lt;toolchain-path&gt;/arm-eabi-4.8/bin:$PATH</strong></span>
+<span class="strong"><strong>$ export ARCH=arm</strong></span>
+<span class="strong"><strong>$ export SUBARCH=arm</strong></span>
+<span class="strong"><strong>$ export CROSS_COMPILE=arm-eabi-</strong></span>
+</pre>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Configuring the kernel</span></h2>
+
+  <p><span>Before being able to compile the kernel, we need to properly configure it. Every device in the Android repository has a specific branch with a specific kernel with a specific configuration to be applied.</span></p>
+
+  <p><span>The table on page 2 has a column with the exact information we need—</span><code class="literal"><span>Build configuration</span></code><span>. This information represents the parameter we need to properly configure the kernel build system. Let's configure everything for our Google Nexus 6. In your terminal, launch the following command:</span></p>
+  <pre><span class="strong"><strong>$ make shamu_defconfig</strong></span>
+</pre>
+
+  <p><span>This command will create a kernel configuration specific for your device. The following screenshot shows the command running and the final success message:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_78.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_78" style="max-width:831px;max-height:509px"/></div>
+
+  <p><span>Once the </span><code class="literal"><span>.config</span></code><span> file is in place, you could already build the kernel, using the default configuration. As advanced users, we want more and that's why we will take full control of the system, digging into the kernel configuration. Editing the configuration could enable missing features or disable unneeded hardware support, to create the perfect custom kernel, and fit your needs.</span></p>
+
+  <p><span>Luckily, to alter the kernel configuration, we don't need to manually edit the </span><code class="literal"><span>.config</span></code><span> file. The Linux kernel provides a graphical tool that will allow you to navigate the whole configuration file structure, get documentation about the single configurable item, and prepare a custom configuration file with zero effort.</span></p>
+
+  <p><span>To access the configuration menu, open your terminal, navigate to the </span><code class="literal"><span>kernel</span></code><span> folder and launch the following command:</span></p>
+  <pre><span class="strong"><strong>$ make menuconfig</strong></span>
+</pre>
+
+  <p><span>The following screenshot shows the official Linux kernel configuration tool—no frills, but very effective:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_79.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_79" style="max-width:600px;max-height:665px"/></div>
+
+  <p><span>In the upper half of the screenshot, you can see the version of the kernel we are going to customize and a quick doc about how you can navigate all those menu items: you navigate using the </span><span class="emphasis"><em><span>arrow</span></em></span><span> keys, you enter a subsection with the </span><span class="emphasis"><em><span>Enter</span></em></span><span> key, you select or deselect an item using </span><span class="emphasis"><em><span>Y</span></em></span><span>/</span><span class="emphasis"><em><span>N</span></em></span><span> or </span><span class="emphasis"><em><span>Spacebar</span></em></span><span> to toggle.</span></p>
+
+  <p><span>With great power comes great responsibility, so be careful enabling and disabling features—check the documentation in </span><code class="literal"><span>menuconfig</span></code><span>, check the Internet, and, most of all, be confident. A wrong configuration could cause a freeze during the boot sequence and this would force you to learn, to create a different configuration and try again.</span></p>
+
+  <p><span>As a real-world example, we are going to enable the FTDI support. Future Technology Devices International or FTDI is a worldwide known semiconductor company, popular for its RS-232/TTL to USB devices. These devices come in very handy to communicate to embedded devices using a standard USB connection. To enable the FTDI support, you need to navigate to the right menu by following these steps:</span></p>
+  <pre><span class="strong"><strong>Device Drivers|USB support|USB Serial Converter support</strong></span>
+</pre>
+
+  <p><span>Once you reach this section, you need to enable the following item:</span></p>
+  <pre><span class="strong"><strong>USB FTDI Single Port Serial Driver</strong></span>
+</pre>
+
+  <p><span>The following screenshot shows the correctly selected item and gives you an idea of how many devices we could possibly support (this screen only shows the USB Serial Converter support):</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_80.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_80" style="max-width:1000px;max-height:1108px"/></div>
+
+  <p><span>Once you have everything in place, just select </span><span class="strong"><strong><span>Exit</span></strong></span><span> and save the configuration, as shown in the following screenshot:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_81.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_81" style="max-width:831px;max-height:354px"/></div>
+
+  <p><span>With the exact same approach, you can add every new feature you want. One important note, we added the FTDI package merging it into the kernel image. Linux kernel gives you the opportunity to make a feature available also as a module. A module is an external file, with </span><code class="literal"><span>.ko</span></code><span> extension, that can be injected and loaded in the kernel at runtime. The kernel modules are a great and handy feature when you are working on a pure Linux system, but they are very impractical on Android. With the hope of having a modular kernel, you should code yourself the whole module loading system, adding unnecessary complexity to the system. The choice we made of having the FTDI feature inside the kernel image penalizes the image from a size point of view, but relieves us from the manual management of the module itself. That's why the common strategy is to include every new feature we want right into the kernel core.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Compiling the kernel</span></h2>
+
+  <p><span>Once you have a properly configured environment and a brand new configuration file, you just need one single command to start the building process. On your terminal emulator, in the kernel source folder, launch:</span></p>
+  <pre><span class="strong"><strong>$ make</strong></span>
+</pre>
+
+  <p><span>The </span><code class="literal"><span>make</span></code><span> command will wrap up the necessary configuration and will launch the compiling and assembling process. The duration of the process heavily depends on the performance of your system: it could be one minute or one hour. As a reference, an i5 2.40 GHz CPU with 8 GB of RAM takes 5-10 minutes to complete a clean build. This is incredibly quicker than compiling the whole AOSP image, as you can see, due to the different complexity and size of the code base.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Working with non-Google devices</span></h2>
+
+  <p><span>So far, we have worked with Google devices, enjoying the Google open-source mindset. As advanced users, we frequently deal with devices that are not from Google or that are not even a smartphone. As a real-world example, we are going to use again a UDOO board: a single-board computer that supports Ubuntu or Android. For the time being, the most popular version of UDOO is the UDOO Quad and that's the version we are targeting.</span></p>
+
+  <p><span>As for every other device, the standard approach is to trust the manufacturer's website to obtain kernel source code and any useful documentation for the process: most of all, how to properly flash the new kernel to the system. When working with a custom kernel, the procedure is quite consolidated. You need the source code, the toolchain, a few configuration steps, and, maybe, some specific software package to be installed on to your host system. When it comes to flashing the kernel, every device can have a different procedure. This depends on how the system has been designed and which tools the manufacturing team provides. Google provides </span><code class="literal"><span>fastboot</span></code><span> to flash our images to our devices. Other manufactures usually provide tools that are similar or that can do similar things with little effort.</span></p>
+
+  <p><span>The UDOO development team worked hard to make the UDOO board fully compatible with </span><code class="literal"><span>fastboot</span></code><span>—instead of forcing you to adjust to their tools, they adjusted their device to work with the tools you already know. They tuned up the board's bootloader and you can now flash the </span><code class="literal"><span>boot.img</span></code><span> using </span><code class="literal"><span>fastboot</span></code><span>, like you were flashing a standard Google Android device.</span></p>
+
+  <p><span>To obtain the kernel, we just need to clone a git repository. With your trusted terminal, launch the following command:</span></p>
+  <pre><span class="strong"><strong>$ git clone http://github.com/UDOOBoard/Kernel_Unico kernel</strong></span>
+</pre>
+
+  <p><span>Once we have the kernel, we need to install a couple of software packages in our Ubuntu system to be able to work with it. With the following command, everything will be installed and put in place:</span></p>
+  <pre><span class="strong"><strong>$ sudo apt-get install build-essential ncurses-dev u-boot-tools</strong></span>
+</pre>
+
+  <p><span>Time to pick a toolchain! UDOO gives you a few possibilities—you can use the same toolchain you used for the Nexus 6 or you can use the one provided by the UDOO team itself. If you decide to use the UDOO official toolchain, you can download it with a couple of terminal commands. Be sure you have already installed </span><code class="literal"><span>curl</span></code><span>. If not, just install it with the following command:</span></p>
+  <pre><span class="strong"><strong>$ sudo apt-get install curl</strong></span>
+</pre>
+
+  <p><span>Once you have </span><code class="literal"><span>curl</span></code><span>, you can use the following command to download the toolchain:</span></p>
+  <pre><span class="strong"><strong>$ curl http://download.udoo.org/files/crosscompiler/arm-fsl-linux-gnueabi.tar.gz | tar -xzf</strong></span>
+</pre>
+
+  <p><span>Now, you have everything in place to launch the build process:</span></p>
+  <pre><span class="strong"><strong>$ cd kernel</strong></span>
+<span class="strong"><strong>$ make ARCH=arm UDOO_defconfig</strong></span>
+</pre>
+
+  <p><span>The following is the output:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_82.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_82" style="max-width:831px;max-height:310px"/></div>
+
+  <p><span>The previous screenshot shows the output of the configuration process. When the default </span><code class="literal"><span>.config</span></code><span> file is ready, you can launch the build process with the following command:</span></p>
+  <pre><span class="strong"><strong>$ make –j4 CROSS_COMPILE ../arm-fsl-linux-gnueabi/bin/arm-fsl-linux-gnueabi- ARCH=arm uImage modules</strong></span>
+</pre>
+
+  <p><span>When the build process is over, you can find the kernel image in the </span><code class="literal"><span>arch</span></code><span> folder:</span></p>
+  <pre><span class="strong"><strong>$ arch/arm/boot/uImage</strong></span>
+</pre>
+
+  <p><span>As for the Nexus 6, we can customize the UDOO kernel using </span><code class="literal"><span>menuconfig</span></code><span>. From the kernel source folder, launch the following command:</span></p>
+  <pre><span class="strong"><strong>$ make ARCH=arm menuconfig</strong></span>
+</pre>
+
+  <p><span>The following screenshot shows the UDOO kernel configuration menu. It's very similar to the Nexus 6 configuration menu. We have the same combination of keys to navigate, select and deselect features, and so on:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_83.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_83" style="max-width:648px;max-height:664px"/></div>
+
+  <p><span>Working with UDOO, the same warnings we had with the Nexus 6 apply here too—be careful while removing components from the kernel. Some of them are just meant to be there to support specific hardware, some of them, instead, are </span><span class="emphasis"><em><span>vital</span></em></span><span> for the system to boot. As always, feel free to experiment, but be careful about gambling!</span></p>
+
+  <p><span>This kind of development device makes debugging the kernel a bit easier compared to a smartphone. UDOO, as with a lot of other embedded development boards, provides a serial connection that enables you to monitor the whole boot sequence. This comes in handy if you are going to develop a driver for some hardware and you want to integrate it into your kernel or even if you are simply playing around with some custom kernel configuration. Every kernel and boot-related message will be printed to the serial console, ready to be captured and analyzed.</span></p>
+
+  <p><span>The next screenshot shows the boot sequence for our UDOO Quad board:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_84.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_84" style="max-width:1000px;max-height:921px"/></div>
+
+  <p><span>As you can see, there is plenty of debugging information, from the board power-on to the Android system prompt.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Driver management</span></h2>
+
+  <p><span>Since version 2.6.x, Linux gives the developer the opportunity to compile parts of the kernel as separated modules that can be injected into the core, to add more features at runtime. This approach gives flexibility and freedom: there is no need to reboot the system to enjoy new features and there is no need to rebuild the whole kernel if you only need to update a specific module. This approach is widely use in the PC world, by embedded devices such as routers, smart TVs, and even by our familiar UDOO board.</span></p>
+
+  <p><span>To code a new kernel module is no easy task and it's far from the purpose of this book: there are plenty of books on the topic and most of the skill set comes from experience. In these pages, you are going to learn about the big picture, the key points, and the possibilities.</span></p>
+
+  <p><span>Unfortunately, Android doesn't use this modular approach: every required feature is built in a single binary kernel file, for practical and simplicity reasons. In the last few years there has been a trend to integrate into the kernel even the logic needed for Wi-Fi functionality, that was before it was loaded from a separated module during the boot sequence.</span></p>
+
+  <p><span>As we saw with the FTDI example in the previous pages, the most practical way to add a new driver to our Android kernel is using </span><code class="literal"><span>menuconfig</span></code><span> and building the feature as a core part of the kernel.</span></p>
+
+  <p><span>In the next chapter, we will dig deeper in this topic and add new features to our kernel that are not present in the default configuration.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Altering the CPU frequency</span></h2>
+
+  <p><span>Overclocking a CPU is one of the most loved topics among advanced users. The idea of getting the maximum amount of power from your device is exciting. Forums and blogs are filled with discussions about overclocking and in this section we are going to have an overview and clarify a few tricky aspects that you could deal with on your journey.</span></p>
+
+  <p><span>Every CPU is designed to work with a specific clock frequency or within a specific frequency range. Any modern CPU has the possibility to scale its clock frequency to maximize performance when needed and power consumption when performance is not needed, saving precious battery in case of our beloved mobile devices. Overclocking, then, denotes the possibility to alter this working clock frequency via software, increasing it to achieve performance higher than the one the CPU was designed for.</span></p>
+
+  <p><span>Contrary to what we often read on unscrupulous forum threads or blogs, overclocking a CPU can be a very dangerous operation: we are forcing the CPU to work with a clock frequency that formally hasn't been tested. This could backfire on us with a device rebooting autonomously, for its own protection, or we could even damage the CPU, in the worst-case scenario.</span></p>
+
+  <p><span>Another interesting aspect of managing the CPU clock frequency is the so-called underclock. Leveraging the CPU clock frequency scaling feature, we can design and implement scaling policies to maximize the efficiency, according to CPU load and other aspects. We could, for instance, reduce the frequency when the device is idle or in sleep mode and push the clock to the maximum when the device is under heavy load, to enjoy the maximum effectiveness in every scenario. Pushing the CPU management even further, lots of smartphone CPUs come with a multicore architecture: you can completely deactivate a core if the current scenario doesn't need it.</span></p>
+
+  <p><span>The key concept of underclocking a CPU is adding a new frequency below the lowest frequency provided by the manufacturer. Via software, we would be able to force the device to this frequency and save battery. This process is not riskless. We could create scenarios in which the device has a CPU frequency so low that it will result in an unresponsive device or even a frozen device. As for overclocking, these are unexplored territories and only caution, experience and luck will get you to a satisfying result.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>An overview of the governors</span></h3>
+
+  <p><span>Linux kernel manages CPU scaling using specific policies called </span><span class="strong"><strong><span>governors</span></strong></span><span>. There are a few pre-build governors in the Linux kernel, already available via </span><code class="literal"><span>menuconfig</span></code><span>, but you can also add custom-made governors, for your specific needs.</span></p>
+
+  <p><span>The following screenshot shows the </span><code class="literal"><span>menuconfig</span></code><span> section of Google Nexus 6 for CPU scaling configuration:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_85.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_85" style="max-width:1000px;max-height:852px"/></div>
+
+  <p><span>As you can see, there are six prebuild governors. Naming conventions are quite useful and make names self-explanatory: for instance, the </span><code class="literal"><span>performance</span></code><span> governor aims to keep the CPU always at maximum frequency, to achieve the highest performance at every time, sacrificing battery life.</span></p>
+
+  <p><span>The most popular governors on Android are definitely the </span><code class="literal"><span>ondemand</span></code><span> and </span><code class="literal"><span>interactive</span></code><span> governors: these are quite common in many Android-based device kernels. Our reference device, Google Nexus 6, uses </span><code class="literal"><span>interactive</span></code><span> as the default governor.</span></p>
+
+  <p><span>As you would expect, Google disallows direct CPU frequency management, for security reasons. There is no quick way to select a specific frequency or a specific governor on Android. However, advanced users can satisfy their curiosity or their needs with a little effort. In the next chapter, you will learn more about CPU management, but, for now, let's customize your boot image.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Customizing the boot image</span></h2>
+
+  <p><span>So far, you learned how to obtain the kernel source code, how to set up the system, how to configure the kernel, and how to create your first custom kernel image. The next step is about equipping your device with your new kernel. To achieve this, we are going to analyze the internal structure of the </span><code class="literal"><span>boot.img</span></code><span> file used by every Android device.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Creating the boot image</span></h3>
+
+  <p><span>A custom ROM comes with four </span><code class="literal"><span>.img</span></code><span> files, necessary to create a working Android system. Two of them (</span><code class="literal"><span>system.img</span></code><span> and </span><code class="literal"><span>data.img</span></code><span>) are compressed images of a Linux compatible filesystem.</span></p>
+
+  <p><span>The remaining two files (</span><code class="literal"><span>boot.img</span></code><span> and </span><code class="literal"><span>recovery.img</span></code><span>) don't contain a standard filesystem. Instead, they are custom image files, specific to Android. These images contain a 2KB header sector, the kernel core, compressed with </span><code class="literal"><span>gzip</span></code><span>, a ramdisk, and an optional second stated loader.</span></p>
+
+  <p><span>Android provides further info about the internal structure of the image file in the </span><code class="literal"><span>boot.img.h</span></code><span> file contained in the </span><code class="literal"><span>mkbootimg</span></code><span> package in the AOSP source folder.</span></p>
+
+  <p><span>The following screenshot shows a snippet of the content of this file:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_86.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_86" style="max-width:695px;max-height:632px"/></div>
+
+  <p><span>As you can see, the image contains a graphical representation of the </span><code class="literal"><span>boot.img</span></code><span> structure. This ASCII art comes with a deeper explanation of sizes and pages.</span></p>
+
+  <p><span>To create a valid </span><code class="literal"><span>boot.img</span></code><span> file, you need the kernel image you have just built and a ramdisk. A ramdisk is a tiny filesystem that is mounted into the system RAM during the boot time. A ramdisk provides a set of critically important files, needed for a successful boot sequence. For instance, it contains the </span><code class="literal"><span>init</span></code><span> file that is in charge of launching all the services needed during the boot sequence.</span></p>
+
+  <p><span>There are two main ways to generate a boot image:</span></p>
+
+  <ul>
+    <li><span>We could use the </span><code class="literal"><span>mkbootimg</span></code><span> tool</span></li>
+
+    <li><span>We could use the Android build system</span></li>
+  </ul>
+
+  <p><span>Using </span><code class="literal"><span>mkbootimg</span></code><span> gives you a lot of freedom, but comes with a lot of complexity. You would need a serious amount of command-line arguments to properly configure the generating system and create a working image. On the other hand, the Android build system comes with the whole set of configuration parameters already set and ready to go, with zero effort for us to create a working image. Just to give you a rough idea of the complexity of </span><code class="literal"><span>mkbootimg</span></code><span>, the following screenshot shows an overview of the required parameters:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_87.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_87" style="max-width:748px;max-height:648px"/></div>
+
+  <p><span>Playing with something so powerful is tempting, but, as you can see, the amount of possible wrong parameters passed to </span><code class="literal"><span>mkbootimg</span></code><span> is large. As pragmatic developers, dealing with </span><code class="literal"><span>mkbootimg</span></code><span> is not worth the risk at the moment. We want the job done, so we are going to use the Android build system to generate a valid boot image with no effort.</span></p>
+
+  <p><span>In the previous chapters, you created a custom version of the whole system using Android source code and a properly configured build system. We are going to take advantage of all the work that we have already done to complete this new step. All that you need to do is export a new environment variable, pointing to the kernel image you have created just a few pages ago. With your trusted terminal emulator, launch:</span></p>
+  <pre><span class="strong"><strong>$ export TARGET_PREBUILT_KERNEL=&lt;kernel_src&gt;/arch/arm/boot/zImage-dtb</strong></span>
+</pre>
+
+  <p><span>Once you have set and exported the </span><code class="literal"><span>TARGET_PREBUILT_KERNEL</span></code><span> environment variable, you can launch:</span></p>
+  <pre><span class="strong"><strong>$ make bootimage</strong></span>
+</pre>
+
+  <p><span>A brand new, fully customized, boot image will be created by the Android build system and will be placed in the following folder:</span></p>
+  <pre><span class="strong"><strong>$ target/product/&lt;device-name&gt;/boot.img</strong></span>
+</pre>
+
+  <p><span>With just a couple of commands, we have a brand new </span><code class="literal"><span>boot.img</span></code><span> file, ready to be flashed. Using the Android build system to generate the boot image is the preferred way for all the Nexus devices and for all those devices, such as the UDOO, that are designed to be as close as possible to an official Google device.</span></p>
+
+  <p><span>For all those devices on the market that are compliant to this philosophy, things start to get tricky, but not impossible. Some manufactures take advantage of the Apache v2 license and don't provide the whole Android source code. You could find yourself in a scenario where you only have the kernel source code and you won't be able to leverage the Android build system to create your boot image or even understand how </span><code class="literal"><span>boot.img</span></code><span> is actually structured.</span></p>
+
+  <p><span>In these scenarios, one possible approach could be to pull the </span><code class="literal"><span>boot.img</span></code><span> from a working device, extract the content, replace the default kernel with your custom version, and recreate </span><code class="literal"><span>boot.img</span></code><span> using </span><code class="literal"><span>mkbootimg</span></code><span>: easier said than done.</span></p>
+
+  <p><span>Right now, we want to focus on the main scenario, dealing with a system that is not fighting us. In the upcoming chapters, you will learn how to fight back and take full control of the system.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Upgrading the new boot image</span></h3>
+
+  <p><span>Once you have your brand new, customized boot image, containing your customized kernel image, you only need to flash it to your device. We are working with Google devices or, at least, Google-compatible devices, so you will be able to use </span><code class="literal"><span>fastboot</span></code><span> to flash your </span><code class="literal"><span>boot.img</span></code><span> file to your device.</span></p>
+
+  <p><span>To be able to flash the image to the device, you need to put the device in </span><code class="literal"><span>fastboot mode</span></code><span>, also known as </span><code class="literal"><span>bootloader mode</span></code><span>. Every device has its own way to reach this mode, so, according to the device you are using, you can examine the table in </span><a class="link" href="" title="Chapter 4. Moving to Real-World Hardware"><span>Chapter 4</span></a><span>, </span><span class="emphasis"><em><span>Moving to Real-World Hardware</span></em></span><span> with all the steps to reach the fastboot mode.</span></p>
+
+  <p><span>Once your device is in fastboot mode, you can connect it via USB to your host computer. Fire up a terminal emulator and launch the command to upgrade the boot partition:</span></p>
+  <pre><span class="strong"><strong>$ sudo fastboot flash boot boot.img</strong></span>
+</pre>
+
+  <p><span>In a few seconds, </span><code class="literal"><span>fastboot</span></code><span> will replace the content of the device boot partition with the content of your </span><code class="literal"><span>boot.img</span></code><span> file. When the flashing process is successfully over, you can reboot your device with:</span></p>
+  <pre><span class="strong"><strong>$ sudo fastboot reboot</strong></span>
+</pre>
+
+  <p><span>The device will reboot using your new kernel and, thanks to the new USB TTL support that you added a few pages ago, you will be able to monitor the whole boot sequence with your terminal emulator.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Android boot sequence</span></h2>
+
+  <p><span>To fully understand all Android internals, we are going to learn how the whole boot sequence works: from the power-on to the actual Android system boot. The Android boot sequence is similar to any other embedded system based on Linux: in a very abstract way, after the power-on, the system initializes the hardware, loads the kernel, and finally the Android framework. Any Linux-based system undergoes a similar process during its boot sequence: your Ubuntu computer or even your home DSL router.</span></p>
+
+  <p><span>In the next sections, we are going to dive deeper in to these steps to fully comprehend the operating system we love so much.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>Internal ROM – bios</span></h3>
+
+  <p><span>When you press the power button on your device, the system loads a tiny amount of code, stored inside a ROM memory. You can think about this as an equivalent of the BIOS software you have in your PC. This software is in charge of setting up all the parameters for CPU clock and running the RAM memory check. After this, the system loads the bootloader into memory and launches it.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>An overview of bootloader</span></h3>
+
+  <p><span>So far, the bootloader has been loaded into the RAM memory and started. The bootloader is in charge of loading the system kernel into the RAM memory and launching it, to continue the boot sequence.</span></p>
+
+  <p><span>The most popular bootloader software for Android devices is U-Boot, the Universal Bootloader. U-Boot is widely used in all kinds of embedded systems: DSL routers, smart TVs, infotainment systems, for example. U-boot is open source software and its flexibility to be customized for any device is definitely one of the reasons for its popularity.</span></p>
+
+  <p><span>U-boot's main task is to read the kernel image from the boot partition, load it into the RAM memory, and run it. From this moment on, the kernel is in charge of finishing the boot sequence.</span></p>
+
+  <p><span>You could think about U-boot on Android like GRUB on your Ubuntu system: it reads the kernel image, decompresses it, loads it into the RAM memory, and executes it. The following diagram gives you a graphical representation of the whole boot sequence as on an embedded Linux system, an Android system, and a Linux PC:</span></p>
+
+  <div class="qrbodyPic"><img class="width50" src="imgs/epub_36702041_88.jpeg" data-src="https://res.weread.qq.com/wrepub/epub_36702041_88" style="max-width:783px;max-height:644px"/></div>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>The kernel</span></h3>
+
+  <p><span>After the bootloader loads the kernel, the kernel's first task is to initialize the hardware. With all the necessary hardware properly set up, the kernel mounts the ramdisk from </span><code class="literal"><span>boot.img</span></code><span> and launches </span><code class="literal"><span>init</span></code><span>.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>The Init process</span></h3>
+
+  <p><span>In a standard Linux system, the </span><code class="literal"><span>init</span></code><span> process takes care of starting all the core services needed to boot the system. The final goal is to complete the boot sequence and start the graphical interface or the command line to make the system available to the user. This whole process is based on a specific sequence of system scripts, executed in a rigorous order to assure system integrity and proper configuration.</span></p>
+
+  <p><span>Android follows the same philosophy, but it acts in a different way. In a standard Android system, the </span><code class="literal"><span>ramdisk</span></code><span>, contained in the </span><code class="literal"><span>boot.img</span></code><span>, provides the </span><code class="literal"><span>init</span></code><span> script and all the scripts necessary for the boot.</span></p>
+
+  <p><span>The Android init process consists of two main files:</span></p>
+
+  <ul>
+    <li><span>init.rc</span></li>
+
+    <li><span>init.${ro.hardware}.rc</span></li>
+  </ul>
+
+  <p><span>The </span><code class="literal"><span>init.rc</span></code><span> file is the first initialization script of the system. It takes care of initializing those aspects that are common to all Android systems. The second file is very hardware specific. As you can guess, </span><code class="literal"><span>${ro.hardware}</span></code><span> is a placeholder for the reference of a particular hardware where the boot sequence is happening. For instance, </span><code class="literal"><span>${ro.hardware}</span></code><span> is replaced with </span><code class="literal"><span>goldfinsh</span></code><span> in the emulator boot configuration.</span></p>
+
+  <p><span>In a standard Linux system, the init sequence executes a set of bash scripts. These bash scripts start a set of system services. Bash scripting is a common solution for a lot of Linux systems, because it is very standardized and quite popular.</span></p>
+
+  <p><span>Android systems use a different language to deal with the initialization sequence: Android Init Language.</span></p>
+
+  <h3 class="Title-2 sigil_not_in_toc"><span>The Android init language</span></h3>
+
+  <p><span>The Android team chose to not use Bash for Android init scripts, but to create its own language to perform configurations and services launches.</span></p>
+
+  <p><span>The Android Init Language is based on five classes of statements:</span></p>
+
+  <ul>
+    <li><span>Actions</span></li>
+
+    <li><span>Commands</span></li>
+
+    <li><span>Services</span></li>
+
+    <li><span>Options</span></li>
+
+    <li><span>Imports</span></li>
+  </ul>
+
+  <p><span>Every statement is line-oriented and is based on specific tokens, separated by white spaces. Comment lines start with a </span><code class="literal"><span>#</span></code><span> symbol.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Actions</span></h4>
+
+  <p><span>An Action is a sequence of commands bound to a specific trigger that's used to execute the particular action at a specific moment. When the desired event happens, the Action is placed in an execution queue, ready to be performed.</span></p>
+
+  <p><span>This snippet shows an example of an Action statement:</span></p>
+  <pre>on &lt;trigger&gt; [&amp;&amp; &lt;trigger&gt;]*
+  &lt;command&gt;
+  &lt;command&gt;
+  &lt;command&gt;</pre>
+
+  <p><span>Actions have unique names. If a second Action is created with the same name in the same file, its set of commands is added to the first Action commands, set and executed as a single action.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Services</span></h4>
+
+  <p><span>Services are programs that the init sequence will execute during the boot. These services can also be monitored and restarted if it's mandatory they stay up. The following snippet shows an example of a service statement:</span></p>
+  <pre>service &lt;name&gt; &lt;pathname&gt; [ &lt;argument&gt; ]*
+  &lt;option&gt;
+  &lt;option&gt;
+  ...</pre>
+
+  <p><span>Services have unique names. If in the same file, a service with a nonunique name exists, only the first one is evaluated as valid; the second one is ignored and the developer is notified with an error message.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Options</span></h4>
+
+  <p><span>Options statements are coupled with services. They are meant to influence how and when init manages a specific service.</span></p>
+
+  <p><span>Android provides quite an amount of possible options statements:</span></p>
+
+  <ul>
+    <li><code class="literal"><span>critical</span></code><span>: This specifies a device-critical service. The service will be constantly monitored and if it dies more than four times in four minutes, the device will be rebooted in Recovery Mode.</span></li>
+
+    <li><code class="literal"><span>disabled:</span></code><span> This service will be in a default stopped state. init won't launch it. A disabled service can only be launched manually, specifying it by name.</span></li>
+
+    <li><code class="literal"><span>setenv &lt;name&gt; &lt;value&gt;</span></code><span>: This sets an environment variable using </span><code class="literal"><span>name</span></code><span> and </span><code class="literal"><span>value</span></code><span>.</span></li>
+
+    <li><code class="literal"><span>socket &lt;name&gt; &lt;type&gt; &lt;perm&gt; [ &lt;user&gt; [ &lt;group&gt; [ &lt;seclabel&gt; ] ] ]</span></code><span>: This command creates a Unix socket, with a specified </span><code class="literal"><span>name</span></code><span>, (</span><code class="literal"><span>/dev/socket/&lt;name&gt;</span></code><span>) and provides its file descriptor the specified service. </span><code class="literal"><span>&lt;type&gt;</span></code><span> specifies the type of socket: </span><code class="literal"><span>dgram</span></code><span>, </span><code class="literal"><span>stream</span></code><span>, or </span><code class="literal"><span>seqpacket</span></code><span>. Default </span><code class="literal"><span>&lt;user&gt;</span></code><span> and </span><code class="literal"><span>&lt;group&gt;</span></code><span> are 0. </span><code class="literal"><span>&lt;seclabel&gt;</span></code><span> specifies the SELinx security context for the created socket.</span></li>
+
+    <li><code class="literal"><span>user &lt;username&gt;</span></code><span>: This changes the username before the service is executed. The default username is </span><code class="literal"><span>root</span></code><span>.</span></li>
+
+    <li><code class="literal"><span>group &lt;groupname&gt; [ &lt;groupname&gt; ]*</span></code><span>: This changes the group name before the service is executed.</span></li>
+
+    <li><code class="literal"><span>seclabel &lt;seclabel&gt;</span></code><span>: This changes the SELinux level before launching the service.</span></li>
+
+    <li><code class="literal"><span>oneshot</span></code><span>: This disables the service monitoring and the service won't be restarted when it terminates.</span></li>
+
+    <li><code class="literal"><span>class &lt;name&gt;</span></code><span>: This specifies a service class. Classes of services can be launched or stopped at the same time. A service with an unspecified </span><code class="literal"><span>class</span></code><span> value will be associated to the default class.</span></li>
+
+    <li><code class="literal"><span>onrestart</span></code><span>: This executes a command when the service is restarted.</span></li>
+
+    <li><code class="literal"><span>writepid &lt;file...&gt;</span></code><span>: When a services forks, this option will write the process ID (PID) in a specified file.</span></li>
+  </ul>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Triggers</span></h4>
+
+  <p><span>Triggers specify a condition that has to be satisfied to execute a particular action. They can be event triggers or property triggers. Event triggers can be fired by the trigger command or by the </span><code class="literal"><span>QueueEventTrigger()</span></code><span> function. The example event triggers are </span><code class="literal"><span>boot</span></code><span> and </span><code class="literal"><span>late-init</span></code><span>. Property triggers can be fired when an observed property changes value. Every Action can have multiple Property triggers, but only one Event trigger; refer to the following code for instance:</span></p>
+  <pre>on boot &amp;&amp; property:a=b</pre>
+
+  <p><span>This Action will be executed when the </span><code class="literal"><span>boot</span></code><span> event is triggered and the property </span><code class="literal"><span>a</span></code><span> is equal to </span><code class="literal"><span>b</span></code><span>.</span></p>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Commands</span></h4>
+
+  <p><span>The Command statement specifies a command that can be executed during the boot sequence, placing it in the </span><code class="literal"><span>init.rc</span></code><span> file. Most of these commands are common Linux system commands. The list is quite extensive. Let's look at them in detail:</span></p>
+
+  <ul>
+    <li><code class="literal"><span>bootchart_init</span></code><span>: This starts bootchart if it is properly configured. Bootchart is a performance monitor and can provide insights about the boot performance of a device.</span></li>
+
+    <li><code class="literal"><span>chmod &lt;octal-mode-permissions&gt; &lt;filename&gt;</span></code><span>: This changes file permissions.</span></li>
+
+    <li><code class="literal"><span>chown &lt;owner&gt; &lt;group&gt; &lt;filename&gt;</span></code><span>: This changes the owner and the group for the specified file.</span></li>
+
+    <li><code class="literal"><span>class_start &lt;serviceclass&gt;</span></code><span>: This starts a service specified by its class name.</span></li>
+
+    <li><code class="literal"><span>class_stop &lt;serviceclass&gt;</span></code><span>: This stops and disables a service specified by its class name.</span></li>
+
+    <li><code class="literal"><span>class_reset &lt;serviceclass&gt;</span></code><span>: This stops a service specified by its class name. It doesn't disable the service.</span></li>
+
+    <li><code class="literal"><span>copy &lt;src&gt; &lt;dst&gt;</span></code><span>: This copies a source file to a new destination file.</span></li>
+
+    <li><code class="literal"><span>domainname &lt;name&gt;</span></code><span>: This sets the domain name.</span></li>
+
+    <li><code class="literal"><span>enable &lt;servicename&gt;</span></code><span>: This starts a service by its name. If the service is already queued to be started, then it starts the service immediately.</span></li>
+
+    <li><code class="literal"><span>exec [&lt;seclabel&gt;[&lt;user&gt;[&lt;group&gt; ]* ]] -- &lt;command&gt; [ &lt;argument&gt; ]*</span></code><span>: This forks and executes the specified command. The execution is blocking: no other command can be executed in the meantime.</span></li>
+
+    <li><code class="literal"><span>export &lt;name&gt; &lt;value&gt;</span></code><span>: This sets and exports an environment variable.</span></li>
+
+    <li><code class="literal"><span>hostname &lt;name&gt;</span></code><span>: This sets the hostname.</span></li>
+
+    <li><code class="literal"><span>ifup &lt;interface&gt;</span></code><span>: This enables the specified network interface.</span></li>
+
+    <li><code class="literal"><span>insmod &lt;path&gt;</span></code><span>: This loads the specified kernel module.</span></li>
+
+    <li><code class="literal"><span>load_all_props</span></code><span>: This loads all the system properties.</span></li>
+
+    <li><code class="literal"><span>load_persist_props</span></code><span>: This loads the persistent properties, after the successful decryption of the </span><code class="literal"><span>/data</span></code><span> partition.</span></li>
+
+    <li><code class="literal"><span>loglevel &lt;level&gt;</span></code><span>: This sets the kernel log level.</span></li>
+
+    <li><code class="literal"><span>mkdir &lt;path&gt; [mode] [owner] [group]</span></code><span>: This creates a folder with the specified name, permissions, owner, and group. The defaults are 755 as permissions, and root as owner and group.</span></li>
+
+    <li><code class="literal"><span>mount_all &lt;fstab&gt;</span></code><span>: This mounts all the partitions in the </span><code class="literal"><span>fstab</span></code><span> file.</span></li>
+
+    <li><code class="literal"><span>mount &lt;type&gt; &lt;device&gt; &lt;dir&gt; [ &lt;flag&gt; ]* [&lt;options&gt;]</span></code><span>: This mounts a specific device in a specific folder. A few mount flags are available: </span><code class="literal"><span>rw</span></code><span>, </span><code class="literal"><span>ro</span></code><span>, </span><code class="literal"><span>remount</span></code><span>, </span><code class="literal"><span>noatime</span></code><span>, and all the common Linux mount flags.</span></li>
+
+    <li><code class="literal"><span>powerctl</span></code><span>: This is used to react to changes of the </span><code class="literal"><span>sys.powerctl</span></code><span> system parameter, critically important for the implementation of the reboot routing.</span></li>
+
+    <li><code class="literal"><span>restart &lt;service&gt;</span></code><span>: This restarts the specified service.</span></li>
+
+    <li><code class="literal"><span>rm &lt;filename&gt;</span></code><span>: This deletes the specified file.</span></li>
+
+    <li><code class="literal"><span>rmdir &lt;foldername&gt;</span></code><span>: This deletes the specified folder.</span></li>
+
+    <li><code class="literal"><span>setpropr &lt;name&gt; &lt;value&gt;</span></code><span>: This sets the system property with the specified name with the specified value.</span></li>
+
+    <li><code class="literal"><span>start &lt;service&gt;</span></code><span>: This starts a service.</span></li>
+
+    <li><code class="literal"><span>stop &lt;service&gt;</span></code><span>: This stops a service.</span></li>
+
+    <li><code class="literal"><span>swapon_all &lt;fstab&gt;</span></code><span>: This enables the swap partitions specified in the fstab file.</span></li>
+
+    <li><code class="literal"><span>symlink &lt;target&gt; &lt;path&gt;</span></code><span>: This creates a symbolic link from the target file to the destination path.</span></li>
+
+    <li><code class="literal"><span>sysclktz &lt;mins_west_of_gtm&gt;</span></code><span>: This sets the system clock.</span></li>
+
+    <li><code class="literal"><span>trigger &lt;event&gt;</span></code><span>: This programmatically triggers the specified event.</span></li></ul></div>
+<div><ul><li/>
+
+    <li><code class="literal"><span>wait &lt;filename &gt; [ &lt;timeout&gt; ]</span></code><span>: This monitors a path for a file to appear. A timeout can be specified. If not, the default timeout value is 5 seconds.</span></li>
+
+    <li><code class="literal"><span>write &lt;filename&gt; &lt;content&gt;</span></code><span>: This writes the specified content to the specified file. If the file doesn't exist, it creates the file. If the file already exists, it won't append the content, but it will override the whole file.</span></li>
+  </ul>
+
+  <h4 class="Title-3 sigil_not_in_toc"><span>Imports</span></h4>
+
+  <p><span>Imports specify all the external files that are needed in the current file and imports them:</span></p>
+  <pre>import &lt;path&gt;</pre>
+
+  <p><span>The previous snippet is an example of how the current init script can be extended, importing an external init script. </span><code class="literal"><span>path</span></code><span> can be a single file or even a folder. In case </span><span class="emphasis"><em><span>path</span></em></span><span> is a folder, all the files that exists in the first level of the specified folder will be imported. The command doesn't act recursively on folders: nested folders must be imported programmatically one by one.</span></p>
+</div>
+		    </div>
+		  
+
+		    <div class="readerChapterContent">
+		      <div>
+  <h2 class="Title-1"><span>Summary</span></h2>
+
+  <p><span>In this chapter, you learned how to obtain the Linux kernel for your device, how to set up your host PC to properly build your custom kernel, how to add new features to the kernel, build it, package it, and flash it to your device.</span></p>
+
+  <p><span>You learned how the Android boot sequence works and how to manipulate the init scripts to customize the boot sequence.</span></p>
+
+  <p><span>In the next chapter, you will learn how to </span><span class="emphasis"><em><span>cook</span></em></span><span> your first custom ROM, how to root your device, and replace the recovery partition.</span></p>
+</div>
+		    </div>
+		  </body></html>

@@ -1,0 +1,947 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;7.&#xA0;Textures and Mapping Techniques"><div class="titlepage"><div><div><h1 class="title"><a id="ch07"/>Chapter 7. Textures and Mapping Techniques</h1></div></div></div><p>In this chapter, we will cover the following recipes:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Applying texture with UV mapping</li><li class="listitem" style="list-style-type: disc">Efficient rendering with ETC2 compressed texture format</li><li class="listitem" style="list-style-type: disc">Applying multiple textures</li><li class="listitem" style="list-style-type: disc">Implementing Skybox with seamless cube mapping</li><li class="listitem" style="list-style-type: disc">Implementing reflection and refraction with environment mapping</li><li class="listitem" style="list-style-type: disc">Implementing render to texture with Frame Buffer Objects</li><li class="listitem" style="list-style-type: disc">Implementing terrain with displacement mapping</li><li class="listitem" style="list-style-type: disc">Implementing bump mapping</li></ul></div><div class="section" title="Introduction"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec59"/>Introduction</h1></div></div></div><p>This chapter will <a id="id469" class="indexterm"/>shed some light on textures, which is a very interesting part of the 3D computer graphics study. Texturing is a technique by which the surface of a 3D mesh model is painted with static images. In our previous chapter, we described the procedural and image texturing technique. The former uses a special algorithm to calculate the colors of the fragments in order to generate specific patterns. On the other hand, the latter one uses static images, which are wrapped onto the 3D mesh or geometry.</p><p>This chapter is all about image texturing that explains its various applications in the field of 3D computer graphics. We will begin this chapter with a simple recipe that demonstrates the UV mapping to render a texture on the 2D planar surface; moving ahead from single texture, you will learn how to apply multiple textures on 3D objects. OpenGL ES 3.0 has introduced many new features. Among these, nonpower of two (NPOT) texture support, ETC2/EAC texture compression support, and seamless cube mapping are explained in detail in this chapter, with the help of a few practical recipes. In the later sections of this chapter, we will implement the environment mapping recipes to simulate the reflection and refraction <a id="id470" class="indexterm"/>behavior on the surface of objects. The chapter will continue to explain an effective technique called render to texture; this allows you to render scenes to user-defined texture buffers. Further, we will discuss the displacement mapping technique, which can be used to render a geographical terrain; the last recipe in this chapter will discuss the bump mapping technique, which is used to produce a high quality, detailed surface using a low polygon mesh.</p></div></div>
+<div class="section" title="Applying texture with UV mapping"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec60"/>Applying texture with UV mapping</h1></div></div></div><p>A texture is <a id="id471" class="indexterm"/>basically an image represented by a chunk of memory in the computer; this memory contains color information in the form of red (R), green (G), blue (B), and alpha (A) component; each component is represented as a series of bits/bytes, depending on the format of the type of texture.</p><p>In this recipe, we <a id="id472" class="indexterm"/>will create a simple square and apply texture to it; three things are required for texture mapping:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">An image first needs to be loaded into the OpenGL ES texture memory with the help of texture objects.</li><li class="listitem">A texture is mapped to the geometry using texture coordinates.</li><li class="listitem">Use texture coordinates to get the corresponding color from texture in order to apply it on the surface of the geometry.</li></ol></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec188"/>Getting ready</h2></div></div></div><p>The GLPI <a id="id473" class="indexterm"/>framework allows to load <span class="strong"><strong>Portable Network Graphics</strong></span> (<span class="strong"><strong>PNG</strong></span>) image files using a high-level abstracted class called <code class="literal">.png</code> image, which is derived from image; this class loads the <code class="literal">.png</code> image and stores image metrics in the class, such as name, dimensions, raw bits, and OpenGL ES texture name (ID). Internally, this class uses <code class="literal">libpng</code>, which is a platform-independent library that allows you to parse <code class="literal">.png</code> images.</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec189"/>How to do it...</h2></div></div></div><p>The following procedure describes the steps to render geometry with the <code class="literal">.png</code> image texture:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">The <code class="literal">libpng</code> library is available under the <code class="literal">GLPLFramework</code> folder; this book will use version 1.5.13 of <code class="literal">libpng</code>.<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>iOS</strong></span>: On iOS, this library needs to be added to the project. In Xcode, under your project, you can include this library using <span class="strong"><strong>File</strong></span> | <span class="strong"><strong>Add to &lt;Project Name&gt;</strong></span>.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Android</strong></span>: For Android, <code class="literal">libpng</code> can be compiled as a shared library called <code class="literal">GLPipng</code>; for this, create <code class="literal">Android.mk</code> in the <code class="literal">libpng</code> folder and add the following code:<div class="informalexample"><pre class="programlisting">       LOCAL_PATH := $(call my-dir)
+       include $(CLEAR_VARS)
+
+       LOCAL_MODULE    := GLPipng
+       LOCAL_SRC_FILES := png.c pngerror.c pngget.c \
+       pngmem.c pngpread.c pngread.c pngrio.c \
+       pngrtran.c pngrutil.c pngset.c pngtrans.c \
+       pngwio.c pngwrite.c pngwtran.c pngwutil.c
+
+       LOCAL_LDLIBS := -lz
+       LOCAL_CFLAGS := -I. -g
+       include $(BUILD_SHARED_LIBRARY)</pre></div></li></ul></div><p>This makefile (<code class="literal">&lt;GLPIFramework&gt;/libpng/Android.mk</code>) needs to be included in the makefile main project (<code class="literal">SimpleTexture/Android/JNI/ Android.mk</code>) and the following line must be included in order to compile it in the makefile of your main project:</p><div class="informalexample"><pre class="programlisting">include $(MY_CUR_LOCAL_PATH)/../ ../../../GLPIFramework/libpng/Android.mk</pre></div><p>The generated shared library called <code class="literal">GLPipng</code> must be added to the project, as given in the following code:</p><div class="informalexample"><pre class="programlisting">LOCAL_SHARED_LIBRARIES := GLPipng</pre></div></li><li class="listitem">In order to <a id="id474" class="indexterm"/>read or write files on the external <a id="id475" class="indexterm"/>storage, your app must acquire the system permissions:<div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note42"/>Note</h3><p>Beginning with Android 4.4, these permissions are not required if you're reading or writing only files that are private to your app.</p></div></div><div class="informalexample"><pre class="programlisting">&lt;manifest ...&gt;&lt;uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /&gt;...&lt;/manifest&gt;</pre></div></li><li class="listitem">Create a <code class="literal">SimpleTexture</code> class derived from <code class="literal">Model</code>; inside the constructor of this class, use the <code class="literal">PngImage</code> class member variable image to load an image:<div class="informalexample"><pre class="programlisting">SimpleText::SimpleText( Renderer* parent ){
+    . . . .
+   modelType          = ImageDemoType;
+   char fname[MAX_PATH]= {""};
+
+    #ifdef __APPLE__
+      GLUtils::extractPath( getenv( "FILESYSTEM" ), fname );
+    #else
+       strcpy( fname, "/sdcard/Images/" );
+    #endif
+   
+    strcat( fname, "cartoon.png" );
+    image = new PngImage();
+    image-&gt;loadImage(fname);
+}</pre></div></li><li class="listitem">The <code class="literal">PngImage::loadImage()</code> is responsible for loading an image and assigning a <a id="id476" class="indexterm"/>unique name to the <a id="id477" class="indexterm"/>loaded texture, which is provided by OpenGL ES to recognize a texture uniquely in the system.<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Syntax</strong></span>:<div class="informalexample"><pre class="programlisting">void PngImage::loadImage(char* fileName, bool generateTexID = true, GLenum target = GL_TEXTURE_2D );</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">fileName</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the name of the image file that needs to be loaded.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">generateTexID</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the Boolean value that decides whether the image needs a unique name ID or not. If the Boolean value is <code class="literal">true</code>, then the loaded image is assigned with a unique ID and if the Boolean value is <code class="literal">false</code>, no ID is assigned to the image. The default value of this parameter is Boolean <code class="literal">true</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">target</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the target to which the texture needs to be bound. The possible targets are <code class="literal">GL_TEXTURE_2D</code>, <code class="literal">GL_TEXTURE_3D, GL_TEXTURE_2D_ARRAY</code>, or <code class="literal">GL_TEXTURE_CUBE_MAP</code>. The default value of this parameter is <code class="literal">GL_TEXTURE_2D</code>.</p>
+</td></tr></tbody></table></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Code</strong></span>: The working code for the <code class="literal">loadImage</code> function of the <code class="literal">PngImage</code> class is as follows:<div class="informalexample"><pre class="programlisting">bool PngImage::loadImage(char* fileName, 
+               bool generateTexID, GLenum target ){
+
+// Get the image bits from the png file.
+memData.bitsraw = read_png_file( fileName);
+
+   // Generate the texture ID if it is not produced before
+   if ( generateTexID ){
+        GLuint texID;
+        glGenTextures ( 1,&amp;texID );
+        memData.texID = texID;
+
+      // Depending upon the target type bind the
+      // texture using generated texture ID handler 
+
+        if (target == GL_TEXTURE_2D){
+            glBindTexture(GL_TEXTURE_2D,texID );
+        }
+   // Similarly, handle cases like GL_TEXTURE_2D, 
+        // GL_TEXTURE_3D, and GL_TEXTURE_2D_ARRAY etc.
+    }
+
+    // Get the colorType from ligpng for current 
+    // image and prepare the texture accordingly
+    switch (colorType) {
+       case PNG_COLOR_TYPE_RGB_ALPHA: {
+            glTexImage2D ( target,  0, GL_RGBA,
+             memData.width, memData.height, 0, GL_RGBA,
+             GL_UNSIGNED_BYTE,memData.bitsraw);
+        break; 
+        }
+       // Similarly, handle other cases: -
+      // PNG_COLOR_TYPE_GRAY,PNG_COLOR_TYPE_RGBetc.
+        
+    }
+             
+             // Release the allocate memory for image bits.
+    free(memData.bitsraw);
+    memData.bitsraw=NULL;return true;
+}</pre></div></li></ul></div></li><li class="listitem">The <code class="literal">loadImage</code> <a id="id478" class="indexterm"/>function parses the specified <a id="id479" class="indexterm"/>image filename and stores the read image buffer in the <code class="literal">bitraw</code> class member of <code class="literal">PngImage</code>.<p>The unique texture name is generated using the <code class="literal">glGenTexture</code> OpenGL ES API. This API generates a number of unused names in textures as specified by <code class="literal">n</code>. This name exists in the form of an unsigned integer ID; the generated ID is stored in the <code class="literal">texID</code> PngImage's member variable.</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Syntax</strong></span>:<div class="informalexample"><pre class="programlisting">void glGenTextures(GLsizei n, GLuint * textures);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">n</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the number of texture names to be generated</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">textures</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies an array of unused generated texture names</p>
+</td></tr></tbody></table></div></li><li class="listitem" style="list-style-type: disc">Consider <a id="id480" class="indexterm"/>the following code:<div class="informalexample"><pre class="programlisting">GLuint texID;
+glGenTextures   ( 1,&amp;texID );
+memData.texID = texID;</pre></div></li></ul></div><p>Bind the generated <code class="literal">texID</code> into a specified target using <code class="literal">glBindTexture</code>; this API of OpenGL ES 3.0 specifies the pipeline and what kind of texture it needs to manage. For example, the following code mentions that the current state of OpenGL ES contains a 2D type texture:</p><div class="informalexample"><pre class="programlisting">         if (target == GL_TEXTURE_2D){
+            glBindTexture ( GL_TEXTURE_2D,texID );
+          }</pre></div><p>This API is <a id="id481" class="indexterm"/>very important to be called to perform any operation on a texture; it binds the correct texture name to OpenGL ES, which allows you to perform any texture operation on it.</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Syntax</strong></span>:<div class="informalexample"><pre class="programlisting">void glBindTexture(GLenum target, GLuint texture);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">target</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the target to which the texture is bound. This must be either <code class="literal">GL_TEXTURE_2D</code>, <code class="literal">GL_TEXTURE_3D</code>, <code class="literal">GL_TEXTURE_2D_ARRAY</code>, or <code class="literal">GL_TEXTURE_CUBE_MAP</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">texture</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies an array of unused generated texture names.</p>
+</td></tr></tbody></table></div></li></ul></div></li><li class="listitem">Load the image in the OpenGL ES texture memory using the <code class="literal">glTexImage2D</code> OpenGL ES 3.0 API:<div class="informalexample"><pre class="programlisting">glTexImage2D ( target, 0, GL_RGBA,  memData.width,
+memData.height,0,GL_RGBA,GL_UNSIGNED_BYTE,memData.bitsraw);</pre></div><p>The syntax of the <code class="literal">glTexImage2D</code> API describing each parameter is as follows:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Syntax</strong></span>:<div class="informalexample"><pre class="programlisting">void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid * data);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">target</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the target to which the texture is bound.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">level</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the level of detail number for mipmapping.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">internalFormat</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the number of components in the texture. For example, this recipe uses an image with four components (red, green, blue, and alpha). Therefore, the format will be <code class="literal">GL_RGBA</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">width</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the width of the texture; the new version of OpenGL ES 3.0 supports 2048 texels for all implementations.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">height</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the height of the texture; the new version of OpenGL ES 3.0 supports 2048 texels for all implementations.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">border</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This value must be 0.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">format</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the pixel data format; for this recipe, it's <code class="literal">GL_RGBA</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">type</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the data type of the pixel data; in this recipe, all components used 8 bits unsigned integer. Therefore, the type must be <code class="literal">GL_UNSIGNED_BYTE</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">data</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is a pointer to the image parsed data.</p>
+</td></tr></tbody></table></div></li></ul></div></li><li class="listitem">Create a vertex <a id="id482" class="indexterm"/>shader file called <code class="literal">SimpleTexutreVertex.glsl</code> and add the following code; this shader file receives <a id="id483" class="indexterm"/>the vertex and texture coordinate information from the OpenGL ES program; the received texture coordinates are further sent to the fragment shader for texture sampling purposes:<div class="informalexample"><pre class="programlisting">#version 300 es
+layout(location = 0) in vec3  VertexPosition;
+layout(location = 1) in vec2  VertexTexCoord;
+out vec2 TexCoord;
+uniform mat4 ModelViewProjectMatrix;
+
+void main( void ) {
+  TexCoord = VertexTexCoord;
+  gl_Position=ModelViewProjectMatrix*vec4(VertexPosition,1.0);
+}</pre></div><p>Similarly, create a shader file called <code class="literal">SimpleTexureFragment.glsl</code>; this is responsible for receiving the texture coordinate from the vertex shader and the texture image. The texture is received in sampler2D, which is a built-in data type in GLSL to access texture in the shader. Another GLSL API texture is used to retrieve the fragment color; this API accepts the texture and texture coordinate as an argument:</p><div class="informalexample"><pre class="programlisting">#version 300 es
+precision mediump float;
+in vec2 TexCoord;
+uniform sampler2D Tex1;
+layout(location = 0) out vec4 outColor;
+
+void main() {
+    outColor = texture(Tex1, TexCoord);
+}</pre></div></li><li class="listitem">Define the <a id="id484" class="indexterm"/>geometry vertices of the square and <a id="id485" class="indexterm"/>texture coordinates to map the texture on the geometry:<div class="informalexample"><pre class="programlisting">float quad[12] = { -1.0, -1.0,  0.0, 1.0, -1.0,  0.0,
+                   -1.0, 1.0, -0.0, 1.0, 1.0, -0.0 };
+float texCoords[8] = { 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0 };</pre></div><div class="mediaobject"><img src="graphics/5527OT_07_01.jpg" alt="How to do it..."/></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note43"/>Note</h3><p>A single texture is always represented in the UV coordinate system from (0.0, 0.0) bottom-left to (1.0, 1.0) top-right. If the texture coordinates goes beyond these dimensional ranges, then the special wrapping rule can be applied to control texture wrapping. For more information, refer to the <span class="emphasis"><em>There's more…</em></span> section in this recipe.</p></div></div></li><li class="listitem">The OpenGL ES shader accesses loaded images using texture units; texture units are <a id="id486" class="indexterm"/>pieces of hardware that have access to images. Each texture unit has an ID that ranges from <code class="literal">0</code> to <code class="literal">GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS -1</code>. In order to make a texture unit active, use <a id="id487" class="indexterm"/><code class="literal">glActiveTexture</code>. In the current recipe, the loaded texture is made accessible to the shader through texture unit 0 (<code class="literal">GL_TEXTURE0</code>). Bind the texture to this texture unit:<div class="informalexample"><pre class="programlisting">glActiveTexture(GL_TEXTURE0); //Make texture unit 0 active.
+glBindTexture(GL_TEXTURE_2D, image-&gt;getTextureID());</pre></div><p>Send the texture unit ID to the fragment shader using a <code class="literal">glUniform1i</code>. In the fragment shader, the <code class="literal">Tex1</code> uniform variable receives this information; query the location of this uniform variable in order to provide the texture unit information. Note that <code class="literal">0</code> here is the texture unit number, not the handle of the texture:</p><div class="informalexample"><pre class="programlisting">   TEX = ProgramManagerObj-&gt;ProgramGetUniformLocation
+                           ( program, (char *) "Tex1" );
+    glUniform1i(TEX, 0);</pre></div></li><li class="listitem">Set the minification, magnification, and wrapping behavior on the texture using <code class="literal">glTexParameterf</code>:<div class="informalexample"><pre class="programlisting">   glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+   glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);</pre></div></li><li class="listitem">Use the current shader program and send the vertex and texture coordinate information to the shader to render geometry:<div class="informalexample"><pre class="programlisting">      glUseProgram(program-&gt;ProgramID);
+      glDisable(GL_CULL_FACE); // Disable culling
+      glEnable(GL_BLEND);      // Enable blending
+      glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+                               //Send Vertices
+      glEnableVertexAttribArray(VERTEX_POSITION); 
+      glEnableVertexAttribArray(TEX_COORD); //Send Tex Coordinate
+      glVertexAttribPointer
+      TEX_COORD, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
+      glVertexAttribPointer
+      (VERTEX_POSITION, 3, GL_FLOAT, GL_FALSE, 0, quad);
+      glUniformMatrix4fv
+      ( MVP, 1, GL_FALSE,( float * )TransformObj-&gt;
+      TransformGetModelViewProjectionMatrix() );</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec190"/>How it works...</h2></div></div></div><p>The GLPI framework provides a high-level PNG image parsing class called <code class="literal">PNGImage</code>; it internally uses the <code class="literal">libpng</code> library to parse PNG files and stores vital information in a local data structure. This class generates texture objects, binds them with an OpenGL state machine, and loads the image buffer data in it.</p><p>OpenGL ES <a id="id488" class="indexterm"/>supports texture through texture objects; these texture objects are prepared using the <code class="literal">glGenTextures</code> API within the <code class="literal">loadImage</code> function. This API generates a texture object behind the curtains and returns the (<code class="literal">texID</code>) unique name ID. OpenGL ES is a state machine; therefore, before applying any operation on a texture, it needs to set it as a current texture; this can be achieved using <code class="literal">glBindTexture</code>. This API will bind the <code class="literal">texID</code> to the current OpenGL ES state as current texture, which allows the OpenGL ES state machine to apply all texture-related operations to the current texture object.</p><p>The OpenGL ES <a id="id489" class="indexterm"/>loads the texture in the form of an image buffer in its texture memory; this information is provided through <code class="literal">glTexImage2D</code>, which specifies the format of the image to the underlying programmable pipeline. The <code class="literal">glActiveTexture</code> API is used to bind the texture with a texture unit; the texture units in OpenGL ES are meant to access textures in the fragment shader. In our recipe, the loaded texture is attached to texture unit <code class="literal">0</code> (<code class="literal">GL_TEXTURE0</code>). The fragment uses a uniform <code class="literal">Sampler2D</code> data type that contains the handle of texture unit through which the texture is attached. The <code class="literal">glUniform1i</code> is used to send information to the sampler <code class="literal">Tex1</code> variable in the fragment shader:</p><div class="informalexample"><pre class="programlisting">   TEX = ProgramManagerObj-&gt;ProgramGetUniformLocation
+   ( program, (char *) "Tex1" );
+   glUniform1i(TEX, 0);</pre></div><p>The vertex shader has two generic attributes, namely, <code class="literal">VertexPosition</code> and <code class="literal">VertexTexCoord</code>, which receive the vertex coordinates and the texture coordinates. Per-vertex texture coordinates (received in the vertex shader) are sent to the fragment shader using <code class="literal">TexCoord</code>.</p><p>The fragment shader is responsible for sampling the texture; sampling is a process of selecting a desire <code class="literal">texel</code> using texture coordinates; this <code class="literal">texel</code> provides the color information that needs to be applied to the corresponding pixel in the primitive. It uses the incoming per-vertex generic attribute called <code class="literal">TexCoord</code> to retrieve texture coordinates and a texture handle in the sampler2D. Texture handles allow you to access the texture from the OpenGL ES <a id="id490" class="indexterm"/>texture memory to be used in shaders to perform the sampling operation. The shading language provides a texture for <a id="id491" class="indexterm"/>sampling purposes; it uses the texture handle, which is <code class="literal">0</code> for this recipe, and the <code class="literal">TexCoord</code> texture coordinate.</p><div class="mediaobject"><img src="graphics/5527OT_07_02.jpg" alt="How it works..."/></div></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec191"/>There's more...</h2></div></div></div><p>In this section, we <a id="id492" class="indexterm"/>will discuss the various built-in filtering and wrapping techniques available in the OpenGL ES 3.0 pipeline. These techniques are applied through <code class="literal">glTexParamterf</code>, <code class="literal">glTexParameteri</code>, <code class="literal">glTexParameterf</code>, <code class="literal">glTexParameteriv</code>, or <code class="literal">glTexParameterfv</code> by specifying various symbolic constants.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note44"/>Note</h3><p>Unlike texture, coordinates have the UV coordinate system; the sampling texels have a convention of the ST coordinate system, where S corresponds to the horizontal axis and T corresponds to the vertical axis. This can be used to define the filtering and wrapping behavior along S and T in the sampling process.</p></div></div><div class="section" title="Filtering"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec01"/>Filtering</h3></div></div></div><p>The texture filtering <a id="id493" class="indexterm"/>technique allows you to control the appearance of the texture quality; sometimes, at correct depth, one texel corresponds to exactly one pixel on screen. However, in other cases, mapping a smaller texture on to a bigger geometry may cause the texture to appear stretched (magnification). Similarly, in the vice versa case, many texels are shader by a few pixels (minification).</p><p>This type of <a id="id494" class="indexterm"/>situation is called minification and magnification. Let's look at them in detail:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Minification</strong></span>: This <a id="id495" class="indexterm"/>occurs when many texels exist for a few screen pixels.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Magnification</strong></span>: This occurs when many screen pixels exist for a few texels.</li></ul></div><p>In order to deal with minification and magnification, OpenGL ES 3.0 provides the following two types of filtering techniques:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">GL_NEAREST</code>: This uses the pixel color closest to texture coordinates</li><li class="listitem" style="list-style-type: disc"><code class="literal">GL_LINEAR</code>: This uses the weighted average of four surrounding pixels closest to texture coordinates<div class="mediaobject"><img src="graphics/5527OT_07_03.jpg" alt="Filtering"/></div></li></ul></div><p>OpenGL ES 3.0 provides <code class="literal">GL_TEXTURE_MAG_FILTER</code> and <code class="literal">GL_TEXTURE_MIN_FILTER</code> as symbolic constants, which can be used in <code class="literal">glTexParamterf</code> as a parameter to specify the filtering technique on magnification and minification respectively.</p></div><div class="section" title="Wrapping"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec02"/>Wrapping</h3></div></div></div><p>One obvious <a id="id496" class="indexterm"/>question that comes to mind is what happens when the range of texture mapping is greater than 1.0; the OpenGL ES 3.0 sampling allows three types of wrapping mode:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">GL_REPEAT</code>: This produces repeating patterns</li><li class="listitem" style="list-style-type: disc"><code class="literal">GL_MIRRORED_REPEAT</code>: This produces a repeating pattern where adjacent texture is mirrored</li><li class="listitem" style="list-style-type: disc"><code class="literal">GL_CLAMP_TO_EDGE</code>: This produces border edges pixels that are repeated</li></ul></div><p>The following image uses 2 x 2 texture coordinates and demonstrates the use of wrapping modes:</p><div class="mediaobject"><img src="graphics/5527OT_07_04.jpg" alt="Wrapping"/></div></div><div class="section" title="MIP mapping"><div class="titlepage"><div><div><h3 class="title"><a id="ch07lvl3sec03"/>MIP mapping</h3></div></div></div><p>This is a texture <a id="id497" class="indexterm"/>mapping technique that improves the visual output by <a id="id498" class="indexterm"/>reducing the aliasing effect and increases the performance of the system by reducing the texture bandwidth. MIP mapping uses precalculated versions as a texture (where each texture is half of the resolution of the previous one). An appropriate texture is selected at runtime according to how far away the viewer is.</p><p>Textures can be viewed from a far or near viewer's distance; this changes the shape and size of the texture that causes the texture to undergo the minification and magnification artefacts. These artefacts can be minimized using the previously mentioned filters, but the effective result can only be produced if the texture size scales in a factor of half or double; beyond these scales, the filter may not produce pleasing results. The MIP mapping improves the quality by picking the correct resolution based on the viewer's distance from the given texture. Not only does it improve the quality of the image by minimizing the minification/magnification artefacts, but it also increases the performance of the system by picking a correct resolution texture instead of using the full resolution image:</p><div class="mediaobject"><img src="graphics/5527OT_07_05.jpg" alt="MIP mapping"/></div><p>The <code class="literal">glGenerateMipmap</code> <a id="id499" class="indexterm"/>API can be used to generate mipmaps.</p><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">void glGenerateMipmap(GLenum target);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">target</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the target type to which the texture mipmaps are going to generate and bound. The target must be either of <code class="literal">GL_TEXTURE_2D</code>, <code class="literal">GL_TEXTURE_3D</code>, <code class="literal">GL_TEXTURE_2D_ARRAY</code>, or <code class="literal">GL_TEXTURE_CUBE_MAP</code>.</p>
+</td></tr></tbody></table></div><p>The generated mipmaps <a id="id500" class="indexterm"/>can be bound to a particular level of depth using the <code class="literal">glTexImage2D</code> API; the second parameter of this API can be used to specify the level of detail. Refer to step 2 under <span class="emphasis"><em>How to do it…</em></span> section of current recipe to see the full description of the <code class="literal">glTexImage2D</code> API.</p></div></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec192"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Procedural texture shading with texture coordinates</em></span> recipe in <a class="link" href="ch06.html" title="Chapter 6. Working with Shaders">Chapter 6</a>, <span class="emphasis"><em>Working with Shaders</em></span></li><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Applying multiple textures</em></span></li><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Efficient rendering with the ETC2 compressed texture</em></span></li></ul></div></div></div>
+<div class="section" title="Efficient rendering with the ETC2 compressed texture"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec61"/>Efficient rendering with the ETC2 compressed texture</h1></div></div></div><p>For many <a id="id501" class="indexterm"/>reasons, compressed texture is desirable over uncompressed textures; the major benefit is reduced memory footprint on the device, smaller size of the downloadable application, and an increase in performance. The OpenGL ES 3.0 specifications made it compulsory for all vendors to support ETC2 and EAC texture compression formats. Prior to this, in OpenGL ES 2.0, texture compression was not standard, as a result of which various hardware specific extensions were evolved. Developers have to support programs of various extensions in order to achieve texture compression on different types of devices.</p><p>In this recipe, we will demonstrate ETC2, which is very famous among different texture compression <a id="id502" class="indexterm"/>schemes. ETC stands for <span class="strong"><strong>Ericson Texture Compression</strong></span>, which is a lossy texture compression technique; this scheme supports both RGB and RGBA formats. Additionally, this recipe also demonstrates the new feature of <a id="id503" class="indexterm"/>OpenGL ES 3.0, which is capable of loading the <span class="strong"><strong>nonpower of two</strong></span> (<span class="strong"><strong>NPOT</strong></span>) texture.</p><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec193"/>Getting ready</h2></div></div></div><p>The ETC2 compressed texture can be stored in two types of file formats, that is, KTX and <code class="literal">PKM</code>. The <code class="literal">KTX</code> file format is a standard Khronos Group compression format, which stores multiple textures under a single file; for example, mipmaps in <code class="literal">KTX</code> require only one file to contain all mipmapped textures. On the other hand, <code class="literal">PKM</code> is a very simple file format that stores each compressed texture as a separate file. Therefore, in case of mipmaps, it will generate multiple files. For this recipe, we will use the <code class="literal">PKM</code> file format. It consists of a header and is followed by the payload; the following c structure declaration describes the header:</p><div class="informalexample"><pre class="programlisting">   struct ETC2Header {
+     char name[4];                 // "PKM "
+     char version[2];              // "20" for ETC2
+     unsigned short format;        // Format
+     unsigned short paddedWidth;   // Texture width,(big-endian)
+     unsigned short paddedHeight;  // Texture height,(big-endian)
+     unsigned short origWidth;    // Original width(big-endian)
+     unsigned short origHeight;   // Original height(big-endian)
+   };</pre></div><p>OpenGL ES 3.0 supports compressed textures using the <code class="literal">glCompressedTexImage2D</code> API.</p><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">void glCompressedTexImage2D(GLenum target, GLint level, Glint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum imageSize, const GLvoid * data);</pre></div><p>Except the <code class="literal">internalFormat</code> and <code class="literal">imageSize</code>, most of the parameters are similar to glTexImage2D, which was described in the first recipe. The former is a format of the compressed texture and the latter specifies the image size, which is specifically calculated using formula. For example, in this recipe, the <code class="literal">internalFormat</code> is a <code class="literal">GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2</code> format, which is an RGBA. The <code class="literal">imageSize</code> is <a id="id504" class="indexterm"/>calculated using the <span class="emphasis"><em>ceil(width/4) * ceil(height/4) * 8</em></span> formula, where width and height are the image dimensions.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note45"/>Note</h3><p>For more information on the internal formation and image size calculations, refer to OpenGL ES 3.0 <a id="id505" class="indexterm"/>reference pages at <a class="ulink" href="https://www.khronos.org/opengles/sdk/docs/man3/html/glCompressedTexImage2D.xhtml">https://www.khronos.org/opengles/sdk/docs/man3/html/glCompressedTexImage2D.xhtml</a>.</p></div></div></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec194"/>How to do it...</h2></div></div></div><p>Perform the following steps to program compressed textures; you can refer to the <code class="literal">CompressedTexture</code> sample recipe of this chapter. In this recipe, we will render a compressed image on to a square plane:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">This recipe reuses our first <code class="literal">SimpleTexture</code>; there is no change in the vertex or fragment shader; the code to render the square geometry has also been reused. For more information, refer to <span class="emphasis"><em>Applying texture with UV mapping</em></span>.</li><li class="listitem">In order to process the compressed PKM format image, the GLPI framework provides a high-level helper class called <code class="literal">CompressImage</code>. This class is responsible for loading the compressed PKM image using the <code class="literal">loadImage</code> function. The compressed image can be loaded using the following code:<div class="informalexample"><pre class="programlisting">    char fname[MAX_PATH]= {""};
+    #ifdef __APPLE__
+    GLUtils::extractPath( getenv( "FILESYSTEM" ), fname );
+    #else
+    strcpy( fname, "/sdcard/Images/" );
+    #endif
+    strcat( fname, "SmallEarth.pkm" );
+   compressImage = new CompressedImage();
+   compressImage-&gt;loadImage(fname);</pre></div></li><li class="listitem">In <code class="literal">CompressedImage::loadImage</code>, open the compressed image and read the header bytes specified by the ETC2 header specification mentioned previously:<div class="informalexample"><pre class="programlisting">   FILE *fp = fopen(fileName, "rb");
+   if (!fp){ return false; }
+   ETC2Header pkmfile;    
+   fread(&amp;pkmfile, sizeof(ETC2Header), 1, fp);</pre></div></li><li class="listitem">Convert read bytes to the Big Endian format:<div class="informalexample"><pre class="programlisting">   pkmfile.format      = swap_uint16(pkmfile.format);
+   pkmfile.paddedWidth = swap_uint16(pkmfile.paddedWidth);
+   pkmfile.paddedHeight = swap_uint16(pkmfile.paddedHeight);
+   pkmfile.origWidth   =  swap_uint16(pkmfile.origWidth);
+   pkmfile.origHeight  = swap_uint16(pkmfile.origHeight);</pre></div></li><li class="listitem">Calculate <a id="id506" class="indexterm"/>the size of the compressed image as per the specified formula mentioned in the <span class="emphasis"><em>Getting ready</em></span> section of this recipe; use it to read the payload image buffer:<div class="informalexample"><pre class="programlisting">   memData.width   = pkmfile.paddedWidth;  // Texture Width
+   memData.height  = pkmfile.paddedHeight; // Texture Height
+    
+   // This only handles the pkmfile format
+   unsigned int imageSize =       ceil(memData.width/4)*ceil(memData.height/4)*8;
+   memData.bitsraw = (unsigned char*) malloc(imageSize);
+    
+   fread(memData.bitsraw, imageSize, 1, fp); //Load Payload
+   if (!memData.bitsraw){ return false; }</pre></div></li><li class="listitem">Generate and bind the <code class="literal">texID</code> named texture and use <code class="literal">glCompressedTexImage2D</code> to load the compressed texture image buffer:<div class="informalexample"><pre class="programlisting">   GLuint texID;
+   glGenTextures( 1,&amp;texID );
+   glBindTexture( GL_TEXTURE_2D,texID );
+   glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGB8
+   _PUNCHTHROUGH_ALPHA1_ETC2, memData.width,memData.height,
+   0,imageSize, memData.bitsraw);</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec195"/>How it works...</h2></div></div></div><p>The <code class="literal">CompressedTexture</code> class helps in loading the PKM format ETC2 compressed texture images. The PKM file format is simple; the header <code class="literal">ETC2Header</code> size is 16 bytes long and the payload is variable. The first four bytes of the header must be PKM and the next two bytes must be <code class="literal">20</code> to ensure the ETC2 scheme. The format provides the internal format of the compressed image, the next two bytes provide the padded dimension of the image, and the last two each byte represents the original dimension of the image in pixels. The internal format helps to identify the correct formula to calculate the size of the image:</p><div class="informalexample"><pre class="programlisting">imageSize = ceil(memData.width/4) * ceil(memData.height/4) * 8;</pre></div><p>Finally, the compressed texture is loaded using the <code class="literal">glCompressedTexImage2D</code> OpenGL ES 3.0 API; this API will also provide a table reference for all compressed internal formats, which is <a id="id507" class="indexterm"/>very helpful to know the image size calculation formula, as mentioned in the preceding code. Refer to the previous recipe for more information on texture rendering using UV texture coordinates.</p></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec196"/>There's more...</h2></div></div></div><p>There are a variety of texture compression tools available that can be used for texture compression; among them, the famous tools are PVRtexTool, Mali GPU Texture Compression Tool, and so on. You can use them to compress a desired image into the PKM format.</p></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec197"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Applying texture with UV mapping</em></span></li></ul></div></div></div>
+<div class="section" title="Applying multiple textures"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec62"/>Applying multiple textures</h1></div></div></div><p>The multitexturing <a id="id508" class="indexterm"/>allows you to apply more than one texture on a given geometry to produce many interesting results; modern graphics allow you to apply multiple textures on to geometry by means of texture units. In this recipe, you will learn how to make use of multiple texture units in order to implement multitexturing.</p><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec198"/>Getting ready</h2></div></div></div><p>This recipe is similar to our first recipe, that is, <code class="literal">SimpleTexture</code>. The only difference is that we will use more than one texture. Instead of using the 2D plane geometry, we will use a 3D cube. Additionally, there are some changes required in the fragment shader. We will discuss this in the next section.</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec199"/>How to do it...</h2></div></div></div><p>This section will discuss all the important changes made to support multiple textures:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Modify the fragment shader to support two given textures simultaneously; these two textures are referenced using the <code class="literal">TexFragile</code> and <code class="literal">Texwood</code> handles:<div class="informalexample"><pre class="programlisting">#version 300 es
+precision mediump float;
+
+in vec2 TexCoord;
+uniform sampler2D TexFragile; // First Texture
+uniform sampler2D TexWood;    // Second Texture
+
+layout(location = 0) out vec4 Color;
+
+void main() {
+   vec4 TextureFragile = texture(TexFragile, TexCoord);
+   vec4 TextureWood    = texture(TexWood, TexCoord);  
+   Color=mix(TextureWood,TextureFragile,TextureFragile.a);
+}</pre></div></li><li class="listitem">Create a function called <code class="literal">loadMultiTexture</code>, which will be responsible for loading multiple <a id="id509" class="indexterm"/>textures in the <code class="literal">MultipleTexture</code> class; it must be called after the loading and compilation of the shader programs. In this function, query the location of <code class="literal">TexFragile</code> and <code class="literal">Texwood</code> uniform sampler variables:<div class="informalexample"><pre class="programlisting">void MultipleTexture::loadMultiTexture(){
+    glUseProgram( program-&gt;ProgramID );
+    // Query uniform samplers location
+    TEX  = ProgramManagerObj-&gt;ProgramGetUniformLocation
+                    ( program, (char *) "TexFragile" );
+    TEX2 = ProgramManagerObj-&gt;ProgramGetUniformLocation
+                    ( program, (char *) "TexWood" );
+}</pre></div></li><li class="listitem">Activate the texture unit <code class="literal">1</code> and load the <code class="literal">fragile.png</code> image using the PngImage's class and the <code class="literal">loadImage</code> function. This takes care of creating the named texture ID and binds it to the current OpenGL ES state. Internally, this API uses <code class="literal">glGenTextures</code>, <code class="literal">glBindTexture</code>, and <code class="literal">glTexImage2D</code> to load the image; this wrapper API makes the job of loading images easy:<div class="informalexample"><pre class="programlisting">     glActiveTexture(GL_TEXTURE1);
+      image = new PngImage();
+      image-&gt;loadImage(creatPath(fname, (char*)"fragile.png"));</pre></div></li><li class="listitem">Set the texture filtering and wrapping properties:<div class="informalexample"><pre class="programlisting">   glTexParameterf
+   (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameterf
+   (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glUniform1i(TEX, 1);</pre></div></li><li class="listitem">Using the <code class="literal">TEX</code> location of <code class="literal">TexFragile</code>, send the texture unit information to the shader using the <code class="literal">glUniform1i</code> API. The Fragile.png texture can be accessed using texture unit <code class="literal">1</code>; therefore, send <code class="literal">1</code> as parameter in the <code class="literal">glUniform1i</code> API:<div class="informalexample"><pre class="programlisting">   glUniform1i(TEX, 1); // Attached to texture unit 1</pre></div></li><li class="listitem">Similarly, for the second texture, that is, wooden.png, follow the same procedure mentioned from the third to the fifth steps:<div class="informalexample"><pre class="programlisting">   glActiveTexture(GL_TEXTURE2);
+   image-&gt;loadImage(creatPath(fname, (char*)"woodenBox.png"));
+   image2 = new PngImage();
+   image2-&gt;loadImage(fname);
+   glTexParameterf
+   (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameterf
+   (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   glUniform1i(TEX2, 2); // Attached to texture unit 2</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec200"/>How it works...</h2></div></div></div><p>The fragment shader <a id="id510" class="indexterm"/>uses two samplers, namely <code class="literal">TexFragile</code> and <code class="literal">TexWood</code>; these are used to access texture images in the shader. It stores the handle of texture units; therefore, it's very important to query their locations from the fragment shader and is stored in the <code class="literal">TEX</code> and <code class="literal">TEX1</code>. Texture images are loaded in the OpenGL texture memory using the <code class="literal">PngImage::loadImage</code> function. For single or multiple textures, it's compulsory to activate texture units so that they become available in the shader program; the texture unit is made active using the <code class="literal">glActiveTexture</code> API. It accepts the handle of the texture unit as an argument. Refer to the next section for more information on texture units.</p><p>The texture unit 1 is activated for the first texture object (<code class="literal">fragile.png</code>) and a corresponding uniform variable is set with <code class="literal">1</code> using <code class="literal">glUniform1i(TEX1, 1)</code>. Similarly, the second texture unit (<code class="literal">woodenBox.png</code>) is activated and its corresponding uniform variable <code class="literal">TEX1</code> is set to value <code class="literal">2</code>. There is no special change required for the vertex shader because it sets clip coordinates for the incoming position and shares texture coordinates with the fragment shader. The fragment shader utilizes these texture coordinates for texture sampling from the available two textures; the sampling provides two color values stored in the <code class="literal">TextureFragile</code> and <code class="literal">TextureWood</code>; these colors are mixed together with the help of the mix GLSL API to produce mixed color effect; this API takes three parameters as an input. The first two parameters specifies the colors that need to be mixed together, whereas the third parameter specifies the proportion of the colors in which these need to be mixed.</p></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec201"/>There's more...</h2></div></div></div><p>Texture units can be thought of as buffers that contain texture information and the number of texture units fixed; the number is very specific to the hardware implementation of the OpenGL ES 3.0. This number can be checked by using the <code class="literal">GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS</code> macro. The texture object is not directly bound with the shader program. Instead, they are bound to the index of the texture unit.</p><p>In the following figure, the texture memory shows 16 texture units. Out of these, only three seem unoccupied (blue in color) and the rest of them are utilized by various texture images. Texture units are <a id="id511" class="indexterm"/>uniquely recognized by their index; these can be accessed in the shader program directly, thereby giving a unique capability of multitexturing. Texture units 1 and 2 are accessed in the fragment shader to produce the desired output, as shown in the following figure:</p><div class="mediaobject"><img src="graphics/5527OT_07_11.jpg" alt="There's more..."/></div></div></div>
+<div class="section" title="Implementing Skybox with seamless cube mapping"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec63"/>Implementing Skybox with seamless cube mapping</h1></div></div></div><p>Cube mapping <a id="id512" class="indexterm"/>is a texturing technique used in 3D graphics to fill the background of a scene with a given set of images. This <a id="id513" class="indexterm"/>technique reduces the number of objects required to draw a scene in order to make the scene look populated (the scene looks bigger). It is commonly used in gaming to render sky horizons, rooms, mountains, day/night effect, reflection, and refraction.</p><p>A cube map is achieved by wrapping six sets of images on six faces of the cube; these images perfectly stitch with each other on the edges. In the cube mapping technique, the viewer or camera is always in the center of the cube. When camera displaces in the 3D space, the cubes are also displaced with respect to it. This way, the camera never reaches close to any face of the cube and creates an illusion of a horizon that always remains at the same distance from the viewer.</p><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec202"/>Getting ready</h2></div></div></div><p>This recipe uses six images named bottom, top, left, right, front, and back for each face of the cube to be mapped on, as shown in the following image. When these images are wrapped around the cube and viewed from inside, it produces an illusion of the sky environment. So far, we have already learned the mapping of texture on to a given geometry in our previous recipes using the UV texture coordinate mapping. However, OpenGL ES provides a special mapping called cube mapping; this mapping makes the job easier to wrap images to a cube-shaped geometry.</p><p>Creating the cube map in OpenGL ES 3.0 is simple:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Create a texture object using <code class="literal">glGenTexture</code>.</li><li class="listitem">Bind the texture using the <code class="literal">glBindTexture</code> API with the <code class="literal">GL_TEXTURE_CUBE_MAP</code> argument. This will help the OpenGL ES to understand the type of texture it needs to store.</li><li class="listitem">Load six <a id="id514" class="indexterm"/>images in <a id="id515" class="indexterm"/>the OpenGL ES texture memory, using <code class="literal">glTexImage2D</code> with <code class="literal">GL_CUBE_MAP_{POSITIVE, NEGATIVE}_{X, Y, Z}</code> as the target parameter:<div class="mediaobject"><img src="graphics/5527OT_07_07.jpg" alt="Getting ready"/></div></li></ol></div></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec203"/>How to do it...</h2></div></div></div><p>This section will describe the practical steps required to implement this recipe:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Create a class called Skybox to render cube geometry; you can reuse the <span class="emphasis"><em>Efficient rendering with Vertex Buffer Object</em></span> recipe from <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span>.</li><li class="listitem">Implement the vertex and fragment shader, as given in the following code. For cube mapping, we require the vertex information in the fragment shader. Therefore, each <a id="id516" class="indexterm"/>incoming per-vertex needs to be shared with the fragment shader:<div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Vertex shader</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Fragment shader</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<div class="informalexample"><pre class="programlisting">//CubeMappingVertex.glsl
+#version 300 es
+
+layout(location = 0) in vec4  VertexPosition;
+uniform mat4 MVP;
+out vec4 Vertex;
+
+void main( void ) {
+  Vertex = VertexPosition;
+  gl_Position
+  
+x       =MVP*VertexPosition;
+}</pre></div><p>
+</p>
+</td><td style="text-align: left" valign="top">
+<div class="informalexample"><pre class="programlisting">//CubeMappingFragment.glsl
+#version 300 es
+precision mediump float;
+uniform samplerCube CubeMapTexture;
+in vec4 Vertex;
+layout(location = 0) out vec4 outColor;
+
+void main() {
+ outColor = texture(
+  CubeMapTexture, Vertex.xyz);
+}</pre></div><p>
+</p>
+</td></tr></tbody></table></div></li><li class="listitem">Create a <a id="id517" class="indexterm"/>function called <code class="literal">createCubeMap</code> in the <code class="literal">Skybox</code> class and call the following function after the shaders are loaded and compiled:<div class="informalexample"><pre class="programlisting">void Cube::InitModel(){
+   //Load and compile shaders . . . .
+   . . . .
+   createCubeMap(); // Create the Cube Map
+}
+
+void Skybox::createCubeMap(){
+   glActiveTexture(GL_TEXTURE1);
+   char fname[MAX_PATH]= {""};
+   image = new PngImage();
+
+   image-&gt;loadImage(creatPath(fname, (char*)"Right.png"),
+                 true,  GL_TEXTURE_CUBE_MAP_POSITIVE_X);
+   image-&gt;loadImage(creatPath(fname, (char*)"Left.png"),  
+                  false, GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
+   image-&gt;loadImage(creatPath(fname, (char*)"Top.png"),
+                  false, GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
+   image-&gt;loadImage(creatPath(fname, (char*)"Bottom.png"),
+                  false, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
+   image-&gt;loadImage(creatPath(fname, (char*)"Front.png"),  
+                  false, GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
+   image-&gt;loadImage(creatPath(fname, (char*)"Back.png"),
+                  false, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
+    
+   glTexParameterf(GL_TEXTURE_CUBE_MAP,
+                  GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameterf(GL_TEXTURE_CUBE_MAP,
+                  GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   
+   // The clamping is important for Skyboxes 
+   // due to texel filtering
+   glTexParameterf(GL_TEXTURE_CUBE_MAP,
+                  GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+   glTexParameterf(GL_TEXTURE_CUBE_MAP,
+                  GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+   glTexParameterf(GL_TEXTURE_CUBE_MAP,
+                  GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+   uniformTex=ProgramManagerObj-&gt;ProgramGetUniformLocation
+                  (program,(char*)"CubeMapTexture" );
+    
+   if (uniformTex &gt;= 0)
+      { glUniform1i(uniformTex, 1); }
+}</pre></div></li><li class="listitem">In the <a id="id518" class="indexterm"/><code class="literal">createCubeMap</code> function, make the texture unit <code class="literal">1</code> active; this allows you to access the cube map texture from the fragment shader:<div class="informalexample"><pre class="programlisting">glActiveTexture(GL_TEXTURE1);</pre></div></li><li class="listitem">The <code class="literal">createCubeMap</code> function first loads six images using <code class="literal">PngImage:: loadImage</code>. This <a id="id519" class="indexterm"/>function creates the texture objects into the OpenGL ES texture memory. Only the first image needs to send with the <code class="literal">true</code> value in the second argument; this parameter will tell the function to generate the named texture (an ID is given to the texture object). The rest of the images will use the same texture name (ID); therefore, the rest must be sent with a <code class="literal">false</code> argument. If the image appears at the right-hand side corner of the cube box and (<code class="literal">Right.png</code>) is located at the positive <span class="emphasis"><em>x</em></span> axis, then use <code class="literal">GL_TEXTURE_CUBE_MAP_POSITIVE_X</code> as the fourth argument. Similarly, for other images, use the appropriate argument, as shown in the preceding code.</li><li class="listitem">Set linear filtering for the minification/magnification and wrapping scheme.</li><li class="listitem">Query the location of the <code class="literal">CubeMapTexture</code> uniform sampler from the fragment shader and set the handle of texture unit as <code class="literal">1</code>.</li><li class="listitem">Render the scene using the <code class="literal">Skybox::Render</code> function:<div class="informalexample"><pre class="programlisting">   void Skybox::Render(){
+   glDisable(GL_CULL_FACE); glDisable(GL_DEPTH_TEST);
+   glUseProgram( program-&gt;ProgramID );
+   // Transform as per your scene requirement. . .
+   glBindBuffer( GL_ARRAY_BUFFER, vId );
+   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, iId );
+   glDrawElements(GL_TRIANGLES,36,GL_UNSIGNED_SHORT,(void*)0);
+         }</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec204"/>How it works...</h2></div></div></div><p>The cubemap texturing requires six sets of 2D images; these images are mapped to the six faces of the cube geometry. Select a texture unit and make it active. In the present case, its texture unit is <code class="literal">1</code> (<code class="literal">GL_TEXTURE1</code>). Load the image using <code class="literal">PngImage::loadImage</code>; this function is called in the <code class="literal">Skybox::InitModel</code>. After the shaders are loaded, it accepts three arguments. The first argument specifies the image file to be loaded and the second argument decides whether to create a texture object or not. For example, in the case of cubemap, only the <a id="id520" class="indexterm"/>first image is required to create a texture object; the remaining images will share the same texture object. The final argument specifies the face to which the image belongs to in the cubemap. In this function, it creates a texture object using <code class="literal">glGenTexture</code> and bounds it using <code class="literal">glBindTexture</code> with the <code class="literal">GL_TEXTURE_CUBE_MAP</code> parameter. The <code class="literal">glTexImage2D</code> API will allocate the necessary storage space for all textures; this API accepts important parameters, such as <code class="literal">GL_TEXTURE_CUBE_MAP_POSITIVE_X</code>, <code class="literal">GL_TEXTURE_CUBE_MAP_NEGATIVE_X</code>, and so on and helps OpenGL ES to know what texture to apply on which surface. Share the cubemap texture stored in the texture unit <code class="literal">1</code> to the fragment shader.</p><p>In order to render <a id="id521" class="indexterm"/>the cubes, we have reused the <span class="emphasis"><em>Efficient rendering with Vertex Buffer Object</em></span> recipe, <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span>. The rendering process takes place in the <code class="literal">Render()</code> function, the cube is scaled in order to fill up the screen and the culling and depth testing should be disabled.</p><p>From the shader's perspective, cube vertices are received in the vertex shader; these are shared to the fragment shader in the form of the position vector as the origin is at (0.0, 0.0, 0.0). The position vector turns out to be the same as vertex positions. This vertex position in the fragment shader is used for sampling purposes where the texture API is provided with the sampler <a id="id522" class="indexterm"/>and vertex position; it returns the corresponding color of the fragment.</p></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec205"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Implementing reflection and refraction with environment mapping</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Efficient rendering with Vertex Buffer Object</em></span> recipe in <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span></li></ul></div></div></div>
+<div class="section" title="Implementing reflection and refraction with environment mapping"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec64"/>Implementing reflection and refraction with environment mapping</h1></div></div></div><p>Environment <a id="id523" class="indexterm"/>mapping is a simple yet <a id="id524" class="indexterm"/>effective and efficient <a id="id525" class="indexterm"/>technique that allows you <a id="id526" class="indexterm"/>to map the surrounding environment effect to render 3D objects. There are two ways in which environment mapping can be used: reflection and refraction. In the former technique, rendered objects are mapped with the reflection of the surroundings, which shows the reflection of the surrounding view of objects. However, in the latter case, objects mapped with the refraction allow you to see through objects. These environment mapping techniques require cube mapping that we programmed in the previous recipe Skybox with seamless cube mapping. In this recipe, we will implement the reflection and refraction environment mapping.</p><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec206"/>Getting ready</h2></div></div></div><p>For this recipe, we can reuse the <span class="emphasis"><em>Implementing Skybox with seamless cube mapping</em></span> recipe and <span class="emphasis"><em>Rendering the wavefront OBJ mesh model</em></span> recipes in <a class="link" href="ch05.html" title="Chapter 5. Light and Materials">Chapter 5</a>, <span class="emphasis"><em>Working with Meshes</em></span>. The former recipe does not require any special changes. However, we will program a new shader for the latter case.</p><p>Reflection is a phenomenon in which light/wave changes its direction when it interacts with other mediums. As a result, it bounces back to the same medium from which it was coming from. The angle of incidence of the light is always equal to the angle of reflection after bouncing, as shown in the following figure:</p><div class="mediaobject"><img src="graphics/5527OT_07_08.jpg" alt="Getting ready"/></div><p>Refraction is a phenomenon that bends the direction of the wave/light through the transmission medium in which it is traveling. The reason for this bending is the difference between the optical densities of these two mediums. For example, a straw in a glass of water appears bent because light travels at different speeds in the given medium/material, such as air and water. This characteristic of the medium or material that affects the speed of light is called the refractive index. The refractive index of a medium tells us how fast the light travels in a given medium; it's the ratio of the speed of light in vacuum (c) to the speed of light in that medium (v), <span class="emphasis"><em>n=c/v</em></span>, therefore, the bending of the light is determined by its refractive index.</p><p>Snell's law gives <a id="id527" class="indexterm"/>the relation between <a id="id528" class="indexterm"/>the refractive index <a id="id529" class="indexterm"/>and the direction of <a id="id530" class="indexterm"/>propagation. Mathematically, <span class="emphasis"><em>n1.sinθ1 = n2.sinθ2</em></span>. As per this law, the ratio of the sine angle of incidence and refraction (<span class="emphasis"><em>sinθ1/sinθ2</em></span>) is equivalent to the opposite ratio of refractive index of the mediums (<span class="emphasis"><em>n2/n1</em></span>).</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec207"/>How to do it...</h2></div></div></div><p>In this section, you will learn the step-by-step procedure to program environment mapping for reflection and refraction:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">The surrounded environment required in environment mapping is created using the cube mapped Skybox from the previous recipe in this chapter. Inside the Skybox simple 3D waveform, objects are rendered (refer to the <span class="emphasis"><em>Rendering the wavefront OBJ mesh model</em></span> recipe <a class="link" href="ch05.html" title="Chapter 5. Light and Materials">Chapter 5</a>, <span class="emphasis"><em>Working with Meshes</em></span>). Add the <code class="literal">Skybox</code> and the <code class="literal">ObjLoader</code> model in the <code class="literal">createModels</code> function and include the required headers:<div class="informalexample"><pre class="programlisting">#include "ObjLoader.h"
+#include "Skybox.h"
+
+void Renderer::createModels(){
+   clearModels();
+   addModel( new Skybox ( this ) );
+   addModel( new ObjLoader ( this ) );
+}</pre></div><p>The <a id="id531" class="indexterm"/>Skybox model is responsible for rendering the Skybox environment using <a id="id532" class="indexterm"/>the cube mapped texture; there is no change required for shader programs. The cube mapped texture is stored in the texture unit <code class="literal">1</code>.</p></li><li class="listitem">The ObjLoader model renders mesh objects and uses the texture unit <code class="literal">1</code> (containing the cube mapped texture) to apply the reflection and refraction mapping.</li><li class="listitem">Define <a id="id533" class="indexterm"/>new shader <a id="id534" class="indexterm"/>programs (<code class="literal">ReflectionVertex.glsl</code>) for the vertex shader:<div class="informalexample"><pre class="programlisting">#version 300 es
+
+// Vertex information
+layout(location = 0) in vec4  VertexPosition;
+layout(location = 1) in vec3  Normal;
+uniform vec3    CameraPosition;
+
+// Model View Project matrix
+uniform mat4    MODELVIEWPROJECTIONMATRIX, MODELMATRIX;
+uniform mat3    NormalMatrix;
+
+vec3 worldCoordPosition, worldCoordNormal;
+out vec3 reflectedDirection;
+
+void main( void ) {
+   worldCoordPosition = vec3(MODELMATRIX * VertexPosition);
+   worldCoordNormal   = normalize(vec3( MODELMATRIX *
+   vec4(Normal, 0.0)));
+
+   // Make negative normals positive so that the face 
+   // of back side will still remain illuminated, 
+   // otherwise these will appear complete black 
+   // when object is rotated and back side faces
+    // the camera.
+   if(worldCoordNormal.z &lt; 0.0){
+      worldCoordNormal.z = -worldCoordNormal.z;
+    }
+    worldView = normalize(CameraPosition – worldCoordPosition);
+    reflectedDirection = reflect(worldView, worldCoordNormal );
+    gl_Position = MODELVIEWPROJECTIONMATRIX * VertexPosition;
+}</pre></div></li><li class="listitem">Use <a id="id535" class="indexterm"/>the following <a id="id536" class="indexterm"/>code <a id="id537" class="indexterm"/>reflection <a id="id538" class="indexterm"/>mapping fragment shader in <code class="literal">ReflectionFragment.glsl</code>:<div class="informalexample"><pre class="programlisting">#version 300 es
+precision mediump float;
+uniform samplerCube CubeMap;
+in vec3    reflectedDirection;
+
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = texture(CubeMap, reflectedDirection); }</pre></div><p>Similarly, for refraction, reuse the preceding reflection shader and define a uniform float variable for the refraction index called <code class="literal">RefractIndex</code>. Additionally, replace the GLSL <code class="literal">reflect</code> API with the refract API and rename the <code class="literal">reflectedDirection</code> with <code class="literal">refractedDirection</code>:</p><div class="informalexample"><pre class="programlisting">uniform float    RefractIndex;
+out vec3 refractedDirection;
+void main() {
+  . . . . . .
+  refractedDirection =
+      -refract(worldView, worldCoordNormal, RefractIndex);
+  gl_Position = MODELVIEWPROJECTIONMATRIX * VertexPosition;
+}</pre></div></li><li class="listitem">Create <code class="literal">RefractionFragment.glsl</code> and reuse the code from <code class="literal">ReflectionFragment.glsl</code>; the only change required is renaming the incoming shared attribute called <code class="literal">reflectedDirection</code> with <code class="literal">refractedDirection</code>.</li><li class="listitem">Load and compile the shader in the <code class="literal">ObjLoader::InitModel</code> function and initialize all uniform variables required by the reflection and refraction shaders. Set the current texture in <code class="literal">CubeMap</code> from the texture unit <code class="literal">1</code> as it contains the cube mapped texture. Note that this texture unit was loaded from the Skybox model class:<div class="informalexample"><pre class="programlisting">void ObjLoader::InitModel()
+{
+   glUseProgram( program-&gt;ProgramID );
+   char uniformTex = ProgramManagerObj&gt;
+   ProgramGetUniformLocation(program, (char*)"CubeMap");
+   if (uniformTex &gt;= 0) {
+   glUniform1i(uniformTex, 1);
+   }
+   char Camera = ProgramManagerObj-&gt;
+   ProgramGetUniformLocation(program, "CameraPosition");
+   if (Camera &gt;= 0){
+   glm::vec3 cp = RendererHandler-&gt;getCameraPosition();
+   glUniform3fv(Camera, 1, (float*)&amp;cp);
+   }
+
+   MVP = ProgramManagerObj-&gt;ProgramGetUniformLocation
+   ( program, ( char* )"MODELVIEWPROJECTIONMATRIX" );
+   M   = ProgramManagerObj-&gt;ProgramGetUniformLocation
+   ( program, ( char* )"MODELMATRIX" );
+   NormalMatrix  = ProgramManagerObj-&gt;
+   ProgramGetUniformLocation(program, (char*)"NormalMatrix");
+   return;
+}</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec208"/>How it works...</h2></div></div></div><p>The <a id="id539" class="indexterm"/>working model of the <a id="id540" class="indexterm"/>reflection and refraction <a id="id541" class="indexterm"/>environment mapping is <a id="id542" class="indexterm"/>very similar; both use the cube map texturing to produce the reflection and refraction effect. The following image shows the logic behind this working model. Here, the top view of the cube map is represented with a green rectangle and all the labeled edges are faces of the cube. The camera position is depicted by an eye, which looks toward the sphere direction that are placed inside the cube map Skybox. Each vertex position produces an incident ray from the camera position, which is used with the normal vector at the vertex position to calculate the reflected vector. This reflected vector is used with the cube-mapped texture to look up the corresponding texel. For example, in the following image, the vertex v1, v2, and v3 after reflection corresponds to the right, back and left face of the cube map. Similarly, refracted rays correspond to the front face of the cube map:</p><div class="mediaobject"><img src="graphics/5527OT_07_09.jpg" alt="How it works..."/></div><p>The <a id="id543" class="indexterm"/>reflected and refracted <a id="id544" class="indexterm"/>positional vector is calculated <a id="id545" class="indexterm"/>in the vertex <a id="id546" class="indexterm"/>shader; these vectors are shared with the fragment shader, where the cubemap texture is used to look up the texel for the corresponding texture.</p><p>Now, we know that the working of the environment mapping is at a higher level; let's understand the code for reflection environment mapping. The vertex shader calculates the world position of each vertex position (<code class="literal">VertexPosition</code>) and normal vector (Normal) in the world coordinate using the model matrix (<code class="literal">MODELMATRIX</code>) and stores it in <code class="literal">worldCoordPosition</code> and <code class="literal">worldCoordNormal</code> respectively. The incident ray for each vector with respect to camera position is calculated and stored in the <code class="literal">incidenceRay</code>. The OpenGL ES shading language provides a high level <code class="literal">reflect()</code> API to calculate the reflected vector. This API takes an incident ray, normal vector, and returns the reflected vector.</p><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">genType reflect(genType I, genType N);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">I</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the incidence ray from coming from source to destination</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">N</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the normal of the surface</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">Return</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the reflected vector given by <span class="emphasis"><em>I - 2.0 * dot(N, I) *N</em></span></p>
+</td></tr></tbody></table></div><p>The reflected vector is shared with the fragment shader using an out variable called reflected direction. The fragment shader uses this vector to find the corresponding texel in the cube map using the <code class="literal">texture()</code> API.</p><div class="mediaobject"><img src="graphics/5527OT_07_10.jpg" alt="How it works..."/></div><p>Similarly, the <a id="id547" class="indexterm"/>refraction is <a id="id548" class="indexterm"/>calculated using the <code class="literal">refract()</code> GLSL API; unlike the reflect API, this accepts an additional parameter called refract index <a id="id549" class="indexterm"/>of the material and returns the <a id="id550" class="indexterm"/>refracted vector.</p><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">genType refract(genType I, genType N, float RI);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variable</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">I</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the incidence ray from coming from source to destination</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">N</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the normal of the surface</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">RI</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the refractive index of the medium</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">Return</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This is the refracted vector</p>
+</td></tr></tbody></table></div><p>The refracted vector is shared with the fragment shader using <code class="literal">refractedDirection</code>. The texel color is calculated for the corresponding fragment.</p></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec209"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Implementing Skybox with seamless cube mapping</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Rendering the wavefront OBJ mesh model</em></span> recipe in <a class="link" href="ch04.html" title="Chapter 4. Working with Meshes">Chapter 4</a>, <span class="emphasis"><em>Working with Meshes</em></span></li></ul></div></div></div>
+<div class="section" title="Implementing render to texture with Frame Buffer Objects"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec65"/>Implementing render to texture with Frame Buffer Objects</h1></div></div></div><p>OpenGL ES <a id="id551" class="indexterm"/>renders a scene on <a id="id552" class="indexterm"/>framebuffer; this framebuffer is called the default framebuffer. A  framebuffer consist of various buffers, such as color, depth, and the stencil buffer. <span class="strong"><strong>Frame Buffer Objects</strong></span> (<span class="strong"><strong>FBO</strong></span>) allows you to create user-defined framebuffers, which can be used to render scenes on non-default framebuffers. The rendered scene on the nondefault framebuffer can be used as a texture to map objects. In this recipe, we will demonstrate render to texture in which a scene is rendered to a texture and this texture is mapped to a 2D plane surface; the 2D plane can be rotated in a 3D space using touch gesture events.</p><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec210"/>How to do it...</h2></div></div></div><p>The detailed procedure to implement the render to texture recipe using FBO is as follows. We will reuse the <span class="emphasis"><em>Generating the polka dot pattern</em></span> recipe from <a class="link" href="ch06.html" title="Chapter 6. Working with Shaders">Chapter 6</a>, <span class="emphasis"><em>Working with Shaders</em></span>:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Create a <code class="literal">DemoFBO</code> class derived from the <code class="literal">Model</code> base class and add <code class="literal">SimpleTexture</code> and <code class="literal">ObjLoader</code> pointer objects; initialize these objects in the constructor of <code class="literal">DemoFBO</code>. For more information on dependent recipes, refer to the <span class="emphasis"><em>See also</em></span> subsection in this recipe:<div class="informalexample"><pre class="programlisting">#include "ObjLoader.h"
+#include "SimpleTexture.h"
+class DemoFBO : public Model
+{
+ private:
+    void InitModel();
+    ObjLoader* objModel;
+    SimpleText* textureQuad;
+    GLuint fboId, rboId, textureId, depthTextureId;
+ public:
+    DemoFBO( Renderer* parent = 0);
+    ~DemoFBO();
+    unsigned int generateTexture
+(int width,int height,bool isDepth=false);
+    void GenerateFBO(); . . . .
+};</pre></div></li><li class="listitem">Define the <code class="literal">generateTexture</code> function; this function is responsible for generating <a id="id553" class="indexterm"/>the color or depth texture depending on the (<code class="literal">isDepth</code>) Boolean argument  passed to it:<div class="informalexample"><pre class="programlisting">unsigned int DemoFBO::generateTexture
+(int width, int height, bool isDepth) {
+unsigned int texId;
+glGenTextures(1, &amp;texId);
+    glBindTexture(GL_TEXTURE_2D, texId);
+   . . . . Set Minification and Maxification filters
+   if (isDepth){
+     glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F,
+         width, height, 0,GL_DEPTH_COMPONENT, GL_FLOAT, 0);  
+   }
+   else{
+     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height,
+         0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+   }
+
+   int error;
+   error = glGetError();
+   if(error != 0){
+      std::cout&lt;&lt;"Error: Fail to generate texture."&lt;&lt;error;
+   }
+   glBindTexture(GL_TEXTURE_2D,0);
+   return texId;
+}</pre></div></li><li class="listitem">Define the <code class="literal">GenerateFBO</code> and use the following code. This function is responsible for generating the FBO; it uses the color buffer and the depth buffer <a id="id554" class="indexterm"/>from the framebuffer. This recipe also contains the <code class="literal">GenerateFBOWithRenderBuffer</code> alternate function, which uses Render buffer's depth buffer to create FBO. For more information, refer to <span class="emphasis"><em>There's more…</em></span> subsection in this recipe:<div class="informalexample"><pre class="programlisting">void DemoFBO::GenerateFBO(){
+   // create a frame buffer object
+   glGenFramebuffers(1, &amp;fboId);
+   glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+
+   textureId = createTexture(TEXTURE_WIDTH,TEXTURE_HEIGHT);
+   depthTextureId = createTexture(
+   TEXTURE_WIDTH,TEXTURE_HEIGHT, true);
+   // attach texture to FBO color attachment point
+   glFramebufferTexture2D(
+   GL_FRAMEBUFFER,       //1.fbo target: GL_FRAMEBUFFER
+   GL_COLOR_ATTACHMENT0, //2.Color attachment point
+   GL_TEXTURE_2D,        //3.tex target: GL_TEXTURE_2D
+   textureId,            //4.Color texture ID
+   0);                   //5.mipmap level: 0(base)
+    
+   // Attach texture to FBO depth attachment point
+   glFramebufferTexture2D(
+   GL_FRAMEBUFFER,       //1.fbo target: GL_FRAMEBUFFER
+   GL_DEPTH_ATTACHMENT,  //2.Depth attachment point
+   GL_TEXTURE_2D,        //3.tex target: GL_TEXTURE_2D
+   depthTextureId,       //4.depth texture ID
+   0);                   //5.mipmap level: 0(base)
+    
+   // check FBO status
+   GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+   if(status != GL_FRAMEBUFFER_COMPLETE){
+   printf("Framebuffer creation fails");
+   }
+}</pre></div></li><li class="listitem">Define <a id="id555" class="indexterm"/>the <code class="literal">InitModel</code> <a id="id556" class="indexterm"/>function and initialize the Polka dots and simple texture classes. Also, generate the FBO using the following code:<div class="informalexample"><pre class="programlisting">void DemoFBO::InitModel(){
+   objModel-&gt;InitModel();
+   textureQuad-&gt;InitModel();
+   GenerateFBO();
+}</pre></div></li><li class="listitem">In the <code class="literal">Render()</code> function, render the polka dots in the FBO texture and map this texture to the 2D plane:<div class="informalexample"><pre class="programlisting">void DemoFBO::Render(){// Render to Texture
+    int CurrentFbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &amp;CurrentFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER,fboId);
+    glViewport(0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    objModel-&gt;Render();
+    glBindFramebuffer(GL_FRAMEBUFFER, CurrentFbo);
+    TransformObj-&gt;TransformError();
+    
+    // Render Quad with render buffer mapped.
+    glViewport(0, 0, RendererHandler-&gt;screenWidthPixel()*2,
+                RendererHandler-&gt;screenHeightPixel()*2);
+    glClearColor(0.710,0.610,0.30,1.0);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    glActiveTexture (GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    textureQuad-&gt;Render();
+    TransformObj-&gt;TransformError();
+}</pre></div></li></ol></div><p>Shader programs can be reused completely without any changes. The only exception being that we rename shader from <code class="literal">SimpleTexture</code> to FBO.</p></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec211"/>How it works...</h2></div></div></div><p>The final destination of all the rendering commands in the rendering pipeline is the default framebuffer; OpenGL ES 3.0 provides means to create additional framebuffers using FBO. FBO allows you to render a scene directly to a texture, which can be used like any other texture for mapping purposes. It can also be used for post processing of a scene. Similar to the default framebuffer, FBO also contains color, depth, and stencil buffers; these buffers are accessed through the (<code class="literal">GL_COLOR_ATTACHMENT0..N</code>, <code class="literal">GL_DEPTH_ATTACHMENT</code>, <code class="literal">GL_STENCIL_ATTACHMENT</code>) attachment points, as shown in the following image given in the <span class="emphasis"><em>There's more…</em></span> section..</p><p>First, like any <a id="id557" class="indexterm"/>other buffer object <a id="id558" class="indexterm"/>in OpenGL ES, create an FBO and bind it using <code class="literal">glGenFramebuffer</code> and <code class="literal">glBindFrameBuffer</code>. Use the <code class="literal">generateTexture</code> function and create an empty 256 x 256 color and depth buffer texture object and store the handles in <code class="literal">textureId</code> and <code class="literal">depthTextureId</code> respectively. The FBO implementation of OpenGL ES 3.0 allows one color buffer and one depth buffer, which can be attached to the FBO, using the <code class="literal">glFramebufferTexture2D</code> API; more color buffers may be defined depending on the OpenGL ES Driver implementation. This is defined via the macro <code class="literal">MAX_COLOR_ATTACHMENTS</code>.</p><p>The <code class="literal">glFramebufferTexture2D</code> API attaches the handle of the created color and depth buffer:</p><div class="informalexample"><pre class="programlisting">glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,textureId,0);  
+glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,depthTextureId,0);</pre></div><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">void glFramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);</pre></div><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Variables</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p><code class="literal">target</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the framebuffer target and should be <code class="literal">GL_FRAMEBUFFER</code>, <code class="literal">GL_DRAW_FRAMEBUFFER</code>, or <code class="literal">GL_READ_FRAMEBUFFER</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">attachment</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the framebuffer target. For this recipe, it should be <code class="literal">GL_COLOR_ATTACHMENT0</code> for the color buffer and <code class="literal">GL_DEPTH_ATTACHMENT</code> for the depth buffer.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">textarget</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the 2D texture target, which in the present case is <code class="literal">GL_TEXTURE_2D</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">texture</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specifies the handle of the texture buffer. In the current recipe, it should be <code class="literal">textureID</code> for the color buffer and <code class="literal">depthTextureId</code> for the depth buffer.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p><code class="literal">level</code></p>
+</td><td style="text-align: left" valign="top">
+<p>This specified the Mipmap level.</p>
+</td></tr></tbody></table></div><p>Check the status of the created framebuffer using the <code class="literal">glCheckFramebufferStatus</code> API; this <a id="id559" class="indexterm"/>API must return <code class="literal">GL_FRAMEBUFFER_COMPLETE</code> if the framebuffer is created successfully.</p><p>Now, we have an FBO with the color and depth buffer attached; the second thing we need to do is to render the scene to this texture. For this, we need to redirect the rendering command to our FBO instead of a default framebuffer. We need to query the handle of the default framework using <code class="literal">glGetIntergerv</code> with the <code class="literal">GL_FRAMEBUFFER_BINDING</code> parameter and <a id="id560" class="indexterm"/>store it in <code class="literal">currentFbo</code>; we will use this handle to restore the default framebuffer once the render to texture operation is accomplished. Bind the rendering pipeline with the <code class="literal">fboID</code> frame buffer object handle using <code class="literal">glBindFramebuffer</code>. Prepare the viewport and clear the color and depth buffer of the FBO using <code class="literal">glViewPort</code> and <code class="literal">glClearColor</code> APIs respectively. Finally, rendering the Polka dots will redirect all the procedural texture-patterned meshes to our <code class="literal">textureId</code> FBO color texture object. After the rendering is completed, restore the default framebuffer by binding its handle to the rendering pipeline using <code class="literal">glBindFramebuffer</code> with <code class="literal">CurrentFbo</code>.</p><p>The third important thing is to use the (<code class="literal">textureId</code>) FBO texture and apply it to this 2D square; this process of applying texture is similar to our first recipe, that is, simple texture; the only difference here is that instead of a static texture, we will use the FBO texture. As we have switched to the default buffer, we need to set the viewport and clear the color and depth buffer. Set the active texture unit ID to <code class="literal">0</code> using <code class="literal">glActiveTexture</code> with the <code class="literal">GL_TEXTURE0</code> parameter or make sure that this texture unit is the same as what is sent to the fragment shader. Finally, render the square geometry and see the render to texture in action:</p><div class="mediaobject"><img src="graphics/5527OT_07_12.jpg" alt="How it works..."/></div><p>Make sure that the FBO is deleted using the <code class="literal">glDeleteFramebuffers</code> API when it's not required by any application.</p></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec212"/>There's more...</h2></div></div></div><p>The current FBO recipe uses the depth buffer from the <code class="literal">Texture</code> object. Alternatively, we can also use <a id="id561" class="indexterm"/>the depth buffer of <a id="id562" class="indexterm"/>the render buffer for this purpose. The render buffer is a special OpenGL ES object used with the FBO that allows you to render off screen; it renders the scene directly to the render buffer object instead of a texture object. The render buffer can only store a single image in its internal format.</p><p>In the following code, we will see how we can use the render buffer's depth buffer instead of using the depth buffer from the texture object; the process of creating an FBO object and attaching with the color buffer of texture images is the same as described in the previous section:</p><div class="informalexample"><pre class="programlisting">void DemoFBO::GenerateFBOWithRenderBuffer()
+{
+    // create a frame buffer object
+    glGenFramebuffers(1, &amp;fboId);
+    glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+    // attach the texture to FBO color attachment point
+    textureId = generateTexture(TEXTURE_WIDTH,TEXTURE_HEIGHT);
+    glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D,textureId,0);
+    // create a renderbuffer object to store depth info
+    glGenRenderbuffers(1, &amp;rboId);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,
+                            TEXTURE_WIDTH,TEXTURE_HEIGHT);
+
+    // attach the renderbuffer to depth attachment point
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                             GL_RENDERBUFFER, rboId);
+    
+    // check FBO status
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if(status != GL_FRAMEBUFFER_COMPLETE)
+        {printf("Framebuffer creation fails"); }
+}</pre></div><p>The render buffer is created using <code class="literal">glGenRenderBuffers</code>, this API returns a non-zero value when a <span class="strong"><strong>Render </strong></span><a id="id563" class="indexterm"/>
+<span class="strong"><strong>Buffer Objects</strong></span> (<span class="strong"><strong>RBO</strong></span>) is created successfully. Unlike the other OpenGL ES objects also need to be bound first before using it with the help of the <code class="literal">glBindRenderBuffer</code> API. The created object is empty. Therefore, it's allocated to the memory space using the <code class="literal">glRenderbufferStorage</code> API; this API takes four arguments. The first <a id="id564" class="indexterm"/>argument specifies the <a id="id565" class="indexterm"/>target of the allocation (which is <code class="literal">GL_RENDERBUFFER</code>), the second argument is the internal format render buffer image (which may be a color-renderable, depth-renderable, or stencil-renderable format). For this recipe, we will use the depth renderable format. The last two parameters are used to specify the dimensions of the render buffer.</p><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">void glRenderbufferStorage(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);</pre></div><p>Finally, the <code class="literal">glFramebufferRenderbuffer</code> API helps the RBO depth buffer to attach to the FBO depth attachment point. The first parameter of this API specifies the framebuffer target, which should be <code class="literal">GL_FRAMEBUFFER</code> in this case. The second argument is the attachment point of the FBO; as we want to attach to the depth attachment point, it should be <code class="literal">GL_DEPTH_ATTACHMENT</code>. The third argument specifies the render buffer target and must be <code class="literal">GL_RENDERBUFFER</code>. The last argument specifies the handle of the <code class="literal">rboId</code> render buffer object. When RBO is no longer in need, it can be deleted using <code class="literal">glDeleteRenderbuffers</code>.</p><p><span class="strong"><strong>Syntax</strong></span>:</p><div class="informalexample"><pre class="programlisting">  GLsync glFramebufferRenderbuffer(GLenum target, GLenum
+    attachment, GLenum renderbuffertarget, GLuint renderbuffer);</pre></div><div class="mediaobject"><img src="graphics/5527OT_07_13.jpg" alt="There's more..."/></div></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec213"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Applying</em></span><a id="id566" class="indexterm"/><span class="emphasis"><em> texture </em></span><a id="id567" class="indexterm"/><span class="emphasis"><em>with UV mapping</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Generating the polka dot pattern</em></span> recipe in <a class="link" href="ch06.html" title="Chapter 6. Working with Shaders">Chapter 6</a>, <span class="emphasis"><em>Working with Shaders</em></span></li></ul></div></div></div>
+<div class="section" title="Implementing terrain with displacement mapping"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec66"/>Implementing terrain with displacement mapping</h1></div></div></div><p>The <a id="id568" class="indexterm"/>displacement map technique <a id="id569" class="indexterm"/>modifies the surface of a geometric shape using procedural texture or texture image. This recipe uses the texture image called <a id="id570" class="indexterm"/>height maps to implement a geographical terrain surface on a 2D plane. A height map is a grayscale image where each texel stores the elevation information in the range of 0.0 to 1.0 (white is mapped to 1.0 and black is mapped to 0.0). The 2D plane is represented by a set of vertices arranged in a grid fashion; the elevation information for each vertex in this 3D grid space is read from the height map. This recipe uses another texture image, which is used to map the grass texture on the generated terrain, to make it more realistic.</p><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec214"/>How to do it...</h2></div></div></div><p>Perform the following steps to implement the displacement mapping height field recipe:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Create a <code class="literal">HeightField</code> class and declare the following member variables in it:<div class="informalexample"><pre class="programlisting">class HeightField: public Model
+{
+
+public:
+   HeightField(Renderer* parent, float rDimension, float
+                cDimension, int Rows = 10, int Columns = 10);
+   ~HeightField();
+    
+    void InitModel();             // Initialize Model class
+    void Render();               // Render the Model class
+
+private:
+    Image* image;                // Image object
+   int imageHeight, imageWidth; // Image texture dimension
+    char MVP, TEX;               // uniform attrib locations
+    float rot;
+
+    GLint NormalMatrix;
+    GLuint HeightFieldVAO_Id;     // VAO of Height Field
+    GLuint vId, iId;              // VBO and IBO
+    int faces;                    // Number of faces
+
+    // Size of vertices, texture, faces indexes, color
+    int sizeofVertex, sizeofTex, sizeofFace, sizeofColor;
+    float *v, *n, *tex;           // temporary buffers
+    unsigned short *faceIdx;
+};</pre></div><p>Define the <a id="id571" class="indexterm"/>parameterize constructor; the first argument specifies the parent of the <code class="literal">HeightField</code> class, the next two parameters define the dimensions of the terrain, and the final two parameters specify the row and column used to create the vertex grid for the terrain plane.</p><p>In this function, load the <code class="literal">HeightMap.png</code> and <code class="literal">grass.png</code> textures for the <a id="id572" class="indexterm"/>displacement mapping and texture mapping respectively; this will generate two texture objects. We are interested only in the front face of the terrain; the total number of faces will be the product of the rows and columns. Allocate the memory space for the total number of vertices (<code class="literal">v</code>), normals (<code class="literal">n</code>), texture coordinates (<code class="literal">tex</code>), and populate them with their respective information. Calculate vertex coordinates using the dimension argument; the normal information is assumed to be a positive <a id="id573" class="indexterm"/>unit vector along the <span class="emphasis"><em>y</em></span> axis for each vertex. Assign texture coordinates for each vertex in the grid plane. Finally, use this populated buffer information to generate the VBO and IBO:</p><div class="informalexample"><pre class="programlisting">          HeightField::HeightField(Renderer*parent, float rDimension,
+                             float cDimension, int Rows, int Columns)
+{
+    . . . .
+    // Load height map image &amp; grass texture file.    
+     . . . . . .
+
+   // Load HeightMap.png
+   imageHeightMap-&gt;loadImage(fname); 
+
+   // Load grass.png 
+      imageGrass-&gt;loadImage(fname);    
+
+      faces = Rows * Columns; // Front side faces
+      v     = new float[3 * (Rows + 1) * (Columns + 1)];
+      n     = new float[3 * (Rows + 1) * (Columns + 1)];
+    tex   = new float[2 * (Rows + 1) * (Columns + 1)];
+    
+      faceIdx= new  unsigned short [6 * Rows * Columns];
+      sizeofVertex = sizeof(float)*3*(Rows+1)*(Columns+1);
+      sizeofTex    = sizeof(float)*2*(Rows+1)*(Columns+1);
+    sizeofFace  = sizeof(unsigned short) * 6 * Rows * Columns;
+
+   float x2, z2; 
+   x2     = rDimension/2.0f;     
+   z2     = cDimension/2.0f;
+
+   float zFactor, xFactor;    
+   zFactor   = cDimension/Columns;
+   xFactor   = rDimension/Rows;
+
+   float texi, texj;
+   texi       = 1.0f/Columns;   
+   texj       = 1.0f/ Rows;
+
+   float x, z; int vidx = 0, tidx = 0;
+
+   // Calculate the Vertices,Normals and TexCoords
+      for( int i = 0; i &lt;= Columns; i++ ) {
+         z = zFactor * i - z2; // Column
+        
+         for( int j = 0; j &lt;= Rows; j++ ) {
+             x = xFactor * j - x2; // Row
+            
+             // Vertex position
+             v[vidx]      =x;
+             v[vidx+1]   =0.0f;  
+             v[vidx+2]   =z;
+
+            // Normals along +Y direction
+            n[vidx]      =0.0f; 
+            n[vidx+1]    =1.0f;  
+            n[vidx+2]    =0.0f;
+
+             // Jump to the next vertex index
+              vidx += 3; 
+            
+             // Texture coordinates
+             tex[tidx]   =j*texj; 
+             tex[tidx+1] =i*texi;
+
+             // Jump to the next vertex index
+            tidx += 2;
+        }
+    }
+
+   // Calculate the face indices
+    unsigned int rowStart, nextRowStart, idx = 0; 
+    for( int i = 0; i &lt; Columns; i++ ) {
+        rowStart = i * (Rows+1);
+        nextRowStart = (i+1) * (Rows+1);
+        for( int j = 0; j &lt; Rows; j++ ) {
+            faceIdx[idx]    = rowStart + j;
+            faceIdx[idx+1]  = nextRowStart + j;
+            faceIdx[idx+2]  = nextRowStart + j + 1;
+            faceIdx[idx+3]  = rowStart + j;
+            faceIdx[idx+4]  = nextRowStart + j + 1;
+            faceIdx[idx+5]  = rowStart + j + 1;
+            idx += 6;
+        }
+    }
+
+
+     // Generate and bind the VBO and IBO
+    // Create the Vertex Array object for height field
+    . . . . . . .
+
+   // Refer to:- Managing VBO's with vertex array
+   // objects (VAO), OpenGL ES 3.0 New Features
+
+     // Bind the VBO and IBO for VAO and
+    // Delete temporary buffer
+    . . . . . . .
+}</pre></div></li><li class="listitem">In the <code class="literal">initModel</code> function, link and compile the vertex and fragment shader. Activate <a id="id574" class="indexterm"/>texture units and bind it with the height map and grass texture objects. The height map texture is <a id="id575" class="indexterm"/>used by the vertex shader to read the elevation information for each vertex. However, the grass texture is used in the fragment shader to paint the geometric surface. The vertex shader uses a <code class="literal">heightFactor</code> uniform variable to control the elevation value for each vertex:<div class="informalexample"><pre class="programlisting">   void HeightField::InitModel(){
+. .Compile and Link shaders
+
+   glUseProgram( program-&gt;ProgramID );    
+   TEX_HEIGHT = ProgramManagerObj-&gt;
+   ProgramGetUniformLocation(program, "ImageTexture");
+   glActiveTexture (GL_TEXTURE0);
+   if (imageHeightMap) {
+   glBindTexture(GL_TEXTURE_2D, imageHeightMap-&gt;getTextureID());
+   glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+
+TEX_GRASS = ProgramManagerObj-&gt;
+ProgramGetUniformLocation(program,"ImageGrassTexture");
+glActiveTexture (GL_TEXTURE1);
+if (imageGrass) {
+   glBindTexture(GL_TEXTURE_2D, imageGrass-&gt;getTextureID());
+        
+   glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+   glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+}
+   
+   MVP = ProgramManagerObj-&gt;ProgramGetUniformLocation
+   ( program, (char*)"ModelViewProjectionMatrix" );
+   FACTOR = ProgramManagerObj-&gt;ProgramGetUniformLocation
+   ( program, (char*)"heightFactor" );
+   if ( FACTOR &gt;= 0 ){
+   glUniform1f(FACTOR, 3);
+   }
+}</pre></div></li><li class="listitem">Create the <a id="id576" class="indexterm"/><code class="literal">HeightFldVertex.glsl</code> vertex shader and add the following code. In this shader, use <a id="id577" class="indexterm"/>texture coordinates and read the elevation information for each vertex from the height map texture stored in the <code class="literal">HeightMapTexture</code>:<div class="informalexample"><pre class="programlisting">#version 300 es
+layout(location = 0) in vec4  VertexPosition;
+layout(location = 2) in vec2  TexCoords;
+uniform mat4    ModelViewProjectionMatrix;
+
+out vec2    TextureCoord;
+out vec3    vertexColor;
+uniform sampler2D HeightMapTexture;
+uniform float heightFactor;
+void main()
+{
+    TextureCoord    = TexCoords;
+    vec4 height     = texture(HeightMapTexture, TexCoords);
+    if(heightFactor&gt;0){
+        height /= heightFactor;
+    }else{
+       height = 0.333; // Assumption, some arbitrary value
+    }
+ 
+    gl_Position = ModelViewProjectionMatrix * vec4(
+           VertexPosition.x, height.r, VertexPosition.z, 1.0);
+}</pre></div></li><li class="listitem">Similarly, for the <code class="literal">HeightFldFragment.glsl</code> fragment shader, add the following code. Make use of texture coordinates and map the grass texture from the <code class="literal">ImageGrassTexture</code> texture unit to the surface of the terrain:<div class="informalexample"><pre class="programlisting">#version 300 es
+precision mediump float;
+
+layout(location = 0) out vec4 FinalColor;
+uniform sampler2D ImageGrassTexture;
+in vec2    TextureCoord;
+
+void main() {
+    FinalColor = texture(ImageGrassTexture, TextureCoord);
+}</pre></div></li><li class="listitem">In the <a id="id578" class="indexterm"/><code class="literal">Renderer.cpp</code>, add the <code class="literal">HeightField</code> model, as shown in the following code; the model is <code class="literal">5</code> units in horizontal and vertical dimensions and contains <code class="literal">50</code> rows and columns:<div class="informalexample"><pre class="programlisting">void Renderer::createModels(){
+   clearModels();
+   addModel( new HeightField( this, 5, 5, 50, 50 ));
+}</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec215"/>How it works...</h2></div></div></div><p>The following image shows the working of displacement mapping that renders the dummy geographical terrain. In this simple example, we assumed the terrain plane with dimension as 1 x 1 units with three rows and columns, resulting in a 3 x 3 vertex grid. Vertex positions are calculated in such a way that the origin always resides in the center; all vertex elevations by default are at 0.0. The vertex shader is responsible for calculating the elevation for each given vertex using the gray scale height map texture. This texture is loaded and accessed <a id="id579" class="indexterm"/>using the <code class="literal">HeightMapTexture</code> texture unit (image part <span class="strong"><strong>A</strong></span>), the height information is read using the <code class="literal">TexCoords</code> texture coordinate (image part <span class="strong"><strong>D</strong></span>) from the height map and is assigned to elevation coordinates (image part <span class="strong"><strong>B: H0</strong></span>, <span class="strong"><strong>H1. . . H8</strong></span>). Finally, the output of the displacement mapping looks like part <span class="strong"><strong>C</strong></span>, as shown in the following image. This is the screenshot of the practical recipe, in which the terrain is 5 x 5 wide and contains 50 x 50 rows and columns.</p><p>In the fragment shader, the grass image texture is applied to the surface of the terrain geometry with the help of a simple texture mapping technique; this makes the geometry more realistic. The <a id="id580" class="indexterm"/>image parts <span class="strong"><strong>D</strong></span>, <span class="strong"><strong>E</strong></span>, and <span class="strong"><strong>F</strong></span> show the output of the fragment shader:</p><div class="mediaobject"><img src="graphics/5527OT_07_14.jpg" alt="How it works..."/></div></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec216"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Refer to <a id="id581" class="indexterm"/>the<span class="emphasis"><em> Efficient rendering with Vertex Buffer Object</em></span> recipe in <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Managing VBO with Vertex Array Objects</em></span> recipe in <a class="link" href="ch03.html" title="Chapter 3. New Features of OpenGL ES 3.0">Chapter 3</a>, <span class="emphasis"><em>New Features of OpenGL ES 3.0</em></span></li></ul></div></div></div>
+<div class="section" title="Implementing bump mapping"><div class="titlepage"><div><div><h1 class="title"><a id="ch07lvl1sec67"/>Implementing bump mapping</h1></div></div></div><p>The bump mapping <a id="id582" class="indexterm"/>technique is a very efficient technique as compared to displacement mapping. This technique is also used to add depth details or elevations to the surface of the geometry. However, this depth or elevation is fake. The geometry vertices do not undergo any change in the elevation. Instead, it uses the light illumination to simulate the depth appearance on a smooth surface. Light illumination uses the vertex normal information stored in normal maps to add depth. Like height maps, which store the height or elevation information, the normal map stores normal information. The idea in normal maps is to avoid calculation of normal maps for each triangular face; these can be sampled from the texture.</p><p>The designer responsible for designing mesh models first create a very high polygon (100,000+) mesh model, then they create a normal map out of it in an image file. Finally, they reduced the high-resolution model to a low polygon mesh (between 3000 and 5000 depends). Depth details are applied at runtime to the low poly mesh using a normal map, which results in a similar appearance like the high poly mesh. Therefore, bump mapping is used to add high details in a low poly mesh model.</p><p>In this recipe, we will implement an earth globe, which makes use of the normal map to produce the bump mapping effect; this makes the 3D depth information more obvious on the globe surface.</p><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec217"/>Getting ready</h2></div></div></div><p>In order to implement <a id="id583" class="indexterm"/>this recipe, we need two textures. The first texture contains the color information to apply texture on the geometric surface. The second texture is the normal map of the first texture. There are many tools available to generate normal maps, such as CrazyBump, GIMP, PixPlant, Photoshop plugins, XNormals, and so on.</p><div class="mediaobject"><img src="graphics/5527OT_07_15.jpg" alt="Getting ready"/></div></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec218"/>How to do it...</h2></div></div></div><p>The step-by-step instructions to implement bump mapping are as follows:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Load the <code class="literal">sphere.obj</code> with <code class="literal">ObjLoader::LoadMesh()</code>; this function uses the <code class="literal">OBJMesh</code> class to load the mesh data. This recipe requires the tangent information from the loaded mesh in order to implement the bump mapping; this is automatically calculated by the <code class="literal">OBJMesh</code> class with the help of the <code class="literal">CalculateTangents</code> function. For more information on this function and mathematics calculations, refer to the <span class="emphasis"><em>There's more…</em></span> section of this recipe.</li><li class="listitem">Load the <code class="literal">earthcolor.png</code> earth texture and its normal (<code class="literal">earthnormal.png</code>) to create texture objects in the <code class="literal">ObjLoader::initModel</code>, as shown in previous recipes. Attach and bind these two texture objects to the texture unit <code class="literal">0</code> and <code class="literal">1</code> respectively so that they become available to the shader programs.</li><li class="listitem">Create the <code class="literal">BumpVertex.glsl</code> and add the following code snippet; this code is responsible for calculating the bi-normal tangent (<code class="literal">B</code>) with the help of the cross product of normal (<code class="literal">N</code>) and tangent (<code class="literal">T</code>). All these vertex parameters are in the tangent space; these must be normalized and stored as a 3x3 tangent space matrix represented by (<code class="literal">[Tx, Bx, Nx]</code>, <code class="literal">[Ty, By, Ny]</code>, and <code class="literal">[Tz, Bz, Nz]</code>). This is used to convert the eye space to a tangent space. The <code class="literal">eyecoord</code> in the <a id="id584" class="indexterm"/>present case is converted to the tangent space and shared with the fragment shader:<div class="informalexample"><pre class="programlisting">#version 300 es
+// Vertex information
+layout(location = 0) in vec4  VertexPosition;
+layout(location = 1) in vec3  Normal;
+layout(location = 2) in vec2  TexCoords;
+layout (location = 3) in vec4 VertexTangent;
+
+// Model View Project matrix
+uniform mat4    ModelViewProjectionMatrix, ModelViewMatrix;
+uniform mat3    NormalMatrix;
+uniform mediump vec3 LightPosition;
+out vec2    textureCoord;
+out vec3    eyeCoord;
+out mat3    tangentSpace;
+
+void main(){
+    // Transform normal and tangent to eye space
+    vec3 norm = normalize(NormalMatrix * Normal);
+    vec3 tang = normalize(NormalMatrix * vec3(VertexTangent));
+    
+    // Compute the binormal
+    vec3 binormal = cross( norm, tang );
+    
+    // Matrix for transformation to tangent space
+    tangentSpace = mat3(tang.x, binormal.x, norm.x, tang.y,
+         binormal.y, norm.y, tang.z, binormal.z, norm.z );
+    
+    // Transform view direction to tangent space
+    eyeCoord=vec3(ModelViewMatrix*VertexPosition)*tangentSpace;
+    textureCoord = TexCoords;
+    gl_Position  = ModelViewProjectionMatrix * VertexPosition;
+}</pre></div></li><li class="listitem">Create the <code class="literal">BumpFragment.glsl</code> and use the following code; the fragment shader coverts the light direction from eye coordinates to the tangent space; this is helpful in <a id="id585" class="indexterm"/>calculating the diffuse and specular intensity:<div class="informalexample"><pre class="programlisting">#version 300 es
+precision mediump float;
+
+// Light information
+uniform vec3 LightAmbient,LightSpecular,LightDiffuse, 
+                                  LightPosition;
+
+// Material information
+uniform vec3 MaterialAmbient,MaterialSpecular, 
+                                     MaterialDiffuse,;
+uniform float ShininessFactor;
+
+in vec2 textureCoord; 
+in vec3 eyeCoord;
+in mat3 tangentSpace;
+layout(location = 0) out vec4 FinalColor;
+
+vec3 normalizeNormal, normalizeEyeCoord, normalizeLightVec;
+
+vec3 V, R, ambient, diffuse, specular;
+
+float sIntensity, cosAngle;
+
+vec3 PhongShading( vec3 norm, vec3 MaterialDiffuse ) {
+    normalizeNormal   = normalize( norm ) ;
+    normalizeEyeCoord = normalize( eyeCoord);
+    normalizeLightVec = normalize( (LightPosition-eyeCoord)
+                          *tangentSpace);
+    
+    // Diffuse Intensity
+    cosAngle = max( 0.0, dot(normalizeNormal,
+                         normalizeLightVec )); 
+
+    // Viewer's vector
+    V = -normalizeEyeCoord; 
+    R = reflect( -normalizeLightVec, normalizeNormal);
+    sIntensity = pow(max(0.0,dot(R,V)),ShininessFactor);
+    
+    // ADS as result of Material &amp; Light interaction
+    ambient = MaterialAmbient * LightAmbient;
+    diffuse = MaterialDiffuse * LightDiffuse * cosAngle;
+    specular= MaterialSpecular*LightSpecular*sIntensity;
+
+    return  ambient + diffuse + specular;
+}
+
+uniform sampler2D ImageTexture, ImageTextureNormal;
+
+void main() {
+  //Lookup normal map
+   vec4 normalMap = texture(ImageTextureNormal, vec2(1.0-
+                   textureCoord.x, textureCoord.y));
+
+  //Convert[0,1] -&gt; [-1,1]
+   normalMap      =  (2.0*normalMap-1.0); 
+  vec4 texColor   = texture(ImageTexture, vec2(1.0 –
+                      textureCoord.x, textureCoord.y));
+   FinalColor     = vec4( PhongShading(normalMap.xyz,
+                      texColor.rgb), 1.0 );
+}</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec219"/>How it works...</h2></div></div></div><p>The bump map requires two texture files. The first texture file contains color information and is used in the <a id="id586" class="indexterm"/>diffuse shading. The second texture is called the normal map, which contains the normal information for the geometry; this information is helpful for specular shading. Both these textures are loaded and stored in texture units in order to make it accessible to the shader.</p><p>Bump mapping heavily relies on the tangent information calculated in the <code class="literal">ObjMesh</code> class when the mesh is loaded. For more information on the tangent calculation, refer to the next section in this recipe. The tangents that are calculated are stored within the mesh VBO and are available to the vertex shader unlike other vertex attributes. In the vertex shader, this information in conjunction with the normal information helps to calculate per-vertex bi-tangent vectors. Once the normal (N), tangent (T), and bi-tangent (B) vectors are available, they are normalized and used to create a tangent space matrix, as shown in the following figure:</p><div class="mediaobject"><img src="graphics/5527OT_07_16.jpg" alt="How it works..."/></div><p>The obtained tangent space matrix (<code class="literal">tangentSpace</code>) is multiplied with the eye coordinates of the <code class="literal">VertexPosition</code> to yield tangent space eye coordinates (<code class="literal">eyeCoord</code>). These are then shared with the fragment shader, along with the tangent space matrix and the <code class="literal">TexCoords</code> texture coordinates.</p><p>In the fragment shader, the image texture and normal texture are sampled using texture coordinates and are stored in the <code class="literal">texColor</code> and <code class="literal">normalMap</code>. It's necessary to change the normal map values from the range <code class="literal">[0, 1]</code> to <code class="literal">[-1, 1]</code>. Once changed, these two texture values are then sent to the <code class="literal">GouraudShading</code>. In this function, the light direction for each vertex is calculated and multiplied with the <code class="literal">tangentSpace</code> in order to transform into the tangent space. This <a id="id587" class="indexterm"/>modified <code class="literal">normalizeLightVec</code> and <code class="literal">eyeCoord</code> are then used to calculate diffuse and specular illumination components in the same way we calculated in the Gouraud shading technique. For more information on this technique, refer to <a class="link" href="ch05.html" title="Chapter 5. Light and Materials">Chapter 5</a>, <span class="emphasis"><em>Light and Materials</em></span>.</p><div class="mediaobject"><img src="graphics/5527OT_07_17.jpg" alt="How it works..."/></div></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec220"/>There's more...</h2></div></div></div><p>The normal map used in the bump mapping technique stores normal information of the geometry with respect to some default direction when normal map was generated. When this texture is mapped on the geometry and used for rendering purposes, it may generate incorrect results because not all faces of the geometry have the same direction as the mapped normal map. Therefore, the normal map needs to be manipulated on the fly at runtime, depending on the direction of the face, which is done using tangent planes. In the <code class="literal">ObjMesh</code> class, this tangent plane is calculated using <code class="literal">OBJMesh::CalculateTangents</code>; the tangent plane consists of Tangent (T) and BiTangent (B) vectors.</p><p>A tangent is a vector that touches a curved surface at a given point; there could be too many tangents at a given point. Hence, it's very important to choose the correct tangent. Therefore, we want our tangent space to be aligned in such a way that <span class="strong"><strong>X</strong></span> direction corresponds to the <span class="strong"><strong>U</strong></span> direction of texture coordinates and <span class="strong"><strong>Y</strong></span> direction corresponds to the <span class="strong"><strong>V</strong></span> direction of texture coordinates.</p><p>Consider a scenario where there is a triangle with vertices P<sub>0</sub>, P<sub>1</sub>, and P<sub>2</sub> and corresponding texture coordinates as (U<sub>0</sub>, V<sub>0</sub>), (U<sub>1</sub>, V<sub>1</sub>), and (U<sub>2</sub>, V<sub>2</sub>), the following image explains the calculation of the tangent space (see the equations). This gives the un-normalized Tangent (T) and BiTangent (B) for the triangle face created using P<sub>0</sub>, P<sub>1</sub>, and P<sub>2</sub>. In order to <a id="id588" class="indexterm"/>calculate the tangent for a given vertex, take the average tangents of all triangle faces that share this vertex:</p><div class="mediaobject"><img src="graphics/5527OT_07_18.jpg" alt="There's more..."/></div><p>The preceding pictorial illustration and given equations in it, the tangent information is calculated in the <code class="literal">OBJMesh</code> class, as shown in the following code:</p><div class="informalexample"><pre class="programlisting">bool OBJMesh::CalculateTangents(){
+    vector&lt;vec3&gt; tan1Accum, tan2Accum; // Accumulated tangents
+    objMeshModel.tangents.resize(objMeshModel.positions.size());
+
+    for( uint i = 0; i &lt; objMeshModel.positions.size(); i++ ) {
+     tan1Accum.push_back(vec3(0.0f));tan2Accum.push_back(vec3(0.0f));
+     objMeshModel.tangents.push_back(vec4(0.0f));
+    }
+    
+    int index0, index1, index2, index0uv, index1uv, index2uv;
+
+    // Compute the tangent vector
+    for( uint i = 0; i &lt; objMeshModel.vecFaceIndex.size(); i += 3 ){
+       index0 = objMeshModel.vecFaceIndex.at(i).vertexIndex;
+       index1 = objMeshModel.vecFaceIndex.at(i+1).vertexIndex;
+       index2 = objMeshModel.vecFaceIndex.at(i+2).vertexIndex;
+
+      const vec3 &amp;p0 = objMeshModel.positions.at(index0);
+      const vec3 &amp;p1 = objMeshModel.positions.at(index1);
+      const vec3 &amp;p2 = objMeshModel.positions.at(index2);
+
+      index0uv = objMeshModel.vecFaceIndex.at(i).uvIndex;
+      index1uv = objMeshModel.vecFaceIndex.at(i+1).uvIndex;
+      index2uv = objMeshModel.vecFaceIndex.at(i+2).uvIndex;
+
+      const vec2 &amp;tc1 = objMeshModel.uvs.at(index0uv);
+      const vec2 &amp;tc2 = objMeshModel.uvs.at(index1uv);
+      const vec2 &amp;tc3 = objMeshModel.uvs.at(index2uv);
+        
+      // Using Equation 1
+      vec3 q1 = p1 - p0; 
+       vec3 q2 = p2 - p0;
+
+      // Using Equation 2
+      float s1 = tc2.x-tc1.x, s2 = tc3.x-tc1.x; 
+      float t1 = tc2.y-tc1.y, t2 = tc3.y-tc1.y;
+
+   // From Equation 5
+      float r = 1.0f / (s1 * t2 - s2 * t1);
+
+      // Using Equation 5
+      vec3 tan( (t2*q1.x - t1*q2.x) * r,
+                 (t2*q1.y - t1*q2.y) * r,
+                 (t2*q1.z - t1*q2.z) * r);  
+      vec3 bTan( (s1*q2.x - s2*q1.x) * r,
+                 (s1*q2.y - s2*q1.y) * r,
+                 (s1*q2.z - s2*q1.z) * r);
+
+        tan1Accum[index0] += tan1; tan1Accum[index1] += tan1;
+        tan1Accum[index2] += tan1; tan2Accum[index0] += bTan;
+        tan2Accum[index1] += bTan; tan2Accum[index2] += bTan;
+    }
+    
+    for( uint i = 0; i &lt; objMeshModel.positions.size(); ++i ){
+      objMeshModel.tangents[i] = vec4(
+                       glm::normalize(tan1Accum[i] ),1.0);
+    }
+
+    for(int i = 0; i &lt; objMeshModel.vecFaceIndex.size(); i++){
+     int index = objMeshModel.vecFaceIndex.at(i + 0).vertexIndex;
+    objMeshModel.vertices[i].tangent=objMeshModel.tangents.at(index);
+    }
+
+   // Clear &amp; Return
+    tan1Accum.clear();tan2Accum.clear(); 
+  return true; 
+}</pre></div></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch07lvl2sec221"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Refer to the <a id="id589" class="indexterm"/><span class="emphasis"><em>Gouraud shading – the per-vertex shading technique</em></span> recipe in <a class="link" href="ch05.html" title="Chapter 5. Light and Materials">Chapter 5</a>, <span class="emphasis"><em>Light and Materials</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Rendering the wavefront OBJ mesh model</em></span> recipe in <a class="link" href="ch04.html" title="Chapter 4. Working with Meshes">Chapter 4</a>, <span class="emphasis"><em>Working with Meshes</em></span></li></ul></div></div></div></body></html>

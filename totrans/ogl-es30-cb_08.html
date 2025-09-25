@@ -1,0 +1,625 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;8.&#xA0;Font Rendering"><div class="titlepage"><div><div><h1 class="title"><a id="ch08"/>Chapter 8. Font Rendering</h1></div></div></div><p>In this chapter, we will cover the following recipes:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Font rendering with the FreeType project</li><li class="listitem" style="list-style-type: disc">Rendering different languages with Harfbuzz</li><li class="listitem" style="list-style-type: disc">Rendering text on Head Up Display</li></ul></div><div class="section" title="Introduction"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec68"/>Introduction</h1></div></div></div><p>Font rendering is an essential part of computer application programs; it helps users to interact with the system and understand information in a readable form. OpenGL ES does not provide a built-in support for font rendering; instead, the font engine needs to be programed by a developer. There are many font-rendering techniques; this chapter will cover the most popular technique for font rendering, which is rendered using the <span class="strong"><strong>FreeType</strong></span> project in conjunction with the <span class="strong"><strong>Harfbuzz</strong></span> library. The former is used to rasterize symbolic characters or glyphs using font files; this library supports different types of font file formats, such as TTF, BDF, OTF, Windows FNT, and so on. The latter library is used for multilingual support. Using this library, almost all world-famous language scripts can be rendered.</p><p>This chapter will provide you with a detailed description on how to build the font engine; we will implement simple text rendering with the help of FreeType. We will use the capabilities of the Harfbuzz library to print multilingual text rendering, such as Arabic, Thai, Tamil, Punjabi, and so on. Last but not least, you will learn the technique to render text in the screen coordinate system on the <span class="strong"><strong>Head Up Display</strong></span> (<span class="strong"><strong>HUD</strong></span>) or overlays.</p></div></div>
+<div class="section" title="Font rendering with the FreeType project"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec69"/>Font rendering with the FreeType project</h1></div></div></div><p>In this recipe, we <a id="id590" class="indexterm"/>will render a simple Latin text in the <a id="id591" class="indexterm"/>3D space. For this, we can create a texture bitmap for each character and render it in a quad geometry (rectangle) shape. However, creating each character bitmap could be expensive in terms of memory management and performance because it is required to load several bitmaps in the texture memory. Instead, the better solution is to create a big texture embedded with all characters in it and use their texture coordinates to map them on the geometry quad.</p><p>An overview of the process to render fonts using the FreeType library is as follows:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Initialize the FreeType library. This initializes the necessary FreeType data structure.</li><li class="listitem">Load the font face. This loads the font file and generates the font style (font face) information.</li><li class="listitem">Specify the font size. With the specified size of the font, create an empty texture big enough to contain all glyphs. In order to make the texture backward compatible with OpenGL ES 2.0, choose its texture size to be a power of two.</li><li class="listitem">Access the font <a id="id592" class="indexterm"/>face data contents. This <a id="id593" class="indexterm"/>uses the font face and metric information to create glyph images on an empty texture, which is called texture atlas. Glyphs will be drawn in the form of row and columns, as shown in the next image.</li><li class="listitem">Map the glyph. This stores the texture coordinates of each glyph image from the texture atlas in a data structure and maps it to its respective charcode.</li><li class="listitem">Render the text. The glyph map contains all character codes, picks the desired character, and maps the respective texture coordinate from the texture atlas to the quad geometry of each character. For example, the following image shows the printing of the Hello World from the texture atlas:<div class="mediaobject"><img src="graphics/5527OT_08_01.jpg" alt="Font rendering with the FreeType project"/></div></li></ol></div><p><span class="strong"><strong>Classes and data structure</strong></span>:</p><p>The following is a <a id="id594" class="indexterm"/>brief description of all the classes and related data structures used in font rendering:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">FontGenerator</code>: This <a id="id595" class="indexterm"/>class loads the font file with the help of the FreeType library. It stores important information from the font file in the related data structure. It uses the FreeType library data structure to build the bitmap texture; the bitmap information for each character/glyph is stored locally in a quick accessible map:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">library</code>: This is the handle of the FreeType library instance.</li><li class="listitem" style="list-style-type: disc"><code class="literal">fontface</code>: Each font may contain one or more font faces or typeface; it has a specific weight, style, condensation, width, slant, italicization, ornamentation, and designer or foundry.</li><li class="listitem" style="list-style-type: disc"><code class="literal">glyphs</code>: This is the STL map of glyph and character code.</li><li class="listitem" style="list-style-type: disc"><code class="literal">atlasTex</code>: This contains the handle of the atlas texture object.</li></ul></div></li><li class="listitem" style="list-style-type: disc"><code class="literal">Glyph</code>: This data structure stores information related to a glyph present in the font file:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">Metric</code>: Glyph metric is used to position the glyph when rendered in the 2D/3D space.</li><li class="listitem" style="list-style-type: disc"><code class="literal">texCoordX</code>, <code class="literal">texCoordY</code>, <code class="literal">atlasX</code>, and <code class="literal">atlasY</code>: These store texture coordinates of glyphs present in the texture atlas.</li><li class="listitem" style="list-style-type: disc"><code class="literal">advanceHorizontal</code> and <code class="literal">advanceVertical</code>: The advance information is helpful in placing next adjacent character with respect to current glyph.</li></ul></div></li><li class="listitem" style="list-style-type: disc"><code class="literal">Font</code>: This class is derived from <code class="literal">FontGenerator</code> and provides an interface to load the font file <a id="id596" class="indexterm"/>and a helper function to render text.</li><li class="listitem" style="list-style-type: disc"><code class="literal">FontSample</code>: This <a id="id597" class="indexterm"/>class acts as a consumer of the font renderer; it renders sample text for demonstration purposes.</li></ul></div><p>The following diagram shows the class diagram of the design; the <code class="literal">Font</code> class is derived from <code class="literal">FontGenerator</code> and <code class="literal">Model</code>:</p><div class="mediaobject"><img src="graphics/5527OT_08_02.jpg" alt="Font rendering with the FreeType project"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec222"/>Getting ready</h2></div></div></div><p>The FreeType project is <a id="id598" class="indexterm"/>an open source library used for font rasterization; it reads <a id="id599" class="indexterm"/>font files and is able to generate bitmaps from the vector/curve information stored in such files. This library is written in ANSI-C, which makes it portable across platforms.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note46"/>Note</h3><p>The library is freely <a id="id600" class="indexterm"/>available under the download section at <a class="ulink" href="http://www.freetype.org">http://www.freetype.org</a>.</p></div></div><p>The <span class="strong"><strong>FreeType License</strong></span> (<span class="strong"><strong>FTL</strong></span>) is the most commonly used one. This is a BSD-style license with a <a id="id601" class="indexterm"/>credit clause and is compatible with the GNU Public License (GPL) version 3 and not with the GPL version 2. In our GLPI framework, we will use the 2.5.4 version, which is placed under the <code class="literal">GLPIFramework/Font/FreeType</code> folder.</p><p><span class="strong"><strong>Build process</strong></span>: The following points provide a detailed description of the build process for the FreeType library and other source files required to implement this recipe:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Android platform</strong></span>: We need the makefile to build the FreeType project library. Add the <code class="literal">Android.mk</code> makefile under <code class="literal">GLPIFramework/Font/FreeType</code>; edit this makefile, as shown in the following code. This will be compiled as a shared library, which is named as GLPift2. Optionally, you can also add the source code directly in the main project makefile instead of compiling a <a id="id602" class="indexterm"/>shared library:<div class="informalexample"><pre class="programlisting">ifndef USE_FREETYPE
+USE_FREETYPE := 2.4.2
+endif
+ifeq ($(USE_FREETYPE),2.4.2)
+
+LOCAL_PATH:= $(call my-dir)
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES:= \
+src/base/ftbbox.c src/base/ftbitmap.c \
+src/base/ftfstype.c src/base/ftglyph.c \
+src/base/ftlcdfil.c src/base/ftstroke.c\
+src/base/fttype1.c src/base/ftxf86.c \
+src/base/ftbase.c src/base/ftsystem.c \
+src/base/ftinit.c src/base/ftgasp.c \
+src/raster/raster.c src/sfnt/sfnt.c \
+src/smooth/smooth.c src/autofit/autofit.c \ src/truetype/truetype.c src/cff/cff.c \ src/psnames/psnames.c src/pshinter/pshinter.c
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/builds $(LOCAL_PATH)/include
+
+LOCAL_CFLAGS+=-W –Wall -fPIC –DPIC -O2
+LOCAL_CFLAGS+="-DDARWIN_NO_CARBON" "-DFT2_BUILD_LIBRARY"
+
+LOCAL_MODULE:= libGLPift2
+include $(BUILD_SHARED_LIBRARY)</pre></div><p>Open the <code class="literal">Android.mk</code> makefile present in the project directory under the <code class="literal">JNI</code> folder (<code class="literal">&lt;Source code path&gt;/SimpleFont/Android/JNI</code>) and include the path of the FreeType library <code class="literal">Android.mk</code> file that we have created in the preceding code:</p><div class="informalexample"><pre class="programlisting">FONT_PATH= $(FRAMEWORK_DIR)/Font
+$(MY_CUR_LOCAL_PATH)/../../../../GLPIFramework/Font/FreeType/Android.mk
+LOCAL_C_INCLUDES += $(FONT_PATH)/FreeType/include
+LOCAL_SRC_FILES += $(SCENE_DIR)/FontGenerator.cpp \
+                   $(SCENE_DIR)/Font.cpp \
+                   $(SCENE_DIR)/FontSample.cpp \
+                   $(SCENE_DIR)/SimpleTexture.cpp
+LOCAL_SHARED_LIBRARIES += GLPift2</pre></div><p>In <code class="literal">GLESNativeLib.java</code>, edit the <code class="literal">GLESNativeLib</code> class and add the reference of our <code class="literal">GLPift2.so</code> shared library in order to link at runtime:</p><div class="informalexample"><pre class="programlisting">public class GLESNativeLib {
+static {
+System.loadLibrary("GLPift2");
+   . . . . . . Other code
+}</pre></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>iOS platform</strong></span>: On the iOS platform, we need to add the same FreeType project source files (mentioned under the <code class="literal">LOCAL_SRC_FILES</code> makefile variable) to your project using the <span class="strong"><strong>Build Phase</strong></span> | <span class="strong"><strong>Compile Sources</strong></span> project properties; click on add to select source files.<p>Provide a <a id="id603" class="indexterm"/>path to include header <a id="id604" class="indexterm"/>files for the free type project using <span class="strong"><strong>Build Settings</strong></span> | <span class="strong"><strong>Search Paths</strong></span> | <span class="strong"><strong>Header Search Paths</strong></span>. For the present case, it should be:</p><div class="informalexample"><pre class="programlisting">../../../../GLPIFramework/Font/FreeType/Include</pre></div><p>Add the following preprocessor macro under <span class="strong"><strong>Apple LLVM &lt;compiler version&gt;</strong></span> | <span class="strong"><strong>Preprocessing</strong></span> | <span class="strong"><strong>Preprocessor Macros</strong></span>:</p><div class="informalexample"><pre class="programlisting">FT2_BUILD_LIBRARY=1 DARWIN_NO_CARBON</pre></div><p>Add the <code class="literal">FontGenerator.h/cpp</code>, <code class="literal">Font.h/cpp</code> project source files and <code class="literal">FontSample.h/cpp</code> using <span class="strong"><strong>File</strong></span> | <span class="strong"><strong>Add Files to &lt;Project Name&gt;</strong></span>.</p></li></ul></div></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec223"/>How to do it...</h2></div></div></div><p>Perform the following steps to understand the procedure of implementing this recipe:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Create the <code class="literal">FontGenerator</code> class and add the following code body to it; the important data structure is already covered in the previous section under classes and data structures:<div class="informalexample"><pre class="programlisting">struct Glyph {
+FT_Glyph_Metrics metric; // Glyph metric
+   float advanceHorizontal; // Horizontal advance
+   float advanceVertical;   // Horizontal advance
+   float texCoordX, texCoordY; // Atlas Texture Coords
+   float atlasX, atlasY;    // Position in texture Altas
+};
+
+class FontGenerator {
+  public:
+   FontGenerator ();     // Constructor
+   ~FontGenerator ();    // Destructor
+   bool errorState ();     // Error check flag
+   bool loadFont(const char* filename, int resolution);
+
+   GLuint         atlasTex;     // Texture atlas handle  
+   std::map&lt;unsigned long, Glyph&gt;  glyphs; // Glyph map
+   float          texDimension;
+   float          squareSize;   // Glyph square size
+   LanguageType   languageType; // Current language
+   FT_Face        fontFace;     // typeface information
+    
+private:
+   bool readFont (const FT_Face&amp; fontFace,
+   int resolution, int glyphMargin);
+    
+   bool getCorrectResolution(const FT_Face&amp; fontFace,
+   int resolution, int&amp; newResolution, int&amp; newMargin);
+    
+   void generateTexFromGlyph (FT_GlyphSlot glyph, GLubyte*
+   texture, int atlasX, int atlasY, int texSize,
+   int resolution, int marginSize, bool drawBorder);
+    
+   void setPixel (GLubyte* texture, int offset,
+   int size, int x, int y, GLubyte val);
+
+   bool                errorStatus;
+   FT_Library          library;  // FreeType lib handle
+};</pre></div></li><li class="listitem">Make sure that the <code class="literal">&lt;ft2build.h&gt;</code> header file is included in the source.</li><li class="listitem">Initialize the <a id="id605" class="indexterm"/>FreeType library in the <a id="id606" class="indexterm"/>constructor with the <code class="literal">FT_Init_FreeType</code> function; this constructor will be called from the Font class when its object is created from the <code class="literal">Renderer::createModels</code> function. This function creates a new instance of the FreeType library and sets the handle to the library:<div class="informalexample"><pre class="programlisting">FontGenerator::FontGenerator () : errorStatus(false),
+ atlasTex(0), texDimension(0), squareSize(0)  {
+    if (FT_Init_FreeType(&amp;library)){
+ errorStatus = true;return;
+ }
+}</pre></div></li><li class="listitem">The <code class="literal">loadFont</code> function is responsible for loading the font file using FreeType's <code class="literal">FT_New_Face</code> function. This function creates a new face with the available typeface and <a id="id607" class="indexterm"/>style information in the font file. For example, Arial Bold and Arial Italic correspond to two different faces. This function calls the <code class="literal">getCorrectResolution</code> function, which is described in the next step:<div class="informalexample"><pre class="programlisting">bool FontGenerator::loadFont(char* file,int resolution){
+    // Generate the face object, return on error
+    if(FT_New_Face(library,filename,0 &amp;fontFace))
+   { 
+   return false;
+   }
+   
+   // Check if current resolution is supported?
+   int calculatedResoution; int calculatedMargin;
+   if( getCorrectResolution(fontFace, resolution,
+   calculatedResoution, calculatedMargin)){
+   return readFont(fontFace, calculatedResoution,calculatedMargin);
+   }
+   return true;
+}</pre></div><p>Before creating the texture atlas, it's important to check whether the texture size is supported by a device using the <code class="literal">getCorrectResolution</code> function. The maximum texture size can be queried using the <code class="literal">GL_MAX_TEXTURE_SIZE</code> symbolic flag. If the texture exceeds the <a id="id608" class="indexterm"/>maximum supported limit, this function falls back to the next immediate smaller available power of two sizes:</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note47"/>Note</h3><p>The texture altas we generated for this recipe is made of power 2.0 in order to make it compatible with OpenGL ES 2.0 version.</p></div></div><div class="informalexample"><pre class="programlisting">   bool FontGenerator::getCorrectResolution(const FT_Face&amp;
+   fontFace, int resolution, int&amp;
+   newResolution, int&amp; newGlyphMargin){
+   
+   int glyphMargin = 0;
+   GLint MaxTextureSize;
+   glGetIntegerv(GL_MAX_TEXTURE_SIZE, &amp;MaxTextureSize);
+
+   while(resolution&gt;0){
+   glyphMargin = (int)ceil(resolution*0.1f);       
+  const long numGlyphs = fontFace-&gt;num_glyphs;    
+  const int squareSize = resolution + glyphMargin;
+  
+  const int numGlyphsPerRow = (int)ceilf(sqrt((double)numGlyphs));
+  const int texSize         = (numGlyphsPerRow)*squareSize;
+  int realTexSize           = GLUtils::nextPowerOf2(texSize);
+  
+  if(realTexSize&lt;=MaxTextureSize )
+  {    break; }
+  
+  resolution  = resolution - 5; // Decrease 5 units.
+  }
+  
+  if(resolution &gt; 0){
+  newResolution   = resolution;
+  newGlyphMargin  = glyphMargin;
+  return true;
+  }
+  else{
+  return false;
+  }
+}</pre></div><p>Read the font <a id="id609" class="indexterm"/>information <a id="id610" class="indexterm"/>from the FreeType library in the <code class="literal">readFont</code> function. This function sets the font size using <code class="literal">FT_Set_Pixel_Sizes</code> in pixels:</p><div class="informalexample"><pre class="programlisting">bool FontGenerator::readFont (const FT_Face&amp; fontFace,
+int resolution, int glyphMargin) {
+  FT_Set_Pixel_Sizes(fontFace, resolution, resolution);
+  const int numGlyphs = fontFace-&gt;num_glyphs;
+  . . . .
+}</pre></div></li><li class="listitem">The <code class="literal">fontFace</code> contains information about the total number of characters in the font file. Using this information and the provided font size, the total size of the texture atlas is calculated in the power of two dimensions. A two channel texture memory is allocated and stored in the <code class="literal">textureData</code> variable for luminance and alpha:<div class="informalexample"><pre class="programlisting">  // Inside FontGenerator::readFont() function
+  squareSize = resolution + glyphMargin;
+  
+  // Texture size for all glyphs in power of 2
+  const int numGlyphsPerRow = ceilf(sqrt(numGlyphs));     
+   const int texSize = numGlyphsPerRow*squareSize;
+   int realTexSize  = GLUtils::nextPowerOf2(texSize);
+   
+   // Two channel texture (luminance and alpha)
+   GLubyte* textureData = NULL;
+   textureData = new GLubyte[realTexSize*realTexSize*2];
+   
+   // if there exist an old atlas delete it. 
+   if (atlasTex){ 
+   glDeleteTextures(1,&amp;atlasTex); 
+   atlasTex=0; 
+}
+    
+   glGenTextures(1, &amp;atlasTex);
+   glBindTexture(GL_TEXTURE_2D, atlasTex);
+   glTexParameteri
+   (GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameteri
+   (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+   GLUtils::checkForOpenGLError(__FILE__, __LINE__);</pre></div></li><li class="listitem">Each glyph in the <a id="id611" class="indexterm"/>font face is recognized with a <a id="id612" class="indexterm"/>unique index; the face object contains one or more tables called character maps (charmaps), which are used to map glyph indices to character codes. For example, <code class="literal">A</code> has a character code of 65 in ASCII encoding.<p>Loop through all the available glyph in the font and load the information for a current glyph image using <code class="literal">FT_Load_Glyph</code>. This function stores the glyph image in a special object called glyph slot. The <code class="literal">FT_Load_Glyph</code> accepts three parameters, handles the font face object, glyphs indexes, and loads flags:</p><div class="informalexample"><pre class="programlisting">   // Inside FontGenerator::readFont() function
+   int texAtlasX  = 0;      int texAtlasY  = 0;
+   FT_UInt gindex = 0;   FT_ULong charcode = 0;
+
+   for (FT_ULong charcode=FT_Get_First_Char(fontFace,
+   &amp;gindex); gindex != 0;charcode=FT_Get_Next_Char
+   (fontFace, charcode, &amp;gindex)) {
+        
+   if(FT_Load_Glyph(fontFace,gindex,FT_LOAD_DEFAULT)){
+   LOGE("Error loading glyph with index %i and charcode %i. Skipping.", gindex, charcode);
+   continue;
+   }
+   // Many lines skipped.
+   }</pre></div></li><li class="listitem">A glyph slot is a container that stores only one type of image at a time. This can be bitmap, outline, and so on. The glyph slot object can be accessed using <span class="strong"><strong>fontFace</strong></span> | <span class="strong"><strong>glyph</strong></span>. The bitmap information is generated out of the glyph slot using the <code class="literal">FT_Render_Glyph</code> API; it accepts two arguments, the first argument is the <a id="id613" class="indexterm"/>glyph slot and the second <a id="id614" class="indexterm"/>argument is the render mode flag, which specifies how to render the glyph image.<p>The glyph information is loaded into the glyph data structure and stored as a value in the STL map glyphs with the character code as a key:</p><div class="informalexample"><pre class="programlisting">   // Inside FontGenerator::readFont() function
+   // This is part of the glyph loading loop.
+   FT_GlyphSlot glyph = fontFace-&gt;glyph;
+   FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
+   
+   // Calculate glyph information
+   Glyph glyphInfo;
+   glyphInfo.metric     = glyph-&gt;metrics;
+   
+   // Get texture offset in the image
+   glyphInfo.atlasX=texAtlasX*squareSize/realTexSize;
+   glyphInfo.atlasY=texAtlasY*squareSize/realTexSize;
+   
+   // Advance stored as fractional pixel format
+   // (=1/64 pixel), as per FreeType specs
+   glyphInfo.advanceHorizontal=glyph-&gt;advance.x/64.0f;
+   glyphInfo.advanceVertical=glyph-&gt;advance.y/64.0f;
+   glyphs[charcode] = glyphInfo;</pre></div></li><li class="listitem">Load the glyph bitmap in the texture atlas using the <code class="literal">generateTexFromGlyph</code> function. This function writes the raster information from the glyph slot to the texture data. After all the characters are rastered, load the texture atlas in the OpenGL ES texture object with the help of <code class="literal">glTexImage2D</code> and delete the local texture atlas:<div class="informalexample"><pre class="programlisting">   // Inside FontGenerator::readFont()
+{    
+   . . . . .     
+   // Copy the bits to the texture atlas
+   generateTexFromGlyph(glyph, textureData, texAtlasX,
+   texAtlasY, realTexSize, resolution, glyphMargin, false);
+   
+   texAtlasX++;
+   if (texAtlasX &gt;= numGlyphsPerRow){
+   texAtlasX=0; 
+   texAtlasY++; 
+   }
+
+   // set texture atlas to OpenGL ES tex object
+   glTexImage2D (GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA,
+   realTexSize, realTexSize, 0, GL_LUMINANCE_ALPHA,
+   GL_UNSIGNED_BYTE, textureData);
+
+   // Delete local texture atlas 
+   delete[] textureData; 
+   GLUtils::checkForOpenGLError(__FILE__, __LINE__);
+   texDimension = (squareSize)/(float)realTexSize;
+   return true;
+}</pre></div></li><li class="listitem">The <code class="literal">generateTexFromGlyph</code> function is responsible for loading the current specified glyph <a id="id615" class="indexterm"/>in to the glyph slot to load it <a id="id616" class="indexterm"/>into a particular position in the texture atlas specified by <code class="literal">atlasX</code>, <code class="literal">atlasY</code>, and <code class="literal">texSize</code>. The last parameter for this function is used to draw a border around the character, which can be very helpful in debugging the positioning of a character in texture rendering. For example, see the preceding <span class="strong"><strong>Hello World</strong></span> sample text image; it contains a border around each character:<div class="informalexample"><pre class="programlisting">   void FontGenerator::generateTexFromGlyph (FT_GlyphSlot
+   glyph, GLubyte* texture, int atlasX, int atlasY, int
+   texSize,int resolution,int marginSize,bool drawBorder){
+
+   int squareSize = resolution + marginSize;
+   baseOffset=atlasX*squareSize+atlasY*squareSize*texSize;
+
+   if (drawBorder) {
+   for (int w=0; w&lt;squareSize; w++)
+   { setPixel(texture,baseOffset,texSize, w, 0, 255); }
+   
+   for (int h=1; h&lt;squareSize; h++){
+   for (int w=0; w&lt;squareSize; w++){
+   setPixel(texture,baseOffset,texSize,w,h,
+   (w==0||w==squareSize-1)?255:
+   (h==squareSize-1)?255:0);
+                                   }
+                                   }
+   }
+
+   const int gr = glyph-&gt;bitmap.rows;
+   const int gw = glyph-&gt;bitmap.width;
+   for (int h=0; h&lt;gr; h++) {
+   for (int w=0; w&lt;gw; w++) {
+   setPixel(texture, baseOffset+marginSize, texSize,
+   w, marginSize+h, glyph-&gt;bitmap.buffer[w+h*gw]);
+   }
+   }
+}</pre></div></li><li class="listitem">Create the <code class="literal">Font</code> <a id="id617" class="indexterm"/>class derived from <code class="literal">Model</code> <a id="id618" class="indexterm"/>and <code class="literal">FontGenerator</code>:<div class="informalexample"><pre class="programlisting">   class Font : public Model, public FontGenerator {
+   public:
+   Font(const char* ttfFile, int Size, Renderer* parent,
+   LanguageType Language= English);
+   ~Font();
+   void Render();
+   void InitModel();
+   void printText (const char* str, GLfloat Red = 1.0f,
+   GLfloat Green = 1.0f, GLfloat Blue = 1.0f,
+   GLfloat Alpha = 1.0f);
+   private:
+   void drawGlyph (const Glyph&amp; gi);
+   char MVP, TEX, FRAG_COLOR;
+};</pre></div><p>Create a vertex shader file called <code class="literal">fontVertex.glsl</code> and add the following code; this shader file receives the vertex and texture coordinate information from the OpenGL ES program. The received texture coordinates are further sent to the fragment shader for the purpose of texture sampling purpose:</p><div class="informalexample"><pre class="programlisting">#version 300 es
+layout(location = 0) in vec3  VertexPosition;
+layout(location = 1) in vec2  VertexTexCoord;
+out vec2 TexCoord;
+uniform mat4 ModelViewProjectMatrix;
+
+void main( void ) {
+  TexCoord      = VertexTexCoord;
+  gl_Position   =ModelViewProjectMatrix  *
+                  vec4(VertexPosition,1.0);
+}</pre></div></li><li class="listitem">Create the <a id="id619" class="indexterm"/><code class="literal">fontfrag.glsl</code> <a id="id620" class="indexterm"/>fragment shader; it contains a sampler2D variable for the texture input and a uniform <code class="literal">TexColor</code> for the text color:<div class="informalexample"><pre class="programlisting">#version 300 es
+precision mediump float;
+
+in vec2 TexCoord;
+uniform sampler2D FontTexture;
+uniform vec4 TextColor;
+layout(location = 0) out vec4 outColor;
+
+void main() {
+    vec4 texcol = texture(FontTexture, TexCoord);
+    outColor    = vec4(vec3(TextColor.rgb), texcol.a);
+}</pre></div></li><li class="listitem">Load and compile the shader in the <code class="literal">initModel</code> function and query the vertex shader attributes:<div class="informalexample"><pre class="programlisting">void Font::InitModel() {
+    . . . . . // Other code . . . .
+  program-&gt;VertexShader  = ShaderManager::ShaderInit
+             (VERTEX_SHADER_PRG, GL_VERTEX_SHADER);
+  program-&gt;FragmentShader   = ShaderManager::ShaderInit
+             (FRAGMENT_SHADER_PRG, GL_FRAGMENT_SHADER);
+  . . . . . // Other code . . . .
+
+  MVP = ProgramManagerObj-&gt;ProgramGetUniformLocation
+             (program,"ModelViewProjectMatrix");
+  TEX = ProgramManagerObj-&gt;ProgramGetUniformLocation
+             (program, (char*) "Tex1");
+  FRAG_COLOR = ProgramManagerObj-&gt;ProgramGetUniformLocation
+             (program, (char*)"TextColor");
+}</pre></div></li><li class="listitem">The <code class="literal">drawGlyph</code> function is responsible for rendering the glyph. The glyph is rendered on a logical square by mapping texture coordinates stored in the glyph data <a id="id621" class="indexterm"/>structure. Initialize the texture <a id="id622" class="indexterm"/>sample with texture unit <code class="literal">0</code>:<div class="informalexample"><pre class="programlisting">void Font::drawGlyph(const Glyph&amp; gi) {
+    glUseProgram(program-&gt;ProgramID);
+
+   // Using the glyph metrics to get the glyph info.
+    float xmargin = flot(gi.metric.width)/(2.0*64.0);
+   float ymargin =float(gi.metric.horiBearingY)/(2.0*64.0);
+    
+    // Calculate texture coord for glyph rendering
+    float texCoords[8] = {
+        gi.atlasX, gi.atlasY,
+        gi.atlasX + texDimension, gi.atlasY,
+        gi.atlasX, gi.atlasY + texDimension,
+        gi.atlasX + texDimension, gi.atlasY + texDimension
+    };
+
+    // 1x1 glyph Quad.
+    float quad[12]   = {
+        {-0.5f, 0.5f,  0.0f},{ 0.5f, 0.5f,  0.0f},
+        {-0.5f, -0.5f, 0.0f},{0.5f, -0.5f, 0.0f }};
+
+   for (int i = 0; i&lt;12;){
+       quad[i] *= squareSize/2.0;
+       quad[i+1] *= squareSize/2.0;
+       quad[i+2] *= 0.0;
+       i += 3;
+   }
+
+    // Initialize the texture with texture unit 0
+    glUniform1i(TEX, 0);
+    TransformObj-&gt;TransformPushMatrix();
+    TransformObj-&gt;TransformTranslate(-xmargin, ymargin,
+                                               0.0f );
+    glUniformMatrix4fv(MVP, 1, GL_FALSE, (float*)
+    TransformObj-&gt;TransformGetModelViewProjectionMatrix());
+    TransformObj-&gt;TransformPopMatrix();
+
+    // Send the vertex and texture info to shader
+    glEnableVertexAttribArray(VERTEX_POSITION);
+    glEnableVertexAttribArray(TEX_COORD);
+    glVertexAttribPointer(VERTEX_POSITION, 3, GL_FLOAT,
+         GL_FALSE, 0, quad);
+    glVertexAttribPointer(TEX_COORD, 2, GL_FLOAT,
+         GL_FALSE, 0, texCoords);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}</pre></div></li><li class="listitem">The message string is printed with the help of the <code class="literal">printText</code> function. This function loops through the message string and calls the <code class="literal">drawGlyph</code> function to render each character in it. After rendering each character, the next glyph is advanced by the <a id="id623" class="indexterm"/>horizontal offset <a id="id624" class="indexterm"/><code class="literal">advanceHorizontal</code> information stored in the glyph data structure for the corresponding character code:<div class="informalexample"><pre class="programlisting">void Font::printText(char* str, GLfloat Red,
+      GLfloat Green, GLfloat Blue, GLfloat Alpha) {
+     // Initialize OpenGL ES States
+     glDisable(GL_CULL_FACE);
+     glDisable(GL_DEPTH_TEST);
+     glEnable(GL_BLEND);
+     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+     // Use font program
+    glUseProgram(program-&gt;ProgramID);
+    
+     // Activate Texture unit 0 and assign the altas
+     glActiveTexture (GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, atlasTex);
+
+    TransformObj-&gt;TransformPushMatrix();
+    GLfloat color[4] = {Red, Green, Blue, Alpha};
+    glUniform4fv(FRAG_COLOR, 1, color);
+
+    for (const char* c = str; *c != '\0'; c++) {
+        const Glyph&amp; gi = glyphs[((unsigned long) *c)];
+        TransformObj-&gt;TransformTranslate
+          (gi.advanceHorizontal/ 2.0, 0.0, 0.0);
+        drawGlyph(gi);
+    }
+    TransformObj-&gt;TransformPopMatrix();
+    return;
+}</pre></div><p>The present case of <code class="literal">drawGlyph()</code> can be optimized by bunching multiple draw calls into a single one. Multiple glyphs can be defined and drawn in one go if all glyph quads are computed and specified along with their texture coordinates in vertex attribute buffers. We will leave this optimization as an exercise to our readers.</p></li><li class="listitem">Create a <code class="literal">FontSample</code> class derived from <code class="literal">Model</code> and override the <code class="literal">Render()</code> method in order to render the sample text, as shown in the following code:<div class="informalexample"><pre class="programlisting">void FontSample::Render(){
+    Font* English = dynamic_cast&lt;Font*&gt;
+                (RendererHandler-&gt;getModel(FontEnglish));
+    static float angle = 0.0;
+    TransformObj-&gt;TransformPushMatrix();
+    TransformObj-&gt;TransformTranslate(-0.50, 0.0, 0.0);
+    TransformObj-&gt;TransformRotate(angle++, 1.0, 0.0, 0.0);
+    English-&gt;printText((char*)"Hello World !!!",1,1,0,1);
+    TransformObj-&gt;TransformPopMatrix();
+}</pre></div></li><li class="listitem">In the <code class="literal">Renderer::createModel</code> function, load the font file with the desired font size and add <a id="id625" class="indexterm"/>the <code class="literal">FontSample</code> <a id="id626" class="indexterm"/>model. Make sure that the font file is added to the project:<div class="informalexample"><pre class="programlisting">void Renderer::createModels(){
+    clearModels();
+    char fname[500]= {""};
+  #ifdef __APPLE__
+    GLUtils::extractPath( getenv("FILESYSTEM"), fname);
+  #else
+    strcpy( fname, "/sdcard/GLPIFramework/Font/");
+  #endif
+    addModel(new Font(strcat(fname,"ACUTATR.TTF"),
+       50, this, English) );
+    addModel( new FontSample(this) );
+}</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec224"/>How it works...</h2></div></div></div><p>The initialization of FreeType is necessary in order to use it properly and without any unexpected surprises during use; this initialization is done in the constructor of the <code class="literal">Font</code> class using the <code class="literal">FT_Init_FreeType</code> API. This ensures that all the modules in the library are ready for use. On successful initialization, this API returns <code class="literal">0</code>; otherwise, it returns an error and sets the handle with a <code class="literal">NULL</code> value.</p><p>The constructor also calls the <code class="literal">loadFont</code> function; this function loads the font file using the <code class="literal">FT_New_Face</code> API and creates the face object. One font file may contain one or more than one font faces; the face contains the font style information. It describes a given typeface and style. For example, <span class="emphasis"><em>Times New Roman Regular</em></span> and <span class="emphasis"><em>Times New Roman Italic</em></span> correspond to two different faces. The <code class="literal">loadFont</code> function calls <code class="literal">getCorrectResolution</code> to make sure that the hardware device supports the requested texture size of the texture atlas allocation. The maximum texture size limit can be queried using <code class="literal">GL_MAX_TEXTURE_SIZE</code>; if the texture size is bigger than the supported limit, it falls back to the next smallest available size and returns the new updated resolution and margin size in the <code class="literal">calculatedResolution</code> and <code class="literal">calculatedSize</code>.</p><p>The <code class="literal">readFont</code> function sets the font size information using the <code class="literal">FT_Set_Pixel_Size</code> API. This function takes three arguments, namely, font face, pixel width, and pixel height. The total number of glyphs in the font file, pixel resolution, and the margin size are used to calculate the size of texture atlas, which is allocated in the power of two and stored in the <code class="literal">textureData</code>. The <a id="id627" class="indexterm"/>allocated texture is stored as two channel information: one for the color information and another for the alpha component.</p><p>Each glyph present in the library is traversed and loaded using the <code class="literal">FT_Load_Glyph</code> API. This loads the current <a id="id628" class="indexterm"/>glyph in the glyph slot that can be retrieved with <code class="literal">fontFace</code> | <code class="literal">glyph</code> and passed to <code class="literal">FT_Render_Glyph</code> and rasters the bitmap bits. These bits are written in the <code class="literal">textureData</code> using the <code class="literal">generateTexFromGlyph</code> function. The glyph writing in the texture is done from the left to right direction. When the number of the glyph reaches the maximum number of glyphs per row, the write pointer is set to the next row. After all the glyphs are written in the <code class="literal">textureData</code> texture atlas, create an OpenGL ES texture object and set it with this information:</p><div class="mediaobject"><img src="graphics/5527OT_08_03.jpg" alt="How it works..."/></div><p>The <code class="literal">Font</code> class provides the interface to the external world for texture rendering purposes. This class first initializes the shaders in the <code class="literal">initModel</code> function, similar to other GLPI framework models. The <code class="literal">printText</code> function can be used to render the text information; this function accepts a text message string as the first argument and colors information in the RGBA format as next four parameters. The printing function should disable the culling and depth testing. The former testing is disabled because we want to view the font on the back faces as well; otherwise, it will surprise the user when texture goes suddenly missing. The latter case is helpful to keep the text rendered at the top always; we don't want this if it gets occluded by some other objects. The alpha blending must be turned on with the <code class="literal">glBlendFunc</code> (<code class="literal">GL_SRC_ALPHA</code>, <code class="literal">GL_ONE_MINUS_SRC_ALPHA</code>) blending function. Traversing through each character prints the string; the corresponding glyph is obtained from <a id="id629" class="indexterm"/>the glyphs map for the current character code <a id="id630" class="indexterm"/>and passed on to the <code class="literal">drawGlyph</code> function. The <code class="literal">drawGlyph</code> function makes use of the glyph structure and generates the necessary information to draw the bitmap image in the 2D or 3D space. Each glyph is rendered to a square and mapped with texture coordinates from the texture atlas; glyphs need to be placed according to font metrics or the glyph metric in the 2D/3D space.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note48"/>Note</h3><p>The glyph metric contains the distance information associated with a particular glyph to help it in positioning while creating a text layout.</p></div></div><div class="mediaobject"><img src="graphics/5527OT_08_04.jpg" alt="How it works..."/></div></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec225"/>There's more...</h2></div></div></div><p>The <code class="literal">printText</code> function renders a simple text where the transformation can be applied to the string to achieve various effects. We have seen that each string is rendered as a single glyph at a time. Therefore, it's possible to perform transforming animations on a single glyph. The following image is an example of the glyph animation, where glyphs are arranged in a circular fashion and rotates along the <span class="emphasis"><em>y</em></span> axis:</p><div class="mediaobject"><img src="graphics/5527OT_08_05.jpg" alt="There's more..."/></div><p>In the current recipe, the <code class="literal">animateText</code> function can be used to render glyphs in an animated fashion. The function definition is explained later on; it accepts two more parameters: radius and rotation in addition to the <code class="literal">printText</code> parameter. This function renders glyphs that are arranged in a circular fashion and rotate along the <span class="emphasis"><em>y</em></span> axis.</p><p>Based on the number of <a id="id631" class="indexterm"/>characters in the string and the given <a id="id632" class="indexterm"/>radius, a locus is calculated, and each character is placed in such a way that it always faces the camera. This way, the letter always faces the camera, irrespective of its position and angle along the <span class="emphasis"><em>y</em></span> axis:</p><div class="informalexample"><pre class="programlisting">void Font::animateText(const char* str, GLfloat Red, GLfloat Green,
+  GLfloat Blue, GLfloat Alpha,float radius,float rotation){
+    // Same code as printText, reuse it
+    int num_segments = strlen(str); int index = 0;
+    float theta = 0;
+    for (const char* c = str; *c != '\0'; c++) {
+        TransformObj-&gt;TransformPushMatrix();
+        TransformObj-&gt;TransformRotate(rot , 0.0, 1.0, 0.0);
+        
+         // position of character on the locus
+        theta = 2.0f * PI_VAL * (index++)/num_segments;
+        TransformObj-&gt;TransformPushMatrix();
+        TransformObj-&gt;TransformTranslate
+             (radius*cosf(theta), 0.0, radius * sinf(theta));
+        const Glyph&amp; gi = glyphs[((unsigned long) *c)];
+        TransformObj-&gt;TransformRotate(-rot , 0.0, 1.0, 0.0);
+        
+       // Draw Glyph
+       drawGlyph(gi);
+        TransformObj-&gt;TransformPopMatrix();
+        TransformObj-&gt;TransformPopMatrix();
+    }
+    TransformObj-&gt;TransformPopMatrix();
+}</pre></div></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec226"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Rendering different languages with Harfbuzz</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Applying texture with UV mapping</em></span> recipe in <a class="link" href="ch07.html" title="Chapter 7. Textures and Mapping Techniques">Chapter 7</a>, <span class="emphasis"><em>Textures and Mapping Techniques</em></span></li></ul></div></div></div>
+<div class="section" title="Rendering different languages with Harfbuzz"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec70"/>Rendering different languages with Harfbuzz</h1></div></div></div><p>The FreeType <a id="id633" class="indexterm"/>library performs the rasterization operation in which each character is associated with a glyph index; this glyph index maps to the bitmap image. This information is more or less sufficient for simple scripts like English, which does not change its shape with the context. For example, based on the context, Arabic language has four different types of shape forms, where a character may change its shape depending on the own location or surrounding characters. With Unicode, there was a need for different languages to allow them to create complex transformations of glyphs, such as substitution, positioning, bi-directional text, context-sensitive shaping, and ligatures. Therefore, we need some special library that understands the context of the language and does the job of shaping for us; this is where Harfbuzz comes into the picture.</p><p>Harfbuzz is a text shaping engine that manages complex text; it performs the shaping job on the given Unicode text using the language script and layout direction specified by the user. This library does not provide text layout or rendering.</p><p>Here are some of the characteristics of complex text:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Bi-directionality</strong></span>: Text <a id="id634" class="indexterm"/>written/displayed from left to right and vice versa direction. Arabic and Hebrew scripts use the right to left direction. However, most other languages, including Latin, are written from left to right. The following image shows the mix of English numerals and Arabic text in the bidirectional order.<div class="mediaobject"><img src="graphics/5527OT_08_06.jpg" alt="Rendering different languages with Harfbuzz"/></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Shaping</strong></span>: The character shape depends on the context. For example, the shape of the Arabic character changes when it connects to the adjacent characters. The following example shows contextual shaping in Arabic.<div class="mediaobject"><img src="graphics/5527OT_08_07.jpg" alt="Rendering different languages with Harfbuzz"/></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Ligatures</strong></span>: A ligature is a special character that combines two or more characters into a single character. Here is an example of the Arabic ligature.<div class="mediaobject"><img src="graphics/5527OT_08_08.jpg" alt="Rendering different languages with Harfbuzz"/></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Positioning</strong></span>: Glyphs <a id="id635" class="indexterm"/>are adjusted with respect to a given character vertically or horizontally; the following image demonstrates the concept of positioning in Thai.<div class="mediaobject"><img src="graphics/5527OT_08_09.jpg" alt="Rendering different languages with Harfbuzz"/></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Reordering</strong></span>: The position of a character depends on the context. In the following example, the last character of the Hindi text (Devanagri script) is placed in front of the second last character in the final output.<div class="mediaobject"><img src="graphics/5527OT_08_10.jpg" alt="Rendering different languages with Harfbuzz"/></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Split characters</strong></span>: In this <a id="id636" class="indexterm"/>case, the same character appears in more than one position.<div class="mediaobject"><img src="graphics/5527OT_08_11.jpg" alt="Rendering different languages with Harfbuzz"/></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note49"/>Note</h3><p>Image courtesy: <a class="ulink" href="http://scripts.sil.org">http://scripts.sil.org</a></p></div></div></li></ul></div><p>This recipe will demonstrate text rendering in different types of languages, such as Arabic, Thai, Punjabi, Tamil, and English altogether.</p><p><span class="strong"><strong>Classes and data structure</strong></span>:</p><p>This recipe will <a id="id637" class="indexterm"/>introduce a new class, which is responsible for shaping the text as per the specified language.</p><p><span class="strong"><strong>FontShaping</strong></span>: This <a id="id638" class="indexterm"/>class is derived from <code class="literal">FontGenerator</code>. It inherits all the vital information from the FreeType library that is necessary <a id="id639" class="indexterm"/>for rasterization. This class uses the <code class="literal">Harfbuzz-ng</code> library for text shaping:</p><div class="mediaobject"><img src="graphics/5527OT_08_12.jpg" alt="Rendering different languages with Harfbuzz"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec227"/>Getting ready</h2></div></div></div><p>The <code class="literal">Harfbuzz-ng</code> library is an open source library written in ANSI-C. This library is freely available under the MIT license.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note50"/>Note</h3><p>The library can be <a id="id640" class="indexterm"/>downloaded at <a class="ulink" href="http://freedesktop.org/wiki/Software/HarfBuzz/">http://freedesktop.org/wiki/Software/HarfBuzz/</a>.</p></div></div><p><span class="strong"><strong>Build process</strong></span>: The following <a id="id641" class="indexterm"/>steps provide a detailed description of the installation process for the <code class="literal">Harfbuzz-ng</code> library and other source files required to implement this recipe:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Android</strong></span>: On the Android platform, we need the makefile to build the <code class="literal">Harfbuzz-ng</code> library. Add the <code class="literal">Android.mk</code> makefile under <code class="literal">GLPIFramework/Font/harfbuzz-ng</code>. Edit this makefile, as given in the following code. This will be compiled as a shared library and named as <code class="literal">GLPiharfbuzz</code>:<div class="informalexample"><pre class="programlisting">LOCAL_SRC_FILES:= \
+   src/hb-blob.cc src/hb-buffer-serialize.cc \
+src/hb-buffer.cc src/hb-common.cc \
+src/hb-fallback-shape.cc src/hb-font.cc \
+   src/hb-ft.cc src/hb-ot-tag.cc src/hb-set.cc \
+src/hb-shape.cc src/hb-shape-plan.cc \
+src/hb-shaper.cc src/hb-tt-font.cc \
+   src/hb-unicode.cc src/hb-warning.cc \
+src/hb-ot-layout.cc src/hb-ot-map.cc \
+src/hb-ot-shape.cc src/hb-ot-shape-complex-arabic.cc\
+   src/hb-ot-shape-complex-default.cc \
+   src/hb-ot-shape-complex-indic.cc \
+   src/hb-ot-shape-complex-indic-table.cc \
+   src/hb-ot-shape-complex-myanmar.cc \
+   src/hb-ot-shape-complex-sea.cc \
+   src/hb-ot-shape-complex-thai.cc \
+   src/hb-ot-shape-normalize.cc \
+   src/hb-ot-shape-fallback.cc \
+
+LOCAL_CPP_EXTENSION := .cc
+
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/src external/icu4c/common \
+             $(LOCAL_PATH)/src $(LOCAL_PATH)/../freetype/include
+
+LOCAL_CFLAGS := -DHAVE_OT
+LOCAL_MODULE:= GLPiharfbuzz
+LOCAL_STATIC_LIBRARIES := GLPift2
+include $(BUILD_SHARED_LIBRARY)</pre></div><p>In <code class="literal">GLESNativeLib.java</code>, edit the <code class="literal">GLESNativeLib</code> class and add the reference <a id="id642" class="indexterm"/>of our <code class="literal">GLPiharfbuzz.so</code> shared library in order to link at runtime:</p><div class="informalexample"><pre class="programlisting">public class GLESNativeLib {
+static {
+ System.loadLibrary("GLPiharfbuzz");
+    . . . . . . Other code
+}</pre></div><p>Open the <a id="id643" class="indexterm"/>
+<code class="literal">Android.mk</code> makefile in the present project directory under the (<code class="literal">&lt;Source code path&gt;/Localization/Android/JNI</code>) JNI folder and include the path of the <code class="literal">Android.mk</code> makefile that we have created in the <code class="literal">harfbuzz</code> library. Additionally, add the following source files in order to build this recipe:</p><div class="informalexample"><pre class="programlisting">FONT_PATH= $(FRAMEWORK_DIR)/Font
+include $(MY_CUR_LOCAL_PATH)/../../../../GLPIFramework/Font/harfbuzz-ng/Android.mk
+
+LOCAL_C_INCLUDES += $(FONT_PATH)/FreeType/include
+LOCAL_C_INCLUDES += $(FONT_PATH)/harfbuzz-ng/src
+
+LOCAL_SRC_FILES += $(SCENE_DIR)/FontGenerator.cpp \
+                   $(SCENE_DIR)/FontShaping.cpp \
+                   $(SCENE_DIR)/Font.cpp \
+                   $(SCENE_DIR)/FontSample.cpp \
+                   $(SCENE_DIR)/SimpleTexture.cpp
+LOCAL_SHARED_LIBRARIES += GLPiharfbuzz</pre></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>iOS</strong></span>: On the <a id="id644" class="indexterm"/>iOS platform, we need to add the same FreeType project source files (mentioned under the <code class="literal">LOCAL_SRC_FILES</code> makefile variable) to your projects using the <span class="strong"><strong>Build Phase</strong></span> | <span class="strong"><strong>Compile Sources</strong></span> project properties. Click on add to select source files.<p>Provide a path to include the header files for the Harfbuzz project using <span class="strong"><strong>Build Settings</strong></span> | <span class="strong"><strong>Search Paths</strong></span> | <span class="strong"><strong>Header Search Paths</strong></span>. For the present case, it should be:</p><div class="informalexample"><pre class="programlisting">../../../../GLPIFramework/Font/harfbuzz-ng/src/</pre></div><p>In addition, add <code class="literal">FontGenerator.h/cpp</code>, <code class="literal">FontShaping.h/cpp</code>, <code class="literal">Font.h/cpp</code>, and <code class="literal">FontSample.h/cpp</code> using <span class="strong"><strong>File</strong></span> | <span class="strong"><strong>Add Files to &lt;Project Name&gt;</strong></span>.</p></li></ul></div></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec228"/>How to do it...</h2></div></div></div><p>Reuse the first implemented recipe, <span class="emphasis"><em>Font rendering with FreeType project</em></span>, and proceed to the following procedure to program this recipe:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Create the <code class="literal">FontShaping</code> class derived from <code class="literal">FontGenerator</code> and add the following code. This class contains two major functions: <code class="literal">setDirectionAndScript</code> and <code class="literal">produceShape</code>:<div class="informalexample"><pre class="programlisting">class FontShaping : public FontGenerator{
+ public:
+    FontShaping(){ font = NULL; buffer = NULL; }
+    ~FontShaping(){}
+    void setDirectionAndScript
+         (hb_buffer_t *&amp;buffer, LanguageType languageType);
+    bool produceShape(const char* string, vector&lt;FT_UInt &gt;&amp;);
+    
+ private:
+    hb_font_t  *font;
+    hb_buffer_t  *buffer;
+};</pre></div></li><li class="listitem">The <code class="literal">produceShape</code> function is responsible for text shaping using the <code class="literal">Harfbuzz-ng</code> <a id="id645" class="indexterm"/>library. It accepts a string that needs to be shaped as an input parameter and returns the code points after processing the shape. These code points are nothing but glyph indexes:<div class="informalexample"><pre class="programlisting">bool FontShaping::produceShape(const char* str, std::vector&lt; FT_UInt &gt;&amp; codePoints){
+    FT_UInt glyph_index = 0;
+    hb_glyph_info_t *glyph_info;
+    FT_Face     ft_face = fontFace; //handle to face object
+    if (!ft_face)
+        { return false; }
+    
+    int num_chars = (int)strlen(str);
+    if (!font) { font=hb_ft_font_create(ft_face, NULL); }
+    
+    /* Create a buffer for harfbuzz to use */
+    if (buffer){ hb_buffer_destroy(buffer); buffer=NULL; }
+
+    buffer = hb_buffer_create();
+
+    // The languageType is an enum containing enum of
+    // different supported languages
+   setDirectionAndScript(buffer, languageType);
+
+    /* Layout the text */
+    hb_buffer_add_utf8(buffer, str, num_chars, 0, num_chars);
+    hb_shape(font, buffer, NULL, 0);
+    
+    glyph_count = hb_buffer_get_length(buffer);
+    glyph_info  = hb_buffer_get_glyph_infos(buffer, 0);
+    for (int i = 0; i &lt; glyph_count; i++) {
+        glyph_index = glyph_info[i].codepoint;
+        codePoints.push_back(glyph_index);
+    }
+
+    if (buffer) {hb_buffer_destroy(buffer); buffer=NULL;}
+    if (codePoints.size() &lt;=0 ) { return false; }
+    return true;
+}</pre></div></li><li class="listitem">The Harfbuzz <a id="id646" class="indexterm"/>requires scripting and layout direction hints in order to perform the text shaping. Therefore, the end user must provide the script type and the direction of the text layout:<div class="informalexample"><pre class="programlisting">void FontShaping::setDirectionAndScript
+(hb_buffer_t *&amp;buffer, LanguageType languageType){
+    switch( languageType ){
+        case Thai:{
+            hb_buffer_set_direction(buffer, HB_DIRECTION_LTR);
+            hb_buffer_set_script(buffer, HB_SCRIPT_THAI);
+        }break;
+            
+        case Punjabi:{
+            hb_buffer_set_direction(buffer, 
+                                  HB_DIRECTION_LTR);
+            hb_buffer_set_script(buffer, 
+                                  HB_SCRIPT_GURMUKHI);
+        }break;
+            
+        case Arabic:{
+            hb_buffer_set_direction(buffer, 
+                                  HB_DIRECTION_RTL);
+            hb_buffer_set_script(buffer, HB_SCRIPT_ARABIC);
+        }break;
+            
+        case Tamil:{
+            hb_buffer_set_direction(buffer,
+                                  HB_DIRECTION_LTR);
+            hb_buffer_set_script(buffer, HB_SCRIPT_TAMIL);
+        }break;
+            
+        default:{
+            hb_buffer_set_direction(buffer,
+                                  HB_DIRECTION_LTR);
+            hb_buffer_set_script(buffer, HB_SCRIPT_COMMON);
+        }break;
+    }
+}</pre></div></li><li class="listitem">In the <code class="literal">FontGenerator::readFont</code> function, replace the following code. This will be <a id="id647" class="indexterm"/>useful to map the Harfbuzz-generated code points after text shaping:<div class="informalexample"><pre class="programlisting">for (FT_ULong charcode=FT_Get_First_Char(fontFace, &amp;gindex);
+       gindex != 0; charcode=FT_Get_Next_Char
+      (fontFace, charcode, &amp;gindex)) { . . }</pre></div><p>Replace the preceding code with this code:</p><div class="informalexample"><pre class="programlisting">for(int myc = 0; myc &lt; numGlyphs; myc++) {  . . . }</pre></div></li><li class="listitem">With respect to the preceding code changes done in the <code class="literal">FontGenerator::readFont</code> function, replace the following code in the <code class="literal">Font::printText</code> function:<div class="informalexample"><pre class="programlisting">    for (const char* c = str; *c != '\0'; c++) {
+        const Glyph&amp; gi = glyphs[((unsigned long) *c)];
+        TransformObj-&gt;TransformTranslate
+             (gi.advanceHorizontal / 2.0, 0.0, 0.0);
+        drawGlyph(gi);
+    }</pre></div><p>Replace the preceding code with this code:</p><div class="informalexample"><pre class="programlisting">    std::vector&lt; FT_UInt &gt; codePointsPtr;
+  int glyph_count = 0;
+  if ( !produceShape(str, codePointsPtr, glyph_count) ){
+     LOGI("Error in producing font shape");return;}
+
+  glyph_count = (int) codePointsPtr.size();
+  FT_UInt glyph_index = 0;
+  for (int i = 0; i &lt; glyph_count; i++) {
+      glyph_index = codePointsPtr.at(i);
+      const Glyph&amp; gi = glyphs[glyph_index];
+      TransformObj-&gt;TransformTranslate
+          (gi.advanceHorizontal / 2.0, 0.0, 0.0);
+      drawGlyph(gi);
+  }</pre></div></li><li class="listitem">In the <code class="literal">Renderer::createModels</code> function, add the necessary font files as per the supported languages:<div class="informalexample"><pre class="programlisting">void Renderer::createModels(){
+   clearModels();
+   . . . . // Other code . . .
+   addModel( new Font(strcat(fname,"ae_Nagham.ttf"),
+         50, this, Arabic) );
+   addModel( new Font(strcat(fname,"Roboto-Black.ttf"),
+         50, this, English) );
+   addModel( new Font(strcat(fname,"DroidSansThai.ttf"),
+         50, this, Thai) );
+   addModel( new Font(strcat(fname,"Uni Ila.Sundaram-03.ttf"),
+        50, this, Tamil) );
+   addModel(new Font(strcat(fname,"AnmolUni.ttf"),
+        50, this, Punjabi) );
+    addModel( new FontSample(this) );
+}</pre></div><div class="mediaobject"><img src="graphics/5527OT_08_13.jpg" alt="How to do it..."/></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec229"/>How it works...</h2></div></div></div><p>The working logic to <a id="id648" class="indexterm"/>render fonts in the current recipe is the same as the previous recipe. Therefore, it's strongly advisable to understand the first recipe before reading this section, which will only cover the text shaping working concept.</p><p>This recipe has introduced a new class called <code class="literal">FontShaping</code>, which is derived from <code class="literal">FontGenerator</code>. From now on, the <code class="literal">Font</code> class will be inheriting from <code class="literal">FontShaping,</code> instead of <code class="literal">FontGenerator</code>. The <code class="literal">FontShaping</code> class is the core engine for text shaping. Internally, this class makes use of the <code class="literal">Harfbuzz-ng</code> library.</p><p>We send UTF-8 encoding as an input parameter for multilingual text rendering in the <code class="literal">Font::printText</code> function. This function calls the <code class="literal">FontShaping::produceShaping</code>, which accepts one more argument in addition to the UTF-8 text, which is a vector list of code points that are returned from this function to the caller function. Code points are basically indexes of glyphs in the font file. In the multilingual text rendering, we have used the index of glyphs instead of character code in the glyphs map.</p><p>The <code class="literal">Harfbuzz-ng</code> library uses its own temporary buffer (of the <code class="literal">hb_buffer_t</code> type) to calculate the shaping information; this temporary buffer is allocated using the <code class="literal">hb_buffer_create</code> API. The created buffer is used to set the text layout direction (<code class="literal">hb_buffer_set_direction</code>) and language script (<code class="literal">hb_buffer_set_script</code>) in the <code class="literal">setDirectionAndScript</code> function.</p><p>Use the <code class="literal">hb_buffer_add_utf8</code> API and provide the UTF8 encoded text to the <code class="literal">Harfbuzz</code> library. In addition, the font face information is required from FreeType in order to create its own font (<code class="literal">hb_font_t</code>). This font is created using the <code class="literal">hb_ft_font_create</code> API. The <code class="literal">hb_shape</code> API does the shaping job for the input string. It accepts the <code class="literal">hb_font_t</code> and <code class="literal">hb_buffer_t</code> object as an argument.</p><p>After the shaping <a id="id649" class="indexterm"/>process is completed in the library, the number of glyphs may change. The <code class="literal">hb_buffer_get_length</code> API provides the new glyph count. The shaping information can be retrieved with the <code class="literal">hb_buffer_get_glyph_infos</code> API, which returns the <code class="literal">hb_glyph_info_t</code> object that contains all the glyph code points. These code points are collected in a vector list and sent back to the <code class="literal">printText</code> function. Make sure that the temporary buffer must be released from the memory at the end of the process.</p><p>In the <code class="literal">Font::printText</code>, the <code class="literal">codePoint</code> or glyph indexes are retrieved from the vector list and render the same way (we have described in the first recipe).</p></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec230"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Font rendering with the FreeType project</em></span></li></ul></div></div></div>
+<div class="section" title="Rendering text on Head Up Display"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec71"/>Rendering text on Head Up Display</h1></div></div></div><p>Text <a id="id650" class="indexterm"/>rendering on the screen coordinate system <a id="id651" class="indexterm"/>is a very common use case of printing text. The HUD, also <a id="id652" class="indexterm"/>known as overlays, allows you to render the text on top of a normal scene. The depth of the scene object does not change the size of the text. Examples of HUD are menu items, status bar, game scoreboards, and so on.</p><p>Technically, HUD is an orthographic view where the dimensions of left, right, top, and bottom are set equal to the viewport of the scene. In this recipe, we will print the vertex position of a rotating 3D cube in the screen coordinates. All vertices in the cube (near or far) have text in equal size. It is not affected by the distance of vertices from the camera position:</p><div class="mediaobject"><img src="graphics/5527OT_08_14.jpg" alt="Rendering text on Head Up Display"/></div><p>In the current recipe, we <a id="id653" class="indexterm"/>will reuse the <span class="emphasis"><em>Drawing APIs in OpenGL ES 3.0</em></span> recipe from <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span>. This will render a rotating cube in the 3D space. We will use the HUD mechanism to display the positions of each vertex in the screen coordinates.</p><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec231"/>Getting ready</h2></div></div></div><p>Reuse the last recipe, <span class="emphasis"><em>Rendering different languages with Harfbuzz</em></span>, and add the following files from <a id="id654" class="indexterm"/>another recipe <span class="emphasis"><em>Drawing APIs in OpenGL ES 3.0</em></span> in <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span>:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Open the <code class="literal">Cube.h</code> and <code class="literal">Cube.cpp</code> GL ES program files</li><li class="listitem">Open the <code class="literal">CubeVertex.glsl</code> and <code class="literal">CubeFragment.glsl</code> GLSL shader files</li></ol></div></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec232"/>How to do it...</h2></div></div></div><p>The following instructions will provide a step-by-step procedure to implement HUD:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Edit the <code class="literal">Cube.h</code>/<code class="literal">cpp</code> and define a new method called <code class="literal">GetScreenCoordinates</code>. This will produce the screen coordinates from the logical coordinates of the cube vertices and collect them in a <code class="literal">screenCoordinateVector</code> vector list. There is no change required for imported shaders:<div class="informalexample"><pre class="programlisting">void Cube::GetScreenCoordinates(){
+    // Get Screen Coordinates for cube vertices
+    int   viewport_matrix[4];
+    float screenCoord[3];
+    glGetIntegerv( GL_VIEWPORT, viewport_matrix );
+    screenCoordinateVector.clear(); // Clear vector
+
+    for(int i=0; i&lt;sizeof(cubeVerts)/(sizeof(GLfloat)*3);i++){
+        GLfloat x = cubeVerts[i][0]; // Vertex X coordinate
+        GLfloat y = cubeVerts[i][1]; // Vertex Y coordinate
+        GLfloat z = cubeVerts[i][2]; // Vertex Z coordinate
+        
+        int success = TransformObj-&gt;TransformProject
+               (x, y, z,
+               TransformObj-&gt;TransformGetModelViewMatrix(),
+               TransformObj-&gt;TransformGetProjectionMatrix(),
+               viewport_matrix, &amp;screenCoord[0],
+               &amp;screenCoord[1], &amp;screenCoord[2]);
+        
+       if (!success)
+          {memset(screenCoord,0,sizeof(float)*3);continue;}
+        int screenX  = screenCoord[0];
+        int screenY  = viewport_matrix[3] - screenCoord[1];
+        screenCoordinateVector.push_back
+                     (glm::vec2(screenX,screenY));
+    }
+}</pre></div></li><li class="listitem">Call the <code class="literal">GetScreenCoordinates</code> in the <code class="literal">Cube::Render</code> function after rendering the <a id="id655" class="indexterm"/>primitives. For this recipe, we change the rendering <a id="id656" class="indexterm"/>primitive from <code class="literal">GL_TRIANGLES to GL_LINE_LOOP</code>:<div class="informalexample"><pre class="programlisting">void Cube::Render(){
+ 
+  . . . . Other Rendering Code . . . .
+   glVertexAttribPointer(attribVertex, 3, GL_FLOAT,
+            GL_FALSE, 0, vertexBuffer);
+   glDrawArrays(GL_LINE_LOOP, 0, 36);
+   GetScreenCoordinates();
+}</pre></div></li><li class="listitem">In <code class="literal">FontSample.h</code>/<code class="literal">cpp</code>, create a function called <code class="literal">HeadUpDisplay</code>; this function will be responsible for setting the correct projection system and its dimensions for the head up display. The projection system for HUD must be orthographic and the dimension must be set to the viewport dimension:<div class="informalexample"><pre class="programlisting">void FontSample::HeadUpDisplay(int width, int height){
+    TransformObj-&gt;TransformSetMatrixMode( PROJECTION_MATRIX );
+    
+    TransformObj-&gt;TransformLoadIdentity();
+    // Left ,Right ,Bottom , Top, Near, Far
+    TransformObj-&gt;TransformOrtho(0, width, 0, height,-1,1);
+    
+    TransformObj-&gt;TransformSetMatrixMode( VIEW_MATRIX );
+    TransformObj-&gt;TransformLoadIdentity();
+    
+    TransformObj-&gt;TransformSetMatrixMode( MODEL_MATRIX );
+    TransformObj-&gt;TransformLoadIdentity();
+}</pre></div></li><li class="listitem">In <code class="literal">FontSample::Render()</code>, call the <code class="literal">HeadUpDisplay</code> function before rendering any <a id="id657" class="indexterm"/>drawing primitive. This will enable the HUD <a id="id658" class="indexterm"/>viewing. Get the vector list from the <code class="literal">Cube</code> class and render the vertex position with the <code class="literal">Font::printText</code> function:<div class="informalexample"><pre class="programlisting">void FontSample::Render(){
+    int viewport_matrix[4];
+    glGetIntegerv( GL_VIEWPORT, viewport_matrix );
+    HeadUpDisplay(viewport_matrix[2], viewport_matrix[3]);
+
+    Font* English = dynamic_cast&lt;Font*&gt;
+                   (RendererHandler-&gt;getModel(FontEnglish));
+    Cube* cubeObject = dynamic_cast&lt;Cube*&gt;
+                    (RendererHandler-&gt;getModel(CubeType));
+    std::vector&lt;glm::vec2&gt;* vertexVector =
+                   cubeObject-&gt;getScreenCoordinateVertices();
+    
+    char buffer[500];
+    for(int i = 0; i&lt;vertexVector-&gt;size(); i++) {
+        TransformObj-&gt;TransformPushMatrix();
+        TransformObj-&gt;TransformTranslate
+        (vertexVector-&gt;at(i).x, vertexVector-&gt;at(i).y, 0.0);
+        TransformObj-&gt;TransformScale(2.0, 2.0, 2.0);
+        memset(buffer, 0, 500);
+        sprintf(buffer, "Vertex pos: %d,%d", (int)
+        vertexVector-&gt;at(i).x, (int)vertexVector-&gt;at(i).y);
+        English-&gt;printText(buffer, 1.0, 1.0, 1.0, 1.0f );
+        TransformObj-&gt;TransformPopMatrix();
+    }
+}</pre></div></li></ol></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec233"/>How it works...</h2></div></div></div><p>The projection system for <a id="id659" class="indexterm"/>head up display must always be in the orthographic view. The <code class="literal">FontSample::HeadUpDisplay</code> function sets the projection matrix to an orthographic view with the help of the <code class="literal">Transform::TransformOrtho</code> API. It accepts eight parameters, in which the left-right and top-bottom must be specified with the correct dimension matched to the viewport size. Set the <code class="literal">Model</code> and <code class="literal">View</code> as the identity matrix:</p><div class="informalexample"><pre class="programlisting">TransformObj-&gt;TransformSetMatrixMode( PROJECTION_MATRIX );
+TransformObj-&gt;TransformLoadIdentity();
+// Left, Right, Bottom, Top, Near, Far
+TransformObj-&gt;TransformOrtho(0, width, 0, height,-1,1);</pre></div><p>The <code class="literal">HeadUpDisplay</code> <a id="id660" class="indexterm"/>function must be called before rendering primitives. For this recipe, we have collected screen coordinates of each vertex from the Cube class and displayed them using the <code class="literal">Font::printText</code> function with their respective screen coordinates position. The screen space coordinates of a vertex can be calculated in the logical coordinate system using the <code class="literal">Transform::TransformProject</code> function:</p><div class="mediaobject"><img src="graphics/5527OT_08_15.jpg" alt="How it works..."/></div></div><div class="section" title="See also"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec234"/>See also</h2></div></div></div><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="emphasis"><em>Rendering </em></span><a id="id661" class="indexterm"/><span class="emphasis"><em>different languages with Harfbuzz</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <span class="emphasis"><em>Understanding projection system in GLPI</em></span> recipe in <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span></li><li class="listitem" style="list-style-type: disc">Refer to the <a id="id662" class="indexterm"/><span class="emphasis"><em>Drawing APIs in OpenGL ES 3.0</em></span> recipe in <a class="link" href="ch02.html" title="Chapter 2. OpenGL ES 3.0 Essentials">Chapter 2</a>, <span class="emphasis"><em>OpenGL ES 3.0 Essentials</em></span></li></ul></div></div></div></body></html>
