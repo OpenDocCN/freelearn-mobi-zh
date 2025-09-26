@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Swift2 设计模式
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/d90ca5c5521879522503c8072a25d7d7`](https://zh.annas-archive.org/md5/d90ca5c5521879522503c8072a25d7d7)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Swift 秘籍第二版
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/9857d57cb8d5d81cfd9d4f486cd6d7d9`](https://zh.annas-archive.org/md5/9857d57cb8d5d81cfd9d4f486cd6d7d9)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
