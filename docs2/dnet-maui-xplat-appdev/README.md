@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# .NET MAUI 跨平台应用开发
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/f68f693541453541646c4b8b58abcd0a`](https://zh.annas-archive.org/md5/f68f693541453541646c4b8b58abcd0a)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 

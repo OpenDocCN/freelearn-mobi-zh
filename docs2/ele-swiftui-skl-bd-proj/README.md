@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# SwiftUI 项目构建与技巧提升指南
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/5f402d2b24e6f22ff5b57b80832447ff`](https://zh.annas-archive.org/md5/5f402d2b24e6f22ff5b57b80832447ff)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
