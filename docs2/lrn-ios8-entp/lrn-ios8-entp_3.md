@@ -1,4 +1,4 @@
-# 第三章 探索各种框架
+# 第三章：探索各种框架
 
 框架是一组资源的集合。它将静态库及其头文件收集到一个单一的结构中，Xcode 可以轻松将其包含到我们的项目中。框架是动态库。在 iOS 中，有两种类型的框架：公开框架和私有框架。从 iOS 3.1 开始，所有私有和公开库都合并到一个大缓存文件中。苹果为不同的功能提供了许多框架。框架的扩展名为`.framework`。对于每个独特的功能，都定义了一个框架——例如，使用地图时，有`MapKit`框架可用，使用位置时，有`CoreLocation`框架可用。各种框架位于`<Xcode.app>Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/<iOS_SDK>/System/Library/Frameworks`目录中，其中`Xcode.app`是我们的应用程序路径（我们保存应用程序的地方）。
 

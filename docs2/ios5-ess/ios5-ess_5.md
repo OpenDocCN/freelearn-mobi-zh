@@ -1,4 +1,4 @@
-# 第五章 使用 AirPlay 和 Core Image
+# 第五章：使用 AirPlay 和 Core Image
 
 从 iOS 4.2 的发布开始，开发者可以使用 AirPlay 将视频、音频和照片流式传输到支持 Apple TV 的设备。在 iOS 5 中，现在甚至更容易通过 Apple TV 自动无线镜像 iPad 2 上的所有内容到 HDTV。
 
