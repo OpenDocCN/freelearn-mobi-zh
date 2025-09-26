@@ -1,0 +1,453 @@
+<html><head></head><body><div id="book-content"><div id="sbo-rt-content"><div id="_idContainer462" class="Basic-Text-Frame">
+    <h1 class="chapterNumber">18</h1>
+    <h1 id="_idParaDest-246" class="chapterTitle">Getting Started with JSON Files</h1>
+    <p class="normal">In the previous chapter, you modified the Add Journal Entry screen so that the user can add their current location to a new journal entry, and configured the Map screen to display a region centered on your current location as well as pins representing the locations where the journal entries are made. However, since the<span class="hljs-variable"> </span><code class="inlineCode">MapViewController</code> instance does not have access to the <code class="inlineCode">journalEntries</code> array in the <code class="inlineCode">JournalListViewcontroller</code> instance, newly added journal entries do not appear on the Map screen as pins. Also, all newly added journal entries are lost when you quit the app.</p>
+    <p class="normal">In this chapter, you will<a id="_idIndexMarker812"/> create a <strong class="keyWord">singleton</strong>, <code class="inlineCode">SharedData</code>, that will provide journal entry data to both the Journal List and Map screens. This class will also be used to load journal entry data from a file on your device when the app starts up and save journal entry data to a file on your device when you add or delete journal entries.</p>
+    <p class="normal">You’ll start by creating the <code class="inlineCode">SharedData</code> class and configuring your app to use it. Next, you’ll modify the <code class="inlineCode">JournalEntry</code> class to be compatible with <a id="_idIndexMarker813"/>the <strong class="keyWord">JSON</strong> format, so you can save journal entries to a JSON file and load journal entries from a JSON file. After that, you’ll add methods to save journal entry data when you add or delete journal entries, and to load journal entry data when your app is starting up.</p>
+    <p class="normal">By the end of this chapter, you’ll know how to create a class to store, load, and save data from JSON files for use in your own apps.</p>
+    <p class="normal">The following topics will be covered in this chapter:</p>
+    <ul>
+      <li class="bulletList">Creating a singleton</li>
+      <li class="bulletList">Modifying the <code class="inlineCode">JournalEntry</code> class to be JSON-compatible</li>
+      <li class="bulletList">Loading and saving JSON data</li>
+    </ul>
+    <h1 id="_idParaDest-247" class="heading-1">Technical requirements</h1>
+    <p class="normal">You will continue working on the <code class="inlineCode">JRNL</code> project that you modified in the previous chapter.</p>
+    <p class="normal">The resource files and completed Xcode project for this chapter are in the <code class="inlineCode">Chapter18</code> folder of the code bundle for this book, which can be downloaded here:</p>
+    <p class="normal"><a href="https://github.com/PacktPublishing/iOS-18-Programming-for-Beginners-Ninth-Edition%0D"><span class="url">https://github.com/PacktPublishing/iOS-18-Programming-for-Beginners-Ninth-Edition</span></a></p>
+    <p class="normal">Check out the following video to see the code in action:</p>
+    <p class="normal"><a href="https://youtu.be/lJ4zuzzyjYE%0D"><span class="url">https://youtu.be/lJ4zuzzyjYE</span></a></p>
+    <p class="normal">Let’s start by creating a new singleton to store the data used by your app.</p>
+    <h1 id="_idParaDest-248" class="heading-1">Creating a singleton</h1>
+    <p class="normal">At present, when you <a id="_idIndexMarker814"/>add new journal entries to your app, they will appear on the Journal List screen, but when you switch to the Map screen, the newly added journal entries are not present. This is because the <code class="inlineCode">MapViewController</code> instance does not have access to the <code class="inlineCode">journalEntries</code> array in the <code class="inlineCode">JournalListViewcontroller</code> instance. To solve this issue, you’ll create a new singleton to store your app data. A singleton is created once and then referenced throughout your app. This means that the <code class="inlineCode">JournalListViewController</code> class and the <code class="inlineCode">MapViewController</code> class will be getting their data from a single source.</p>
+    <div class="note">
+      <p class="normal">For more information on singletons, see <a href="https://developer.apple.com/documentation/swift/managing-a-shared-resource-using-a-singleton"><span class="url">https://developer.apple.com/documentation/swift/managing-a-shared-resource-using-a-singleton</span></a>.</p>
+    </div>
+    <p class="normal">You will create a singleton named <code class="inlineCode">SharedData</code> and configure the <code class="inlineCode">JournalListViewController</code> and <code class="inlineCode">MapViewController</code> classes to use it. Follow these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, move the <strong class="screenText">Model</strong> group that is inside the <strong class="screenText">Journal List Screen</strong> group to a new location just below the <strong class="screenText">SceneDelegate</strong> file:</li>
+    </ol>
+    <figure class="mediaobject"><img src="image/B31371_18_01.png" alt="" width="379" height="367"/></figure>
+    <p class="packt_figref">Figure 18.1: Model group moved to a new location</p>
+    <p class="normal-one">This reflects the fact that the model objects are no longer solely used by the Journal List screen, but are used by the entire app.</p>
+    <ol>
+      <li class="numberedList" value="2">Right-click the <strong class="screenText">Model</strong> group and choose <strong class="screenText">New File from Template...</strong>.</li>
+      <li class="numberedList"><strong class="screenText">iOS</strong> should already <a id="_idIndexMarker815"/>be selected. Choose <strong class="screenText">Swift File</strong> and click <strong class="screenText">Next</strong>.</li>
+      <li class="numberedList">Name the file <code class="inlineCode">SharedData</code> and then click <strong class="screenText">Create</strong>. It will appear in the Project navigator and its contents will appear in the Editor area.</li>
+      <li class="numberedList">Replace the contents of this file with the following code to declare and define the <code class="inlineCode">SharedData</code> class:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">import</span> <span class="code-highlight"><strong class="hljs-slc">UIKit</strong></span>
+<span class="hljs-keyword">class</span> <span class="hljs-title">SharedData</span> {  
+  <span class="hljs-comment">// MARK: - Properties</span>
+  <span class="hljs-type">@MainActor</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">let</span> <span class="hljs-template-variable">shared</span> <span class="hljs-operator">=</span> <span class="hljs-con-class">SharedData</span>()
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> <span class="hljs-template-variable">journalEntries</span>: [<span class="hljs-con-class">JournalEntry</span>] = []
+  <span class="hljs-comment">// MARK: - Initializers</span>
+  <span class="hljs-keyword">private</span> <span class="hljs-keyword">init</span>() {
+  }
+<span class="hljs-comment">  // MARK: - Access methods</span>
+  <span class="hljs-keyword">func</span> <span class="hljs-template-variable">numberOfJournalEntries</span>() -&gt; <span class="hljs-type">Int</span> {
+    <span class="hljs-variable">journalEntries</span>.<span class="hljs-con-attribute">count</span>
+  }
+  <span class="hljs-keyword">func</span> <span class="hljs-template-variable">journalEntry(at</span> <span class="hljs-params">index</span>: <span class="hljs-type">Int</span>) -&gt; <span class="hljs-con-class">JournalEntry</span> {
+    <span class="hljs-variable">journalEntries</span>[index]
+  }
+  <span class="hljs-keyword">func</span> <span class="hljs-template-variable">allJournalEntries</span>() -&gt; [<span class="hljs-con-class">JournalEntry</span>] {
+    <span class="hljs-variable">journalEntries</span>
+  }
+  <span class="hljs-keyword">func</span> <span class="hljs-template-variable">addJournalEntry</span>(<span class="hljs-template-variable">_</span> <span class="hljs-params">newJournalEntry</span>: <span class="hljs-con-class">JournalEntry</span>) {
+    <span class="hljs-variable">journalEntries</span>.<span class="hljs-con-attribute">insert</span>(newJournalEntry, <span class="hljs-con-attribute">at</span>: <span class="hljs-number">0</span>)
+  }
+  <span class="hljs-keyword">func</span> <span class="hljs-template-variable">removeJournalEntry</span>(<span class="hljs-con-attribute">at </span><span class="hljs-params">index</span>: <span class="hljs-type">Int</span>) {
+    <span class="hljs-variable">journalEntries</span>.<span class="hljs-con-attribute">remove</span>(<span class="hljs-con-attribute">at</span>: index)
+  }
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">Let’s break this down:</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-type">@MainActor</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">let</span> <span class="hljs-template-variable">shared</span> <span class="hljs-operator">=</span> <span class="hljs-con-class">SharedData</span>()
+</code></pre>
+    <p class="normal-one">This statement creates a single instance of this class, which means that the only instance<a id="_idIndexMarker816"/> of <code class="inlineCode">SharedData</code> in your app is stored in the <code class="inlineCode">shared</code> property. This property is marked with <code class="inlineCode">@MainActor</code> to ensure that it should only be accessed from the main queue.</p>
+    <div class="note-one">
+      <p class="normal">For more information, watch Apple’s WWDC 2022 video titled <em class="italic">Eliminate data races using Swift Concurrency</em> here: <a href="https://developer.apple.com/videos/play/wwdc2022/110351/"><span class="url">https://developer.apple.com/videos/play/wwdc2022/110351/</span></a>.</p>
+    </div>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">private</span> <span class="hljs-keyword">var</span> <span class="hljs-template-variable">journalEntries</span>: [<span class="hljs-con-class">JournalEntry</span>] = []
+</code></pre>
+    <p class="normal-one">This statement creates an empty array named <code class="inlineCode">journalEntries</code> that will be used to store <code class="inlineCode">JournalEntry</code> instances. The private keyword means that the <code class="inlineCode">journalEntries</code> array may only be modified by methods in the <code class="inlineCode">SharedData</code> class. This is to ensure that no other part of your app can make changes to the <code class="inlineCode">journalEntries</code> array.</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">private</span> <span class="hljs-keyword">init</span>() {
+}
+</code></pre>
+    <p class="normal-one">The <code class="inlineCode">init()</code> method has an empty body. This prevents the accidental creation of a <code class="inlineCode">SharedData()</code> instance.</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">numberOfJournalEntries</span>() -&gt; <span class="hljs-type">Int</span> {
+  <span class="hljs-variable">journalEntries</span>.<span class="hljs-con-attribute">count</span>
+}
+</code></pre>
+    <p class="normal-one">This method returns the number of items in the <code class="inlineCode">journalEntries</code> array.</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">journalEntry(at</span> <span class="hljs-params">index</span>: <span class="hljs-type">Int</span>) -&gt; <span class="hljs-con-class">JournalEntry</span> {
+  <span class="hljs-variable">journalEntries</span>[index]
+}
+</code></pre>
+    <p class="normal-one">This method returns the <code class="inlineCode">JournalEntry</code> instance located at the specified index in the <code class="inlineCode">journalEntries</code> array.</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">allJournalEntries</span>() -&gt; [<span class="hljs-con-class">JournalEntry</span>] {
+  <span class="hljs-variable">journalEntries</span>
+}
+</code></pre>
+    <p class="normal-one">This method <a id="_idIndexMarker817"/>returns a copy of the <code class="inlineCode">JournalEntries</code> array.</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">addJournalEntry</span>(<span class="hljs-template-variable">_</span> <span class="hljs-params">newJournalEntry</span>: <span class="hljs-con-class">JournalEntry</span>) {
+  <span class="hljs-variable">journalEntries</span>.<span class="hljs-con-attribute">insert</span>(newJournalEntry, <span class="hljs-con-attribute">at</span>: <span class="hljs-number">0</span>)
+}
+</code></pre>
+    <p class="normal-one">This method inserts the <code class="inlineCode">JournalEntry</code> instance that was passed into the <code class="inlineCode">JournalEntries</code> array at index <code class="inlineCode">0</code>.</p>
+    <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">removeJournalEntry</span>(<span class="hljs-con-attribute">at </span><span class="hljs-params">index</span>: <span class="hljs-type">Int</span>) {
+  <span class="hljs-variable">journalEntries</span>.<span class="hljs-con-attribute">remove</span>(<span class="hljs-con-attribute">at</span>: index)
+}
+</code></pre>
+    <p class="normal-one">This method removes the <code class="inlineCode">JournalEntry</code> instance at the specified index from the <code class="inlineCode">JournalEntries</code> array.</p>
+    <p class="normal">Now that you have created the <code class="inlineCode">SharedData</code> class, you’ll modify your app to use it. Follow these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, click the <strong class="screenText">JournalListViewController</strong> file. Remove the <code class="inlineCode">journalEntries</code> property from the <code class="inlineCode">JournalListViewController</code> class:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-comment">//MARK: - Properties</span>
+<span class="hljs-keyword">@IBOutlet</span> <span class="hljs-keyword">var</span> <span class="hljs-template-variable">tableView</span>: <span class="hljs-type">UITableView</span>!
+<span class="code-highlight"><strong class="hljs-keyword-slc">private var</strong><strong class="hljs-slc"> </strong><strong class="hljs-template-variable-slc">journalEntries</strong><strong class="hljs-slc">: [</strong><strong class="hljs-con-class-slc">JournalEntry</strong><strong class="hljs-slc">] = [] </strong><strong class="hljs-comment-slc">// remove</strong></span>
+</code></pre>
+      </li>
+      <li class="numberedList">In <code class="inlineCode">viewDidLoad()</code>, remove the statement that creates the sample data and appends it to the <code class="inlineCode">journalEntries</code> array:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">override</span> <span class="hljs-keyword">func</span> <span class="hljs-template-variable">viewDidLoad</span>() {
+  <span class="hljs-keyword">super</span>.<span class="hljs-con-attribute">viewDidLoad</span>()
+  <span class="code-highlight"><strong class="hljs-variable-slc">journalEntries</strong><strong class="hljs-slc"> =</strong><strong class="hljs-con-class-slc">JournalEntry</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">createSampleJournalEntryData</strong><strong class="hljs-slc">() </strong><strong class="hljs-comment-slc">// remove</strong></span>
+  
+}
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">tableView(_:numberOfRowsInSection:)</code> method to get the number of rows for the table view from <code class="inlineCode">SharedData</code>:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">tableView</span>(<span class="hljs-template-variable">_</span> <span class="hljs-params">tableView</span>: <span class="hljs-type">UITableView</span>, <span class="hljs-template-variable">numberOfRowsInSection</span> <span class="hljs-params">section</span>: <span class="hljs-type">Int</span>) -&gt; <span class="hljs-type">Int</span> {
+  <span class="code-highlight"><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">numberOfJournalEntries</strong><strong class="hljs-slc">()</strong></span>
+}
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">tableView(_:cellForRowAt:)</code> method to get the required <code class="inlineCode">JournalEntry</code> instance <a id="_idIndexMarker818"/>from <code class="inlineCode">SharedData</code>:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">let</span> journalCell <span class="hljs-operator">=</span> tableView.<span class="hljs-con-attribute">dequeueReusableCell</span>(<span class="hljs-con-attribute">withIdentifier</span>: <span class="hljs-string">"journalCell"</span>, <span class="hljs-con-attribute">for</span>: indexPath) <span class="hljs-keyword">as</span>! <span class="hljs-con-class">JournalListTableViewCell</span>
+<span class="code-highlight"><strong class="hljs-keyword-slc">let</strong><strong class="hljs-slc"> journalEntry </strong><strong class="hljs-operator-slc">=</strong><strong class="hljs-slc"> </strong><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">journalEntry</strong><strong class="hljs-slc">(</strong><strong class="hljs-variable-slc">at</strong><strong class="hljs-slc">: indexPath.</strong><strong class="hljs-con-attribute-slc">row</strong><strong class="hljs-slc">)</strong></span>
+journalCell.<span class="hljs-variable">photoImageView</span>.<span class="hljs-con-attribute">image</span> <span class="hljs-operator">=</span> journalEntry.<span class="hljs-variable">photo</span>
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">tableView(_:commit:forRowAt:)</code> method to remove the selected <code class="inlineCode">JournalEntry</code> instance from <code class="inlineCode">SharedData</code>:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">if</span> editingStyle <span class="hljs-operator">==</span> .<span class="hljs-con-attribute">delete</span> {
+  <span class="code-highlight"><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">journalEntry</strong><strong class="hljs-slc">(</strong><strong class="hljs-variable-slc">at</strong><strong class="hljs-slc">: indexPath.</strong><strong class="hljs-con-attribute-slc">row</strong><strong class="hljs-slc">)</strong></span>
+  tableView.<span class="hljs-con-attribute">reloadData</span>()
+}
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">prepare(for:sender:)</code> method to use <code class="inlineCode">SharedData</code> to get the selected <code class="inlineCode">JournalEntry</code> instance:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">let</span> selectedJournalEntry <span class="hljs-operator">=</span> <span class="code-highlight"><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">journalEntry</strong><strong class="hljs-slc">(</strong><strong class="hljs-variable-slc">at</strong><strong class="hljs-slc">: indexPath.</strong><strong class="hljs-con-attribute-slc">row</strong><strong class="hljs-slc">)</strong></span>
+journalEntryDetailViewController.<span class="hljs-variable">selectedJournalEntry</span> <span class="hljs-operator">=</span> selectedJournalEntry
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">unwindNewEntrySave(segue:)</code> method to add a new <code class="inlineCode">JournalEntry</code> instance to <code class="inlineCode">SharedData</code>:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">if</span> <span class="hljs-keyword">let</span> sourceViewController <span class="hljs-operator">=</span> segue.<span class="hljs-con-attribute">source</span> <span class="hljs-keyword">as?</span> <span class="hljs-con-class">AddJournalEntryViewController</span>, <span class="hljs-keyword">let</span> newJournalEntry <span class="hljs-operator">=</span> sourceViewController.<span class="hljs-variable">newJournalEntry</span> {
+<span class="code-highlight"><strong class="hljs-slc">  </strong><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">addjournalEntry</strong><strong class="hljs-slc">(newJournalEntry)</strong></span>
+  <span class="hljs-variable">tableView</span>.<span class="hljs-con-attribute">reloadData</span>()
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal">You have made all the required changes to the <code class="inlineCode">JournalListViewController</code> class. Now you will modify the <code class="inlineCode">MapViewController</code> class to use <code class="inlineCode">SharedData</code>. As noted in the previous chapter, when running your app on an actual device, it takes a long time to determine the device’s location, and the map on the Map screen will not be updated if the user’s location <a id="_idIndexMarker819"/>changes. You’ll address both of these issues as well. Follow these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, click the <strong class="screenText">MapViewController</strong> file. Remove the <code class="inlineCode">annotations</code> property from the <code class="inlineCode">MapViewController</code> class:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-comment">//MARK: - Properties</span>
+<span class="hljs-keyword">@IBOutlet</span> <span class="hljs-keyword">var</span> <span class="hljs-template-variable">mapView</span>: <span class="hljs-type">MKMapView</span>!
+<span class="hljs-keyword">let</span> <span class="hljs-template-variable">locationManager</span> <span class="hljs-operator">=</span> <span class="hljs-type">CLLocationManager</span>()
+private var <span class="hljs-template-variable">locationTask</span>: <span class="hljs-type">Task</span>&lt;<span class="hljs-type">Void</span>, <span class="hljs-type">Error</span>&gt;?
+<span class="code-highlight"><strong class="hljs-keyword-slc">private var</strong><strong class="hljs-slc"> </strong><strong class="hljs-template-variable-slc">annotations</strong><strong class="hljs-slc">: </strong><strong class="hljs-slc">[</strong><strong class="hljs-con-class-slc">JournalEntry</strong><strong class="hljs-slc">]</strong><strong class="hljs-type-slc"> </strong><strong class="hljs-slc">= [] </strong><strong class="hljs-comment-slc">// remove</strong></span>
+<span class="hljs-keyword">var</span> <span class="hljs-template-variable">selectedJournalEntry</span>: <span class="hljs-con-class">JournalEntry</span>?
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">viewDidLoad()</code> method by removing the highlighted statements:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">override</span> <span class="hljs-keyword">func</span> <span class="hljs-template-variable">viewDidLoad</span>() {
+  <span class="hljs-keyword">super</span>.<span class="hljs-con-attribute">viewDidLoad</span>()
+<span class="code-highlight"><strong class="hljs-slc">  </strong><strong class="hljs-variable-slc">fetchUserLocation</strong><strong class="hljs-slc">() </strong><strong class="hljs-comment-slc">// remove</strong></span>
+  <span class="hljs-title">mapView</span>.<span class="hljs-con-attribute">delegate</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">self</span>
+<span class="code-highlight"><strong class="hljs-slc">  </strong><strong class="hljs-variable-slc">annotations</strong><strong class="hljs-slc"> = </strong><strong class="hljs-con-class-slc">JournalEntry</strong><strong class="hljs-slc">.</strong></span>
+<span class="code-highlight"><strong class="hljs-slc">  </strong><strong class="hljs-variable-slc">createSampleJournalEntryData</strong><strong class="hljs-slc">() </strong><strong class="hljs-comment-slc">// remove</strong><strong class="hljs-slc"> </strong></span>
+<span class="code-highlight"><strong class="hljs-slc">  </strong><strong class="hljs-variable-slc">mapView</strong><strong class="hljs-slc">.</strong><strong class="hljs-con-attribute-slc">addAnnotations</strong><strong class="hljs-slc">(</strong><strong class="hljs-variable-slc">annotations</strong><strong class="hljs-slc">) </strong><strong class="hljs-comment-slc">// remove</strong></span>
+}
+</code></pre>
+      </li>
+      <li class="numberedList">To reduce the time taken to determine the user’s location, add a statement to <code class="inlineCode">fetchUserLocation()</code> as shown to set the location manager instance’s accuracy to <code class="inlineCode">kCLLocationAcccuracyKilometer</code>:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-variable">locationManager</span>.<span class="hljs-con-attribute">requestWhenInUseAuthorization</span>()
+<span class="code-highlight"><strong class="hljs-variable-slc">locationManager</strong><strong class="hljs-slc">.</strong><strong class="hljs-con-attribute-slc">desiredAccuracy</strong><strong class="hljs-slc"> </strong><strong class="hljs-operator-slc">=</strong><strong class="hljs-slc"> </strong><strong class="hljs-con-attribute-slc">kCLLocationAccuracyKilometer</strong></span>
+<span class="hljs-keyword">self</span>.<span class="hljs-con-attribute">navigationItem</span>.<span class="hljs-con-attribute">title</span> <span class="hljs-operator">=</span> <span class="hljs-string">"Getting location..."</span>
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">The default value of this property is <code class="inlineCode">kCLLocationAccuracyBest</code>, which takes a relatively long time to determine. This trade-off is acceptable since the <em class="italic">JRNL</em> app does not require the highest level of accuracy when displaying annotations on the map.</p>
+    <ol>
+      <li class="numberedList" value="4">To update the user’s location whenever the Map screen appears, first implement the<a id="_idIndexMarker820"/> following method after the <code class="inlineCode">viewDidLoad()</code> method:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">override</span> <span class="hljs-keyword">func</span> <span class="hljs-template-variable">viewIsAppearing</span>(<span class="hljs-template-variable">_ </span><span class="hljs-params">animated</span>: <span class="hljs-type">Bool</span>) {
+  <span class="hljs-keyword">super</span><span class="hljs-con-attribute">.viewIsAppearin</span>g(animated)
+  <span class="hljs-title">fetchUserLocation</span>()
+}
+</code></pre>
+      </li>
+    </ol>
+    <div class="note-one">
+      <p class="normal">The <code class="inlineCode">viewIsAppearing()</code> view controller lifecycle method was introduced during WWDC 2023. You can learn more about this method at this link: <a href="https://developer.apple.com/documentation/uikit/uiviewcontroller/4195485-viewisappearing"><span class="url">https://developer.apple.com/documentation/uikit/uiviewcontroller/4195485-viewisappearing</span></a>.</p>
+    </div>
+    <ol>
+      <li class="numberedList" value="5">Add the following statement to the <code class="inlineCode">updateMapWithLocation(_:)</code> method as shown so that the map view gets all the annotations from <code class="inlineCode">SharedData</code> after the user’s location has been determined and the map region has been set:
+        <pre class="programlisting code-one"><code class="hljs-code">    <span class="hljs-variable">mapView</span>.<span class="hljs-con-attribute">region</span> <span class="hljs-operator">=</span> <span class="hljs-type">MKCoordinateRegion</span>(<span class="hljs-con-attribute">center</span>: 
+    <span class="hljs-type">CLLocationCoordinate2D</span>(<span class="hljs-con-attribute">latitude</span>: lat, <span class="hljs-con-attribute">longitude</span>: long),
+    <span class="hljs-con-attribute">span</span>: <span class="hljs-type">MKCoordinateSpan</span>(<span class="hljs-con-attribute">latitudeDelta</span>: <span class="hljs-number">0.01</span>,
+    <span class="hljs-con-attribute">longitudeDelta</span>: <span class="hljs-number">0.01</span>))
+<span class="code-highlight"><strong class="hljs-slc">   </strong><strong class="hljs-title-slc"> </strong><strong class="hljs-variable-slc">mapView</strong><strong class="hljs-slc">.</strong><strong class="hljs-con-attribute-slc">addAnnotations</strong><strong class="hljs-slc">(</strong><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">    .</strong><strong class="hljs-variable-slc">allJournalEntries</strong><strong class="hljs-slc">())</strong></span>
+
+  }
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal">With this change, if you are on the Journal List screen, tapping the <strong class="keyWord">Map</strong> tab bar button will update the user’s location, redraw the map on the Map screen, and reload the map annotations.</p>
+    <p class="normal">You have made all the required changes to the <code class="inlineCode">MapViewController</code> class. Now let’s test your app. Follow<a id="_idIndexMarker821"/> these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">Launch Simulator, and choose <strong class="screenText">Location</strong> | <strong class="screenText">Apple</strong> from Simulator’s <strong class="screenText">Features</strong> menu to simulate a location. Build and run your app. </li>
+    </ol>
+    <p class="numberedList">Click the <strong class="screenText">+</strong> button and add a new journal entry. Make sure the <strong class="screenText">Get Location</strong> switch is on:</p>
+    <figure class="mediaobject"><img src="image/B31371_18_02.png" alt="" width="448" height="358"/></figure>
+    <p class="packt_figref">Figure 18.2: Simulator showing Add New Journal Entry screen</p>
+    <ol>
+      <li class="numberedList" value="2">Tap the <strong class="screenText">Map</strong> tab button to go to the Map screen:</li>
+    </ol>
+    <figure class="mediaobject"><img src="image/B31371_18_03.png" alt="" width="366" height="651"/></figure>
+    <p class="packt_figref">Figure 18.3: Simulator showing the Map tab button</p>
+    <ol>
+      <li class="numberedList" value="3">Note the journal<a id="_idIndexMarker822"/> entry you added earlier is visible as a pin on the Map screen. Tap the pin and then tap the callout button:</li>
+    </ol>
+    <figure class="mediaobject"><img src="image/B31371_18_04.png" alt="" width="530" height="405"/></figure>
+    <p class="packt_figref">Figure 18.4: Simulator showing pin callout button</p>
+    <p class="normal-one">The journal entry <a id="_idIndexMarker823"/>details are displayed on the Journal Entry Detail screen:</p>
+    <figure class="mediaobject"><img src="image/B31371_18_05.png" alt="" width="460" height="389"/></figure>
+    <p class="packt_figref">Figure 18.5: Simulator showing Journal Entry Detail screen</p>
+    <p class="normal">You have successfully created a singleton and configured your app to use it, but the data is lost once the app quits. Later, you will write code to save journal entries to your device storage. But<a id="_idIndexMarker824"/> before you can do that, you’ll modify the <code class="inlineCode">JournalEntry</code> class so that the data in it can be stored in JSON format. You’ll do this in the next section.</p>
+    <h1 id="_idParaDest-249" class="heading-1">Modifying the JournalEntry class to be JSON-compatible</h1>
+    <p class="normal">At present, all<a id="_idIndexMarker825"/> app data is lost when you quit <a id="_idIndexMarker826"/>the app. You will need to implement a way to save your app data. iOS provides many ways to store your app data. One of them is converting the data <a id="_idIndexMarker827"/>to <strong class="keyWord">JavaScript Object Notation</strong> (<strong class="keyWord">JSON</strong>) format, and then writing it as a file to your device storage. JSON is a way to structure data in a file that can be easily read by both people and computers.</p>
+    <p class="normal">To help you to understand the JSON format, look at the sample shown below:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-punctuation">[</span>
+  <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"dateString"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"May 17, 2023"</span>
+    <span class="hljs-attr">"rating"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span>
+    <span class="hljs-attr">"entryTitle"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Good"</span>
+    <span class="hljs-attr">"entryBody"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Today is a good day"</span>
+    <span class="hljs-attr">"photoData"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"&lt;photo data for the sun.max image&gt;"</span>
+    <span class="hljs-attr">"latitude"</span><span class="hljs-punctuation">:</span>
+    <span class="hljs-attr">"longitude"</span><span class="hljs-punctuation">:</span>
+  <span class="hljs-punctuation">},</span>
+  <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"dateString"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"May 17, 2023"</span>
+    <span class="hljs-attr">"rating"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span>
+    <span class="hljs-attr">"entryTitle"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Bad"</span>
+    <span class="hljs-attr">"entryBody"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Today is a bad day"</span>
+    <span class="hljs-attr">"photoData"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"&lt;photo data for the cloud image&gt;"</span>
+    <span class="hljs-attr">"latitude"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">37.331354</span>
+    <span class="hljs-attr">"longitude"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">-122.031791</span>
+  <span class="hljs-punctuation">},</span>
+  <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">"dateString"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"May 17, 2023"</span>
+    <span class="hljs-attr">"rating"</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span>
+    <span class="hljs-attr">"</span><span class="hljs-attr">entryTitle"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Good"</span>
+    <span class="hljs-attr">"entryBody"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"Today is a good day"</span>
+    <span class="hljs-attr">"photoData"</span><span class="hljs-punctuation">:</span> <span class="hljs-string">"&lt;photo data for the cloud.sun&gt;"</span>
+    <span class="hljs-attr">"latitude"</span><span class="hljs-punctuation">:</span>
+    <span class="hljs-attr">"longitude"</span><span class="hljs-punctuation">:</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">]</span>
+</code></pre>
+    <p class="normal">This sample is a representation <a id="_idIndexMarker828"/>of the <code class="inlineCode">journalEntries</code> array in<a id="_idIndexMarker829"/> JSON format. As you can see, it starts with an opening square bracket, and each item inside consists of key-value pairs containing journal entry information, enclosed by curly braces and separated by commas.</p>
+    <p class="normal">At the very end of the file, you can see a closing square bracket. The square brackets denote arrays, and the curly braces denote dictionaries. The keys in the dictionary correspond to the properties in a <code class="inlineCode">JournalEntry</code> instance, and the values correspond to the values assigned to those properties.</p>
+    <div class="note">
+      <p class="normal">To learn more about using JSON with Swift types, see <a href="https://developer.apple.com/documentation/foundation/archives_and_serialization/using_json_with_custom_types"><span class="url">https://developer.apple.com/documentation/foundation/archives_and_serialization/using_json_with_custom_types</span></a>.</p>
+      <p class="normal">To learn more about parsing JSON files, watch the video available here: <a href="https://devstreaming-cdn.apple.com/videos/wwdc/2017/212vz78e2gzl2/212/212_hd_whats_new_in_foundation.mp4"><span class="url">https://devstreaming-cdn.apple.com/videos/wwdc/2017/212vz78e2gzl2/212/212_hd_whats_new_in_foundation.mp4</span></a>.</p>
+    </div>
+    <p class="normal">A custom Swift type needs to conform to the <code class="inlineCode">Codable</code> protocol before it can be converted to and from JSON.</p>
+    <div class="note">
+      <p class="normal">To learn more about <code class="inlineCode">Codable</code>, see <a href="https://developer.apple.com/documentation/swift/codable"><span class="url">https://developer.apple.com/documentation/swift/codable</span></a>.</p>
+    </div>
+    <p class="normal">JSON supports dates, strings, numbers, Boolean values, and <code class="inlineCode">null</code> values, but it does not support images. To <a id="_idIndexMarker830"/>conform <a id="_idIndexMarker831"/>to the <code class="inlineCode">Codable</code> protocol, you will modify the <code class="inlineCode">JournalEntry</code> class to use types that are supported by JSON and modify the rest of your app to work with the updated <code class="inlineCode">JournalEntry</code> instance. Follow these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, click the <strong class="screenText">JournalEntry</strong> file. Modify the <code class="inlineCode">JournalEntry</code> class declaration as shown to adopt the <code class="inlineCode">Codable</code> protocol:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">class</span> <span class="hljs-title">JournalEntry</span>: <span class="hljs-type">NSObject</span>, <span class="hljs-type">MKAnnotation</span><span class="code-highlight"><strong class="hljs-slc">, </strong><strong class="hljs-type-slc">Codable</strong></span> {
+</code></pre>
+      </li>
+      <li class="numberedList">An error will appear because the <code class="inlineCode">UIImage</code> type does not conform to <code class="inlineCode">Codable</code>. Modify the <code class="inlineCode">photo</code> property as shown to make <code class="inlineCode">JournalEntry</code> conform to <code class="inlineCode">Codable</code>:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">let</span> <span class="hljs-template-variable">date</span>: Date
+<span class="hljs-keyword">let</span> <span class="hljs-template-variable">rating</span>: <span class="hljs-type">Int</span>
+<span class="hljs-keyword">let</span> <span class="hljs-template-variable">entryTitle</span>: <span class="hljs-type">String</span>
+<span class="hljs-keyword">let</span> <span class="hljs-template-variable">body</span>: <span class="hljs-type">String</span>
+<span class="hljs-keyword">let</span> <span class="code-highlight"><strong class="hljs-template-variable-slc">photoData</strong><strong class="hljs-slc">: </strong><strong class="hljs-type-slc">Data</strong><strong class="hljs-slc">?</strong></span>
+<span class="hljs-keyword">let</span> <span class="hljs-template-variable">latitude</span>: <span class="hljs-type">Double</span>?
+<span class="hljs-keyword">let</span> <span class="hljs-template-variable">longitude</span>: <span class="hljs-type">Double</span>?
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">The error will disappear, but another error will appear in the initializer.</p>
+    <ol>
+      <li class="numberedList" value="3">Modify the initializer as shown:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">self</span>.<span class="hljs-variable">date</span> <span class="hljs-operator">=</span> <span class="hljs-type">Date</span>()
+<span class="hljs-keyword">self</span>.<span class="hljs-variable">rating</span> <span class="hljs-operator">=</span> rating
+<span class="hljs-keyword">self</span>.<span class="hljs-variable">entryTitle</span> <span class="hljs-operator">=</span> title
+<span class="hljs-keyword">self</span>.<span class="hljs-variable">body</span> <span class="hljs-operator">=</span> body
+<span class="hljs-keyword">self</span>.<span class="hljs-variable">photoData</span> <span class="hljs-operator">=</span> <span class="code-highlight"><strong class="hljs-slc">photo?.jpegData(compressionQuality: </strong><strong class="hljs-number-slc">1.0</strong><strong class="hljs-slc">)</strong></span>
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">This converts the value in the <code class="inlineCode">photo</code> argument into a <code class="inlineCode">Data</code> instance and assigns it to <code class="inlineCode">photoData</code>.</p>
+    <div class="note">
+      <p class="normal">To learn more about the <code class="inlineCode">Data</code> type, see <a href="https://developer.apple.com/documentation/foundation/data"><span class="url">https://developer.apple.com/documentation/foundation/data</span></a>.</p>
+    </div>
+    <p class="normal">All the errors in the initializer are gone, but if you build your app now, you’ll see other errors appear. Let’s<a id="_idIndexMarker832"/> fix <a id="_idIndexMarker833"/>them now. Follow these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, click the <strong class="screenText">JournalListViewController</strong> file. Modify the <code class="inlineCode">tableView(_:cellForRowAt:)</code> method in the <code class="inlineCode">JournalListViewController</code> class as shown:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">let</span> journalEntry <span class="hljs-operator">=</span> <span class="hljs-con-class">SharedData</span>.<span class="hljs-variable">shared</span>.<span class="hljs-variable">getJournalEntry</span>(index: indexPath.<span class="hljs-con-attribute">row</span>)
+<span class="code-highlight"><strong class="hljs-keyword-slc">if</strong><strong class="hljs-slc"> </strong><strong class="hljs-keyword-slc">let</strong><strong class="hljs-slc"> photoData </strong><strong class="hljs-operator-slc">=</strong><strong class="hljs-slc"> journalEntry.</strong><strong class="hljs-variable-slc">photoData</strong><strong class="hljs-slc"> {</strong></span>
+<span class="code-highlight"><strong class="hljs-slc">  journalCell.</strong><strong class="hljs-variable-slc">photoImageView</strong><strong class="hljs-slc">.</strong><strong class="hljs-con-attribute-slc">image</strong><strong class="hljs-slc"> </strong><strong class="hljs-operator-slc">=</strong><strong class="hljs-slc"> </strong><strong class="hljs-type-slc">UIImage</strong><strong class="hljs-slc">(</strong><strong class="hljs-con-attribute-slc">data</strong><strong class="hljs-slc">: photoData)</strong></span>
+<span class="code-highlight"><strong class="hljs-slc">}</strong></span>
+journalCell.<span class="hljs-variable">dateLabel</span>.text = journalEntry.<span class="hljs-variable">date</span>.<span class="hljs-con-attribute">formatted</span>(
+  .<span class="hljs-con-attribute">dateTime</span>.<span class="hljs-con-attribute">month</span>().<span class="hljs-con-attribute">day</span>().<span class="hljs-con-attribute">year</span>()
+)
+journalCell.<span class="hljs-title">titleLabel</span>.<span class="hljs-con-attribute">text</span> <span class="hljs-operator">=</span> journalEntry.<span class="hljs-variable">entryTitle</span>
+<span class="hljs-keyword">return</span> journalCell
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">The updated code converts the data stored in <code class="inlineCode">photoData</code> back into a <code class="inlineCode">UIImage</code> and assigns it to the image view in <code class="inlineCode">journalCell</code>.</p>
+    <ol>
+      <li class="numberedList" value="2">In the Project navigator, click the <strong class="screenText">JournalEntryDetailViewController</strong> file. Modify the <code class="inlineCode">viewDidLoad()</code> method as shown:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">override</span> <span class="hljs-keyword">func</span> <span class="hljs-template-variable">viewDidLoad</span>() {
+  <span class="hljs-keyword">super</span>.<span class="hljs-con-attribute">viewDidLoad</span>()
+  <span class="hljs-variable">dateLabel</span>.<span class="hljs-con-attribute">text</span> = <span class="hljs-variable">selectedJournalEntry</span>?.<span class="hljs-variable">date</span>.<span class="hljs-con-attribute">formatted</span>(
+    .<span class="hljs-con-attribute">dateTime</span>.<span class="hljs-con-attribute">day</span>().<span class="hljs-con-attribute">month</span>(.<span class="hljs-con-attribute">wide</span>).<span class="hljs-con-attribute">year</span>()
+  )
+  <span class="hljs-variable">titleLabel</span>.<span class="hljs-con-attribute">text</span> <span class="hljs-operator">=</span> <span class="hljs-variable">selectedJournalEntry</span><span class="hljs-operator">?</span>.<span class="hljs-variable">entryTitle</span>
+  <span class="hljs-variable">bodyTextView</span>.<span class="hljs-con-attribute">text</span> <span class="hljs-operator">=</span> <span class="hljs-variable">selectedJournalEntry</span><span class="hljs-operator">?</span>.<span class="hljs-variable">entryBody</span>
+<span class="code-highlight"><strong class="hljs-slc">  </strong><strong class="hljs-keyword-slc">if</strong><strong class="hljs-slc"> </strong><strong class="hljs-keyword-slc">let</strong><strong class="hljs-slc"> photoData </strong><strong class="hljs-operator-slc">=</strong><strong class="hljs-slc"> </strong><strong class="hljs-variable-slc">selectedJournalEntry</strong><strong class="hljs-operator-slc">?</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">photoData </strong><strong class="hljs-slc">{</strong></span>
+<span class="code-highlight"><strong class="hljs-slc">    </strong><strong class="hljs-variable-slc">photoImageView</strong><strong class="hljs-slc">.</strong><strong class="hljs-con-attribute-slc">image</strong><strong class="hljs-slc"> </strong><strong class="hljs-operator-slc">=</strong><strong class="hljs-slc"> </strong><strong class="hljs-type-slc">UIImage</strong><strong class="hljs-slc">(</strong><strong class="hljs-con-attribute-slc">data</strong><strong class="hljs-slc">: photoData)</strong></span>
+<span class="code-highlight"><strong class="hljs-slc">  }</strong></span>
+  <span class="hljs-variable">getMapSnapshot</span>()
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">The updated code converts the data stored in <code class="inlineCode">photoData</code> to a <code class="inlineCode">UIImage</code> instance and assigns it to the <code class="inlineCode">image</code> property of <code class="inlineCode">photoImageView</code>. There should be no more errors in your app at this point.</p>
+    <ol>
+      <li class="numberedList" value="3">Build and run your app. Verify that the simulated location has been set and add a new journal entry. Your app should work the way it did before.</li>
+    </ol>
+    <div class="note">
+      <p class="normal">Note that the image is now black instead of blue. This is due to the image conversion process and will not be noticeable when you use images from your camera or photo library. You will learn how to do so in <em class="chapterRef">Chapter 20</em>, <em class="italic">Getting Started with the Camera and Photo Library</em>.</p>
+    </div>
+    <p class="normal">You have successfully modified the <code class="inlineCode">JournalEntry</code> class to conform to the <code class="inlineCode">Codable</code> protocol, and you <a id="_idIndexMarker834"/>have<a id="_idIndexMarker835"/> addressed all the errors in your app. In the next section, you’ll implement saving and loading app data, so it will not be lost when you quit your app.</p>
+    <h1 id="_idParaDest-250" class="heading-1">Loading and saving JSON data</h1>
+    <p class="normal">Now that you have<a id="_idIndexMarker836"/> modified the <code class="inlineCode">JournalEntry</code> class to conform to the <code class="inlineCode">Codable</code> protocol, you are ready to implement loading data from and saving data to JSON files.</p>
+    <p class="normal">To make it easier for you to work with JSON files, Apple provides <code class="inlineCode">JSONDecoder</code> and <code class="inlineCode">JSONEncoder</code> classes.</p>
+    <p class="normal">A <code class="inlineCode">JSONDecoder</code> instance decodes instances of a data type from JSON objects, and you will use it when loading files from your device storage.</p>
+    <div class="note">
+      <p class="normal">To learn more about <code class="inlineCode">JSONDecoder</code>, see <a href="https://developer.apple.com/documentation/foundation/jsondecoder"><span class="url">https://developer.apple.com/documentation/foundation/jsondecoder</span></a>.</p>
+    </div>
+    <p class="normal">A <code class="inlineCode">JSONEncoder</code> instance encodes instances of a data type to JSON objects, and you will use it when saving files to your device storage.</p>
+    <div class="note">
+      <p class="normal">To learn more about <code class="inlineCode">JSONEncoder</code>, see <a href="https://developer.apple.com/documentation/foundation/jsonencoder"><span class="url">https://developer.apple.com/documentation/foundation/jsonencoder</span></a>.</p>
+    </div>
+    <p class="normal">You’ll now implement the methods to load data from a file and save data to a file in the <code class="inlineCode">SharedData</code> class. Follow <a id="_idIndexMarker837"/>these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, click the <strong class="screenText">SharedData</strong> file. In the <code class="inlineCode">SharedData</code> class, implement a method to get the location where you can load or save a file on your device storage before the closing curly brace:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-comment">// MARK: - Persistence</span>
+<span class="hljs-keyword">func</span> <span class="hljs-template-variable">documentDirectory</span>() -&gt; <span class="hljs-type">URL</span> {
+  <span class="hljs-type">FileManager</span>.<span class="hljs-con-attribute">default</span>.<span class="hljs-con-attribute">urls</span>(<span class="hljs-con-attribute">for</span>: .<span class="hljs-con-attribute">documentDirectory</span>,   <span class="hljs-con-attribute">in</span>: .<span class="hljs-con-attribute">userDomainMask</span>).<span class="hljs-con-attribute">first</span>!
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">This is analogous to getting the path to the Documents directory in your home directory on your Mac.</p>
+    <div class="note-one">
+      <p class="normal">To learn more about accessing the iOS file system, see <a href="https://developer.apple.com/documentation/foundation/filemanager"><span class="url">https://developer.apple.com/documentation/foundation/filemanager</span></a>.</p>
+    </div>
+    <ol>
+      <li class="numberedList" value="2">Implement a method to load journal entries from a file on your device storage after the <code class="inlineCode">documentDirectory()</code> method:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-title">l</span><span class="hljs-template-variable">oadJournalEntriesData</span>() {
+  <span class="hljs-keyword">let</span> pathDirectory <span class="hljs-operator">=</span> <span class="hljs-variable">documentDirectory</span>()
+  <span class="hljs-keyword">let</span> fileURL <span class="hljs-operator">=</span> pathDirectory.  <span class="hljs-con-attribute">appendingPathComponent</span>(<span class="hljs-string">"journalEntriesData.json"</span>)
+  <span class="hljs-keyword">do</span> {
+    <span class="hljs-keyword">let</span> data <span class="hljs-operator">=</span> <span class="hljs-keyword">try</span> <span class="hljs-type">Data</span>(<span class="hljs-con-attribute">contentsOf</span>: fileURL)
+    <span class="hljs-keyword">let</span> entries <span class="hljs-operator">=</span> <span class="hljs-keyword">try</span> <span class="hljs-type">JSONDecoder</span>().<span class="hljs-con-attribute">decode</span>(    [<span class="hljs-con-class">JournalEntry</span>].<span class="hljs-keyword">self</span>, <span class="hljs-con-attribute">from</span>: data)
+    <span class="hljs-variable">journalEntries</span> <span class="hljs-operator">=</span> entries
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-con-attribute">print</span>(<span class="hljs-string">"Failed to read JSON data: </span>
+<span class="hljs-subst">    </span>\(error.<span class="hljs-con-attribute">localizedDescription</span>)<span class="hljs-string">"</span>)
+  }
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">This method uses the <code class="inlineCode">documentDirectory()</code> method to get the location where files can be loaded from. Then it specifies a file name, <code class="inlineCode">journalEntriesData.json</code>, where the data is saved and appends that to the path. It then attempts to load the file. If successful, it attempts to decode the data into an array of <code class="inlineCode">JournalEntry</code> instances and assign it to the <code class="inlineCode">journalEntries</code> array.</p>
+    <ol>
+      <li class="numberedList" value="3">Implement a<a id="_idIndexMarker838"/> method to save journal entries to a file on your device storage after the <code class="inlineCode">loadJournalEntriesData()</code> method:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">func</span> <span class="hljs-template-variable">saveJournalEntriesData</span>() {
+  <span class="hljs-keyword">let</span> pathDirectory <span class="hljs-operator">=</span> <span class="hljs-variable">documentDirectory</span>()
+  <span class="hljs-keyword">do</span> {
+<span class="hljs-keyword">    try?</span> <span class="hljs-type">FileManager</span>().<span class="hljs-con-attribute">createDirectory</span>(<span class="hljs-con-attribute">at</span>: pathDirectory,    <span class="hljs-con-attribute">withIntermediateDirectories</span>: <span class="hljs-literal">true</span>)
+    <span class="hljs-keyword">let</span> filePath =   pathDirectory.<span class="hljs-con-attribute">appendingPathComponent</span>(<span class="hljs-string">    "journalEntriesData.json"</span>)
+    <span class="hljs-keyword">let</span> json = <span class="hljs-keyword">try</span> <span class="hljs-type">JSONEncoder</span>().<span class="hljs-con-attribute">encode</span>(<span class="hljs-variable">journalEntries</span>)
+    <span class="hljs-keyword">try</span> json<span class="hljs-con-attribute">.write</span>(<span class="hljs-con-attribute">to</span>: filePath)
+  } <span class="hljs-keyword">catch</span> {
+    <span class="hljs-con-attribute">print</span>(<span class="hljs-string">"Failed to write JSON data: </span>
+<span class="hljs-subst">    </span>\(error.<span class="hljs-con-attribute">localizedDescription</span>)<span class="hljs-string">"</span>)
+  }
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">This method uses the <code class="inlineCode">documentDirectory()</code> method to get the location where files can be saved. Then it specifies a file name where the data is to be saved and appends that to the path. It then attempts to use a <code class="inlineCode">JSONEncoder</code> instance to encode the <code class="inlineCode">journalEntries</code> array to JSON format and subsequently write it to the file specified earlier.</p>
+    <p class="normal">You have implemented the methods to load and save journal entries in your app. Now you’ll modify the <code class="inlineCode">JournalListViewController</code> class to call these methods at appropriate times. Follow these steps:</p>
+    <ol>
+      <li class="numberedList" value="1">In the Project navigator, click the <strong class="screenText">JournalListViewController</strong> file. In the <code class="inlineCode">JournalListViewController</code> class, modify <code class="inlineCode">viewDidLoad()</code> to call the <code class="inlineCode">loadJournalEntriesData()</code> method:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">override</span> <span class="hljs-keyword">func</span> <span class="hljs-template-variable">viewDidLoad</span>() {
+  <span class="hljs-keyword">super</span>.<span class="hljs-con-attribute">viewDidLoad</span>()
+  <span class="code-highlight"><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">loadJournalEntriesData</strong><strong class="hljs-slc">()</strong></span>
+}
+</code></pre>
+      </li>
+    </ol>
+    <p class="normal-one">This will load any saved journal entries as the app is starting up.</p>
+    <ol>
+      <li class="numberedList" value="2">Modify the <code class="inlineCode">tableView(_:commit:forRowAt:)</code> method to call the <code class="inlineCode">saveJournalEntriesData()</code> method <a id="_idIndexMarker839"/>after a row has been removed from the table view:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">if</span> editingStyle <span class="hljs-operator">==</span> .<span class="hljs-con-attribute">delete</span> {
+  <span class="hljs-con-class">SharedData</span>.<span class="hljs-variable">shared</span>.<span class="hljs-variable">removeJournalEntry</span>(<span class="hljs-variable">at</span>: indexPath.row)
+  <span class="code-highlight"><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">saveJournalEntriesData</strong><strong class="hljs-slc">()</strong></span>
+  tableView.<span class="hljs-con-attribute">reloadData</span>()
+}
+</code></pre>
+      </li>
+      <li class="numberedList">Modify the <code class="inlineCode">unwindNewEntrySave(segue:)</code> method to call <code class="inlineCode">saveJournalEntriesData()</code> after a new journal entry has been added:
+        <pre class="programlisting code-one"><code class="hljs-code"><span class="hljs-keyword">if</span> <span class="hljs-keyword">let</span> sourceViewController <span class="hljs-operator">=</span> segue.<span class="hljs-con-attribute">source</span> <span class="hljs-keyword">as</span>? <span class="hljs-con-class">AddJournalEntryViewController</span>, <span class="hljs-keyword">let</span> newJournalEntry <span class="hljs-operator">=</span> sourceViewController.<span class="hljs-variable">newJournalEntry</span> {
+  <span class="hljs-con-class">SharedData</span>.<span class="hljs-variable">shared</span>.<span class="hljs-variable">addJournalEntry</span>(newJournalEntry)
+  <span class="code-highlight"><strong class="hljs-con-class-slc">SharedData</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">shared</strong><strong class="hljs-slc">.</strong><strong class="hljs-variable-slc">saveJournalEntriesData</strong><strong class="hljs-slc">()</strong></span>
+  tableView.<span class="hljs-con-attribute">reloadData</span>()
+}
+</code></pre>
+      </li>
+      <li class="numberedList">Build and run your app. Verify a simulated location has been set and add a new journal entry. Your app should work the way it did before.</li>
+      <li class="numberedList">Stop your app and run it again. The journal entry you added earlier should still be present:</li>
+    </ol>
+    <figure class="mediaobject"><img src="image/B31371_18_06.png" alt="" width="466" height="224"/></figure>
+    <p class="packt_figref">Figure 18.6: Simulator showing persistent app data in your app</p>
+    <div class="packt_tip">
+      <p class="normal">If you are running your app in Simulator, you can use a <code class="inlineCode">print(filePath)</code> statement in the <code class="inlineCode">saveJournalEntriesData()</code> method to print the file path to the Debug area. This will tell you where the <code class="inlineCode">journalEntriesData.json</code> file is saved on your Mac.</p>
+    </div>
+    <p class="normal">You have successfully <a id="_idIndexMarker840"/>implemented saving and loading using JSON files for your app! Fantastic job!</p>
+    <h1 id="_idParaDest-251" class="heading-1">Summary</h1>
+    <p class="normal">In this chapter, you created a singleton, <code class="inlineCode">SharedData</code>, and configured your app to use it. Next, you modified the <code class="inlineCode">JournalEntry</code> class to be compatible with the JSON format, so you can save journal entries to a JSON file and load journal entries from a JSON file. After that, you added methods to save journal entry data when you add or delete journal entries, and to load journal entry data when your app is starting up.</p>
+    <p class="normal">You now know how to create a class to store, load, and save data from JSON files for use in your own apps.</p>
+    <p class="normal">In the next chapter, you’ll implement a custom user interface element that allows you to set star ratings for journal entries.</p>
+    <h1 id="_idParaDest-252" class="heading-1">Join us on Discord!</h1>
+    <p class="normal">Read this book alongside other users, experts, and the author himself. Ask questions, provide solutions to other readers, chat with the author via Ask Me Anything sessions, and much more. Scan the QR code or visit the link to join the community.</p>
+    <p class="normal"><a href="https://packt.link/ios-Swift%0D"><span class="url">https://packt.link/ios-Swift</span></a></p>
+    <p class="normal"><a href="https://packt.link/ios-Swift%0D"><img src="image/QR_Code2370024260177612484.png" alt="" width="177" height="177"/></a></p>
+  </div>
+</div></div></body></html>

@@ -1,0 +1,376 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;8.&#xA0;It's Too Dangerous to Go Alone, Take a Friend!"><div class="titlepage"><div><div><h1 class="title"><a id="ch08"/>Chapter 8. It's Too Dangerous to Go Alone, Take a Friend!</h1></div></div></div><p>You've done it! You've officially released your game and it's doing great! But now you want to add more features and push an update, right? Because the same thing over and over is kind of repetitive and we don't want to lose people's interest. This is what we will discuss in this chapter:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Multiplayer integration</li><li class="listitem" style="list-style-type: disc">Game Center integration (we mix multiplayer and Game Center)</li><li class="listitem" style="list-style-type: disc">Pushing an update to the AppStore</li></ul></div><p>Now, we can make things super fun for our players because, really, who doesn't like playing with friends? It's going to be a fair amount of work, but hey, it will be totally worth it!</p><p>Let's do this...</p><div class="section" title="Multiplayer integration"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec31"/>Multiplayer integration</h1></div></div></div><p>I'm sure all of us remember sitting down in front of our old CRT TV with a friend and loading up <span class="emphasis"><em>Super Mario 3</em></span> (blowing on the cartridge before inserting it to ensure that it works) and playing together for hours on end.</p><p>Then, the split screen multiplayer was introduced and that blew everyone's minds. "We can play together <a id="id295" class="indexterm"/>at the same time? We don't have to take turns? Awesome sauce!"</p><p>Now, we are in the age of Bluetooth/online multiplayer games. No more are we sitting down with friends in the same room to play our games; no, we are antisocial now. That's not an issue though; it does leave a smaller mess to clean up when you're done playing. This is what will integrate—multiplayer with matchmaking—and it will be so cool!</p><p>In order to do this, however, we do need to enable and integrate <span class="strong"><strong>Game Center</strong></span> into our game. To start doing this, let's open up our project in <a id="id296" class="indexterm"/>Xcode. With our project selected on the left-hand side, click on the <span class="strong"><strong>Capabilities</strong></span> tab in the center of the screen, as <a id="id297" class="indexterm"/>shown in the following screenshot:</p><div class="mediaobject"><img src="graphics/B03553_08_01.jpg" alt="Multiplayer integration"/></div><p>Then, scroll through the list of capabilities we can add and find <span class="strong"><strong>Game Center</strong></span> (it's usually the third one in this list). Click on the arrow to roll out the options. You will see a button that says <span class="strong"><strong>OFF</strong></span>, click that button to turn on <span class="strong"><strong>Game Center</strong></span>.</p><p>We can't run our game and expect <span class="strong"><strong>Game Center</strong></span> to automatically work, no no! For that, we actually have to authenticate the user by logging them in when our app opens up.</p><p>In order to ensure that everything is organized within our app, we will create a new group (or folder) within our project and name it <code class="literal">Multiplayer.</code>
+</p><p>We will then have to create a new class (by navigating to <span class="strong"><strong>File</strong></span> | <span class="strong"><strong>New</strong></span> | <span class="strong"><strong>File</strong></span>) and create a new <code class="literal">.h</code> file as well as a new <code class="literal">.m</code> file and name them both <code class="literal">MultiplayerHelper</code>. Then, drag the two files into the <code class="literal">Multiplayer</code> folder we just created.</p><p>We will now replace the code within <code class="literal">MultiplayerHelper.h</code> with the following code:</p><div class="informalexample"><pre class="programlisting">@import GameKit;
+
+@interface MultiplayerHelper : NSObject
+
+@property (nonatomic, readonly) UIViewController *authenticationViewController;
+@property (nonatomic, readonly) NSError *lastError;
+
++ (instancetype)sharedGameKitHelper;
+
+@end</pre></div><p>This imports the <code class="literal">GameKit</code> API (we will use this to connect the two players together) and then defines two properties—one is a view controller that we will use to display the Game Center authentication and the other is used to keep track of the last error (if any) that occurred while interacting with Game Center.</p><p>Now, let's pop<a id="id298" class="indexterm"/> on over to our <code class="literal">.m</code> file and change the code to the following:</p><div class="informalexample"><pre class="programlisting">#import "MultiplayerHelper.h"
+
+@import GameKit;
+
+@implementation MultiplayerHelper {
+    BOOL _enableGameCenter;
+}
+
++ (instancetype)sharedMultiplayerHelper
+{
+    static MultiplayerHelper *sharedMultiplayerHelper;
+    static dispatch_once_t onceToken;
+    dispatch_once(&amp;onceToken, ^{
+        sharedMultiplayerHelper = [[MultiplayerHelper alloc] init];
+    });
+    return sharedMultiplayerHelper;
+}
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        _enableGameCenter = YES;
+    }
+    return self;
+}
+
+- (void)authenticateLocalPlayer
+{
+    
+    GKLocalPlayer *localPlayer = [GKLocalPlayer localPlayer];
+    
+    
+    localPlayer.authenticateHandler  =
+    ^(UIViewController *viewController, NSError *error) {
+         
+        [self setLastError:error];
+        
+        if(viewController != nil) {
+            
+            [self setAuthenticationViewController:viewController];
+        } else if([GKLocalPlayer localPlayer].isAuthenticated) {
+            
+            _enableGameCenter = YES;
+        } else {
+            
+            _enableGameCenter = NO;
+        }
+    };
+}
+
+- (void)setAuthenticationViewController:(UIViewController *)authenticationViewController
+{
+}
+
+- (void)setLastError:(NSError *)error
+{
+}
+
+@end</pre></div><p>I know this does <a id="id299" class="indexterm"/>seem a bit daunting at first, but let's break it all down. At once, we get an instance of the <code class="literal">GKLocalPlayer</code> class, which represents the currently authenticated player. We then give <code class="literal">GKLocalPlayer</code> an authentication handler, which the <code class="literal">GameKit</code> API will call.</p><p>We set up a method to store any errors that may appear for easy debugging with the <code class="literal">setLastError:</code> method.</p><p>Next, we check whether the player is logged in to Game Center in either the GC app or anywhere else within your device. If not, the <code class="literal">GameKit</code> API will attempt to authenticate the user. This is where we display the authentication window (we all know the Game Center login popup window, don't we?). It's ideal for authenticating the user as soon as possible. No one wants to be interrupted with the authentication window midway through gameplay or while typing game settings.</p><p>Alternatively, if the player is logged in, the <code class="literal">authenticated</code> property of the <code class="literal">Game Kit</code> local player will be set to <code class="literal">true</code>.</p><p>Finally, the last method is just turning Game Center off. Who knows, maybe the player doesn't want to be bothered by it, so all the features get shut off.</p><p>As Game Center authentication occurs in the background of the app, the game can authenticate at any time when the app is open, irrespective of whether the player is navigating screens or fighting a boss battle. That's not what we want. In order to counteract this from killing our game, we will use a bit of trickery. Basically, we will get Game Center to create a notification, and the current view that we are on will be responsible for displaying it. So, for example, if the notification is called in the main menu, no problem, we will call it right away. However, if we are mid-level and the notification is called, we will need to display the authentication window at a convenient time, such as when the player pauses or dies.</p><p>To do this, we <a id="id300" class="indexterm"/>need to define the notification. So, in our <code class="literal">MultiplayerHelper.m</code> file, we will add the following line directly at the top of the file, just under the <code class="literal">@import GameKit</code> line:</p><div class="informalexample"><pre class="programlisting">NSString *const PresentAuthenticationViewController = @"present_authentication_view_controller";</pre></div><p>Further down in our <code class="literal">setAuthenticationViewController:</code> method, add the following block of code:</p><div class="informalexample"><pre class="programlisting"> if (authenticationViewController != nil) {
+        _authenticationViewController = authenticationViewController;
+        [[NSNotificationCenter defaultCenter]
+         postNotificationName:PresentAuthenticationViewController
+         object:self];
+    }</pre></div><p>All that this method does is store and send the notification to the current view controller. Are you following me? I know it's a lot to take in, isn't it?</p><p>Let's now scroll down to our <code class="literal">-(void)setLastError:</code> method and add the following code within the parentheses:</p><div class="informalexample"><pre class="programlisting">_lastError = [error copy];
+  if (_lastError) {
+    NSLog(@"MultiplayerHelper ERROR: %@",
+          [[_lastError userInfo] description]);
+  }</pre></div><p>This will just send a log into the console if anything awry occurs. We set <code class="literal">MultiplayerHelper</code> first before the error so in the log we will actually see <code class="literal">MultiplayerHelper Error:</code> "<code class="literal">Connection Failed</code>" This way it is much easier to see what error is being thrown. There can be a lot of times a connection fails, by doing this we will be able to tell, not only what the error is, but what is causing the error. This is a good practice to follow; it makes things a heck of a lot easier when debugging issues!</p><p>We then need to hop on over to our <code class="literal">MultiplayerHelper.h</code> file, and we need to add an external linkage method just above the <code class="literal">interface</code> method:</p><div class="informalexample"><pre class="programlisting">extern NSString *const PresentAuthenticationViewController;</pre></div><p>This will allow us to access this function through other parts of our project, so we can show the authentication view whenever needed.</p><p>Finally, we need to add in a declaration to authenticate the local player just above <code class="literal">@end</code>:</p><div class="informalexample"><pre class="programlisting">(void)authenticateLocalPlayer;</pre></div><p>That's all we need to authenticate the player!</p><p>For the moment, the<a id="id301" class="indexterm"/> content of your <code class="literal">MultiplayerHelper.h</code> file should look like the following:</p><div class="informalexample"><pre class="programlisting">@import GameKit;
+extern NSString *const PresentAuthenticationViewController;
+@interface MultiplayerHelper : NSObject
+
+@property (nonatomic, readonly) UIViewController *authenticationViewController;
+@property (nonatomic, readonly) NSError *lastError;
+
+
+- (void)authenticateLocalPlayer;
++ (instancetype)sharedMultiplayerHelper;
+
+@end</pre></div><p>Also, the content of your <code class="literal">MultiplayerHelper.m</code> file should look like the following:</p><div class="informalexample"><pre class="programlisting">#import "MultiplayerHelper.h"
+
+@import GameKit;
+
+NSString *const PresentAuthenticationViewController = @"present_authentication_view_controller";
+
+@implementation MultiplayerHelper {
+    BOOL _enableGameCenter;
+}
+
++ (instancetype)sharedMultiplayerHelper
+{
+    static MultiplayerHelper *sharedMultiplayerHelper;
+    static dispatch_once_t onceToken;
+    dispatch_once(&amp;onceToken, ^{
+        sharedMultiplayerHelper = [[MultiplayerHelper alloc] init];
+    });
+    return sharedMultiplayerHelper;
+}
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        _enableGameCenter = YES;
+    }
+    return self;
+}
+
+- (void)authenticateLocalPlayer
+{
+    
+    GKLocalPlayer *localPlayer = [GKLocalPlayer localPlayer];
+    
+    
+    localPlayer.authenticateHandler  =
+    ^(UIViewController *viewController, NSError *error) {
+        
+        [self setLastError:error];
+        
+        if(viewController != nil) {
+            
+            [self setAuthenticationViewController:viewController];
+        } else if([GKLocalPlayer localPlayer].isAuthenticated) {
+            
+            _enableGameCenter = YES;
+        } else {
+            
+            _enableGameCenter = NO;
+        }
+    };
+}
+
+- (void)setAuthenticationViewController:(UIViewController *)authenticationViewController
+{
+    if (authenticationViewController != nil) {
+        _authenticationViewController = authenticationViewController;
+        [[NSNotificationCenter defaultCenter]
+         postNotificationName:PresentAuthenticationViewController
+         object:self];
+    }
+}
+
+- (void)setLastError:(NSError *)error
+{
+    _lastError = [error copy];
+    if (_lastError) {
+        NSLog(@"MultiplayerHelper ERROR: %@",
+              [[_lastError userInfo] description]);
+    }
+}
+
+@end</pre></div><p>With that all sorted out (hopefully everything is working perfectly for you), we will hop into our <code class="literal">ViewController.m</code> file, and we will add the following functions inside the <code class="literal">(void)viewDidAppear:</code> method:</p><div class="informalexample"><pre class="programlisting">  [[NSNotificationCenter defaultCenter]
+     addObserver:self
+     selector:@selector(showAuthenticationViewController)
+     name:PresentAuthenticationViewController
+     object:nil];
+    
+    [[MultiplayerHelper sharedMultiplayerHelper]
+     authenticateLocalPlayer];</pre></div><p>Again, we will <a id="id302" class="indexterm"/>use the <code class="literal">NSNotificationCenter</code> method, which will allow each <code class="literal">ViewController</code> class to send a notification, in this case to display the authentication view controller, so it can be handled differently depending on where it's being called in the <code class="literal">ViewController</code> class.</p><p>Now, we need to add the method to actually show the authentication view controller. Further in the <code class="literal">ViewController.m</code> file, add the following function:</p><div class="informalexample"><pre class="programlisting">- (void)showAuthenticationViewController
+{
+    MultiplayerHelper *multiplayerHelper =
+    [MultiplayerHelper sharedMultiplayerHelper];
+    
+    [self presentViewController:
+     multiplayerHelper.authenticationViewController
+                                         animated:YES
+                                       completion:nil];
+}
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}</pre></div><p>When you run and test the game after a few seconds, you will be greeted with the following page:</p><div class="mediaobject"><img src="graphics/B03553_08_02.jpg" alt="Multiplayer integration"/></div><p>When you<a id="id303" class="indexterm"/> type your credentials, you will be logged in, and then you will see the following page:</p><div class="mediaobject"><img src="graphics/B03553_08_03.jpg" alt="Multiplayer integration"/></div><p>We aren't done yet! We still need to search for other players to play with. The great thing about <a id="id304" class="indexterm"/>Game Center is that a matchmaking system is built right into the API, so we don't have to do any funky complicated programming or GUI creation.</p><p>Let's hop back over to our <code class="literal">MultiPlayerHelper.h</code> file so that we can make the following changes by adding this block of code after our <code class="literal">@import</code> line:</p><div class="informalexample"><pre class="programlisting">@protocol MultiPlayerHelperDelegate
+-(void)matchStarted;
+-(void)matchEnded;
+-(void)match:(GKMatch *)match didReceiveData:(NSData *)data fromPlayer:(NSString *)playerID;
+@end</pre></div><p>We then have to modify our <code class="literal">@interface</code> line, so we can support the matchmaking protocol we just created:</p><div class="informalexample"><pre class="programlisting">@interface MultiplayerHelper : NSObject&lt;GKMatchmakerViewControllerDelegate, GKMatchDelegate&gt;</pre></div><p>We will then add these functions after our <code class="literal">@interface</code> line:</p><div class="informalexample"><pre class="programlisting">@property (nonatomic, strong) GKMatch *match;
+@property (nonatomic, assign) id &lt;MultiPlayerHelperDelegate&gt; delegate;
+
+- (void)findMatchWithMinPlayers:(int)minPlayers maxPlayers:(int)maxPlayers
+                 viewController:(UIViewController *)viewController
+                 delegate:(id&lt;MultiPlayerHelperDelegate&gt;)delegate;</pre></div><p>Whoa, whoa! Settle down there, cowboy! That's some trickery I've never seen before! Let's break it down!</p><p>First, we added<a id="id305" class="indexterm"/> a new protocol entitled <code class="literal">MultiPlayerHelperDelegate</code>. This is so we can notify other objects and functions when certain events occur, such as a new game starting or ending.</p><p>Next, the <code class="literal">MultiplayerHelper</code> class defines two new protocols. The first protocol is the <code class="literal">GKMatchmakerViewControllerDelegate</code> function, which enables the <code class="literal">MultiplayerHelper</code> class to notify the player when it's found a new match. The second protocol is the <code class="literal">GKMatchDelegate</code> function, which is for Game Center to notify <code class="literal">MultiplayerHelper</code> if new data is coming in or if we lose the connection.</p><p>Finally, the next action allows the <code class="literal">MultiplayerHelper</code> class to search for someone to play with.</p><p>Easy, right? YES!</p><p>We will now hop over to our <code class="literal">GameKitHelper.m</code> file so that we can add more functions!</p><p>The first function has to be added within our <code class="literal">@implementation</code> line:</p><div class="informalexample"><pre class="programlisting">BOOL _matchStarted;</pre></div><p>This is a simple <code class="literal">true</code> or <code class="literal">false</code> statement that we will call if there is a new match beginning. Now, we will add the following function (I added it just after the <code class="literal">(void)authenticateLocalPlayer</code> method):</p><div class="informalexample"><pre class="programlisting">- (void)findMatchWithMinPlayers:(int)minPlayers maxPlayers:(int)maxPlayers
+                 viewController:(UIViewController *)viewController
+                       delegate:(id&lt;MultiPlayerHelperDelegate&gt;)delegate {
+    
+    if (!_enableGameCenter) return;
+    
+    _matchStarted = NO;
+    self.match = nil;
+    _delegate = delegate;
+    [viewController dismissViewControllerAnimated:NO completion:nil];
+    
+    GKMatchRequest *request = [[GKMatchRequest alloc] init];
+    request.minPlayers = minPlayers;
+    request.maxPlayers = maxPlayers;
+    
+    GKMatchmakerViewController *mmvc =
+    [[GKMatchmakerViewController alloc] initWithMatchRequest:request];
+    mmvc.matchmakerDelegate = self;
+    
+    [viewController presentViewController:mmvc animated:YES completion:nil];
+}</pre></div><p>This is the function that will allow a match to be found. We set it up so that, if the player doesn't sign in to Game Center, it will invalidate and do nothing.</p><p>After this, we<a id="id306" class="indexterm"/> begin the search for a new match. This method allows us to customize the type of match we want, for example, the minimum or maximum players desired in the match. You can create a GUI so that the matchmaker can customize the match himself like in your typical FPS game.</p><p>Then, we create a new instance of the Game Kit <code class="literal">MatchMakerViewController</code> function by setting the delegate to our <code class="literal">MultiplayerHelper</code> object, and it then pops it into the screen.</p><p>Finally, the <code class="literal">MatchMakerViewController</code> function begins to start searching. It will send out some call-backs, which we will now add. Insert the following directly after that method we just added; the first will be called when the user cancels searching for a friend:</p><div class="informalexample"><pre class="programlisting">- (void)matchmakerViewControllerWasCancelled:(GKMatchmakerViewController *)viewController {
+    [viewController dismissViewControllerAnimated:YES completion:nil];
+}</pre></div><p>The next is when the matchmaking process has failed; we then show in the log what happened:</p><div class="informalexample"><pre class="programlisting">- (void)matchmakerViewController:(GKMatchmakerViewController *)viewController didFailWithError:(NSError *)error {
+    [viewController dismissViewControllerAnimated:YES completion:nil];
+    NSLog(@"Well that didn't work. Here's why: %@", error.localizedDescription);
+}</pre></div><p>Now, we've located a match!</p><div class="informalexample"><pre class="programlisting">- (void)matchmakerViewController:(GKMatchmakerViewController *)viewController didFindMatch:(GKMatch *)match {
+    [viewController dismissViewControllerAnimated:YES completion:nil];
+    self.match = match;
+    match.delegate = self;
+    if (!_matchStarted &amp;&amp; match.expectedPlayerCount == 0) {
+        NSLog(@"Ready to start playing!");
+    }
+}
+
+#pragma mark GKMatchDelegate</pre></div><p>The following block of code tells us <a id="id307" class="indexterm"/>whether the match has received any data sent from the player:</p><div class="informalexample"><pre class="programlisting">- (void)match:(GKMatch *)match didReceiveData:(NSData *)data fromPlayer:(NSString *)playerID {
+    if (_match != match) return;
+    
+    [_delegate match:match didReceiveData:data fromPlayer:playerID];
+}</pre></div><p>This tells us if there's a change in the connection:</p><div class="informalexample"><pre class="programlisting">- (void)match:(GKMatch *)match player:(NSString *)playerID didChangeState:(GKPlayerConnectionState)state {
+    if (_match != match) return;
+    
+    switch (state) {
+        case GKPlayerStateConnected:
+           
+            NSLog(@"Player connected!");
+            
+            if (!_matchStarted &amp;&amp; match.expectedPlayerCount == 0) {
+                NSLog(@"Ready to start match!");
+            }
+            
+            break;
+        case GKPlayerStateDisconnected:
+           
+            NSLog(@"Player disconnected!");
+            _matchStarted = NO;
+            [_delegate matchEnded];
+            break;
+    }
+}</pre></div><p>This will tell us if the game can't start for some odd reason:</p><div class="informalexample"><pre class="programlisting">- (void)match:(GKMatch *)match connectionWithPlayerFailed:(NSString *)playerID withError:(NSError *)error {
+    
+    if (_match != match) return;
+    
+    NSLog(@"Failed to connect to player with error: %@", error.localizedDescription);
+    _matchStarted = NO;
+    [_delegate matchEnded];
+}</pre></div><p>Finally, this tells <a id="id308" class="indexterm"/>us if there was an error in connecting to any player:</p><div class="informalexample"><pre class="programlisting">- (void)match:(GKMatch *)match didFailWithError:(NSError *)error {
+    
+    if (_match != match) return;
+    
+    NSLog(@"Match failed with error: %@", error.localizedDescription);
+    _matchStarted = NO;
+    [_delegate matchEnded];
+}</pre></div><p>We will add another <code class="literal">NSString</code> class at the top of our <code class="literal">MultiplayerHelper.m</code> file. Add the following declaration just under the definition of our <code class="literal">present_authentication_view_controller</code> line:</p><div class="informalexample"><pre class="programlisting">NSString *const LocalPlayerIsAuthenticated = @"local_player_authenticated";</pre></div><p>We will then scroll down to our <code class="literal">authenticatedLocalPlayer</code> method, and we will edit it so that it looks like the following:</p><div class="informalexample"><pre class="programlisting">- (void)authenticateLocalPlayer
+{
+    
+    GKLocalPlayer *localPlayer = [GKLocalPlayer localPlayer];
+    
+    if (localPlayer.isAuthenticated) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:LocalPlayerIsAuthenticated object:nil];
+        return;
+    }
+    
+    
+    localPlayer.authenticateHandler  =
+    ^(UIViewController *viewController, NSError *error) {
+        
+        [self setLastError:error];
+        
+        if(viewController != nil) {
+            
+            [self setAuthenticationViewController:viewController];
+        } else if([GKLocalPlayer localPlayer].isAuthenticated) {
+            
+            _enableGameCenter = YES;
+            [[NSNotificationCenter defaultCenter] postNotificationName:LocalPlayerIsAuthenticated object:nil];
+        } else {
+            
+            _enableGameCenter = NO;
+        }
+    };
+}</pre></div><p>Again, what <a id="id309" class="indexterm"/>we did here is create a new notification (the <code class="literal">NSString</code> class) to be called later on when the player is authenticated, as we will handle the calling of that notification momentarily.</p><p>Let's pop back over to our <code class="literal">MultiPlayerHelper.h</code> file, where we will add the following line of code just below the <code class="literal">@import</code> line:</p><div class="informalexample"><pre class="programlisting">extern NSString *const LocalPlayerIsAuthenticated;</pre></div><p>Again, this is an external linkage that we will access later. For the moment, we will change our <code class="literal">ViewController.h</code> file:</p><div class="informalexample"><pre class="programlisting">#import &lt;UIKit/UIKit.h&gt;
+#import &lt;SpriteKit/SpriteKit.h&gt;
+#import &lt;iAd/iAd.h&gt;
+#import "MultiplayerHelper.h"
+
+@interface ViewController : UIViewController &lt;ADBannerViewDelegate, MultiPlayerHelperDelegate&gt; {
+    ADBannerView *adView;
+}
+
+@end</pre></div><p>We needed to adjust the <code class="literal">ViewController</code> interface to implement the <code class="literal">MultiPlayerHelperDelegate</code> method.</p><p>We now need to adjust our <code class="literal">ViewController.m</code> file with the following additions and changes. First, we will add this block to our <code class="literal">(void)viewDidAppear</code> function:</p><div class="informalexample"><pre class="programlisting">    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playerAuthenticated)
+name:LocalPlayerIsAuthenticated object:nil];</pre></div><p>The following code shows us how we accept the notification we created earlier to authenticate the player:</p><div class="informalexample"><pre class="programlisting">- (void)playerAuthenticated {
+    [[MultiplayerHelper sharedMultiplayerHelper] findMatchWithMinPlayers:2 maxPlayers:2 viewController:self delegate:self];
+}</pre></div><p>Now, add the <a id="id310" class="indexterm"/>following definitions under the <code class="literal">dealloc</code> function:</p><div class="informalexample"><pre class="programlisting">#pragma mark MultiPlayerHelperDelegate
+
+- (void)matchStarted {    
+    NSLog(@"Game started");        
+}
+
+- (void)matchEnded {    
+    NSLog(@"Game ended");    
+}
+
+- (void)match:(GKMatch *)match didReceiveData:(NSData *)data fromPlayer:(NSString *)playerID {
+    NSLog(@"Received data");
+}</pre></div><p>These will simply log each notification that comes through the <code class="literal">MultiPlayerHelperDelegate</code> method, so when a game begins or ends or when data is received, you will see a log in the console.</p><p>Now run it, and you will see the following output:</p><div class="mediaobject"><img src="graphics/B03553_08_04.jpg" alt="Multiplayer integration"/></div><p>Awesome!! That<a id="id311" class="indexterm"/> part is looking pretty cool, but we still have quite a way to go.</p></div></div>
+<div class="section" title="Game Center integration"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec32"/>Game Center integration</h1></div></div></div><p>Matchmaker, matchmaker find me a match! Now's the time to start finding our friends!</p><p>Let's pop over to our <code class="literal">MultiplayerHelper.h</code> file so that we can add in a new dictionary to store the players <a id="id312" class="indexterm"/>we find. Just after the <code class="literal">@interface</code> line, add in the following declaration:</p><div class="informalexample"><pre class="programlisting">@property(nonatomic, strong) NSMutableDictionary *playersDict;</pre></div><p>This dictionary allows Game Kit to easily look up player data.</p><p>Now, we will go over to our <code class="literal">MultiplayerHelper.m</code> file and make a few new changes. First, we will add a new method just after we authenticate our local player:</p><div class="informalexample"><pre class="programlisting">- (void)lookupPlayers {
+    
+    NSLog(@"Looking up %lu players...", (unsigned long)_match.playerIDs.count);
+    
+    [GKPlayer loadPlayersForIdentifiers:_match.playerIDs withCompletionHandler:^(NSArray *players, NSError *error) {
+        
+        if (error != nil) {
+            NSLog(@"Error retrieving player info: %@", error.localizedDescription);
+            _matchStarted = NO;
+            [_delegate matchEnded];
+        } else {
+            
+            // fill up that there dictionary
+            _playersDict = [NSMutableDictionary dictionaryWithCapacity:players.count];
+            for (GKPlayer *player in players) {
+                NSLog(@"Found this person to play with: %@", player.alias);
+                [_playersDict setObject:player forKey:player.playerID];
+            }
+            [_playersDict setObject:[GKLocalPlayer localPlayer] forKey:[GKLocalPlayer localPlayer].playerID];
+            
+            // Let me know if the match can start k?
+            _matchStarted = YES;
+            [_delegate matchStarted];
+        }
+    }];
+}</pre></div><p>Next, we need to<a id="id313" class="indexterm"/> actually call this method, and we will call it in two separate areas. In the first method, we will adjust the following code:</p><div class="informalexample"><pre class="programlisting">- (void)matchmakerViewController:(GKMatchmakerViewController *)viewController didFindMatch:(GKMatch *)match {
+    [viewController dismissViewControllerAnimated:YES completion:nil];
+    self.match = match;
+    match.delegate = self;
+    if (!_matchStarted &amp;&amp; match.expectedPlayerCount == 0) {
+        NSLog(@"Ready to play!");
+        [self lookupPlayers];
+    }
+}</pre></div><p>We need to adjust yet another method:</p><div class="informalexample"><pre class="programlisting">- (void)match:(GKMatch *)match player:(NSString *)playerID didChangeState:(GKPlayerConnectionState)state {
+    if (_match != match) return;
+    
+    switch (state) {
+        case GKPlayerStateConnected:
+            // handle a new player connection.
+            NSLog(@"Player connected!");
+            
+            if (!_matchStarted &amp;&amp; match.expectedPlayerCount == 0) {
+                NSLog(@"LET'S PLAY YA");
+                [self lookupPlayers];
+            }
+            
+            break;
+        case GKPlayerStateDisconnected:
+            // a player just disconnected.
+            NSLog(@"Player disconnected!");
+            _matchStarted = NO;
+            [_delegate matchEnded];
+            break;
+    }
+}</pre></div><p>Now, if you were to <a id="id314" class="indexterm"/>test our code on two devices, you should get the following in the console:</p><div class="informalexample"><pre class="programlisting">2015-10-26 18:52:13.867 ADESA[787:60b] Ready to start match!
+2015-10-26 18:52:13.874 ADESA[787:60b] Looking up 1 players...
+2015-10-26 18:52:13.894 ADESA[787:60b] Found player: miigman
+2015-10-26 18:52:13.895 ADESA[787:60b] Match has started successfully</pre></div><p>That's it! Now all that is required to finish our multiplayer integration is to handle the controls between the two connected devices.</p><p>Now that we have the multiplayer features all integrated, it's up to you to make both players appear! (You didn't think I would make it that easy for you, did you?)</p><p>Most of the work has been completed for you; just keep in mind how to work between multiple classes. Want a hint? Send messages! For example, when you press the jump button, send the <code class="literal">MultiPlayerHelper</code> method a message to make <code class="literal">player2</code> move within the <code class="literal">GameScene</code> class. Oh, and don't forget to set up <code class="literal">player2</code>.</p><p>I know you can do it!</p><p>This will be the final challenge for you.</p><p>When you're done...</p></div>
+<div class="section" title="Pushing updates to the AppStore!"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec33"/>Pushing updates to the AppStore!</h1></div></div></div><p>Now that you<a id="id315" class="indexterm"/> have completed your awesome new <a id="id316" class="indexterm"/>multiplayer game, it's time to push the latest version of your game to the AppStore! Do you remember how we pushed our game in the first place? The steps are very similar!</p><p>To begin, simply log in to <a class="ulink" href="http://itunesconnect.apple.com">itunesconnect.apple.com</a> and, in the <span class="strong"><strong>My Apps</strong></span> section, click on the app you want to update.</p><div class="mediaobject"><img src="graphics/B03553_08_05.jpg" alt="Pushing updates to the AppStore!"/></div><p>Once you have selected the app, you will be greeted with a big blue circle with an <span class="strong"><strong>i</strong></span> in the center asking you to create a new app version if you want to change the app information. Well how the heck do I do that?!</p><p>It's easy, try to stay calm.</p><p>On the sidebar, simply click on the <span class="strong"><strong>+</strong></span> button where it says <span class="strong"><strong>VERSION OR PLATFORM</strong></span>, as shown in the following screenshot:</p><div class="mediaobject"><img src="graphics/B03553_08_06.jpg" alt="Pushing updates to the AppStore!"/></div><p>At the time of writing this book, it will ask you whether you want to create a new iOS version or a tvOS version.</p><p>For this book (because we didn't cover tvOS).</p><p>ITunes connect will then ask you to type in the new version number. When you click on <span class="strong"><strong>Done</strong></span>, it will appear above the current version that says <span class="strong"><strong>Ready for Sale</strong></span>.</p><p>Once you click on the new version, you will be asked to fill in new version information and upload <a id="id317" class="indexterm"/>new screenshots, as shown in the following <a id="id318" class="indexterm"/>screenshot:</p><div class="mediaobject"><img src="graphics/B03553_08_07.jpg" alt="Pushing updates to the AppStore!"/></div><p>You can then change the description of the app and contact information and select when you want the app to be released. When you have it all filled out and all the new screenshots uploaded, you can exit your browser and open up Xcode again.</p><p>I know, earlier we used Application Loader, but Xcode seems to be a much easier way to do it because you can build and submit directly through it.</p><p>Do you remember how we do this? No problem!</p><p>Click on the scheme at the top of our project and ensure that we have a device build selected (otherwise, the archive option will not be available), as shown in the following screenshot:</p><div class="mediaobject"><img src="graphics/B03553_08_08.jpg" alt="Pushing updates to the AppStore!"/></div><p>Once you have a device build selected, navigate to <span class="strong"><strong>Product</strong></span> | <span class="strong"><strong>Archive</strong></span>. Xcode will now build our app and archive it for AppStore submission. Once it's done, it will show you the organizer with all the builds of our app and the other apps we have built in the past. The most recent<a id="id319" class="indexterm"/> build will automatically be selected. On<a id="id320" class="indexterm"/> the sidebar, simply click on <span class="strong"><strong>Upload to App Store</strong></span>.</p><div class="mediaobject"><img src="graphics/B03553_08_09.jpg" alt="Pushing updates to the AppStore!"/></div><p>Xcode will validate our package, sign it, and then archive it.</p><div class="mediaobject"><img src="graphics/B03553_08_10.jpg" alt="Pushing updates to the AppStore!"/></div><p>Once that's done, simply click on the <span class="strong"><strong>Upload</strong></span> button! Xcode will automatically upload your project file to the AppStore. Don't forget to change the version number in the list before you<a id="id321" class="indexterm"/> upload it, or else it will come up with an<a id="id322" class="indexterm"/> error after the upload.</p><p>Now all you have to do is wait for your awesome new version to be released!</p><p>I'm so proud of you guys! You've come such a long way!</p><div class="section" title="I didn't forget... I just missed it"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec27"/>I didn't forget... I just missed it</h2></div></div></div><p>Did you have any issues when implementing the multiplayer functionality of our game? Did it show you it wasn't recognized by Game Center? Silly me! I forgot to mention a somewhat critical step to follow... Oops! Hey, it happens!</p><p>So, if you did <a id="id323" class="indexterm"/>get that error when running your app on a device or even in the simulator, it's because your game hasn't been registered in Game Center.</p><p>How do you do this?</p><p>Log in to <a class="ulink" href="http://itunesconnect.apple.com">itunesconnect.apple.com</a> again, go to <span class="strong"><strong>My Apps</strong></span>, and then open up your app. Scroll down and, if you see a gray box with the text <span class="strong"><strong>Click + to select Multiplayer Compatibility for this app version</strong></span> under the <span class="strong"><strong>Multiplayer Compatibility</strong></span> section, then you know where I've, you've, I've, you've gone wrong.</p><div class="mediaobject"><img src="graphics/B03553_08_11.jpg" alt="I didn't forget... I just missed it"/></div><p>Simply <a id="id324" class="indexterm"/>click the <span class="strong"><strong>+</strong></span> button and select your app to add multiplayer compatibility.</p></div></div>
+<div class="section" title="You're done!"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec34"/>You're done!</h1></div></div></div><p>Guys, I'm so happy you've come all this way with me! I know, at times it may have been confusing or a lot to take in, but you've made it!</p><p>I hope you will be able to Master iOS Development with all the knowledge and tips and tricks I have taught you!</p><p>Have an awesome game development career, and never give up on your dreams and passions. The following image shows us the final result when the game is all completed.</p><div class="mediaobject"><img src="graphics/B03553_08_12.jpg" alt="You're done!"/></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec35"/>Summary</h1></div></div></div><p>We discussed implementing multiplayer integration! We set up GameCenter for our game, and we even got player authentication and match searching all ready to go. It's all up to you to finish the awesome project. We also discussed how to upload an update of our game, so the millions around the world can enjoy your newest update.</p></div></body></html>

@@ -1,0 +1,505 @@
+<html><head></head><body>
+<div id="page" style="height:0pt"/><div class="book" title="Chapter&#xA0;10.&#xA0;Data Access" id="2E6E41-bba3081a9dc049b7aa5e4f7cc42ef8bb"><div class="book"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch10" class="calibre1"/>Chapter 10. Data Access</h1></div></div></div><p class="calibre7">In this chapter, we will cover the following recipes:</p><div class="book"><ul class="itemizedlist"><li class="listitem">Creating an SQLite database</li><li class="listitem">Checking where your IP is from</li><li class="listitem">Tracking your phone activity</li><li class="listitem">Controlling your stocks</li><li class="listitem">Designing a voting device using CouchDB</li></ul></div></div>
+
+<div class="book" title="Chapter&#xA0;10.&#xA0;Data Access" id="2E6E41-bba3081a9dc049b7aa5e4f7cc42ef8bb">
+<div class="book" title="Introduction"><div class="book"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_1"><a id="ch10lvl1sec76" class="calibre1"/>Introduction</h1></div></div></div><p class="calibre7">As you might know, nowadays it is very difficult to imagine an app that doesn't store anything on hard disk. Simple apps such as a calculator or a compass might not need to store any information, but usually you will need to create apps with more complex features and that will need to keep information even if the device reboots.</p><p class="calibre7">When you have to store a minimum amount of information such as a simple date, or just the current app version, you can use a file as we have done in the previous chapters of this book, but when you have to store a few records with different data structures, you need the help of a database.</p><p class="calibre7">In this chapter, we are going to learn how to use databases on Swift and you will see the advantages of each method.</p></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Creating an SQLite database"><div class="book" id="2F4UM2-bba3081a9dc049b7aa5e4f7cc42ef8bb"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch10lvl1sec77" class="calibre1"/>Creating an SQLite database</h1></div></div></div><p class="calibre7">Usually, storing <a id="id461" class="calibre1"/>information on a mobile app is done with a local database. To do that, it is very common to use SQLite because even if it is a bit limited, this database has some advantages, such as it is a serverless database, it is zero-configuration, and it is built in iOS and Mac OS X.</p></div>
+
+<div class="book" title="Creating an SQLite database">
+<div class="book" title="Getting ready"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch10lvl2sec236" class="calibre1"/>Getting ready</h2></div></div></div><p class="calibre7">For this recipe, we are going to download an SQLite file; therefore you will need an SQLite client for <a id="id462" class="calibre1"/>reading this file. So beside the iFunBox downloaded in the previous chapter, you will also need to download a program such as SQLiteBrowser (<a class="calibre1" href="http://sqlitebrowser.org/">http://sqlitebrowser.org/</a>).</p><p class="calibre7">Create a new project <a id="id463" class="calibre1"/>called <code class="email">Chapter 10 SQLite</code>; keep in mind where you saved this recipe because we are going to complete it in the next recipe.</p></div></div>
+
+<div class="book" title="Creating an SQLite database">
+<div class="book" title="How to do it…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch10lvl2sec237" class="calibre1"/>How to do it…</h2></div></div></div><div class="book"><ol class="orderedlist"><li class="listitem" value="1">When the project is created, click on the <span class="strong"><strong class="calibre8">General</strong></span> tab and scroll down until you get to the section <span class="strong"><strong class="calibre8">Linked Frameworks and Libraries</strong></span>. Click on the plus sign for adding a new library and select <code class="email">libsqlite3.tbd</code>:<div class="mediaobject"><img src="../images/00144.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="2">After that, let's create a new bridging file by adding a new header file called <code class="email">BridgingHeader.h</code>; check that it is set as a bridging header in the <span class="strong"><strong class="calibre8">Build Settings</strong></span>. In this file, include the <code class="email">sqlite3.h</code>:<div class="informalexample"><pre class="programlisting">#include &lt;sqlite3.h&gt;</pre></div></li><li class="listitem" value="3">Now add a new file called <code class="email">SQLite.swift</code>; here we are going to start coding a class called <a id="id464" class="calibre1"/><code class="email">SQLite</code> and inside of it an enumeration called <code class="email">status</code>:<div class="informalexample"><pre class="programlisting">public class SQLite {
+    public enum Status {
+        case CONNECTED,
+        DISCONNECTED
+    }</pre></div></li><li class="listitem" value="4">Now, let's create two attributes, one for the connection with the database and another one for the current connection status:<div class="informalexample"><pre class="programlisting">    private var _connection:COpaquePointer = nil
+    private var _status = SQLite.Status.DISCONNECTED</pre></div></li><li class="listitem" value="5">The next step is creating a read-only computed attribute that returns the current connection status:<div class="informalexample"><pre class="programlisting">    public var status:SQLite.Status {
+        return _status
+    }</pre></div></li><li class="listitem" value="6">After that, you can create a method that opens a connection with the database. For this method, we will need only the filename as an argument; however, we are going to store it in the documents folder:<div class="informalexample"><pre class="programlisting">    public func connect(filename:String)-&gt; Bool{
+        let documentsPath = (NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as NSString).stringByAppendingPathComponent(filename)
+        let error = sqlite3_open(documentsPath,&amp;self._connection)
+        if error == SQLITE_OK {
+            // Adding a table just in case
+            let statement = "CREATE TABLE IF NOT EXISTS ips " +
+                            "(ipstart text, ipend text, " +
+                            "iipstart integer, iipend integer, " +
+                            "country text);" as NSString
+            var errmessage:UnsafeMutablePointer&lt;CChar&gt; = nil
+            if sqlite3_exec(self._connection, statement.UTF8String, nil, nil, &amp;errmessage) == SQLITE_OK {
+                self._status = .CONNECTED
+                return true
+            }
+            return false
+        return false
+    }</pre></div></li><li class="listitem" value="7">The last <a id="id465" class="calibre1"/>detail for this class is the deinitializer that should close the database connection:<div class="informalexample"><pre class="programlisting">    deinit {
+        switch self._status {
+            case .CONNECTED:
+                sqlite3_close(self._connection)
+            default:
+                break;
+        }
+    }
+}</pre></div></li><li class="listitem" value="8">The model part is done; now let's create the view part by clicking on the storyboard and adding a label, a text field, and a button, something similar to this layout:<div class="mediaobject"><img src="../images/00145.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="9">Now connect the text field with the view controller and call it <code class="email">databaseNameTextField</code>:<div class="informalexample"><pre class="programlisting">    @IBOutlet var databaseNameTextField: UITextField!</pre></div></li><li class="listitem" value="10">Once it is <a id="id466" class="calibre1"/>done, you can create an action for the only button; in this case we are going to open the database connection, create a table and check whether everything was done successfully:<div class="informalexample"><pre class="programlisting">    @IBAction func createDatabase(sender: AnyObject) {
+        var database = SQLite()
+        if self.databaseNameTextField.text == "" {
+        let alert = UIAlertController(title: "No database name", message: "You must introduce a database name", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+        
+        return
+        
+}
+        let dbname = self.databaseNameTextField.text + ".sqlite"
+        if database.connect(dbname) {
+            UIAlertView(title: nil, message: "Database was created", delegate: nil, cancelButtonTitle: "OK").show()
+            let alert = UIAlertController(title: nil, message: "Database was created", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+
+        }else {
+            let alert = UIAlertController(title: nil, message: "Failed creating the database", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+        }
+        
+    }</pre></div></li><li class="listitem" value="11">This app is done. Better off saying, this first version is done; now press play and write a filename for your database, such as <code class="email">mydatabase</code>, and then press the button for creating a database.</li><li class="listitem" value="12">Now let's <a id="id467" class="calibre1"/>check the real application, so open your iFunBox and search for the app <code class="email">Chapter 10 SQLite</code>; open its <code class="email">Document</code> folder, select the only file that is in this folder, then press the button <span class="strong"><strong class="calibre8">Copy to Mac</strong></span> and save it in your local documents folder:<div class="mediaobject"><img src="../images/00146.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="13">Once you have the empty database, let's check whether we are able to open it. Open your Sqlite browser (only supports 8.3 and below) and click on the <span class="strong"><strong class="calibre8">Open </strong></span><a id="id468" class="calibre1"/><span class="strong"><strong class="calibre8">Database</strong></span> button:<div class="mediaobject"><img src="../images/00147.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="14">Choose the database file you have downloaded and open it. After that, you should see on the main panel and on the database schema a table called <code class="email">ips</code>, which means that your database was created successfully and it can create a table without any errors:<div class="mediaobject"><img src="../images/00148.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li></ol><div class="calibre13"/></div></div></div>
+
+<div class="book" title="Creating an SQLite database">
+<div class="book" title="How it works…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch10lvl2sec238" class="calibre1"/>How it works…</h2></div></div></div><p class="calibre7">SQLite is not a framework; rather, it is a library that uses the traditional C functions instead of Objective-C or Swift objects.</p><p class="calibre7">As you might know, using C functions implies using C types; that's the reason we had to use <code class="email">UnsafeMutablePointer&lt;CChar&gt;</code> for the error message and <code class="email">COpaquePointer</code> for the database handle.</p><div class="informalexample" title="Note"><h3 class="title2"><a id="note41" class="calibre1"/>Note</h3><p class="calibre7"><code class="email">COpaquePointer</code> represents a C pointer such as <code class="email">UnsafeMutablePointer</code>, but it is used when you can't represent the pointer type on Swift, such as some structs, for example.</p></div><p class="calibre7">In this recipe, we used three SQLite functions:</p><div class="book"><ul class="itemizedlist"><li class="listitem"><code class="email">sqlite3_open</code>: This function <a id="id469" class="calibre1"/>opens a database. It creates a new database file if one doesn't exist. This function receives as an argument the file name and a handle pointer by reference.<div class="note" title="Note"><h3 class="title2"><a id="tip51" class="calibre1"/>Tip</h3><p class="calibre7">If you don't <a id="id470" class="calibre1"/>want to create a database file, you can use in-memory databases; check it out at <a class="calibre1" href="https://www.sqlite.org/inmemorydb.html">https://www.sqlite.org/inmemorydb.html</a>.</p></div></li><li class="listitem"><code class="email">sqlite3_close</code>: This function closes the connection with the database and frees the <a id="id471" class="calibre1"/>resources that are being used for this connection. Bear in mind that C has no objects, no garbage collector, and no automatic reference <a id="id472" class="calibre1"/>counter; therefore, if you don't free the resources, they are going to be there until your application finishes or crashes.</li><li class="listitem"><code class="email">sqlite3_exec</code>: This <a id="id473" class="calibre1"/>function executes an SQL statement; in this case it wasn't really necessary because we just want to check whether the file was created or not; however sometimes SQLite creates only an empty file if you don't use the database.</li></ul></div></div></div>
+
+<div class="book" title="Creating an SQLite database">
+<div class="book" title="See also"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_4"><a id="ch10lvl2sec239" class="calibre1"/>See also</h2></div></div></div><div class="book"><ul class="itemizedlist"><li class="listitem">SQLite has a lot of options and <a id="id474" class="calibre1"/>functions; you can check out more about it at the official website: <a class="calibre1" href="https://www.sqlite.org/cintro.html">https://www.sqlite.org/cintro.html</a>. Now that you know how to create a database, let's work with it, creating registers and querying results.</li></ul></div></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Checking where your IP is from"><div class="book" id="2G3F82-bba3081a9dc049b7aa5e4f7cc42ef8bb"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch10lvl1sec78" class="calibre1"/>Checking where your IP is from</h1></div></div></div><p class="calibre7">Sometimes you need to <a id="id475" class="calibre1"/>query from a remote database, but as you know, SQLite works with a local database, meaning that you have to populate it before querying. In this recipe, we are going to convert a CSV file into an SQLite database and after that we are going to query some results.</p></div>
+
+<div class="book" title="Checking where your IP is from">
+<div class="book" title="Getting ready"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch10lvl2sec240" class="calibre1"/>Getting ready</h2></div></div></div><p class="calibre7">For this recipe, we are going to need a CSV file with the ranges of IPs of each country. There are some websites that give or sell it to you. You can download it free from <a class="calibre1" href="https://db-ip.com/db/download/country">https://db-ip.com/db/download/country</a>. Uncompress it, and add it into your SQLite <a id="id476" class="calibre1"/>application.</p><div class="informalexample" title="Note"><h3 class="title2"><a id="note42" class="calibre1"/>Note</h3><p class="calibre7">Right now this file is called <code class="email">dbip-country-2014-12.csv</code>, but it changes its name every month, so replace the filename where it is mentioned with the one you have.</p></div></div></div>
+
+<div class="book" title="Checking where your IP is from">
+<div class="book" title="How to do it…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch10lvl2sec241" class="calibre1"/>How to do it…</h2></div></div></div><div class="book"><ol class="orderedlist"><li class="listitem" value="1">Let's start completing the SQLite class by adding two additional methods, one of which is for executing statements that don't return any result, such as insert, delete, and update <a id="id477" class="calibre1"/>queries. To do it, click on the file <code class="email">SQLite.swift</code> and inside the SQLite class add this code:<div class="informalexample"><pre class="programlisting">    func exec(statement: String) -&gt; Bool {
+        var errmessage:UnsafeMutablePointer&lt;CChar&gt; = nil
+        return sqlite3_exec(self._connection, (statement as NSString).UTF8String, nil, nil, &amp;errmessage) == SQLITE_OK
+    }
+    
+    func query(statement:String) -&gt; [[String]]? {
+        var sqliteStatement:COpaquePointer = nil
+        if sqlite3_prepare_v2(self._connection, (statement as NSString).UTF8String , -1, &amp;sqliteStatement, nil) != SQLITE_OK {
+            return nil
+        }
+        var result = [[String]]()
+        while sqlite3_step(sqliteStatement) == SQLITE_ROW {
+            var row = [String]()
+            for i in 0..&lt;sqlite3_column_count(sqliteStatement) {
+               row.append(String.fromCString(UnsafePointer&lt;CChar&gt;(sqlite3_column_text(sqliteStatement, i)))!)
+            }
+            result.append(row)
+        }
+        return result
+    }</pre></div></li><li class="listitem" value="2">Now, let's add a new file called <code class="email">Functions.swift</code> in your project. This file will contain some auxiliary functions. The first function that we are going to create is the one that reads a CSV file and returns its contents inside a double array of string:<div class="informalexample"><pre class="programlisting">func csv2array(filename: String) -&gt; [[String]]? {
+    var error: NSErrorPointer = nil
+    var url = NSBundle.mainBundle().URLForResource(filename, withExtension: "csv")
+    if let  fileContent = String(contentsOfURL: url!, encoding: NSUTF8StringEncoding, error: error){
+        var records = [[String]] ()
+        fileContent.enumerateLines({ (line, _) -&gt; () in
+            var fields:[String] = line.componentsSeparatedByString(",").map({ (field:String) -&gt; String in
+                return field.stringByTrimmingCharactersInSet(NSCharacterSet(charactersInString: "\""))
+            })
+            if isIPv4(fields[0]) {
+                records.append(fields)
+            }
+        })
+        
+        return records
+    }else {
+        return nil
+    }
+}</pre></div></li><li class="listitem" value="3">Now we need two additional functions related to the IP string; the first one will check whether <a id="id478" class="calibre1"/>the input string has an IPv4 format:<div class="informalexample"><pre class="programlisting">func isIPv4(ip:String) -&gt; Bool {
+    var error: NSErrorPointer = nil
+    return try NSRegularExpression(pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", options: .CaseInsensitive, error: error)!.matchesInString(ip, options: nil, range:NSMakeRange(0, countElements(ip))).count &gt; 0
+}</pre></div></li><li class="listitem" value="4">The next function will convert the IP from a string to an unsigned integer; it will allow us to compare if an IP is in a range:<div class="informalexample"><pre class="programlisting">    func ip2int(ip:String) -&gt; UInt32 {
+        return CFSwapInt32(inet_addr((ip as NSString).UTF8String))
+    }</pre></div></li><li class="listitem" value="5">We have finished with the auxiliaries functions, now we have to update the storyboard. Go to your storyboard and add two more buttons, one with the word <span class="strong"><strong class="calibre8">Populate</strong></span> and another one with the word <span class="strong"><strong class="calibre8">Search</strong></span>, something similar to the following screenshot:<div class="mediaobject"><img src="../images/00149.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="6">Now we need to set these buttons as hidden by default, because we are not going to insert any <a id="id479" class="calibre1"/>register before creating the database. To do it, click on one of these new buttons, go to the attribute inspector, check the <span class="strong"><strong class="calibre8">Hidden</strong></span> option, and then repeat the operation with the other button:<div class="mediaobject"><img src="../images/00150.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="7">Once the storyboard is done, we have to update the view controller. Let's start by connecting the label and the three buttons with the view controller:<div class="informalexample"><pre class="programlisting">    @IBOutlet var inputLabel: UILabel!
+    @IBOutlet var createButton: UIButton!
+    @IBOutlet var populateButton: UIButton!
+    @IBOutlet var searchButton: UIButton!</pre></div></li><li class="listitem" value="8">We still need another attribute that is the database connection, which is inside the action of creating <a id="id480" class="calibre1"/>a database, so what we are going to do is move the declaration with the initialization from inside the method <code class="email">createDatabase</code> to outside of it:<div class="informalexample"><pre class="programlisting">
+<span class="strong"><strong class="calibre8">    var database = SQLite()</strong></span>
+    @IBAction func createDatabase(sender: AnyObject) {
+        
+        if self.databaseNameTextField.text == "" {</pre></div></li><li class="listitem" value="9">As we are working near the <code class="email">createDatabase</code> method, we can take advantage of it and update it by hiding some unneeded views and displaying only the <span class="strong"><strong class="calibre8">Populate</strong></span> button:<div class="informalexample"><pre class="programlisting">    @IBAction func createDatabase(sender: AnyObject) {
+        
+        if self.databaseNameTextField.text == "" {
+            let alert = UIAlertController(title: "No database name", message: "You must introduce a database name", preferredStyle:.Alert)
+            self.presentViewController(alert, animated: true, completion: nil)
+            
+            return
+        }
+        let dbname = self.databaseNameTextField.text + ".sqlite"
+        if database.connect(dbname) {
+            let alert = UIAlertController(title: nil, message: "Database was created", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+
+            self.createButton.hidden = true
+            self.populateButton.hidden = false
+            self.inputLabel.text = ""
+            self.databaseNameTextField.text = ""
+            self.databaseNameTextField.hidden = true
+        }else {
+            let alert = UIAlertController(title: nil, message: "Failed creating database", preferredStyle:.Alert)
+            self.presentViewController(alert, animated: true, completion: nil)
+        }
+    }</pre></div></li><li class="listitem" value="10">After that we can connect the <span class="strong"><strong class="calibre8">Populate</strong></span> button with a new action. This action will be called <code class="email">populate</code> and it will call an <code class="email">insert</code> statement on our database then it will display the <a id="id481" class="calibre1"/><span class="strong"><strong class="calibre8">Search</strong></span> button:<div class="informalexample"><pre class="programlisting">    @IBAction func populate(sender: AnyObject) {
+        if let data = csv2array("dbip-country-2014-12"){
+            print("total \(data.count)")
+            var statements = data.map{ record -&gt; String in
+                return "INSERT INTO ips (ipstart, ipend, iipstart, iipend, country) VALUES " +
+                "('\(record[0])', '\(record[1])', \(ip2int(record[0])), \(ip2int(record[1]))," +
+                    "'\(record[2])' )"
+            }
+            
+            database.exec("delete from ips;")
+            
+            for statement in statements {
+                database.exec(statement)
+            }
+            self.searchButton.hidden = false
+            self.populateButton.hidden = true
+            self.inputLabel.text = "Enter an IP"
+            self.databaseNameTextField.text = ""
+            self.databaseNameTextField.hidden = false
+        }
+        else {
+            let alert = UIAlertController(title: nil, message: "Unable to parse the file", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+        }
+    }</pre></div></li><li class="listitem" value="11">As you might imagine, we need to develop the search action. First, it needs to check whether the <a id="id482" class="calibre1"/>input is correct and after that it will look for the IP range where it belongs. If it is able to find it, it will show the country where the IP belongs, otherwise it will show that the country wasn't found:<div class="informalexample"><pre class="programlisting">    @IBAction func search(sender: AnyObject) {
+        let iptext = self.databaseNameTextField.text
+        if !isIPv4(iptext) {
+            UIAlertView(title: "Error", message: "Wrong format", delegate: nil, cancelButtonTitle: "OK").show()
+            return
+        }
+        let ipnumber = ip2int(iptext)
+        let sql = "SELECT country FROM ips where \(ipnumber) between iipstart and iipend"
+        if let result = database.query(sql){
+            if result.count &gt; 0 &amp;&amp; result[0].count &gt; 0 {
+              let alert = UIAlertController(title: "Found", message: " This ip belongs to \(result[0][0])", preferredStyle:.Alert)
+              self.presentViewController(alert, animated: true, completion: nil)
+            }else {
+              let alert = UIAlertController(title: "Not found", message: "No result was found", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+
+ }
+        }else {
+          let alert = UIAlertController(title: "Error", message: "Failed to execute your query", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+
+}
+    }</pre></div></li><li class="listitem" value="12">Once again we have completed another app and we need to test it. Press play, write on the test field <code class="email">mydatabase</code>, and press <span class="strong"><strong class="calibre8">Create database</strong></span>. Now you should see only the populate button on screen, tap on it—it will take a while until it finishes.<div class="note" title="Note"><h3 class="title2"><a id="tip52" class="calibre1"/>Tip</h3><p class="calibre7">If you would like to know when the app starts writing to disk when you are developing, you can click on the debugger navigator and then on the disk report, and you should see some <a id="id483" class="calibre1"/>bars with the disk-writing activity, as shown in the following image:</p><div class="mediaobject1"><img src="../images/00151.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre11"> </p></div></li><li class="listitem" value="13">The last step is looking for the country of a specific IP, so type an IP in the text field when it appears, for example <code class="email">74.125.230.52</code> and press <span class="strong"><strong class="calibre8">Search</strong></span>. You should receive an alert displaying where this IP is from.</li></ol><div class="calibre13"/></div></div></div>
+
+<div class="book" title="Checking where your IP is from">
+<div class="book" title="How it works…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch10lvl2sec242" class="calibre1"/>How it works…</h2></div></div></div><p class="calibre7">SQL has two kinds of queries:</p><div class="book"><ul class="itemizedlist"><li class="listitem">There are queries that modify the data structure, such as <code class="email">CREATE TABLE</code> and <code class="email">ALTER TABLE</code>, or modify the data content, such as <code class="email">INSERT</code>, <code class="email">DELETE</code>, or <code class="email">UPDATE</code>, which are going to be shown in the next section. These queries usually don't return any data. For this kind of query you can use the function <code class="email">sqlite3_exec</code>.</li><li class="listitem">Queries that retrieve information such as <code class="email">SELECT</code>. Here you have to work in a different way; you need to use the function <code class="email">sqlite3_prepare_v2</code> for executing the query and <code class="email">sqlite3_step</code> for retrieving each record.</li></ul></div><div class="informalexample" title="Note"><h3 class="title2"><a id="note43" class="calibre1"/>Note</h3><p class="calibre7">If you check the SQLite API documentation you will see that <code class="email">sqlite3_exec</code> can also return a result from a <code class="email">SELECT</code> statement; however it needs a pointer to a function for each record received (what is called a callback).</p></div><p class="calibre7">If you have developed your <a id="id484" class="calibre1"/>function in C you can have a pointer to it by using a variable of type <code class="email">CFunctionPointer</code>, but bear in mind that this data type can't be used for pointing to Swift functions. Make sure that SQLite has its own constants, such as <code class="email">SQLITE_OK</code> for indicating that the operation has finished successfully, <code class="email">SQLITE_ROW</code>, which tells us that it could receive a record from the statement result, or <code class="email">SQLITE_DONE</code>, which is saying that there are no more records on this statement result.</p><p class="calibre7">In this case, we had a common case of converting a text file into database records. Check in detail when you need to do a similar task. First we added every record in an array; it took approximately 80 megabytes of RAM by the time we finished inserting the records. This isn't a problem because even low-end devices such as the iPhone 4S has 512 megabytes of RAM, but if you decide to load the cities' IP database, it can consume a lot of memory, so you would probably need to split the file or store each record directly on the database without using an intermediate array.</p><p class="calibre7">Another detail is that we didn't use transactions, meaning that if for any reason we had to stop inserting it halfway, we will need to remove every record previously inserted; otherwise we can have duplicated records or errors when trying to reinsert everything again.</p><p class="calibre7">One good question is: Why did we use IP ranges instead of one record for each IP? The reason is very simple: space. If we were going to use one record for each IP we would need 4,294,967,296 records; if each record occupies 1 kilobyte of disk space it would need 4,398,046,511,104 bytes (~4 terabytes), which we don't have on any Apple mobile device except for Apple computers, but it wouldn't be worth wasting such space for only an IP table.</p><p class="calibre7">Another good question is: Why did we have to convert IP strings into an unsigned integer? Even if you see an IP as a sequence of four numbers, actually it is a 32-bit unsigned integer, which allows us to compare if an IP is inside a range; otherwise we would do a string comparison, which is not valid.</p></div></div>
+
+<div class="book" title="Checking where your IP is from">
+<div class="book" title="See also"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_4"><a id="ch10lvl2sec243" class="calibre1"/>See also</h2></div></div></div><div class="book"><ul class="itemizedlist"><li class="listitem">SQLite has a lot of functions, some of which are used more often than others and some of which are more specialized than others; for this reason it's a good idea to check the <a id="id485" class="calibre1"/>C functions that are available at <a class="calibre1" href="https://www.sqlite.org/c3ref/intro.html">https://www.sqlite.org/c3ref/intro.html</a> and the SQL statements at <a class="calibre1" href="https://www.sqlite.org/lang.html">https://www.sqlite.org/lang.html</a>.</li><li class="listitem">Here you learned how to use the SQLite on an application, however it gives us some work to do because SQLite is not a framework, it is a C library. In the next recipe, we are <a id="id486" class="calibre1"/>going to learn how to use an SQLite "precooked" class for saving time when developing.</li></ul></div></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Tracking your phone activity"><div class="book" id="2H1VQ2-bba3081a9dc049b7aa5e4f7cc42ef8bb"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch10lvl1sec79" class="calibre1"/>Tracking your phone activity</h1></div></div></div><p class="calibre7">Imagine that you <a id="id487" class="calibre1"/>would like to track where your phone received (or made) a call by recording when a human head was close to the phone, so you want to create an app that will register data such as the current time and the phone coordinates every time that the proximity sensor detects that something is near the front face of the phone.</p><p class="calibre7">Although we are going to use SQLite again, we are not going to write any SQL statement. This time we are going to use a framework that uses only Swift types and objects; that way we don't have to worry about converting types from Swift to C and from C to Swift.</p></div>
+
+<div class="book" title="Tracking your phone activity">
+<div class="book" title="Getting ready"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch10lvl2sec244" class="calibre1"/>Getting ready</h2></div></div></div><p class="calibre7">For this recipe <a id="id488" class="calibre1"/>we will need to download an external framework called <code class="email">SQLite.Swift</code>. To do it, open your favorite browser and go to <a class="calibre1" href="https://github.com/stephencelis/SQLite.swift">https://github.com/stephencelis/SQLite.swift</a>. Once the website is open, click on the icon Download ZIP. If you have used Safari, the downloaded file was probably unzipped. In case of using another web browser, unzip it yourself by double-clicking on the file icon on your finder window. Using this framework requires Xcode 6.1 or greater, so make sure that you are using an updated version of Xcode.</p><p class="calibre7">As this recipe will use the proximity sensor, it is necessary to use it with a physical phone, otherwise you won't be able create any records.</p><p class="calibre7">If you are ready to start, create a new project called <code class="email">Chapter 10 Activity Recording</code>.</p></div></div>
+
+<div class="book" title="Tracking your phone activity">
+<div class="book" title="How to do it…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch10lvl2sec245" class="calibre1"/>How to do it…</h2></div></div></div><div class="book"><ol class="orderedlist"><li class="listitem" value="1">First of all we need to add the <code class="email">SQLite.Swift</code> into our project. To do it, just drag the <code class="email">SQLite.Swift</code> Xcode project file (<code class="email">SQLite.xcodeproj</code>) into your project; you shall now see two projects on the project navigator:<div class="mediaobject"><img src="../images/00152.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="2">Now click on your project for adding this framework, so click on the <span class="strong"><strong class="calibre8">General</strong></span> tab of your <a id="id489" class="calibre1"/>target, scroll down to <span class="strong"><strong class="calibre8">Linked Frameworks and Libraries</strong></span>, and click on the plus sign. When the dialog appears you can check that there is a section called <span class="strong"><strong class="calibre8">Workspace</strong></span> with two frameworks with the same name; select the one that is done for iOS:<div class="mediaobject"><img src="../images/00153.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="3">Press the plus <a id="id490" class="calibre1"/>sign again and select another framework: the <code class="email">CoreLocation</code> framework.</li><li class="listitem" value="4">As, in this recipe, we are going to develop only the view controller, we are not going to add any new file. So, click directly on the storyboard and add to your view a text field and a button. Remove the text of your text field and change the button label to <span class="strong"><strong class="calibre8">Print records</strong></span>. Now connect the text field with the view controller and call it <code class="email">textView</code>:<div class="informalexample"><pre class="programlisting">    @IBOutlet var textView: UITextView!</pre></div></li><li class="listitem" value="5">Connect the button with a new action called <code class="email">printRecords</code>; we are not going to develop it right now, just leave it empty for future use:<div class="informalexample"><pre class="programlisting">    @IBAction func printRecords(sender: AnyObject) {
+    }</pre></div></li><li class="listitem" value="6">Now click on the view controller file and place the prompt at the beginning of this file. Here, we have to import two frameworks beside the UIKit: <code class="email">SQLite</code> and <code class="email">CoreLocation</code>:<div class="informalexample"><pre class="programlisting">import SQLite
+import CoreLocation</pre></div></li><li class="listitem" value="7">Before we start developing the view controller code, we are going to create an auxiliary type for <a id="id491" class="calibre1"/>our common variables:<div class="informalexample"><pre class="programlisting">typealias activityTuple = (activity: Query, id:Expression&lt;Int&gt;,
+    latitude: Expression&lt;Double?&gt;, longitude:Expression&lt;Double?&gt;,
+    time:Expression&lt;String&gt;, away:Expression&lt;Bool&gt;)</pre></div></li><li class="listitem" value="8">As we will need to use the core location for receiving the current location, we will need to implement the view controller as a core location delegate:<div class="informalexample"><pre class="programlisting">class ViewController: UIViewController, <span class="strong"><strong class="calibre8">CLLocationManagerDelegate</strong></span> {</pre></div></li><li class="listitem" value="9">Now we can add the attributes, we will need one database connection for the location manager and another one for keeping the last location received:<div class="informalexample"><pre class="programlisting">    var database:Database?
+    var locationManager = CLLocationManager()
+    var lastLocation: CLLocation?</pre></div></li><li class="listitem" value="10">It is time to develop the methods, starting with the <code class="email">viewDidLoad</code>; here we need to set everything up:<div class="informalexample"><pre class="programlisting">    override func viewDidLoad() {
+        super.viewDidLoad()
+        if !openDatabase(){
+          let alert = UIAlertController(title: "Error", message: "Cant open the database", preferredStyle:.Alert)
+          self.presentViewController(alert, animated: true, completion: nil)
+
+          return
+        }
+        if !createStructure() {
+            UIAlertView(title: "Error", message: "Can't create database structure", delegate: nil, cancelButtonTitle: "OK").show()
+            return
+        }
+        setLocationManager()
+        setProximitySensor()
+    }</pre></div></li><li class="listitem" value="11">As you can see we have a few methods to implement. Let's start with the <code class="email">openDatabase</code>, which creates the database and handles the connection:<div class="informalexample"><pre class="programlisting">    private func openDatabase() -&gt; Bool{
+        let documentsPath = (NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as NSString).stringByAppendingPathComponent("database.sqlite")
+        database = Database(documentsPath)
+        return database != nil
+    }</pre></div></li><li class="listitem" value="12">The next step is <a id="id492" class="calibre1"/>creating the database structure; it will create a table called <code class="email">activity</code> with its columns:<div class="informalexample"><pre class="programlisting">    private func createStructure() -&gt; Bool {
+        var actVars = self.activityVars()
+        var result = database!.create(table: actVars.activity, ifNotExists: true) { t in
+            // Autoincrement means that we don't have to set this value because it will be automatic.
+            t.column(actVars.id, primaryKey: .Autoincrement)
+            t.column(actVars.latitude)
+            t.column(actVars.longitude)
+            t.column(actVars.time, unique: true)
+            t.column(actVars.away)
+        }
+        return !result.failed
+    }</pre></div></li><li class="listitem" value="13">The database initialization is done; we need to start receiving information about the device position by setting up the core location:<div class="informalexample"><pre class="programlisting">    private func setLocationManager(){
+        locationManager.delegate = self
+        locationManager.distanceFilter = kCLDistanceFilterNone
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        
+        if (UIDevice.currentDevice().systemVersion as NSString).floatValue &gt;= 8 &amp;&amp; CLLocationManager.authorizationStatus() != CLAuthorizationStatus.AuthorizedAlways {
+            locationManager.requestAlwaysAuthorization()
+        }
+        locationManager.startUpdatingLocation() 
+    }</pre></div></li><li class="listitem" value="14">As you know, we need to implement the method that updates the current location:<div class="informalexample"><pre class="programlisting">    func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!){
+        if locations.count &gt; 0 {
+            lastLocation = locations[0] as? CLLocation
+        }
+    }</pre></div></li><li class="listitem" value="15">Now we need to <a id="id493" class="calibre1"/>get notifications from the proximity sensor; to do it we need to use the notification center:<div class="informalexample"><pre class="programlisting">    private func setProximitySensor(){
+        var device = UIDevice.currentDevice()
+        device.proximityMonitoringEnabled = true
+        if device.proximityMonitoringEnabled {
+            NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("proximity:"), name: UIDeviceProximityStateDidChangeNotification, object: device)
+        }
+    }</pre></div></li><li class="listitem" value="16">As you can see, when we receive a proximity sensor change, the method <code class="email">proximity</code> will be called; that's the moment when we have to store in the database that an activity has started or ended:<div class="informalexample"><pre class="programlisting">    func proximity(notification:NSNotification){
+        var device: AnyObject? = notification.object
+        var latitude:Double?
+        var longitude:Double?
+        if lastLocation != nil {
+            latitude = lastLocation!.coordinate.latitude
+            longitude = lastLocation!.coordinate.longitude
+        }
+        let dateFormatter = NSDateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss" // superset of OP's format
+        let dateString:String = dateFormatter.stringFromDate(NSDate())
+        
+        let actVars = self.activityVars()
+
+        if let id = actVars.activity.insert(actVars.away &lt;- !device!.proximityState!,
+            actVars.time &lt;- dateString, actVars.latitude &lt;- latitude, actVars.longitude &lt;- longitude ) {
+            print("Register inserted with id \(id)")
+        }
+    }</pre></div></li><li class="listitem" value="17">Now we need to <a id="id494" class="calibre1"/>create the method that returns the variables that are related to the activity table:<div class="informalexample"><pre class="programlisting">    private func activityVars() -&gt; activityTuple{
+        return (activity:database!["activity"], id:Expression&lt;Int&gt;("id"),
+            latitude: Expression&lt;Double?&gt;("latitude"), longitude:Expression&lt;Double?&gt;("longitude"),
+            time:Expression&lt;String&gt;("time"), away:Expression&lt;Bool&gt;("away") )
+    }</pre></div></li><li class="listitem" value="18">The last part of the development is the button event, which was empty until now. We just need to retrieve data from the activity table and add it to the text view:<div class="informalexample"><pre class="programlisting">    @IBAction func printRecords(sender: AnyObject) {
+        self.textView.text = ""
+        let actVars = activityVars()
+        for record in actVars.activity {
+            
+            textView.text = textView.text +  "id: \(record[actVars.id]), time: \(record[actVars.time]), away: \(record[actVars.away])"
+            if record[actVars.latitude] != nil {
+            textView.text = textView.text +  ", latitude: \(record[actVars.latitude]!), longitude: \(record[actVars.longitude]!)"
+            }
+            textView.text = textView.text +  "\n"
+        }
+    }</pre></div></li><li class="listitem" value="19">There is one more step that you might need to do: click on the Info.plist of your project and add a new row. In this row, set <code class="email">NSLocationAlwaysUsageDescription</code> for the key and <code class="email">This app needs GPS</code> as the value. The reason for it is that on iOS 8 when you request permission to use the GPS (Core Location), it is ignored if there is no message. Some people say that it is a bug and it should be fixed soon.</li><li class="listitem" value="20">Once again, the app is done and we need to test it, so press play and put your phone next to your head as if you were talking on it. Repeat this a few times, and then check the table content by pressing the button. Your result should be something <a id="id495" class="calibre1"/>similar to this screenshot:<div class="mediaobject"><img src="../images/00154.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li></ol><div class="calibre13"/></div></div></div>
+
+<div class="book" title="Tracking your phone activity">
+<div class="book" title="How it works…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch10lvl2sec246" class="calibre1"/>How it works…</h2></div></div></div><p class="calibre7"><code class="email">SQLite.Swift</code> is a good layer over the SQLite library. You can create a database by creating an object of database type. You can define the table fields with a generic class called <span class="strong"><strong class="calibre8">Expression</strong></span>. This class works with integers (<code class="email">Int</code>), double precision (<code class="email">Double</code>), strings, and Boolean types (<code class="email">Bool</code>). All of them can be declared as optionals, meaning that the database can store null values on it.</p><p class="calibre7">You can use methods such as insert or update for adding or changing a record; both of these receive a type called setter, which is like the relationship between a field and its value. To create an object of Setter type you have to use the operator <code class="email">&lt;-</code>.</p><p class="calibre7">For retrieving results, you can iterate over a query object like we did with the <code class="email">for</code> loop and access its fields with the subscript using the expression fields as an index.</p><div class="informalexample" title="Note"><h3 class="title2"><a id="tip53" class="calibre1"/>Tip</h3><p class="calibre7">You can use the filter method for retrieving only the records that complain with a criteria, such <a id="id496" class="calibre1"/>as the where clause on the SQL language.</p></div></div></div>
+
+<div class="book" title="Tracking your phone activity">
+<div class="book" title="There's more…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_4"><a id="ch10lvl2sec247" class="calibre1"/>There's more…</h2></div></div></div><p class="calibre7">As you could see with this framework, we didn't have the need of writing SQL statements; however <code class="email">SQLite.Swift</code> allows you to work with SQL statements if you want. To do it you can use methods such as run or prepare.</p><p class="calibre7">Another excellent feature of <code class="email">SQLite.Swift</code> is that it is transaction ready. The method transaction and how it works for using transactions.</p><p class="calibre7">Apple has another solution for using a database over its own layer, called <span class="strong"><strong class="calibre8">Core Data</strong></span>. In the next recipe, we are going to learn how to use it.</p></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Controlling your stocks"><div class="book" id="2I0GC2-bba3081a9dc049b7aa5e4f7cc42ef8bb"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch10lvl1sec80" class="calibre1"/>Controlling your stocks</h1></div></div></div><p class="calibre7">The idea of an <a id="id497" class="calibre1"/>application connected with a database came from the need to keep some data, even if the application finishes. However, SQL is another language and you have to repeat some developments twice, such as a new field on a class is also a new field on the database.</p><p class="calibre7">When Xerox developed the first window system based on Smalltalk, it didn't use any kind of database. The argument for it is that if an application doesn't finish, the data will always be on the RAM memory.</p><p class="calibre7">The idea is very intelligent, however we know that the real world doesn't work like that. Applications crash and finish and devices need to reboot sometimes. Beside these facts, you also need to consider that, until today, RAM memory was still more expensive than hard disk. The new iPhone 6, for example, has only 1 gigabyte of RAM and at least 32 gigabytes of permanent storage.</p><p class="calibre7">Based on the problems just mentioned, Apple recommends using its own ORM called <span class="strong"><strong class="calibre8">Core Data</strong></span>. An <span class="strong"><strong class="calibre8">ORM</strong></span> is a framework that allows your objects to be stored on a permanent storage system without wasting time writing SQL statements. Actually what Core Data does is write the SQL for us.</p><p class="calibre7">In this recipe, we are going to develop a small app using Core Data by simulating a product control of a warehouse.</p></div>
+
+<div class="book" title="Controlling your stocks">
+<div class="book" title="Getting ready"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch10lvl2sec248" class="calibre1"/>Getting ready</h2></div></div></div><p class="calibre7">Start creating a new app called <code class="email">Chapter 10 Stock Control</code>, however make sure that the option <span class="strong"><strong class="calibre8">Use Core Data</strong></span> is checked as shown in the following screenshot:</p><p class="calibre7"> </p><div class="mediaobject"><img src="../images/00155.jpeg" alt="Getting ready" class="calibre10"/></div><p class="calibre11"> </p></div></div>
+
+<div class="book" title="Controlling your stocks">
+<div class="book" title="How to do it…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch10lvl2sec249" class="calibre1"/>How to do it…</h2></div></div></div><div class="book"><ol class="orderedlist"><li class="listitem" value="1">First, we will need to create a database model. Don't think in SQLite when creating this <a id="id498" class="calibre1"/>model because there will be some different types. So click on the file <code class="email">Chapter_10_Stock_Control.xcdatamodeld</code>; here you should see a different layout with some empty fields. Let's start by pressing the sign that is located over the text <span class="strong"><strong class="calibre8">Add Entity</strong></span>:<div class="mediaobject"><img src="../images/00156.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="2">Rename the new entity to <code class="email">Product</code>:<div class="mediaobject"><img src="../images/00157.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="3">After that, add <a id="id499" class="calibre1"/>three attributes for this entity, one called <code class="email">name</code>, which should be of type string, <code class="email">price</code> that is a double, and <code class="email">units</code>, which is an integer of 32 bits:<div class="mediaobject"><img src="../images/00158.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="4">That's all for the data part. Now we need to click on the storyboard file. Select the only view controller you have by clicking on it and go to the <span class="strong"><strong class="calibre8">Editor</strong></span> menu, expand the <span class="strong"><strong class="calibre8">Embedded In</strong></span> option and select <span class="strong"><strong class="calibre8">Navigation Controller</strong></span>:<div class="mediaobject"><img src="../images/00159.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="5">As we don't <a id="id500" class="calibre1"/>want the navigation bar for this app, you can click on the navigation controller just created and uncheck the option <span class="strong"><strong class="calibre8">Show Navigation Bar</strong></span> that is on attribute inspector:<div class="mediaobject"><img src="../images/00160.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="6">Now add a button on the only view controller we have with the text <span class="strong"><strong class="calibre8">New product</strong></span>; under <a id="id501" class="calibre1"/>it add a table view. You should have a layout similar to the following one:<div class="mediaobject"><img src="../images/00161.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="7">Now go to the view controller and import <code class="email">CoreData</code>:<div class="informalexample"><pre class="programlisting">import CoreData</pre></div></li><li class="listitem" value="8">After, you have to add the <code class="email">UITableViewDataSource</code> protocol to the view controller; that way we display results on the table view:<div class="informalexample"><pre class="programlisting">class ViewController: UIViewController, UITableViewDataSource {</pre></div></li><li class="listitem" value="9">Now connect the table view with the view controller as a data source and as an attribute of it. As we are adding an attribute we can also add a new attribute that will contain our records:<div class="informalexample"><pre class="programlisting">    @IBOutlet var tableView: UITableView!
+    var products = [NSManagedObject]()</pre></div></li><li class="listitem" value="10">Once it is <a id="id502" class="calibre1"/>done, we have to implement the methods that update the table view information. In this case, the number of records is the size of the array but their contents are the values of some keys of the <code class="email">NSManagedObject</code>:<div class="informalexample"><pre class="programlisting">    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -&gt; Int{
+        return products.count
+    }
+    
+    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -&gt; UITableViewCell {
+        var cell: UITableViewCell? = tableView.dequeueReusableCellWithIdentifier("cell") as UITableViewCell?
+        if (cell == nil) {
+            cell = UITableViewCell(style: UITableViewCellStyle.Value1, reuseIdentifier: "cell")
+        } 
+        cell!.textLabel?.text = products[indexPath.row].valueForKey("name") as? String
+        var units = products[indexPath.row].valueForKey("units") as? Int
+        cell!.detailTextLabel?.text = "\(units!) units"   
+        return cell!
+    }</pre></div></li><li class="listitem" value="11">Imagine that when we create a new record, it's necessary to reload the table view data. We could create a button for refreshing it, but it wouldn't be so intuitive, so the best way we can do it is, when the view appears again, we can refresh the <a id="id503" class="calibre1"/>data as well as updating the product array:<div class="informalexample"><pre class="programlisting">    override func viewWillAppear(animated: Bool) {
+        var appDelegate:AppDelegate = UIApplication.sharedApplication().delegate as AppDelegate
+        var moc: NSManagedObjectContext = appDelegate.managedObjectContext!
+        var request = NSFetchRequest(entityName: "Product")
+        request.returnsObjectsAsFaults = false
+        
+        do {
+          try products  = moc.executeFetchRequest(request) as [NSManagedObject]
+    } catch {
+        let alert = UIAlertController(title: "Error", message: "Error fetching the data.", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+    }
+        self.tableView.reloadData()
+    }</pre></div></li><li class="listitem" value="12">Good, press play and what happens? Nothing! The reason is that we are able to list the records but not to insert them, so it is time to add functionality to the <span class="strong"><strong class="calibre8">New product</strong></span> button. Return to the storyboard and add a new view controller, put it on the right-hand side of the previous one and click on the <span class="strong"><strong class="calibre8">New product</strong></span> button with the <span class="strong"><em class="calibre9"></em></span> key pressed and drag it to the new view controller.</li><li class="listitem" value="13">Press play, of course you are not going to see any records, but if you tap on the button you can see that a new view is called. At this moment we need to develop this view, however, before we continue, it needs a view controller file; in this case you have to add a new file of type Cocoa Touch Class and name it <code class="email">NewProductViewController</code>. Make sure that it inherits from <span class="strong"><strong class="calibre8">UIViewController</strong></span>:<div class="mediaobject"><img src="../images/00162.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="14">Return to your storyboard and change the class of this view controller on the identity <a id="id504" class="calibre1"/>inspector to the new file created:<div class="mediaobject"><img src="../images/00163.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="15">Now let's create a layout for this view. We have to add three text fields (one for each entity field), three labels for explaining what these fields are about, one button for saving the records, and one label just for displaying the view title (as we don't have the navigation bar):<div class="mediaobject"><img src="../images/00164.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="16">Once the layout is done we have to connect the text field to the new product view controller:<div class="informalexample"><pre class="programlisting">    @IBOutlet weak var nameTextField: UITextField!
+    @IBOutlet weak var priceTextField: UITextField!
+    @IBOutlet weak var unitsTextField: UITextField!</pre></div></li><li class="listitem" value="17">The last part we <a id="id505" class="calibre1"/>need to do is the save button development. As it is going to use a few <code class="email">CoreData</code> classes, you have to start by importing it:<div class="informalexample"><pre class="programlisting">import CoreData</pre></div></li><li class="listitem" value="18">Now connect your <code class="email">save</code> button with an action called save and develop it by retrieving the text fields data and saving it with core data:<div class="informalexample"><pre class="programlisting">    @IBAction func save(sender: UIButton) {
+        var appDelegate:AppDelegate = UIApplication.sharedApplication().delegate as AppDelegate
+        var moc: NSManagedObjectContext = appDelegate.managedObjectContext!
+
+        var newProduct = NSEntityDescription.insertNewObjectForEntityForName("Product", inManagedObjectContext: moc) as NSManagedObject
+        newProduct.setValue(self.nameTextField.text, forKey: "name")
+            newProduct.setValue( (priceTextField.text as NSString).floatValue, forKey: "price")
+        newProduct.setValue(unitsTextField.text.toInt()!, forKey: "units")
+        var err:NSError?
+        moc.save(&amp;err)
+        if let error = err {
+            print(error.localizedDescription)
+        }else{
+            print(newProduct)
+        }
+        self.navigationController?.popViewControllerAnimated(true)
+    }</pre></div></li><li class="listitem" value="19">The last step is testing your app. Press play, and add a few products such as computers, potatoes, and cars, and check that they appear on your table view.</li></ol><div class="calibre13"/></div></div></div>
+
+<div class="book" title="Controlling your stocks">
+<div class="book" title="How it works…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch10lvl2sec250" class="calibre1"/>How it works…</h2></div></div></div><p class="calibre7">We have to be very <a id="id506" class="calibre1"/>thankful to Apple because old versions of Xcode didn't have the option of creating a <code class="email">CoreData</code> application, which meant that the code for initialization done on the <code class="email">AppDelegate</code> class had to be done manually. What it does is create some attributes such as <code class="email">managedObjectModel</code> that read the entity model and interpret it; the <code class="email">persistentStoreCoordinator</code> then converts from core data to a persistent system (SQLite by default, but it can be configured to be an XML file, for example), and a very important one: <code class="email">managedObjectContext</code>; this object controls the objects/records that belong to <code class="email">CoreData</code>.</p><p class="calibre7">For this reason, every time we had to use something from <code class="email">CoreData</code> we had to access the <code class="email">AppDelegate</code> class a few times. If you prefer, you can create your own singleton class and transfer the <code class="email">CoreData</code> code over there.</p><p class="calibre7">When we need a new record, we need an object of type <code class="email">NSManagedObject</code>. If it is a new record we can ask for the help of the method <code class="email">insertNewObjectForEntityForName</code> from the <code class="email">NSEntityDescription</code> class. Accessing its fields is very easy; we just need to use <code class="email">valueForKey</code> for retrieving its value or setValue for modifying it.</p><p class="calibre7">If you need to access the objects, you have to use <code class="email">NSFetchRequest</code>, which is like an SQL statement. The <code class="email">managedObjectContext</code> is the one that can execute this request and return its data.</p></div></div>
+
+<div class="book" title="Controlling your stocks">
+<div class="book" title="There's more…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_4"><a id="ch10lvl2sec251" class="calibre1"/>There's more…</h2></div></div></div><p class="calibre7">If you want to filter <a id="id507" class="calibre1"/>some data, you can use <code class="email">NSPredicate</code>, which is something like the where clause of SQL.</p><p class="calibre7">We've seen some ways of storing data into your local device, but how about a network database? In the next recipe we are going to use a centralized database for storing our data.</p></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Designing a voting device using CouchDB"><div class="book" id="2IV0U2-bba3081a9dc049b7aa5e4f7cc42ef8bb"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch10lvl1sec81" class="calibre1"/>Designing a voting device using CouchDB</h1></div></div></div><p class="calibre7">As we <a id="id508" class="calibre1"/>learned before, usually on mobile apps <a id="id509" class="calibre1"/>we access a local database, but sometimes we need to use only one database with a lot of devices connected to it. For example, when you do a Google query you don't download the whole Google index onto your mobile phone, you just request some information and retrieve the result.</p><p class="calibre7">In this recipe we are going to learn how to use a centralized database, in this case we are going to use a database called CouchDB.</p></div>
+
+<div class="book" title="Designing a voting device using CouchDB">
+<div class="book" title="Getting ready"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch10lvl2sec252" class="calibre1"/>Getting ready</h2></div></div></div><p class="calibre7">For this recipe you need to <a id="id510" class="calibre1"/>download a CouchDB server. I assume that you are developing on a Mac computer, so it will be demonstrated with Mac OS X. In case you prefer to use another platform, such as Linux or Windows, feel free to use them.</p><p class="calibre7">Download CouchDB from <a class="calibre1" href="http://couchdb.apache.org">http://couchdb.apache.org</a>. Once it is downloaded and unzipped, right click on its icon and choose the option <span class="strong"><strong class="calibre8">Show Package Contents</strong></span> from the menu:</p><div class="mediaobject"><img src="../images/00165.jpeg" alt="Getting ready" class="calibre10"/></div><p class="calibre11"> </p><p class="calibre7">Now follow the path <code class="email">Contents/Resources/couchdbx-core/etc/couchdb</code>; here you should see a file <a id="id511" class="calibre1"/>called <code class="email">default.ini</code>. Open it and search <a id="id512" class="calibre1"/>for the variable <code class="email">bind_address</code>. Here you have to change from 127.0.0.1 to 0.0.0.0. Now return to the folder where the CouchDB app is located and open the app by double-clicking on it. Your web browser should open displaying the CouchDB front-end (called <span class="strong"><strong class="calibre8">Futon</strong></span>); keep it open for checking the results later.</p><p class="calibre7">A big detail that you have to bear in mind is that if you are going to use a physical device it must use the same Wi-Fi network as your computer; otherwise your device won't be able to find your database server.</p><p class="calibre7">Return to your Xcode and create a new project called <code class="email">Chapter 10 Voting</code>. Here you won't need <code class="email">CoreData</code>.</p></div></div>
+
+<div class="book" title="Designing a voting device using CouchDB">
+<div class="book" title="How to do it…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch10lvl2sec253" class="calibre1"/>How to do it…</h2></div></div></div><div class="book"><ol class="orderedlist"><li class="listitem" value="1">The first step is setting the database. Go to your web browser and click on the button Create database. If for any reason you closed your browser, just type the URL <code class="email">http://127.0.0.1:5984/_utils/</code>. When the website asks for a database name, write <code class="email">voting</code>:<div class="mediaobject"><img src="../images/00166.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="2">Inside this database we need to add a few documents. So press on the button that says <a id="id513" class="calibre1"/><span class="strong"><strong class="calibre8">New document</strong></span>.<div class="note" title="Note"><h3 class="title2"><a id="note44" class="calibre1"/>Note</h3><p class="calibre7">Documents in CouchDB are JSON dictionaries.</p></div></li><li class="listitem" value="3">For the first <a id="id514" class="calibre1"/>document, click on <span class="strong"><strong class="calibre8">Source</strong></span> and complete it as shown in the following code. Do not modify the _id value, leave the one that CouchDB gave you:<div class="informalexample"><pre class="programlisting">{
+   "_id": "608d7c9174f7caba4ab618d6810004cf",
+   "question": "What is your favorite computer programming language?",
+   "answers": [
+       {
+           "answer": "Swift",
+           "votes": []
+       },
+       {
+           "answer": "Objective-C",
+           "votes": []
+       },
+       {
+           "answer": "C",
+           "votes": []
+       }
+   ]
+}</pre></div></li><li class="listitem" value="4">Good, now press save document and let's repeat the operation with another document; this way <a id="id515" class="calibre1"/>we can be sure that the questions are being received from the database:<div class="informalexample"><pre class="programlisting">{
+   "_id": "608d7c9174f7caba4ab618d681001467",
+   "_rev": "3-41c057820d6cbd595e7db2bdf05610fe",
+   "question": "What is your favorite book?",
+   "answers": [
+       {
+           "answer": "Swift cookbook",
+           "votes": []
+       },
+       {
+           "answer": "Divine Comedy",
+           "votes": []
+       },
+       {
+           "answer": "Oxford dictionary",
+           "votes": []
+       }
+   ]
+}</pre></div></li><li class="listitem" value="5">Now we need to create an update handler, which is like a function that receives some data and completes a document for us. Click on new document and this time we need <a id="id516" class="calibre1"/>to change the document id because it will be called <code class="email">_design/voting</code>:<div class="informalexample"><pre class="programlisting">{
+   "_id": "_design/voting",
+   "updates": {
+       "addvote": "function(doc, req) { var json = JSON.parse(req.body); doc.answers[parseInt(json.answer)].votes.push(json.uid); return [doc, toJSON(doc)]}"
+   }
+}</pre></div></li><li class="listitem" value="6">The database part is done; therefore you have to go back to your Xcode project.<div class="note" title="Note"><h3 class="title2"><a id="note45" class="calibre1"/>Note</h3><p class="calibre7">Explaining how CouchDB works is out of the scope of this book; if you would like to learn how to use this database, there are good books and tutorials about it.</p></div></li><li class="listitem" value="7">Once you've returned to your Xcode project, click on the storyboard and add two labels and three buttons to your view. Write <code class="email">TODAY'S QUESTION</code> on the first label, which should be located at the top of the view. Below it, place the other label, which will contain the received question, and under that the three buttons. Don't worry about the text of these components, they will be changed programmatically.</li><li class="listitem" value="8">As usual, we <a id="id517" class="calibre1"/>have to link some <a id="id518" class="calibre1"/>components with the view controller; in this case we have to connect the question label and the three buttons:<div class="informalexample"><pre class="programlisting">    @IBOutlet var questionLabel: UILabel!
+    @IBOutlet var answer1button: UIButton!
+    @IBOutlet var answer2button: UIButton!
+    @IBOutlet var answer3button: UIButton!</pre></div></li><li class="listitem" value="9">Besides that, we will also add two attributes, one for the document id and another one for the common part of the request's URL. Remember that if you are using a device, you have to change the IP from <code class="email">127.0.0.1</code> to the one of your computer:<div class="informalexample"><pre class="programlisting">    var documentId:String?
+    
+    let baseurl = "http://127.0.0.1:5984/voting/"</pre></div></li><li class="listitem" value="10">Connect the three buttons with the same action called <code class="email">vote</code>. Leave this action empty for now:<div class="informalexample"><pre class="programlisting">    @IBAction func vote(sender: UIButton) {
+    }</pre></div></li><li class="listitem" value="11">When the application starts we need to receive the current questions that our database has, so let's just start calling a function that will do it for us on the <code class="email">viewDidLoad</code> method:<div class="informalexample"><pre class="programlisting">    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.chooseQuestion()
+    }</pre></div></li><li class="listitem" value="12">As you might imagine, we have to implement the <code class="email">chooseQuestion</code> method. This method will call the action <code class="email">_all_docs</code>, which returns the ID of every document on the database, including the special document <code class="email">_design/voting</code>. Once we have received the document we can choose one of them and request its data:<div class="informalexample"><pre class="programlisting">    private func chooseQuestion(){
+        var url = NSURL(string: baseurl + "_all_docs")!
+        var task = NSURLSession.sharedSession().dataTaskWithURL(url, completionHandler: {
+            data, response, error -&gt; Void in
+            if error != nil {
+                print(error.localizedDescription)
+            }
+      var jsonResult = [:]
+            do {
+            jsonResult = try NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers) as NSDictionary
+    } catch {
+        let alert = UIAlertController(title: "Error", message: "Error parsing JSON", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+    }
+            
+var invalid = true
+            var docid:String = ""
+            while invalid {
+            let rows  = jsonResult.valueForKey("rows") as NSArray
+            srandom(UInt32(time(nil)))
+            var choosenRow:Int = random() % rows.count
+            docid = (rows[choosenRow] as NSDictionary).valueForKey("id") as String
+                invalid = startsWith(docid, "_")
+            }
+            self.getQuestion( docid )
+        })
+        task.resume()
+    }</pre></div></li><li class="listitem" value="13">Once the application has decided which document it wants, we can request its data. The mechanism is similar to the previous one, but with the difference that <a id="id519" class="calibre1"/>when we receive the data <a id="id520" class="calibre1"/>we have to update the UI. As you know it must be done on the main thread:<div class="informalexample"><pre class="programlisting">    private func getQuestion(id:String){
+        self.documentId = id
+        var url = NSURL(string: baseurl + id)!
+        var task = NSURLSession.sharedSession().dataTaskWithURL(url, completionHandler: {
+            data, response, error -&gt; Void in
+            if error != nil {
+                print(error.localizedDescription)
+            }
+      var jsonResult = [:]
+            do {
+       jsonResult = try NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers) as NSDictionary
+    } catch {
+        let alert = UIAlertController(title: "Error", message: "Error parsing JSON", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+    }
+            
+            dispatch_async(dispatch_get_main_queue(), {
+                self.questionLabel.text = jsonResult.valueForKey("question")
+                var answers = jsonResult.valueForKey("answers") as [NSDictionary]
+                self.answer1button.setTitle(answers[0].valueForKey("answer") as? String, forState: .Normal)
+                self.answer2button.setTitle(answers[1].valueForKey("answer") as? String, forState: .Normal)
+                self.answer3button.setTitle(answers[2].valueForKey("answer") as? String, forState: .Normal)
+
+            })
+        })
+        task.resume()
+    }</pre></div></li><li class="listitem" value="14">If you press <a id="id521" class="calibre1"/>play now you are going to see a <a id="id522" class="calibre1"/>screen like the following one. It means that you have received a question with its possible answers from the database. However, if you choose any answer, nothing happens:<div class="mediaobject"><img src="../images/00167.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li><li class="listitem" value="15">Now it's time to implement the vote action. The idea is to check which button was pressed and then send this information with the device id to the database. This way <a id="id523" class="calibre1"/>our vote will be registered:<div class="informalexample"><pre class="programlisting">   @IBAction func vote(sender: UIButton) {
+        var answer:Int
+        switch sender {
+        case answer1button:
+            answer = 0
+        case answer2button:
+            answer = 1
+        case answer3button:
+            answer = 2
+        default:
+            return
+        }
+        // input
+        var params = ["answer":"\(answer)", "uid":UIDevice.currentDevice().identifierForVendor.UUIDString] as Dictionary&lt;String, String&gt;
+        var request = NSMutableURLRequest(URL: NSURL(string: baseurl + "_design/voting/_update/addvote/\(documentId!)")!)
+        request.HTTPMethod = "POST"
+        do {
+        request.HTTPBody = try NSJSONSerialization.dataWithJSONObject(params, options: nil)
+    } catch {
+        let alert = UIAlertController(title: "Error", message: "Error getting HTTP header", preferredStyle:.Alert)
+        self.presentViewController(alert, animated: true, completion: nil)
+    }
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        var task = NSURLSession.sharedSession().dataTaskWithRequest(request, completionHandler: {data, response, error -&gt; Void in
+            UIAlertView(title: nil, message: "Thanks for voting", delegate: nil, cancelButtonTitle: "OK").show()
+        })
+        task.resume()
+    }</pre></div></li><li class="listitem" value="16">The application is done, so now we have to check that it communicates with the database <a id="id524" class="calibre1"/>correctly. Press play again and <a id="id525" class="calibre1"/>choose an answer. You should receive an alert view thanking you, which is a good sign. After that go to the web browser again and open the chosen document; check that your device ID is there on the answer that you have selected:<div class="mediaobject"><img src="../images/00168.jpeg" alt="How to do it…" class="calibre10"/></div><p class="calibre14"> </p></li></ol><div class="calibre13"/></div></div></div>
+
+<div class="book" title="Designing a voting device using CouchDB">
+<div class="book" title="How it works…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch10lvl2sec254" class="calibre1"/>How it works…</h2></div></div></div><p class="calibre7">If you have worked with remote SQL databases you might know that usually you need a driver/connector, which should be compatible with your platform and can also be blocked by some firewalls.</p><p class="calibre7">CouchDB is a NoSQL database that works by exchanging JSON messages via http protocol, which makes our life easier, because we didn't have to add any controller, just receive and send JSON messages. Due to the way that this database works we had to develop a function for updating/inserting a new vote on the client size; remember that Swift is not <a id="id526" class="calibre1"/>JavaScript: adding a new element into a JSON array can give us more work than just developing a simple function.</p><p class="calibre7">Why did we have to <a id="id527" class="calibre1"/>cast to <code class="email">NSArray</code> and <code class="email">NSDictionary</code> a few times? The reason is that the <code class="email">NSJSONSerialization</code> was created on the Objective-C era, meaning that it is still not 100% prepared for Swift.</p><p class="calibre7">It is true that the way we worked could be better organized. The ideal way is by creating a layer for CouchDB, such as a framework or a library, however this task will be left as homework.</p></div></div>
+
+<div class="book" title="Designing a voting device using CouchDB">
+<div class="book" title="There's more…"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_4"><a id="ch10lvl2sec255" class="calibre1"/>There's more…</h2></div></div></div><p class="calibre7">In this chapter, we learned different ways of using databases on Swift; some of them are very straightforward and others require a better analysis.</p><p class="calibre7">In the next chapter, we are going to learn some new tricks, mainly those that are related to the new Xcode 6 and the iOS 8.</p></div></div></body></html>

@@ -1,0 +1,378 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;6.&#xA0;Make Swift Work For You &#x2013; Protocols and Generics"><div class="titlepage"><div><div><h1 class="title"><a id="ch06"/>Chapter 6. Make Swift Work For You – Protocols and Generics</h1></div></div></div><p>As we learned in <a class="link" href="ch02.html" title="Chapter 2. Building Blocks – Variables, Collections, and Flow Control">Chapter 2</a>, <span class="emphasis"><em>Building Blocks – Variables, Collections, and Flow Control</em></span>, Swift is a strongly typed language, which means that every piece of data must have a type. Not only can we take advantage of this to reduce the clutter in our code, we can also leverage it to let the compiler catch bugs for us. The earlier we catch a bug, the better. Besides not writing them in the first place, the earliest place where we can catch a bug is when the compiler reports an error.</p><p>Two big tools that Swift provides to achieve<a class="indexterm" id="id258"/> this are called <span class="strong"><strong>protocols</strong></span> and <span class="strong"><strong>generics</strong></span>. Both of them use the type system to make our intentions clear to the compiler so that it can catch more bugs for us.</p><p>In this chapter, we will cover the following topics:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Protocols</li><li class="listitem" style="list-style-type: disc">Generics</li><li class="listitem" style="list-style-type: disc">Extending existing generics</li><li class="listitem" style="list-style-type: disc">Extending protocols</li><li class="listitem" style="list-style-type: disc">Putting protocols and generics to use</li></ul></div><div class="section" title="Protocols"><div class="titlepage"><div><div><h1 class="title"><a id="ch06lvl1sec42"/>Protocols</h1></div></div></div><p>The first tool we will look <a class="indexterm" id="id259"/>at is <span class="strong"><strong>protocols</strong></span>. A protocol is essentially a contract that a type can sign, specifying that it will provide a certain interface to other components. This relationship is significantly looser than the relationship a subclass has with its superclass. A protocol does not provide any implementation to the types that implement them. Instead, a type can implement them in any way that they like.</p><p>Let's take a look at how we define a protocol, in order to understand them better.</p><div class="section" title="Defining a protocol"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec52"/>Defining a protocol</h2></div></div></div><p>Let's say we <a class="indexterm" id="id260"/>have some code that needs to interact with a collection of strings. We don't actually care what order they are stored in and we only need to be able to add and enumerate elements inside the container. One option would be to simply use an array, but an array does way more than we need it to. What if we decide later that we would rather write and read the elements from the file system? Furthermore, what if we want to write a container that would intelligently start using the file system as it got really large? We can make our code flexible enough to do this in the future by defining a string container protocol, which is a loose contract that defines what we need it to do. This protocol might look similar to the following code:</p><div class="informalexample"><pre class="programlisting">protocol StringContainer {
+    var count: Int { get }
+    mutating func addString(string: String)
+    func enumerateStrings(handler: (string: String) -&gt; Void)
+}</pre></div><p>Predictably, a protocol is defined using the <code class="literal">protocol</code> keyword, similar to a class or a structure. It also allows you to specify computed properties and methods. You cannot declare a stored property because it is not possible to create an instance of a protocol directly. You can only create instances of types that implement the protocol. Also, you may notice that none of the computed properties or methods provide implementations. In a protocol, you only provide the interface.</p><p>Since protocols cannot be initialized on their own, they are useless until we create a type that implements them. Let's take a look at how we can create a type that implements our <code class="literal">StringContainer</code> protocol.</p></div><div class="section" title="Implementing a protocol"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec53"/>Implementing a protocol</h2></div></div></div><p>A type "signs the contract" of a <a class="indexterm" id="id261"/>protocol in the same way that a class inherits from another class except that structures and enumerations can also implement protocols:</p><div class="informalexample"><pre class="programlisting">struct StringBag: StringContainer {
+    // Error: Type 'StringBag' does not conform to protocol 'StringContainer'
+}</pre></div><p>As you can see, once a type has claimed to implement a specific protocol, the compiler will give an error if it has not fulfilled the contract by implementing everything defined in the protocol. To satisfy the compiler, we must now implement the <code class="literal">count</code> computed property, mutating function <code class="literal">addString:</code>, and function <code class="literal">enumerateStrings:</code> as they are defined. We will do this by internally holding our values in an array:</p><div class="informalexample"><pre class="programlisting">struct StringBag: StringContainer {
+    var strings = [String]()
+    var count: Int {
+        return self.strings.count
+    }
+    
+    mutating func addString(string: String) {
+        self.strings.append(string)
+    }
+    
+    func enumerateStrings(handler: (string: String) -&gt; Void) {
+        for string in self.strings {
+            handler(string: string)
+        }
+    }
+}</pre></div><p>The <code class="literal">count</code> property will <a class="indexterm" id="id262"/>always just return the number of elements in our <code class="literal">strings</code> array. The <code class="literal">addString:</code> method can simply add the string to our array. Finally, our <code class="literal">enumerateString:</code> method just needs to loop through our array and call the handler with each element.</p><p>At this point, the compiler is satisfied that <code class="literal">StringBag</code> is fulfilling its contract with the <code class="literal">StringContainer</code> protocol.</p><p>Now, we can similarly create a class that implements the <code class="literal">StringContainer</code> protocol. This time, we will implement it using an internal dictionary instead of an array:</p><div class="informalexample"><pre class="programlisting">class SomeSuperclass {}
+class StringBag2: SomeSuperclass, StringContainer {
+    var strings = [String:Void]()
+    var count: Int {
+        return self.strings.count
+    }
+    
+    func addString(string: String) {
+        self.strings[string] = ()
+    }
+    
+    func enumerateStrings(handler: (string: String) -&gt; Void) {
+        for string in self.strings.keys {
+            handler(string: string)
+        }
+    }
+}</pre></div><p>Here we can see that a class can both inherit from a superclass and implement a protocol. The superclass always has to come first in the list, but you can implement as many protocols as you want, separating each one with a comma. In fact, a structure and enumeration can also implement multiple protocols.</p><p>With this<a class="indexterm" id="id263"/> implementation we are doing something slightly strange with the dictionary. We defined it to have no values; it is simply a collection of keys. This allows us to store our strings without any regard to the order they are in.</p><p>Now, when we create instances, we can actually assign any instance of any type that implements our protocol to a variable that is defined to be our protocol, just like we can with superclasses:</p><div class="informalexample"><pre class="programlisting">var someStringBag: StringContainer = StringBag()
+someStringBag.addString("Sarah")
+someStringBag = StringBag2()
+someStringBag.addString("Sarah")</pre></div><p>When a variable is defined with our protocol as its type, we can only interact with it using the interface that the protocol defines. This is a great way to abstract implementation details and create more flexible code. By being less restrictive on the type that we want to use, we can easily change our code without affecting how we use it. Protocols provide the same benefit that superclasses do, but in an even more flexible and comprehensive way, because they can be implemented by all types and a type can implement an unlimited number of protocols. The only benefit that superclasses provide over protocols is that superclasses share their implementations with their children.</p></div><div class="section" title="Using type aliases"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec54"/>Using type aliases</h2></div></div></div><p>Protocols can<a class="indexterm" id="id264"/> be made more flexible using a feature called <span class="strong"><strong>type aliases</strong></span>. They <a class="indexterm" id="id265"/>act as a placeholder for a type that will be defined <a class="indexterm" id="id266"/>later when the protocol is being implemented. For example, instead of creating an interface that specifically includes strings, we can create an interface for a container that can hold any type of value, as shown:</p><div class="informalexample"><pre class="programlisting">protocol Container {
+    typealias Element
+    
+    mutating func addElement(element: Element)
+    func enumerateElements(handler: (element: Element) -&gt; Void)
+}</pre></div><p>As you can see, this protocol creates a type alias called <code class="literal">Element</code> using the keyword <code class="literal">typealias</code>. It does not actually specify a real type; it is just a placeholder for a type that will be defined later. Everywhere we have previously used a string, we simply refer to it as <code class="literal">Element</code>.</p><p>Now, we can create another string bag that uses the new <code class="literal">Container</code> protocol with a type alias instead <a class="indexterm" id="id267"/>of the <code class="literal">StringContainer</code> protocol. To do this, we not only <a class="indexterm" id="id268"/>need to implement each of the methods, we also need to give a definition for the type alias, as shown:</p><div class="informalexample"><pre class="programlisting">struct StringBag3: Container {
+    typealias Element = String
+
+    var elements = [Element:Void]()
+
+    var count: Int {
+        return elements.count
+    }
+
+    mutating func addElement(element: Element) {
+        self.elements[element] = ()
+    }
+
+    func enumerateElements(handler: (element: Element) -&gt; Void) {
+        for element in self.elements.keys {
+            handler(element: element)
+        }
+    }
+}</pre></div><p>With this code, we have specified that the <code class="literal">Element</code> type alias should be a string for this implementation using an equal sign (<code class="literal">=</code>). This code continues to use the type alias for all of the properties and methods, but you can also use string since they are in fact the same thing now.</p><p>Using the type alias actually makes it really easy for us to create another structure that can hold integers instead of strings:</p><div class="informalexample"><pre class="programlisting">struct IntBag: Container {
+    typealias Element = Int
+
+    var elements = [Element:Void]()
+
+    var count: Int {
+        return elements.count
+    }
+
+    mutating func addElement(element: Element) {
+        self.elements[element] = ()
+    }
+
+    func enumerateElements(handler: (element: Element) -&gt; Void) {
+        for element in self.elements.keys {
+            handler(element: element)
+        }
+    }
+}</pre></div><p>The only <a class="indexterm" id="id269"/>difference between these two pieces of code is that the type alias has been defined to be an integer in the second case instead of a string. We could use copy and paste to create a container of virtually any type, but as usual, doing a lot of copy and paste is a sign that there is a better solution. Also, you may notice that our new <code class="literal">Container</code> protocol isn't actually that useful on its own because with our existing techniques, we can't treat a variable as just a <code class="literal">Container</code>. If we are going to interact with an instance that implements this protocol, we need to know what type it has assigned the type alias to.</p><p>Swift provides a tool called <span class="strong"><strong>generics</strong></span> to solve both of these problems.</p></div></div></div>
+<div class="section" title="Generics"><div class="titlepage"><div><div><h1 class="title"><a id="ch06lvl1sec43"/>Generics</h1></div></div></div><p>A generic is very <a class="indexterm" id="id270"/>similar to a type alias. The difference is that the exact type of a generic is determined by the context in which it is being used, instead of being determined by the implementing types. This also means that a generic only has a single implementation that must support all possible types. Let's start by defining a generic function.</p><div class="section" title="Generic function"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec55"/>Generic function</h2></div></div></div><p>In <a class="link" href="ch05.html" title="Chapter 5. A Modern Paradigm – Closures and Functional Programming">Chapter 5</a>, <span class="emphasis"><em>A Modern Paradigm – Closures and Functional Programming</em></span>, we created a function that helped us find the first number in <a class="indexterm" id="id271"/>an array of numbers that passes a test:</p><div class="informalexample"><pre class="programlisting">func firstInNumbers(
+    numbers: [Int],
+    passingTest: (number: Int) -&gt; Bool
+    ) -&gt; Int?
+{
+    for number in numbers {
+        if passingTest(number: number) {
+            return number
+        }
+    }
+    return nil
+}</pre></div><p>This would be great if we only ever dealt with arrays of <code class="literal">integers</code>, but clearly it would be helpful to be able to do this with other types. In fact, dare I say, all types? We achieve this very simply by making our function generic. A generic function is declared similar to a normal<a class="indexterm" id="id272"/> function, but you include a list of comma-separated placeholders inside angled brackets (<code class="literal">&lt;&gt;</code>) at the end of the function name, as shown:</p><div class="informalexample"><pre class="programlisting">func firstInArray&lt;ValueType&gt;(
+    array: [ValueType],
+    passingTest: (value: ValueType) -&gt; Bool
+    ) -&gt; ValueType?
+{
+    for value in array {
+        if passingTest(value: value) {
+            return value
+        }
+    }
+    return nil
+}</pre></div><p>In this function, we have declared a single placeholder called <code class="literal">ValueType</code>. Just like with type aliases, we can continue to use this type in our implementation. This will stand in for a single type that will be determined when we go to use the function. You can imagine inserting <code class="literal">String</code> or any other type into this code instead of <code class="literal">ValueType</code> and it would still work.</p><p>We use this function similarly to any other function, as shown:</p><div class="informalexample"><pre class="programlisting">var strings = ["This", "is", "a", "sentence"]
+var numbers = [1, 1, 2, 3, 5, 8, 13]
+firstInArray(strings, passingTest: {$0 == "a"}) // "a"
+firstInArray(numbers, passingTest: {$0 &gt; 10}) // 13</pre></div><p>Here, we have used <code class="literal">firstInArray:passingTest:</code> with both an array of strings and an array of numbers. The compiler figures out what type to substitute in for the placeholder based on the variables we pass into the function. In the first case, <code class="literal">strings</code> is an array of <code class="literal">String</code>. It compares that to <code class="literal">[ValueType]</code> and assumes that we want to replace <code class="literal">ValueType</code> with <code class="literal">String</code>. The same thing happens with our <code class="literal">Int</code> array in the second case.</p><p>So what happens if the type we use in our closure doesn't match the type of array we pass in?</p><div class="informalexample"><pre class="programlisting">firstInArray(numbers, passingTest: {$0 == "a"}) // Cannot convert
+// value of type '[Int]' to expected argument type'[_]'</pre></div><p>As you can see, we get an error that the types don't match.</p><p>You may have noticed that we have actually used generic functions before. All of the built in functions we looked at in <a class="link" href="ch05.html" title="Chapter 5. A Modern Paradigm – Closures and Functional Programming">Chapter 5</a>, <span class="emphasis"><em>A Modern Paradigm – Closures and Functional Programming</em></span>, such as <code class="literal">map</code> and <code class="literal">filter</code> are generic; they can be used with any type.</p><p>We have even experienced generic types before. Arrays and dictionaries are also generic. The Swift team <a class="indexterm" id="id273"/>didn't have to write a new implementation of array and dictionary for every type that we might want to use inside the containers; they created them as generic types.</p></div><div class="section" title="Generic type"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec56"/>Generic type</h2></div></div></div><p>Similar to a <a class="indexterm" id="id274"/>generic function, a generic type is defined just like a normal type but it has a list of placeholders at the end of its name. Earlier in this chapter, we created our own containers for strings and <code class="literal">integers</code>. Let's make a generic version of these containers, as shown:</p><div class="informalexample"><pre class="programlisting">struct Bag&lt;ElementType&gt; {
+    var elements = [ElementType]()
+
+    mutating func addElement(element: ElementType) {
+        self.elements.append(element)
+    }
+
+    func enumerateElements(
+        handler: (element: ElementType) -&gt; ()
+        )
+    {
+        for element in self.elements {
+            handler(element: element)
+        }
+    }
+}</pre></div><p>This implementation looks similar to our type alias versions, but we are using the <code class="literal">ElementType</code> placeholder instead.</p><p>While a generic function's placeholders are determined when the function is called, a generic type's placeholders are determined when initializing new instances:</p><div class="informalexample"><pre class="programlisting">var stringBag = Bag(elements: ["This", "is", "a", "sentence"])
+var numberBag = Bag(elements: [1, 1, 2, 3, 5, 8, 13])</pre></div><p>All future interactions with a generic instance must use the same types for its placeholders. This is actually one of the beauties of generics where the compiler does work for us. If we create an instance of one type and accidently try to use it as a different type, the compiler won't let us. This protection does not exist in many other programming languages, including Apple's previous language: Objective-C.</p><p>One interesting case to consider is if we try to initialize a bag with an empty array:</p><div class="informalexample"><pre class="programlisting">var emptyBag = Bag(elements: []) // Cannot invoke initilaizer for
+// type 'Bag&lt;_&gt;' with an argument list of type '(elements: [_])'</pre></div><p>As you can see, we get an error that the compiler could not determine the type to assign to our generic placeholder. We can solve this by giving an explicit type to the generic we are assigning it to:</p><div class="informalexample"><pre class="programlisting">var emptyBag: Bag&lt;String&gt; = Bag(elements: [])</pre></div><p>This is great <a class="indexterm" id="id275"/>because not only can the compiler determine the generic placeholder types based on the variables we pass to them, it can also determine the type based on how we are using the result.</p><p>We have already seen how to use generics in a powerful way. We solved the first problem we discussed in the type alias section about copying and pasting a bunch of implementations for different types. However, we have not yet figured out how to solve the second problem: how do we write a generic function to handle any type of our <code class="literal">Container</code> protocol? The answer is that we can use <span class="strong"><strong>type constraints</strong></span>.</p></div><div class="section" title="Type constraints"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec57"/>Type constraints</h2></div></div></div><p>Before <a class="indexterm" id="id276"/>we<a class="indexterm" id="id277"/> jump right into solving the problem, let's take a look at a simpler form of type constraints.</p><div class="section" title="Protocol constraints"><div class="titlepage"><div><div><h3 class="title"><a id="ch06lvl3sec11"/>Protocol constraints</h3></div></div></div><p>Let's say that we <a class="indexterm" id="id278"/>want to write a function that can determine the index of an instance within an array using an equality check. Our first attempt will probably look similar to the following code:</p><div class="informalexample"><pre class="programlisting">func indexOfValue&lt;T&gt;(value: T, inArray array: [T]) -&gt; Int? {
+    var index = 0
+    for testValue in array {
+        if testValue == value { // Error: Cannot invoke '=='
+            return index
+        }
+        index++
+    }
+    return nil
+}</pre></div><p>With this attempt, we get an error that we cannot invoke the equality operator (<code class="literal">==</code>). This is because our implementation must work for any possible type that might be assigned to our placeholder. Not every type in Swift can be tested for equality. To fix this problem, we can use a type constraint to tell the compiler that we only want to allow our function to be called with types that support the equality operation. We add type constraints by requiring the placeholder to implement a protocol. In this case, Swift provides a protocol called <code class="literal">Equatable</code>, which we can use:</p><div class="informalexample"><pre class="programlisting">func indexOfValue&lt;T: Equatable&gt;(
+    value: T,
+    inArray array: [T]
+    ) -&gt; Int?
+{
+    var index = 0
+    for testValue in array {
+        if testValue == value {
+            return index
+        }
+        index++
+    }
+    return nil
+}</pre></div><p>A type constraint<a class="indexterm" id="id279"/> looks similar to a type implementing a protocol using a colon (<code class="literal">:</code>) after a placeholder name. Now, the compiler is satisfied that every possible type can be compared using the equality operator. If we were to try to call this function with a type that is not equatable, the compiler would produce an error:</p><div class="informalexample"><pre class="programlisting">class MyType {}
+var typeList = [MyType]()
+indexOfValue(MyType(), inArray: typeList)
+// Cannot convert value of type '[MyType]' to expected
+// argument type '[_]'</pre></div><p>This is another case where the compiler can save us from ourselves.</p><p>We can also add type constraints to our generic types. For example, if we tried to create a bag with our dictionary implementation without a constraint, we would get an error:</p><div class="informalexample"><pre class="programlisting">struct Bag2&lt;ElementType&gt; {
+    var elements: [ElementType:Void]
+    // Type 'ElementType' does not conform to protocol 'Hashable'
+}</pre></div><p>This is because the key of dictionaries has a constraint that it must be <code class="literal">Hashable</code>. Dictionary is defined as <code class="literal">struct Dictionary&lt;Key : Hashable, Value&gt;</code>. <code class="literal">Hashable</code> basically means that the type can be represented using an integer. In fact, we can look at exactly what it means if we write <code class="literal">Hashable</code> in Xcode and then click on it while holding down the <span class="emphasis"><em>Command</em></span> Key. This brings us to the definition of <code class="literal">Hashable</code>, which has comments that explain that the hash value of two objects that are equal must be the same. This is important to the way that <code class="literal">Dictionary</code> is implemented. So, if we want to be able to store our elements as keys in a dictionary, we must also add the <code class="literal">Hashable</code> constraint:</p><div class="informalexample"><pre class="programlisting">struct Bag2&lt;ElementType: Hashable&gt; {
+    var elements: [ElementType:Void]
+
+    mutating func addElement(element: ElementType) {
+        self.elements[element] = ()
+    }
+
+    func enumerateElements(
+        handler: (element: ElementType) -&gt; ()
+        )
+    {
+        for element in self.elements.keys {
+            handler(element: element)
+        }
+    }
+}</pre></div><p>Now the <a class="indexterm" id="id280"/>compiler is happy and we can start to use our <code class="literal">Bag2</code> struct with any type that is <code class="literal">Hashable</code>. We are close to solving our <code class="literal">Container</code> problem, but we need a constraint on the type alias of <code class="literal">Container</code>, not <code class="literal">Container</code> itself. To do that, we can use a <code class="literal">where</code> clause.</p></div><div class="section" title="Where clauses for protocols"><div class="titlepage"><div><div><h3 class="title"><a id="ch06lvl3sec12"/>Where clauses for protocols</h3></div></div></div><p>You can <a class="indexterm" id="id281"/>specify any number of <code class="literal">where</code> clauses you want after you have defined each placeholder type. They allow you to represent more complicated relationships. If we want to write a function that can check if our container contains a particular value, we can require that the element type is equatable:</p><div class="informalexample"><pre class="programlisting">func container&lt;C: Container where C.Element: Equatable&gt;(
+    container: C,
+    hasElement element: C.Element
+    ) -&gt; Bool
+{
+    var hasElement = false
+    container.enumerateElements { testElement in
+        if element == testElement {
+            hasElement = true
+        }
+    }
+    return hasElement
+}</pre></div><p>Here, we have specified a placeholder <code class="literal">C</code> that must implement the <code class="literal">Container</code> protocol; it must also have an <code class="literal">Element</code> type that is <code class="literal">Equatable</code>.</p><p>Sometimes we may also want to enforce a relationship between multiple placeholders. To do that, we can use an equality test inside the <code class="literal">where</code> clauses.</p></div><div class="section" title="Where clauses for equality"><div class="titlepage"><div><div><h3 class="title"><a id="ch06lvl3sec13"/>Where clauses for equality</h3></div></div></div><p>If we want to write a <a class="indexterm" id="id282"/>function that can merge one container into another while still allowing the exact types to vary, we could write a function that would require that the containers hold the same value:</p><div class="informalexample"><pre class="programlisting">func merged&lt;C1: Container, C2: Container where C1.Element == C2.Element&gt;(
+    lhs: C1,
+    rhs: C2
+    ) -&gt; C1
+{
+    var merged = lhs
+    rhs.enumerateElements { element in
+        merged.addElement(element)
+    }
+    return merged
+}</pre></div><p>Here, we have specified two different placeholders: <code class="literal">C1</code> and <code class="literal">C2</code>. Both of them must implement the <code class="literal">Container</code> protocol and they must also contain the same <code class="literal">Element </code>type. This allows us to add elements from the second container into a copy of the first container that we return at the end.</p><p>Now that we know how to create our own generic functions and types, let's take a look at how we can extend existing generics.</p></div></div></div>
+<div class="section" title="Extending generics"><div class="titlepage"><div><div><h1 class="title"><a id="ch06lvl1sec44"/>Extending generics</h1></div></div></div><p>The two main <a class="indexterm" id="id283"/>generics that we will probably want to extend are arrays and dictionaries. These are the two most prominent containers provided by Swift and are used in virtually every app. Extending a generic type is simple once you understand that an extension itself does not need to be generic.</p><div class="section" title="Adding methods to all forms of a generic"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec58"/>Adding methods to all forms of a generic</h2></div></div></div><p>Knowing that<a class="indexterm" id="id284"/> an array is declared as <code class="literal">struct Array&lt;Element&gt;</code>, your first instinct to extend an array might look something similar to this:</p><div class="informalexample"><pre class="programlisting">extension Array&lt;Element&gt; { // Use of undeclared type 'Element'
+    // ...
+}</pre></div><p>However, as you can see, you would get an error. Instead, you can simply leave out the placeholder specification and still use the <code class="literal">Element</code> placeholder inside your implementations. Your other instinct might be to declare <code class="literal">Element</code> as a placeholder for your individual methods:</p><div class="informalexample"><pre class="programlisting">extension Array {
+    func someMethod&lt;Element&gt;(element: Element) {
+        // ...
+    }
+}</pre></div><p>This is <a class="indexterm" id="id285"/>more dangerous because the compiler doesn't detect an error. This is wrong because you are actually declaring a new placeholder <code class="literal">Element</code> to be used within the method. This new <code class="literal">Element</code> has nothing to do with the <code class="literal">Element</code> defined in <code class="literal">Array</code> itself. For example, you might get a confusing error if you tried to compare a parameter to the method to an element of the Array:</p><div class="informalexample"><pre class="programlisting">extension Array {
+    mutating func addElement&lt;Element&gt;(element: Element) {
+        self.append(element)
+        // Cannot invoke 'append' with argument list
+        // of type '(Element)'
+    }
+}</pre></div><p>This is because the <code class="literal">Element</code> defined in <code class="literal">Array</code> cannot be guaranteed to be the exact same type as the new <code class="literal">Element</code> defined in <code class="literal">addElement:</code>. You are free to declare additional placeholders in methods on generic types, but it is best to give them unique names so that they don't hide the type's version of the placeholder.</p><p>Now that we understand this, let's add an extension to the array that allows us to test if it contains an element passing a test:</p><div class="informalexample"><pre class="programlisting">extension Array {
+    func hasElementThatPasses(
+        test: (element: Element) -&gt; Bool
+        ) -&gt; Bool
+    {
+        for element in self {
+            if test(element: element) {
+                return true
+            }
+        }
+        return false
+    }
+}</pre></div><p>As you can see, we continue to use the placeholder <code class="literal">Element</code> within our extension. This allows us to call the passed in test closure for each element in the array. Now, what if we want to be <a class="indexterm" id="id286"/>able to add a method that will check if an element exists using the equality operator? The problem that we will run into is that array does not place a type constraint on <code class="literal">Element</code> requiring it to be <code class="literal">Equatable</code>. To do this, we can add an extra constraint to our extension.</p></div><div class="section" title="Adding methods to only certain instances of a generic"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec59"/>Adding methods to only certain instances of a generic</h2></div></div></div><p>A <a class="indexterm" id="id287"/>constraint on an extension is written as a <code class="literal">where</code> clause, as shown:</p><div class="informalexample"><pre class="programlisting">extension Array where Element: Equatable {
+    func containsElement(element: Element) -&gt; Bool {
+        for testElement in self {
+            if testElement == element {
+                return true
+            }
+        }
+        return false
+    }
+}</pre></div><p>Here we add a constraint that guarantees that our element is equatable. This means that we will only be able to call this method on arrays that have equatable elements:</p><div class="informalexample"><pre class="programlisting">[1,2,3,4,5].containsElement(4) // true
+class MyType {}
+var typeList = [MyType]()
+typeList.containsElement(MyType()) // Type 'MyType' does not
+// conform to protocol 'Equtable'</pre></div><p>Again, Swift is protecting us from accidently trying to call this method on an array that it wouldn't work for.</p><p>These are the building blocks that we have to play with generics. However, we actually have one more feature of protocols that we have not discussed, which works really well in combination with generics.</p></div><div class="section" title="Extending protocols"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec60"/>Extending protocols</h2></div></div></div><p>We first discussed <a class="indexterm" id="id288"/>how we can extend existing types in <a class="link" href="ch03.html" title="Chapter 3. One Piece at a Time – Types, Scopes, and Projects">Chapter 3</a>, <span class="emphasis"><em>One Piece at a Time – Types, Scopes, and Projects</em></span>. In Swift 2, Apple added the ability to extend protocols. This has some fascinating implications, but before we dive into those, let's take a look at an example of adding a method to the <code class="literal">Comparable</code> protocol:</p><div class="informalexample"><pre class="programlisting">extension Comparable {
+    func isBetween(a: Self, b: Self) -&gt; Bool {
+        return a &lt; self &amp;&amp; self &lt; b
+    }
+}</pre></div><p>This <a class="indexterm" id="id289"/>adds a method to all types that implement the Comparable. This means that it will now be available on any of the built-in types that are comparable and any of our own types that are comparable:</p><div class="informalexample"><pre class="programlisting">6.isBetween(4, b: 7) // true
+"A".isBetween("B", b: "Z") // false</pre></div><p>This is a really powerful tool. In fact, this is how the Swift team implemented many of the functional methods we saw in <a class="link" href="ch05.html" title="Chapter 5. A Modern Paradigm – Closures and Functional Programming">Chapter 5</a>, <span class="emphasis"><em>A Modern Paradigm – Closures and Functional Programming</em></span>. They did not have to implement the map method on arrays, dictionaries, or on any other sequence that should be mappable; instead, they implemented it directly on <code class="literal">SequenceType</code>.</p><p>This shows that similarly, protocol extensions can be used for inheritance, and it can also be applied to both classes and structures and types can also inherit this functionality from multiple different protocols because there is no limit to the number of protocols a type can implement. However, there are two major differences between the two.</p><p>First, types cannot inherit stored properties from protocols, because extensions cannot define them. Protocols can define read only properties but every instance will have to redeclare them as properties:</p><div class="informalexample"><pre class="programlisting">protocol Building {
+    var squareFootage: Int {get}
+}
+
+struct House: Building {
+    let squareFootage: Int
+}
+
+struct Factory: Building {
+    let squareFootage: Int
+}</pre></div><p>Second, method overriding does not work in the same way with protocol extensions. With protocols, Swift does not intelligently figure out which version of a method to call based on the actual type of an instance. With class inheritance, Swift will call the version of a method that is most directly associated with the instance. Remember, when we called clean on an instance of our House subclass in <a class="link" href="ch03.html" title="Chapter 3. One Piece at a Time – Types, Scopes, and Projects">Chapter 3</a>, <span class="emphasis"><em>One Piece at a Time – Types, Scopes, and Projects</em></span>, it calls the overriding version of clean, as shown:</p><div class="informalexample"><pre class="programlisting">class Building {
+    // ...
+
+    func clean() {
+        print(
+            "Scrub \(self.squareFootage) square feet of floors"
+        )
+    }
+}
+
+class House: Building {
+    // ...
+
+    override func clean() {
+        print("Make \(self.numberOfBedrooms) beds")
+        print("Clean \(self.numberOfBathrooms) bathrooms")
+    }
+}
+
+let building: Building = House(
+    squareFootage: 800,
+    numberOfBedrooms: 2,
+    numberOfBathrooms: 1
+)
+building.clean()
+// Make 2 beds
+// Clean 1 bathroom</pre></div><p>Here, even<a class="indexterm" id="id290"/> though the building variable is defined as a <code class="literal">Building</code>, it is in fact a house; so Swift will call the house's version of clean. The contrast with protocol extensions is that it will call the version of the method that is defined by the exact type the variable is declared as:</p><div class="informalexample"><pre class="programlisting">protocol Building {
+    var squareFootage: Int {get}
+}
+
+extension Building {
+    func clean() {
+        print(
+            "Scrub \(self.squareFootage) square feet of floors"
+        )
+    }
+}
+
+struct House: Building {
+    let squareFootage: Int
+    let numberOfBedrooms: Int
+    let numberOfBathrooms: Double
+
+    func clean() {
+        print("Make \(self.numberOfBedrooms) beds")
+        print("Clean \(self.numberOfBathrooms) bathrooms")
+    }
+}
+
+let house = House(
+    squareFootage: 1000,
+    numberOfBedrooms: 2,
+    numberOfBathrooms: 1.5
+)
+house.clean()
+// Make 2 beds
+// Clean 1.5 bathrooms
+
+(house as Building).clean()
+// Scrub 1000 square feet of floors</pre></div><p>When we <a class="indexterm" id="id291"/>call clean on the house variable which is of type <code class="literal">House</code>, it calls the house version; however, when we cast the variable to a <code class="literal">Building</code> and then call it, it calls the building version.</p><p>All of this shows that it can be hard to choose between using structures and protocols or class inheritance. We will look at the last piece of that consideration in the next chapter on memory management, so we will be able to make a fully informed decision when moving forward.</p><p>Now that we have looked at the features available to us with generics and protocols, let's take this opportunity to explore some more advanced ways protocols and generics are used in Swift.</p></div></div>
+<div class="section" title="Putting protocols and generics to use"><div class="titlepage"><div><div><h1 class="title"><a id="ch06lvl1sec45"/>Putting protocols and generics to use</h1></div></div></div><p>One cool part <a class="indexterm" id="id292"/>of Swift is generators and sequences. They provide an<a class="indexterm" id="id293"/> easy way to iterate over a list of values. Ultimately, they boil down to two different protocols: <code class="literal">GeneratorType</code> and <code class="literal">SequenceType</code>. If you implement the <code class="literal">SequenceType</code> protocol in your custom types, it allows you to use the for-in loop over an instance of your type. In this section, we will look at how we can do that.</p><div class="section" title="Generators"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec61"/>Generators</h2></div></div></div><p>The most <a class="indexterm" id="id294"/>critical part of this is the <code class="literal">GeneratorType</code> protocol. Essentially, a generator is an object that you can repeatedly ask for the next object in a series until there are no objects left. Most of the time you can simply use an array for this, but it is not always the best solution. For example, you can even make a generator that is infinite.</p><p>There is a famous infinite series of numbers called the Fibonacci sequence, where every number in the series is the sum of the two previous numbers. This is especially famous because it is found all over nature from the number of bees in a nest to the most pleasing aspect ratio of a rectangle to look at. Let's create an infinite generator that will produce this series.</p><p>We start by creating a structure that implements the <code class="literal">GeneratorType</code> protocol. The protocol is made up of two pieces. First, it has a type alias for the type of elements in the sequence and second, it has a mutating method called <code class="literal">next</code> that returns the next object in the sequence.</p><p>The implementation looks similar to this:</p><div class="informalexample"><pre class="programlisting">struct FibonacciGenerator: GeneratorType {
+    typealias Element = Int
+    
+    var values = (0, 1)
+    
+    mutating func next() -&gt; Element? {
+        self.values = (
+            self.values.1,
+            self.values.0 + self.values.1
+        )
+        return self.values.0
+    }
+}</pre></div><p>We defined a property called <code class="literal">values</code> that is a tuple representing the previous two values in the sequence. We update <code class="literal">values</code> and return the first element of the tuple each time <code class="literal">next</code> is called. This means that there will be no end to the sequence.</p><p>We can use this generator on its own by instantiating it and then repeatedly calling next inside a while loop:</p><div class="informalexample"><pre class="programlisting">var generator = FibonacciGenerator()
+while let next = generator.next() {
+    if next &gt; 10 {
+        break
+    }
+    print(next)
+}
+// 1, 1, 2, 3, 5, 8</pre></div><p>We need to set up some sort of a condition so that the loop doesn't go on forever. In this case, we <a class="indexterm" id="id295"/>break out of the loop once the numbers get above 10. However, this code is pretty ugly, so Swift also defines the protocol called <code class="literal">SequenceType</code> to clean it up.</p></div><div class="section" title="Sequences"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec62"/>Sequences</h2></div></div></div><p><code class="literal">SequenceType</code> is <a class="indexterm" id="id296"/>another protocol that is defined as having a type alias for a <code class="literal">GeneratorType</code> and a method called <code class="literal">generate</code> that returns a new generator of that type. We could declare a simple sequence for our <code class="literal">FibonacciGenerator</code>, as follows:</p><div class="informalexample"><pre class="programlisting">struct FibonacciSequence: SequenceType {
+    typealias Generator = FibonacciGenerator
+    
+    func generate() -&gt; Generator {
+        return FibonacciGenerator()
+    }
+}</pre></div><p>Every for-in loop operates on the <code class="literal">SequenceType</code> protocol, so now we can use a for-in loop on our <code class="literal">FibonacciSequence</code>:</p><div class="informalexample"><pre class="programlisting">for next in FibonacciSequence() {
+    if next &gt; 10 {
+        break
+    }
+    print(next)
+}</pre></div><p>This is pretty cool; we can easily iterate over the Fibonacci sequence in a very readable way. It is much easier to understand the preceding code than it would be to understand a complicated while loop that has to calculate the next value of the sequence each time. Imagine all of the other type of sequences we can design such as prime numbers, random name generators, and so on.</p><p>However, it is not always ideal to have to define two different types to create a single sequence. To fix this, we can use generics. Swift provides a generic type called <code class="literal">AnyGenerator</code> with a companion function called <code class="literal">anyGenerator:</code>. This function takes a closure and returns a generator that uses the closure as its next method. This means that we don't have to explicitly create a generator ourselves; instead we can use <code class="literal">anyGenerator:</code> directly in a sequence:</p><div class="informalexample"><pre class="programlisting">struct FibonacciSequence2: SequenceType {
+    typealias Generator = AnyGenerator&lt;Int&gt;
+
+    func generate() -&gt; Generator {
+        var values = (0, 1)
+        return anyGenerator({
+            values = (values.1, values.0 + values.1)
+            return values.0
+        })
+    }
+}</pre></div><p>In this<a class="indexterm" id="id297"/> version of <code class="literal">FibonacciSequence</code>, we create a new generator every time generate is called that takes a closure that does the same thing that our original <code class="literal">FibonacciGenerator</code> was doing. We declare the <code class="literal">values</code> variable outside of the closure so that we can use it to store the state between calls to the closure. If your generator is simple and doesn't require a complicated state, using the <code class="literal">AnyGenerator</code> generic is a great way to go.</p><p>Now let's use this <code class="literal">FibonacciSequence</code> to solve the kind of math problem that computers are great at.</p></div><div class="section" title="Product of Fibonacci numbers under 50"><div class="titlepage"><div><div><h2 class="title"><a id="ch06lvl2sec63"/>Product of Fibonacci numbers under 50</h2></div></div></div><p>What if <a class="indexterm" id="id298"/>we want to know what is the result of multiplying every number in the Fibonacci sequence under 50? We can try to use a calculator and painstakingly enter in all of the numbers, but it is much more efficient to do it in Swift.</p><p>Let's start by creating a generic <code class="literal">SequenceType</code> that will take another sequence type and limit it to stop the sequence once it has reached a maximum number. We need to make sure that the type of the maximum value matches the type in the sequence and also that the element type is comparable. For that, we can use a where clause on the element type:</p><div class="informalexample"><pre class="programlisting">struct SequenceLimiter&lt;
+    S: SequenceType where S.Generator.Element: Comparable
+    &gt;: SequenceType
+{
+    typealias Generator = AnyGenerator&lt;S.Generator.Element&gt;
+    let sequence: S
+    let max: S.Generator.Element
+
+    init(_ sequence: S, max: S.Generator.Element) {
+        self.sequence = sequence
+        self.max = max
+    }
+
+    func generate() -&gt; Generator {
+        var g = self.sequence.generate()
+        return anyGenerator({
+            if let next = g.next() {
+                if next &lt;= self.max {
+                    return next
+                }
+            }
+            return nil
+        })
+    }
+}</pre></div><p>Notice that<a class="indexterm" id="id299"/> when we refer to the element type, we must go through the generator type.</p><p>When our <code class="literal">SequenceLimiter</code> structure is created, it stores the original sequence. This is so that it can use the result of its <code class="literal">generate</code> method each time <code class="literal">generate</code> is called on this parent sequence. Each call to <code class="literal">generate</code> needs to start the sequence over again. It then creates an <code class="literal">AnyGenerator</code> with a closure that calls <code class="literal">next</code> on the locally initialized generator of the original sequence. If the value returned by the original generator is greater than or equal to the maximum value, we return <code class="literal">nil</code>, indicating that the sequence is over.</p><p>We can even add an extension to <code class="literal">SequenceType</code> with a method that will create a limiter for us:</p><div class="informalexample"><pre class="programlisting">extension SequenceType where Generator.Element: Comparable {
+    func limit(max: Generator.Element) -&gt; SequenceLimiter&lt;Self&gt; {
+        return SequenceLimiter(self, max: max)
+    }
+}</pre></div><p>We use <code class="literal">Self</code> as a placeholder representing the specific type of the instance the method is being called on.</p><p>Now, we can easily limit our Fibonacci sequence to only values under 50:</p><div class="informalexample"><pre class="programlisting">FibonacciSequence().limit(50)</pre></div><p>The last part we need to solve our problem is the ability to find the product of a sequence. We can do this with another extension. In this case, we are only going to support sequences that contain <code class="literal">Int</code>s so that we can ensure that the elements can be multiplied:</p><div class="informalexample"><pre class="programlisting">extension SequenceType where Generator.Element == Int {
+    var product: Generator.Element {
+        return self.reduce(1, combine: *)
+    }
+}</pre></div><p>This method takes advantage of the reduce function to start with the value one and multiply it by every value in the sequence. Now we can do our final calculation easily:</p><div class="informalexample"><pre class="programlisting">FibonacciSequence().limit(50).product // 2,227,680</pre></div><p>Almost<a class="indexterm" id="id300"/> instantaneously, our program will return the result 2,227,680. Now we can really understand why we call these devices computers.</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch06lvl1sec46"/>Summary</h1></div></div></div><p>Protocols and generics are definitely complex, but we have seen that they can be used to effectively let the compiler protect us from ourselves. In this chapter, we have covered how protocols are like contracts for types to sign. We have also seen that protocols can be made more flexible using type aliases. Generics allow us to take full advantage of protocols with type aliases and also allow us to create powerful and flexible types that adapt to the contexts in which they are used. Finally, we looked at how we can use protocols and generics in the form of sequences and generators to solve a complex math problem in a very clean and understandable way, as an inspiration to solve other types of problems just as cleanly.</p><p>At this point we have covered all of the core features of the Swift language. We are now ready to look a little bit deeper at how data is actually stored while a program is run and how we can best manage the resources used by our programs.</p></div></body></html>

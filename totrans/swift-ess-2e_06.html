@@ -1,0 +1,544 @@
+<html><head></head><body>
+<div id="page" style="height:0pt"/><div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data"><div class="book" id="1AT9A2-d7e55eb5242648e89c396442afe4f84b"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch06" class="calibre1"/>Chapter 6. Parsing Networked Data</h1></div></div></div><p class="calibre8">Many iOS applications need to communicate with other servers or devices. This chapter presents both HTTP and non-HTTP networking in Swift, and how data can be parsed from either JSON or XML. It first demonstrates how to load data efficiently from URLs, followed by how to stream larger data responses. It then concludes with how to perform both synchronous and asynchronous network requests over protocols other than HTTP.</p><p class="calibre8">This chapter will present the following topics:</p><div class="book"><ul class="itemizedlist"><li class="listitem">Loading data from URLs</li><li class="listitem">Updating the user interface from a background thread</li><li class="listitem">Parsing JSON and XML data</li><li class="listitem">Stream-based connections</li><li class="listitem">Asynchronous data communication</li></ul></div></div>
+
+<div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data">
+<div class="book" title="Loading data from URLs"><div class="book"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_1"><a id="ch06lvl1sec38" class="calibre1"/>Loading data from URLs</h1></div></div></div><p class="calibre8">The most <a id="id284" class="calibre1"/>common way to load data from a remote network source is to use an HTTP (or HTTPS) URL of the form <a class="calibre1" href="https://raw.githubusercontent.com/alblue/com.packtpub.swift.essentials/master/CustomViews/CustomViews/SampleTable.json">https://raw.githubusercontent.com/alblue/com.packtpub.swift.essentials/master/CustomViews/CustomViews/SampleTable.json</a>.</p><p class="calibre8">URLs can be manipulated with the <code class="literal">NSURL</code> class, which comes from the <code class="literal">Foundation</code> module (which is transitively imported from the <code class="literal">UIKit</code> module). The main <code class="literal">NSURL</code> initializer takes a <code class="literal">String</code> initializer with a full URL, although other initializers exist to create relative URLs or for references to file paths.</p><p class="calibre8">The <code class="literal">NSURLSession</code> class is typically used to perform operations with URLs, and individual sessions can be created through the initializer or the standard <span class="strong"><strong class="calibre2">shared session</strong></span> can be used. The <code class="literal">NSURLConnection</code> class was used in older versions of iOS and Mac OS X. References to this class can still be seen in some tutorials, or may be required if Mac OS X 10.8 or iOS 6 needs to be supported; otherwise, the <code class="literal">NSURLSession</code> class should be preferred.</p><p class="calibre8">The <code class="literal">NSURLSession</code> class provides a means to create tasks. These include:</p><div class="book"><ul class="itemizedlist"><li class="listitem"><span class="strong"><strong class="calibre2">Data task:</strong></span> This can be used to process network data programmatically</li><li class="listitem"><span class="strong"><strong class="calibre2">Upload task:</strong></span> This can be used to upload data to a remote server</li><li class="listitem"><span class="strong"><strong class="calibre2">Download task:</strong></span> This can be used to download to local storage or to resume a previous or partial download</li></ul></div><p class="calibre8">Tasks are <a id="id285" class="calibre1"/>created from the <code class="literal">NSURLSession</code> class methods, and can take a URL argument and an optional <span class="strong"><em class="calibre11">completion handler</em></span>. A completion handler is a lot like a delegate, except that it can be customized per task, and it is usually represented as a function.</p><p class="calibre8">Tasks can be <span class="strong"><em class="calibre11">suspended</em></span> or <span class="strong"><em class="calibre11">resumed</em></span> to stop and start the process. Tasks are created in a suspended state by default, and so they have to be initially resumed to start processing.</p><p class="calibre8">When a data task completes, the completion handler is called back with three arguments: an <code class="literal">NSData</code> object that represents the returned data, an <code class="literal">NSURLResponse</code> object that represents the response from the remote URL server, and an optional <code class="literal">NSError</code> object if anything failed during the request.</p><p class="calibre8">With this in place, the <code class="literal">SampleTable</code> that was created in the previous chapter can load data from a network URL by obtaining a session, initiating a data task, and then resuming it. The completion handler will get called when the data is available, which can be used to add the content to the table.</p><p class="calibre8">Modify the <code class="literal">viewDidLoad</code> method of the <code class="literal">SampleTable</code> class to load the <code class="literal">SampleTable.json</code> file by adding the following to the end of the method:</p><div class="note"><pre class="programlisting">let url = NSURL(string: "https://raw.githubusercontent.com/
+  alblue/com.packtpub.swift.essentials/master/
+  CustomViews/CustomViews/SampleTable.json")!
+let session = NSURLSession.sharedSession()
+let encoding = NSUTF8StringEncoding
+let task = session.dataTaskWithURL(url,completionHandler:
+ {data,response,error -&gt; Void in
+  let contents = String(data:data!,encoding:encoding)!
+  self.items += [(url.absoluteString,contents)]
+<span class="strong"><strong class="calibre2">  // table data won't reload – needs to be on ui thread</strong></span>
+  self.tableView.reloadData()
+})
+task.resume()</pre></div><p class="calibre8">This creates an <code class="literal">NSURL</code> and an <code class="literal">NSURLSession</code>, and then creates a data, task and immediately resumes it. After the content is downloaded, the completion handler is called, which passes the data as an <code class="literal">NSData</code> object. The <code class="literal">String</code> initializer is used to decode <code class="literal">UTF8</code> text from the <code class="literal">NSData</code> object, and is explicitly cast to a <code class="literal">String</code> so that it can be added to the <code class="literal">items</code> array.</p><div class="note" title="Note"><h3 class="title2"><a id="tip50" class="calibre1"/>Tip</h3><p class="calibre8">The <code class="literal">NSURLSession</code> class also provides other factory methods, including one that takes a configuration argument that includes options, such as whether responses should be cached, whether network connections should go over the cellular network, and whether any cookies or other headers should be sent with the task.</p></div><p class="calibre8">Finally, the <a id="id286" class="calibre1"/>item is added to the <code class="literal">items</code> and the <code class="literal">tableView</code> is reloaded to show the new data. Please note that this does not work immediately if it is not run on the main UI thread; the table has to be rotated or moved in order to redraw the display. Running on the UI thread is covered in the <span class="strong"><em class="calibre11">Networking and user interface</em></span> section later in this chapter.</p></div></div>
+
+<div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data">
+<div class="book" title="Loading data from URLs">
+<div class="book" title="Dealing with errors"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch06lvl2sec78" class="calibre1"/>Dealing with errors</h2></div></div></div><p class="calibre8">Errors <a id="id287" class="calibre1"/>are a fact of life, especially on mobile devices with intermittent connectivity. The completion handler is called with a third argument, which represents any error raised during the operation. If this is <code class="literal">nil</code>, then the operation was a success; if not, then the <code class="literal">localizedDescription</code> property of the <code class="literal">error</code> can be used to notify the user.</p><p class="calibre8">For testing purposes, if an error is detected add the <code class="literal">localizedDescription</code> to the <code class="literal">items</code> in the list. Modify the <code class="literal">viewDidLoad</code> method as follows:</p><div class="note"><pre class="programlisting">let task = session.dataTaskWithURL(url, completionHandler:
+ {data,response,error -&gt; Void in
+  if <span class="strong"><strong class="calibre2">error == nil {</strong></span>
+    let contents = String(data:data!,encoding:encoding)!
+    self.items += [(url.absoluteString,contents)]
+  <span class="strong"><strong class="calibre2">} else {</strong></span>
+<span class="strong"><strong class="calibre2">    self.items += [("Error",error!.localizedDescription)]</strong></span>
+<span class="strong"><strong class="calibre2">  }</strong></span>
+<span class="strong"><strong class="calibre2">  // table data won't reload – needs to be on UI thread</strong></span>
+  self.tableView.reloadData()
+})</pre></div><p class="calibre8">An error can be simulated using a nonexistent hostname or an unknown protocol in the URL.</p></div></div></div>
+
+<div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data">
+<div class="book" title="Loading data from URLs">
+<div class="book" title="Dealing with missing content"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch06lvl2sec79" class="calibre1"/>Dealing with missing content</h2></div></div></div><p class="calibre8">Errors <a id="id288" class="calibre1"/>are reported if the remote server cannot be contacted, such as when the hostname is incorrect or the server is down. If the server is operational, then an error will not be reported; but it is still possible that the file that is requested will not be found, or that the server will experience an error while serving the request. These are reported with HTTP status codes.</p><div class="note" title="Note"><h3 class="title2"><a id="note46" class="calibre1"/>Note</h3><p class="calibre8">If an HTTP URL is not found, the server sends back a <code class="literal">404</code> status code. This can be used by the client to determine whether a different file should be accessed or whether another server should be queried. For example, browsers will often ask the server for a <code class="literal">favicon.ico</code> file and use this to display a small logo; if this file is missing, then a generic page icon is displayed instead. In general, <code class="literal">4xx</code> responses are client errors, while <code class="literal">5xx</code> responses are server errors.</p></div><p class="calibre8">The <code class="literal">NSURLResponse</code> object<a id="id289" class="calibre1"/> doesn't have the concept of an HTTP status code, because it can be used for any protocol, including <code class="literal">ftp</code>. However, if the request used HTTP, then the response is likely to be HTTP and so it can be cast to an <code class="literal">NSURLHttpResponse</code>, which has a <code class="literal">statusCode</code> property. This can be used to provide more specific feedback when the file is not found. Modify the code as follows:</p><div class="note"><pre class="programlisting">if error == nil {
+  <span class="strong"><strong class="calibre2">let httpResponse = response as! NSHTTPURLResponse</strong></span>
+<span class="strong"><strong class="calibre2">  let statusCode = httpResponse.statusCode</strong></span>
+<span class="strong"><strong class="calibre2">  if (statusCode &gt;= 400 &amp;&amp; statusCode &lt; 500) {</strong></span>
+<span class="strong"><strong class="calibre2">    self.items += [("Client error \(statusCode)",</strong></span>
+<span class="strong"><strong class="calibre2">     url.absoluteString)]</strong></span>
+<span class="strong"><strong class="calibre2">  } else if (statusCode &gt;= 500) {</strong></span>
+<span class="strong"><strong class="calibre2">    self.items += [("Server error \(statusCode)",</strong></span>
+<span class="strong"><strong class="calibre2">     url.absoluteString)]</strong></span>
+<span class="strong"><strong class="calibre2">  } else {</strong></span>
+    let contents = String(data:data!,encoding:encoding)!
+    self.items += [(url.absoluteString,contents)]
+  <span class="strong"><strong class="calibre2">}</strong></span>
+} else {...}</pre></div><p class="calibre8">Now, if the server responds but indicates that either the client made a bad request or the server suffered a problem, the user interface will be updated appropriately.</p></div></div></div>
+
+<div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data">
+<div class="book" title="Loading data from URLs">
+<div class="book" title="Nested if and switch statements"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_4"><a id="ch06lvl2sec80" class="calibre1"/>Nested if and switch statements</h2></div></div></div><p class="calibre8">Sometimes, the<a id="id290" class="calibre1"/> error handling logic can get convoluted with handling different cases, particularly if there are different values that need to be tested. In the previous section, both the <code class="literal">NSError</code> and HTTP <code class="literal">statusCode</code> needed to be checked.</p><p class="calibre8">An alternative approach is to use a <code class="literal">switch</code> statement with <code class="literal">where</code> clauses. These can be used to test multiple different conditions and also show which part of the condition is being tested. Although a <code class="literal">switch</code> statement requires a single expression, it is possible to use a <span class="strong"><em class="calibre11">tuple</em></span> to group multiple values into a single expression.</p><p class="calibre8">Another <a id="id291" class="calibre1"/>advantage of using a tuple is that it permits the cases to be matched on types. In the networking case, some URLs are based on <code class="literal">http</code> or <code class="literal">https</code>, which means that the response will be an <code class="literal">NSHTTPURLResponse</code> type. However, if the URL is a different type (such as a <code class="literal">file</code> or <code class="literal">ftp</code> protocol), then it will be of a different subtype of <code class="literal">NSURLResponse</code>. Unconditionally casting to <code class="literal">NSHTTPURLResponse</code> with <code class="literal">as</code> will fail in these cases and cause a crash.</p><p class="calibre8">The tests can be rewritten as a <code class="literal">switch</code> block as follows:</p><div class="note"><pre class="programlisting">switch (data,response,error) {
+  case (_,_,let e) where e != nil:
+    self.items += [("Error",e.localizedDescription)]
+  case (_,let r as NSHTTPURLResponse,_) 
+   where r.statusCode &gt;= 400 &amp;&amp; r.statusCode &lt; 500:
+    self.items += [("Client error \(r.statusCode)",
+     url.absoluteString)]
+  // see note below
+  case (_,let r as NSHTTPURLResponse,_) 
+   where r.statusCode &gt;= 500:
+    self.items += [("Server error \(r.statusCode)",
+      url.absoluteString)]
+  default:
+    let contents = String(data:data!,encoding:encoding)!
+    self.items += [(url.absoluteString,contents)]
+}</pre></div><p class="calibre8">In this example, the <code class="literal">default</code> block is used to execute the success condition, and the prior <code class="literal">case</code> statements are used to match the error conditions.</p><p class="calibre8">The <code class="literal">case (_,_,let e) where e != nil</code> case is an example of a <span class="strong"><em class="calibre11">conditional pattern match</em></span>. The underscore, which is called a <span class="strong"><em class="calibre11">wildcard pattern</em></span> in Swift (also known as a <span class="strong"><strong class="calibre2">hole</strong></span> in other languages), is something that will match any value. The third parameter, <code class="literal">let e</code>, is a <span class="strong"><em class="calibre11">value binding pattern</em></span>, and has the effect of <code class="literal">let e = error</code> in this case. Finally, the <code class="literal">where</code> clause adds the test to ensure this case only occurs when <code class="literal">e</code> is not <code class="literal">nil</code>.</p><div class="note" title="Note"><h3 class="title2"><a id="tip51" class="calibre1"/>Tip</h3><p class="calibre8">It would be possible to use the identifier <code class="literal">error</code> instead of <code class="literal">let e</code> in the <code class="literal">case</code> statement, using <code class="literal">case (_,_,_) where error != nil</code> would have had the same effect. However, it is bad practice to capture values outside of the <code class="literal">switch</code> statement for case matching purposes because if the <code class="literal">error</code> variable is renamed, then the <code class="literal">case</code> statement may become invalid. Generally, use <code class="literal">let</code> patterns inside <code class="literal">case</code> statements to ensure that the correct expression value is being matched.</p></div><p class="calibre8">The second and third cases perform both a <code class="literal">let</code> assignment and a type test/conversion. When <code class="literal">case (_,let r as NSHTTPURLResponse,_)</code> is matched, not only is the value of that part in the tuple assigned the constant <code class="literal">r</code>, but it is also cast to an <code class="literal">NSHTTPURLRepsonse</code>. If the value is not of type <code class="literal">NSHTTPURLResponse</code>, then the case statement is automatically skipped. This is equivalent to an <code class="literal">if</code> test with an <code class="literal">is</code> expression followed by a cast with <code class="literal">as</code>.</p><p class="calibre8">Although <a id="id292" class="calibre1"/>the patterns are the same in both, the <code class="literal">where</code> clauses are different. The first <code class="literal">where</code> clause looks for the case where <code class="literal">r.statusCode</code> is 400 or greater and less than 500, while the second is matched where <code class="literal">r.statusCode</code> is 500 or greater.</p><div class="note" title="Note"><h3 class="title2"><a id="tip52" class="calibre1"/>Tip</h3><p class="calibre8">Whether nested <code class="literal">if</code> statements or the <code class="literal">switch</code> statement is used, the code that performs the test is likely to be very similar. It typically comes down to developer preference, but more developers are likely to be familiar with nested <code class="literal">if</code> statements. In Swift, the <code class="literal">switch</code> statement is more powerful than in other languages, and so, this kind of pattern is likely to become more popular.</p></div><p class="calibre8">An alternative with Swift 2 is to use the <code class="literal">guard</code> statement to ensure that if certain error conditions occur, then appropriate action can be taken instead. The <code class="literal">guard</code> statement is like an <code class="literal">if</code> statement where there is no <code class="literal">true</code> block and the <code class="literal">false</code> block must always leave the function. For example, the code could be rewritten as:</p><div class="note"><pre class="programlisting">guard error == nil else {
+  self.items += [("Error",error!.localizedDescription)]
+  return
+}
+let statusCode = (response as! NSHTTPURLResponse).statusCode
+
+guard statusCode &lt; 500 else {
+  self.items += [("Server error \(statusCode)",
+    url.absoluteString)]
+  return
+}
+
+guard statusCode &lt; 400 else {
+  self.items += [("Client error \(statusCode)",
+   url.absoluteString)]
+  return
+}
+
+let contents = String(data:data!,encoding:encoding)!
+self.items += [(url.absoluteString,contents)]</pre></div><p class="calibre8">Please note that the <code class="literal">guard</code> block must exit the calling function; so, if additional operations are required, either the body of the implementation must be moved to a different <a id="id293" class="calibre1"/>function or the <code class="literal">switch</code> or <code class="literal">if</code> blocks used instead. The examples later in this chapter assume the use of the <code class="literal">if</code> blocks for simplicity.</p></div></div></div>
+
+<div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data">
+<div class="book" title="Loading data from URLs">
+<div class="book" title="Networking and user interfaces"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_5"><a id="ch06lvl2sec81" class="calibre1"/>Networking and user interfaces</h2></div></div></div><p class="calibre8">One<a id="id294" class="calibre1"/> outstanding problem with the current callback approach is that the callback cannot be guaranteed to be called from the <span class="strong"><em class="calibre11">main thread</em></span>. As a result, user interface operations may not work correctly or throw errors. The right solution is to set up another call using the main thread.</p><p class="calibre8">Accessing the main thread in Swift is done in the same way as it is in Objective-C: using <span class="strong"><strong class="calibre2">Grand Central Dispatch</strong></span> (<span class="strong"><strong class="calibre2">GCD</strong></span>). The <span class="strong"><em class="calibre11">main queue</em></span> can be accessed with <code class="literal">dispatch_get_main_queue</code>, which is used by the thread that all UI updates should use. Background tasks are submitted with <code class="literal">dispatch_async</code> to a queue. To invoke the <code class="literal">reloadData</code> call on the main thread, wrap it as follows:</p><div class="note"><pre class="programlisting">
+<span class="strong"><strong class="calibre2">dispatch_async(dispatch_get_main_queue(), {</strong></span>
+  self.tableView.reloadData()
+<span class="strong"><strong class="calibre2">})</strong></span>
+</pre></div><p class="calibre8">This style of <a id="id295" class="calibre1"/>call will be valid for both Objective-C and Swift (although Objective-C uses the ^ (caret) as a block prefix). However, Swift has a special syntax for functions that take blocks; the block can be promoted out of the function's argument and left as a trailing argument. This is known as a <span class="strong"><em class="calibre11">trailing closure</em></span>:</p><div class="note"><pre class="programlisting">
+<span class="strong"><strong class="calibre2">dispatch_async(dispatch_get_main_queue()) {</strong></span>
+  self.tableView.reloadData()
+<span class="strong"><strong class="calibre2">}</strong></span>
+</pre></div><p class="calibre8">Although this is a minor difference, it makes it look like <code class="literal">dispatch_async</code> is more like a keyword, such as <code class="literal">if</code> or <code class="literal">switch</code>, which takes a block of code. This can be used for any function whose final argument is a function; there is no special syntax needed in the function definition. Additionally, the same technique works for functions that are defined outside of Swift; in the case of <code class="literal">dispatch_async</code>, the function is defined as a C-language function and can be transparently used in a portable way.</p></div></div></div>
+
+<div class="book" title="Chapter&#xA0;6.&#xA0;Parsing Networked Data">
+<div class="book" title="Loading data from URLs">
+<div class="book" title="Running functions on the main thread"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_6"><a id="ch06lvl2sec82" class="calibre1"/>Running functions on the main thread</h2></div></div></div><p class="calibre8">Whenever <a id="id296" class="calibre1"/>the UI needs to be updated, the update must be run on the main thread. This can be done using the previous pattern to perform updates as they will always be threaded. However, it can be a pain to remember to do this each time it is required.</p><p class="calibre8">It is possible to build a Swift function that takes another function and runs it on the main thread automatically. <code class="literal">NSThread.isMainThread</code> can be used to determine whether the current thread <a id="id297" class="calibre1"/>is the UI thread or not; so to run a block of code on the main thread, regardless of whether it's on the main thread or not, the following can be used:</p><div class="note"><pre class="programlisting">func runOnUIThread(fn:()-&gt;()) {
+  if NSThread.isMainThread() {
+    fn()
+  } else {
+    dispatch_async(dispatch_get_main_queue(), fn)
+  }
+}</pre></div><p class="calibre8">This allows code to be submitted to the background thread using:</p><div class="note"><pre class="programlisting">self.runOnUIThread(self.tableView.reloadData)</pre></div><div class="note" title="Note"><h3 class="title2"><a id="tip53" class="calibre1"/>Tip</h3><p class="calibre8">Due to the lack of parenthesis, the <code class="literal">reloadData</code> function is not called, but it is passed in as a function pointer. It is dispatched to the correct thread inside the <code class="literal">runOnUIThread</code> function.</p></div><p class="calibre8">If there is more than one function that needs to be called, an inline block can be created. As this can be passed as a trailing closure to the <code class="literal">runOnUIThread</code> method, the parenthesis are optional:</p><div class="note"><pre class="programlisting">self.runOnUIThread {
+  self.tableView.backgroundColor = UIColor.redColor()
+  self.tableView.reloadData()
+  self.tableView.backgroundColor = UIColor.greenColor()
+}</pre></div></div></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Parsing JSON" id="1BRPS1-d7e55eb5242648e89c396442afe4f84b"><div class="book"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch06lvl1sec39" class="calibre1"/>Parsing JSON</h1></div></div></div><p class="calibre8">The <a id="id298" class="calibre1"/>most popular mechanism to send structured data over a network is to encode it in <span class="strong"><strong class="calibre2">JSON</strong></span>, which stands for <span class="strong"><strong class="calibre2">JavaScript Object Notation</strong></span>. This provides a hierarchical tree data structure, which can store simple numeric, logical, and string-based types, along with array and dictionary representations.</p><p class="calibre8">Both Mac OS X and iOS come with a built-in parser for JSON documents, in the <code class="literal">NSJSONSerialization</code> class. This provides a means to parse a data object and return an <code class="literal">NSDictionary</code> that contains the key/value pairs of a JSON object, or an <code class="literal">NSArray</code> to represent JSON arrays. Other literals are parsed and are represented as either <code class="literal">NSNumber</code> or <code class="literal">NSString</code> values.</p><p class="calibre8">The JSON parser uses <code class="literal">JSONObjectWithData</code> to create an object from an <code class="literal">NSData</code> object containing a string. This is typically the format that is returned by network APIs, and it can be created<a id="id299" class="calibre1"/> from an existing string using <code class="literal">dataUsingEncoding</code> with one of the built-in encoding types, such as <code class="literal">NSUTF8StringEncoding</code>.</p><p class="calibre8">A simple JSON array of numbers can be parsed as follows:</p><div class="note"><pre class="programlisting">let array = "[1,2,3]".dataUsingEncoding(NSUTF8StringEncoding)!
+let parsed = try? NSJSONSerialization.JSONObjectWithData(
+  array, options:.AllowFragments)</pre></div><p class="calibre8">The return type of this is an optional <code class="literal">AnyObject</code>. The optionality represents the fact that the data content may not be valid JSON data. This can be cast to an appropriate type using the <code class="literal">as</code> keyword; if there is a parsing failure, then an error will be thrown.</p><p class="calibre8">The <code class="literal">options</code> can be used to indicate whether the return type should be mutable or not. Mutable data allows the caller to add or delete items after being returned from the parsing function; if not specified, the return value will be immutable. The <code class="literal">NSJSONReadingOptions</code> options include <code class="literal">MutableContainers</code> (containing data structures are mutable), <code class="literal">MutableLeaves</code> (the child leaves are mutable), and <code class="literal">AllowFragments</code> (allow nonobject, non-array values to be parsed).</p><p class="calibre8">The <code class="literal">SampleTable.json</code> file (referred to in the <code class="literal">viewDidLoad</code> method) stores an array of entries, with <code class="literal">title</code> and <code class="literal">content</code> fields holding text data per entry:</p><div class="note"><pre class="programlisting">[{"title":"Sample Title","content":"Sample Content"}]</pre></div><p class="calibre8">To parse the JSON file and entries to the table, replace the <code class="literal">default</code> clause in the <code class="literal">SampleTable</code> with the following:</p><div class="note"><pre class="programlisting">default:
+  let parsed = try? NSJSONSerialization.JSONObjectWithData(
+    data!, options:.AllowFragments) as! NSArray
+  for entry in parsed {
+    self.items += 
+      [(entry["title"] as! String,
+        entry["content"] as! String)]
+  }</pre></div><p class="calibre8">Running the application will show the <span class="strong"><strong class="calibre2">Sample Title</strong></span> and <span class="strong"><strong class="calibre2">Sample Content</strong></span> entries in the table, which have been loaded and parsed from the book's GitHub repository.</p></div>
+
+<div class="book" title="Parsing JSON" id="1BRPS1-d7e55eb5242648e89c396442afe4f84b">
+<div class="book" title="Handling errors"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch06lvl2sec83" class="calibre1"/>Handling errors</h2></div></div></div><p class="calibre8">If there <a id="id300" class="calibre1"/>are problems parsing the JSON data then the return type of the <code class="literal">try? JSONObjectWithData</code> function will return a <code class="literal">nil</code> value. If the type is implicitly unwrapped, then accessing the element will cause an error:</p><div class="note"><pre class="programlisting">do {
+ let parsed = try NSJSONSerialization.JSONObjectWithData(data!,
+ options:.AllowFragments) {
+  // do something with parsed
+} catch let error as NSError {
+  self.items += [("Error", 
+   "Cannot parse JSON \(error.localizedDescription)")]
+  // show message to user
+}</pre></div><p class="calibre8">The <code class="literal">parsed</code> value<a id="id301" class="calibre1"/> will be of type <code class="literal">AnyObject?</code> although the <code class="literal">let</code> block will implicitly unwrap the value, known as <span class="strong"><em class="calibre11">optional binding</em></span>. In the previous section, the code was cast to an <code class="literal">NSArray</code> directly, but if the returned result contains different types (for example, an <code class="literal">NSDictionary</code> or one of the fragment types <code class="literal">NSNumber</code> or <code class="literal">NSString</code>), then attempting to cast to a type that is incompatible with the runtime type will cause a failure.</p><p class="calibre8">The type of the object can be tested with <code class="literal">if [object] is [type]</code>. However, as the next step is usually to cast it to a different class with <code class="literal">as</code>, a shorthand form <code class="literal">as?</code> can perform both the test and the cast in one step:</p><div class="note"><pre class="programlisting">
+<code class="literal"> if let array = parsed as? NSArray {</code>
+  for entry in array {
+    // process elements
+  }
+} else {
+  self.items += [("Error", "JSON is not an array")]
+}</pre></div><p class="calibre8">A <code class="literal">switch</code> statement can be used to check the type of multiple values at the same time. As the values are optional <code class="literal">AnyObject</code> objects, they need to be converted to a <code class="literal">String</code> before they can be used in Swift:</p><div class="note"><pre class="programlisting">for entry in array {
+  switch (entry["title"], entry["content"]) {
+    case (let title as String, let content as String):
+      self.items += [(title,content)]
+    default:
+      self.items += [("Error", "Missing unknown entry")]
+  }
+}</pre></div><p class="calibre8">Now when the application is run, any errors are detected and handled without the application crashing.</p></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Parsing XML" id="1CQAE1-d7e55eb5242648e89c396442afe4f84b"><div class="book"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch06lvl1sec40" class="calibre1"/>Parsing XML</h1></div></div></div><p class="calibre8">Although <a id="id302" class="calibre1"/>JSON is more commonly used, there are still many XML-based network services. Fortunately XML parsing has existed in iOS since version 5 in the <code class="literal">NSXMLParser</code> class and is simple to access from Swift. For example, some data feeds (such as blog posts) use XML documents, such as Atom or RSS.</p><p class="calibre8">The <code class="literal">NSXMLParser</code> is a stream-oriented parser; that is, it reports individual elements as they are seen. The parser calls the <code class="literal">delegate</code> to notify when elements are seen and have finished. When an element is seen, the parser also includes any attributes that were present; and for text nodes, the string content. Parsing an XML file involves some state management in the parser. The example used in this section will be to parse an Atom (news feed) file, whose (simplified) structure looks like this:</p><div class="note"><pre class="programlisting">&lt;feed &gt;
+  &lt;title&gt;AlBlue's Blog&lt;/title&gt;
+  &lt;link href="http://alblue.bandlem.com/atom.xml" rel="self"/&gt;
+  &lt;entry&gt;
+    &lt;title type="html"&gt;QConLondon and Swift Essentials&lt;/title&gt;
+    &lt;link href="http://alblue.bandlem.com/2015/01/qcon-swift-essentials.html"/&gt;
+    ... 
+  &lt;/entry&gt;
+  ...
+&lt;/feed&gt; </pre></div><p class="calibre8">In this case, the goal is to extract all the <code class="literal">entry</code> elements from the feed, specifically the <code class="literal">title</code> and the <code class="literal">link</code>. This presents a few challenges that will become apparent later on.</p></div>
+
+<div class="book" title="Parsing XML" id="1CQAE1-d7e55eb5242648e89c396442afe4f84b">
+<div class="book" title="Creating a parser delegate"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch06lvl2sec84" class="calibre1"/>Creating a parser delegate</h2></div></div></div><p class="calibre8">Parsing<a id="id303" class="calibre1"/> an XML file requires creating a class that conforms to the <code class="literal">NSXMLParserDelegate</code> protocol. To do this, create a new class, <code class="literal">FeedParser</code>, that extends <code class="literal">NSObject</code> and conforms to the <code class="literal">NSXMLParserDelegate</code> protocol.</p><p class="calibre8">It should have an <code class="literal">init</code> method that takes an <code class="literal">NSData</code>, and an <code class="literal">items</code> property that will be used to acquire the results after they have been parsed:</p><div class="note"><pre class="programlisting">class FeedParser: NSObject, NSXMLParserDelegate {
+  var items:[(String,String)] = []
+  init(_ data:NSData) {
+    // parse XML
+  }
+}</pre></div><div class="note" title="Note"><h3 class="title2"><a id="tip54" class="calibre1"/>Tip</h3><p class="calibre8">The <code class="literal">NSXMLParserDelegate</code> protocol requires that the object also conform to the <code class="literal">NSObjectProtocol</code>. The easiest way to do this is to subclass <code class="literal">NSObject</code>. The first mentioned super type is the super class; the second and subsequent super types must be protocols.</p></div></div></div>
+
+<div class="book" title="Parsing XML" id="1CQAE1-d7e55eb5242648e89c396442afe4f84b">
+<div class="book" title="Downloading the data"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch06lvl2sec85" class="calibre1"/>Downloading the data</h2></div></div></div><p class="calibre8">The <a id="id304" class="calibre1"/>XML parser can either parse a stream of data as it is downloaded, or it can take an <code class="literal">NSData</code> object that has been downloaded previously. On successful download, the <code class="literal">FeedParser</code> can be used to parse the <code class="literal">NSData</code> instance and return the list of items.</p><p class="calibre8">Although individual expressions can be assigned temporary values that are similar to last time, the statement can be written in a single line (although please note that the error handling is not present). Add the following to the end of the <code class="literal">viewDidLoad</code> method of <code class="literal">SampleTable</code>:</p><div class="note"><pre class="programlisting">session.dataTaskWithURL(
+  NSURL(string:"https://alblue.bandlem.com/Tag/swift/atom.xml")!,
+  completionHandler: {data,response,error -&gt; Void in
+    if let data = data {
+      self.items += FeedParser(data).items
+      self.runOnUIThread(self.tableView.reloadData)
+    }
+}).resume()</pre></div><p class="calibre8">This will download the Atom XML feed for the Swift posts from the author's blog at <a class="calibre1" href="https://alblue.bandlem.com">https://alblue.bandlem.com</a>. Currently, the data is not parsed, so nothing will be added to the table in this step.</p><div class="note" title="Note"><h3 class="title2"><a id="tip55" class="calibre1"/>Tip</h3><p class="calibre8">Make sure that both the download operation and the parsing are handled off the main thread as both of these operations may take some time. Once the data is downloaded, it can be parsed, and after it is parsed, the UI can be notified to redisplay the contents.</p></div></div></div>
+
+<div class="book" title="Parsing XML" id="1CQAE1-d7e55eb5242648e89c396442afe4f84b">
+<div class="book" title="Parsing the data"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch06lvl2sec86" class="calibre1"/>Parsing the data</h2></div></div></div><p class="calibre8">To <a id="id305" class="calibre1"/>process the downloaded XML file, it is necessary to parse the data. This involves writing a parser delegate to listen for the <code class="literal">title</code> and <code class="literal">link</code> elements. However, the <code class="literal">title</code> and <code class="literal">link</code> elements exist both at the individual <code class="literal">entry</code> level and also at the top level of the blog. It is therefore necessary to represent some kind of state in the parser, which detects when the parser is inside an <code class="literal">entry</code> element to allow the correct values to be used.</p><p class="calibre8">Elements are reported with the <code class="literal">parser:didStartElement:</code> method and the <code class="literal">parser:didEndElement:</code> method. This can be used to determine if the parser is inside an <code class="literal">entry</code> element by <a id="id306" class="calibre1"/>setting a boolean value when an <code class="literal">entry</code> element starts and resetting it when the <code class="literal">entry</code> element ends. Add the following to the <code class="literal">FeedParser</code> class:</p><div class="note"><pre class="programlisting">var inEntry:Bool = false
+func parser(parser: NSXMLParser,
+ didStartElement elementName: String,
+ namespaceURI: String?, qualifiedName: 
+ String?, attributes: [String:String]) {
+  switch elementName {
+    case "entry":
+      inEntry = true
+    default: break
+  }
+}</pre></div><p class="calibre8">The <code class="literal">link</code> stores the value of the references in an <code class="literal">href</code> attribute of the element. This is passed when the start element is called, so it is trivial to store. At this point, the title may not be known, so the value of the <code class="literal">link</code> has to be stored in an optional field:</p><div class="note"><pre class="programlisting">
+<span class="strong"><strong class="calibre2">var link:String?</strong></span>
+...
+// in parser:didStartElement method
+case "entry":
+  inEntry = true
+<span class="strong"><strong class="calibre2">case "link":</strong></span>
+<span class="strong"><strong class="calibre2">  link = attributes["href"]</strong></span>
+default break;</pre></div><p class="calibre8">The <code class="literal">title</code> stores its data as a text node, which needs to be implemented with another boolean flag indicating whether the parser is inside a <code class="literal">title</code> node. Text nodes are reported with the <code class="literal">parser:foundCharacters:</code> delegate method. Add the following to the <code class="literal">FeedParser</code>:</p><div class="note"><pre class="programlisting">
+<span class="strong"><strong class="calibre2">var title:String?</strong></span>
+<span class="strong"><strong class="calibre2">var inTitle: Bool = false</strong></span>
+...
+// in parser:didStartElement method
+case "entry":
+  inEntry = true
+<span class="strong"><strong class="calibre2">case "title":</strong></span>
+<span class="strong"><strong class="calibre2">  inTitle = true</strong></span>
+case "link":
+...
+<span class="strong"><strong class="calibre2">func parser(parser: NSXMLParser, foundCharacters string:String) {</strong></span>
+<span class="strong"><strong class="calibre2">  if inEntry &amp;&amp; inTitle {</strong></span>
+<span class="strong"><strong class="calibre2">    title = string</strong></span>
+<span class="strong"><strong class="calibre2">  }</strong></span>
+<span class="strong"><strong class="calibre2">}</strong></span>
+</pre></div><p class="calibre8">By storing<a id="id307" class="calibre1"/> the <code class="literal">title</code> and <code class="literal">link</code> as optional fields when the end of the <code class="literal">entry</code> element is seen, the fields can be appended into the <code class="literal">items</code> list, followed by resetting the state of the parser:</p><div class="note"><pre class="programlisting">func parser(parser: NSXMLParser,
+ didEndElement elementName: String,
+ namespaceURI: String?, qualifiedName: String?) {
+  switch elementName {
+    case "entry":
+      inEntry = false
+      if title != nil &amp;&amp; link != nil {
+        items += [(title!,link!)]
+      }
+      title = nil
+      link = nil
+    case "title":
+      inTitle = false
+    default: break
+  }
+}</pre></div><p class="calibre8">Finally, having implemented the callback methods, the remaining steps are to create an <code class="literal">NSXMLParser</code> from the data passed in previously, set the <code class="literal">delegate</code> (and optionally, the namespace handling), and then invoke the parser:</p><div class="note"><pre class="programlisting">init(_ data:NSData) {
+  let parser = NSXMLParser(data: data)
+  parser.shouldProcessNamespaces = true
+  super.init()
+  parser.delegate = self
+  parser.parse() }</pre></div><div class="note" title="Note"><h3 class="title2"><a id="tip56" class="calibre1"/>Tip</h3><p class="calibre8">The assignment of <code class="literal">self</code> to the <code class="literal">delegate</code> cannot be done until after <code class="literal">super.init</code> has been called.</p></div><p class="calibre8">Now when the application is run, a set of news feed items will be displayed.</p><div class="note" title="Note"><h3 class="title2"><a id="tip57" class="calibre1"/>Tip</h3><p class="calibre8">If running on iOS 9 targets and downloading from http sites, a <span class="strong"><strong class="calibre2">App Transport Security has blocked a cleartext HTTP resource load</strong></span> message may be seen in the console. The solution to fix this is to add an exception in the <code class="literal">Info.plist</code> file, which permits connections via HTTP, either for the explicit domain or for all domains. Add the following to the <code class="literal">Info.plist</code> after the first <code class="literal">&lt;dict&gt;</code> element:</p><div class="note"><pre class="programlisting">&lt;key&gt;NSAppTransportSecurity&lt;/key&gt;
+&lt;dict&gt;
+  &lt;key&gt;NSAllowsArbitraryLoads&lt;/key&gt;
+  &lt;true/&gt;
+&lt;/dict&gt;</pre></div><p class="calibre8">Now when the application is run, the error should no longer be seen.</p></div></div></div>
+
+<div id="page" style="height:0pt"/><div class="book" title="Direct network connections"><div class="book" id="1DOR02-d7e55eb5242648e89c396442afe4f84b"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch06lvl1sec41" class="calibre1"/>Direct network connections</h1></div></div></div><p class="calibre8">Although<a id="id308" class="calibre1"/> most application networking will involve downloading content over standard protocols, such as HTTP(S), and using standard representations, there are times when having a specific data stream protocol is required. In this case, a <span class="strong"><em class="calibre11">stream</em></span>-oriented process will allow individual bytes to be read or written, or a <span class="strong"><em class="calibre11">datagram</em></span> or <span class="strong"><em class="calibre11">packet</em></span>-oriented process can be used to send individual packets of data.</p><p class="calibre8">There are networking libraries to support both; an <code class="literal">NSStream</code> higher-level Objective-C based class provides a mechanism to drive stream-based responses, and although lower-level packet connections are possible with the <code class="literal">CoreFoundation</code> or the <code class="literal">POSIX</code> layer, local multiplayer gaming using the <code class="literal">MultipeerConnectivity</code> module is often appropriate.</p><div class="note" title="Note"><h3 class="title2"><a id="note47" class="calibre1"/>Note</h3><p class="calibre8">Local networking with the <code class="literal">MultipeerConnectivity</code> module involves creating an <code class="literal">MCSession</code>, followed by <code class="literal">sendData</code> to send <code class="literal">NSData</code> objects to connected peers, and using the <code class="literal">MCSessionDelegate</code> to <code class="literal">receiveData</code> from connected peers. This is often used to synchronize the state of the world, such as the player's current location or health.</p></div></div>
+
+<div class="book" title="Direct network connections">
+<div class="book" title="Opening a stream-based connection"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_1"><a id="ch06lvl2sec87" class="calibre1"/>Opening a stream-based connection</h2></div></div></div><p class="calibre8">A stream <a id="id309" class="calibre1"/>is a reliable, ordered <a id="id310" class="calibre1"/>sequence of bytes, which is used by most internet protocols. Streams can be created from a network host and port using the <code class="literal">NSStream</code> class method <code class="literal">getStreamsToHostWithName</code>. This allows an <code class="literal">NSInputStream</code> and <code class="literal">NSOutputStream</code> to be acquired at the same time.</p><div class="note" title="Note"><h3 class="title2"><a id="note48" class="calibre1"/>Note</h3><p class="calibre8">As this is an existing Objective-C API, the streams are returned via <span class="strong"><em class="calibre11">inout parameters</em></span>. In Swift, this translates to the parameters being passed back with an ampersand (<code class="literal">&amp;</code>) and declaring the variables as optional.</p></div><p class="calibre8">The<a id="id311" class="calibre1"/> input and output streams can then be used to send data asynchronously or synchronously. Asynchronous mechanisms involve scheduling the data processing on the application's run-loop and is covered in the <span class="strong"><em class="calibre11">Asynchronous reading and writing</em></span> section. Synchronous mechanisms use <code class="literal">read</code> and <code class="literal">write</code> to receive or send buffers of data.</p><div class="note" title="Note"><h3 class="title2"><a id="tip59" class="calibre1"/>Tip</h3><p class="calibre8">Once the streams have been acquired, they need to be <span class="strong"><em class="calibre11">open</em></span> to receive or send data. Forgetting this step will result in no networking data being sent.</p></div><p class="calibre8">To simplify <a id="id312" class="calibre1"/>acquiring the streams, the following can be created as an extension of the <code class="literal">NSStream</code> class. An extension makes a method appear to come from an original class but is implemented externally to that class. Add a <code class="literal">StreamExtensions.swift</code> file to the <code class="literal">CustomViews</code> project with the following content:</p><div class="note"><pre class="programlisting">extension NSStream {
+  class func open(host:String,_ port:Int)
+   -&gt; (NSInputStream, NSOutputStream)? {
+    var input:NSInputStream?
+    var output:NSOutputStream?
+    NSStream.getStreamsToHostWithName(
+      host, port: port, 
+      inputStream: &amp;input,
+      outputStream: &amp;output)
+    guard let i = input, o = output else {
+      return nil
+    }
+    o.open()
+    i.open()
+    return (i,o)
+  }
+}</pre></div><p class="calibre8">A connection to a remote host can be obtained by calling <code class="literal">NSStream.open(host,port)</code>, which returns an open pair of input/output streams.</p></div></div>
+
+<div class="book" title="Direct network connections">
+<div class="book" title="Synchronous reading and writing"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_2"><a id="ch06lvl2sec88" class="calibre1"/>Synchronous reading and writing</h2></div></div></div><p class="calibre8">The<a id="id313" class="calibre1"/> <code class="literal">NSInputStream</code> method <code class="literal">read</code> allows bytes to be read from a stream synchronously, while<a id="id314" class="calibre1"/> the <code class="literal">NSOutputStream</code> method <code class="literal">write</code> allows bytes to be written to a stream. These take different types, but the most common approach is to create an array of bytes <code class="literal">[UInt8]</code> in Swift as the buffer, and then read into or out of it with an <code class="literal">UnsafeMutablePointer</code> (equivalent to an ampersand in C).</p><p class="calibre8">The <a id="id315" class="calibre1"/>
+<code class="literal">read</code> and <code class="literal">write</code> methods both return a number of bytes read/written. This can be negative (in the case of an error), zero, or positive in the case of bytes having been processed. Both <a id="id316" class="calibre1"/>calls take a buffer and a maximum length, though it is not guaranteed that the full maximum length will be processed.</p><div class="note" title="Note"><h3 class="title2"><a id="tip60" class="calibre1"/>Tip</h3><p class="calibre8">Always check the return value of <code class="literal">write</code> or <code class="literal">read</code> as it is possible that only part of the buffer has been written. Best practice (for synchronous connections) is to wrap the call in a <code class="literal">while</code> loop or have some other form of <code class="literal">retry</code> in order to ensure that all the data is written.</p></div><div class="book" title="Writing data to NSOutputStream"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec09" class="calibre1"/>Writing data to NSOutputStream</h3></div></div></div><p class="calibre8">To <a id="id317" class="calibre1"/>make it easier to write <code class="literal">NSData</code> content to streams, an extension method on <code class="literal">NSOuptutStream</code> can be created that performs a full write, based on the size of the data:</p><div class="note"><pre class="programlisting">extension NSOutputStream {
+  func writeData(data:NSData) -&gt; Int {
+    let size = data.length
+    var completed = 0
+    while completed &lt; size {
+      let wrote = write(UnsafePointer(data.bytes) +
+       completed, maxLength:size - completed)
+      if wrote &lt; 0 {
+        return wrote
+      } else {
+        completed += wrote
+      }
+    }
+    return completed
+  }
+}</pre></div><p class="calibre8">This code takes an <code class="literal">NSData</code> and writes it to the underlying stream, returning the number of bytes written (or a negative value if there are problems). The return value of the <code class="literal">write</code> method is checked, and if the value is negative, it is returned to the caller directly. Otherwise, the <code class="literal">completed</code> counter is incremented with the number of bytes written.</p><p class="calibre8">If the number of written bytes reaches the size of the data requested, then the value is returned. Otherwise the loop recurs, this time starting at the point where it left off.</p><div class="note" title="Note"><h3 class="title2"><a id="note49" class="calibre1"/>Note</h3><p class="calibre8">Although uncommon in Swift, pointer arithmetic is possible by acquiring an <code class="literal">UnsafePointer</code> to the <code class="literal">data.bytes</code> array, and then incrementing it by the number of bytes already written. The length of the remaining bytes is calculated with <code class="literal">size-completed</code>.</p></div></div><div class="book" title="Reading from an NSInputStream"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec10" class="calibre1"/>Reading from an NSInputStream</h3></div></div></div><p class="calibre8">A similar approach <a id="id318" class="calibre1"/>can be used to read a full buffer from an <code class="literal">NSInputStream</code> by creating a <code class="literal">readBytes</code> method that returns an array of bytes of a known size, and a means to convert this to an <code class="literal">NSData</code> for easier processing/parsing:</p><div class="note"><pre class="programlisting">extension NSInputStream {
+  func readBytes(size:Int) -&gt; [UInt8]? {
+    let buffer = Array&lt;UInt8&gt;(count:size,repeatedValue:0)
+    var completed = 0
+    while completed &lt; size {
+      let read = self.read(
+       UnsafeMutablePointer(buffer) + completed,
+       maxLength: size - completed)
+      if read &lt; 0 {
+        return nil
+      } else {
+        completed += read
+      }
+    }
+    return buffer
+  }
+  func readData(size:Int) -&gt; NSData? {
+    if let buffer = readBytes(size) {
+      return NSData(
+       bytes: UnsafeMutablePointer(buffer),
+       length: buffer.count)
+    } else {
+      return nil
+    }
+  }
+}</pre></div><p class="calibre8">The <code class="literal">readData</code> method returns an <code class="literal">NSData</code>, while the <code class="literal">readBytes</code> method returns an array of <code class="literal">UInt8</code> values. The <code class="literal">NSData</code> approach is useful in some cases (particularly, creating a <code class="literal">String</code> from the returned data), and in other cases, being able to process the bytes directly is useful (for example, parsing binary formats). Having both allows either to be used as appropriate.</p><div class="note" title="Note"><h3 class="title2"><a id="tip61" class="calibre1"/>Tip</h3><p class="calibre8">Synchronous reads can block forever; if the client application requests exactly 10 bytes but the server only sends 9 bytes, then it will hang permanently until the tenth byte is sent. It is best practice to use asynchronous reads, which cannot block in this way.</p></div></div><div class="book" title="Reading and writing hexadecimal and UTF8 data"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec11" class="calibre1"/>Reading and writing hexadecimal and UTF8 data</h3></div></div></div><p class="calibre8">Being able<a id="id319" class="calibre1"/> to process data as UTF8 values or hexadecimal values can be useful in some protocols. Although both <code class="literal">NSString</code> and <code class="literal">NSData</code> provide means to convert to and from UTF8, the syntax is overly verbose as it is based on pre-existing Objective-C methods.</p><p class="calibre8">To facilitate <a id="id320" class="calibre1"/>the conversions, extension methods can be created to provide a simple way of converting to and from UTF8 representations. In addition to class and instance functions, it is possible to use extensions to add dynamic properties to an existing object. This can be used to create <code class="literal">utf8data</code> and <code class="literal">utf8string</code> properties on <code class="literal">NSData</code> and <code class="literal">String</code> by adding extensions in a file <code class="literal">Extensions.swift</code>, as follows:</p><div class="note"><pre class="programlisting">extension NSData {
+  var utf8string:String {
+    return String(data:self,
+     encoding:NSUTF8StringEncoding)!
+  }
+}
+extension String {
+  var utf8data:NSData {
+    return self.dataUsingEncoding(
+      NSUTF8StringEncoding, allowLossyConversion: false)!
+  }
+}</pre></div><p class="calibre8">This allows expressions, such as <code class="literal">data.utf8string</code> and <code class="literal">string.utf8data</code>, which are much more compact. Each time the expression is evaluated, the associated getter function will be called.</p><div class="note" title="Note"><h3 class="title2"><a id="tip62" class="calibre1"/>Tip</h3><p class="calibre8">There is no standard convention to name extensions in Swift at the time this book was written. If there are extensions to a single type of data—such as the streams previously—then the file can be named <code class="literal">[Type]Extensions.swift</code>. Alternatively, the name can be used for the type of methods that are called; for example, in this case, <code class="literal">UTF8Extensions.swift</code> could have been used.</p></div><p class="calibre8">Parsing hexadecimal data from strings and integers can also be added to the <code class="literal">String</code> and <code class="literal">Int</code> types, as follows:</p><div class="note"><pre class="programlisting">extension String {
+  func fromHex() -&gt; Int {
+    var result = 0
+    for c in self.characters {
+      result *= 16
+      switch c {
+      case "0":result += 0      case "1":result += 1
+      case "2":result += 2      case "3":result += 3
+      case "4":result += 4      case "5":result += 5
+      case "6":result += 6      case "7":result += 7
+      case "8":result += 8      case "9":result += 9
+      case "a","A":result += 10 case "b","B":result += 11
+      case "c","C":result += 12 case "d","D":result += 13
+      case "e","E":result += 14 case "f","F":result += 15
+      default: break
+      }
+    }
+    return result;
+  }
+}
+extension Int {
+  func toHex(digits:Int) -&gt; String {
+    return String(format:"%0\(digits)x",self)
+  }
+}</pre></div><p class="calibre8">This allows hex values <a id="id321" class="calibre1"/>to be<a id="id322" class="calibre1"/> created with <code class="literal">int.toHex</code> and <code class="literal">string.fromHex</code>.</p></div><div class="book" title="Implementing the Git protocol"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec12" class="calibre1"/>Implementing the Git protocol</h3></div></div></div><p class="calibre8">It is possible<a id="id323" class="calibre1"/> to write a client to query a remote git server using the <code class="literal">git://</code> protocol to determine the hashes of remote tags/branches/references.</p><div class="note" title="Note"><h3 class="title2"><a id="note50" class="calibre1"/>Note</h3><p class="calibre8">The <code class="literal">git://</code> protocol works by sending <span class="strong"><em class="calibre11">packet lines</em></span> of data with each line prefixed with four hexadecimal digits in ASCII, indicating the length of the rest of the data (including the four initial digits). Sending a <code class="literal">git-upload-pack</code> request will return a list of references on the remote repository.</p></div><p class="calibre8">As the <code class="literal">git://</code> protocol uses packet lines, create a <code class="literal">PacketLineExtensions.swift</code> file with the following content:</p><div class="note"><pre class="programlisting">extension NSOutputStream {
+  func writePacketLine(message:String = "") -&gt; Int {
+    let data = message.utf8data
+    let length = data.length
+    if length == 0 {
+      return writeData("0000".utf8data)
+    } else {
+      let prefix = (length + 4).toHex(4).utf8data
+      return self.writeData(prefix) + self.writeData(data)
+    }
+  }
+}</pre></div><p class="calibre8">When an<a id="id324" class="calibre1"/> empty <code class="literal">NSData</code> object is passed, the special packet line <code class="literal">0000</code> is written, indicating the end of the conversation. When a non-empty <code class="literal">NSData</code> is written, the length of the data is written as a hexadecimal value (including the 4 bytes for the length), followed by the data itself.</p><div class="note" title="Note"><h3 class="title2"><a id="note51" class="calibre1"/>Note</h3><p class="calibre8">This will result in a protocol conversation such as:</p><div class="note"><pre class="programlisting">&gt; 004egit-upload-pack /alblue/com.packtpub.swift.essentials.git\0host=github.com\0
+&lt; 00dfadaa46b98ce211ff819f0bb343395ad6a2ec6ef1 HEAD\0multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag multi_ack_detailed symref=HEAD:refs/heads/master agent=git/2:2.1.1+github-611-gd89bd9f
+&lt; 003fadaa46b98ce211ff819f0bb343395ad6a2ec6ef1 refs/heads/master
+&gt; 0000
+&lt; 0000</pre></div></div><p class="calibre8">Reading a packet line is similar:</p><div class="note"><pre class="programlisting">extension NSInputStream {
+  func readPacketLine() -&gt; NSData? {
+    if let data = readData(4) {
+      let length = data.utf8string.fromHex()
+      if length == 0 {
+        return nil
+      } else {
+        return readData(length - 4)
+      }
+    } else {
+      return nil
+    }
+  }
+  func readPacketLineString() -&gt; NSString? {
+    if let data = self.readPacketLine() {
+      return data.utf8string
+    } else {
+      return nil
+    }
+  }
+}</pre></div><p class="calibre8">In this case, the<a id="id325" class="calibre1"/> first 4 bytes are read to determine what the remaining length is. If it is zero, a <code class="literal">nil</code> value is returned to indicate the end of stream. If it is non-zero, the data is read (less the 4 that is used for the packet line length header). An additional <code class="literal">readPacketLineString</code> is provided to allow an easy creation of the packet line as an <code class="literal">NSString</code>.</p></div><div class="book" title="Listing git references remotely"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec13" class="calibre1"/>Listing git references remotely</h3></div></div></div><p class="calibre8">To<a id="id326" class="calibre1"/> remotely query a git repository for references, the <code class="literal">git-upload-pack</code> command needs to be sent along with a reference to the repository in question, and optionally, a host. To provide an API to query this programmatically, create a <code class="literal">RemoteGitRepository</code> class with an initializer that stores the host, port, and repository, and an <code class="literal">lsRemote</code> function, which returns the value of the references:</p><div class="note"><pre class="programlisting">class RemoteGitRepository {
+  let host:String
+  let repo:String
+  let port:Int
+  init(host:String, repo:String, _ port:Int = 9418) {
+    self.host = host
+    self.repo = repo
+    self.port = port
+  }
+  func lsRemote() -&gt; [String:String] {
+    var refs = [String:String]()
+    // load the data
+    return refs
+  }
+}</pre></div><p class="calibre8">To load the data from the repository, a connection to the remote host needs to be made on the default port (in this case, <code class="literal">9418</code> is the default for the <code class="literal">git://</code> protocol). Once the streams are opened, the <code class="literal">git-upload-pack [repository]\0host=[host]\0</code> packet line is sent, and subsequently, lines can be read of the form <code class="literal">hash reference</code>. Add the following to the <code class="literal">lsRemote</code> function:</p><div class="note"><pre class="programlisting">// load the data
+if let (input,output) = NSStream.open(host,port) {
+  output.writePacketLine(
+   "git-upload-pack \(repo)\0host=\(host)\0")
+  while true {
+    if let response = input.readPacketLineString() {
+      let hash = String(response.substringToIndex(41))
+      let ref = String(response.substringFromIndex(41))
+      if ref.hasPrefix("HEAD") {
+        continue
+      } else {
+        refs[ref] = hash
+      }
+    } else {
+      break
+    }
+  }
+  output.writePacketLine()
+  input.close()
+  output.close()
+}</pre></div><p class="calibre8">Calling <a id="id327" class="calibre1"/>the <code class="literal">lsRemote</code> function on a <code class="literal">RemoteGitRepository</code> instance with an appropriate <code class="literal">host</code> and <code class="literal">repo</code> will return a list of hashes by reference.</p></div><div class="book" title="Integrating the network call into the UI"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec14" class="calibre1"/>Integrating the network call into the UI</h3></div></div></div><p class="calibre8">As the <a id="id328" class="calibre1"/>network can introduce delays or can even result in a complete failure, network calls should never be performed on the UI thread. Previously, the <code class="literal">SampleTable</code> was used to introduce a <code class="literal">runOnUIThread</code> function. A similar approach can be used to run a function on a background thread. Add the following to the <code class="literal">SampleTable</code> class:</p><div class="note"><pre class="programlisting">func runOnBackgroundThread(fn:()-&gt;()) {
+  dispatch_async(
+   dispatch_get_global_queue(
+    DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+   ,fn)
+}</pre></div><p class="calibre8">This will permit <code class="literal">viewDidLoad</code> to invoke a call in order to query the remote references from the repository, and add them to the table. As before, the call to update the table must be called from the UI thread. Add the following to the end of the <code class="literal">viewDidLoad</code> method:</p><div class="note"><pre class="programlisting">runOnBackgroundThread {
+  let repo = RemoteGitRepository(host: "github.com", 
+   repo: "/alblue/com.packtpub.swift.essentials.git")
+  for (ref,hash) in repo.lsRemote() {
+    self.items += [(ref,hash)]
+  }
+  self.runOnUIThread(self.tableView.reloadData)
+}</pre></div><p class="calibre8">Now when <a id="id329" class="calibre1"/>the application is launched, entries corresponding to the branches and tags in the remote repository should be added to the table.</p></div></div></div>
+
+<div class="book" title="Direct network connections">
+<div class="book" title="Asynchronous reading and writing"><div class="book"><div class="book"><div class="book"><h2 class="title1" id="calibre_pb_3"><a id="ch06lvl2sec89" class="calibre1"/>Asynchronous reading and writing</h2></div></div></div><p class="calibre8">As <a id="id330" class="calibre1"/>well as synchronous <a id="id331" class="calibre1"/>reading and writing, it is also possible to perform <span class="strong"><em class="calibre11">asynchronous</em></span> reading and writing. Instead of spinning in a <code class="literal">while</code> loop, the application can be use callbacks scheduled on the application's run loop.</p><p class="calibre8">To receive callbacks, a class that implements <code class="literal">NSStreamDelegate</code> must be created and assigned to the stream's <code class="literal">delegate</code> field. When events occur, the <code class="literal">stream</code> method is called with the type of event and the associated stream.</p><p class="calibre8">The stream is registered with <code class="literal">scheduleInRunLoop</code> (using <code class="literal">NSRunLoop.mainRunLoop()</code> with a <code class="literal">NSDefaultRunLoopMode</code> mode). Finally, the stream can be opened.</p><div class="note" title="Note"><h3 class="title2"><a id="tip63" class="calibre1"/>Tip</h3><p class="calibre8">If the stream is opened before the delegate is set or scheduled in the run loop, then events will not be delivered.</p></div><p class="calibre8">Events are defined in the <code class="literal">NSStreamEvent</code> class, and they include <code class="literal">HasSpaceAvailable</code> (for output streams) and <code class="literal">HasBytesAvailable</code> (for input streams). By responding to callbacks, the application can process results asynchronously.</p><div class="note" title="Note"><h3 class="title2"><a id="tip64" class="calibre1"/>Tip</h3><p class="calibre8">When using Swift, the <code class="literal">NSStreamDelegate</code> is treated as a <code class="literal">weak</code> delegate on the input stream or output stream. This presents problems when using an inline class to provide input parsing; doing so will result in an <code class="literal">EXC_BAD_ACCESS</code> as the delegate is automatically reclaimed by the runtime. This can be avoided by storing a strong circular reference to <code class="literal">self</code> in the initializer and assigning it to <code class="literal">nil</code> when the streams are closed.</p></div><div class="book" title="Reading data asynchronously from an NSInputStream"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec15" class="calibre1"/>Reading data asynchronously from an NSInputStream</h3></div></div></div><p class="calibre8">This is <a id="id332" class="calibre1"/>especially useful for asynchronous protocols, such as XMPP, which may send additional messages at arbitrary times. It also allows battery-powered devices to not spin the CPU if the remote server is slow or hangs.</p><p class="calibre8">To receive data asynchronously, a delegate must implement the <code class="literal">NSStreamDelegate</code> method <code class="literal">stream(stream:handleEvent)</code>. When data is available, the <code class="literal">HasBytesAvailable</code> event will be sent, and data can be read accordingly.</p><p class="calibre8">To <a id="id333" class="calibre1"/>convert the previous example to an asynchronous form, a few changes need to be made. Firstly, the <code class="literal">open</code> extension method that was created in <span class="strong"><em class="calibre11">Opening a stream connection</em></span> section needs to be augmented with a <code class="literal">connect</code> method, but which does not perform the <code class="literal">open</code> immediately:</p><div class="note"><pre class="programlisting">class func open(host:String,_ port:Int)
+ -&gt; (NSInputStream, NSOutputStream)? {
+  if let (input,output) = connect(host,port) {
+    input.open()
+    output.open()
+    return (input,output)
+  } else {
+    return nil
+  }
+}
+class func connect(host:String,_ port:Int)
+  -&gt; (NSInputStream, NSOutputStream)? {
+    var input:NSInputStream?
+    var output:NSOutputStream?
+    NSStream.getStreamsToHostWithName(
+      host, port: port, 
+      inputStream: &amp;input,
+      outputStream: &amp;output)
+    guard let i = input, o = output else {
+      return nil
+    }
+    return (i,o)
+  } 
+}</pre></div><div class="note" title="Note"><h3 class="title2"><a id="tip65" class="calibre1"/>Tip</h3><p class="calibre8">In order to receive events asynchronously, the delegate must be set and the stream must be scheduled on a run loop before the stream is opened.</p></div></div><div class="book" title="Creating a stream delegate"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec16" class="calibre1"/>Creating a stream delegate</h3></div></div></div><p class="calibre8">To <a id="id334" class="calibre1"/>create a stream delegate, create a file called <code class="literal">PacketLineParser.swift</code> with the following content:</p><div class="note"><pre class="programlisting">class PacketLineParser: NSObject, NSStreamDelegate {
+  let output:NSOutputStream
+  let callback:(NSString)-&gt;()
+  <span class="strong"><strong class="calibre2">var capture:PacketLineParser?</strong></span>
+  init(_ output:NSOutputStream, _ callback:(NSString) -&gt; ()) {
+    self.output = output
+    self.callback = callback
+    super.init()
+    <span class="strong"><strong class="calibre2">capture = self</strong></span>
+  }
+  func stream(stream: NSStream, handleEvent: NSStreamEvent) {
+    let input = stream as! NSInputStream
+    if handleEvent == NSStreamEvent.HasBytesAvailable {
+      if let line = input.readPacketLineString() {
+        callback(line)
+      } else {
+        output.writePacketLine()
+        input.close()
+        output.close()
+        <span class="strong"><strong class="calibre2">capture = nil</strong></span>
+      }
+    }
+  }
+}</pre></div><p class="calibre8">This <a id="id335" class="calibre1"/>parser has a callback, which is invoked for each packet line read; when the <code class="literal">HasBytesAvailable</code> event is sent, the line is read (using the same synchronous mechanism as before) and then passed to the callback. Unlike the synchronous approach, there is no <code class="literal">while</code> loop here—when data is available, it triggers the parsing of the data.</p><div class="note" title="Note"><h3 class="title2"><a id="tip66" class="calibre1"/>Tip</h3><p class="calibre8">As this will be assigned to an input stream delegate (which holds a weak reference), it is necessary to capture a cyclic reference to itself with <code class="literal">capture = self</code> in order to avoid the runtime from evicting the instance. When the streams are closed, the <code class="literal">capture</code> will be set to <code class="literal">nil</code>, which will release the instance.</p></div><p class="calibre8">The <code class="literal">readPacketLine</code> returns <code class="literal">nil</code> to indicate either an error or a completed stream; in this case, an empty packet line is sent (to tell the remote server that no further interaction is required), and then both streams are closed.</p></div><div class="book" title="Dealing with errors"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec17" class="calibre1"/>Dealing with errors</h3></div></div></div><p class="calibre8">It is <a id="id336" class="calibre1"/>necessary to clean up the streams and remove them from run loops, both when the stream content is successful and when communication errors occur. In addition to the <code class="literal">HasBytesAvailable</code> event, there are also events that are sent when the stream's end is encountered or an error occurs.</p><p class="calibre8">These should be handled in the same way as when the connection comes to a natural end; resources should be tidied, and in particular, the streams should be removed from run loop processing. Finally, the cyclic reference should be removed to permit the <code class="literal">delegate</code> object to be removed.</p><p class="calibre8">The <a id="id337" class="calibre1"/>existing <code class="literal">close</code> code can be moved to its own separate function, and additional cases of the stream ending or errors occurring can perform the same cleanup:</p><div class="note"><pre class="programlisting">func stream(stream: NSStream, handleEvent: NSStreamEvent) {
+  let input = stream as! NSInputStream
+  if handleEvent == NSStreamEvent.HasBytesAvailable {
+    if let line = input.readPacketLineString() {
+      callback(line)
+    } else {
+      <span class="strong"><strong class="calibre2">closeStreams(input,output)</strong></span>
+    }
+  }
+  <span class="strong"><strong class="calibre2">if handleEvent == NSStreamEvent.EndEncountered </strong></span>
+<span class="strong"><strong class="calibre2">  || handleEvent == NSStreamEvent.ErrorOccurred {</strong></span>
+<span class="strong"><strong class="calibre2">    closeStreams(input,output)</strong></span>
+<span class="strong"><strong class="calibre2">  }</strong></span>
+}
+func closeStreams(input:NSInputStream,_ output:NSOutputStream) {
+  if capture != nil {
+    capture = nil
+    output.removeFromRunLoop(NSRunLoop.mainRunLoop(),
+     forMode: NSDefaultRunLoopMode)
+    input.removeFromRunLoop(NSRunLoop.mainRunLoop(),
+     forMode: NSDefaultRunLoopMode)
+    input.delegate = nil
+    output.delegate = nil
+    if output.streamStatus != NSStreamStatus.Closed {
+      output.writePacketLine()
+      output.close()
+    }
+    if input.streamStatus != NSStreamStatus.Closed {
+      input.close()
+    }
+  }
+}</pre></div></div><div class="book" title="Listing references asynchronously"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec18" class="calibre1"/>Listing references asynchronously</h3></div></div></div><p class="calibre8">To <a id="id338" class="calibre1"/>provide a list of references asynchronously, the delegate has to be set up with a suitable callback that will parse the returned data. Instead of the method returning a dictionary (which would require synchronous blocking), a callback will be passed, which can be called with references as they are found.</p><div class="note" title="Note"><h3 class="title2"><a id="note52" class="calibre1"/>Note</h3><p class="calibre8">Please note that there are two separate callbacks: the <code class="literal">PacketLineParser</code> callback (which reads in network data and returns <code class="literal">NSString</code> instances on a per-packet-line basis), and the reference parsing callback (which translates the <code class="literal">NSString</code> into a <code class="literal">(String,String)</code> tuple).</p></div><p class="calibre8">To start<a id="id339" class="calibre1"/> the process, the <code class="literal">git-upload-pack</code> needs to be sent synchronously after which subsequent responses will be processed asynchronously. This can be done by creating a new method, <code class="literal">lsRemoteAsync</code>, in the <code class="literal">RemoteGitRepository</code> class, which takes a callback function for the <code class="literal">(String,String)</code> tuple:</p><div class="note"><pre class="programlisting">func lsRemoteAsync(fn:(String,String) -&gt; ()) {
+  if let (input,output) = NSStream.connect(host,port) {
+    input.delegate = PacketLineParser(output) {
+    (response:NSString) -&gt; () in
+      let hash = String(response.substringToIndex(41))
+      let ref = String(response.substringFromIndex(41))
+      if !ref.hasPrefix("HEAD") {
+        fn(ref,hash)
+      }
+    }
+    input.scheduleInRunLoop(NSRunLoop.mainRunLoop(), 
+     forMode: NSDefaultRunLoopMode)
+    input.open()
+    output.open()
+    output.writePacketLine(
+     "git-upload-pack \(repo)\0host=\(host)\0")
+  }
+}</pre></div><p class="calibre8">This creates a connection (but without opening the streams), sets the <code class="literal">delegate</code>, and schedules the run loop for the input stream, and finally, opens both streams for interaction. Once this is done, the initial <code class="literal">git-upload-pack</code> message is sent as before. At this point the <code class="literal">lsRemoteAsync</code> method returns, and subsequent events occur when input data is received from the server.</p><p class="calibre8">When a line is received through the <code class="literal">PacketLineParser</code> callback, it is split into a reference and a hash and then hands the results to the callback passed into the argument in the first place.</p><div class="note" title="Note"><h3 class="title2"><a id="note53" class="calibre1"/>Note</h3><p class="calibre8">Asynchronous programming often involves many callbacks. Instead of a synchronous program that may look like <code class="literal">A;B;C;</code>, an asynchronous program often looks like <code class="literal">A(callback:B(callback:C))</code>. When an input trigger occurs—a network request, user interaction, or timer firing—a sequence of actions can occur via these nested callbacks.</p><p class="calibre8">Asynchronous pipelines are generally preferred for battery performance reasons as blocking in a <code class="literal">while</code> spin loop will waste CPU energy until the condition is satisfied.</p></div></div><div class="book" title="Displaying asynchronous references in the UI"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec19" class="calibre1"/>Displaying asynchronous references in the UI</h3></div></div></div><p class="calibre8">To display the <a id="id340" class="calibre1"/>asynchronous data to the screen, the callback must be modified to allow individual elements to update the GUI.</p><p class="calibre8">In <code class="literal">SampleTable</code>, instead of calling <code class="literal">repo.lsRemote</code> (which performs a synchronous lookup), use <code class="literal">repo.lsRemoteAsync</code> instead. This requires a callback, which can be used to update the table data and causes the view to reload the contents:</p><div class="note"><pre class="programlisting">// for (ref,hash) in repo.lsRemote() {
+//   self.items += [(ref,hash)]
+// }
+repo.lsRemoteAsync() { (ref:String,hash:String) in
+  self.items += [(ref,hash)]
+  self.runOnUIThread(self.tableView.reloadData)
+}</pre></div><p class="calibre8">Now when the application is run, the references will be updated asynchronously and the UI will not be blocked by a slow or hung server.</p></div><div class="book" title="Writing data asynchronously to an NSOutputStream"><div class="book"><div class="book"><div class="book"><h3 class="title2"><a id="ch06lvl3sec20" class="calibre1"/>Writing data asynchronously to an NSOutputStream</h3></div></div></div><p class="calibre8">Asynchronous<a id="id341" class="calibre1"/> sending is not as useful as asynchronous reading unless large uploads are required. If there is a lot of data, then it is unlikely to be written synchronously in a single <code class="literal">write</code> call. It is better to perform any additional writes asynchronously.</p><p class="calibre8">To write data asynchronously requires storing the <code class="literal">completed</code> count as a variable outside of the function. The <code class="literal">write</code> method can be used to replace the <code class="literal">while</code> loop as before by writing a segment of the data on each iteration of the stream method. Although the code isn't needed in this example, code would look something like this:</p><div class="note"><pre class="programlisting">…
+self.data = data
+// initial write to kick off subsequent events
+completed = output.write(UnsafePointer(data.bytes), 
+ maxLength: data.length
+…
+var completed:Int
+var data:NSData?
+func stream(stream: NSStream, handleEvent: NSStreamEvent) {
+  let output = stream as! NSOutputStream
+  if handleEvent == NSStreamEvent.HasSpaceAvailable 
+   &amp;&amp; data != nil {
+    let size = data!.length
+    completed += output.write(
+     UnsafePointer(data!.bytes) + completed,
+     maxLength: size – completed)
+    if completed == size {
+      completed = 0
+      data = nil
+    }
+  }
+}</pre></div><p class="calibre8">Asynchronous <a id="id342" class="calibre1"/>data always starts with a call to synchronously write the data. If not all of the data is written (in other words, <code class="literal">completed &lt; size</code>) then subsequent callbacks will occur on the <code class="literal">NSStreamDelegate</code>. This can then pick up where the <code class="literal">data</code> value left off using a similar technique to the synchronous case but without a <code class="literal">while</code> loop. Instead of the iteration blocking to write the whole data value, the stream call will be called multiple times (in effect replacing each iteration of the <code class="literal">while</code> loop). On the final run, when <code class="literal">completed == size</code>, the data is released, and the completion counter is reset.</p><div class="note" title="Note"><h3 class="title2"><a id="note54" class="calibre1"/>Note</h3><p class="calibre8">The stream callback is called enough times to write all the data. If no data is written, then events are no longer called. New data is only written when an additional value is passed. Care must be taken when writing data from different threads as the data value is processed as an instance variable, and overwriting it may cause data to be lost. The reader is invited to extend the single element data into an array of outstanding data elements so that they can be queued up appropriately.</p></div></div></div></div>
+<div class="book" title="Summary" id="1ENBI1-d7e55eb5242648e89c396442afe4f84b"><div class="book"><div class="book"><div class="book"><h1 class="title" id="calibre_pb_0"><a id="ch06lvl1sec42" class="calibre1"/>Summary</h1></div></div></div><p class="calibre8">This chapter presented the common techniques that are used to deal with networked data in Swift-based applications with a particular focus on how to maximize battery usage on portable devices using asynchronous techniques to access data.</p><p class="calibre8">As most network requests are likely to provide either a JSON or XML-based representation over HTTP(S), the first section of this chapter covered using <code class="literal">NSURLSession</code> and the asynchronous <code class="literal">dataTask</code> operations to pull data down from a remote server. The second and third sections then presented how this data can be parsed from either JSON or XML depending on the format required.</p><p class="calibre8">The last section presented how to make network connections directly to deal with protocols other than HTTP; and as an example, showed how a remote <code class="literal">git</code> command can be executed to find out what references are available in a remote git repository. This was presented in two forms: as a synchronous API (to demonstrate the technique of how to work with streams, and to explain the git protocol), followed by its conversion to an asynchronous API, which can be used to minimize CPU cycles and, thus, battery usage, to allow other such translations to be performed in the future.</p><p class="calibre8">The next chapter will present how to integrate all of the ideas covered in this book into an iOS application to display GitHub repositories.</p></div></body></html>

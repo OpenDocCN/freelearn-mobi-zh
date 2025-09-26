@@ -1,0 +1,108 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;3.&#xA0;Payment Authorization Workflow"><div class="titlepage"><div><div><h1 class="title"><a id="ch03"/>Chapter 3. Payment Authorization Workflow</h1></div></div></div><p>The <span class="emphasis"><em>payment sheet</em></span> is the <a id="id97" class="indexterm"/>most important user-facing aspect of the Apple Pay experience. Also, this is where the user should spend the least amount of time. Your app convinced the user to purchase the product. The payment sheet is where you will take the user from <span class="emphasis"><em>desire</em></span> to <span class="emphasis"><em>acquire</em></span> in as few taps as possible, two taps being the ideal.</p><p>In the previous chapter, you learned how to present information in the payment sheet, including a list of the shipping methods you can make available to your customers, and the total price of the order. With the payment sheet up, the user can change the shipping type (from delivery to store pickup, for example), the shipping address, and the payment method (the payment card that will be used to fund the transaction). For each change the user makes, you must update the payment request's summary items to reflect it. For example, when the user changes the shipping method, you must update the summary item that displays the price for shipping the item using the newly selected shipping method.</p><p>This chapter shows how to respond to messages from the payment sheet to update the appropriate information on the payment request. It also shows how to start the payment processing workflow in response to the user authorizing the app to submit the payment request for approval by the selected card's issuing bank.</p><p>This chapter will do the following:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Describe the payment authorization workflow</li><li class="listitem" style="list-style-type: disc">Demonstrate the implementation of the methods (declared by the payment sheet delegate protocol) that respond to payment sheet messages to update appropriate information in the payment request</li><li class="listitem" style="list-style-type: disc">Show you how to dismiss the payment sheet when the user authorizes the payment request or cancels the transaction by tapping the cancel button</li></ul></div><div class="section" title="Actors and operations in the authorization workflow"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec23"/>Actors and operations in the authorization workflow</h1></div></div></div><p>The <span class="emphasis"><em>payment authorization workflow</em></span> is a process by which the user confirms or enters the shipping information you provide or request in the payment sheet and authorizes the app to submit the payment<a id="id98" class="indexterm"/> request for approval by the issuing bank of the payment card specified in the payment request. The user may also change the payment card to<a id="id99" class="indexterm"/> use to fund the payment request, in which case you might need to update the payment request's summary items (by adding <a id="id100" class="indexterm"/>surcharges for specific cards, for example).</p><p>The payment<a id="id101" class="indexterm"/> authorization workflow starts when your app presents the payment sheet (a <code class="literal">PKPaymentAuthorizationViewController</code> object) and ends with the user authorizing the payment request. (The user may cancel the transaction by tapping the <span class="strong"><strong>Cancel</strong></span> button on the payment sheet.)</p><p>This diagram depicts the actors and operations that are part of the payment authorization workflow:</p><div class="mediaobject"><img src="graphics/B05093_03_01.png.jpg" alt="Actors and operations in the authorization workflow"/></div><p>The workflow<a id="id102" class="indexterm"/> comprises four steps, as follows:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">The app presents the<a id="id103" class="indexterm"/> payment sheet.</li><li class="listitem">The user enters or changes the information you present or require (the less the information shown on the payment sheet, the faster the authorization).</li><li class="listitem">The app responds to changes in the payment sheet by updating payment summary items.</li><li class="listitem">The user <a id="id104" class="indexterm"/>approves the payment request.</li></ol></div><p>These are the operations in more detail:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>payment request</strong></span> (<code class="literal">PKPaymentRequest</code>): This is the payment request you use to present the <a id="id105" class="indexterm"/>payment sheet.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>shipping type</strong></span> (<code class="literal">PKShippingType</code>): This indicates how the customer will get the product being purchased. The available shipping types are delivery (for instance, for office supplies or pizza), store pickup (such as for Apple Watches or jewelry), and service pickup (for example, when you provide transportation or delivery <a id="id106" class="indexterm"/>services that offer home pickup). With the store pickup shipping type, you must manage the shipping addresses as they are not shipping addresses but pickup addresses, such as your store's address. For example, in this case, you can set the <span class="emphasis"><em>shipping</em></span> address to your store's address or hide the shipping address by setting the <code class="literal">requiredShippingAddressFields</code> property of the payment request to <code class="literal">PKAddressFieldNone</code>.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>payment summary items</strong></span> and <span class="strong"><strong>shipping method</strong></span> (<code class="literal">PKPaymentSummaryItem</code>, <code class="literal">PKShippingMethod</code>): This indicates<a id="id107" class="indexterm"/> the summary items displayed after the order's subtotal, including<a id="id108" class="indexterm"/> the shipping method selected for the order.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>shipping methods</strong></span> (<code class="literal">PKShippingMethod</code> objects): This indicates the shipping methods <a id="id109" class="indexterm"/>available to the customer for the order. This list may change if the user changes the shipping address.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>payment sheet</strong></span> (<code class="literal">PKPaymentAuthorizationViewController</code>): This is the sheet the app presents<a id="id110" class="indexterm"/> to let the user verify or enter the information you require before the user authorizes the payment request. The user authorizes the payment request on this sheet.</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>payment sheet interaction protocol</strong></span> (<code class="literal">PKPaymentAuthorizationViewControllerDelegate</code>): This is the API the app and the<a id="id111" class="indexterm"/> payment sheet use to communicate with each other.</li></ul></div></div></div>
+<div class="section" title="Implementing a shared method to compute summary items"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec24"/>Implementing a shared method to compute summary items</h1></div></div></div><p>To respond to the<a id="id112" class="indexterm"/> delegate method calls from the payment sheet, you should have a single method that computes<a id="id113" class="indexterm"/> the payment summary items based on the shipping information. Here's a possible implementation of such a method:</p><div class="informalexample"><pre class="programlisting">// client_app/merchantapp/ProductCard.m
+@property Product*           product;
+@property PKShippingMethod*  selected_shipping_method;
+...
+// tally the summary items' cost and the grand total
+- (NSArray&lt;PKPaymentSummaryItem*&gt;*) computeSummaryItems
+{
+   NSDecimalNumber* product_price=
+      [NSDecimalNumber decimalNumberWithString:_product.price];
+      
+   NSDecimalNumber* shipping= 
+      _selected_shipping_method?
+         _selected_shipping_method.amount :
+         [NSDecimalNumber zero];
+         
+   NSDecimalNumber* tax=
+      [product_price decimalNumberByMultiplyingBy:
+         [NSDecimalNumber decimalNumberWithString:@"0.08"]];
+         
+   NSDecimalNumber* total=
+      decimal_number_sum(@[product_price, shipping, tax]);
+   
+   // specify summary items
+   NSMutableArray&lt;PKPaymentSummaryItem*&gt;* summary_items=
+   [NSMutableArray arrayWithArray: 
+    @[
+      [PKPaymentSummaryItem
+         summaryItemWithLabel: _product.name
+                       amount: product_price],
+      [PKPaymentSummaryItem
+         summaryItemWithLabel: @"Shipping"
+                       amount: shipping],
+      [PKPaymentSummaryItem
+         summaryItemWithLabel: @"Tax"
+                       amount: tax],
+      [PKPaymentSummaryItem
+         summaryItemWithLabel: @"Acme"
+                       amount: total]
+      ]];
+   
+   return summary_items.copy;
+}</pre></div><p>With this <a id="id114" class="indexterm"/>method in place, you can<a id="id115" class="indexterm"/> respond to different delegate method calls from the payment sheet and have a consistent algorithm for the computation of the payment summary items.</p></div>
+<div class="section" title="Responding to user interactions with the payment sheet"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec25"/>Responding to user interactions with the payment sheet</h1></div></div></div><p>After identifying the<a id="id116" class="indexterm"/> main actors and<a id="id117" class="indexterm"/> operations involved in the payment authorization workflow and with a single method to compute payment summary items, we are ready to delve into your responses to payment sheet messages initiated by the changes the user makes to shipping information.</p><p>Note that the correct functionality of the payment sheet is essential to the payment authorization workflow; in particular, the payment sheet must call its delegate methods consistently so<a id="id118" class="indexterm"/> that you can correctly gauge when these methods are called as a result of user interaction with the payment sheet. If you use iOS<a id="id119" class="indexterm"/> simulators to test your code and notice that the payment sheet delegate methods are not being called, quit and restart the Simulator app.</p><div class="section" title="User changes shipping information"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec20"/>User changes shipping information</h2></div></div></div><p>When the user changes the shipping address or contact, your payment sheet delegate receives the <code class="literal">paymentAuthorizationViewController:didSelectShippingContact:completion:</code> message indicating<a id="id120" class="indexterm"/> that the user changed the shipping information for the order.</p><p>The new shipping details are encapsulated in a <span class="emphasis"><em>contact</em></span> (a <code class="literal">PKContact</code> instance). This <code class="literal">contact</code> object contains only the shipping information you requested in the <code class="literal">requiredShippingAddressFields</code> property of the payment request. The properties of  <code class="literal">contact</code> are <code class="literal">name</code>, <code class="literal">emailAddress</code>, <code class="literal">phoneNumber</code>, and <code class="literal">postalAddress</code>. So if you required only a postal address and name by setting the <code class="literal">requiredShippingAddressFields</code> payment request property to <code class="literal">PKAddressFieldPostalAddress|PKAddressFieldName</code>, the payment sheet ensures that the <code class="literal">name</code> and <code class="literal">postalAddress</code> properties of the contact are populated when it calls this <code class="literal">delegate</code> method. This is an implementation of this method:</p><div class="informalexample"><pre class="programlisting">// client_app/merchantapp/ProductCard.m
+- (void)
+paymentAuthorizationViewController:
+   (PKPaymentAuthorizationViewController* _Nonnull)     controller
+didSelectShippingContact:
+   (PKContact* _Nonnull)                          shipping_contact
+completion:
+   (void (^ _Nonnull) 
+      (PKPaymentAuthorizationStatus             status,
+       NSArray&lt;PKShippingMethod*&gt;* _Nonnull     shipping_methods,
+       NSArray&lt;PKPaymentSummaryItem*&gt;* _Nonnull summary_items)
+      )                                                 completion
+{
+   // validate address in shipping_contact parameter.
+   // if the address is not valid, set the status argument of
+   // the completion block to an appropriate value, such as
+   // PKPaymentAuthorizationStatusInvalidShippingPostalAddress.
+   
+   completion(
+      PKPaymentAuthorizationStatusSuccess,
+      _pk_shipping_methods,
+      [self computeSummaryItems]
+   );
+}</pre></div><p>All this method does is provide a success status, the standard shipping methods, and the computed payment summary items to the payment sheet through the method's completion block. In your app's case, you may need to tailor the returned shipping methods depending on the<a id="id121" class="indexterm"/> information contained in the <code class="literal">contact</code> argument of the completion block.</p></div><div class="section" title="User changes shipping method"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec21"/>User changes shipping method</h2></div></div></div><p>When the user <a id="id122" class="indexterm"/>changes the shipping method, the payment sheet calls the <code class="literal">paymentAuthorizationViewController:didSelectShippingMethod:completion:</code> method of its delegate. Similar to changes in shipping information, you recompute the payment summary items based on the shipping method the user selects. In the <code class="literal">completion</code> block, provide a success authorization status and the newly computed payment summary items, as shown in this example:</p><div class="informalexample"><pre class="programlisting">// client_app/merchantapp/ProductCard.m
+@property PKShippingMethod*  selected_shipping_method;
+@property NSString*          shipping_method_name;
+...
+- (void)
+paymentAuthorizationViewController:
+   (PKPaymentAuthorizationViewController* _Nonnull)    controller
+didSelectShippingMethod:
+   (PKShippingMethod* _Nonnull)                   shipping_method
+completion:
+   (void (^ _Nonnull)
+      (PKPaymentAuthorizationStatus             status,
+       NSArray&lt;PKPaymentSummaryItem*&gt;* _Nonnull summary_items)
+      )                                                completion
+{   
+   _selected_shipping_method= shipping_method;
+   _shipping_method_name=     shipping_method.identifier;
+   
+   completion(
+      PKPaymentAuthorizationStatusSuccess,
+      [self computeSummaryItems]
+   );
+}</pre></div><p>All this method does is store the index of the shipping method chosen, recompute the payment summary item array, and call the completion block with <code class="literal">PKPaymentAuthorizationStatusSuccess</code> as the <code class="literal">status</code> argument and the new payment summary items array as the <code class="literal">summary_items</code> argument.</p></div><div class="section" title="User authorizes payment request"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec22"/>User authorizes payment request</h2></div></div></div><p>When the user authorizes the <a id="id123" class="indexterm"/>payment request, the payment sheet calls the <code class="literal">paymentAuthorizationViewController:didAuthorizePayment:completion:</code> method in its delegate. In this method, you process the payment (the <code class="literal">PKPayment</code> instance) you get from the payment sheet, a process described in the next chapter. If the payment is processed successfully, you will call the <code class="literal">completion</code> block with <code class="literal">PKPaymentAuthorizationStatusSuccess</code> as the argument. If your validation checks determine that the payment request contains incorrect information, you can return values that specify this, such as:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><code class="literal">PKPaymentAuthorizationStatusInvalidBillingPostalAddress</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">PKPaymentAuthorizationStatusInvalidShippingPostalAddress</code></li><li class="listitem" style="list-style-type: disc"><code class="literal">PKPaymentAuthorizationStatusInvalidShippingContact</code></li></ul></div><p>Otherwise, for a general failure, including that the issuing bank did not approve the transaction, you can return <code class="literal">PKPaymentAuthorizationStatusFailure</code>.</p><p>Here is an <a id="id124" class="indexterm"/>with <code class="literal">payment sheet:payment request, authorizing"</code> example implementation of this method:</p><div class="informalexample"><pre class="programlisting">// client_app/merchantapp/ProductCard.m
+- (void)
+paymentAuthorizationViewController:
+   (PKPaymentAuthorizationViewController*)      controller
+didAuthorizePayment:
+   (PKPayment*)                                 payment_info
+completion:
+   (void (^)(PKPaymentAuthorizationStatus))     payment_completion
+{
+   [self process_ApplePay_payment_with_Stripe: payment_info
+                                   completion: payment_completion
+   ];
+}</pre></div><p>Here is an example of the payment sheet:</p><div class="mediaobject"><img src="graphics/B05093_03_02.png.jpg" alt="User authorizes payment request"/></div><p>Whether the payment is processed successfully or the user canceled the transaction, it is your responsibility<a id="id125" class="indexterm"/> to dismiss the payment sheet when it calls the <code class="literal">paymentAuthorizationViewControllerDidFinish:</code> method on its delegate. This is an example of how to do this:</p><div class="informalexample"><pre class="programlisting">// client_app/merchantapp/ProductCard.m
+- (void)
+paymentAuthorizationViewControllerDidFinish:
+   (PKPaymentAuthorizationViewController*)    controller
+{
+   [self dismissViewControllerAnimated:YES completion:nil];
+}</pre></div><p>In addition to dismissing the payment sheet, you can perform other state-restoring operations as needed.</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec26"/>Summary</h1></div></div></div><p>In this chapter you learned how the actors in your app's payment authorization workflow work together to help the user provide the information you need to process the payment and order (if the payment is approved by the payment card's issuing bank). The chapter showed how to prepare the payment request with essential payment information, such as the payment networks you support. It described how to respond to changes the user makes to the order in the payment sheet. Finally, the chapter showed how to dismiss the payment sheet after the user authorizes or cancels the payment request.</p><p>The next chapter will describe the payment processing workflow, which is where you will process the information obtained here to process the payment through your payment gateway and fulfill the customer's order in your order processing web application. We will consider the payment information required to get the user's payment card's issuing bank to approve the transaction. </p></div></body></html>

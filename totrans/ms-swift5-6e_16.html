@@ -1,0 +1,309 @@
+<html><head></head><body>
+  <div id="_idContainer099">
+    <h1 class="chapterNumber">16</h1>
+    <h1 id="_idParaDest-265" class="chapterTitle">Concurrency and Parallelism in Swift</h1>
+    <p class="normal">When I first started learning Objective-C, I already had a good understanding of concurrency and multitasking with my background in other languages, such as C and Java. This background made it very easy for me to create multithreaded applications using threads. Then, Apple changed everything when they released <strong class="keyword">Grand Central Dispatch</strong> (<strong class="keyword">GCD</strong>) with OS X 10.6 and iOS 4. At first, I went into denial; there was no way GCD could manage my application's threads better than I could. Then, I entered the anger phase; GCD was hard to use and understand. Next was the bargaining phase; maybe I could use GCD with my threading code, so I could still control how the threading worked. Then, there was the depression phase; maybe GCD does handle threading better than I could. Finally, I entered the wow phase; this GCD thing is really easy to use and works amazingly well.</p>
+    <p class="normal">After using GCD and operation queues with Objective-C, I do not see a reason for using manual threads with Swift.</p>
+    <p class="normal">In this chapter, we will learn about the following topics:</p>
+    <ul>
+      <li class="bullet">The basics of concurrency and parallelism</li>
+      <li class="bullet">How to use GCD to create and manage concurrent dispatch queues</li>
+      <li class="bullet">How to use GCD to create and manage serial dispatch queues</li>
+      <li class="bullet">How to use various GCD functions to add tasks to the dispatch queues</li>
+      <li class="bullet">How to use <code class="Code-In-Text--PACKT-">Operation</code> and <code class="Code-In-Text--PACKT-">OperationQueues</code> to add concurrency to our applications</li>
+    </ul>
+    <p class="normal">We have not seen a lot of improvement with regards to concurrency in the Swift language over the course of Swift 5.x. It does appear that this will change in the future as concurrency improvements are one of the main goals of Swift 6. Let's start off by looking at the difference between concurrency and parallelism, one that is important to understand.</p>
+    <h1 id="_idParaDest-266" class="title">Concurrency and parallelism</h1>
+    <p class="normal"><strong class="keyword">Concurrency</strong> is the concept of <a id="_idIndexMarker624"/>multiple tasks starting, running, and completing within the same time period. This does not necessarily mean that the tasks are executing simultaneously. In fact, in order for tasks to be run simultaneously, our application needs to be running on a multicore or multiprocessor system. Concurrency allows us to share the processor or cores for multiple tasks; however, a single core can only execute one task at a given time.</p>
+    <p class="normal"><strong class="keyword">Parallelism</strong> is the concept of <a id="_idIndexMarker625"/>two or more tasks running simultaneously. Since each core of our processor can only execute one task at a time, the number of tasks executing simultaneously is limited to the number of cores within our processors and the number of processors that we have. As an example, if we have a four-core processor, then we are limited to running four tasks simultaneously. Today's processors can execute tasks so quickly that it may appear that larger tasks are executing simultaneously. However, within the system, the larger tasks are actually taking turns executing subtasks on the cores.</p>
+    <p class="normal">In order to understand the difference between concurrency and parallelism, let's look at how a juggler juggles balls. If you watch a juggler, it seems they are catching and throwing multiple balls at any given time; however, a closer look reveals that they are, in fact, only catching and throwing one ball at a time. The other balls are in the air waiting to be caught and thrown. If we want to be able to catch and throw multiple balls simultaneously, we need to have multiple jugglers.</p>
+    <p class="normal">This example is really good because we can think of jugglers as the cores of a processor. A system with a single-core processor (one juggler), regardless of how it seems, can only execute one task (catch or throw one ball) at a time. If we want to execute more than one task at a time, we need to use a multicore processor (more than one juggler).</p>
+    <p class="normal">Back in the days when all of the processors were single-core, the only way to have a system that executed tasks simultaneously was to have multiple processors in the system. This also required specialized software to take advantage of the multiple processors. In today's world, just about every device has a processor that has multiple cores, and both iOS and macOS are designed to take advantage of these multiple cores to run tasks simultaneously.</p>
+    <p class="normal">Traditionally, the way applications added concurrency was to create multiple threads; however, this model does not scale well to an arbitrary number of cores. The biggest problem with using threads was that our applications ran on a variety of systems (and processors), and in order to optimize our code, we needed to know how many cores/processors could be efficiently used at a given time, which is usually not known at the time of development.</p>
+    <p class="normal">To solve this problem, many operating systems, including iOS and macOS, started relying on asynchronous functions. These functions are often used to initiate tasks that could possibly take a long time to complete, such as making an HTTP request or writing data to disk. An asynchronous function <a id="_idIndexMarker626"/>typically starts a long-running task and then returns prior to the task's completion. Usually, this task runs in the background and uses a callback function (such as a closure in Swift) when the task completes.</p>
+    <p class="normal">These asynchronous functions work great for the tasks that the operating system provides them for, but what if we need to create our own asynchronous functions and do not want to manage the threads ourselves? For this, Apple provides a couple of technologies. In this chapter, we will be covering two of these: GCD and operation queues.</p>
+    <p class="normal">GCD is a low-level, C-based <a id="_idIndexMarker627"/>API that allows specific tasks to be queued up for execution and schedules the execution on any of the available processor cores. Operation queues are similar to GCD; however, they are Foundation objects and are internally implemented using GCD.</p>
+    <p class="normal">Let's begin by looking at GCD.</p>
+    <h1 id="_idParaDest-267" class="title">Grand Central Dispatch (GCD)</h1>
+    <p class="normal">Prior to Swift 3, using GCD felt <a id="_idIndexMarker628"/>like writing low-level C code. The API was a little cumbersome and sometimes hard to understand because it did not use any of the Swift language design features. This all changed with Swift 3 because Apple took up the task of rewriting the API so it would meet the Swift 3 API guidelines.</p>
+    <p class="normal">GCD provides what is known as dispatch queues <a id="_idIndexMarker629"/>to manage submitted tasks. The queues manage these submitted tasks and execute <a id="_idIndexMarker630"/>them in a <strong class="keyword">First-In, First-Out</strong> (<strong class="keyword">FIFO</strong>) order. This ensures that the tasks are started in the order they were submitted.</p>
+    <p class="normal">A task is simply some work that our application needs to perform. For example, we can create tasks that perform simple calculations, read/write data to disk, make an HTTP request, or anything else that our application needs to do. We define these tasks by placing the code inside either a function or a closure and adding it to a dispatch queue.</p>
+    <p class="normal">GCD provides three types of dispatch queues:</p>
+    <ul>
+      <li class="bullet"><strong class="keyword">Serial queues</strong>: Tasks in a serial queue (also known as a <strong class="keyword">private queue</strong>) are executed one at a <a id="_idIndexMarker631"/>time in the order they were <a id="_idIndexMarker632"/>submitted. Each task is started only after the preceding task is completed. Serial queues are often used to synchronize access to specific resources because we are guaranteed that no two tasks in a serial queue will ever run simultaneously. Therefore, if the only way to access the specific resource is through the tasks in the serial queue, then no two tasks will attempt to access the resource at the same time or out of order.</li>
+      <li class="bullet"><strong class="keyword">Concurrent queues</strong>: Tasks in a <a id="_idIndexMarker633"/>concurrent queue (also known as a <strong class="keyword">global dispatch queue</strong>) execute concurrently; however, the tasks are still started in the order that they were added to the <a id="_idIndexMarker634"/>queue. The exact number of tasks that can be executed at any given instance is variable and is dependent on the system's current conditions and resources. The decision of when to start a task is up to GCD and is not something that we can control within our application.</li>
+      <li class="bullet"><strong class="keyword">Main dispatch queue</strong>: The main <a id="_idIndexMarker635"/>dispatch queue is a globally available serial queue that executes tasks on the application's main thread. Since tasks put into the main dispatch queue run on the main thread, it is usually called from a background queue when some background processing has finished and the user interface needs to be updated.</li>
+    </ul>
+    <p class="normal">Dispatch queues offer several advantages over traditional threads. The first and foremost advantage is that, with dispatch queues, the system handles the creation and management of threads <a id="_idIndexMarker636"/>rather than the application itself. The system can scale the number of threads dynamically, based on the overall available resources of the system and the current system conditions. This means that dispatch queues can manage the threads with greater efficiency than we could.</p>
+    <p class="normal">Another advantage of dispatch queues is that we are able to control the order in which the tasks are started. With serial queues, not only do we control the order in which tasks are started, but we also ensure that one task does not start before the preceding one is complete. With traditional threads, this can be very cumbersome and brittle to implement, but with dispatch queues, as we will see later in this chapter, it is quite easy.</p>
+    <h2 id="_idParaDest-268" class="title">Calculation types</h2>
+    <p class="normal">Before we look at how to use dispatch queues, let's create a class that will help us to demonstrate how the <a id="_idIndexMarker637"/>various types of <a id="_idIndexMarker638"/>queues work. This class will contain two basic functions and we will name the class <code class="Code-In-Text--PACKT-">DoCalculations</code>. The first function will simply perform some basic calculations and then return a value. Here is the code for this function, which is named <code class="Code-In-Text--PACKT-">doCalc()</code>:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">func</span><span class="hljs-function"> </span><span class="hljs-title">doCalc</span><span class="hljs-params">()</span> { 
+    <span class="hljs-keyword">let</span> x = <span class="hljs-number">100</span>
+    <span class="hljs-keyword">let</span> y = x*x
+    <span class="hljs-number">_</span> = y/x
+}
+</code></pre>
+    <p class="normal">The other function, which we will name <code class="Code-In-Text--PACKT-">performCalculation()</code>, accepts two parameters. One is an integer named <code class="Code-In-Text--PACKT-">iterations</code> and the other is a string named <code class="Code-In-Text--PACKT-">tag</code>. The <code class="Code-In-Text--PACKT-">performCalculation()</code> function calls the <code class="Code-In-Text--PACKT-">doCalc()</code> function repeatedly until it calls the function the same number of times as defined by the <code class="Code-In-Text--PACKT-">iterations</code> parameter. We also use the <code class="Code-In-Text--PACKT-">CFAbsoluteTimeGetCurrent()</code> function to calculate the elapsed time it took to perform all of the iterations, and then we print the elapsed time with the <code class="Code-In-Text--PACKT-">tag</code> string to the console. This will let us know when the function completes and how long it took to complete it. Here is the code for this function:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">func</span><span class="hljs-function"> </span><span class="hljs-title">performCalculation</span><span class="hljs-params">(</span><span class="hljs-number">_</span><span class="hljs-params"> iterations: Int, tag: String)</span> { 
+    <span class="hljs-keyword">let</span> start = <span class="hljs-type">CFAbsoluteTimeGetCurrent</span>()
+    <span class="hljs-keyword">for</span> <span class="hljs-number">_</span> <span class="hljs-keyword">in</span> <span class="hljs-number">0</span> ..&lt; iterations { 
+        <span class="hljs-keyword">self</span>.doCalc()
+    }
+    <span class="hljs-keyword">let</span> end = <span class="hljs-type">CFAbsoluteTimeGetCurrent</span>() 
+    <span class="hljs-built_i">print</span>(<span class="hljs-string">"time for \(tag):\(end-start)"</span>)
+}
+</code></pre>
+    <p class="normal">These functions will be used together to keep our queues busy, so we can see how they work. Let's begin by looking at how we would create a dispatch queue.</p>
+    <h2 id="_idParaDest-269" class="title">Creating queues</h2>
+    <p class="normal">We <a id="_idIndexMarker639"/>use the <code class="Code-In-Text--PACKT-">DispatchQueue</code> initializer to <a id="_idIndexMarker640"/>create a new dispatch queue. The following code shows how we would create a new dispatch queue:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> concurrentQueue = <span class="hljs-type">DispatchQueue</span>(label: <span class="hljs-string">"cqueue.hoffman.jon"</span>,                       attributes: .concurrent)
+<span class="hljs-keyword">let</span> serialQueue = <span class="hljs-type">DispatchQueue</span>(label: <span class="hljs-string">"squeue.hoffman.jon"</span>)
+</code></pre>
+    <p class="normal">The first line would create a concurrent queue with a label of <code class="Code-In-Text--PACKT-">cqueue.hoffman.jon</code>, while the second line would create a serial queue with a label of <code class="Code-In-Text--PACKT-">squeue.hoffman.jon</code>. The <code class="Code-In-Text--PACKT-">ispatchQueue</code> initializer takes the following parameters:</p>
+    <ul>
+      <li class="bullet"><code class="Code-In-Text--PACKT-">label</code>: This is a string label that is attached to the queue to uniquely identify it in debugging tools, such as instruments and crash reports. It is recommended that we use a reverse DNS naming convention. This parameter is optional and can be <code class="Code-In-Text--PACKT-">nil</code>.</li>
+      <li class="bullet"><code class="Code-In-Text--PACKT-">attributes</code>: This specifies <a id="_idIndexMarker641"/>the type of queue to make. This can be <code class="Code-In-Text--PACKT-">DispatchQueue.Attributes.serial</code>, <code class="Code-In-Text--PACKT-">DispatchQueue.Attributes.concurrent</code>, or <code class="Code-In-Text--PACKT-">nil</code>. If this <a id="_idIndexMarker642"/>parameter is <code class="Code-In-Text--PACKT-">nil</code>, a serial queue is created. You can use <code class="Code-In-Text--PACKT-">.serial</code> or <code class="Code-In-Text--PACKT-">.concurrent</code> as we showed in the sample code.</li>
+    </ul>
+    <div class="note">
+      <p class="Information-Box--PACKT-">Some programming languages use the reverse DNS naming convention to name certain components. This convention is based on a registered domain name that is reversed. As an example, if we worked for a company that had a domain name of <code class="Code-In-Text--PACKT-">mycompany.com</code> with a product called widget, the reverse DNS name would be <code class="Code-In-Text--PACKT-">com.mycompany.widget</code>.</p>
+    </div>
+    <p class="normal">Let's now look at how we can create and use concurrent queues.</p>
+    <h2 id="_idParaDest-270" class="title">Creating and using a concurrent queue</h2>
+    <p class="normal">A concurrent queue will <a id="_idIndexMarker643"/>execute tasks in a FIFO order; however, the tasks will <a id="_idIndexMarker644"/>execute concurrently and finish in any order. Let's see how we would create and use a concurrent queue. The following line will create the concurrent queue that we will be using for this section and will also create an instance of the <code class="Code-In-Text--PACKT-">DoCalculations</code> type that will be used to test the queue:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> cqueue = <span class="hljs-type">DispatchQueue</span>(label: <span class="hljs-string">"cqueue.hoffman.jon"</span>,              attributes:.concurrent)
+<span class="hljs-keyword">let</span> calculation = <span class="hljs-type">DoCalculations</span>()
+</code></pre>
+    <p class="normal">The first line will create a new dispatch queue that we will name <code class="Code-In-Text--PACKT-">cqueue</code>, and the second line creates an instance of the <code class="Code-In-Text--PACKT-">DoCalculations</code> type. Now, let's see how we would use our concurrent queue by using the <code class="Code-In-Text--PACKT-">performCalculation()</code> method from the <code class="Code-In-Text--PACKT-">DoCalculations</code> type to perform some calculations:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> <span class="hljs-built_i">c</span> = {calculation.performCalculation(<span class="hljs-number">1000</span>, tag: <span class="hljs-string">"async1"</span>)}
+cqueue.async(execute: <span class="hljs-built_i">c</span>)
+</code></pre>
+    <p class="normal">In the preceding code, we created a closure, which represents our task and simply calls the <code class="Code-In-Text--PACKT-">performCalculation()</code> function of the <code class="Code-In-Text--PACKT-">DoCalculation</code> instance, requesting that it runs through 1,000 iterations of the <code class="Code-In-Text--PACKT-">doCalc()</code> function. Finally, we use the <code class="Code-In-Text--PACKT-">async(execute:)</code> method of our queue to execute it. This code will execute the task in a concurrent dispatch queue, which is separate from the main thread.</p>
+    <p class="normal">While the preceding example works perfectly, we can actually shorten the code a little bit. The next example shows that we do not need to create a separate closure as we did in the preceding example. We can also submit the task to execute, as follows:</p>
+    <pre class="programlisting code"><code class="hljs-code">cqueue.async {
+    calculation.performCalculation(<span class="hljs-number">1000</span>, tag: <span class="hljs-string">"async1"</span>)
+}
+</code></pre>
+    <p class="normal">This <a id="_idIndexMarker645"/>shorthand version is how we usually submit small code blocks to our queues. If we <a id="_idIndexMarker646"/>have larger tasks or tasks that we need to submit multiple times, we will generally want to create a closure and submit the closure to the queue as we showed in the first example.</p>
+    <p class="normal">Let's see how a concurrent queue works by adding several items to the queue and looking at the order and time that they return. The following code will add three tasks to the queue. Each task will call the <code class="Code-In-Text--PACKT-">performCalculation()</code> function with various iteration counts.</p>
+    <p class="normal">Remember that the <code class="Code-In-Text--PACKT-">performCalculation()</code> function will execute the calculation routine continuously until it is executed the number of times defined by the iteration count passed in. Therefore, the larger the iteration count we pass into the function, the longer it should take to execute. Let's look at the following code:</p>
+    <pre class="programlisting code"><code class="hljs-code">cqueue.async {
+    calculation.performCalculation(<span class="hljs-number">10_000_000</span>, tag: <span class="hljs-string">"async1"</span>)
+}
+cqueue.async {
+    calculation.performCalculation(<span class="hljs-number">1000</span>, tag: <span class="hljs-string">"async2"</span>)
+}
+cqueue.async {
+    calculation.performCalculation(<span class="hljs-number">100_000</span>, tag: <span class="hljs-string">"async3"</span>)
+}
+</code></pre>
+    <p class="normal">Note that each of the functions is called with a different value in the <code class="Code-In-Text--PACKT-">tag</code> parameter. Since the <code class="Code-In-Text--PACKT-">performCalculation()</code> function prints out the <code class="Code-In-Text--PACKT-">tag</code> variable with the elapsed time, we can see the order in which the tasks complete and the time they took to execute. If we execute the preceding code, we should see results similar to this:</p>
+    <pre class="programlisting con"><code class="hljs-con">time for async2: 0.000200986862182617
+time for async3: 0.00800204277038574
+time for async1: 0.461670994758606
+</code></pre>
+    <div class="note">
+      <p class="Information-Box--PACKT-">The elapsed time will vary from one run to the next and from system to system.</p>
+    </div>
+    <p class="normal">Since the queues function in a FIFO order, the task that had the tag of <code class="Code-In-Text--PACKT-">async1</code> was executed first. However, as we can see from the results, it was the last task to finish. Since this is a concurrent queue, if it is possible (if the system has the <a id="_idIndexMarker647"/>available resources), the <a id="_idIndexMarker648"/>blocks of code will execute concurrently. This is why tasks with the tags of <code class="Code-In-Text--PACKT-">async2</code> and <code class="Code-In-Text--PACKT-">async3</code> completed prior to the task that had the <code class="Code-In-Text--PACKT-">async1</code> tag, even though the execution of the <code class="Code-In-Text--PACKT-">async1</code> task began before the other two.</p>
+    <p class="normal">Now, let's see how a serial queue executes tasks.</p>
+    <h2 id="_idParaDest-271" class="title">Creating and using a serial queue</h2>
+    <p class="normal">A serial queue functions a little differently to a <a id="_idIndexMarker649"/>concurrent queue. A serial queue will only execute <a id="_idIndexMarker650"/>one task at a time and will wait for one task to complete before starting the next one. This queue, like the concurrent dispatch queue, follows the FIFO order. The following line of code will create a serial queue that we will be using for this section and will create an instance of the <code class="Code-In-Text--PACKT-">DoCalculations</code> type:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> squeue = <span class="hljs-type">DispatchQueue</span>(label: <span class="hljs-string">"squeue.hoffman.jon"</span>)
+<span class="hljs-keyword">let</span> calculation = <span class="hljs-type">DoCalculations</span>()
+</code></pre>
+    <p class="normal">The first line will create a new serial dispatch queue that we name <code class="Code-In-Text--PACKT-">squeue</code>, and the second line creates an instance of the <code class="Code-In-Text--PACKT-">DoCalculations</code> type. Now, let's see how we would use our serial queue by using the <code class="Code-In-Text--PACKT-">performCalculation()</code> method from the <code class="Code-In-Text--PACKT-">DoCalculations</code> type to perform some calculations:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> s = {calculation.performCalculation(<span class="hljs-number">1000</span>, tag: <span class="hljs-string">"async1"</span>)}
+squeue.async (execute: s)
+</code></pre>
+    <p class="normal">In the preceding code, we created a closure, which represents our task, that simply calls the <code class="Code-In-Text--PACKT-">performCalculation()</code> function of the <code class="Code-In-Text--PACKT-">DoCalculation</code> instance, requesting that it runs through 1,000 iterations of the <code class="Code-In-Text--PACKT-">doCalc()</code> function. Finally, we use the <code class="Code-In-Text--PACKT-">async(execute:)</code> method of our queue to execute it. This code will execute the task in a serial dispatch queue, which is separate from the main thread. As we can see from this code, we use the serial queue exactly like we use the concurrent queue.</p>
+    <p class="normal">We <a id="_idIndexMarker651"/>can shorten this <a id="_idIndexMarker652"/>code a little bit, just like we did with the concurrent queue. The following example shows how we would do this with a serial queue:</p>
+    <pre class="programlisting code"><code class="hljs-code">squeue.async {
+    calculation.performCalculation(<span class="hljs-number">1000</span>, tag: <span class="hljs-string">"async2"</span>)
+}
+</code></pre>
+    <p class="normal">Let's see how the serial queue works by adding several items to the queue and looking at the order in which they complete. The following code will add three tasks, which will call the <code class="Code-In-Text--PACKT-">performCalculation()</code> function with various iteration counts to the queue:</p>
+    <pre class="programlisting code"><code class="hljs-code">squeue.async {
+    calculation.performCalculation(<span class="hljs-number">100000</span>, tag: <span class="hljs-string">"async1"</span>)
+}
+squeue.async {
+    calculation.performCalculation(<span class="hljs-number">1000</span>, tag: <span class="hljs-string">"async2"</span>)
+}
+squeue.async {
+    calculation.performCalculation(<span class="hljs-number">100000</span>, tag: <span class="hljs-string">"async3"</span>)
+}
+</code></pre>
+    <p class="normal">Just as we did in the concurrent queue example, we call the <code class="Code-In-Text--PACKT-">performCalculation()</code> function with various iteration counts and different values in the <code class="Code-In-Text--PACKT-">tag</code> parameter. Since the <code class="Code-In-Text--PACKT-">performCalculation()</code> function prints out the <code class="Code-In-Text--PACKT-">tag</code> string with the elapsed time, we can see the order in which the tasks complete and the time it takes to execute. If we execute this code, we should see the following results:</p>
+    <pre class="programlisting con"><code class="hljs-con">time for async1: 0.00648999214172363
+time for async2: 0.00009602308273315
+time for async3: 0.00515800714492798
+</code></pre>
+    <div class="note">
+      <p class="Information-Box--PACKT-">The elapsed time will vary from one run to the next and from system to system.</p>
+    </div>
+    <p class="normal">Unlike the concurrent <a id="_idIndexMarker653"/>queues, we can see that the tasks completed in the same order that they were submitted in, even though the <code class="Code-In-Text--PACKT-">sync2</code> and <code class="Code-In-Text--PACKT-">sync3</code> tasks took considerably less time <a id="_idIndexMarker654"/>to complete. This demonstrates that a serial queue only executes one task at a time and that the queue waits for each task to complete before starting the next one.</p>
+    <p class="normal">In the previous examples, we used the <code class="Code-In-Text--PACKT-">async</code> method to execute the code blocks. We could also use the <code class="Code-In-Text--PACKT-">sync</code> method.</p>
+    <h2 id="_idParaDest-272" class="title">async versus sync</h2>
+    <p class="normal">In the <a id="_idIndexMarker655"/>previous examples, we used the <code class="Code-In-Text--PACKT-">async</code> method to execute the code blocks. When we use the <code class="Code-In-Text--PACKT-">async</code> method, the call will <a id="_idIndexMarker656"/>not block the current thread. This means that the method returns and the code block is executed asynchronously.</p>
+    <p class="normal">Rather than using the <code class="Code-In-Text--PACKT-">async</code> method, we could use the <code class="Code-In-Text--PACKT-">sync</code> method to execute the code blocks. The <code class="Code-In-Text--PACKT-">sync</code> method will block the current thread, which means it will not return until the execution of the code has completed. Generally, we use the <code class="Code-In-Text--PACKT-">async</code> method, but there are use cases where the <code class="Code-In-Text--PACKT-">sync</code> method is useful. These use cases are usually when we have a separate thread and we want that thread to wait for some work to finish.</p>
+    <h2 id="_idParaDest-273" class="title">Executing code on the main queue function</h2>
+    <p class="normal">The <code class="Code-In-Text--PACKT-">DispatchQueue.main.async(execute:)</code> function <a id="_idIndexMarker657"/>will execute code on the application's <a id="_idIndexMarker658"/>main queue. We generally use this function when we want to update our code from another thread or queue.</p>
+    <p class="normal">The main queue is automatically created for the main thread when the application starts. This main queue is a serial queue; therefore, items in this queue are executed one at a time, in the order that they were submitted. We will generally want to avoid using this queue unless we have a need to update the user interface from a background thread.</p>
+    <p class="normal">The following code example shows how we would use this function:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> squeue = <span class="hljs-type">DispatchQueue</span>(label: <span class="hljs-string">"squeue.hoffman.jon"</span>) 
+squeue.async {
+    <span class="hljs-keyword">let</span> resizedImage = image.resize(to: rect) 
+    <span class="hljs-type">DispatchQueue</span>.main.async {
+        picView.image = resizedImage
+    }
+}
+</code></pre>
+    <p class="normal">In the previous code, we assume that we have added a method to the <code class="Code-In-Text--PACKT-">UIImage</code> type that will resize the image. In this code, we create a new serial queue and, in that queue, we resize an image. This is a good example of how to use a dispatch queue because we would not want to resize an image on the main queue since it would freeze the UI while the image is being resized. Once the image is resized, we then need to update <code class="Code-In-Text--PACKT-">UIImageView</code> with the new image; however, all updates to the UI need to occur on the main thread. Therefore, we will use the <code class="Code-In-Text--PACKT-">DispatchQueue.main.async</code> function to perform the update on the main queue.</p>
+    <p class="normal">There will be times when we need to execute tasks after a delay. If we were using a threading model, we would need to create a new thread, perform some sort of <code class="Code-In-Text--PACKT-">delay</code> or <code class="Code-In-Text--PACKT-">sleep</code> function, and execute our task. With GCD, we can use the <code class="Code-In-Text--PACKT-">asyncAfter</code> function.</p>
+    <h2 id="_idParaDest-274" class="title">Using asyncAfter</h2>
+    <p class="normal">The <code class="Code-In-Text--PACKT-">asyncAfter</code> function <a id="_idIndexMarker659"/>will execute a block of <a id="_idIndexMarker660"/>code asynchronously after a given delay. This is very useful when we need to pause the execution of our code. The following code sample shows how we would use the <code class="Code-In-Text--PACKT-">asyncAfter</code> function:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> queue2 = <span class="hljs-type">DispatchQueue</span>(label: <span class="hljs-string">"squeue.hoffman.jon"</span>) 
+<span class="hljs-keyword">let</span> delayInSeconds = <span class="hljs-number">2.0</span>
+<span class="hljs-keyword">let</span> pTime = <span class="hljs-type">DispatchTime</span>.now() + <span class="hljs-type">Double</span>(delayInSeconds * <span class="hljs-type">Double</span>(<span class="hljs-type">NSEC_PER_SEC</span>)) / <span class="hljs-type">Double</span>(<span class="hljs-type">NSEC_PER_SEC</span>) 
+queue2.asyncAfter(deadline: pTime) {
+    <span class="hljs-built_i">print</span>(<span class="hljs-string">"Time's Up"</span>)
+}
+</code></pre>
+    <p class="normal">In this code, we begin by creating a serial dispatch queue. We then create an instance of the <code class="Code-In-Text--PACKT-">DispatchTime</code> type and calculate the time to execute the block of code based on the current time. We then use the <code class="Code-In-Text--PACKT-">asyncAfter</code> function to execute the code block after the delay.</p>
+    <p class="normal">Now, that <a id="_idIndexMarker661"/>we have looked at GCD, let's look at <a id="_idIndexMarker662"/>operation queues.</p>
+    <h1 id="_idParaDest-275" class="title">Using the Operation and OperationQueue types</h1>
+    <p class="normal">The <code class="Code-In-Text--PACKT-">Operation</code> and <code class="Code-In-Text--PACKT-">OperationQueue</code> types, working together, provide us with an alternative to <a id="_idIndexMarker663"/>GCD for adding concurrency to our applications. Operation queues are part of the Foundation framework and function like dispatch queues as <a id="_idIndexMarker664"/>they are a higher level of abstraction over GCD.</p>
+    <p class="normal">We define the tasks (operations) that we wish to execute and then add the tasks to the operation queue. The operation queue will then handle the scheduling and execution of tasks. Operation queues are instances of the <code class="Code-In-Text--PACKT-">OperationQueue</code> class and operations are instances of the <code class="Code-In-Text--PACKT-">Operation</code> class.</p>
+    <p class="normal">An operation represents a single unit of work or a task. The <code class="Code-In-Text--PACKT-">Operation</code> type is an abstract class that provides a thread-safe structure for modeling the state, priority, and dependencies. This class must be subclassed to perform any useful work; we will look at how to subclass this class in the <em class="italic">Subclassing the Operation class</em> section of this chapter.</p>
+    <p class="normal">Apple provides a concrete implementation of the <code class="Code-In-Text--PACKT-">Operation</code> type that we can use as-is for situations where it does not make sense to build a custom subclass. This subclass is <code class="Code-In-Text--PACKT-">BlockOperation</code>.</p>
+    <p class="normal">More than one operation queue can exist at the same time, and, in fact, there is always at least one operation queue running. This operation queue is known as the <strong class="keyword">main queue</strong>. The main <a id="_idIndexMarker665"/>queue is automatically created for the main thread when the application starts and is where all of the UI operations are performed.</p>
+    <p class="normal">One thing to keep in mind with operation queues is that they add additional overhead because they are Foundation objects. For the large majority of applications, this little extra overhead should not be an issue or even noticed; however, for some projects, such as games that need every last resource that they can get, this extra overhead might very well be an issue.</p>
+    <p class="normal">There are several ways that we can use the <code class="Code-In-Text--PACKT-">Operation</code> and <code class="Code-In-Text--PACKT-">OperationQueue</code> classes to add concurrency to our application. In this chapter, we will look at three of these ways. The first one we will look at is the use of the <code class="Code-In-Text--PACKT-">BlockOperation</code> implementation of the <code class="Code-In-Text--PACKT-">Operation</code> abstract class.</p>
+    <h2 id="_idParaDest-276" class="title">Using BlockOperation</h2>
+    <p class="normal">In this section, we will be <a id="_idIndexMarker666"/>using the same <code class="Code-In-Text--PACKT-">DoCalculation</code> class that we used in the <em class="italic">Grand Central Dispatch (GCD)</em> section to keep our queues busy with work so that we can see how the <code class="Code-In-Text--PACKT-">OperationQueue</code> class works.</p>
+    <p class="normal">The <code class="Code-In-Text--PACKT-">BlockOperation</code> class is a concrete implementation of the <code class="Code-In-Text--PACKT-">Operation</code> type that can manage the execution of one or more blocks. This class can be used to execute several tasks at once without the need to create separate operations for each task.</p>
+    <p class="normal">Let's see how we can use the <code class="Code-In-Text--PACKT-">BlockOperation</code> class to add concurrency to our application. The following code shows how to add three tasks to an operation queue using a single <code class="Code-In-Text--PACKT-">BlockOperation</code> instance:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> calculation = <span class="hljs-type">DoCalculations</span>()
+<span class="hljs-keyword">let</span> blockOperation1: <span class="hljs-type">BlockOperation</span> = <span class="hljs-type">BlockOperation</span>.<span class="hljs-keyword">init</span>(
+    block: {
+        calculation.performCalculation(<span class="hljs-number">10000000</span>, tag: <span class="hljs-string">"Operation 1"</span>)
+    }
+)
+blockOperation1.addExecutionBlock({ 
+        calculation.performCalculation(<span class="hljs-number">10000</span>, tag: <span class="hljs-string">"Operation 2"</span>)
+    }
+)
+blockOperation1.addExecutionBlock({ 
+        calculation.performCalculation(<span class="hljs-number">1000000</span>, tag: <span class="hljs-string">"Operation 3"</span>)
+    }
+)
+<span class="hljs-keyword">let</span> operationQueue = <span class="hljs-type">OperationQueue</span>() 
+operationQueue.addOperation(blockOperation1)
+</code></pre>
+    <p class="normal">In this code, we begin by creating an instance of the <code class="Code-In-Text--PACKT-">DoCalculation</code> class and an instance of the <code class="Code-In-Text--PACKT-">OperationQueue</code> class. Next, we create an instance of the <code class="Code-In-Text--PACKT-">BlockOperation</code> class using the <code class="Code-In-Text--PACKT-">init</code> constructor. This constructor takes a single parameter, which is a block of code that represents one of the tasks we want to execute in the queue. Next, we add two additional tasks using the <code class="Code-In-Text--PACKT-">addExecutionBlock()</code> method.</p>
+    <p class="normal">One of the differences between dispatch queues and operations is that, with dispatch queues, if resources are available, the tasks are executed as they are added to the queue. With operations, the individual tasks are not executed until the operation itself is submitted to an operation queue. This allows us to initiate all of the operations into a single block operation prior to executing them.</p>
+    <p class="normal">Once we add all of the tasks to the <code class="Code-In-Text--PACKT-">BlockOperation</code> instance, we then add the operation to the <code class="Code-In-Text--PACKT-">OperationQueue</code> instance that we created at the beginning of the code. At this point, the individual tasks within the operation start to execute.</p>
+    <p class="normal">This example shows <a id="_idIndexMarker667"/>how to use <code class="Code-In-Text--PACKT-">BlockOperation</code> to queue up multiple tasks and then pass the tasks to the operation queue. The tasks are executed in a FIFO order; therefore, the first task that is added will be the first task executed. However, the tasks can be executed concurrently if we have the available resources.</p>
+    <p class="normal">The output from this code should look similar to this:</p>
+    <pre class="programlisting con"><code class="hljs-con">time for Operation 2: 0.00546294450759888
+time for Operation 3: 0.0800899863243103
+time for Operation 1: 0.484337985515594
+</code></pre>
+    <p class="normal">What if we do not want the tasks to run concurrently? What if we wanted them to run serially like the serial dispatch queue? We can set a property in the operation queue that defines the number of tasks that can be run concurrently in the queue. The property is named <code class="Code-In-Text--PACKT-">maxConcurrentOperationCount</code>, and is used like this:</p>
+    <pre class="programlisting code"><code class="hljs-code">operationQueue.maxConcurrentOperationCount = <span class="hljs-number">1</span>
+</code></pre>
+    <p class="normal">However, if we add this line to our previous example, it will not work as expected. To see why this is, we need to understand what the property actually defines. If we look at Apple's <code class="Code-In-Text--PACKT-">OperationQueue</code> class reference, the definition of the property is <em class="italic">the maximum number of queued operations that can execute at the same time</em>.</p>
+    <p class="normal">What this tells us is that this property defines the number of operations (this is the keyword) that can be executed at the same time. The <code class="Code-In-Text--PACKT-">BlockOperation</code> instance, which we added all of the tasks to, represents a single operation; therefore, no other <code class="Code-In-Text--PACKT-">BlockOperation</code> added to the queue will execute until the first one is complete, but the individual tasks within the operation will execute concurrently. To run the tasks serially, we would need to create a separate instance of <code class="Code-In-Text--PACKT-">BlockOperation</code> for each task.</p>
+    <p class="normal">Using an instance of the <code class="Code-In-Text--PACKT-">BlockOperation</code> class is good if we have several tasks that we want to execute concurrently, but they will not start executing until we add the operation to an <a id="_idIndexMarker668"/>operation queue. Let's look at a simpler way of adding tasks to an operation queue using the <code class="Code-In-Text--PACKT-">addOperationWithBlock()</code> method.</p>
+    <h2 id="_idParaDest-277" class="title">Using the addOperation() method of the operation queue</h2>
+    <p class="normal">The <code class="Code-In-Text--PACKT-">OperationQueue</code> class has a method named <code class="Code-In-Text--PACKT-">addOperation()</code>, which makes it easy to add a block of <a id="_idIndexMarker669"/>code to the queue. This method automatically wraps the block of code in an operation object and then passes that operation to the queue. Let's see how to use this method to add tasks to a queue:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> operationQueue = <span class="hljs-type">OperationQueue</span>() 
+<span class="hljs-keyword">let</span> calculation = <span class="hljs-type">DoCalculations</span>()
+operationQueue.addOperation() {
+    calculation.performCalculation(<span class="hljs-number">10000000</span>, tag: <span class="hljs-string">"Operation1"</span>)
+}
+operationQueue.addOperation() { 
+    calculation.performCalculation(<span class="hljs-number">10000</span>, tag: <span class="hljs-string">"Operation2"</span>)
+}
+operationQueue.addOperation() { 
+    calculation.performCalculation(<span class="hljs-number">1000000</span>, tag: <span class="hljs-string">"Operation3"</span>)
+}
+</code></pre>
+    <p class="normal">In the <code class="Code-In-Text--PACKT-">BlockOperation</code> example earlier in this chapter, we added the tasks that we wished to execute into a <code class="Code-In-Text--PACKT-">BlockOperation</code> instance. In this example, we are adding the tasks directly to the operation queue, and each task represents one complete operation. Once we create the instance of the operation queue, we then use the <code class="Code-In-Text--PACKT-">addOperation()</code> method to add the tasks to the queue.</p>
+    <p class="normal">Also, in the <code class="Code-In-Text--PACKT-">BlockOperation</code> example, the individual tasks did not execute until all of the tasks were added, and then that operation was added to the queue. This example is similar to the GCD example where the tasks began executing as soon as they were added to the operation queue.</p>
+    <p class="normal">If we run the preceding code, the output should be similar to this:</p>
+    <pre class="programlisting con"><code class="hljs-con">time for Operation2: 0.0115870237350464
+time for Operation3: 0.0790849924087524
+time for Operation1: 0.520610988140106
+</code></pre>
+    <p class="normal">You will notice that the operations are executed concurrently. With this example, we can execute the tasks serially by using the <code class="Code-In-Text--PACKT-">maxConcurrentOperationCount</code> property that we mentioned earlier. Let's try this by initializing the <code class="Code-In-Text--PACKT-">OperationQueue</code> instance as follows:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">var</span> operationQueue = <span class="hljs-type">OperationQueue</span>() 
+operationQueue.maxConcurrentOperationCount = <span class="hljs-number">1</span>
+</code></pre>
+    <p class="normal">Now, if we run the example, the output should be similar to this:</p>
+    <pre class="programlisting con"><code class="hljs-con">time for Operation1: 0.418763995170593 
+time for Operation2: 0.000427007675170898 
+time for Operation3: 0.0441589951515198
+</code></pre>
+    <p class="normal">In this example, we can see that each task waited for the previous task to complete before starting.</p>
+    <p class="normal">Using the <code class="Code-In-Text--PACKT-">addOperation()</code> method to add tasks to the operation queue is generally easier than using the <code class="Code-In-Text--PACKT-">BlockOperation</code> method; however, the tasks will begin as soon as they are added to <a id="_idIndexMarker670"/>the queue. This is usually the desired behavior, although there are use cases where we do not want the tasks executing until all operations are added to the queue, as we saw in the <code class="Code-In-Text--PACKT-">BlockOperation</code> example.</p>
+    <p class="normal">Now, let's look at how we can subclass the <code class="Code-In-Text--PACKT-">Operation</code> class to create an operation that we can add directly to an operation queue.</p>
+    <h2 id="_idParaDest-278" class="title">Subclassing the Operation class</h2>
+    <p class="normal">The previous two examples showed how to add small blocks of code to our operation queues. In these <a id="_idIndexMarker671"/>examples, we called the <code class="Code-In-Text--PACKT-">performCalculations</code> method in the <code class="Code-In-Text--PACKT-">DoCalculation</code> class to perform our tasks. These examples illustrate two really good ways to add concurrency for functionality that is already written, but what if, at design time, we want to design our <code class="Code-In-Text--PACKT-">DoCalculation</code> class itself for concurrency? For this, we can subclass the <code class="Code-In-Text--PACKT-">Operation</code> class.</p>
+    <p class="normal">The <code class="Code-In-Text--PACKT-">Operation</code> abstract class provides a significant amount of infrastructure. This allows us to very easily create a subclass without a lot of work. We will need to provide at least an initialization method and a <code class="Code-In-Text--PACKT-">main</code> method. The <code class="Code-In-Text--PACKT-">main</code> method will be called when the queue begins executing the operation.</p>
+    <p class="normal">Let's see how to implement the <code class="Code-In-Text--PACKT-">DoCalculation</code> class as a subclass of the <code class="Code-In-Text--PACKT-">Operation</code> class; we will call this new class <code class="Code-In-Text--PACKT-">MyOperation</code>:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">class</span><span class="hljs-class"> </span><span class="hljs-title">MyOperation</span><span class="hljs-class">: </span><span class="hljs-title">Operation</span><span class="hljs-class"> </span>{ 
+    <span class="hljs-keyword">let</span> iterations: <span class="hljs-type">Int</span>
+    <span class="hljs-keyword">let</span> tag: <span class="hljs-type">String</span>
+    <span class="hljs-keyword">init</span>(iterations: <span class="hljs-type">Int</span>, tag: <span class="hljs-type">String</span>) { 
+        <span class="hljs-keyword">self</span>.iterations = iterations
+        <span class="hljs-keyword">self</span>.tag = tag
+    }
+    <span class="hljs-keyword">override</span> <span class="hljs-keyword">func</span><span class="hljs-function"> </span><span class="hljs-title">main</span><span class="hljs-params">()</span> { 
+          performCalculation()
+    }
+    <span class="hljs-keyword">func</span><span class="hljs-function"> </span><span class="hljs-title">performCalculation</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">let</span> start = <span class="hljs-type">CFAbsoluteTimeGetCurrent</span>()
+        <span class="hljs-keyword">for</span> <span class="hljs-number">_</span> <span class="hljs-keyword">in</span> <span class="hljs-number">0</span> ..&lt; iterations {
+            <span class="hljs-keyword">self</span>.doCalc()
+    }
+        <span class="hljs-keyword">let</span> end = <span class="hljs-type">CFAbsoluteTimeGetCurrent</span>() 
+        <span class="hljs-built_i">print</span>(<span class="hljs-string">"time for \(tag):\(end-start)"</span>)
+    }
+    <span class="hljs-keyword">func</span><span class="hljs-function"> </span><span class="hljs-title">doCalc</span><span class="hljs-params">()</span> {
+        <span class="hljs-keyword">let</span> x=<span class="hljs-number">100</span>
+        <span class="hljs-keyword">let</span> y = x*x
+        <span class="hljs-number">_</span> = y/x
+    }
+}
+</code></pre>
+    <p class="normal">We begin by defining that the <code class="Code-In-Text--PACKT-">MyOperation</code> class is a subclass of the <code class="Code-In-Text--PACKT-">Operation</code> class. Within the implementation of the class, we define two class constants, which represent the iteration count and the tag that the <code class="Code-In-Text--PACKT-">performCalculations()</code> method uses. Keep in mind that when the <a id="_idIndexMarker672"/>operation queue begins executing the operation, it will call the <code class="Code-In-Text--PACKT-">main()</code> method with no parameters; therefore, any parameters that we need to pass it must be passed through initializers.</p>
+    <p class="normal">In this example, our initializer takes two parameters that are used to set the <code class="Code-In-Text--PACKT-">iterations</code> and <code class="Code-In-Text--PACKT-">tag</code> class constants. Then, the <code class="Code-In-Text--PACKT-">main()</code> method, which the operation queue is going to call to begin the execution of the operation, simply calls the <code class="Code-In-Text--PACKT-">performCalculation()</code> method.</p>
+    <p class="normal">We can now very easily add instances of our <code class="Code-In-Text--PACKT-">MyOperation</code> class to an operation queue, as follows:</p>
+    <pre class="programlisting code"><code class="hljs-code"><span class="hljs-keyword">let</span> operationQueue = <span class="hljs-type">NSOperationQueue</span>() 
+    operationQueue.addOperation( <span class="hljs-type">MyOperation</span>(iterations: <span class="hljs-number">10000000</span>, tag:<span class="hljs-string">"Operation 1"</span>)
+)
+operationQueue.addOperation( 
+    <span class="hljs-type">MyOperation</span>(iterations: <span class="hljs-number">10000</span>, tag:<span class="hljs-string">"Operation 2"</span>)
+)
+operationQueue.addOperation(
+    <span class="hljs-type">MyOperation</span>(iterations: <span class="hljs-number">1000000</span>, tag:<span class="hljs-string">"Operation 3"</span>)
+)
+</code></pre>
+    <p class="normal">If we run this code, we will see the following results:</p>
+    <pre class="programlisting con"><code class="hljs-con">time for Operation 2: 0.00187397003173828
+time for Operation 3: 0.104826986789703
+time for Operation 1: 0.866684019565582
+</code></pre>
+    <p class="normal">As we saw earlier, we can also execute the tasks serially by setting the <code class="Code-In-Text--PACKT-">maxConcurrentOperationCount</code> property of the operation queue to <code class="Code-In-Text--PACKT-">1</code>.</p>
+    <p class="normal">If we know that we need to execute some functionality concurrently prior to writing the code, I would recommend subclassing the <code class="Code-In-Text--PACKT-">Operation</code> class, as shown in this example, rather than using the <a id="_idIndexMarker673"/>previous examples. This gives us the cleanest implementation; however, there is nothing wrong with using the <code class="Code-In-Text--PACKT-">BlockOperation</code> class or the <code class="Code-In-Text--PACKT-">addOperation()</code> methods described earlier in this section.</p>
+    <div class="note">
+      <p class="Information-Box--PACKT-">Before we consider adding concurrency to our application, we should make sure that we understand why we are adding it and ask ourselves whether it is necessary. While concurrency can make our application more responsive by offloading work from our main application thread to a background thread, it also adds extra overhead and complexity to our code. I have even seen numerous applications, in various languages, which actually ran better after we pulled out some of the concurrency code. This is because the concurrency was not well thought out or planned.</p>
+    </div>
+    <h1 id="_idParaDest-279" class="title">Summary</h1>
+    <p class="normal">At the start of this chapter, we had a discussion about running tasks concurrently compared to running tasks in parallel. We also discussed the hardware limitations that restrict how many tasks can run in parallel on a given device. Having a good understanding of these concepts is very important to understanding how and when to add concurrency to our projects.</p>
+    <p class="normal">We learned about GCD and operation queues, two different ways of implementing concurrency. While GCD is not limited to system-level applications, before we use it in our application, we should consider whether operation queues would be easier and more appropriate for our needs. In general, we should use the highest level of abstraction that meets our needs. This will usually point us to using operation queues; however, there really is nothing preventing us from using GCD, and it may be more appropriate for our needs.</p>
+    <p class="normal">We should always consider whether it is necessary to add concurrency to our applications. It is a good idea to think and talk about concurrency when we are discussing an application's expected behavior.</p>
+    <p class="normal">In the next chapter, we will look at some advanced topics and things to consider when we are creating our own custom types.</p>
+  </div>
+</body></html>

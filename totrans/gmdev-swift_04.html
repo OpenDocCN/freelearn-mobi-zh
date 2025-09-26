@@ -1,0 +1,189 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;4.&#xA0;Adding Controls"><div class="titlepage"><div><div><h1 class="title"><a id="ch04"/>Chapter 4. Adding Controls</h1></div></div></div><p>Players control<a id="id137" class="indexterm"/> mobile games through a very limited number of interactions. Often, games feature only a single mechanic: tap anywhere on the screen to jump or fly. Contrast that to a console controller with dozens of button combinations. With so few actions, keeping users engaged with polished, fun controls is vital to the success of your game.</p><p>In this chapter, you will learn to implement several popular control schemes that have emerged from the App Store. First, we will experiment with tilt controls; the physical orientation of the device will determine where the player flies. Then, we will wire up the <code class="literal">onTap</code> events on our sprite nodes. Finally, we will implement and polish a simple control scheme for flying in our game: tap anywhere on the screen to fly higher. You can combine these techniques to create unique and enjoyable controls in your future games.</p><p>The topics in this chapter include:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Retrofitting the <code class="literal">Player</code> class for flight</li><li class="listitem" style="list-style-type: disc">Polling for device movement with Core Motion</li><li class="listitem" style="list-style-type: disc">Wiring up the sprite <code class="literal">onTap</code> events</li><li class="listitem" style="list-style-type: disc">Teaching our penguin to fly</li><li class="listitem" style="list-style-type: disc">Improving the camera</li><li class="listitem" style="list-style-type: disc">Looping the ground as the player moves forward</li></ul></div><div class="section" title="Retrofitting the Player class for flight"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec33"/>Retrofitting the Player class for flight</h1></div></div></div><p>We need to <a id="id138" class="indexterm"/>perform a few quick setup tasks before we can react to player input. We will remove some of our older testing code and add a physics body to the <code class="literal">Player</code> class.</p><div class="section" title="The Beekeeper"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec47"/>The Beekeeper</h2></div></div></div><p>First, clean up<a id="id139" class="indexterm"/> the old bee physics tests from the last chapter. Open <code class="literal">GameScene.swift</code>, find <code class="literal">didMoveToView</code>, and locate the bottom two lines; one sets a mass for <code class="literal">bee2</code>, the other applies an impulse to <code class="literal">bee2</code>. Remove these lines.</p></div><div class="section" title="Updating the Player class"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec48"/>Updating the Player class</h2></div></div></div><p>We need <a id="id140" class="indexterm"/>to give the <code class="literal">Player</code> class its own <code class="literal">update</code> function. We want to store player-related logic in <code class="literal">Player</code>, and we need it to run before every frame.</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Open <code class="literal">Player.swift</code> and add the following function inside <code class="literal">Player</code>:<div class="informalexample"><pre class="programlisting">func update() { }</pre></div></li><li class="listitem">In <code class="literal">GameScene.swift</code>, add this code at the bottom of the <code class="literal">GameScene</code> class:<div class="informalexample"><pre class="programlisting">override func update(currentTime: NSTimeInterval) {
+    player.update()
+}</pre></div></li></ol></div><p>Perfect. The <code class="literal">GameScene</code> class will call the <code class="literal">player class update</code> function on every update.</p></div><div class="section" title="Moving the ground"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec49"/>Moving the ground</h2></div></div></div><p>We<a id="id141" class="indexterm"/> initially placed the ground higher than necessary to make sure it displayed for all screen sizes in the previous chapter. We can now move the ground into its final position since the player will soon be moving around, bringing the camera wherever they go.</p><p>In <code class="literal">GameScene.swift</code>, locate the line that defines the <code class="literal">groundPosition</code> constant and change the <code class="literal">y</code> value from <code class="literal">100</code> to <code class="literal">30</code>:</p><div class="informalexample"><pre class="programlisting">let groundPosition = CGPoint(x: -self.size.width, <span class="strong"><strong>y: 30</strong></span>)</pre></div></div><div class="section" title="Assigning a physics body to the player"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec50"/>Assigning a physics body to the player</h2></div></div></div><p>We will <a id="id142" class="indexterm"/>use physics forces to move our player around the screen. To apply these forces, we must first add a physics body to the player sprite.</p><div class="section" title="Creating a physics body shape from a texture"><div class="titlepage"><div><div><h3 class="title"><a id="ch04lvl3sec12"/>Creating a physics body shape from a texture</h3></div></div></div><p>When <a id="id143" class="indexterm"/>gameplay allows, you should use circles to define your physics bodies – they are the most efficient shape for the physics simulation and result in the highest frame rate. However, the accuracy of Pierre's shape is very important to our gameplay and a circle is not a great fit for his shape. Instead, we will assign a special type of physics body based on his texture.</p><p>Apple introduced the ability to define the shape of a physics body with opaque texture pixels in Xcode 6. This is a convenient addition as it allows us to easily create extremely accurate <a id="id144" class="indexterm"/>shapes for our sprites. There is a performance penalty; it is computationally expensive to use these texture-driven physics bodies. You will want to use them sparingly, only on your most important sprites.</p><p>To create Pierre's physics body, add this code in <code class="literal">Player.swift</code>, at the bottom of the <code class="literal">spawn</code> function:</p><div class="informalexample"><pre class="programlisting">// Create a physics body based on one frame of Pierre's animation.
+// We will use the third frame, when his wings are tucked in,
+// and use the size from the spawn function's parameters:
+let bodyTexture = textureAtlas.textureNamed("pierre-flying-3.png")
+self.physicsBody = SKPhysicsBody(
+    texture: bodyTexture,
+    size: size)
+// Pierre will lose momentum quickly with a high linearDamping:
+self.physicsBody?.linearDamping = 0.9
+// Adult penguins weigh around 30kg:
+self.physicsBody?.mass = 30
+// Prevent Pierre from rotating:
+        self.physicsBody?.allowsRotation = false</pre></div><p>Run the project and the ground will appear to rise up to Pierre. Since we have given him a physics body, he is now subject to gravity. Pierre is actually dropping down the grid, and the camera is adjusting to keep him centered. This is fine for now; later we will give him the tools to fly into the sky. Next, let's learn how to move a character, based on the tilt of the physical device.</p></div></div></div></div>
+<div class="section" title="Polling for device movement with Core Motion"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec34"/>Polling for device movement with Core Motion</h1></div></div></div><p>Apple <a id="id145" class="indexterm"/>provides the <span class="strong"><strong>Core Motion</strong></span> framework to expose precise information on the iOS device's orientation in physical space. We can use this data to move<a id="id146" class="indexterm"/> our player on <a id="id147" class="indexterm"/>the screen when the user tilts their device in the direction they want to move. This unique style of input offers new game-play mechanics in mobile games.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note11"/>Note</h3><p>You will need a physical iOS device for this Core Motion section. The iOS simulator in Xcode does not simulate device movement. However, this section is only a learning exercise and is not required to finish the game we are building. Our final game will not use Core Motion. Feel free to skip the Core Motion section if you cannot test with a physical device.</p></div></div><div class="section" title="Implementing the Core Motion code"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec51"/>Implementing the Core Motion code</h2></div></div></div><p>It is<a id="id148" class="indexterm"/> very easy to poll for device orientation. We will check the device position during every update and apply the appropriate force to our player. Follow these steps to implement the Core Motion controls:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">In <code class="literal">GameScene.swift</code>, near the very top, add a new <code class="literal">import</code> statement below the <code class="literal">import SpriteKit</code> line:<div class="informalexample"><pre class="programlisting">import CoreMotion</pre></div></li><li class="listitem">Inside the <code class="literal">GameScene</code> class, add a new constant named <code class="literal">motionManager</code> and instantiate an instance of <code class="literal">CMMotionManager</code>:<div class="informalexample"><pre class="programlisting">let motionManager = CMMotionManager()</pre></div></li><li class="listitem">Inside the <code class="literal">GameScene</code> function <code class="literal">didMoveToView</code>, add the following code at the bottom. This lets Core Motion know that we want to poll the orientation data, so it needs to start reporting data:<div class="informalexample"><pre class="programlisting">self.motionManager.startAccelerometerUpdates()</pre></div></li><li class="listitem">Finally, add the following code to the bottom of the <code class="literal">update</code> function to poll the orientation, build an appropriate vector, and apply a physical force to the player's character:<div class="informalexample"><pre class="programlisting">// Unwrap the accelerometer data optional:
+if let accelData = self.motionManager.accelerometerData {
+    var forceAmount:CGFloat
+    var movement = CGVector()
+
+    // Based on the device orientation, the tilt number
+    // can indicate opposite user desires. The  
+    // UIApplication class exposes an enum that allows
+    // us to pull the current orientation.
+    // We will use this opportunity to explore Swift's    
+    // switch syntax and assign the correct force for the 
+    // current orientation:
+    Switch
+   UIApplication.sharedApplication().statusBarOrientation {
+    case .LandscapeLeft:
+        // The 20,000 number is an amount that felt right
+        // for our example, given Pierre's 30kg mass:
+        forceAmount = 20000
+    case .LandscapeRight:
+        forceAmount = -20000
+    default:
+        forceAmount = 0
+    }
+
+    // If the device is tilted more than 15% towards complete
+    // vertical, then we want to move the Penguin:
+    if accelData.acceleration.y &gt; 0.15 {
+        movement.dx = forceAmount
+    }
+    // Core Motion values are relative to portrait view. // Since we are in landscape, use y-values for x-axis.
+    else if accelData.acceleration.y &lt; -0.15 {
+        movement.dx = -forceAmount
+    }
+
+    // Apply the force we created to the player:
+    player.physicsBody?.applyForce(movement)
+}</pre></div></li></ol></div><p>Run the<a id="id149" class="indexterm"/> project. You can slide Pierre across the ice by tilting your device in the direction you want to move. Great work – we have successfully implemented our first control system.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="tip08"/>Tip</h3><p>Notice that Pierre falls through the ground when you move him too far in any direction. Later in the chapter, we will improve the ground, continuously repositioning it to cover the area beneath the player.</p></div></div><p>This is a simple example of using Core Motion data for player movement; we are not going to use this method in our final game. Still, you can extrapolate this example into advanced control schemes in your own games.</p></div></div>
+<div class="section" title="Checkpoint 4-A"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec35"/>Checkpoint 4-A</h1></div></div></div><p>To download my project, including the Core Motion code, visit this address:</p><p>
+<a class="ulink" href="http://www.thinkingswiftly.com/game-development-with-swift/chapter-4">http://www.thinkingswiftly.com/game-development-with-swift/chapter-4</a>
+</p></div>
+<div class="section" title="Wiring up the sprite onTap events"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec36"/>Wiring up the sprite onTap events</h1></div></div></div><p>Your games will<a id="id150" class="indexterm"/> often require the ability to run code when the player taps a specific sprite. I like to implement a system that includes all the sprites in your game so you can add tap events to each sprite without building an additional structure. We have already implemented <code class="literal">onTap</code> methods in all of our classes that adopt the <code class="literal">GameSprite</code> protocol; we still need to wire up the scene to call these methods when the player<a id="id151" class="indexterm"/> taps the sprites.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note12"/>Note</h3><p>Before we move on, we need to remove the Core Motion code since we will not be using it in the finished game. Once you finish exploring the Core Motion example, please remove it from the game by following the previous section's bullet points in reverse.</p></div></div><div class="section" title="Implementing touchesBegan in the GameScene"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec52"/>Implementing touchesBegan in the GameScene</h2></div></div></div><p>SpriteKit calls <a id="id152" class="indexterm"/>our scene's <code class="literal">touchesBegan</code> function every time the screen is touched. We will read the location of <a id="id153" class="indexterm"/>the touch and determine the sprite node in that position. We can check if the touched node adopts our <code class="literal">GameSprite</code> protocol. If it does, this means it must have an <code class="literal">onTap</code> function, which we can then invoke. Add the <code class="literal">touchesBegan</code> function below to the <code class="literal">GameScene</code> class – I like to place it just below the <code class="literal">didSimulatePhysics</code> function:</p><div class="informalexample"><pre class="programlisting">override func touchesBegan(touches: Set&lt;NSObject&gt;, withEvent 
+    event: UIEvent) {
+    for touch in (touches as! Set&lt;UITouch&gt;) {
+        // Find the location of the touch:
+        let location = touch.locationInNode(self)
+        // Locate the node at this location:
+        let nodeTouched = nodeAtPoint(location)
+        // Attempt to downcast the node to the GameSprite protocol
+        if let gameSprite = nodeTouched as? GameSprite {
+            // If this node adheres to GameSprite, call onTap:
+            gameSprite.onTap()
+        }
+    }
+}</pre></div><p>That is all we need to do to wire up all of the <code class="literal">onTap</code> functions we have implemented on the game object classes we have made. Of course, all of these <code class="literal">onTap</code> functions are empty at the moment; we will now add some functionality to illustrate the effect.</p></div><div class="section" title="Larger than life"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec53"/>Larger than life</h2></div></div></div><p>Open your <code class="literal">Bee.swift</code> file and locate the <code class="literal">onTap</code> function. Temporarily, we will expand the bees to a giant size when tapped, to demonstrate that we have wired our <code class="literal">onTap</code> functions correctly. Add this code inside the bee's <code class="literal">onTap</code> function:</p><div class="informalexample"><pre class="programlisting">self.xScale = 4
+self.yScale = 4</pre></div><p>Run the project and tap on the bees. They will expand to four times their original size, as shown in the following screenshot:</p><div class="mediaobject"><img src="graphics/Image_B04532_04_01.jpg" alt="Larger than life"/></div><p>Oh no – giant bees! This<a id="id154" class="indexterm"/> example shows that our <code class="literal">onTap</code> functions work. You can remove the scaling code you added to the <code class="literal">Bee</code> class. We will keep the <code class="literal">onTap</code> wire-up code in <code class="literal">GameScene</code> so that we can use tap events later.</p></div></div>
+<div class="section" title="Teaching our penguin to fly"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec37"/>Teaching our penguin to fly</h1></div></div></div><p>Let's implement<a id="id155" class="indexterm"/> the control scheme for our penguin. The player can tap anywhere on the screen to make Pierre fly higher and release to let him fall. We are going to make quite a few changes – if you need help, refer to the checkpoint at the end of this chapter. Start by modifying the <code class="literal">Player</code> class; follow these steps to prepare our <code class="literal">Player</code> for flight:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">In <code class="literal">Player.swift</code>, add some new properties directly to the <code class="literal">Player</code> class:<div class="informalexample"><pre class="programlisting">// Store whether we are flapping our wings or in free-fall:
+var flapping = false
+// Set a maximum upward force.
+// 57,000 feels good to me, adjust to taste:
+let maxFlappingForce:CGFloat = 57000
+// Pierre should slow down when he flies too high:
+let maxHeight:CGFloat = 1000</pre></div></li><li class="listitem">So far, Pierre has been flapping his wings by default. Instead, we want to display the soaring animation by default and only run the flap animation when the user presses the screen. In the <code class="literal">spawn</code> function, remove the line that runs <code class="literal">flyAnimation</code> and, instead, run <code class="literal">soarAnimation</code>:<div class="informalexample"><pre class="programlisting">self.runAction(soarAnimation, withKey: "soarAnimation")</pre></div></li><li class="listitem">When the <a id="id156" class="indexterm"/>player touches the screen, we apply the upward force in the <code class="literal">Player</code> class <code class="literal">update</code> function. Remember that <code class="literal">GameScene</code> calls this <code class="literal">update</code> function once per frame. Add this code in <code class="literal">update</code>:<div class="informalexample"><pre class="programlisting">// If flapping, apply a new force to push Pierre higher.
+if self.flapping {
+    var forceToApply = maxFlappingForce
+
+    // Apply less force if Pierre is above position 600
+    if position.y &gt; 600 {
+        // The higher Pierre goes, the more force we 
+        // remove. These next three lines determine the   
+        // force to subtract:
+        let percentageOfMaxHeight = position.y / maxHeight
+        let flappingForceSubtraction = 
+            percentageOfMaxHeight * maxFlappingForce
+        forceToApply -= flappingForceSubtraction
+    }
+    // Apply the final force:
+    self.physicsBody?.applyForce(CGVector(dx: 0, dy: 
+        forceToApply))
+}
+
+// Limit Pierre's top speed as he climbs the y-axis.
+// This prevents him from gaining enough momentum to shoot
+// over our max height. We bend the physics for gameplay:
+if self.physicsBody?.velocity.dy &gt; 300 {
+    self.physicsBody?.velocity.dy = 300
+}</pre></div></li><li class="listitem">Finally, we will provide two functions on <code class="literal">Player</code> to allow other classes to start and stop the flapping behavior. The <code class="literal">GameScene</code> class will call these functions when it detects touch input. Add the following functions to the <code class="literal">Player</code> class:<div class="informalexample"><pre class="programlisting">// Begin the flap animation, set flapping to true:
+func startFlapping() {
+    self.removeActionForKey("soarAnimation")
+    self.runAction(flyAnimation, withKey: "flapAnimation")
+    self.flapping = true
+}
+
+// Stop the flap animation, set flapping to false:
+func stopFlapping() {
+    self.removeActionForKey("flapAnimation")
+    self.runAction(soarAnimation, withKey: "soarAnimation")
+    self.flapping = false
+}</pre></div></li></ol></div><p>Perfect, our <code class="literal">Player</code> is ready<a id="id157" class="indexterm"/> for flight. Now we will simply invoke the start and stop functions from the <code class="literal">GameScene</code> class.</p><div class="section" title="Listening for touches in GameScene"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec54"/>Listening for touches in GameScene</h2></div></div></div><p>The<a id="id158" class="indexterm"/> <code class="literal">SKScene</code> class (that <code class="literal">GameScene</code> inherits from) includes handy functions we can use to monitor touch input. Follow these steps to wire up the <code class="literal">GameScene</code> class:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">In <code class="literal">GameScene.swift</code>, in the <code class="literal">touchesBegan</code> function, add this code at the bottom to start the <code class="literal">Player</code> flapping when the user touches the screen:<div class="informalexample"><pre class="programlisting">player.startFlapping()</pre></div></li><li class="listitem">Below <code class="literal">touchesBegan</code>, create two new functions in the <code class="literal">GameScene</code> class. These functions stop the flapping when the user lifts his or her finger from the screen, or when an iOS notification interrupts the touch:<div class="informalexample"><pre class="programlisting">override func touchesEnded(touches: Set&lt;NSObject&gt;, withEvent event: UIEvent) {
+    player.stopFlapping()
+}
+
+override func touchesCancelled(touches: Set&lt;NSObject&gt;!, withEvent event: UIEvent) {
+    player.stopFlapping()
+}</pre></div></li></ol></div></div><div class="section" title="Fine-tuning gravity"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec55"/>Fine-tuning gravity</h2></div></div></div><p>Before we <a id="id159" class="indexterm"/>test out our new flying code, we need to make one adjustment. The default gravity setting of -9.8 feels too real. Pierre lives in a cartoon world; real-world gravity is a bit of a drag. We can adjust gravity in the <code class="literal">GameScene</code> class; add this line at the bottom of the <code class="literal">didMoveToView</code> function:</p><div class="informalexample"><pre class="programlisting">// Set gravity
+self.physicsWorld.gravity = CGVector(dx: 0, dy: -5)</pre></div></div><div class="section" title="Spreading your wings"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec56"/>Spreading your wings</h2></div></div></div><p>Run<a id="id160" class="indexterm"/> the project. Tap the screen to make Pierre fly higher, release to let him fall. Play with the action; Pierre rotates towards his vector and builds or loses momentum as you tap and release. Terrific! You have successfully implemented the core mechanic of our game. Take a minute to enjoy flying up and down, as in this screenshot:</p><div class="mediaobject"><img src="graphics/Image_B04532_04_02.jpg" alt="Spreading your wings"/></div></div></div>
+<div class="section" title="Improving the camera"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec38"/>Improving the camera</h1></div></div></div><p>Our camera <a id="id161" class="indexterm"/>code works well; it follows the player wherever they fly. However, we can improve the camera to enhance the flying experience. In this section, we <a id="id162" class="indexterm"/>will add two new features:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Zoom the camera out as Pierre Penguin flies higher, reinforcing the feeling of increasing height.</li><li class="listitem" style="list-style-type: disc">Suspend vertical centering when the player drops below the halfway point of the screen. This means the ground never fills too much of the screen, and adds the feeling of cutting upwards into the air when Pierre flies higher and the camera starts tracking him again.</li></ul></div><p>Follow these steps to implement these two improvements:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">In <code class="literal">GameScene.swift</code>, create a new variable in the <code class="literal">GameScene</code> class to store the center point of the screen:<div class="informalexample"><pre class="programlisting">var screenCenterY = CGFloat()</pre></div></li><li class="listitem">In the <a id="id163" class="indexterm"/><code class="literal">didMoveToView</code> function, set this new variable with the calculated center of the screen's height:<div class="informalexample"><pre class="programlisting">// Store the vertical center of the screen:
+screenCenterY = self.size.height / 2</pre></div></li><li class="listitem">We<a id="id164" class="indexterm"/> need to rework the <code class="literal">didSimulatePhysics</code> function significantly. Remove the existing <code class="literal">didSimulatePhysics</code> function and replace it with this code:<div class="informalexample"><pre class="programlisting">override func didSimulatePhysics() {
+    var worldYPos:CGFloat = 0
+
+    // Zoom the world as the penguin flies higher
+    if (player.position.y &gt; screenCenterY) {
+        let percentOfMaxHeight = (player.position.y - 
+            screenCenterY) / (player.maxHeight - 
+            screenCenterY)
+        let scaleSubtraction = (percentOfMaxHeight &gt; 1 ? 1 : percentOfMaxHeight) * 0.6
+        let newScale = 1 - scaleSubtraction
+        world.yScale = newScale
+        world.xScale = newScale
+        // The player is above half the screen size
+        // so adjust the world on the y-axis to follow:
+        worldYPos = -(player.position.y * world.yScale - 
+            (self.size.height / 2))
+    }
+
+    let worldXPos = -(player.position.x * world.xScale - 
+        (self.size.width / 3))
+
+    // Move the world for our adjustment:
+    world.position = CGPoint(x: worldXPos, y: worldYPos)
+}</pre></div></li></ol></div><p>Run the project, and then fly up. The world scales smaller as you gain height. The camera also now allows Pierre to dive below the center of the screen when you fly close to the ground. The following screenshot illustrates the two extremes. Notice the smaller sprites in the top screen, Pierre flies higher and the camera zooms out. In the bottom shot, the camera stops following Pierre vertically as he approaches the ground:</p><div class="mediaobject"><img src="graphics/Image_B04532_04_03.jpg" alt="Improving the camera"/></div><p>The <a id="id165" class="indexterm"/>combined<a id="id166" class="indexterm"/> effect adds a lot of polish to the game and increases the fun of flying. Our flying mechanic feels great. The next step is to move Pierre forward through the world.</p></div>
+<div class="section" title="Pushing Pierre forward"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec39"/>Pushing Pierre forward</h1></div></div></div><p>This <a id="id167" class="indexterm"/>style of game usually moves the world forward at a constant speed. Rather than applying force or impulse, we can manually set a constant velocity for Pierre during every <code class="literal">update</code>. Open the <code class="literal">Player.swift</code> file and add this code in the <code class="literal">update</code> function:</p><div class="informalexample"><pre class="programlisting">// Set a constant velocity to the right:
+self.physicsBody?.velocity.dx = 200</pre></div><p>Run the project. Our protagonist penguin will move forward past the swarm of bees and through the world. This works well, but you will quickly notice that the ground runs out as Pierre moves forward, as shown in this screenshot:</p><div class="mediaobject"><img src="graphics/Image_B04532_04_04.jpg" alt="Pushing Pierre forward"/></div><p>Recall that <a id="id168" class="indexterm"/>our ground is only as wide as the screen width multiplied by three. Rather than extending the ground further, we will move the ground's position at well-timed intervals. Since the ground is made from repeating tiles, there are many opportunities to jump its position forward seamlessly. We simply need to figure out when the player travels the correct distance.</p><div class="section" title="Tracking the player's progress"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec57"/>Tracking the player's progress</h2></div></div></div><p>First, we need <a id="id169" class="indexterm"/>to keep track of how far the player has flown. We will use this later as well, for keeping track of a high score. This is easy to implement. Follow these steps to track how far the player has flown:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">In the <code class="literal">GameScene.swift</code> file, add two new properties to the <code class="literal">GameScene</code> class:<div class="informalexample"><pre class="programlisting">let initialPlayerPosition = CGPoint(x: 150, y: 250)
+var playerProgress = CGFloat()</pre></div></li><li class="listitem">In the <code class="literal">didMoveToView</code> function, update the line that spawns the player to use the new <code class="literal">initialPlayerPosition</code> constant instead of the old hard-coded value:<div class="informalexample"><pre class="programlisting">// Spawn the player:
+player.spawn(world, position: initialPlayerPosition)</pre></div></li><li class="listitem">In the <code class="literal">didSimulatePhysics</code> function, update the new <code class="literal">playerProgress</code> property with the player's new distance:<div class="informalexample"><pre class="programlisting">// Keep track of how far the player has flown
+playerProgress = player.position.x - initialPlayerPosition.x</pre></div></li></ol></div><p>Perfect – we now <a id="id170" class="indexterm"/>have access to the player's progress at all times in the <code class="literal">GameScene</code> class. We can use the distance traveled to reposition the ground at the correct time.</p></div><div class="section" title="Looping the ground"><div class="titlepage"><div><div><h2 class="title"><a id="ch04lvl2sec58"/>Looping the ground</h2></div></div></div><p>There<a id="id171" class="indexterm"/> are many possible methods to create an endless ground loop. We will implement a straightforward solution that jumps the ground forward after the player travels over roughly one-third of its width. This method guarantees that the ground always covers the screen, given that our player starts in the middle third.</p><p>We will create the jump logic on the <code class="literal">Ground</code> class. Follow these steps to implement endless ground:</p><div class="orderedlist"><ol class="orderedlist arabic"><li class="listitem">Open the <code class="literal">Ground.swift</code> file, and add two new properties to the <code class="literal">Ground</code> class:<div class="informalexample"><pre class="programlisting">var jumpWidth = CGFloat()
+// Note the instantiation value of 1 here:
+var jumpCount = CGFloat(1)</pre></div></li><li class="listitem">In the <code class="literal">createChildren</code> function, we find the total width from one-third of the children tiles and make it our <code class="literal">jumpWidth</code>. We will need to jump the ground forward every time the player travels this distance. You only need to add one line: near the bottom of the function, but inside the conditional that unwraps the texture. I will show the entire function in the following example, for context, with the new line in bold:<div class="informalexample"><pre class="programlisting">func createChildren() {
+    if let texture = groundTexture {
+        var tileCount:CGFloat = 0
+        let textureSize = texture.size()
+        let tileSize = CGSize(width: textureSize.width / 2, 
+            height: textureSize.height / 2)
+
+        while tileCount * tileSize.width &lt; self.size.width {
+            let tileNode = SKSpriteNode(texture: texture)
+            tileNode.size = tileSize
+            tileNode.position.x = tileCount * tileSize.width
+            tileNode.anchorPoint = CGPoint(x: 0, y: 1)
+            self.addChild(tileNode)
+
+            tileCount++
+        }
+
+        // Find the width of one-third of the children nodes
+<span class="strong"><strong>        jumpWidth = tileSize.width * floor(tileCount / 3)</strong></span>
+    }
+}</pre></div></li><li class="listitem">Add <a id="id172" class="indexterm"/>a new function named <code class="literal">checkForReposition</code> to the <code class="literal">Ground</code> class, below the <code class="literal">createChildren</code> function. The scene will call this function at every frame to check if we should jump the ground forward:<div class="informalexample"><pre class="programlisting">func checkForReposition(playerProgress:CGFloat) {
+    // The ground needs to jump forward
+    // every time the player has moved this distance:
+    let groundJumpPosition = jumpWidth * jumpCount
+
+    if playerProgress &gt;= groundJumpPosition {
+        // The player has moved past the jump position!
+        // Move the ground forward:
+        self.position.x += jumpWidth
+        // Add one to the jump count:
+        jumpCount++
+    }
+} </pre></div></li><li class="listitem">Open <code class="literal">GameScene.swift</code> and add this line at the bottom of the <code class="literal">didSimulatePhysics</code> function to call the <code class="literal">Ground</code> class's new logic:<div class="informalexample"><pre class="programlisting">// Check to see if the ground should jump forward:
+ground.checkForReposition(playerProgress)</pre></div></li></ol></div><p>Run the project. The ground will seem to stretch on forever as Pierre flies forward. This looping ground is a big step towards the final game world. It may seem like a lot of work for a simple effect, but the looping ground is important, and our method will perform well on any screen size. Great work!</p></div></div>
+<div class="section" title="Checkpoint 4-B"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec40"/>Checkpoint 4-B</h1></div></div></div><p>To download my project up to this point, visit this address:</p><p>
+<a class="ulink" href="http://www.thinkingswiftly.com/game-development-with-swift/chapter-4">http://www.thinkingswiftly.com/game-development-with-swift/chapter-4</a>
+</p></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch04lvl1sec41"/>Summary</h1></div></div></div><p>In this chapter, we have transformed a tech demo into the beginnings of a real game. We have added a great deal of new code. You learned how to implement three distinct mobile game control methods: physical device motion, sprite tap events, and flying higher when the screen is touched. We polished the flying mechanic for maximum fun and sent Pierre flying forward through the world.</p><p>You also learned how to implement two common mobile game requirements: looping the ground and a smarter camera system. Both of these features make a big impact in our game.</p><p>Next, we will add more content to our level. Flying is already fun, but traveling past the first few bees feels a little lonely. We will give Pierre Penguin some company in <a class="link" href="ch05.html" title="Chapter 5. Spawning Enemies, Coins, and Power-ups">Chapter 5</a>, <span class="emphasis"><em>Spawning Enemies, Coins, and Power-ups</em></span>.</p></div></body></html>
