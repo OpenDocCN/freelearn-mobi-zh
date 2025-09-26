@@ -1,0 +1,933 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;8.&#xA0;Supporting a Wide Range of Devices"><div class="titlepage"><div><div><h1 class="title"><a id="ch08"/>Chapter 8. Supporting a Wide Range of Devices</h1></div></div></div><p>It's really great that the Marmalade SDK allows us to target so many different devices and platforms. However, a certain degree of care and awareness is required in order to optimize your application fully for all of these varying device types.</p><p>In this chapter we'll be covering the following subjects:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">A general overview of the kinds of things to be wary of when trying to support a wide range of different devices</li><li class="listitem" style="list-style-type: disc">A more advanced look at the ICF filesystem we encountered back in the first chapter of this book</li><li class="listitem" style="list-style-type: disc">Using Marmalade's built-in systems to allow multiple different data sets to be used and to process those data sets in different ways (for example, allowing the final texture format used on the device to be specified)</li><li class="listitem" style="list-style-type: disc">Configuring the deployment system to make different types of builds</li><li class="listitem" style="list-style-type: disc">Using the Derbh archiver to reduce the size of our assets in the install package</li></ul></div><div class="section" title="Accommodating a wide range of device types"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec49"/>Accommodating a wide range of device types</h1></div></div></div><p>Mobile operating systems <a id="id1074" class="indexterm"/>such as iOS<a id="id1075" class="indexterm"/> or Android<a id="id1076" class="indexterm"/> are capable of running on a widely varying range of devices. Before we get on to discussing the ways in which Marmalade makes it easy for us to target multiple device types, we'll first highlight some of the things to keep in <a id="id1077" class="indexterm"/>mind when developing a game so that it will look and run its best on as many different devices as possible.</p><p>Marmalade also ships with a whitepaper that covers some of the things to be careful about when developing a game destined to run on more than one device specification. You can find it in the Marmalade documentation at <span class="strong"><strong>Whitepapers</strong></span> | <span class="strong"><strong>Device Independent Code</strong></span>.</p><div class="section" title="Dealing with different screen resolutions"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec123"/>Dealing with different screen resolutions</h2></div></div></div><p>Probably the most<a id="id1078" class="indexterm"/>
+<a id="id1079" class="indexterm"/> immediately notable difference between different devices will be the screen resolution. Taking iOS as an example, you may find yourself having to support screen resolutions ranging from 320 x 480 at the low end through the two different iPhone Retina screen resolutions (640 x 960 and 640 x 1136) and iPad at 1024 x 768, right up to the frankly crazy resolution of 2048 x 1536 of the most recent iPad (you'll be hard pressed to find a PC monitor capable of displaying that resolution!).</p><p>We've already touched on this subject in <a class="link" href="ch06.html" title="Chapter 6. Implementing Fonts, User Interfaces, and Localization">Chapter 6</a>, <span class="emphasis"><em>Implementing Fonts, User Interfaces, and Localization</em></span>, when we discussed the best way of implementing a user interface. We should never hardcode our game to work at a fixed screen resolution as it will be much harder to port it across to other screen resolutions later.</p><p>Instead, we should query Marmalade for the screen dimensions and then use these values to position and size everything we want to draw, whether that be through using percentages of the screen size, by clamping objects to the edges of the screen, or indeed some other method of your own choosing. We can find the screen width and height as follows:</p><div class="informalexample"><pre class="programlisting">uint32 lScreenWidth = IwGxGetScreenWidth();
+uint32 lScreenHeight = IwGxGetScreenHeight();</pre></div><p>These functions will also automatically take care of device orientation. The returned values will change when the player rotates the device, unless we have disabled this functionality using the <code class="literal">DispFixRot</code> <a id="id1080" class="indexterm"/>ICF file setting (more on this setting shortly).</p></div><div class="section" title="Using different resources for different screen resolutions"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec124"/>Using different resources for different screen resolutions</h2></div></div></div><p>Using the screen <a id="id1081" class="indexterm"/>
+<a id="id1082" class="indexterm"/>dimensions to position and size the elements we wish to draw works well, but it does lead to a further problem. We may find that any images used to render items on screen start to look blurry or blocky if they have to be scaled up in size too much.</p><p>Similarly, fonts that work well at a low resolution may become impossible to read because they are too small when used on a higher-resolution device. While we could just apply a scale to the font when rendering, a more aesthetically pleasing solution is to use a different version of the font created at a bigger point size.</p><p>Luckily, as we'll see later in this chapter, Marmalade has a very easy-to-use solution for this problem that allows us to provide alternate sets of resources that can be used when targeting different <a id="id1083" class="indexterm"/>
+<a id="id1084" class="indexterm"/>sets of screen resolutions.</p></div><div class="section" title="Checking device capabilities"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec125"/>Checking device capabilities</h2></div></div></div><p>Another thing to be <a id="id1085" class="indexterm"/>
+<a id="id1086" class="indexterm"/>vigilant of when targeting a large number of different devices is that some devices may not include support for certain Marmalade SDK features.</p><p>Some devices may feature a multi-touch display while others only have single touch or indeed no touch screen at all. Some may not feature accelerometer inputs or keypads. It is therefore a good idea to ensure that we call the various Marmalade functions that enquire whether these and other features are available for use and what capabilities are provided, so that we can then provide the user with options tailored to their device.</p></div></div></div>
+<div class="section" title="Configuring your game using ICF file settings"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec50"/>Configuring your game using ICF file settings</h1></div></div></div><p>If you cast your<a id="id1087" class="indexterm"/>
+<a id="id1088" class="indexterm"/> mind back to the "Hello World" project in the very first chapter of this book, you will recall that we used the ICF file to display a different welcome message depending on which platform the code was being executed on. Don't worry if you've forgotten how all this works, as we'll be covering it again shortly.</p><p>This functionality proves extremely useful when we are trying to target as many different devices as possible, as there are built-in parameters that allow us to apply different settings for a range of things including memory usage, OpenGL ES graphics performance, splash screens, and much more.</p><div class="section" title="Built-in ICF settings"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec126"/>Built-in ICF settings</h2></div></div></div><p>ICF file settings <a id="id1089" class="indexterm"/>are assigned to a section identifier which is defined by placing the name of the section in square brackets. When specifying a value for an ICF setting you must ensure that it appears after the correct section identifier, otherwise it will not be found at runtime and an assert will be raised. Here's an example:</p><div class="informalexample"><pre class="programlisting">[S3E]
+MemSize=10000000
+SysAppVersion="1.0.0"</pre></div><p>There are far too many ICF settings to be able to cover all of them in this book, so instead we'll be taking a look at some of the more immediately useful ones. If you want to see a complete list, take a look in the Marmalade documentation, by going to <span class="strong"><strong>Marmalade</strong></span> | <span class="strong"><strong>Marmalade Development Tools Reference</strong></span> | <span class="strong"><strong>ICF File Settings</strong></span>.</p><p>The following table shows a few of the settings that control Marmalade at its lowest level. The section identifier for these settings is <code class="literal">[S3E]</code>:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Setting</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Value type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">MemSize</code>
+<a id="id1090" class="indexterm"/>
+<a id="id1091" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>The size, in bytes, of the main memory heap available to an application. A Marmalade application can actually have up to ten memory heaps available, so there are also settings called <code class="literal">MemSize0</code> through <code class="literal">MemSize9</code>, which allow the sizes of these heaps to be declared. <code class="literal">MemSize0</code> is actually equivalent to using <code class="literal">MemSize</code>. For more information on memory heaps take a look at the s3eMemory API in the Marmalade documentation.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">MemSizeDebug</code>
+<a id="id1092" class="indexterm"/>
+<a id="id1093" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>The size, in bytes, of the debug memory heap when a Windows debug build is executed. This is a special block of memory that is used for tasks such as processing 3D models and converting textures to different formats during the resource building process.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SysAppVersion</code>
+<a id="id1094" class="indexterm"/>
+<a id="id1095" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>String</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows an application to access its version number. While this value can be set in the ICF file, it can also be set using the MKB deployment's <code class="literal">version</code> setting.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SysGlesVersion</code>
+<a id="id1096" class="indexterm"/>
+<a id="id1097" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>Identifies whether the application should attempt to initialize an OpenGL ES 1.x or 2.x interface. Only the major version number (that is, 1 or 2) can be specified.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SysStackSize</code>
+<a id="id1098" class="indexterm"/>
+<a id="id1099" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>The size of the stack available to the program, in bytes. It is useful, for example, when an application requires extra stack space (due to heavily recursive algorithms).</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SplashScreenFile</code>
+<a id="id1100" class="indexterm"/>
+<a id="id1101" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>String</p>
+</td><td style="text-align: left" valign="top">
+<p>The name of an image file that will be displayed while an application is loading. The filename is relative to the <code class="literal">data</code> directory.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SplashScreenBkR</code>
+<a id="id1102" class="indexterm"/>
+<a id="id1103" class="indexterm"/>
+<code class="literal">,</code>
+</p>
+<p>
+<code class="literal">SplashScreenBkG</code>
+<a id="id1104" class="indexterm"/>
+<a id="id1105" class="indexterm"/>, and</p>
+<p>
+<code class="literal">SplashScreenBkB</code>
+<a id="id1106" class="indexterm"/>
+<a id="id1107" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Byte</p>
+</td><td style="text-align: left" valign="top">
+<p>A value from <code class="literal">0</code> through <code class="literal">255</code> to specify the red, green, and blue component values of the splash screen background color. This is the color that will be used to clear the screen before displaying the specified splash screen image, assuming the image is smaller than the screen size.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SplashScreenWidth</code>
+<a id="id1108" class="indexterm"/>
+<a id="id1109" class="indexterm"/> and </p>
+<p>
+<code class="literal">SplashScreenHeight</code>
+<a id="id1110" class="indexterm"/>
+<a id="id1111" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>The width and height that the splash screen image should be drawn at. If smaller than the screen size, the image will be centered.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">AudioAllowBackground</code>
+<a id="id1112" class="indexterm"/>
+<a id="id1113" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">0</code> or <code class="literal">1</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>When set to <code class="literal">1</code> this allows any audio track a user may have started (for example, through the iPod application on an iOS device) to continue playing when our application starts.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">DispFixRot</code>
+<a id="id1114" class="indexterm"/>
+<a id="id1115" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>String</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows the screen to be locked to a particular orientation, rather than rotating when the user rotates the device. Can be set to one of the following values: <code class="literal">Free</code>, <code class="literal">Portrait</code>, <code class="literal">Landscape</code>, <code class="literal">FixedPortrait</code>, or <code class="literal">FixedLandscape</code>. The <code class="literal">Free</code> setting allows any device orientation, while <code class="literal">FixedPortrait</code> and <code class="literal">FixedLandscape</code> keep the screen orientation locked to a default portrait or landscape aspect, which can be very important to prevent unwanted screen rotations when using the accelerometer to control a game!</p>
+</td></tr></tbody></table></div><p>The following table lists some useful parameters for altering the initialization of OpenGL ES. These settings must occur after the section identifier <code class="literal">[GL]</code>:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Setting</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Value type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">AlphaInFrameBuffer</code>
+<a id="id1116" class="indexterm"/>
+<a id="id1117" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">0</code> or <code class="literal">1</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>When set to <code class="literal">1</code>, this setting indicates that the frame buffer also includes the destination alpha channel.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">EGL_RED_SIZE</code>
+<a id="id1118" class="indexterm"/>
+<a id="id1119" class="indexterm"/>,</p>
+<p>
+<code class="literal">EGL_GREEN_SIZE</code>
+<a id="id1120" class="indexterm"/>
+<a id="id1121" class="indexterm"/>,</p>
+<p>
+<code class="literal">EGL_BLUE_SIZE</code>
+<a id="id1122" class="indexterm"/>
+<a id="id1123" class="indexterm"/>,</p>
+<p>
+<code class="literal">EGL_ALPHA_SIZE</code>
+<a id="id1124" class="indexterm"/>
+<a id="id1125" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>Indicates the number of bits to be used to store each of the red, green, blue, and alpha channels in the frame buffer. For best render quality, all of these settings would normally be given the value <code class="literal">8</code>, yielding an RGBA8888 display. Most hardware can also support formats such as RGBA5551 and RGB565, which will use less video memory and may render faster at the expense of a drop in visual quality.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">EGL_DEPTH_SIZE</code>
+<a id="id1126" class="indexterm"/>
+<a id="id1127" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Integer</p>
+</td><td style="text-align: left" valign="top">
+<p>The number of bits to use for the depth buffer. Valid values are <code class="literal">16</code>, <code class="literal">24</code>, and <code class="literal">32</code>, with the latter giving the most precision and therefore least chance of Z-buffer clashes when rendering, at the expense of slower rendering and more memory usage.</p>
+</td></tr></tbody></table></div><p>We'll finish off with some settings related to resource management that we'll be looking at in more depth later in this chapter. They have been included here for easy reference. The settings reside in the ICF section <code class="literal">[RESMANAGER]</code>:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Setting</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Value type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ResBuild</code>
+<a id="id1128" class="indexterm"/>
+<a id="id1129" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">0</code> or <code class="literal">1</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>When set to <code class="literal">1</code>, the Windows debug build will load resources by parsing the original GROUP files and loading the source models, textures, and other resources. Once the data has been processed, it is saved to the <code class="literal">data-ram</code> directory in a binary format. If this setting is set to <code class="literal">0</code>, the source assets will not be loaded and any existing binary-formatted data will be loaded directly. This can speed up testing when there have been no changes made to game data.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ResBuildStyle</code>
+<a id="id1130" class="indexterm"/>
+<a id="id1131" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>String</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the resource building style to use when the Windows debug build is processing the original source assets. As we will learn later in this chapter, this parameter allows us to provide different sets of resources to cater for devices of varying abilities.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Defining new ICF settings"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec127"/>Defining new ICF settings</h2></div></div></div><p>One of the <a id="id1132" class="indexterm"/>best things about ICF files is that we are able to make use of them ourselves by creating our own custom settings. To define new settings we just need to add them to the <a id="id1133" class="indexterm"/>file <code class="literal">app.config.txt</code>, which is automatically generated for us when creating a new project using an MKB file.</p><p>When defining new settings, we can also provide a string of text that explains what this setting is for. While this description isn't actually used or needed by the Marmalade SDK, it's a good way of documenting what a setting is supposed to do!</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note43"/>Note</h3><p>It is, however, important to add definitions for all our settings to the <code class="literal">app.config.txt</code> file because it will prevent the application generating lots of asserts when it is executed. In a Windows Debug build, Marmalade checks to see if an ICF setting has been declared both when loading the ICF file at the start of execution and also whenever we try to access a setting from within our own code.</p></div></div><p>We can also define our own section identifiers in the <code class="literal">app.config.txt</code> file simply by listing the name of the section in square brackets and following it with the new setting definitions. Here's an example illustrating how to create new section identifiers and settings:</p><div class="informalexample"><pre class="programlisting">[GAME_DEBUG]
+SkipToLevel      Skip to a level at game start
+
+[GAME]
+FrameRate        The frame rate we want the game to run at
+MaximumHealth      Amount of energy the player has at game start</pre></div><p>Defining our own section identifiers can be extremely useful when creating library modules, such as the GUI and <code class="literal">Localise</code> modules created in <a class="link" href="ch06.html" title="Chapter 6. Implementing Fonts, User Interfaces, and Localization">Chapter 6</a>, <span class="emphasis"><em>Implementing Fonts, User Interfaces, and Localization</em></span>. The only difference when creating a module is that the <code class="literal">app.config.txt</code> file changes to <code class="literal">modulename.config.txt</code> and it should reside in a subdirectory <a id="id1134" class="indexterm"/>called <code class="literal">docs</code> in the module's main directory. As an example, if we were to add our own settings to the GUI module we would create a directory called <code class="literal">GUI\docs</code>, and the file that lists the settings would be called <code class="literal">GUI.config.txt</code>.</p></div><div class="section" title="Accessing ICF settings in code"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec128"/>Accessing ICF settings in code</h2></div></div></div><p>It's very little <a id="id1135" class="indexterm"/>
+<a id="id1136" class="indexterm"/>use to be able to provide settings in the ICF files without some way of accessing them. This is where the s3eConfig API comes into play and we can use it by just including the <code class="literal">s3eConfig.h</code> header file.</p><p>The first function we will look at is <code class="literal">s3eConfigGetString</code>, which takes the section identifier and setting name we want to access and also a pointer to an array of <code class="literal">char</code> that will be used to return the value of the setting when the function completes. Since the <code class="literal">app.icf</code> file is really little more than an ASCII text file, all this function does is return the string of text following the equals sign for the specified ICF setting.</p><p>The <code class="literal">char</code> array supplied to <code class="literal">s3eConfigGetString</code> should be at least of length <code class="literal">S3E_CONFIG_STRING_MAX</code>, as this is the largest string size the function can return. If the requested setting can't be found in the ICF file this buffer will not be changed, which is very useful as it allows us to set up a default value for the parameter in our code.</p><div class="informalexample"><pre class="programlisting">// Set default first level
+char lLevelName[S3E_CONFIG_STRING_MAX];
+strcpy(lLevelName, "level1");
+
+s3eConfigGetString("GAME_DEBUG", "SkipToLevel", &amp;lLevelName);
+// lLevelName will still contain "level1" if the SkipToLevel setting 
+// could not be found in the ICF file</pre></div><p>Quite often we will want to specify ICF settings, which just need a numeric value. To make this easier for us, Marmalade provides another function called <code class="literal">s3eConfigGetInt</code>, which, instead of a pointer to a <code class="literal">char</code> array, takes a pointer to an <code class="literal">int</code> variable.</p><p>This function will read the setting string from the ICF file and then attempt to convert it into an integer value. If this fails (for example, the string contains non-numeric characters or is out of the range of an <code class="literal">int</code>) or the setting does not exist in the ICF file, the variable's current value will not be changed, thus allowing default values to be specified in code.</p><p>Both functions <a id="id1137" class="indexterm"/>
+<a id="id1138" class="indexterm"/>will return <code class="literal">S3E_RESULT_SUCCESS</code> if the setting value could be retrieved, or <code class="literal">S3E_RESULT_ERROR</code> if there was a problem. The function <code class="literal">s3eConfigGetError</code> will let us discover what the problem was by returning one of the following values:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Value</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">S3E_CONFIG_ERR_NONE</code>
+<a id="id1139" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>No error occurred.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">S3E_CONFIG_ERR_PARAM</code>
+<a id="id1140" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>One of the parameters to <code class="literal">s3eConfigGetInt</code> or <code class="literal">s3eConfigGetString</code> was not valid. For example, a <code class="literal">NULL</code> value passed in.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">S3E_CONFIG_ERR_NOT_FOUND</code>
+<a id="id1141" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>The requested ICF setting could not be found.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">S3E_CONFIG_ERR_PARSE</code>
+<a id="id1142" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>There was a problem converting the ICF setting value to an integer when using <code class="literal">s3eConfigGetInt</code>.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Limiting ICF settings by platform and device"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec129"/>Limiting ICF settings by platform and device</h2></div></div></div><p>When targeting a <a id="id1143" class="indexterm"/>
+<a id="id1144" class="indexterm"/>
+<a id="id1145" class="indexterm"/>
+<a id="id1146" class="indexterm"/>large number of different devices, it is not uncommon to have a situation where we want to be able to do different things depending on the device the application is running on.</p><p>The ICF filesystem makes handling this incredibly easy by allowing us to provide different values for parameters based on both the operating system of the device and even by individual device type.</p><p>To begin with, we can provide different settings on a platform-wide basis. The "Hello World" project from <a class="link" href="ch01.html" title="Chapter 1. Getting Started with Marmalade">Chapter 1</a>, <span class="emphasis"><em>Getting Started with Marmalade</em></span>, has already demonstrated this, but to recap, we limit the settings to a particular operating system using the <code class="literal">OS</code> conditional. This is best illustrated by an example:</p><div class="informalexample"><pre class="programlisting">[GAME]
+FrameRate=20
+
+{OS=BADA}
+FrameRate=15
+
+{OS=IPHONE}
+FrameRate=30
+{}</pre></div><p>This example sets a default value for the <code class="literal">FrameRate</code> setting of <code class="literal">20</code>. It then overrides this value for Bada devices with a value of <code class="literal">15</code> and for iOS devices with a value of <code class="literal">30</code>. Note that for legacy <a id="id1147" class="indexterm"/>
+<a id="id1148" class="indexterm"/>
+<a id="id1149" class="indexterm"/>
+<a id="id1150" class="indexterm"/>reasons the value <code class="literal">IPHONE</code> refers to all iOS devices (all versions of iPad and iPod touch as well as all iPhones).</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note44"/>Note</h3><p>The earlier example ends with open and close braces. This returns all settings made after this point to being global settings that apply to all devices and platforms.</p></div></div><p>It is also possible to make settings that will only apply to a particular subset of devices on a particular platform. This is done using the <code class="literal">ID</code> conditional that first specifies the platform type and then has a comma-separated list of device identifiers that the setting should apply to. Here's another example:</p><div class="informalexample"><pre class="programlisting">[GAME]
+FrameRate=30
+
+{ID=ANDROID "HTC Hero", "T-Mobile G1"}
+FrameRate=20
+{}</pre></div><p>Here we set a default value for the <code class="literal">FrameRate</code> setting of <code class="literal">30</code>, then limit the value to just <code class="literal">20</code> if the game is running on either of the listed Android devices. Quote marks are only required on device names that contain spaces.</p><p>Wondering how to discover the device name? Often it is the name of the device, but this is not always the case. The easiest way to discover the device name for a particular device is to create a short test program that makes a call to <code class="literal">s3eDeviceGetString</code>, as follows:</p><div class="informalexample"><pre class="programlisting">const char* lpDeviceID = s3eDeviceGetString(S3E_DEVICE_ID);</pre></div><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note45"/>Note</h3><p>The <code class="literal">s3eDeviceGetString</code> function<a id="id1151" class="indexterm"/> and its sibling <code class="literal">s3eDeviceGetInt</code> <a id="id1152" class="indexterm"/>allow us to determine an awful lot of information about the device we're running on, including the operating system, processor type, phone number, current language settings, and much more. Take a look at the <code class="literal">s3eDevice.h</code> header file or the Marmalade documentation for more details.</p></div></div></div></div>
+<div class="section" title="Creating multiple resource sets"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec51"/>Creating multiple resource sets</h1></div></div></div><p>Since Marmalade <a id="id1153" class="indexterm"/>allows us to target so many different devices, it seems a shame to limit ourselves to a subset of them just because our graphics are too low or too high resolution for certain devices, or some devices have less memory and therefore can't handle lots of high resolution textures.</p><p>Another issue we might face is that different devices support different file formats for audio or video clips. To improve render speed and memory usage we might also consider using hardware texture compression, which of course varies depending on the type of graphics processor a particular device has.</p><p>Marmalade provides a couple of solutions to these problems. The first, more global approach is to make use of <span class="strong"><strong>build styles</strong></span>
+<a id="id1154" class="indexterm"/>, which allow us to both load different sets of resource files when loading a GROUP file and specify the type of hardware texture compression to apply.</p><p>Build styles are then enhanced by the concept of <a id="id1155" class="indexterm"/> <span class="strong"><strong>resource templates</strong></span>, which allow us to more finely control the configuration of resources. Resource templates can be used to affect the final format of a texture or to modify the way a 3D model is converted for use in the game, among other things.</p><div class="section" title="Using build styles"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec130"/>Using build styles</h2></div></div></div><p>Marmalade comes with <a id="id1156" class="indexterm"/>
+<a id="id1157" class="indexterm"/>a number of built-in build styles that allow us to build resources for all the common GPU formats used across mobile devices. The build styles available are shown in the following table:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Build style</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">sw</code>
+<a id="id1158" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Build resources optimized for use with Marmalade's legacy software renderer. Resources built in this way cannot be rendered using hardware acceleration. This format is now only of use if we are using the <code class="literal">IW_USE_LEGACY_MODULES</code> define in our MKB file in order to make the software renderer available for use.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">gles1</code>
+<a id="id1159" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Builds resources without any form of texture compression. This is the default if no build style is specified.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">gles1-pvrtc</code>
+<a id="id1160" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Same as <code class="literal">gles1</code>, but uses the PVRTC format for texture compression on images where this type of compression works well. Typically this just means images with no alpha channel, as PVRTC tends to perform badly on such textures.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">gles-atitc</code>
+<a id="id1161" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Same as <code class="literal">gles1</code>, but uses the ATITC texture compression format where possible.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">gles1-dxt</code>
+<a id="id1162" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Same as <code class="literal">gles1</code>, but uses the DXT format for texture compression.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">gles2-etc</code>
+<a id="id1163" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Intended for use on devices that make use of OpenGL ES 2.x and support the ETC texture compression format.</p>
+</td></tr></tbody></table></div><p>We can also define <a id="id1164" class="indexterm"/>
+<a id="id1165" class="indexterm"/>our own custom build styles should the default ones not suffice. To do this we create a file in the <code class="literal">data</code> directory called <code class="literal">resbuildstyles.itx</code>. This file is automatically loaded by the resource manager when it is initialized in the call to <code class="literal">IwResManagerInit</code> and it contains one or more instances of the<a id="id1166" class="indexterm"/> <code class="literal">CIwResBuildStyle</code> class.</p><p>To declare a build style instance we must give it a name so that it can be selected for use, an optional list of directories in which resource files can reside, and an indication of the platform this build style is targeting. Note that in the case of build styles, the platform does not refer to any particular operating system; instead it refers to the type of GPU the style targets, which for the most part means the type of hardware texture compression to be used.</p><p>Here's an example of a <code class="literal">resbuildstyles.itx</code> file that will be used for discussion in the following sections:</p><div class="informalexample"><pre class="programlisting">CIwResBuildStyle
+{
+  name             "default"
+  platform         "GLES1"
+}
+CIwResBuildStyle
+{
+  name             "pvrtc"
+  addReadPrefix    "data-pvrtc"
+  platform         "IMG_MBX"
+}
+CIwResBuildStyle
+{
+  name             "atitc"
+  addReadPrefix    "data-atitc"
+  platform         "ATI_IMAGEON"
+}</pre></div><div class="section" title="Adding extra resource directories"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec79"/>Adding extra resource directories</h3></div></div></div><p>The <code class="literal">addReadPrefix</code> parameter<a id="id1167" class="indexterm"/> allows us to add a new search path that will be checked whenever we attempt to load a file of any kind. A directory name is specified; this must be a subdirectory within the project's <code class="literal">data</code> directory. If you want to add more than one extra search directory, just include further <code class="literal">addReadPrefix</code> entries.</p><p>Whenever we try to open a <a id="id1168" class="indexterm"/>file, Marmalade will first look in the list of extra directories specified by the build style in the order they were specified. If the requested file is found in one of these directories, it will be loaded from there; otherwise the resource manager will revert to looking in the <code class="literal">data</code> directory.</p></div><div class="section" title="Supported build style platforms"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec80"/>Supported build style platforms</h3></div></div></div><p>The <code class="literal">platform</code> field<a id="id1169" class="indexterm"/> of a <code class="literal">CIwResBuildStyle</code> instance can take one of the following values:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Platform value</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">SW</code>
+<a id="id1170" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Build resources optimized for use with Marmalade's legacy software renderer. Again, we must be using the <code class="literal">IW_USE_LEGACY_MODULES</code> define in our MKB in order to use this.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">GLES1</code>
+<a id="id1171" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>This is the default option if none is specified and builds resources that can be rendered efficiently using OpenGL ES.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">IMG_MBX</code>
+<a id="id1172" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Same as <code class="literal">GLES1</code>, but uses the PVRTC format for texture compression on images where this type of compression works well.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">IMG_MBX_VGP</code>
+<a id="id1173" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Currently the same as <code class="literal">IMG_MBX</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ATI_IMAGEON</code>
+<a id="id1174" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Same as <code class="literal">GLES1</code>, but uses the ATITC format for texture compression where possible.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">NVIDIA_GOFORCE</code>
+<a id="id1175" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Currently performs the same as <code class="literal">GLES1</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ARM_MALI</code>
+<a id="id1176" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Currently performs the same as <code class="literal">GLES1</code>.</p>
+</td></tr></tbody></table></div><p>While the platform<a id="id1177" class="indexterm"/> identifier makes it easy to create resources for different types of GPU, it is also possible to be a little more specific about the type of texture compression to use. This can be done by specifying the platform as <code class="literal">GLES1</code> and adding a <code class="literal">textureFormat</code> setting. For example, the <code class="literal">atitc</code> entry from the earlier example could be written as follows:</p><div class="informalexample"><pre class="programlisting">CIwResBuildStyle
+{
+  name             "atitc"
+  addReadPrefix    "data-atitc"
+  platform         "GLES1"
+  textureFormat    "ATITC"
+}</pre></div><p>The following values <a id="id1178" class="indexterm"/>can be used for the<a id="id1179" class="indexterm"/> <code class="literal">textureFormat</code> parameter:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Value</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">PVRTC_2</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Uses 2-bit PVR <a id="id1180" class="indexterm"/>texture compression. Not normally recommended, as it tends to produce poor-quality results. Can be used on devices featuring an Imagination-produced chipset, such as iOS devices.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">PVRTC_4</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Uses 4-bit PVR texture compression. This type generally yields good results for textures with no alpha channel, but can be quite poor when compressing transparent textures. By default Marmalade will not perform this type of compression on any source texture with an alpha component. This type of compression is supported by devices using an Imagination GPU, for example iOS devices.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ATITC</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Will compress textures using ATI compression. Automatically uses 4-bit compression on textures with no alpha channel, or 8-bit compression on textures with transparency. Supported on ATI/Qualcomm chipsets typically used in many Android devices.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ETC</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Uses 4-bit Ericsson texture compression on textures with no alpha channel. Transparent textures cannot be compressed. Supported on ATI/Qualcomm chipsets and most chipsets that support OpenGL ES 2.x.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">DXT1</code>,</p>
+<p>
+<code class="literal">DXT3</code>, and </p>
+<p>
+<code class="literal">DXT5</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>
+<code class="literal">DXT1</code> compression is a 4-bit format used for non-transparent textures. <code class="literal">DXT3</code> is an 8-bit format that allows transparent textures to be compressed. <code class="literal">DXT5</code> is another 8-bit format that has better support for gradients in the alpha channel. If <code class="literal">DXT3</code> or <code class="literal">DXT5</code> is specified and an opaque texture is encountered, Marmalade will automatically use <code class="literal">DXT1</code> compression instead. Available on NVidia Tegra2 chipset devices.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Specifying which build style to use"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec81"/>Specifying which build style to use</h3></div></div></div><p>With our build styles<a id="id1181" class="indexterm"/> declared, we now just need to let Marmalade know which of them to use when loading resources. The easiest way of doing this is to use the <code class="literal">ResBuildStyle</code> ICF setting, which we do by adding the following to our ICF file:</p><div class="informalexample"><pre class="programlisting">[RESMANAGER]
+ResBuildStyle=pvrtc</pre></div><p>We can also switch between build styles at runtime as the resource manager provides methods for us to set and get the current build style. The following code snippets illustrate this:</p><div class="informalexample"><pre class="programlisting">// Discover the currently selected build style
+CIwStringL lCurrentStyle = IwGetResManager()-&gt;
+   GetBuildStyleCurrName();
+
+// To change to a different build style
+IwGetResManager()-&gt;SetBuildStyle("atitc");</pre></div><p>Bear in mind, however, that while it is easy to switch between build styles, this behavior is only supported in Windows debug builds. When we create a release build for devices, we will generally only provide the resources required for that device type in order to reduce the size of the installation package. We'll be looking at how to achieve this later in this chapter.</p></div></div><div class="section" title="Using resource templates"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec131"/>Using resource templates</h2></div></div></div><p>Build styles allow <a id="id1182" class="indexterm"/>us to make decisions on how the resources for our game are processed on a global level; but sometimes we want a little more fine-grained control so we can treat different types of resources in different ways.</p><p>This is where resource templates come into play. Put simply, all a resource template allows us to do is alter the default settings that are applied when processing textures, materials, 3D models, animations, and GROUP files.</p><p>Resource templates can be defined in an ITX file that we parse before attempting to load any resources. Since these are only required in Windows debug builds, we do not need to load this file if we won't be building resources.</p><p>Marmalade provides a handy define, <code class="literal">IW_BUILD_RESOURCES</code>, which is only defined in Windows debug builds. Using this define, we can reduce the size of our compiled code by excluding any resource processing code. For example, if our resource template definitions are contained in a file called <code class="literal">restemplates.itx</code>, we could use the following code snippet to load the file:</p><div class="informalexample"><pre class="programlisting">#ifdef IW_BUILD_RESOURCES
+IwGetTextParserITX()-&gt;ParseFile("restemplates.itx");
+#endif</pre></div><p>The following code<a id="id1183" class="indexterm"/> provides an example of what the <code class="literal">restemplates.itx</code> file might look like. We'll discuss the different resource template types in greater detail in the coming sections; but notice how a template called <code class="literal">default</code> is defined for each type. This is so we can revert to normal loading behavior should we want to.</p><div class="informalexample"><pre class="programlisting">CIwResTemplateImage
+{
+  name        "default"
+
+  formatHW    FORMAT_UNDEFINED
+  formatSW    FORMAT_UNDEFINED
+}
+
+CIwResTemplateImage
+{
+  name        "rgba4444_nomipmap"
+
+  formatHW    RGBA_4444
+  mipMapping  false
+}
+
+CIwResTemplateMTL
+{
+  name        "default"
+}
+
+CIwResTemplateMTL
+{
+  name         "clamped_unfiltered"
+  clampUV      true
+  filtering    false
+}</pre></div><p>Once a resource template has <a id="id1184" class="indexterm"/>been defined, it can be invoked from within a GROUP file by using the <code class="literal">useTemplate</code> parameter. This parameter takes the type and name of a resource template, searches for it and, if found, applies any settings defined in the template to any resource of the type that is loaded from then on. Here's an example:</p><div class="informalexample"><pre class="programlisting">CIwResGroup
+{
+  name "images"
+
+  useTemplate "image" "rgba4444_nomipmap"
+  useTemplate "mtl" "clamped_unfiltered"
+
+  "./materials.mtl"
+
+  useTemplate "image" "default"
+  useTemplate "mtl" "default"
+}</pre></div><div class="section" title="Defining material templates"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec82"/>Defining material templates</h3></div></div></div><p>A material <a id="id1185" class="indexterm"/>resource template is declared by an instance of the <code class="literal">CIwResTemplateMTL</code> class and is used to provide a starting configuration for all instances of <code class="literal">CIwMaterial</code> that are created while the template is in use.</p><p>We can specify any<a id="id1186" class="indexterm"/> parameter in a material template that can be applied to a <code class="literal">CIwMaterial</code> instance when processed from an ITX file. In the following table, a few of the more useful ones for template purposes are listed, but for a complete list take a look at the Marmalade documentation for <code class="literal">CIwMaterial</code>:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Parameter</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">colAmbient</code>
+<a id="id1187" class="indexterm"/>
+<a id="id1188" class="indexterm"/>,</p>
+<p>
+<code class="literal">colDiffuse</code>
+<a id="id1189" class="indexterm"/>
+<a id="id1190" class="indexterm"/>,</p>
+<p>
+<code class="literal">colEmissive</code>
+<a id="id1191" class="indexterm"/>
+<a id="id1192" class="indexterm"/>, and </p>
+<p>
+<code class="literal">colSpecular</code>
+<a id="id1193" class="indexterm"/>
+<a id="id1194" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows a default RGBA color to be specified for the ambient, diffuse, emissive, and specular lighting components. For example: <code class="literal">colAmbient { 255, 255, 255, 255 }</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">cullMode</code>
+<a id="id1195" class="indexterm"/>
+<a id="id1196" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the back-face culling method to use for the material. Can be one of <code class="literal">BACK</code>, <code class="literal">FRONT</code>, or <code class="literal">NONE</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">alphaMode</code>
+<a id="id1197" class="indexterm"/>
+<a id="id1198" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies a default transparency mode. Can be one of <code class="literal">NONE</code>, <code class="literal">ADD</code>, <code class="literal">SUB</code>, <code class="literal">HALF</code>, or <code class="literal">BLEND</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">blendMode</code>
+<a id="id1199" class="indexterm"/>
+<a id="id1200" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies <a id="id1201" class="indexterm"/>the blending type that will be used when drawing. Possible values are <code class="literal">MODULATE</code>, <code class="literal">MODULATE_2X</code>, <code class="literal">MODULATE_4X</code>, <code class="literal">DECAL</code>, <code class="literal">ADD</code>, <code class="literal">REPLACE</code>, and <code class="literal">BLEND</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">alphaTest</code>
+<a id="id1202" class="indexterm"/>
+<a id="id1203" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the type of alpha test to use when drawing pixels. Consists of a test type followed by an alpha value. Valid test types are <code class="literal">DISABLED</code>, <code class="literal">NEVER</code>, <code class="literal">LESS</code>, <code class="literal">EQUAL</code>, <code class="literal">LEQUAL</code>, <code class="literal">GREATER</code>, <code class="literal">GEQUAL</code>, <code class="literal">NOTEQUAL</code>, and <code class="literal">ALWAYS</code>. For example: <code class="literal">alphaTest GEQUAL 128</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">zDepthOfs</code>
+<a id="id1204" class="indexterm"/>
+<a id="id1205" class="indexterm"/> and </p>
+<p>
+<code class="literal">zDepthOfsHW</code>
+<a id="id1206" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows this material to have an offset added to the z component of vertices when they are rendered, to force drawing backwards or forwards. Useful for drawing glowing effects so they can be forced to appear behind or in front of a 3D model. <code class="literal">zDepthOfs</code> is used in the software renderer and <code class="literal">zDepthOfsHW</code> is used when rendering with OpenGL ES.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">filtering</code>
+<a id="id1207" class="indexterm"/>
+<a id="id1208" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Set to <code class="literal">true</code> to use bilinear filtering when rendering.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">clampUV</code>
+<a id="id1209" class="indexterm"/>
+<a id="id1210" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If <code class="literal">true</code>, the UV coordinates are clamped within the bounds of the texture. This helps avoid the problems caused by bilinear filtering when rendering the edges of a texture, as bilinear filtering will attempt to blend between texels on the left and right or top and bottom of the <a id="id1211" class="indexterm"/>image as it will assume the texture can be tiled otherwise.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Defining image templates"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec83"/>Defining image templates</h3></div></div></div><p>We can also use the resource template system to specify how we want images to be processed, which includes the ability to specify what texture format is used. To define a resource template for images we have to <a id="id1212" class="indexterm"/>declare an instance of <code class="literal">CIwResTemplateImage</code>, which can be configured using the following parameters:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Parameter</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">formatSW</code>
+<a id="id1213" class="indexterm"/>
+<a id="id1214" class="indexterm"/> and</p>
+<p>
+<code class="literal">formatHW</code>
+<a id="id1215" class="indexterm"/>
+<a id="id1216" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Converts any image to the requested format. The two versions of this parameter allow a format to be defined for the software renderer and another format for OpenGL ES rendering.</p>
+<p>For a complete list of texture formats, take a look at the Marmalade documentation for the <code class="literal">CIwImage</code> class, but bear in mind that some of these formats apply only to software or hardware rendering. For example, OpenGL ES does not support any of the palette-based formats, while the software renderer does not support compressed formats such as PVRTC or ATITC.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">compressForDiskSpace</code>
+<a id="id1217" class="indexterm"/>
+<a id="id1218" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>When <code class="literal">true</code>, converting textures using the <code class="literal">formatSW</code> and <code class="literal">formatHW</code> parameters will only store the converted version in the binary version of the GROUP file if it is smaller (in memory terms) than the image in its original format. Defaults to <code class="literal">false</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">mipMapping</code>
+<a id="id1219" class="indexterm"/>
+<a id="id1220" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>When <code class="literal">true</code>, mipmaps will automatically be generated for the image. It can be very useful to set this to <code class="literal">false</code> for images that will form part of the UI, since these generally want to be drawn at their native size and mipmaps will not be needed.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">allowLowQualityCompression</code>
+<a id="id1221" class="indexterm"/>
+<a id="id1222" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If using a hardware compressed format, Marmalade will not use the requested compression if the resulting texture is likely to be of low quality, for example, when using PVRTC on an image with an alpha channel. Setting this parameter to <code class="literal">true</code> allows you to force Marmalade to perform the requested compression.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">ignoreImages</code>
+<a id="id1223" class="indexterm"/>
+<a id="id1224" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If set to <code class="literal">true</code>, images will be ignored and a 2 x 2 checkerboard <a id="id1225" class="indexterm"/>texture will be used instead. Can be useful when debugging to speed up loading time.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Defining model templates"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec84"/>Defining model templates</h3></div></div></div><p>When loading a 3D model from a GEO file, we can use an instance of the <code class="literal">CIwResTemplateGEO</code> resource template to control how the model is processed. Many of the options available allow us to increase rendering performance when we know that a particular model will be used under certain conditions; for example, it will only ever be rendered using OpenGL ES or it may have been exported with normals, which are not required as the model will never be rendered with lighting enabled.</p><p>Some of the more <a id="id1226" class="indexterm"/>useful settings are shown in the following table, but there are a great many more, so check out the Marmalade documentation for <code class="literal">CIwResTemplateGEO</code> for more details:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Parameter</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">scale</code>
+<a id="id1227" class="indexterm"/>
+<a id="id1228" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows a floating point value that will be used to scale all the vertices of the model, to be specified. Can be useful to allow 3D models to be created in a modeling package with one scale and used at a different scale in the game.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">buildCols</code>
+<a id="id1229" class="indexterm"/>
+<a id="id1230" class="indexterm"/>,</p>
+<p>
+<code class="literal">buildNorms</code>
+<a id="id1231" class="indexterm"/>
+<a id="id1232" class="indexterm"/>,</p>
+<p>
+<code class="literal">buildUVs</code>
+<a id="id1233" class="indexterm"/>
+<a id="id1234" class="indexterm"/>, and</p>
+<p>
+<code class="literal">buildUV1s</code>
+<a id="id1235" class="indexterm"/>
+<a id="id1236" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If set to <code class="literal">true</code>, the processed model data will include vertex colors, normals, and UV information, assuming it exists in the exported model. This can be useful to save memory in the game if lighting or textures are not required on the model.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">triStrip</code>
+<a id="id1237" class="indexterm"/>
+<a id="id1238" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If set to <code class="literal">true</code>, a model will be conditioned for rendering using triangle strips. The default is <code class="literal">false</code>, which will cause triangle lists to be generated. Only takes effect if the model is being conditioned for rendering with OpenGL ES.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">calculateNorms</code>
+<a id="id1239" class="indexterm"/>
+<a id="id1240" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If set to <code class="literal">true</code>, the model builder will attempt to generate vertex normals for lighting purposes. Useful if the source model was exported without normals for any reason.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">chunked</code>
+<a id="id1241" class="indexterm"/>
+<a id="id1242" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>If set to <code class="literal">true</code>, the model will be subdivided into smaller "chunks" for rendering using binary space partitioning. This can be useful when rendering a model much larger than screen size, as it allows whole sections of the model which are off-screen to be ignored.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">maxPrimsPerChunk</code>
+<a id="id1243" class="indexterm"/>
+<a id="id1244" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Used in conjunction with the <code class="literal">chunked</code> parameter to specify the maximum number of polygons each chunk of the model should <a id="id1245" class="indexterm"/>contain.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Defining animation templates"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec85"/>Defining animation templates</h3></div></div></div><p>The <code class="literal">CIwResTemplateANIM</code> class <a id="id1246" class="indexterm"/>allows ANIM file data to be adjusted when being processed. It only provides a <a id="id1247" class="indexterm"/>couple of options, which are listed in the following table:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Parameter</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">zeroMotionTolerance</code>
+<a id="id1248" class="indexterm"/>
+<a id="id1249" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows a floating point value to be specified that will be used to filter the translation part of any key frame data. When animating a model it is possible that the artist may accidentally include some small movements to the bone positions, which yields a larger output data set. This value allows movements up to the specified value to be ignored, which can mean fewer key frames have to be output.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">transformPrecision</code>
+<a id="id1250" class="indexterm"/>
+<a id="id1251" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Another floating point value that specifies the precision to be used when animating. The default value is <code class="literal">4.0</code>, meaning that the animation mathematics are calculated at four times the world space resolution. If you have an animation with lots of subtle movements, you may want to consider increasing this value so that those movements are not lost.</p>
+</td></tr></tbody></table></div></div><div class="section" title="Defining GROUP file templates"><div class="titlepage"><div><div><h3 class="title"><a id="ch08lvl3sec86"/>Defining GROUP file templates</h3></div></div></div><p>Finally, there is the <code class="literal">CIwResTemplateGROUP</code> class<a id="id1252" class="indexterm"/> that is used for creating a <span class="strong"><strong>texture atlas</strong></span>. A <a id="id1253" class="indexterm"/>texture atlas is simply a <a id="id1254" class="indexterm"/>
+<a id="id1255" class="indexterm"/>collection of several smaller textures that are laid out within a much larger texture. This can improve rendering speed since fewer texture swaps are required when rendering.</p><p>We won't be looking at texture atlases in detail in this book, so if you want further information take a look at the Marmalade documentation page for the <code class="literal">CIwResTemplateGROUP</code> class.</p></div></div><div class="section" title="Producing binary versions of resources"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec132"/>Producing binary versions of resources</h2></div></div></div><p>Previously in this book we've seen references to the fact that Marmalade produces binary versions of our resources, which are normally both smaller in size and quicker to load compared to the source assets.</p><p>Until now we've <a id="id1256" class="indexterm"/>
+<a id="id1257" class="indexterm"/>kind of glossed over this a little, but now that we know about build styles it's worth taking a closer look.</p><p>The binary versions of resources are generated automatically for us whenever we load a GROUP file, assuming we have the ICF setting <code class="literal">ResBuild</code> set to <code class="literal">1</code> and we're running a Windows debug build of our game. These files are written out with the file extension <code class="literal">.group.bin</code> into a directory called <code class="literal">data-ram</code>, which lives alongside the regular <code class="literal">data</code> directory where our source assets reside.</p><p>If we look inside the <code class="literal">data-ram</code> directory for any project, we'll discover another set of subdirectories and these are what contain the binary versions of our resources. These subdirectories correspond to the extra prefix directories that we specify in our build styles.</p><p>When the <code class="literal">.group.bin</code> files are written out, they will always be written to the prefix directory specified by the currently active build style, regardless of whether the source file was read from the standard <code class="literal">data</code> directory or from the extra prefix directory.</p><p>The relative directory path from the <code class="literal">data</code> directory will also be created in the output directory when writing out the binary versions of the files.</p><p>This makes it very easy for us to deploy different sets of resources to different platforms as we just need to include all the <code class="literal">.group.bin</code> files from one of the subdirectories of <code class="literal">data-ram</code>.</p><p>Let's illustrate this with a quick example. Suppose we have a file <code class="literal">data/images/images.group</code> that loads in a number of textures. If no build style is specified, the default is the Marmalade-defined <code class="literal">GLES1</code> style, which specifies a prefix directory called <code class="literal">data-gles1</code>. The binary version of the file will be written to the file path <code class="literal">data-ram/data-gles1/images/images.group.bin</code>.</p><p>If we now run our program again, with the <code class="literal">pvrtc</code> build style selected (as defined in the section on build styles earlier in this chapter), the images will be converted to PVRTC format and instead written to the file path <code class="literal">data-ram/data-pvrtc/images/images.group.bin</code>.</p><p>As it happens, <a id="id1258" class="indexterm"/>
+<a id="id1259" class="indexterm"/>Marmalade does not just write out the binary versions of the GROUP files, it also creates a number of other files that can be useful for debugging purposes. We won't look at these in detail in this book, but you might find them useful to take a look at if you're having problems with some resource not being processed as expected. In particular, there is a file with the extension <code class="literal">.group.bin.txt</code> that details all the classes encountered while processing a particular GROUP file.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note46"/>Note</h3><p>There is one drawback to this approach, that is, you must load every single GROUP file that your game makes reference to in order to generate all the binary versions of them. This can particularly be a problem if your game has a large number of levels and you have a GROUP file for each level. A good way of solving this issue is to create a special mode for your game that can be given a list of all the required GROUP files (and potentially any dependencies between them) and will then load each file in turn to generate the binary version.</p></div></div></div></div>
+<div class="section" title="Compressing resources using the Derbh archiver"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec52"/>Compressing resources using the Derbh archiver</h1></div></div></div><p>Game resources <a id="id1260" class="indexterm"/>can soon grow very large in size, so it would be great if we could somehow compress these files so that they take up less space in our installation package, particularly if there are any restrictions on the maximum size an install package can have.</p><p>Marmalade <a id="id1261" class="indexterm"/>
+<a id="id1262" class="indexterm"/>provides just such a feature in the form of Derbh archives, which is very similar to compression systems such as ZIP that you will no doubt be familiar with. Derbh supports multiple compression algorithms, including the standard LZMA and also its own proprietary algorithm, which can achieve improved compression by operating over multiple files simultaneously.</p><p>The Marmalade SDK provides an API which allows us to load compressed files as easily as if they were provided as individual uncompressed files. A command-line utility called DZip is also provided to generate the archives in the first place.</p><div class="section" title="Creating a Derbh archive"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec133"/>Creating a Derbh archive</h2></div></div></div><p>To create a <a id="id1263" class="indexterm"/>Derbh archive, the first thing we have to do is create a <a id="id1264" class="indexterm"/>
+<span class="strong"><strong>DZip Configuration File</strong></span> (<span class="strong"><strong>DCL</strong></span>). This file is passed to the DZip utility to specify the source files and how they should be compressed. Here is a simple example of a DCL file taken from the Skiing example project for this chapter:</p><div class="informalexample"><pre class="programlisting">archive data-ram\data-gles1\skiing.dz
+basedir data
+basedir data-ram\data-gles1
+
+file text\EN.str 0 dz
+file models.group.bin 0 dz
+file flag\flag.group.bin 0 dz
+file rock\rock.group.bin 0 dz
+file skier\skierskiing.group.bin 0 dz
+file sound\sound.group.bin 0 dz
+file tree\tree.group.bin 0 dz
+file ui\ui.group.bin 0 dz</pre></div><p>The first line uses the <code class="literal">archive</code> keyword to specify the name of the Derbh archive to be created, which is normally given the extension <code class="literal">.dz</code>. It is possible to create several archives at once by simply adding further <code class="literal">archive</code> entries.</p><p>The <code class="literal">basedir</code> keyword allows us to specify a directory in which to search for the files that will make up the archive. In the previous example we specify the directories <code class="literal">data</code> and <code class="literal">data-ram\data-gles1</code>.</p><p>Next we list all the files that will be added to the archive using the <code class="literal">file</code> keyword. The first parameter is the name of the file to include, which should be relative to one of the directories specified by the <code class="literal">basedir</code> keyword. This is followed by a number and a compression type. The number refers to which archive the file should be added to, with zero being the first archive specified in the DCL file.</p><p>There are a number of compression types available, although note that not all of them actually compress the source file! We can use a different compression type for each file if we so wish. The following table shows the types available:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Type</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">lzma</code>
+<a id="id1265" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Uses lzma compression, which generally gives the best compression ratio and has a reasonable decompression speed.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">dz</code>
+<a id="id1266" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Marmalade's own compression format, which gives a good compression ratio and decompression speed.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">zlib</code>
+<a id="id1267" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Uses zlib compression, which provides a less optimal compression ratio but has a very good decompression speed.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">zero</code>
+<a id="id1268" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>A block of zeros the same size as the file will be added to the archive. Can be used for debugging purposes, for example, if we need to detect corrupted files.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">copy</code>
+<a id="id1269" class="indexterm"/>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>The file is included uncompressed in the archive. In the case of a file type that is already compressed, this can produce a smaller end file size for the archive than trying to compress the file.</p>
+</td></tr></tbody></table></div><p>With the DCL file<a id="id1270" class="indexterm"/> constructed, we can then build the archive file using the DZip utility. This utility can be found as the file <code class="literal">tools\dzip\dzip.exe</code> in the Marmalade SDK install directory.</p><p>To create the archive, simply pass the name of the DCL file into the DZip utility, ensuring you run the command from within a directory where the <code class="literal">archive</code> and <code class="literal">basedir</code> entries can be located.</p></div><div class="section" title="Using a Derbh archive in code"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec134"/>Using a Derbh archive in code</h2></div></div></div><p>With a <a id="id1271" class="indexterm"/>
+<a id="id1272" class="indexterm"/>Derbh archive created, it is then really easy to make use of it in our game. Firstly we need to add support for the Derbh API by adding <code class="literal">derbh</code> to the list of <code class="literal">subprojects</code> in the MKB file. We also need to include the <code class="literal">derbh.h</code> file to provide access to the API functions.</p><p>To make use of our archive file we just need to add a call to the function <code class="literal">dzArchiveAttach</code>, which takes a single parameter—the filename of the Derbh archive itself. From then on any call to open a file will first check to see if it exists in the Derbh archive, and if it does the data will automatically be decompressed and returned whenever we try to read from the file. It really is that simple!</p><p>We can attach more than one archive at a time as well by simply calling <code class="literal">dzArchiveAttach</code> for each archive we wish to use.</p><p>If a request is made for a file that doesn't appear in the archive, Marmalade will then look in the <code class="literal">data</code> and <code class="literal">data-ram</code> directories.</p><p>If we want to stop using a Derbh archive for any reason, we can either call <code class="literal">dzArchiveDetach</code> to remove the last archive that was attached or we can specify the archive to detach <a id="id1273" class="indexterm"/>
+<a id="id1274" class="indexterm"/>using the <code class="literal">dzArchiveDetachNamed</code> function.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note47"/>Note</h3><p>It is important to note that only files loaded from within the application code will be accessible from an attached Derbh archive. If you are trying to start a music track with s3eAudio or a video clip with s3eVideo, these files must exist as separate files as they are loaded by the operating system native methods, which obviously will have no way of accessing a Derbh file's contents.</p></div></div></div><div class="section" title="The automatic Derbh method"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec135"/>The automatic Derbh method</h2></div></div></div><p>For most projects there is actually an even easier way of making use of Derbh archives, which doesn't require us to create a DCL file or build a Derbh file ourselves. We don't even have to attach the archive in our code! To make use of this feature, all we need to do is add the following to the <code class="literal">deployments</code> section of our MKB file (we'll be covering this section of the MKB file in greater detail in just a moment).</p><div class="informalexample"><pre class="programlisting">deployments
+{
+  auto-derbh
+}</pre></div><p>With this in place, the Marmalade Deployment Tool will automatically build us a Derbh archive from the relevant files in the <code class="literal">assets</code> section of the MKB file (again, the <code class="literal">assets</code> section will be discussed shortly) and will attach it before our application code starts executing.</p><div class="note" title="Note" style=""><div class="inner"><h3 class="title"><a id="note48"/>Note</h3><p>Be wary of using the automatic Derbh facility if you ever deploy files that need to be modified by your code after installation. You will not be able to modify a file once it is contained within an archive, so you would instead need to make a copy of any such files in a new location the first time your application runs.</p></div></div></div></div>
+<div class="section" title="Creating different deployment types"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec53"/>Creating different deployment types</h1></div></div></div><p>It's now time to take a<a id="id1275" class="indexterm"/>
+<a id="id1276" class="indexterm"/> deeper look at how Marmalade handles the deployment process. If you've been following the sample code, you may be wondering how we are able to make a deployment package that contains all the necessary resource files in order to function. Or, if we're creating multiple resource sets, how do we choose which one to pair with our code when creating the installer package?</p><p>We also need a way of including icons and captions that will be used to represent our application when installed on a device.</p><p>All of this magic <a id="id1277" class="indexterm"/>
+<a id="id1278" class="indexterm"/>occurs in the MKB file, and the following sections aim to explain exactly what you have to do.</p><div class="section" title="Specifying icons, application names, and other details"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec136"/>Specifying icons, application names, and other details</h2></div></div></div><p>The <code class="literal">deployments</code> <a id="id1279" class="indexterm"/>
+<a id="id1280" class="indexterm"/>
+<a id="id1281" class="indexterm"/>section of the MKB file is where we can set all manner of attributes that will be applied to the final installation package of our application. There are a huge number of deployment options that can be specified, some of which are global to all supported platforms and some that are operating system specific.</p><p>The following table lists several of the more immediately useful attributes, but you should go to <span class="strong"><strong>Marmalade</strong></span> | <span class="strong"><strong>Marmalade Development Tools Reference</strong></span> | <span class="strong"><strong>MKB File Settings</strong></span> | <span class="strong"><strong>Deployment Options</strong></span> in the Marmalade documentation for full details.</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Attribute</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Description</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">assets</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies which asset group to use in a deployment. This will be explained in greater detail in the following sections.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">name</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the name of the deployment. This name will be used for the name of the installation directory, the executable file, and the installation package file. If this value is not specified, the filename of the MKB file will be used instead.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">caption</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>This is the name that will be used to identify the application once installed on the device—for example, the text that appears underneath a program icon. If no caption is specified, the <code class="literal">name</code> value will be used instead.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">app-icf</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows an alternative file to be specified for use instead of the default <code class="literal">app.icf</code> file.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">version</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the version number of the application. It should be provided in the form <code class="literal">major.minor.revision</code>.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">version-major</code>,</p>
+<p>
+<code class="literal">version-minor</code>, and</p>
+<p>
+<code class="literal">version-revision</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>An alternative way of specifying the version number. Each of these attributes should be followed by a number representing the respective part of the version number.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">iphone-icon</code>,</p>
+<p>
+<code class="literal">iphone-icon-ipad</code>,</p>
+<p>
+<code class="literal">iphone-icon-high-res</code>, and</p>
+<p>
+<code class="literal">iphone-icon-ipad-high-res</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Sets the icons for use in iOS deployment. These settings specify a filename to an icon of suitable format and dimension to be used as the specified icon type.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">android-icon</code>,</p>
+<p>
+<code class="literal">android-icon-hdpi</code>, and</p>
+<p>
+<code class="literal">android-icon-ldpi</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Sets the filenames containing the icons for use on Android deployments.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">bada-icon</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the file to be used for the icon on Bada deployments.</p>
+</td></tr></tbody></table></div><p>As you can see, there <a id="id1282" class="indexterm"/>
+<a id="id1283" class="indexterm"/>
+<a id="id1284" class="indexterm"/>are options for specifying the icon files for most platforms and indeed there are further platform-specific attributes for specifying information such as application signing keys.</p><p>You should check out the aforementioned page of the Marmalade documentation for further details on this, as you will be unable to produce final deployment packages for submission purposes without this information.</p></div><div class="section" title="Specifying asset lists"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec137"/>Specifying asset lists</h2></div></div></div><p>We need some way <a id="id1285" class="indexterm"/>of listing all the resource files that have to be included in the deployment package so our game can run. Marmalade allows us to do this by way of the <code class="literal">assets</code> section of the MKB file. Here's an example from this chapter's version of the Skiing project:</p><div class="informalexample"><pre class="programlisting">assets
+{
+  [common]
+  (data)
+  sound/music.mp3
+
+  [normal]
+  &lt;include common&gt;
+  (data-ram/data-gles1)
+  skiing.dz
+
+  [highres]
+  &lt;include common&gt;
+  (data-ram/data-highres)
+  skiing.dz
+}</pre></div><p>This small example demonstrates most of the functionality available in the <code class="literal">assets</code> section. First, you will notice the use of square brackets to create named groups of assets. In the example we have asset groups called <code class="literal">common</code>, <code class="literal">normal</code>, and <code class="literal">highres</code>.</p><p>Normal brackets are used to specify a directory, relative to the directory containing the MKB file, where files that need to be included in the deployment package can be located. This is then followed by the files themselves. You can have any number of these blocks of files in an asset group.</p><p>The important thing to remember about how directories and files are specified in an asset group is that the directory in brackets becomes the root path of the application's installation directory on the device. Let's illustrate this by looking at an example.</p><p>First we have the <code class="literal">common</code> asset group, which specifies that the file called <code class="literal">sound/music.mp3</code> can be found in the <code class="literal">data</code> directory. When installed on the device, the <code class="literal">music.mp3</code> file will be written into a subdirectory called <code class="literal">sound</code> in the application's installation directory.</p><p>Now let's consider the asset group called <code class="literal">normal</code>. Here the path to the file is completely enclosed in the brackets and just the name of the file, <code class="literal">skiing.dz</code>, is specified. This will result in the <code class="literal">skiing.dz</code> file being written into the application's installation directory.</p><p>There is one final <a id="id1286" class="indexterm"/>feature of the assets section demonstrated by the example, which is the ability to include an asset group from within another asset group. This is done using the <code class="literal">include</code> keyword, which is enclosed in angle brackets along with the name of the asset group to be included.</p><p>Looking at the example we can see that both the <code class="literal">normal</code> and <code class="literal">highres</code> asset groups include the <code class="literal">common</code> asset group.</p></div><div class="section" title="Creating and using deployment types"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec138"/>Creating and using deployment types</h2></div></div></div><p>We can now look at<a id="id1287" class="indexterm"/>
+<a id="id1288" class="indexterm"/> creating different configurations for different devices. The <code class="literal">deployments</code> sections of the MKB file also allows us to create different deployment types by specifying a name in square brackets. All settings that are made after this will only apply to that deployment type. Settings can be applied globally across all deployment types by specifying them with square brackets before defining a deployment type.</p><p>It is possible to limit a deployment type to a certain set of mobile platforms by following the name in square brackets with a platform identifier or a comma-separated list of platforms in quote marks.</p><p>A full list of all the platforms supported by Marmalade at the time of this writing is provided in the following table:</p><div class="informaltable"><table border="1"><colgroup><col style="text-align: left"/><col style="text-align: left"/></colgroup><thead><tr><th style="text-align: left" valign="bottom">
+<p>Platform</p>
+</th><th style="text-align: left" valign="bottom">
+<p>Notes</p>
+</th></tr></thead><tbody><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">android</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the Android operating system.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">iphone</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Any iOS-based device—iPhone, iPod touch, or iPad.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">bada</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Targets the Samsung Bada platform.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">lgtv</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Specifies the LG Smart TV system.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">playbook</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>For targeting the Blackberry Playbook tablet.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">symbian9</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Builds an application that runs on Symbian 9 S60 or Symbian ^3 devices.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">webos</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Targets the webOS platform, the best known device being the now discontinued HP TouchPad.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">winmobile</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>Allows for Windows Mobile 6 device support. Note that Marmalade cannot target Windows Phone 7.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">win32</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>For x86 Windows builds.</p>
+</td></tr><tr><td style="text-align: left" valign="top">
+<p>
+<code class="literal">osx</code>
+</p>
+</td><td style="text-align: left" valign="top">
+<p>For x86 Apple Mac builds (when using the Mac version of Marmalade).</p>
+</td></tr></tbody></table></div><p>It is not mandatory to specify a platform list in a deployment type. If no list is given, it is assumed that any platform is a valid target.</p><p>Once a deployment<a id="id1289" class="indexterm"/>
+<a id="id1290" class="indexterm"/> type has been specified, any attributes will only apply to that deployment type. This is particularly useful to us for being able to specify different sets of resources. By using the <code class="literal">assets</code> attribute we can specify the asset group that we want to be included in the final deployment package. The following example of the <code class="literal">deployments</code> section is taken from the Skiing project for this chapter.</p><div class="informalexample"><pre class="programlisting">deployments
+{
+  name="SkiingC8"
+  caption="SkiingC8"
+
+  [normal]
+  assets=normal
+
+  [highres]
+  assets=highres
+}</pre></div><p>To create an installation package for a particular deployment type, all we have to do is follow the same deployment instructions provided in <a class="link" href="ch01.html" title="Chapter 1. Getting Started with Marmalade">Chapter 1</a>, <span class="emphasis"><em>Getting Started with Marmalade</em></span>, of this book to start up the <span class="strong"><strong>Marmalade System Deployment Tool</strong></span>. The second page of this application allows us to choose the deployment types that we want to create by clicking on checkboxes, as shown in the following screenshot:</p><div class="mediaobject"><img src="graphics/3363_08_01.jpg" alt="Creating and using deployment types"/></div><p>This page does allow you to create and modify deployment types by way of the <span class="strong"><strong>Add &lt;config&gt;</strong></span>, <span class="strong"><strong>Copy &lt;config&gt;</strong></span>, and <span class="strong"><strong>Remove &lt;config&gt;</strong></span> buttons, but I personally prefer specifying them by <a id="id1291" class="indexterm"/>
+<a id="id1292" class="indexterm"/>hand in the MKB file. Using these buttons modifies the MKB file accordingly.</p><p>Once you have progressed through all the pages of the deployment tool and made the deployment packages, they can be found in the folder <code class="literal">build_projectname_vcxx\deployments</code>, where <code class="literal">projectname</code> is the name of the MKB file and <code class="literal">vcxx</code> refers to the version of Microsoft Visual C++ that you are using for development.</p></div></div>
+<div class="section" title="Example code"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec54"/>Example code</h1></div></div></div><p>There are two example projects that accompany this chapter, and they are described in the following sections.</p><div class="section" title="The build styles project"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec139"/>The build styles project</h2></div></div></div><p>This is a very simple <a id="id1293" class="indexterm"/>example demonstrating the use of build styles, resource templates, and deployment types. It is based on the Graphics2D example from <a class="link" href="ch02.html" title="Chapter 2. Resource Management and 2D Graphics Rendering">Chapter 2</a>, <span class="emphasis"><em>Resource Management and 2D Graphics Rendering</em></span>.</p><p>The <code class="literal">resbuildstyles.itx</code> file defines a build style called <code class="literal">highres</code> that specifies a prefix directory called <code class="literal">data-highres</code>. If you look inside the <code class="literal">data</code> directory, you will see that the jar of the marmalade image in <code class="literal">data\images\textures\marmalade.png</code> is 256 x 256 pixels in size. A new directory for the <code class="literal">highres</code> build style has also been added, containing a 512 x 512 version of this image. This file is called <code class="literal">data\data-highres\images\textures\marmalade.png</code>.</p><p>If you now look at the <code class="literal">app.icf</code> file, you will see the new entry <code class="literal">ResBuildStyle=highres</code>. If you run the program with this line in place, the 512 x 512 version of the image will be loaded. Comment out or remove this line, and the 256 x 256 image will be loaded.</p><p>The <code class="literal">restemplates.itx</code> file shows a simple example of a resource template that will force the images to be converted into RGBA4444 format and also disables mipmapping. This resource template is used in the <code class="literal">data\images\images.group</code> file to reduce the size of the <code class="literal">images.group.bin</code> file as no mipmap images need to be stored in it.</p><p>Finally, the <code class="literal">BuildStyles.mkb</code> file declares two deployment types called <code class="literal">normal</code> and <code class="literal">highres</code>. When making an install package using the <span class="strong"><strong>Marmalade System Deployment Tool</strong></span>, we can select either of these options to include the low or high resolution images. Note that the deployment tool will also list the default deployment type as this is always defined automatically by the deployment tool. Using the default type will not include any resources and so will not work on the device.</p></div><div class="section" title="The Skiing project"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec140"/>The Skiing project</h2></div></div></div><p>For this chapter the <a id="id1294" class="indexterm"/>Skiing project has been updated to use build styles, resource templates, and deployment types. It also makes use of Derbh archives to reduce the size of the install package.</p><p>In this instance the build styles system has been used to allow a larger size of font to be used on devices with a higher screen resolution. The <code class="literal">data\data-highres\ui\fonts</code> directory contains alternative versions of the font files <code class="literal">skiing.gxfont</code> and <code class="literal">skiing.tga</code> that will be loaded when the <code class="literal">highres</code> build style has been selected in the <code class="literal">app.icf</code> file.</p><p>No changes were necessary to any of the UI layout configuration since we used the approach of sizing controls based on the screen dimensions of the device. We just need a slightly bigger sized font to fill the larger screen area better.</p><p>To make deployments easier and to reduce the overall memory size of install packages, the Derbh API has also been used. If you look in the root project directory, you will see two new files called <code class="literal">skiing.dcl</code> and <code class="literal">skiing-highres.dcl</code>. These files list all the resources needed by the game and are used as input to the DZip tool to create the archive files. A batch file called <code class="literal">MakeDerbh.bat</code> has also been included to demonstrate use of the DZip tool.</p><p>Note that the Derbh archives can obviously not be created until the various <code class="literal">.group.bin</code> files have been generated. In order to do this you will need to run the game twice, once with the <code class="literal">ResBuildStyle=highres</code> setting set in the <code class="literal">app.icf</code> file and again with this line commented out.</p><p>The two DCL files<a id="id1295" class="indexterm"/> create the target archives inside the <code class="literal">data-ram\data-gles1</code> and <code class="literal">data-ram\data-highres</code> directories, but both generate an archive called <code class="literal">skiing.dz</code>. The deployment types in the <code class="literal">Skiing.mkb</code> file include the relevant version of this file so our code becomes independent of the deployment type. At the start of the program we just have to attach the <code class="literal">skiing.dz</code> archive with the <code class="literal">dzArchiveAttach</code> function in order to access the correct resource files.</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec55"/>Summary</h1></div></div></div><p>In this chapter we have learnt how Marmalade makes it easy to organize our resource files so that we can create different versions of them for devices of different specifications. We only need to provide alternative versions of resources that must be different, for example higher resolution textures. Any common files, such as configuration and GROUP files, can generally stay the same.</p><p>We've also covered the use of resource templates to allow us finer control over how our resources will be used in the game (for example, by specifying a particular type of texture compression to be used) and we've seen how to make different deployment types that include the same core code but different resource files.</p><p>Finally, we've also looked at the Derbh API to allow us to compress our resource files to save space in the installation package.</p><p>In the next chapter we'll be looking at how we can make use of social media to allow our players to share information about our game with their Facebook friends.</p></div></body></html>

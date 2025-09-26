@@ -1,0 +1,429 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;5.&#xA0;Creating Cool Content"><div class="titlepage"><div><div><h1 class="title"><a id="ch05"/>Chapter 5. Creating Cool Content</h1></div></div></div><p>In this chapter, you'll be learning how to implement the really complex, subtle game mechanics that not many developers do. This is what separates the good games from the great games. There will be many examples, tutorials, and code snippets in this chapter intended for adaption in your own projects, so feel free to come back at any time to look at something you may have either missed the first time, or are just curious to know about in general.</p><p>In this chapter, we will cover the following topics:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem">Adding a table for scores</li><li class="listitem">Adding subtle sliding to the units</li><li class="listitem">Creating movements on a Bézier curve instead of straight paths</li><li class="listitem">Depth perception via device tilting (and parallax scrolling)</li><li class="listitem">Three ways to create unit streamers or ghosts</li><li class="listitem">Touchscreen controls versus D-pad adaptation (and why it matters so much to know this distinction)</li><li class="listitem">A common theme for this chapter will be to show you how to take what seem like complex things and turn them into easy-to-code and easy-to-modify segments that you can implement in your own project (or projects).</li></ul></div><p>Also, this chapter features things that won't go well with the book's project, and only the first two points in the preceding list are related to the game project, which has been slowly worked all this while. The rest are standalone sample projects with code designed in a modular fashion so that you can extract it for your own projects faster.</p><div class="note" title="Note"><h3 class="title"><a id="tip30"/>Tip</h3><p>It's strongly recommended to open the Chapter 5 code before working on the first two sections. A decent amount of code has been added and/or modified since the last chapter, and it was not talked about in this book. Therefore, you may get compilation errors should you try to follow along with the book without using the Chapter 5 project code. Thanks for understanding!</p></div><div class="section" title="Adding a table for scores"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec36"/>Adding a table for scores</h1></div></div></div><p>Because <a id="id274" class="indexterm"/>we want a way to show the user their past high scores, in the <code class="literal">GameOver</code> scene, we're going to add a table that displays the most recent high scores that are saved. For this, we're going to use <code class="literal">CCTableView</code>. It's still relatively new, but it works for what we're going to use it.</p><div class="section" title="CCTableView versus UITableView"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec76"/>CCTableView versus UITableView</h2></div></div></div><p>Although <code class="literal">UITableView</code> might be known to some of you who've made non-Cocos2d apps before, you <a id="id275" class="indexterm"/>should be aware of its downfalls when it comes to using it within Cocos2d. For example, if you want a BMFont in your table, you can't add <code class="literal">LabelBMFont</code> (you could try to convert the BMFont into a TTF font and use that within the table, but that's outside the scope of this book).</p><p>If you still wish to use a <code class="literal">UITableView</code> object (or any <code class="literal">UIKit</code> element for that matter), you can create the object like normal, and add it to the scene, like this (<code class="literal">tblScores</code> is the name of the <code class="literal">UITableView</code> object):</p><div class="informalexample"><pre class="programlisting">[[[CCDirector sharedDirector] view] addSubview:tblScores];</pre></div></div><div class="section" title="Saving high scores (NSUserDefaults)"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec77"/>Saving high scores (NSUserDefaults)</h2></div></div></div><p>Before <a id="id276" class="indexterm"/>we display any high scores, we have to make sure we save them. The easiest way to do this is by making use of Apple's built-in data preservation tool—NSUserDefaults. If you've never used it before, let me tell you that it's basically a dictionary with "save" mechanics that stores the values in the device so that the next time the user loads the device, the values are available for the app.</p><p>Also, because there are three different values we're tracking for each gameplay, let's only say a given game is better than another game when the total score is greater.</p><p>Therefore, let's create a <code class="literal">saveHighScore</code> method that will go through all the total scores in our saved list and see whether the current total score is greater than any of the saved scores. If so, it will insert itself and bump the rest down. In <code class="literal">MainScene.m</code>, add the following method:</p><div class="informalexample"><pre class="programlisting">-(NSInteger)saveHighScore
+{
+  //save top 20 scores
+  
+  //an array of Dictionaries...
+  //keys in each dictionary:
+  //  [DictTotalScore]
+  //  [DictTurnsSurvived]
+  //  [DictUnitsKilled]
+
+//read the array of high scores saved on the user's device
+  NSMutableArray *arrScores = [[[NSUserDefaults standardUserDefaults] arrayForKey:DataHighScores] mutableCopy];
+  
+//sentinel value of -1 (in other words, if a high score was not found on this play through)
+  NSInteger index = -1;
+//loop through the scores in the array
+  for (NSDictionary *dictHighScore in arrScores)
+  {
+//if the current game's total score is greater than the score stored in the current index of the array...
+    if (numTotalScore &gt; [dictHighScore[DictTotalScore] integerValue])
+    {
+//then store that index and break out of the loop
+      index = [arrScores indexOfObject:dictHighScore];
+      break;
+    }
+  }
+  
+//if a new high score was found
+  if (index &gt; -1)
+  {
+//create a dictionary to store the score, turns survived, and units killed
+    NSDictionary *newHighScore = @{ DictTotalScore : @(numTotalScore),
+    DictTurnsSurvived : @(numTurnSurvived),
+    DictUnitsKilled : @(numUnitsKilled) };
+    
+//then insert that dictionary into the array of high scores
+    [arrScores insertObject:newHighScore atIndex:index];
+    
+//remove the very last object in the high score list (in other words, limit the number of scores)
+    [arrScores removeLastObject];
+    
+//then save the array
+    [[NSUserDefaults standardUserDefaults] setObject:arrScores forKey:DataHighScores];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+  }
+
+//finally return the index of the high score (whether it's -1 or an actual value within the array)
+  return index;
+}</pre></div><p>Finally, call <a id="id277" class="indexterm"/>this method in the <code class="literal">endGame</code> method right before you transition to the next scene:</p><div class="informalexample"><pre class="programlisting">-(void)endGame
+{
+  //call the method here to save the high score, then grab the index of the high score within the array
+  NSInteger hsIndex = [self saveHighScore];
+  
+  NSDictionary *scoreData = @{ DictTotalScore : @(numTotalScore),
+  DictTurnsSurvived : @(numTurnSurvived),
+  DictUnitsKilled : @(numUnitsKilled),
+  DictHighScoreIndex : @(hsIndex)};
+  
+  [[CCDirector sharedDirector] replaceScene:[GameOverScene sceneWithScoreData:scoreData]];
+  
+}</pre></div><p>Now that we have our high scores being saved, let's create the table to display them.</p></div><div class="section" title="Creating the table"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec78"/>Creating the table</h2></div></div></div><p>It's <a id="id278" class="indexterm"/>really simple to set up a <code class="literal">CCTableView</code> object. All we need to do is modify the <code class="literal">contentSize</code> object, and then put in a few methods that handle the size and content of each cell.</p><p>So first, open the <code class="literal">GameOverScene.h</code> file and set the scene as a data source for the <code class="literal">CCTableView</code>:</p><div class="informalexample"><pre class="programlisting">@interface GameOverScene : CCScene &lt;CCTableViewDataSource&gt;</pre></div><p>Then, in the <code class="literal">initWithScoreData</code> method, create the header labels as well as initialize the <code class="literal">CCTableView</code>:</p><div class="informalexample"><pre class="programlisting">//get the high score array from the user's device
+arrScores = [[NSUserDefaults standardUserDefaults] arrayForKey:DataHighScores];
+    
+//create labels
+CCLabelBMFont *lblTableTotalScore = [CCLabelBMFont labelWithString:@"Total Score:" fntFile:@"bmFont.fnt"];
+
+CCLabelBMFont *lblTableUnitsKilled = [CCLabelBMFont labelWithString:@"Units Killed:" fntFile:@"bmFont.fnt"];
+
+CCLabelBMFont *lblTableTurnsSurvived = [CCLabelBMFont labelWithString:@"Turns Survived:" fntFile:@"bmFont.fnt"];
+  
+//position the labels
+lblTableTotalScore.position = ccp(winSize.width * 0.5, winSize.height * 0.85);
+lblTableUnitsKilled.position = ccp(winSize.width * 0.675, winSize.height * 0.85);
+lblTableTurnsSurvived.position = ccp(winSize.width * 0.875, winSize.height * 0.85);
+  
+//add the labels to the scene
+[self addChild:lblTableTurnsSurvived];
+[self addChild:lblTableTotalScore];
+[self addChild:lblTableUnitsKilled];
+  
+//create the tableview and add it to the scene
+CCTableView * tblScores = [CCTableView node];
+tblScores.contentSize = CGSizeMake(0.6, 0.4);
+CGFloat ratioX = (1.0 - tblScores.contentSize.width) * 0.75;
+CGFloat ratioY = (1.0 - tblScores.contentSize.height) / 2;
+tblScores.position = ccp(winSize.width * ratioX, winSize.height * ratioY);
+tblScores.dataSource = self;
+tblScores.block = ^(CCTableView *table){
+    //if the press a cell, do something here.
+    //NSLog(@"Cell %ld", (long)table.selectedRow);
+};
+[self addChild: tblScores]; </pre></div><p>With the <code class="literal">CCTableView</code> object's data source being set to <code class="literal">self</code> we can add the three methods that will determine exactly how our table looks and what data goes in each cell (that is, row).</p><div class="note" title="Note"><h3 class="title"><a id="note04"/>Note</h3><p>Note that if we don't set the data source, the table view's method will not be called; and if we set it to anything other than <code class="literal">self</code>, the methods will be called on that object/class instead.</p></div><p>That being<a id="id279" class="indexterm"/> said, add these three methods:</p><div class="informalexample"><pre class="programlisting">-(CCTableViewCell*)tableView:(CCTableView *)tableView nodeForRowAtIndex:(NSUInteger)index
+{
+  CCTableViewCell* cell = [CCTableViewCell node];
+  
+  cell.contentSizeType = CCSizeTypeMake(CCSizeUnitNormalized, CCSizeUnitPoints);
+  cell.contentSize = CGSizeMake(1, 40);
+  
+  // Color every other row differently
+  CCNodeColor* bg;
+  if (index % 2 != 0) bg = [CCNodeColor nodeWithColor:[CCColor colorWithRed:0 green:0 blue:0 alpha:0.3]];
+  else bg = [CCNodeColor nodeWithColor: [CCColor colorWithRed:0 green:0 blue:0 alpha:0.2]];
+  
+  bg.userInteractionEnabled = NO;
+  bg.contentSizeType = CCSizeTypeNormalized;
+  bg.contentSize = CGSizeMake(1, 1);
+  [cell addChild:bg];
+  return cell;
+}
+
+-(NSUInteger)tableViewNumberOfRows:(CCTableView *)tableView
+{
+  return [arrScores count];
+}
+
+-(float)tableView:(CCTableView *)tableView heightForRowAtIndex:(NSUInteger)index
+{
+  return 40.f;
+}</pre></div><p>The first method, <code class="literal">tableView:nodeForRowAtIndex:</code>, will format each cell based on which index it is. For now, we're going to color each cell in one of two different colors.</p><p>The second method, <code class="literal">tableViewNumberOfRows:</code>, returns the number of rows, or cells, that will be in the table view. Since we know there are going to be 20, we can technically type 20, but what if we decide to change that number later? So, let's stick with using the count of the array.</p><p>The third <a id="id280" class="indexterm"/>method, <code class="literal">tableView:heightForRowAtIndex:</code>, is meant to return the height of the row, or cell, at the given index. Since we aren't doing anything different with any cell in particular, we can hardcode this value to a fairly reasonable height of 40.</p><p>At this point, you should be able to run the game, and when you lose, you'll be taken to the game over screen with the labels across the top as well as a table that scrolls on the right side of the screen.</p><div class="note" title="Note"><h3 class="title"><a id="tip31"/>Tip</h3><p>It's good practice when learning Cocos2d to just mess around with stuff to see what sort of effects you can make. For example, you could try using some ScaleTo actions to scale the text up from 0, or use a <code class="literal">MoveTo</code> action to slide it from the bottom or the side.</p><p>Feel free to see whether you can create a cool way to display the text right now.</p></div><p>Now that we have the table in place, let's get the data displayed, shall we?</p></div><div class="section" title="Showing the scores"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec79"/>Showing the scores</h2></div></div></div><p>Now that <a id="id281" class="indexterm"/>we have our table created, it's a simple addition to our code to get the proper numbers to display correctly.</p><p>In the <code class="literal">nodeForRowAtIndex</code> method, add the following block of code right after adding the background color to the cell:</p><div class="informalexample"><pre class="programlisting">//Create the 4 labels that will be used within the cell (row). 
+CCLabelBMFont *lblScoreNumber = [CCLabelBMFont labelWithString:[NSString stringWithFormat:@"%d)", index+1] fntFile:@"bmFont.fnt"];
+//Set the anchor point to the middle-right (default middle-middle)
+lblScoreNumber.anchorPoint = ccp(1,0.5);
+  
+CCLabelBMFont *lblTotalScore = [CCLabelBMFont labelWithString:[NSString stringWithFormat:@"%d", [arrScores[index][DictTotalScore] integerValue]] fntFile:@"bmFont.fnt"];
+
+CCLabelBMFont *lblUnitsKilled = [CCLabelBMFont labelWithString:[NSString stringWithFormat:@"%d", [arrScores[index][DictUnitsKilled] integerValue]] fntFile:@"bmFont.fnt"];
+
+CCLabelBMFont *lblTurnsSurvived = [CCLabelBMFont labelWithString:[NSString stringWithFormat:@"%d", [arrScores[index][DictTurnsSurvived] integerValue]] fntFile:@"bmFont.fnt"];
+  
+//set the position type of each label to normalized (where (0,0) is the bottom left of its parent and (1,1) is the top right of its parent)
+lblScoreNumber.positionType = lblTotalScore.positionType = lblUnitsKilled.positionType = lblTurnsSurvived.positionType = CCPositionTypeNormalized;
+
+//position all of the labels within the cell
+lblScoreNumber.position = ccp(0.15,0.5);
+lblTotalScore.position = ccp(0.35,0.5);
+lblUnitsKilled.position = ccp(0.6,0.5);
+lblTurnsSurvived.position = ccp(0.9,0.5);
+  
+//if the index we're iterating through is the same index as our High Score index...
+if (index == highScoreIndex)
+{
+//then set the color of all the labels to a golden color
+    lblScoreNumber.color =
+    lblTotalScore.color =
+    lblUnitsKilled.color =
+    lblTurnsSurvived.color = [CCColor colorWithRed:1 green:183/255.f blue:0];
+}
+  
+//add all of the labels to the individual cell
+[cell addChild:lblScoreNumber];
+[cell addChild:lblTurnsSurvived];
+[cell addChild:lblTotalScore];
+[cell addChild:lblUnitsKilled];</pre></div><p>And that's it! When you play the game and end up at the game over screen, you'll see the high scores being displayed (even the scores from earlier attempts, because they were saved, remember?). Notice the high score that is yellow. It's an indication that the score you got in the game you just played is on the scoreboard, and shows you where it is.</p><p>Although <a id="id282" class="indexterm"/>the <code class="literal">CCTableView</code> might feel a bit weird with things disappearing and reappearing as you scroll, we'll cover how to make that better in the next chapter on polishing our game. For now, let's get some <span class="emphasis"><em>Threes!</em></span>—like sliding into our game.</p><div class="note" title="Note"><h3 class="title"><a id="tip32"/>Tip</h3><p>If you're considering adding a <code class="literal">CCTableView</code> to your own project, the key takeaway here is to make sure you modify the <code class="literal">contentSize</code> and position properly. By default, the <code class="literal">contentSize</code> is a normalized <code class="literal">CGSize</code>, so from 0 to 1, and the anchor point is (0,0).</p><p>Plus, make sure you perform these two steps:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem">Set the data source of the table view</li><li class="listitem">Add the three table view methods</li></ul></div><p>With all that in mind, it should be relatively easy to implement a <code class="literal">CCTableView</code>.</p></div></div></div></div>
+<div class="section" title="Adding subtle sliding to the units"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec37"/>Adding subtle sliding to the units</h1></div></div></div><p>If you've<a id="id283" class="indexterm"/> ever played <span class="emphasis"><em>Threes!</em></span> (or if you haven't, check out the trailer at <a class="ulink" href="http://asherv.com/threes/">http://asherv.com/threes/</a>, and maybe even download the game on your phone), you would be aware of the sliding feature when a user begins to make their move but hasn't yet completed the move. At the speed of the dragging finger, the units slide in the direction they're going to move, showing the user where each unit will go and how each unit will combine with another.</p><p>This is useful as it not only adds that extra layer of "cool factor" but also provides a preview of the future for the user if they want to revert their decision ahead of time and make a different, more calculated move.</p><div class="note" title="Note"><h3 class="title"><a id="tip34"/>Tip</h3><p>Here's a side note: if you want your game to go really viral, you have to make the user believe it was their fault that they lost, and not your "stupid game mechanics" (as some players might say).</p><p>Think <span class="emphasis"><em>Angry Birds</em></span>, <span class="emphasis"><em>Smash Hit</em></span>, <span class="emphasis"><em>Crossy Road</em></span>, <span class="emphasis"><em>Threes!</em></span>, <span class="emphasis"><em>Tiny Wings</em></span>… the list goes on and on with more games that became popular, and all had one underlying theme: when the user loses, it was entirely in their control to win or lose, and they made the wrong move.</p><p>This<a id="id284" class="indexterm"/> unseen mechanic pushes players to play again with a better strategy in mind. And this is exactly why we want our users to see their move before it gets made. It's a win-win situation for both the developers and the players.</p></div><div class="section" title="Sliding one unit"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec80"/>Sliding one unit</h2></div></div></div><p>If we <a id="id285" class="indexterm"/>can get one unit to slide, we can surely get the rest of the units to slide by simply looping through them, modularizing the code, or some other form of generalization.</p><p>That being said, we need to set up the <code class="literal">Unit</code> class so that it can detect how far the finger has dragged. Thus, we can determine how far to move the unit. So, open <code class="literal">Unit.h</code> and add the following variable. It will track the distance from the previous touch position:</p><div class="informalexample"><pre class="programlisting">@property (nonatomic, assign) CGPoint previousTouchPos;</pre></div><p>Then, in the <code class="literal">touchMoved</code> method of <code class="literal">Unit.m</code>, add the following assignment to <code class="literal">previousTouchPos</code>. It sets the previous touch position to the touch-down position, but only after the distance is greater than 20 units:</p><div class="informalexample"><pre class="programlisting">if (!self.isBeingDragged &amp;&amp; ccpDistance(touchPos, self.touchDownPos) &gt; 20)
+{
+  self.isBeingDragged = YES;
+  //add it here:
+  self.previousTouchPos = self.touchDownPos;</pre></div><p>Once that's in place, we can begin calculating the distance while the finger is being dragged. To do that, we'll do a simple check. Add the following block of code at the end of <code class="literal">touchMoved</code>, after the end of the initial <code class="literal">if</code> block:</p><div class="informalexample"><pre class="programlisting">//only if the unit is currently being dragged
+if (self.isBeingDragged)
+{
+    CGFloat dist = 0;
+    //if the direction the unit is being dragged is either UP or DOWN
+    if (self.dragDirection == DirUp || self.dragDirection == DirDown)
+    //then subtract the current touch position's Y-value from the previously-recorded Y-value to determine the distance to move
+      dist = touchPos.y - self.previousTouchPos.y;
+      //else if the direction the unit is being dragged is either LEFT or RIGHT
+    else if (self.dragDirection == DirLeft || 
+        self.dragDirection == DirRight)
+        //then subtract the current touch position's Y-value from the previously-recorded Y-value to determine the distance to move
+      dist = touchPos.x - self.previousTouchPos.x; 
+
+//then assign the touch position for the next iteration of touchMoved to work properly
+self.previousTouchPos = touchPos;
+
+}</pre></div><p>The <a id="id286" class="indexterm"/>assignment of <code class="literal">previousTouchPos</code> at the end will ensure that while the unit is being dragged, we continue to update the touch position so that we can determine the distance. Plus, the distance is calculated in only the direction in which the unit is being dragged (up and down are denoted by Y, and left and right are denoted by X).</p><p>Now that we have the distance between finger drags being calculated, let's push this into a function that will move our unit based on which direction it's being dragged in. So, right after you've calculated <code class="literal">dist</code> in the previous code block, call the following method to move our unit based on the amount dragged:</p><div class="informalexample"><pre class="programlisting">dist /= 2; //optional
+[self slideUnitWithDistance:dist withDragDirection:self.dragDirection];</pre></div><div class="note" title="Note"><h3 class="title"><a id="tip35"/>Tip</h3><p>Dividing the distance by <code class="literal">2</code> is optional. You may think the squares are too small, and want the user to be able to see their square. So note that dividing by <code class="literal">2</code>, or a larger number, will mean that for every 1 point the finger moves, the unit will move by 1/2 (or less) points.</p></div><p>With that method call being ready, we need to implement it, so add the following method body for now. Since this method is rather complicated, it's going to be added in parts:</p><div class="informalexample"><pre class="programlisting">-(void)slideUnitWithDistance:(CGFloat)dist withDragDirection:(enum UnitDirection)dir
+{
+}</pre></div><p>The first thing <a id="id287" class="indexterm"/>we need to do is set up a variable to calculate the new <span class="emphasis"><em>x</em></span> and <span class="emphasis"><em>y</em></span> positions of the unit. We'll call these <code class="literal">newX</code> and <code class="literal">newY</code>, and set them to the unit's current position:</p><div class="informalexample"><pre class="programlisting">CGFloat newX = self.position.x, newY = self.position.y;</pre></div><p>Next, we want to grab the position that the unit starts at, that is, the position the unit would be at if it was positioned at its current grid coordinate. To do that, we're going to call the <code class="literal">getPositionForGridCoordinate</code> method from <code class="literal">MainScene</code>, (since that's where the positions are being calculated anyway, we might as well use that function):</p><div class="informalexample"><pre class="programlisting">CGPoint originalPos = [MainScene getPositionForGridCoord:self.gridPos];</pre></div><p>Next, we're going to move the <code class="literal">newX</code> or <code class="literal">newY</code> based on the direction in which the unit is being dragged. For now, let's just add the up direction:</p><div class="informalexample"><pre class="programlisting">if (self.dragDirection == DirUp)
+{
+    newY += dist;
+    if (newY &gt; originalPos.y + self.gridWidth)
+      newY = originalPos.y + self.gridWidth;
+    else if (newY &lt; originalPos.y)
+      newY = originalPos.y;
+}</pre></div><p>In this if block, we're first going to add the distance to the <code class="literal">newY</code> variable (because we're going up, we're adding to Y instead of X). Then, we want to make sure the position is at most 1 square up. We're going to use the <code class="literal">gridWidth</code> (which is essentially the width of the square, assigned in the <code class="literal">initCommon</code> method). Also, we need to make sure that if they're bringing the square back to its original position, it doesn't go into the square beneath it.</p><p>So let's add the rest of the directions as else if statements:</p><div class="informalexample"><pre class="programlisting">else if (self.dragDirection == DirDown)
+{
+    newY += dist;
+    if (newY &lt; originalPos.y - self.gridWidth)
+      newY = originalPos.y - self.gridWidth;
+    else if (newY &gt; originalPos.y)
+      newY = originalPos.y;
+}
+else if (self.dragDirection == DirLeft)
+{
+    newX += dist;
+    if (newX &lt; originalPos.x - self.gridWidth)
+      newX = originalPos.x - self.gridWidth;
+    else if (newX &gt; originalPos.x)
+      newX = originalPos.x;
+}
+else if (self.dragDirection == DirRight)
+{
+    newX += dist;
+    if (newX &gt; originalPos.x + self.gridWidth)
+      newX = originalPos.x + self.gridWidth;
+    else if (newX &lt; originalPos.x)
+      newX = originalPos.x;
+}</pre></div><p>Finally, we <a id="id288" class="indexterm"/>will set the position of the unit based on the newly calculated <span class="emphasis"><em>x</em></span> and <span class="emphasis"><em>y</em></span> positions:</p><div class="informalexample"><pre class="programlisting">self.position = ccp(newX, newY);</pre></div><p>Running the game at this point should cause the unit you drag to slide along with your finger. Nice, huh? Since we have a function that moves one unit, we can very easily alter it so that every unit can be moved like this.</p><p>But first, there's something you've probably noticed a while ago (or maybe just recently), and that's the unit movement being canceled only when you bring your finger back to the original touch down position. Because we're dragging the unit itself, we can "cancel" the move by dragging the unit back to where it started. However, the finger might be in a completely different position, so we need to modify how the cancelling gets determined.</p><p>To do that, in your <code class="literal">touchEnded</code> method of <code class="literal">Unit.m</code>, locate this if statement:</p><div class="informalexample"><pre class="programlisting">if (ccpDistance(touchPos, self.touchDownPos) &gt; self.boundingBox.size.width/2)</pre></div><p>Change it to the following, which will determine the unit's distance, and not the finger's distance:</p><div class="informalexample"><pre class="programlisting">CGPoint oldSelfPos = [MainScene getPositionForGridCoord:self.gridPos];
+
+CGFloat dist = ccpDistance(oldSelfPos, self.position);
+if (dist &gt; self.gridWidth/2)</pre></div><p>Yes, this means you no longer need the <code class="literal">touchPos</code> variable in <code class="literal">touchEnded</code> if you're getting that <a id="id289" class="indexterm"/>warning and wish to get rid of it. But that's it for sliding 1 unit. Now we're ready to slide all the units, so let's do it!</p></div><div class="section" title="Sliding all units"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec81"/>Sliding all units</h2></div></div></div><p>Now <a id="id290" class="indexterm"/>that we have the dragging unit being slid, let's continue and make all the units slide (even the enemy units so that we can better predict our troops' movement).</p><p>First, we need a way to move all the units on the screen. However, since the Unit class only contains information about the individual unit (which is a good thing), we need to call a method in <code class="literal">MainScene</code>, since that's where the arrays of units are.</p><p>Moreover, we cannot simply call <code class="literal">[MainScene method]</code>, since the arrays are instance variables, and instance variables must be accessed through an instance of the object itself.</p><p>That being said, because we know that our unit will be added to the scene as a child, we can use Cocos2d to our advantage, and call an instance method on the <code class="literal">MainScene</code> class via the parent parameter. So, in <code class="literal">touchMoved</code> of <code class="literal">Unit.m</code>, make the following change:</p><div class="informalexample"><pre class="programlisting">[(MainScene*)self.parent slideAllUnitsWithDistance:dist withDragDirection:self.dragDirection];
+//[self slideUnitWithDistance:dist withDragDirection:self.dragDirection];</pre></div><p>Basically we've commented out (or deleted) the old method call here, and instead called it on our parent object (which we cast as a <code class="literal">MainScene</code> so that we know which functions it has).</p><p>But we don't have that method created yet, so in <code class="literal">MainScene.h</code>, add the following method declaration:</p><div class="informalexample"><pre class="programlisting">-(void)slideAllUnitsWithDistance:(CGFloat)dist withDragDirection:(enum UnitDirection)dir;</pre></div><div class="note" title="Note"><h3 class="title"><a id="tip36"/>Tip</h3><p>Just in case you haven't noticed, the enum UnitDirection is declared in <code class="literal">Unit.h</code>, which is why <code class="literal">MainScene.h</code> imports <code class="literal">Unit.h</code>—so that we can make use of that enum in this class, and the function to be more specific.</p></div><p>Then in <code class="literal">MainScene.m</code>, we're going to loop through both the friendly and enemy arrays, and call the <code class="literal">slideUnitWithDistance</code> function on each individual unit:</p><div class="informalexample"><pre class="programlisting">-(void)slideAllUnitsWithDistance:(CGFloat)dist withDragDirection:(enum UnitDirection)dir
+{
+  for (Unit *u in arrFriendlies)
+    [u slideUnitWithDistance:dist withDragDirection:dir];
+  
+  for (Unit *u in arrEnemies)
+    [u slideUnitWithDistance:dist withDragDirection:dir];
+}</pre></div><p>However, that<a id="id291" class="indexterm"/> still isn't functional, as we haven't declared that function in the header file for the <code class="literal">Unit</code> class. So go ahead and do that now. Declare the function header in <code class="literal">Unit.h</code>:</p><div class="informalexample"><pre class="programlisting">-(void)slideUnitWithDistance:(CGFloat)dist withDragDirection:(enum UnitDirection)dir;</pre></div><p>We're almost done.</p><p>We initially set up our <code class="literal">slideUnitWithDistance</code> method with a drag direction in mind. However, only the unit that's currently being dragged will have a drag direction. Every other unit will need to use the direction it's currently facing (that is, the direction in which it's already going).</p><p>To do that, we just need to modify how the <code class="literal">slideUnitWithDistance</code> method does its checking to determine which direction to modify the distance by.</p><p>But first, we need to handle the negatives. What does that mean? Well, if you're dragging a unit to the left and a unit being moved is supposed to be moving to the left, it will work properly, as x-10 (for example) will still be less than the grid's width. However, if you're dragging left and a unit being moved is supposed to be moving right, it won't be moving at all, as it tries to add a negative value x <code class="literal">-10</code>, but because it needs to be moving to the right, it'll encounter the left-bound right away (of less than the original position), and stay still.</p><p>The following diagram should help explain what is meant by "handling negatives." As you can see, in the top section, when the non-dragged unit is supposed to be going left by <code class="literal">10</code> (in other words, negative 10 in the <span class="emphasis"><em>x</em></span> direction), it works. But when the non-dragged unit is going the opposite sign (in other words, positive <code class="literal">10</code> in the <span class="emphasis"><em>x</em></span> direction), it doesn't.</p><div class="mediaobject"><img src="../Images/image00248.jpeg" alt="Sliding all units"/></div><p style="clear:both; height: 1em;"> </p><p>To<a id="id292" class="indexterm"/> handle this, we set up a pretty complicated if statement. It checks when the drag direction and the unit's own direction are opposite (positive versus negative), and multiplies the distance by <code class="literal">-1</code> (flips it).</p><p>Add this to the top of the <code class="literal">slideUnitWithDistance</code> method, right after you grab the <code class="literal">newX</code> and the original position:</p><div class="informalexample"><pre class="programlisting">-(void)slideUnitWithDistance:(CGFloat)dist withDragDirection:(enum UnitDirection)dir
+{
+  CGFloat newX = self.position.x, newY = self.position.y;
+  CGPoint originalPos = [MainScene getPositionForGridCoord:self.gridPos];
+  
+  
+if (!self.isBeingDragged &amp;&amp; 
+
+(((self.direction == DirUp || self.direction == DirRight) &amp;&amp; 
+(dir == DirDown || dir == DirLeft)) ||
+
+((self.direction == DirDown || self.direction == DirLeft) &amp;&amp; 
+(dir == DirUp || dir == DirRight))))
+{
+    dist *= -1;
+}
+}</pre></div><p>The logic<a id="id293" class="indexterm"/> of this if statement works is as follows:</p><p>Suppose the unit is not being dragged. Also suppose that either the direction is positive and the drag direction is negative, or the direction is negative and the drag direction is positive. Then multiply by <code class="literal">-1</code>.</p><p>Finally, as mentioned earlier, we just need to handle the non-dragged units. So, in every <code class="literal">if</code> statement, add an "or" portion that will check for the same direction, but only if the unit is not currently being dragged. In other words, in the <code class="literal">slideUnitWithDistance</code> method, modify your if statements to look like this:</p><div class="informalexample"><pre class="programlisting">if (self.dragDirection == DirUp || (!self.isBeingDragged &amp;&amp; self.direction == DirUp))
+{}
+else if (self.dragDirection == DirDown || (!self.isBeingDragged &amp;&amp; self.direction == DirDown))
+{}
+else if (self.dragDirection == DirLeft || (!self.isBeingDragged &amp;&amp; self.direction == DirLeft))
+{}
+else if (self.dragDirection == DirRight || (!self.isBeingDragged &amp;&amp; self.direction == DirRight))
+{}</pre></div><p>Finally, we can run the game. Bam! All the units go gliding across the screen with our drag. Isn't it lovely? Now the player can better choose their move.</p><p>That's it for the sliding portion (as well as this project's portion of the chapter). The rest of this chapter is filled with some really amazing things, and you're encouraged to check them out, as they may be helpful to you in your current projects outside this book, or in a future project<a id="id294" class="indexterm"/> of your own.</p><div class="note" title="Note"><h3 class="title"><a id="tip37"/>Tip</h3><p>The key to unit sliding is to loop through the arrays to ensure that all the units get moved by an equal amount, hence passing the distance to the <code class="literal">move</code> function.</p></div></div></div>
+<div class="section" title="Creating movements on a B&#xE9;zier curve"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec38"/>Creating movements on a Bézier curve</h1></div></div></div><p>If you <a id="id295" class="indexterm"/>don't know what a Bézier curve is, it's basically<a id="id296" class="indexterm"/> a line that goes from point A to point B over a curve. Instead of being a straight line with two points, it uses a second set of points called control points that bend the line in a smooth way. When you want to apply movement with animations in Cocos2d, it's very tempting to queue up a bunch of <code class="literal">MoveTo</code> actions in a sequence. However, it's going to look a lot nicer ( in both the game and the code) if you use a smoother Bézier curve animation.</p><p>Here's a good example of what a Bézier curve looks like:</p><div class="mediaobject"><img src="../Images/image00249.jpeg" alt="Creating movements on a Bézier curve"/></div><p style="clear:both; height: 1em;"> </p><p>As you can see, the red line goes from point P0 to P3. However, the line is influenced in the direction of the control points, P1 and P2.</p><div class="section" title="Examples of using a Bézier curve"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec82"/>Examples of using a Bézier curve</h2></div></div></div><p>Let's list<a id="id297" class="indexterm"/> a few examples where it would be a good choice to use a Bézier curve instead of just the regular <code class="literal">MoveTo</code> or <code class="literal">MoveBy</code> actions:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem">A character that will perform a jumping animation, for example, in <span class="emphasis"><em>Super Mario Bros</em></span></li><li class="listitem">A boomerang as a weapon that the player throws</li><li class="listitem">Launching a missile or rocket and giving it a parabolic curve</li><li class="listitem">A tutorial hand that indicates a curved path the user must make with their finger</li><li class="listitem">A skateboarder on a half-pipe ramp (if not done with Chipmunk)</li></ul></div><p>There are obviously a lot of other examples that could use a Bézier curve for their movement. But let's actually code one, shall we?</p></div><div class="section" title="Sample project – Bézier map route"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec83"/>Sample project – Bézier map route</h2></div></div></div><p>First, to make things go a lot faster—as this isn't going to be part of the book's project—simply<a id="id298" class="indexterm"/> download the project from the code repository or the website.</p><p>If you open the project and run it on your device or a simulator, you will notice a blue screen and a square in the bottom-left corner. If you tap anywhere on the screen, you'll see the blue square make an <span class="strong"><strong>M</strong></span> shape ending in the bottom-right corner. If you hold your finger, it will repeat. Tap again and the animation will reset.</p><p>Imagine the path this square takes is over a map, and indicates what route a player will travel with their character. This is a very choppy, very sharp path. Generally, paths are curved, so let's make one that is!</p><p>Here's the end result (tracked using the <code class="literal">CCMotionStreak</code> method described in the <span class="emphasis"><em>Three ways to make unit streamers or "ghosts"</em></span> section of this chapter). </p><p>Here is a screenshot that shows a very straight path of the blue square:</p><div class="mediaobject"><img src="../Images/image00250.jpeg" alt="Sample project – Bézier map route"/></div><p style="clear:both; height: 1em;"> </p><p>The<a id="id299" class="indexterm"/> following screenshot shows the Bézier path of the yellow square:</p><div class="mediaobject"><img src="../Images/image00251.jpeg" alt="Sample project – Bézier map route"/></div><p style="clear:both; height: 1em;"> </p></div><div class="section" title="Curved M-shape"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec84"/>Curved M-shape</h2></div></div></div><p>Open <code class="literal">MainScene.h</code> and add another <code class="literal">CCNodeColor</code> variable, named <code class="literal">unitBezier</code>:</p><div class="informalexample"><pre class="programlisting">CCNodeColor *unitBezier;</pre></div><p>Then<a id="id300" class="indexterm"/> open <code class="literal">MainScene.m</code> and add the following code to the init method so that your yellow block shows up on the screen:</p><div class="informalexample"><pre class="programlisting">unitBezier = [[CCNodeColor alloc] initWithColor:[CCColor colorWithRed:1 green:1 blue:0] width:50 height:50];
+[self addChild:unitBezier];
+CCNodeColor *shadow2 = [[CCNodeColor alloc] initWithColor:[CCColor blackColor] width:50 height:50];
+shadow2.anchorPoint = ccp(0.5,0.5);
+shadow2.position = ccp(26,24);
+shadow2.opacity = 0.5;
+[unitBezier addChild:shadow2 z:-1];</pre></div><p>Then, in the <code class="literal">sendFirstUnit</code> method, add the lines of code that will reset the yellow block's position as well as queue up the method to move the yellow block:</p><div class="informalexample"><pre class="programlisting">-(void)sendFirstUnit
+{
+  unitRegular.position = ccp(0,0);
+  
+  //Add these 2 lines
+  unitBezier.position = ccp(0,0);
+  [self scheduleOnce:@selector(sendSecondUnit) delay:2];
+  
+  CCActionMoveTo *move1 = [CCActionMoveTo actionWithDuration:0.5 position:ccp(winSize.width/4, winSize.height * 0.75)];
+  CCActionMoveTo *move2 = [CCActionMoveTo actionWithDuration:0.5 position:ccp(winSize.width/2, winSize.height/4)];
+  CCActionMoveTo *move3 = [CCActionMoveTo actionWithDuration:0.5 position:ccp(winSize.width*3/4, winSize.height * 0.75)];
+  CCActionMoveTo *move4 = [CCActionMoveTo actionWithDuration:0.5 position:ccp(winSize.width - 50, 0)];
+  
+  [unitRegular runAction:[CCActionSequence actions:move1, move2, move3, move4, nil]];
+}</pre></div><p>After this, you'll <a id="id301" class="indexterm"/>need to actually create the <code class="literal">sendSecondUnit</code> method, like this:</p><div class="informalexample"><pre class="programlisting">-(void)sendSecondUnit
+{
+  ccBezierConfig bezConfig1;
+  bezConfig1.controlPoint_1 = ccp(0, winSize.height);
+  bezConfig1.controlPoint_2 = ccp(winSize.width*3/8, winSize.height);
+  bezConfig1.endPosition = ccp(winSize.width*3/8, winSize.height/2);
+  CCActionBezierTo *bez1 = [CCActionBezierTo actionWithDuration:1.0 bezier:bezConfig1];
+  
+  ccBezierConfig bezConfig2;
+  bezConfig2.controlPoint_1 = ccp(winSize.width*3/8, 0);
+  bezConfig2.controlPoint_2 = ccp(winSize.width*5/8, 0);
+  bezConfig2.endPosition = ccp(winSize.width*5/8, winSize.height/2);
+  CCActionBezierBy *bez2 = [CCActionBezierTo actionWithDuration:1.0 bezier:bezConfig2];
+  
+  ccBezierConfig bezConfig3;
+  bezConfig3.controlPoint_1 = ccp(winSize.width*5/8, winSize.height);
+  bezConfig3.controlPoint_2 = ccp(winSize.width, winSize.height);
+  bezConfig3.endPosition = ccp(winSize.width - 50, 0);
+  CCActionBezierTo *bez3 = [CCActionBezierTo actionWithDuration:1.0 bezier:bezConfig3];
+  
+  [unitBezier runAction:[CCActionSequence actions:bez1, bez2, 
+bez3, nil]];
+}</pre></div><p>The preceding <a id="id302" class="indexterm"/>method creates three Bézier configurations and attaches them to a <code class="literal">MoveTo</code> command that takes a Bézier configuration. The reason for this is that each Bézier configuration can take only two control points. As you can see in this marked-up screenshot, where each white and red square represents a control point, you can make only a U-shaped parabola with a single Bézier configuration. </p><p>Thus, to make three U-shapes, you need three Bézier configurations.</p><div class="mediaobject"><img src="../Images/image00252.jpeg" alt="Curved M-shape"/></div><p style="clear:both; height: 1em;"> </p><p>Finally, make sure that in the <code class="literal">touchBegan</code> method, you make the <code class="literal">unitBezier</code> stop all its actions (that is, stop on reset):</p><div class="informalexample"><pre class="programlisting">[unitBezier stopAllActions];</pre></div><p>And that's it! When you run the project and tap on the screen (or tap and hold), you'll see the blue square M-shape its way across, followed by the yellow square in its squiggly M-shape.</p><div class="note" title="Note"><h3 class="title"><a id="tip38"/>Tip</h3><p>If you<a id="id303" class="indexterm"/> want to adapt the Bézier <code class="literal">MoveTo</code> or <code class="literal">MoveBy</code> actions for your own project, you should know that you can create only one U-shape with each Bézier configuration. They're fairly easy to implement and can quickly be copied and pasted, as shown in the <code class="literal">sendSecondUnit</code> function.</p><p>Plus, as the control points and end position are just <code class="literal">CGPoint</code> values, they can be relative (that is, relative to the unit's current position, the world's position, or an enemy's position), and as a regular <code class="literal">CCAction</code>, they can be run with any <code class="literal">CCNode</code> object quite easily.</p></div></div></div>
+<div class="section" title="Depth perception via device tilting"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec39"/>Depth perception via device tilting</h1></div></div></div><p>Something<a id="id304" class="indexterm"/> that can increase the cool factor of your game without really changing the game is a depth-perception-like feel when the user tilts the device. This can be seen in games such as <span class="emphasis"><em>Shadowmatic</em></span> and <span class="emphasis"><em>Jump! Chump!</em></span>, the checklist <span class="emphasis"><em>Wunderlist</em></span>, or a lock screen background image with <span class="strong"><strong>Perspective Zoom</strong></span> set to <span class="strong"><strong>On</strong></span>. Although it's subtle, it can make your game feel a lot more polished and increase user engagement, as it's just one more thing they'll find cool or interesting about the game.</p><div class="note" title="Note"><h3 class="title"><a id="tip39"/>Tip</h3><p>As a reminder, you cannot make use of device tilting/accelerometer in the simulator. It must be done on a physical device.</p></div><p>Here is <span class="emphasis"><em>Shadowmatic</em></span> game's tilt effect seen on the menu. As you can see, it's a three-dimensional object, and the camera rotates around the object, as well as the shadows.</p><p>The first one is as follows:</p><div class="mediaobject"><img src="../Images/image00253.jpeg" alt="Depth perception via device tilting"/></div><p style="clear:both; height: 1em;"> </p><p>The <a id="id305" class="indexterm"/>second one is as follows:</p><div class="mediaobject"><img src="../Images/image00254.jpeg" alt="Depth perception via device tilting"/></div><p style="clear:both; height: 1em;"> </p><p>The following is <span class="emphasis"><em>Jump! Chump!</em></span> game's tilt effect seen in the game, where you can see the shadows of the main characters and enemies being shifted.</p><p>The first one is as follows:</p><div class="mediaobject"><img src="../Images/image00255.jpeg" alt="Depth perception via device tilting"/></div><p style="clear:both; height: 1em;"> </p><p>The second one is as follows:</p><div class="mediaobject"><img src="../Images/image00256.jpeg" alt="Depth perception via device tilting"/></div><p style="clear:both; height: 1em;"> </p><div class="section" title="Isn't this parallax scrolling?"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec85"/>Isn't this parallax scrolling?</h2></div></div></div><p>This is <a id="id306" class="indexterm"/>similar, but slightly different from <a id="id307" class="indexterm"/>parallax scrolling. Parallax scrolling—if you're unfamiliar—is when there are multiple background layers and each moves across the screen at a different rate to create the feeling of a more realistic movement. Cocos2d even has something called <code class="literal">CCParallaxNode</code>, which basically allows different relative movement speeds among the node's children. As an example, suppose you add a background image, a middle-ground image, and a foreground image with different ratios. When you move the <code class="literal">CCParallaxNode</code> object, it will automatically move the children as per the ratio set by each individual child.</p><p>Parallax scrolling is similar because there will still be multiple layers moving around, and they will be moving slightly in one direction or another based on the tilt of the device. Thus, the user feels as if there are objects (buttons, for example) that are literally in front of others (the grass in the background, for example).</p><p>Let's begin implementing some simple depth perception effects.</p></div><div class="section" title="Sample project – depth"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec86"/>Sample project – depth</h2></div></div></div><p>Download<a id="id308" class="indexterm"/> the <code class="literal">Depth</code> sample project from the code repository and run the project. You'll notice there are some background mountains, grass, and a few buttons that don't go anywhere. We're going to change this so that the buttons move around the screen to give a bit of depth.</p></div><div class="section" title="Creating the parallax node and adding the objects"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec87"/>Creating the parallax node and adding the objects</h2></div></div></div><p>In <code class="literal">MainScene.h</code>, add the the variables<a id="id309" class="indexterm"/> listed <a id="id310" class="indexterm"/>here, as well as import the CoreMotion framework:</p><div class="informalexample"><pre class="programlisting">#import &lt;CoreMotion/CoreMotion.h&gt;
+@interface MainScene : CCNode
+{
+  CGSize winSize;
+  
+  //add these
+  CCParallaxNode *parallax;
+  CMMotionManager *motionManager;
+  CGFloat xFiltered, yFiltered ;yFiltered
+}</pre></div><p>The <code class="literal">CCParallaxNode</code> is obvious. The <code class="literal">motionManager</code> is meant for tracking the accelerometer data, and <code class="literal">xFiltered</code> and <code class="literal">yFiltered</code> are going to be used as filters for the accelerometer so that it doesn't become too jittery.</p><p>Now, in the init method of <code class="literal">MainScene.m</code>, comment out the line that adds the <code class="literal">layoutbox</code> to the scene. Add the code that initializes the parallax node, adds the <code class="literal">layoutbox</code> to it, and adds the parallax node to the scene:</p><div class="informalexample"><pre class="programlisting">//[self addChild:layout];
+    
+parallax = [CCParallaxNode node];
+//Ratio: For every 1 pixel moved, move the child that amount
+parallax.position = ccp(winSize.width/2, winSize.height/2);
+[parallax addChild:layout z:0 parallaxRatio:ccp(1,1) positionOffset:ccp(0,0)];
+[self addChild:parallax];</pre></div><p>If you're wondering what the ratio parameter is, it's like what the comment says: for every one pixel that the parallax object is moved, it will move the child by that amount. For example, if the parallax node was moved 100 pixels to the left, and if the child has a ratio of 0.5, the child will move to the left by 50 pixels. Does this make sense? So, for our buttons, we want the ratio to be 1:1. This means that, for every pixel the parallax node moves, the buttons will move by the same amount.</p><p>Running the project now won't do anything, however, so let's get the accelerometer data going so that we can shift the menu buttons by tilting the device.</p></div><div class="section" title="Visualizing the depth"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec88"/>Visualizing the depth</h2></div></div></div><p>In the <a id="id311" class="indexterm"/>init method of <code class="literal">MainScene.m</code>, add the following block of code, which will set up the motion manager so that it can start collecting accelerometer data:</p><div class="informalexample"><pre class="programlisting">//60 times per second. In theory once per frame
+CGFloat interval = 1/60.f; 
+motionManager = [[CMMotionManager alloc] init];
+motionManager.accelerometerUpdateInterval = interval;
+[motionManager startAccelerometerUpdates];
+[self schedule:@selector(getAccelerometerData:) interval:interval]; </pre></div><p>For the accelerometer to affect the parallax node's position, we must create the <code class="literal">getAccelerometerData</code> method, and modify the position there:</p><div class="informalexample"><pre class="programlisting">-(void)getAccelerometerData:(CCTime)delta
+{
+  CMAcceleration accel = motionManager.accelerometerData.acceleration;
+  
+  CGFloat filterValue  = 0.8f;
+  
+  xFiltered = filterValue * xFiltered + (1.0 - filterValue) * accel.x;
+  yFiltered = filterValue * yFiltered + (1.0 - filterValue) * accel.y;
+  
+  parallax.position = ccp(winSize.width/2 + 50 * yFiltered, winSize.height/2 - 50 * xFiltered);
+}</pre></div><p>This method basically reads the accelerometer's data 60 times per second, sends it through a filter (if you want steadier movement, increase the K value, which we called <code class="literal">filterValue</code> in the preceding code, up to a maximum of 1), and assigns the parallax's position based on the filtered <span class="emphasis"><em>x</em></span> and <span class="emphasis"><em>y</em></span> values.</p><div class="note" title="Note"><h3 class="title"><a id="tip40"/>Tip</h3><p>If this is the entirety of the effect you want in your own project, feel free to stop here. The key thing to note if you're using this in your own project is the fact that the parallax node affects every child's position based on the ratio it was given. Plus, if you're using the tilt mechanic, make sure you put a filter on the accelerometer data, or else it will be very jittery and actually hurt your game instead of helping it.</p></div><p>Next, we're <a id="id312" class="indexterm"/>going to equalize the parallax node so that the buttons aren't always being pushed up or off to the side.</p></div><div class="section" title="Restoring equilibrium (calibrating to the new rotation)"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec89"/>Restoring equilibrium (calibrating to the new rotation)</h2></div></div></div><p>After <a id="id313" class="indexterm"/>the user adjusts their phone to a new position, you would want to slowly bring their equilibrium to the way they're holding the device. For example, if they start with the device flat on a table, and then tilt it towards themselves by about 45 degrees, you will shift the items as necessary. You'll then need to slowly make the 45-degree position look the same as it did when it was flat.</p><p>This is easy to do, as long as we have a variable to hold what the equilibrium is. To do so, open <code class="literal">MainScene.h</code> and add the following code:</p><div class="informalexample"><pre class="programlisting">CGFloat avgXValue, avgYValue;</pre></div><p>These two values will store the average of the last 100 <code class="literal">xFiltered</code> and <code class="literal">yFiltered</code> values recorded.</p><p>Then in <code class="literal">MainScene.m</code>, modify the three relevant lines in your <code class="literal">getAccelerometerData</code> method to look like what you see here:</p><div class="informalexample"><pre class="programlisting">avgXValue = (avgXValue * 99 + xFiltered)/100.f;
+avgYValue = (avgYValue * 99 + yFiltered)/100.f;
+  
+parallax.position = ccp(winSize.width/2 + 50 * (yFiltered - avgYValue), winSize.height/2 - 50 * (xFiltered - avgXValue));</pre></div><p>At first, the math probably makes no sense, so let's go over it.</p><p>First, <code class="literal">avgXValue</code> and <code class="literal">avgYValue</code> calculate the average by slowly adding one point at a time to the average in an estimation sort of way. This is not 100 percent accurate in the true "average" sense, but it comes close enough. It's also slightly better to do it this way as it means less code, less memory, and faster execution. Since we're doing this 60 times per second, it's not entirely important to get an accurate average. Within a few seconds, you'll have hundreds of points that will get you close enough.</p><p>Second, the subtraction of <code class="literal">xFiltered</code>/<code class="literal">xFiltered</code> and <code class="literal">avgYValue</code>/<code class="literal">avgXValue</code> is done to slowly bring it back to the center. For example, if your <code class="literal">yFiltered</code> value is <code class="literal">-1</code>, and <code class="literal">avgYValue</code> is <code class="literal">0</code>, it will quickly jump down to its new position. But if the device is held at <code class="literal">-1</code> for long enough, <code class="literal">avgYValue</code> will come so close to <code class="literal">-1</code> that subtracting the two variables will yield a zeroed-out position, which is exactly what we want.</p><div class="note" title="Note"><h3 class="title"><a id="tip41"/>Tip</h3><p>The<a id="id314" class="indexterm"/> key thing to note here if you are implementing the calibration effect into your own project is to subtract the two values. Whether you use a single-value calibration or a pseudo-average value (like what was used here), if you don't subtract the filtered <span class="emphasis"><em>x</em></span> and <span class="emphasis"><em>y</em></span> values, you won't see any change.</p><p>For slow calibration, the preceding method is the way to go. If you want instant calibration (for example, with a button that realigns when the user says so), simply store the single accelerometer value when the button is pressed rather than store the average value.</p></div></div><div class="section" title="A quick scrolling example"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec90"/>A quick scrolling example</h2></div></div></div><p>Since <a id="id315" class="indexterm"/>we're covering the topic of parallax scrolling, let's quickly go over a simple example of parallax scrolling as it was intended. In <code class="literal">MainScene.m</code> (or the header; it doesn't really matter), import the <code class="literal">GameScene.h</code> file:</p><div class="informalexample"><pre class="programlisting">#import "GameScene.h" </pre></div><p>Then, in the <code class="literal">buttonPressed</code> method, add the following line of code. It will go to the game scene:</p><div class="informalexample"><pre class="programlisting">[[CCDirector sharedDirector] replaceScene:[GameScene scene]];</pre></div><p>Now let's add the <code class="literal">CCParallaxNode</code> to <code class="literal">GameScene.h</code>:</p><div class="informalexample"><pre class="programlisting">@interface GameScene : CCScene
+{
+  CGSize winSize;
+  
+  //add this:
+  CCParallaxNode *parallax;
+}</pre></div><p>Then, in the <code class="literal">GameScene.m</code> file's <code class="literal">init</code> method, set up the parallax node and add a few sprites to the node:</p><div class="informalexample"><pre class="programlisting">CCSprite *bg1 = [CCSprite spriteWithImageNamed:@"mountains.png"];
+CCSprite *bg2 = [CCSprite spriteWithImageNamed:@"mountains.png"];
+  
+CCSprite *mg1 = [CCSprite spriteWithImageNamed:@"midground.png"];
+CCSprite *mg2 = [CCSprite spriteWithImageNamed:@"midground.png"];
+  
+CCSprite *fg1 = [CCSprite spriteWithImageNamed:@"foreground.png"];
+CCSprite *fg2 = [CCSprite spriteWithImageNamed:@"foreground.png"];
+fg1.anchorPoint = fg2.anchorPoint = ccp(0.5,0);
+  
+CCSprite *sun = [CCSprite spriteWithImageNamed:@"sun.png"];
+  
+parallax = [CCParallaxNode node];
+parallax.anchorPoint = ccp(0,0);
+parallax.position = ccp(0,0);
+  
+[parallax addChild:bg1 z:0 parallaxRatio:ccp(0.35,0) positionOffset:ccp(winSize.width/2, winSize.height/2)];
+  
+[parallax addChild:bg2 z:0 parallaxRatio:ccp(0.35,0) positionOffset:ccp(winSize.width/2 + winSize.width - 2,winSize.height/2)];
+  
+[parallax addChild:sun z:1 parallaxRatio:ccp(0.5,0) positionOffset:ccp(winSize.width, winSize.height * 0.8)];
+  
+[parallax addChild:mg1 z:1 parallaxRatio:ccp(0.5,0) positionOffset:ccp(winSize.width/2, winSize.height/2)];
+[parallax addChild:mg2 z:1 parallaxRatio:ccp(0.5,0) positionOffset:ccp(winSize.width/2 + winSize.width, winSize.height/2)];
+  
+[parallax addChild:fg1 z:2 parallaxRatio:ccp(1,0) positionOffset:ccp(winSize.width/2, 0)];
+[parallax addChild:fg2 z:2 parallaxRatio:ccp(1,0) positionOffset:ccp(winSize.width/2 + winSize.width, 0)];
+  
+[self addChild:parallax];</pre></div><p>Just in<a id="id316" class="indexterm"/> case you're wondering what <code class="literal">positionOffset</code> does, it moves the node to the position given as a parameter before any parallax ratios get applied. This is useful when first setting up your scene (just as we're doing here).</p><p>Then, we want to enable touching, so we add this line to the <code class="literal">init</code> method:</p><div class="informalexample"><pre class="programlisting">[self setUserInteractionEnabled:YES];</pre></div><p>But first, we need to create a variable to hold the previous position the finger was at so that we know how far to move the parallax node. Therefore, in <code class="literal">GameScene.h</code>, add the following:</p><div class="informalexample"><pre class="programlisting">CGPoint previousPosition;</pre></div><p>Finally, add<a id="id317" class="indexterm"/> the <code class="literal">touchBegan</code> and <code class="literal">touchMoved</code> methods so that the parallax node moves according to the <code class="literal">touchMoved</code> distance, while also making sure that the scrolling never goes beyond the bounds:</p><div class="informalexample"><pre class="programlisting">-(void)touchBegan:(CCTouch *)touch withEvent:(CCTouchEvent *)event
+{
+  previousPosition = [touch locationInNode:self];
+}
+
+-(void)touchMoved:(CCTouch *)touch withEvent:(CCTouchEvent *)event
+{
+  CGPoint newPosition = [touch locationInNode:self];
+  
+  parallax.position = ccp(parallax.position.x + (newPosition.x - previousPosition.x), 0);
+  
+  if (parallax.position.x &lt; -winSize.width)
+    parallax.position = ccp(-winSize.width,0);
+  if (parallax.position.x &gt; 0)
+    parallax.position = ccp(0,0);
+  
+  previousPosition = newPosition;
+}</pre></div><p>From here onwards, you can run the project, and when you click on <span class="strong"><strong>Play</strong></span>, you'll be taken to the game scene, which now has a (rather crude) set of background, middle-ground, and foreground elements. When you drag your finger across the screen, you'll notice the grass scrolling at the same speed while the mountains, trees, and sun all scroll at different speeds.</p><div class="note" title="Note"><h3 class="title"><a id="tip42"/>Tip</h3><p>If you're implementing a parallax scrolling background in your own project, the key thing to note is the difference in ratios between the added objects. Once you have that squared away, all you have to do is move the parallax node with respect to a finger dragging, a character moving, or whatever.</p></div></div></div>
+<div class="section" title="Three ways to make unit streamers or &quot;ghosts&quot;"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec40"/>Three ways to make unit streamers or "ghosts"</h1></div></div></div><p>If you've <a id="id318" class="indexterm"/>ever played games such as <span class="emphasis"><em>Fruit Ninja</em></span>, <span class="emphasis"><em>Blek</em></span>, <span class="emphasis"><em>Jetpack Joyride</em></span>, or <span class="emphasis"><em>Tiny Wings</em></span>, you've surely seen this effect. There's a position on the screen that <a id="id319" class="indexterm"/>generates something similar to stars, a slashing effect, smoke clouds, or a line following the finger.</p><div class="section" title="Sample project – ghosts"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec91"/>Sample project – ghosts</h2></div></div></div><p>Go to <a id="id320" class="indexterm"/>the code repository and open the <code class="literal">Ghosts</code> project under the <code class="literal">Sample Projects</code> folder. If you run it, you will see just three labels as buttons that lead to mostly blank screens that don't really do anything. That's where you come in.</p><p>Here, you're going to learn how to make the effects that you just read. There are three general ways to go about making something like this. Let's go over each method, starting with the easiest and ending with the hardest.</p></div><div class="section" title="Method 1 – particle systems"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec92"/>Method 1 – particle systems</h2></div></div></div><p>Particle <a id="id321" class="indexterm"/>systems are basically sprites that are created en masse, such as a firework effect, a gushing water fountain, or a flickering candle. The difference between using a particle system and creating the sprites yourself is that particle systems generally allow only moving, scaling, rotation, and color changes. But for simple effects such as a smoke cloud, a particle system works just fine.</p><div class="note" title="Note"><h3 class="title"><a id="tip43"/>Tip</h3><p>If you wish to create your own particles for this sample project or any project of your own, as mentioned in <a class="link" title="Chapter 1. Refreshing Your Cocos2d Knowledge" href="part0014.xhtml">Chapter 1</a>, <span class="emphasis"><em>Refreshing Your Cocos2d Knowledge</em></span>, Particle Designer is a great tool for this purpose. You can manually create them in the code, but it's a lot easier and more efficient to create them visually using an editor such as Particle Designer.</p></div><p>With the <code class="literal">Ghosts</code> project opened in Xcode, open the <code class="literal">ParticleExampleScene.h</code> file and add a <code class="literal">CCParticleSystem</code> variable to the list:</p><div class="informalexample"><pre class="programlisting">CCParticleSystem *smokeParticle;</pre></div><p>Then open <code class="literal">ParticleExampleScene.m</code> and add the particle system to the screen in the init method:</p><div class="informalexample"><pre class="programlisting">smokeParticle = [CCParticleSystem 
+  particleWithFile:@"SmokeParticle.plist"];
+[self addChild:smokeParticle];</pre></div><p>The particle system used in the preceding code was created using Particle Designer, as mentioned at the beginning of this book. It uses a simple cloud-shaped image and has certain properties set to create the effect of fading out.</p><p>Finally, in the <code class="literal">updateParticleSource</code> method, set the particle system's source position so that as<a id="id322" class="indexterm"/> you drag your finger around the screen, the smoke starts in a different position:</p><div class="informalexample"><pre class="programlisting">smokeParticle.sourcePosition = startPosition;</pre></div><p>If you run the project at this point, you'll see that the smoke is constantly being generated, even after you take your finger off the screen. Although this doesn't mean much for this sample project, imagine you want a particle being displayed only if a user is in midair, or while a combo move is being performed. That being said, we need a way to stop and start the particle streaming on demand (in this case, when the user places or removes their finger).</p><p>Although Cocos2d does not have a method to begin a particle system, it's very easy to add such a method. So, look up the project for <code class="literal">stopSystem</code>. In the <code class="literal">CCParticleSystemBase.h</code> file (which should be the first result in the search), add the following code above the <code class="literal">stopSystem</code> declaration:</p><div class="informalexample"><pre class="programlisting">-(void)startSystem;</pre></div><p>Then, in the <code class="literal">CCParticleSystemBase.m</code> file (the next result in the search), add this method so that you can start the particle system on demand:</p><div class="informalexample"><pre class="programlisting">-(void)startSystem
+{
+  _active = YES;
+  _elapsed = _duration;
+  _emitCounter = 0;
+}</pre></div><p>Now go back to <code class="literal">ParticleExampleScene.m</code>, and in the <code class="literal">init</code> method, right after you've added the smoke particle to the scene, call the <code class="literal">stopSystem</code> method so that it's not on the screen when the scene first starts:</p><div class="informalexample"><pre class="programlisting">[smokeParticle stopSystem];</pre></div><p>Add the <code class="literal">stopSystem</code> method to the <code class="literal">touchEnded</code> method so that the particle system stops spawning new particles and lets the old particles die out:</p><div class="informalexample"><pre class="programlisting">-(void)touchEnded:(CCTouch *)touch withEvent:(CCTouchEvent *)event
+{
+	isStreaming = NO;
+	[smokeParticle stopSystem];
+}</pre></div><p>Finally, add <a id="id323" class="indexterm"/>a method call to the newly created <code class="literal">startSystem</code> method in the <code class="literal">touchBegan</code> method so that the particles begin streaming when a finger is on the screen:</p><div class="informalexample"><pre class="programlisting">[smokeParticle startSystem];</pre></div><p>Running the project at this point will allow you to see the starting and stopping of a particle system that has already been created.</p><div class="note" title="Note"><h3 class="title"><a id="tip44"/>Tip</h3><p>You may be wondering how to adapt this for your own project. Once you have the particle system added to the screen, it's basically just a matter of updating the particle system's source position with the "start position." For example, you could have a rocket flying across the screen, and the rocket's position could be the start position.</p></div><p>Now let's move on to a very similar-looking style that takes a little more code, but allows greater manipulation with the overall look of the game.</p></div><div class="section" title="Method 2 – sprites or nodes"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec93"/>Method 2 – sprites or nodes</h2></div></div></div><p>Although <a id="id324" class="indexterm"/>a particle system requires less code to get a similar effect, there<a id="id325" class="indexterm"/> are more things you can do when you create the sprite yourself and handle everything that happens to it. For example, you can make the sprite change color several times, set up crazy movement patterns, change images altogether, or apply other <code class="literal">CCAction</code> actions that the particle system can't do.</p><div class="note" title="Note"><h3 class="title"><a id="tip45"/>Tip</h3><p>One example of something that a particle system can't do is shake mechanics. A simple way you can do this is by queuing up a sequence of <code class="literal">CCMove</code> actions to go in the various directions you want (generally, no more than a few points in any direction), and using a variable for the duration so that you can increase or decrease the speed based on the situation.</p></div><p>With<a id="id326" class="indexterm"/> the <code class="literal">Ghosts</code> project opened in Xcode, open the <code class="literal">SpriteExampleScene.m</code> file <a id="id327" class="indexterm"/>and add the following block of code to the <code class="literal">spawnStreamer</code> method:</p><div class="informalexample"><pre class="programlisting">CCSprite *heart = [CCSprite spriteWithImageNamed:@"heart.png"];
+heart.color = [CCColor redColor];
+heart.position = startPosition;
+[self addChild:heart];
+
+CCActionScaleTo *shrink = [CCActionScaleTo actionWithDuration:0.5 scale:0];
+CCActionCallBlock *block = [CCActionCallBlock actionWithBlock:^{
+  [self removeChild:heart];
+}];
+
+[heart runAction:[CCActionSequence actions:shrink, block, nil]];</pre></div><p>This code will spawn a red heart (the image is white, but we've colored it red), shrink it down to a scale of <code class="literal">0</code> in half a second, and then remove it from the scene so that it doesn't create lag after running for a while.</p><p>If you run the project and drag you finger around the screen, you'll see some beautiful hearts being created in a fluid manner. And that's it! The only reason it was mentioned that you'd probably have to use more code is that, the more you want to do with your streamer (ghost, phantom, or whatever), the more code it will take to get the effect you want.</p><p>So say, for example, you want to make the sprites move along a Bézier curve, spin 360 degrees, and finally shrink down and disappear, while at the same time changing to a green heart. The code will look something like this:</p><div class="informalexample"><pre class="programlisting">CCSprite *heart = [CCSprite spriteWithImageNamed:@"heart.png"];
+heart.color = [CCColor redColor];
+heart.position = startPosition;
+[self addChild:heart];
+  
+CCActionTintTo *tint = [CCActionTintTo actionWithDuration:0.5 color:[CCColor greenColor]];
+  
+ccBézierConfig bezConfig;
+bezConfig.controlPoint_1 = ccp(0,100);
+bezConfig.controlPoint_2 = ccp(100,100);
+bezConfig.endPosition = ccp(100,0);
+CCActionBézierTo *move = [CCActionBézierBy actionWithDuration:0.5 Bézier:bezConfig];
+  
+CCActionRotateBy *rotate = [CCActionRotateBy actionWithDuration:0.5 angle:360];
+  
+CCActionScaleTo *shrink = [CCActionScaleTo actionWithDuration:0.5 scale:0];
+CCActionCallBlock *remove = [CCActionCallBlock actionWithBlock:^{
+  [self removeChild:heart];
+}];
+  
+[heart runAction:tint];
+[heart runAction:[CCActionSequence actions:move, rotate, shrink, remove, nil]];</pre></div><div class="note" title="Note"><h3 class="title"><a id="tip46"/>Tip</h3><p>If you<a id="id328" class="indexterm"/> wish to implement something like this within your own project, the<a id="id329" class="indexterm"/> key requirement is the <code class="literal">isStreaming</code> Boolean and the check within the update method. Everything else is straightforward and very similar to the particle method of changing the <code class="literal">startPosition</code>.</p></div><p>Finally, let's tackle the most unique method of all—the constant line that both <span class="emphasis"><em>Fruit Ninja</em></span> and <span class="emphasis"><em>Blek</em></span> have implemented.</p></div><div class="section" title="Method 3 – constant line"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec94"/>Method 3 – constant line</h2></div></div></div><p>Constant line<a id="id330" class="indexterm"/> is the most advanced version of streamers. It's not really a particle, and therefore, it can't be made as a sprite creation either. Instead, we're going to use <code class="literal">CCMotionStreak</code> to create a slashing effect. <code class="literal">CCMotionStreak</code> is fairy simple to implement, as it only needs a position, an image, and a color.</p><p>With the <code class="literal">Ghosts</code> project opened in Xcode, open <code class="literal">ConstantLineExampleScene.h</code> and add a <code class="literal">CCMotionStreak</code> object to the list:</p><div class="informalexample"><pre class="programlisting">{
+  CGSize winSize;
+  CGPoint startPosition;
+  
+  CCMotionStreak *streak;
+}</pre></div><p>Then, in <code class="literal">ConstantLineExampleScene.m</code>, create the streak and add it to the scene in the <code class="literal">init</code> method:</p><div class="informalexample"><pre class="programlisting">streak = [CCMotionStreak streakWithFade:0.35 minSeg:1 width:15 color:[CCColor yellowColor] textureFilename:@"blade.png"];
+[self addChild:streak];</pre></div><p>Here we're <a id="id331" class="indexterm"/>using the yellow color and the file named <code class="literal">blade.png</code>. You can use whichever image you want, but since we want a blade slashing effect, we're going to use the image that is shaped like a diamond to give the beginning and end a pointed edge.</p><p>Next, in the <code class="literal">touchBegan</code> method, set the <code class="literal">CCMotionStreak</code> object's position, and reset it so that when the users touch down again, it doesn't connect the two lines (unless that's what you want; in that case, you should not reset it):</p><div class="informalexample"><pre class="programlisting">streak.position = startPosition;
+[streak reset];</pre></div><p>Finally, in the <code class="literal">touchMoved</code> method, set the position so that every time the finger is dragged, the motion streak glides to the next position:</p><div class="informalexample"><pre class="programlisting">streak.position = startPosition;</pre></div><p>And that's it! If you run the project, go to the line example, and drag a finger around, you'll see the nice slashing effect. If you want to make the line bigger (or smaller), simply adjust the width in the initialization of <code class="literal">CCMotionStreak</code>. The same applies to the color, image, or even duration. However, it's not recommended to set the duration too high, as the motion streak might be a bit delayed. </p><div class="note" title="Note"><h3 class="title"><a id="tip47"/>Tip</h3><p>The key point to remember if you want to implement this style of streamer/ghost in your project is that <code class="literal">CCMotionStreak</code> relies on a position of something. So, if you want a streak on a spaceship, you have to update the motion streak's position in the update function, like this:</p><div class="informalexample"><pre class="programlisting">-(void)update:(CCTime)delta
+{
+  streak.position = ship.position;
+}</pre></div></div></div></div>
+<div class="section" title="Touchscreen controls versus D-pad adaptation (and why it matters so much to know this distinction)"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec41"/>Touchscreen controls versus D-pad adaptation (and why it matters so much to know this distinction)</h1></div></div></div><p>Because we're coding for iOS, it's important to note the uniqueness of the device we're creating<a id="id332" class="indexterm"/> games for, that is, the touchscreen<a id="id333" class="indexterm"/> itself versus a plastic controller with joysticks and triggers that the user has in their hands. When creating games for iOS (or any smartphone device with a touchscreen), you must create the controls such that they feel natural and fluid on the device, as if the game never existed on another console.</p><p>Granted, it's understandable that some games are better suited for D-pad-style movement. However, there's always the accelerometer, swipe controls, or the way that Infinity Blade does it (using small buttons on the screen to block or dodge, and also using swipes across the center of the screen to attack with your sword).</p><p>Unfortunately, there's no "how to program" section for the best controls, as it's all based on your individual game. For example, in this book's game, we don't tap a unit and then use a D-pad to tell the game which direction to send the unit in. Instead, we make use of the touch-and-drag feature of iOS and integrate that as part of our controls.</p><p>There are more good examples of touch-integrated controls later in this chapter, but first, let's go over what not to do.</p><div class="section" title="Bad examples of iOS game controls"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec95"/>Bad examples of iOS game controls</h2></div></div></div><p>The<a id="id334" class="indexterm"/> following are some examples of some games that just basically took the controls they had on their console or PC version of the game and dumped them into the touchscreen, hoping it would work out for them.</p><p>
+<span class="emphasis"><em>Game Dev Story</em></span>: Although this is not a bad game on its own, the controls are completely menu driven and don't feel as if they were created with a mobile in mind.</p><div class="mediaobject"><img src="../Images/image00257.jpeg" alt="Bad examples of iOS game controls"/></div><p style="clear:both; height: 1em;"> </p><p>
+<span class="emphasis"><em>Tomb Raider I</em></span>: Just<a id="id335" class="indexterm"/> based on the screenshots, it's easy to see how complex the controls are and how little time the developers put into innovating their control scheme for the mobile platform.</p><div class="mediaobject"><img src="../Images/image00258.jpeg" alt="Bad examples of iOS game controls"/></div><p style="clear:both; height: 1em;"> </p><p>
+<span class="emphasis"><em>Duke Nukem 3D</em></span>: Again, just <a id="id336" class="indexterm"/>based on the following screenshot, you can understand what bad controls are being pointed out here:</p><div class="mediaobject"><img src="../Images/image00259.jpeg" alt="Bad examples of iOS game controls"/></div><p style="clear:both; height: 1em;"> </p><p>
+<span class="emphasis"><em>Midway Arcade</em></span>: They could've done so much better when it comes to cycling through the mini-games and even the mini-games themselves. Some of the games feel mobile friendly, but the<a id="id337" class="indexterm"/> rest are just not pulling their weight.</p><div class="mediaobject"><img src="../Images/image00260.jpeg" alt="Bad examples of iOS game controls"/></div><p style="clear:both; height: 1em;"> </p></div><div class="section" title="Great examples of touchscreen controls"><div class="titlepage"><div><div><h2 class="title"><a id="ch05lvl2sec96"/>Great examples of touchscreen controls</h2></div></div></div><p>In this <a id="id338" class="indexterm"/>section, you'll find some games that, whether they started on console before or not, have some great controls on mobile. They exhibit everything beautiful about being able to code games for a handheld device with a touchscreen and an accelerometer.</p><p>First up is <span class="emphasis"><em>Shadowmatic</em></span>; you drag the screen to rotate the objects, and tilting the device moves the camera so slightly that you really get a three-dimension-like feeling in this game.</p><div class="mediaobject"><img src="../Images/image00261.jpeg" alt="Great examples of touchscreen controls"/></div><p style="clear:both; height: 1em;"> </p><p>Next is <span class="emphasis"><em>Smash Hit</em></span>; not<a id="id339" class="indexterm"/> only does it spawn the metal balls where your finger touches but also the easy-to-press buttons cause no disruptions to the gameplay either.</p><div class="mediaobject"><img src="../Images/image00262.jpeg" alt="Great examples of touchscreen controls"/></div><p style="clear:both; height: 1em;"> </p><p>I can't forget <span class="emphasis"><em>Angry Birds</em></span>, with its pinch-zoom, pullback mechanics, and easy-to-understand gameplay, all of which stem from great touchscreen controls.</p><div class="mediaobject"><img src="../Images/image00263.jpeg" alt="Great examples of touchscreen controls"/></div><p style="clear:both; height: 1em;"> </p><p>There's also <span class="emphasis"><em>Temple Run</em></span>, integrating <a id="id340" class="indexterm"/>the swiping mechanics in every direction, making the user feel as if they're actually pushing their character in the particular direction.</p><div class="mediaobject"><img src="../Images/image00264.jpeg" alt="Great examples of touchscreen controls"/></div><p style="clear:both; height: 1em;"> </p><p>Last but<a id="id341" class="indexterm"/> not least (as there are surely a lot more that also have great touchscreen controls) is <span class="emphasis"><em>Blek</em></span>. I'm not even sure whether this game could exist outside a touchscreen environment because it's just so fluid!</p><div class="mediaobject"><img src="../Images/image00265.jpeg" alt="Great examples of touchscreen controls"/></div><p style="clear:both; height: 1em;"> </p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch05lvl1sec42"/>Summary</h1></div></div></div><p>In this chapter, you learned how to do a variety of things, from making a score table and previewing the next move, to making use of Bézier curves and creating unit streamers.</p><p>Remember, if you ever need to come back to this chapter (or any other for that matter), don't hesitate to do so. The code was built with a copy-paste mindset, so it can be adapted for any project without much reworking (if it is required at all).</p><p>In the next chapter, we will enhance this game, which used only programmer art until now, so that it looks like something a team of 20 people spent months developing.</p></div></body></html>
