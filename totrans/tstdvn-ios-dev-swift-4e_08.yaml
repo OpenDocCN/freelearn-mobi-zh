@@ -1,0 +1,961 @@
+- en: '*Chapter 6*: Testing, Loading, and Saving Data'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: At the moment, we have structures to hold the information of one to-do item.
+    A usable to-do item app has to show and manage several to-do items. In addition,
+    when the user closes the app and opens it again, they expect the to-do items to
+    still be there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This means our app needs structures that can store and load information of a
+    list of to-do items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will add a class that stores and loads a list of to-do items
+    to and from the filesystem of the iOS device. We will use the JSON format because
+    it is a common choice in iOS development. It has the nice benefit in that it is
+    easily readable by humans and computers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The chapter is structured as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Publishing changes with Combine
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Checking items
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Storing and loading `ToDoItem`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Technical requirements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The source code for this chapter is available here: [https://github.com/PacktPublishing/Test-Driven-iOS-Development-with-Swift-Fourth-Edition/tree/main/chapter06](https://github.com/PacktPublishing/Test-Driven-iOS-Development-with-Swift-Fourth-Edition/tree/main/chapter06).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Publishing changes with Combine
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In today's iOS apps, communication between different parts is often implemented
+    using the **Combine** framework by Apple. In Combine, data changes are published
+    and can be subscribed to. This design pattern helps to decouple the code and make
+    it easier to maintain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will use Combine in our `ToDoItemStore` to inform, for example, the table
+    view controller that something changed and the user interface should be updated
+    with the new data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open Project Navigator and select the `ToDoItemStoreTests`. Import the `ToDo`
+    module (`@testable import ToDo`) and remove the two test method templates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing asynchronous Combine code
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Up to now, all the code we''ve tested has been synchronous code. Publishing
+    values in Combine is asynchronous. To be able to test Combine code, we need a
+    way to halt the test and wait until the code we want to test is executed. `XCTest`
+    provides `XCTestExpectation` for this task. Let''s see how this works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following code to `ToDoItemStoreTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `toDoItemStore`, but using `sut` makes it easier to read, and it also allows
+    us to copy and paste test code into other tests when appropriate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The test is not yet finished, but it already fails because Xcode cannot find
+    `ToDoItemStore` in the scope. Open Project Navigator again and select the `ToDoItemStore.swift`.
+    Add the following class definition to `ToDoItemStore.swift`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This is enough to make the test code compilable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run the tests to make sure that they all pass and we can continue writing tests.
+    Add the following code to `test_add_shouldPublishChange()`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: First, we create an instance of `ToDoItemStore`. Next, we need an expectation
+    to wait for the asynchronous execution of our Combine code. With `description`,
+    we inform our future selves why we need this expectation. To figure out whether
+    `publisher` worked as expected, we need to subscribe to it in the test and check
+    the published value. We will store the value in the `receivedItems` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last line is the beginning of the subscription to the publisher, but we
+    have to pause before writing the rest because Xcode complains that **Value of
+    type 'ToDoItemStore' has no member 'itemPublisher'**. This means we need to write
+    some code in the main target to make the test compile again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we need to import the Combine framework. Then, we can add the publisher,
+    like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If you haven't worked with Combine or Generics yet, this syntax might look a
+    bit strange. `[ToDoItem]` in `<[ToDoItem], Never>` means that the publisher sends
+    arrays of `ToDoItems`. The second part, `Never`, is the failure type of this publisher.
+    `Never` means that this publisher cannot fail. In summary, `CurrentValueSubject<[ToDoItem],
+    Never>([])` creates an instance of a `CurrentValueSubject` publisher that sends
+    arrays of `ToDoItems` that never fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This fixes the error reported by the static analyzer. We can switch back to
+    the test code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Import Combine below the existing import statements and change the code in
+    `test_add_shouldPublishChange()` so that it looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This does not compile. But before we switch back to the production code, let''s
+    see what we added here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we drop the first published value from `itemPublisher` using `dropFirst()`.
+    We do this because a `CurrentValueSubject` publisher publishes the first current
+    value as soon as we subscribe to it. But in the test, we only want to assert that
+    the changes have been published.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Next, we subscribe to the publisher using `sink(receiveValue:)`. The published
+    value is passed into the `receivedValue` parameter. You can't see the parameter
+    name in the code because we are using the trailing closure syntax as it is common
+    in iOS development. We store the received value into the `receivedItems` variable.
+    At this point, the asynchronous code we waited for in the test is finished. We
+    tell the test runner that we don't need to wait any further by calling `fulfill()`
+    on the expectation.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The last two lines in this code are the execution of the method we want to test.
+    We assume here that `ToDoItemStore` has an `add(_:)` method that allows us to
+    add to-do items to the item store. As we haven't written this method yet, Xcode
+    is complaining and we have to switch back to the production code. Follow the next
+    step for that.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Add the following code to `ToDoItemStore`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This makes the test compilable again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Switch back to the test code and add the last three lines in the following
+    code to `test_add_shouldPublishChange()`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With `wait(for:timeout:)`, we tell the test runner to wait at this point until
+    all expectations in the `first` parameter are fulfilled. If all the expectations
+    are not fulfilled after the timeout has passed, the test fails. Next, we cancel
+    the publisher. If we omitted this line, the compiler could remove the subscription
+    because it looks like it is not used anywhere in the code. In the last line, we
+    compare the received value with what we expect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we can run the test. As expected, the test we just added fails because
+    the publisher hasn't published anything yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We would like to use the assertion like this: `XCTAssertEqual(receivedItems,
+    [toDoItem])`. But this is not possible at the moment because `ToDoItem` does not
+    conform to the `Equatable` protocol, which tells the compiler how to treat equality
+    between two instances. We will fix that soon. But first, we need to make the tests
+    green again.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Change the code in `ToDoItemStore` so that it looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this code, we added a `private` property to hold the to-do items in the
+    item store. Whenever this property changes (for example, when a new item is added),
+    it is published using the item publisher. As a result, in the `add(_:)` method,
+    we only have to append the item to the items list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the tests. All tests pass.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now let's tackle the problem of `ToDoItem` not being equatable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making ToDoItem equatable
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The step of making `ToDoItem` equatable is a refactoring step. Up to this point,
+    the code worked without `ToDoItem` being equatable. But the readability of the
+    test would greatly benefit if we could use `XCTAssertEqual` directly on an array
+    of `ToDoItems`. The following steps show you how to do that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, add the `Equatable` protocol to the declaration of `ToDoItem`, like
+    this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, do the same for the `Location` structure:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, add the following method to the `Location` struct:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If Swift cannot automatically add `Equatable` conformance (for example, because
+    one of the properties isn't `Equatable` itself), we need to add the `== (lhs:rhs:)`
+    class method. The method looks a bit complicated but this is just because the
+    `coordinate` property is optional. So, we also have to respect the cases when
+    one coordinate is nil and the other isn't.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, go back to `test_add_shouldPublishChange()` and replace the assertion
+    call at the end with this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests. All tests pass. The assertion now looks way better and we assert
+    exactly what we expect from the test. But the test is still hard to read. All
+    that Combine code is distracting from the main objective of the test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s add a helper function to the test case to improve the test code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The helper function we are going to add is inspired by a blog post ([https://www.swiftbysundell.com/articles/unit-testing-combine-based-swift-code/](https://www.swiftbysundell.com/articles/unit-testing-combine-based-swift-code/))
+    by *John Sundell*. Add the following code at the end of `ToDoItemStoreTests.swift`
+    but outside of the `ToDoItemStoreTests` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This code is similar to the code we wrote in `test_add_shouldPublishChange()`.
+    It is modified a bit to make it work as an extension of `XCTestCase`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we can replace the test code with the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This change makes the test easy to understand. Run the tests again. All tests
+    still pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `wait` method we just added to `XCTestCase` can throw an error. As a result,
+    we had to add the `try` keyword to the call of this method. We could wrap the
+    call in a `do-catch` block but there is a better way. When we mark the test method
+    itself as `throws`, an error thrown during the test invocation is registered by
+    the test runner as a test failure. This again makes the test easier to read and
+    understand. During the course of this book, we will always use this feature of
+    `XCTest` instead of writing `do-catch` blocks in test methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But how do we know that we didn't break the test? Let's make sure that the test
+    can still fail. Go to `ToDoItemStore` and remove the `items.append(item)` line
+    from `add(_:)`. Run the tests to make sure that the test we changed fails now.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'But something is strange now. The test failure is shown as gray instead of
+    red. The reason is that the failure is in the `wait` function we added to `XCTestCase`.
+    To make the test failure be reported at the call site of that function, we need
+    to change the function to this (we only show the relevant lines here):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The function now has two more parameters, `file` and `line`. They are set to
+    the default values, `#file` and `#line`, respectively. These parameters are then
+    used in the call to `XCTUnwrap`. When `XCTUnwrap` now fails, Xcode uses the `file`
+    and `line` parameters to figure out where this function was called and reports
+    the failure at the call site. Run the tests again to see the difference.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, make the test pass again by adding the line you deleted.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the next section, we will implement an essential feature for a to-do list
+    app: *checking items*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking items
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In a to-do app, the user needs to be able to mark to-do items as done. This
+    is an important feature of a to-do app because part of the reason people use such
+    apps is the satisfying feeling when marking a to-do as done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, our app also needs this feature. As the process of building this app is
+    driven by tests, we start with a new test for this feature. But before we can
+    add the test for this feature, we need to think about how we can assert in the
+    test that the feature works. This means we need a way to get all the to-do items
+    that are already done. The easiest way to differentiate the done to-do items from
+    the ones that are still to be done is with a property in the to-do item itself.
+    This way, we can filter all the to-do items according to the value of that property.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this plan, we can start writing the test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following method to `ToDoItemStoreTests.swift`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the first four lines of this test, we set up `ToDoItemStore` with two to-do
+    items. Next, we wait for the publisher and try to check the to-do item. Xcode
+    tells us that the `check(_:)` method is missing. As the test code does not compile
+    right now, we need to switch to the production code and add the `check(_:)` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go to `ToDoItemStore.swift` and add the following method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Run the tests to make the test code aware of this change. The test fails because
+    the publisher does not publish anything when we call the `check(_:)` method. Change
+    the code of the `check` method to the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Wait a minute! This is not what the `check` method should do. Yes, you are right.
+    This is just the simplest code that makes the test at this stage pass. In TDD,
+    you should always write the simplest code that makes the test pass. If you know
+    the code is wrong, you need to add more tests until the feature actually works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run the tests to confirm that all tests pass. Open `ToDoItemStore.swift` and
+    change the code in `test_check_shouldPublishChangeInDoneItems()` such that it
+    looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The last two lines before the closing curly braces are new. In these two lines,
+    we first filter all done to-do items, and then we assert that the result is an
+    array with only the to-do item we checked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The static analyzer of Xcode tells us that the `ToDoItem` type does not have
+    a property with the name `done`. Open `ToDoItem.swift` and add this property:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, the code compiles again. Run the tests. The `test_check_shouldPublishChangeInDoneItems()`
+    test fails because the array with the filtered items is empty. This is expected
+    because the code we added to `check(_:)` does not check any item. It just adds
+    a new item with an empty title.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go back to `ToDoItemStore.swift`. We need to replace the to-do item in the
+    array with the one in which we changed the `done` property to `true`. Replace
+    the `check` method with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: First, we get a mutable copy of the item. Next, we change `done` to `true` and
+    finally, we replace the item in the items array with the changed item.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even though this should make the test pass, it still fails. Click the red diamond
+    next to the failure message to expand it. Read the message carefully. The test
+    fails because the two arrays are not the same. The to-do item in the result array
+    has another value in the `done` property.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 6.1 – Expanded failure message telling us that the items are different'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_6.01_B18127.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 6.1 – Expanded failure message telling us that the items are different
+  prefs: []
+  type: TYPE_NORMAL
+- en: This makes sense. By adding the `done` property, we changed how Swift figures
+    out whether two to-do items are the same. This is not what we want. A to-do item
+    should have an identity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s add a property that provides the to-do item with an identity. Open `ToDoItem.swift`
+    and replace the `ToDoItem` structure with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this code, we add an ID that is set when an item is created. In addition,
+    we use this `id` property to figure out whether two to-do items are the same.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the tests. All tests pass.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Before we move on, we have to clean up the tests a bit. In the first line of
+    each test, we create the system under test (`sut`). This code should be put into
+    `setUpWithError()`. First, add the following property to `ToDoItemStoreTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, change `setUpWithError()` and `tearDownWithError()` like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we can remove the following line of code from each of the tests:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This makes the tests easier to understand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can now add and check to-do items using our `ToDoItemStore`. But at the moment,
+    the to-do items are only held in memory as long as the app runs. `ToDoItemStore`
+    needs to store the to-do items somewhere and load them into memory as soon as
+    the app starts again. In the next section, we will implement exactly this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Storing and loading ToDoItems
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To test storing and loading to-do items, we first need to create an instance
+    of the `ToDoItemStore` class, add a to-do item, destroy that store instance, and
+    create a new one. When we add a to-do item in the first instance, all items should
+    be stored in the filesystem. When creating the second instance, the stored items
+    should be loaded again from the filesystem. This means when we find the item we
+    added in the first instance after we created the second instance, storing and
+    loading works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing storing and loading
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'It is essential that the test controls the environment needed for itself. This
+    means for storing and loading to-do items, the test needs to control where the
+    items are stored. For example, if we used Core Data to persist the to-do items,
+    the test would be responsible for setting up a fake Core Data store just used
+    for the test. In our app, we will store the to-do items in a JSON file. So, the
+    test needs to control where the JSON file is stored. Let''s see how this can be
+    done:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following test method code to `ToDoItemStore`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this test, we don't use the instance created in `setUpWithError()` because
+    we need to pass in the name of the store to be used. Xcode complains that we passed
+    an argument to a call that takes no arguments. This means we have to pause writing
+    the test code and switch to the production code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following initializer to `ToDoItemStore`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This is enough to make the test compile again. This initializer allows passing
+    the filename for the JSON file into `ToDoItemStore`. The `fileName` parameter
+    has a default value because in the production code, the `ToDoItemStore` class
+    should control where the file is stored.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we can write the rest of the test code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This code looks a bit intimidating, but it only contains concepts we''ve already
+    covered. Let''s go over that code step by step:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create an instance of `ToDoItemStore` and a test expectation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Next, we add an item to the to-do item store and destroy the store by setting
+    it to nil.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, we create a new to-do item store and subscribe to its `itemPublisher`.
+    But this time, we do not drop the first published value from the publisher. As
+    the publisher is a `CurrentValueSubject` structure, the subscriber receives the
+    current value as soon as it subscribes to the publisher.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finally, we wait for the asynchronous execution of the Combine code and assert
+    that the published items array contains the item we added to the initial to-do
+    item store.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the tests. This test fails, because we haven't implemented storing and loading
+    yet. Let's implement the code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to store the filename in a property and access it when we store and
+    load the items. Add the following property and change the initializer to set that
+    property:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The next step is to make `ToDoItem` convertible to JSON format. Swift can do
+    this for us if all the properties of a type are convertible to JSON. The only
+    thing we as the developer have to do is to add the `Codable` protocol to the type.
+    Change the declaration of `ToDoItem` such that it reads like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Xcode complains that `Location` property does not conform to `Codable` yet.
+    Change the declaration of `Location` to the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now Xcode tells us that `Location` does not conform to `Codable`. Oh, bummer!
+    `CLLocationCoordinate2D` does not conform to `Codable`. We could implement the
+    conformance ourselves, but there is an easier way. We create a `Coordinate` struct
+    that serves the same purpose but is `Codable`. Create a new Swift file with the
+    *⌘**N* shortcut and call it `Coordinate`. Set **Group** to **ToDo** and make sure
+    that it is added to the **ToDo** target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 6.2 – Creating a file for the Coordinate structure'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_6.02_B18127.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 6.2 – Creating a file for the Coordinate structure
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following code to the new file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As Double is Codable, a structure only consisting of Double properties is also
+    Codable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we can replace the CLLocationCoordinate2D type in Location with our new
+    Coordinate type:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this change, we no longer depend on Core Location and can remove its import
+    from `Location.swift`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have changed some code. How do we make sure that everything we implemented
+    before still works? With our tests! To do that, we first have to disable the currently
+    failing test because of the incomplete implementation of storing and loading to-do
+    items. We know that this test still fails because we are not finished with the
+    implementation. We only want to run the tests that were green before we started
+    implementing storing and loading. Let''s get started:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go to `ToDoItemStoreTests` and add the following call of `XCTSkipIf(_:_:)`
+    at the beginning of the test. Note that you also have to add the `throws` keyword
+    to the test signature:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this call, we tell the test runner that it should skip this test. When
+    we are done with the change of the coordinate type, we just have to remove this
+    line of code to activate the test again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run the tests to figure out whether the coordinate change was successful or
+    whether we missed something. The `test_init_setsCoordinate()` test does not compile
+    because we changed the coordinate type. Replace the `CLLocationCoordinate2D` type
+    with `Coordinate` and remove the import of `CoreLocation`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests again. Now all tests pass.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This is huge! For the first time, we used unit tests to make refactoring easier.
+    We didn't have to check each and every file to see whether the coordinate property
+    was used and whether we had to adapt the type. We just had to run the tests. Now
+    imagine we're working on a code base with hundreds of thousands of lines of code.
+    The confidence you gain with a good test suite makes refactoring code effortless.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Go back to `ToDoItemStoreTests` and remove the `XCTSkipIf(_:_:)` call. Run the
+    tests to confirm that `test_init_shouldLoadPreviousToDoItems()` still fails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that `ToDoItem` conforms to `Codable`, we can store a list of to-do items
+    in a JSON structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following method to `ToDoItemStore`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: First, we get a file URL to store the JSON file to. Next, we get a `Data` object
+    from the to-do items and write it to the file URL. As the conversion to JSON and
+    writing to the file URL can throw an error, we embedded these calls into a `do-catch`
+    block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The items need to be saved whenever something in the list of to-do items changes.
+    Change the `add(_:)` method such that it looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'When we add a new item to the store, we save the list to the filesystem. We
+    also need a method that loads the to-do items. Add the following method to `ToDoItemStore`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This method is the reverse of the `saveItems` method. We get the same file URL
+    in the beginning. Then, we load the data from the filesystem and convert it from
+    the JSON format to a list of to-do items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We call this method in the initializer of `ToDoItemStore`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: That should make our test green. Run the tests to confirm.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Depending on your configuration, your tests might indeed be green. But most
+    probably, some of the tests in `ToDoItemStoreTests` will fail. With storing and
+    loading to-do items, the tests now depend on the tests that ran before. This is
+    bad and should be avoided. When tests depend on the order in which they are executed,
+    a test suite is not reliable. Tests can fail on some computers or in some environments.
+    We need to fix this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, all tests should use a dummy JSON file. So, replace the setup code in
+    `ToDoItemStoreTests` with this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Second, we have to remove the JSON file after each test execution:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: I know what you are thinking. We used the code to get the file URL for the JSON
+    file a third time. We should clean that up. No worries, we will do that next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run all tests twice. In the second run, all tests should be green.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning up the code
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In software development, we should follow the DRY principle. **DRY** stands
+    for **don't repeat yourself**. By copying the code that creates the file URL for
+    the JSON file two times, we violated this principle. Let's make this code reusable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Select the `FileManagerExtension.swift` and make sure it is added to the main
+    target of our project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Follow these steps to remove the duplicated code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add this extension to `FileManagerExtension.swift`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `ToDoItemStore.swift` and replace `saveItems()` with the following implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Usually, you wouldn't use the `FileManager` singleton directly here. In real
+    code, you would rather pass in the kind of storage into the `ToDoItemStore` as
+    a dependency using Dependency Injection. We take the approach above to keep the
+    book as short as possible and to not distract from the main topic of this section.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, replace `loadItems()` with this code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, replace `tearDownWithError()` in `ToDoItemStoreTests.swift` with the
+    following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run all tests to make sure they still pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We are not done yet. There is one test missing. When the user checks a to-do
+    item as done, the list of items should also be written to the filesystem. To make
+    sure that is the case, add the following test to `ToDoItemStoreTests.swift`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This test looks kind of like `test_init_shouldLoadPreviousToDoItems()`. But
+    here, we check `toDoItem` before we destroy the to-do item store. In addition,
+    we assert at the end that the loaded to-do item is checked as done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make this test pass, add the call to `saveItems()` within the `if let` conditional
+    of the `check(_:)` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Before you move on, make sure that all tests pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have explored how to test Combine code. To make the tests
+    easier to understand, we introduced a helper method and improved its failure message.
+    We figured out how to make an `Equatable` type and how this can help in unit tests.
+    Finally, we learned how to test storing and loading a JSON file to and from the
+    filesystem of the iOS device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With these skills, you should be able to write tests for a variety of different
+    model scenarios.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will start building the user interface. We will start
+    with the list of to-do items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Remove the expectation from the tests that test Combine code and check whether
+    they fail.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Think about what needs to be done to check whether the stored file is indeed
+    in JSON format. Do you think such a test is of any use?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL

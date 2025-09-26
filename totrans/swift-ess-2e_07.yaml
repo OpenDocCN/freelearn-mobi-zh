@@ -1,0 +1,788 @@
+- en: Chapter 7. Building a Repository Browser
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Having covered how to integrate the components necessary to build an application,
+    this chapter will create a repository browser that allows user repositories to
+    be displayed using the GitHub API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This chapter will present the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An overview of the GitHub API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Talking to the GitHub API with Swift
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a repository browser
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Maintaining selection between view controllers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An overview of the GitHub API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The GitHub API provides a REST-based interface using JSON to return information
+    about users and repositories. Version 3 of the API is documented at [https://developer.github.com/v3/](https://developer.github.com/v3/)
+    and is the version used in this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The API is rate limited; at the time of writing, anonymous requests can be made
+    up to sixty times per hour, while logged in users have a higher limit. The code
+    repository for this book has sample responses that can be used for testing and
+    development purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Root endpoint
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The main entry point to GitHub is the *root endpoint*. For the main GitHub
+    site, this is [https://api.github.com](https://api.github.com), and for GitHub
+    Enterprise installations, it will be of the form `https://hostname.example.org/api/v3/`
+    along with user credentials. The endpoint provides a collection of URLs that can
+    be used to find specific resources:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The services are *URI templates*. Text in braces `{}` is replaced on demand
+    with the values of parameters; text that starts with `{?a,b,c}` is expanded to
+    form `?a=&b=&c=` if present, and is missing otherwise. For example, with a `user`
+    of `alblue`, the `user_url` of the user resource at `https://api.github.com/users/{user}`
+    becomes `https://api.github.com/users/alblue`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: User resource
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The user resource for a specific user contains information about their repositories
+    (`repos_url`), name, and other information, such as a location and blog (if provided).
+    In addition, the `avatar_url` provides a URL to an image that can be used to display
+    the user''s avatar. For example, `https://api.github.com/users/alblue` contains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `repos_url` link can be used to find the user's repositories. This is what
+    is reported at the root endpoint as the `user_repositories_url` with the `{user}`
+    already replaced with the username.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Repositories resource
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Repositories for a user can be accessed via the `repos_url` or `user_repositories_url`
+    references. This returns an array of JSON objects containing information, such
+    as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Repository browser project
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `RepositoryBrowser` client will be created from the **Master Detail** template.
+    This sets up an empty application that can be used on a large device with a split
+    view controller or a navigator view controller on a small device. In addition
+    to this, actions to add entries are also created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create a project with tests, ensure that the **Include Unit Tests** option
+    is selected when creating the project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Repository browser project](img/00090.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'To build the APIs necessary to display content, several utility classes are
+    needed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `URITemplate` class processes URI templates with a set of key/value pairs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Threads` class allows functions to be run in the background or in the main
+    thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `NSURLExtensions` class provides easy parsing of JSON objects from a URL
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `DictionaryExtensions` class provides a means of creating a Swift dictionary
+    from a JSON object
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `GitHubAPI` class provides access to the GitHub remote API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: URI templates
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: URI templates are defined in RFC 6570 at [https://tools.ietf.org/html/rfc6570](https://tools.ietf.org/html/rfc6570).
+    They can be used to replace sequences of text surrounded by `{}` in a URI. Although
+    GitHub's API uses optional values `{?...}`, the example client presented in this
+    chapter will not need to use these, and so, they can be ignored in this implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The template class replaces the parameters with values from a dictionary. To
+    create the API, it is useful to write a test case first, following test driven
+    development. A test case class can be created by navigating to **File** | **New**
+    | **File…** | **iOS** | **Source** | **Unit Test Case Class** and creating a subclass
+    of `XCTestCase` in Swift. The test code will look like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Don't forget to ensure that the `URITemplateTests.swift` file is added to the
+    necessary test targets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `replace` function requires string processing. Although the function can
+    be a class function or an extension on `String`, having it as a separate class
+    makes testing easier. The function signature looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Make sure that the `URITemplate` class is added to the test target as well;
+    otherwise, the test script will not compile.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The parameters are matched using a regular expression, such as `{[^}]}`. To
+    search or access this from a string involves a `Range` of `String.Index` values.
+    These are like integer indexes into the string, but instead of referring to a
+    character by its byte offset, the index is an abstract representation (some character
+    encodings, such as UTF8, use multiple bytes to represent a single character).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `rangeOfString` method takes a string or regular expression and returns
+    a range if there is a match present (or `nil` if there isn''t). This can be used
+    to detect whether a pattern is present or to break out of the `while` loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `parameterRange` contains a `start` and `end` index that represent the
+    locations of the `{` and `}` characters. The value of the parameter can be extracted
+    with `replacement.substringWithRange(parameterRange)`. If it starts with `{?`
+    it is replaced with an empty string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, if the replacement is of the form `{user}`, then the value of `user`
+    is acquired from the dictionary and used as the replacement value. To get the
+    name of the parameter, `startIndex` has to be advanced to the `successor`, and
+    `endIndex` has to be reversed to the `predecessor` to account for the `{` and
+    `}` characters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now when the test is run by navigating to **Product** | **Test** or by pressing
+    *Command + U*, the string replacement will pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `??` is an optional test that is used to return the first argument if it
+    is present, and the second argument if it is `nil`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Background threading
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Background threading allows functions to be trivially launched on the UI thread
+    or on a background thread as appropriate. This was explained in [Chapter 6](part0045_split_000.html#1AT9A2-d7e55eb5242648e89c396442afe4f84b
+    "Chapter 6. Parsing Networked Data"), *Parsing Networked Data*, in the *Networking
+    and user interface* section. Add the following as `Threads.swift`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Threads` class can be tested with the following test case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the tests are run with *Command* + *U*, the tests should pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing JSON dictionaries
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As many network responses are returned in JSON format and to make JSON parsing
+    easier, extensions can be added to the `NSURL` class to facilitate the acquiring
+    and parsing of content that is loaded from network locations. Instead of designing
+    a synchronous extension that blocks until data is available, using a callback
+    function is best practice. Create a file `NSURLExtensions.swift` with the following
+    content:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This provides an extension for an `NSURL` to provide a JSON dictionary. However,
+    the data type returned from the `JSONObjectWithData` method is `[String:AnyObject]`,
+    not `[String:String]`. Although it may be expected that it could just be cast
+    to the right type, the `as` will perform a test, and if there are mixed values
+    (such as a number or a `nil`), then the entire object will be considered invalid.
+    Instead, the JSON data structure must be converted to a `[String:String]` type.
+    Add the following as a standalone function to `NSURLExtensions.swift`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This can be used to convert the `[String:AnyObject]` in the JSON function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The function can be tested with a test class using the `data:` protocol by
+    passing in a *base64* encoded string representing the JSON data. To create a `base64`
+    representation, create a string, convert it to a UTF8 data object and then convert
+    it back to a string representation with a `data:` prefix:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Please note that the `sleep(1)` is required as parsing the response has to happen
+    in the background thread and, therefore, may not be immediately available. By
+    adding a delay to the function it gives a chance for the assertion to be executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing JSON arrays of dictionaries
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A similar approach can be used to parse arrays of dictionaries (such as those
+    that are returned by the list repositories resource). The differences here are
+    the type signatures (which have an extra `[]` to represent the array), and the
+    fact that a `map` is being used to process the elements in the list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The test can be extended as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Creating the client
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that the utilities are complete, the GitHub client API can be created. Once
+    that is complete, it can be integrated with the user interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Talking to the GitHub API
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A Swift class will be created to talk to the GitHub API. This will connect to
+    the root endpoint host and download the JSON for the service URLs so that subsequent
+    network connections can be made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To ensure that network requests are not repeated, an `NSCache` will be used
+    to save the responses. This will automatically be emptied when the application
+    is under memory pressure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: This can be tested by saving the response from the main GitHub API site at [https://api.github.com](https://api.github.com)
+    into an `api/index.json` file by creating an `api` directory in the root level
+    of the project and running `curl https://api.github.com > api/index.json` from
+    a Terminal prompt. Inside Xcode, add the `api` directory to the project by navigating
+    to **File** | **Add Files to Project…** or by pressing *Command* + *Option* +
+    *A*, and ensure it is associated with the test target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It can then be accessed with an `NSBundle`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The dummy API should not be part of the main application's target, but rather
+    of the test target. As a result, instead of using `NSBundle.mainBundle` to acquire
+    the application's bundle, `NSBundle(forClass)` is used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Returning repositories for a user
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The APIs returned from the services lookup include `user_repositories_url`,
+    which is a template that can be instantiated with a specific user. It is possible
+    to add a method `getURLForUserRepos` to the `GitHubAPI` class that will return
+    the URL of the user''s repositories. As it will be called frequently, the results
+    should be cached using an `NSCache`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once the URL is known, data can be parsed as an array of JSON objects using
+    an asynchronous callback function to notify when the data is ready:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This can be tested using a simple addition to the `GitHubAPITests` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The sample data contains 24 repositories in the following file, but the GitHub
+    API may contain a different value for this user in the future:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://raw.githubusercontent.com/alblue/com.packtpub.swift.essentials/master/RepositoryBrowser/api/users/alblue/repos.json](https://raw.githubusercontent.com/alblue/com.packtpub.swift.essentials/master/RepositoryBrowser/api/users/alblue/repos.json)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing data through the AppDelegate
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When building an iOS application that manages data, deciding where to declare
+    the variable is the first decision that has to be made. When implementing a view
+    controller, it is common for view-specific data to be associated with that class;
+    but if the data needs to be used across multiple view controllers, there is more
+    choice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A common approach is to wrap everything into a *singleton*, which is an object
+    that is instantiated once. This is typically achieved with a `private var` in
+    the implementation class, with a `class func` that returns (or instantiates on
+    demand) the singleton.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Swift `private` keyword ensures that the variable is only visible in the
+    current source file. The default visibility is `internal`, which means that code
+    is only visible in the current module; the `public` keyword means that it is visible
+    outside of the module as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another approach is to use the `AppDelegate` itself. This is in effect already
+    a singleton that can be accessed with `UIApplication.sharedApplication().delegate`,
+    and is set up prior to any other object accessing it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The AppDelegate should not be overused to store data. Instead of adding too
+    many properties, consider creating a separate class or struct to hold the values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `AppDelegate` will be used to store the reference to the `GitHubAPI`, which
+    could use a preference store or other external means to define what instance to
+    connect to, along with the list of users and a cache of repositories:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To facilitate loading repositories from view controllers, a function can be
+    added to `AppDelegate` to provide a list of repositories for a given user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Accessing repositories from view controllers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the `MasterViewController` (created from the **Master Detail** template
+    or a new subclass of a `UITableViewController`), define an instance variable,
+    `AppDelegate`, which is assigned in the `viewDidLoad` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The table view controller provides data in a number of sections and rows. The
+    `numberOfSections` method will return the number of users with the section title
+    being the username (indexed by the users list):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `numberOfRowsInSection` function is called to determine how many rows are
+    present in each section. If the number is not known, `0` can be returned while
+    running a background query to find the right answer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Remember to reload the section on the UI thread; otherwise, the updates won't
+    display correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, the repository name needs to be shown in the value of the cell. If
+    a default `UITableViewCell` is used, then the value can be set on the `textLabel`;
+    if it is loaded from a storyboard prototype cell, then the content can be accessed
+    appropriately using tags:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the application is run, the list of repositories will be displayed, grouped
+    by the user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Accessing repositories from view controllers](img/00091.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Adding users
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'At this moment, the list of users is hardcoded into the application. It would
+    be preferable to remove this hardcoded list and allow users to be added on demand.
+    Create an `addUser` function in the `AppDelegate` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This allows the detail controller to call the `addUser` function and ensure
+    that the list of users is ordered alphabetically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `$0` and `$1` are anonymous parameters expected by the `sort` function.
+    This is a shorthand form of `users.sort({ user1, user2 in user1 < user2})`. It
+    is also possible to sort the array using the `<` function on the array itself
+    using `users.sortInPlace(<)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The add button can be created in the `MasterViewController` in the `viewDidLoad`
+    method such that the `insertNewObject` method is called when tapped:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the add button is selected, a `UIAlertController` dialog can be shown with
+    a number of actions with handlers that will be called to add the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add (or replace) the `insertNewObject` in the `MasterViewController`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, the users can be added in the UI by clicking the **Add** (**+**) button
+    at the top right of the application. Each time the application is launched, the
+    users array will be empty, and users can be re-added.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Adding users](img/00092.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Users could persist between launches using `NSUserDefaults.standardUserDefaults`
+    and the `setObject:forKey` and `stringArrayForKey` methods. The implementation
+    of this is left to the reader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the detail view
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The final step is to implement the detail view so that when a repository is
+    selected, per-repository information is shown. At the time the repository is selected
+    from the master screen, the username, and repository name are known. These can
+    be used to pull more information from the repository and add the items into the
+    detail view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Update the view in the storyboard to add four labels and four label titles
+    for username, repository name, number of watchers, and number of open issues.
+    Wire these into outlets into the `DetailViewController`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To set content on the details view, the `user` and `repo` will be stored as
+    (optional) strings, and the additional `data` will be stored in string key/value
+    pairs. When they are changed, the `configureView` method should be called to redisplay
+    content:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `configureView` call will also need to be called after the `viewDidLoad`
+    method is called to ensure that the UI is set up as expected:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `configureView` method, the labels may not have been set, so they need
+    to be tested with an `if let` statement before the content is set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If using the standard template, the `splitViewController` of the `AppDelegate`
+    needs to be changed to return `true` after the detail view is amended:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `splitViewController:collapseSecondaryViewController` method determines
+    whether or not the first page that is displayed is the master (`true`) or detail
+    (`false`) page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Transitioning between the master and detail views
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The connection between the master and detail view is triggered with the `showDetail`
+    segue in `MasterViewController`. This can be used to extract the selected row
+    from the table, which can then be used to extract the selected row and section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The details controller can be accessed from the segue''s destination controller—except
+    that the destination is the navigation controller, so it needs to be unpacked
+    one step further:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, the details need to be passed in, which can be extracted from `indexPath`,
+    as in the prior parts of the application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, to ensure that the application works in split mode with `SplitViewController`,
+    the back button needs to be displayed if in split mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Running the application now will show a set of repositories, and when one is
+    selected, the details will be displayed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Transitioning between the master and detail views](img/00093.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If a crash is seen when displaying the detail view, check in the `Main.storyboard`
+    that the connector for a nonexistent field is not defined. Otherwise an error
+    similar to **This class is not key value coding-compliant for the key detailDescriptionLabel**
+    might be seen, which is caused by the Storyboard runtime attempting to assign
+    a missing outlet in the code. Open the `Main.storyboard`, go to the connections
+    inspector, and remove the connection to the missing outlet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Transitioning between the master and detail views](img/00094.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Loading the user's avatar
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The user may have an avatar or icon that they have uploaded to GitHub. This
+    information is stored in the user information, which is accessible from a separate
+    lookup in the GitHub API. Each user''s avatar will be stored as a reference with
+    `avatar_url` in the user information document, such as [https://api.github.com/users/alblue](https://api.github.com/users/alblue),
+    which will return something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: This URL represents an image that can be used in the header for the user's repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To add support for this, the user info needs to be added to the `GitHubAPI`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This looks up the `user_url` service from the GitHub API, which returns the
+    following URI template:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This can be instantiated with the user and then the image can be loaded asynchronously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the support to load the user's avatar has been implemented, it can be added
+    to the view's header to display it in the user interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The set of nested `if` statements here suggests that it may be better to refactor
+    to Swift's `guard` statement instead. This would ensure that the indentation does
+    not increase on each condition. The refactoring is left as an exercise for the
+    reader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Displaying the user's avatar
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The table view that presents the repository information by user can be amended
+    so that along with the user's name, it also displays their avatar at the same
+    time. Currently, this is done in the `tableView:`**title**`ForHeaderInSection`
+    method, but an equivalent `tableView:`**view**`ForHeaderInSection` method is available
+    that provides more customization options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although the method signature indicates that the return type is `UIView`, in
+    fact, it must be a subtype of `UITableViewHeaderFooterView`. Unfortunately, there
+    is no support to edit or customize these in Storyboard, so they must be implemented
+    programmatically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To implement the `viewForHeaderInSection` method, obtain the username as before,
+    and set it to the `textLabel` of a newly created `UITableViewHeaderFooterView`.
+    Then, in the asynchronous image loader, create a frame that has the same origin
+    but a square size for the image, and then create and add the image as a subview
+    of the header view. The method will look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now when the application is run, the avatar will be displayed overlaying the
+    user''s repositories:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Displaying the user''s avatar](img/00095.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter has shown how to integrate the subjects that were created in this
+    book to integrate them into a functional application to interact with a remote
+    network service, such as GitHub, and be able to present this information in a
+    tabular way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By ensuring that all network requests are implemented on background threads,
+    and that returned data is updated on the UI thread, the application will remain
+    responsive to the user's input. Graphics and custom views can be created to provide
+    headings, or the Storyboard could be modified to include more graphics for each
+    repository.
+  prefs: []
+  type: TYPE_NORMAL

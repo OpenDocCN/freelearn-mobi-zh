@@ -1,0 +1,678 @@
+- en: Chapter 7. Implementing Collision Events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So far, we have let the SpriteKit physics simulation detect and handle collisions
+    between game objects. You have seen that Pierre Penguin sends enemies and coins
+    flying off into space when he flies into them. This is because the physics simulation
+    automatically monitors collisions and sets the post-collision trajectory and velocity
+    of each colliding body. In this chapter, we will add our own game logic when two
+    objects come into contact: taking damage from enemies, granting the player invulnerability
+    after touching the star, and tracking points as the player collects coins. The
+    game will become more fun to play as the game mechanics come to life.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The topics in this chapter include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Learning the SpriteKit collision vocabulary
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adding contact events to our game
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Player health and damage
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Collecting coins
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The power-up star logic
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Learning the SpriteKit collision vocabulary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: SpriteKit uses some unique concepts and terms to describe physics events. If
+    you familiarize yourself with these terms now, it will be easier to understand
+    the implementation steps later in the chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Collision versus contact
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'There are two types of interactions when physics bodies come together in the
+    same space:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A **collision** is the physics simulation''s mathematical analysis and repositioning
+    of bodies after they touch. Collisions include all the automatic physical interactions
+    between bodies: preventing overlap, bouncing apart, spinning through the air,
+    and transferring momentum. By default, physics bodies collide with every other
+    physics body in the scene; we have witnessed this automatic collision behavior
+    in our game so far.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A **contact** event also occurs when two bodies touch. Contact events allow
+    us to wire in our custom game logic when two bodies come into contact. Contact
+    events do not create any change on their own; they only provide us with the chance
+    to execute our own code. For instance, we will use contact events to assign damage
+    to the player when he or she runs into an enemy. There are no contact events by
+    default; we will manually configure contacts in this chapter.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Physics bodies collide with every other body in the scene by default, but you
+    can configure specific bodies to ignore collisions and pass through each other
+    without any physical reaction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, collisions and contacts are independent; you can disable physical
+    collision between two types of bodies and still fire custom code with a contact
+    event when the bodies pass through each other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Physics category masks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: You can assign physics categories to each physics body in your game. These categories
+    allow you to specify the bodies that should collide, the bodies that should contact,
+    and the bodies that should pass through each other without any event. When two
+    bodies try to share the same space, the physics simulation will compare each body's
+    categories and test if collision or contact events should fire.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Our game will include physics categories for the penguin, the ground, the coins,
+    and the enemies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Physics categories are stored as 32-bit masks, which allow the physics simulation
+    to perform these tests with processor-efficient bitwise operations. It is not
+    strictly necessary to understand bitwise operations to use physics categories,
+    but it is a nice topic for further reading, if you are interested in enhancing
+    your knowledge. If you are interested, try an Internet search for `swift bitwise
+    operations`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each physics body has three properties which you can use to control collisions
+    in your game. Let''s begin with a very simple summary of each property, and then
+    explore them in depth:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`categoryBitMask`: The physics body''s physical categories'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`collisionBitMask`: Collide with these physical categories'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`contactTestBitMask`: Contact with these physical categories'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `categoryBitMask` property stores the body's current physics categories.
+    The default value is `0xFFFFFFFF`, equating to every category. This means that,
+    by default, every physics body belongs to every physics category.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `collisionBitMask` property specifies the physical categories the body should
+    collide with, preventing two bodies from sharing the same space. The starting
+    value is `0xFFFFFFFF`, or all bits set, meaning that the body will collide with
+    every category by default. When one body begins to overlap with another, the physics
+    simulation compares each body's `collisionBitMask` against the other body's `categoryBitMask`.
+    If there is a match, a collision takes place. Note that this test works two ways;
+    each body can independently participate or ignore a collision.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `contactTestBitMask` property works just like the collision property, but
+    specifies categories for contact events, instead of collisions. The default value
+    is `0x00000000`, or no bits set, meaning that the body will not contact with anything
+    by default.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a dense subject. It is ok to move forward if you do not yet fully understand
+    this topic. Implementing category masks into our game will help you learn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using category masks in Swift
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Apple''s Adventure game demo provides a good implementation of bitmasks in
+    Swift. We will follow their example and use an `enum` to store our categories
+    as `UInt32` values, writing these bitmasks in an easy-to-read manner. The following
+    is an example of a physics category `enum` for a theoretical war game:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is very important to double the value for each subsequent group; this is
+    a necessary step to create proper bitmasks for the physics simulation. For example,
+    if we were to add `fighterJets`, the value would need to be `32`. Always remember
+    to double subsequent values to create unique bitmasks that perform as expected
+    in the physics tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Bitmasks are binary values that the CPU can very quickly compare to check for
+    a match. You do not need to understand bitwise operators to complete this material,
+    but if you are already familiar and curious, this doubling method works because
+    `2` is equivalent to `1 << 1` (binary: `10`), `4` is equivalent to `1 << 2` (binary:
+    `100`), `8` is equivalent to `1 << 3` (binary: `1000`), and so on. We opt for
+    the manual doubling since `enum` values must be literals, and these values are
+    easier for humans to read.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding contact events to our game
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that you are familiar with SpriteKit's physics concepts, we can head into
+    Xcode to implement physics categories and contact logic for our penguin game.
+    We will start by adding in our physics categories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up the physics categories
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To create our physics categories, open your `GameScene.swift` file and enter
+    the following code at the bottom, completely outside the `GameScene` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice how we double each succeeding value, as in our previous example. We are
+    also creating an extra category for our penguin to use after he takes damage.
+    We will use the `damagedPenguin` physics category to allow the penguin to pass
+    through enemies for a few seconds after taking damage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assigning categories to game objects
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we have the physics categories, we need to go back through our existing
+    game objects and assign the categories to the physics bodies. We will start with
+    the `Player` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The player
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Open `Player.swift` and add the following code at the bottom of the spawn function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: We assigned the penguin physics category to the `Player` physics body, and used
+    the `contactTestBitMask` property to set up contact tests with enemies, the ground,
+    power-ups, and coins.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, notice how we use the `rawValue` property of our `enum` values. You will
+    need to use the `rawValue` property whenever you are using the physics category
+    bitmasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ground
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Next, let''s assign the physics category for the `Ground` class. Open `Ground.swift`,
+    and add the following code at the bottom of the `spawn` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: All we need to do is assign the ground bitmask to the `Ground` class physics
+    body, since it already collides with everything by default.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The star power-up
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Open `Star.swift` and add the following code at the bottom of the `spawn` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This assigns the power-up physics category to the `Star` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enemies
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Perform this same action in `Bat.swift`, `Bee.swift`, `Blade.swift`, `Ghost.swift`,
+    and `MadFly.swift`. Add the following code inside their `spawn` functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use the bitwise `NOT` operator (`~`) to remove the `damagedPenguin` physics
+    category from collisions with enemies. Enemies will collide with all categories
+    except the `damagedPenguin` physics category. This allows us to change the penguin's
+    category to the `damagedPenguin` value when we want the penguin to ignore enemy
+    collisions and pass straight through.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Coins
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Lastly, we will add the coin physics category. We do not want coins to collide
+    with other game objects, but we still want to monitor for contact events. Open
+    `Coin.swift` and add the following code at the bottom of the `spawn` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Preparing GameScene for contact events
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now that we have assigned the physics categories to our game objects, we can
+    monitor for contact events in the `GameScene` class. Follow these steps to wire
+    up the `GameScene` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we need to tell the `GameScene` class to implement the `SKPhysicsContactDelegate`
+    protocol. SpriteKit can then inform the `GameScene` class when contact events
+    occur. Change the `GameScene` class declaration line to look like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will tell SpriteKit to inform `GameScene` of contact events by setting the
+    `GameScene physicsWorld contactDelegate` property to the `GameScene` class. At
+    the bottom of the `GameScene didMoveToView` function, add this line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`SKPhysicsContactDelegate` defines a `didBeginContact` function that will fire
+    when contact occurs. We can now implement this `didBeginContact` function in the
+    `GameScene` class. Create a new function in the `GameScene` class named `didBeginContact`,
+    as shown in the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This function will serve as a central hub for our contact events. We will print
+    to the console when our various contact events occur, to test that our code is
+    working.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Viewing console output
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You can use the `println` function to write information to the console, which
+    is very useful for debugging. If you have not yet used the console in Xcode, follow
+    these simple steps to view it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the upper right-hand corner of Xcode, make sure the debug area is turned
+    on, as shown in this screenshot:![Viewing console output](img/Image_B04532_07_01.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the bottom right-hand corner of Xcode, make sure the console is turned on,
+    as shown in this screenshot:![Viewing console output](img/Image_B04532_07_02.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Testing our contact code
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Now that you can see your console output, run the project. You should see our
+    `println` strings appear in the console as you fly Pierre into various game objects.
+    Your console should look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Testing our contact code](img/Image_B04532_07_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Congratulations – if you see the contact output in the console, you have completed
+    the structure for our contact system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You may notice that flying into coins produces strange collision behavior, which
+    we will enhance later in the chapter. Next, we will add game logic for each type
+    of contact.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checkpoint 7-A
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To download my project to this point, visit this URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.thinkingswiftly.com/game-development-with-swift/chapter-7](http://www.thinkingswiftly.com/game-development-with-swift/chapter-7)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Player health and damage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The first custom contact logic is player damage. We will assign the player
+    health points and take them away when damaged. The game will end when the player
+    runs out of health. This is one of the core mechanics of our gameplay. Follow
+    these steps to implement the health logic:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `Player.swift` file, add six new properties to the `Player` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Inside the `update` function, change the code that moves the player through
+    the world to use the new `forwardVelocity` property:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the very beginning of the `startFlapping` function, add this line to prevent
+    the player from flying higher when dead:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the same line at the very beginning of the `stopFlapping` function to prevent
+    the soar animation from running after death:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a new function named `die` to the `Player` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a new function named `takeDamage` to the `Player` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open the `GameScene.swift` file. Inside the `didBeginContact` function, update
+    the switch case that fires when contact is made with an enemy:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will also take damage when we hit the ground. Update the ground case in
+    the same way:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Good work – let's test our code to make sure everything is working correctly.
+    Run the project and smash into some enemies. You can watch the printed output
+    in the console to make sure everything is working correctly. After taking damage
+    three times, the penguin should drop to the ground and become unresponsive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may notice that there is no way for the player to tell how many health points
+    he or she has remaining as they play the game. We will add a health meter to the
+    scene in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we will enhance the feel of the game with new animations when the player
+    takes damage and when the game ends.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Animations for damage and game over
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We will use `SKAction` sequences to create fun animations when the player takes
+    damage. By combining actions, we will grant temporary safety in a damaged state
+    after the player hits an enemy. We will show a fade animation that slowly pulses
+    at first and then speeds up as the safe state starts to wear off.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The damage animation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To add the new animation, add this code at the bottom of the `Player` class
+    `createAnimations` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, update the `takeDamage` function to flag the player as damaged, immediately
+    after taking a hit. The damage animation you just created will turn the damaged
+    flag back off once it has completed. After this change, the first four lines of
+    the `takeDamage` function should look like this (the new code is written in bold):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Run the project. Directly after taking damage, your penguin should fade and
+    be able to pass through enemies, as shown in this image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The damage animation](img/Image_B04532_07_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We are starting to see some good results from our hard work. Notice how the
+    penguin can pass through enemies but still collides with coins, the star, and
+    the ground while in the invulnerable state. Next, we will add a game over animation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The game over animation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We will create a funny, over-the-top death animation when the penguin runs
+    out of health. When Pierre loses his last hit point, he will hang in the air,
+    scale larger, flip over on to his back, and then finally fall to the ground. To
+    implement this animation, add the following code at the bottom of the `Player`
+    class `createAnimations` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Run the project and bump into three enemies. You will see the comedic death
+    animation play, as shown in this screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The game over animation](img/Image_B04532_07_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Poor Pierre Penguin! Good job implementing the damage and death animations.
+    Next, we will handle coin collection on the coin contact event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Collecting coins
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As a main goal for the player, collecting coins should be one of the most enjoyable
+    aspects of our game. We will create a rewarding animation when the player contacts
+    a coin. Follow these steps to implement coin collection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `GameScene.swift`, add a new property to the `GameScene` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In `Coin.swift`, add a new function to the `Coin` class named `collect`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In `GameScene.swift`, call the new `collect` function from the coin contact
+    case in the `didBeginContact` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Great work! Run the project and try to collect some coins. You will see the
+    coins perform their collection animation. The game will keep track of how many
+    coins you are collecting and print the number to the console. The player cannot
+    see that number yet; we will add a text counter on the game screen in the next
+    chapter. Next, we will implement the power-up star game logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The power-up star logic
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When the player contacts the star, we will grant invulnerability for a short
+    time and give the player great speed to power through encounters. Follow these
+    steps to implement the power-up:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `Player.swift`, add a new function to the `Player` class, as shown here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Invoke the new function from the `GameScene` class `didBeginContact` function,
+    under the power-up case:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You may find it helpful to increase the spawn rate of the star power-up in
+    order to test. Remember that we are generating a random number in the `didSimulatePhysics`
+    function of `GameScene` to determine how often we spawn the star. To spawn the
+    star more often, comment out the line that generates a random number and replace
+    it with a hardcoded `0`, as shown here (the new code is written in bold):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Great, now it will be easy to test the star power-up. Run the project and find
+    a star. The penguin should scale to a large size and start charging forward, blowing
+    enemies aside as he passes, as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The power-up star logic](img/Image_B04532_07_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Remember to change the star-spawning code back to a random number before you
+    continue, or the star will spawn too often.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checkpoint 7-B
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have made terrific progress in this chapter. To download my project up to
+    this point, visit this URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.thinkingswiftly.com/game-development-with-swift/chapter-7](http://www.thinkingswiftly.com/game-development-with-swift/chapter-7)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Our penguin game is looking great! You have brought the core mechanics to life
+    by implementing the sprite contact events. You learned how SpriteKit handles collisions
+    and contacts, used bitmasks to assign collision categories to different types
+    of sprites, wired up a contact system in our penguin game, and added custom game
+    logic for taking damage, collecting coins, and gaining the star power-up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have a playable game at this point; the next step is adding polish, menus,
+    and features to make the game stand out. We will make our game shine by adding
+    a HUD, background images, particle emitters, and more in [Chapter 8](ch08.html
+    "Chapter 8. Polishing to a Shine – HUD, Parallax Backgrounds, Particles, and More"),
+    *Polishing to a Shine – HUD, Parallax Backgrounds, Particles, and More*.
+  prefs: []
+  type: TYPE_NORMAL

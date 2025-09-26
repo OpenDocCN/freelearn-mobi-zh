@@ -1,0 +1,646 @@
+- en: '*Chapter 10*: Testing Networking Code'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Almost all iOS apps communicate with some kind of server to synchronize data
+    to other devices or to provide additional features that are not possible on the
+    iOS device alone. As the code of the server application is separate from the code
+    of the iOS application, the unit tests for the iOS app should not test features
+    implemented in the server application. The unit tests for the iOS app should only
+    fail if the code of the iOS app has bugs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To achieve that, the unit tests need to be independent of the server application.
+    This separation has several advantages. The main ones are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The unit tests are faster when they don't need to wait for the responses of
+    the server.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The unit tests do not fail because the server is not available.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The networking code can be developed using test-driven development, even before
+    the server application is available.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In this chapter, we will implement two different kinds of networking code using
+    test-driven development and mock objects. After you have worked through this chapter,
+    you will be able to write tests for code that communicates with `CLGeoCoder`.
+    You will also learn how to write tests for networking code using the new async/await
+    API of `URLSession`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This chapter is structured as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mocking `CLGeoCoder`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing async/await code that communicates with a `URLSession` instance
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Handling errors
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Writing tests for networking code is exciting, so let's get started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mocking CLGeoCoder
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`CLGeoCoder` is a class provided by Apple that helps you to get coordinates
+    from an address string and vice versa. The methods in `CLGeoCoder` are based on
+    completion closures. In this chapter, we will explore how to mock and test such
+    methods.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning your project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we write the first test for this chapter, let''s clean up the project
+    a bit. Add sections in the project navigator and move the files to those sections
+    according to your structure scheme. For inspiration, here is the structure I use
+    for the main target:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Figure 10.1 – Adding structure in the project navigator'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '](img/Figure_10.1_B18127.jpg)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure 10.1 – Adding structure in the project navigator
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your structure can be completely different. Use the structure you usually use
+    in iOS projects. Also, add a similar structure to the files in the test target.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you add new files to the project, you have to choose the correct folder
+    depending on the structure you applied.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preparations for the tests
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we can write tests for the `APIClient` class we added in [*Chapter 9*](B18127_09_ePub.xhtml#_idTextAnchor324),
+    *Test-Driven Input View in SwiftUI*, we need a new test case class. Follow these
+    steps to add it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add a new `APIClientTests` to the test target. Remove the two test template
+    methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Import the `ToDo` module using the `@testable` keyword and add setup and teardown
+    code to the `TestCase` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Creating the first test
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'With this preparation, we are ready to write the first test for the `APIClient`
+    class. Follow these steps to add a test for fetching the coordinate of an address
+    using a `CLGeoCoder` instance and make it pass:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To be able to replace `CLGeoCoder` in the `APIClient` class with a mock object,
+    we need to define the interface we expect in a protocol. Import the `CoreLocation`
+    framework to `APIClient.swift` and add the following protocol definition to `APIClient.swift`
+    outside of the `APIClient` class implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, we need to tell the compiler that `CLGeoCoder` already conforms to that
+    protocol. It does so because it already implements a method with this exact signature.
+    Add this line below the `GeoCoderProtocol` implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we can define a mock object we will use in the test. Add a new Swift file
+    to the test target and call it `GeoCoderProtocolMock.swift`. Replace its content
+    with the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the test, we want to call the `geocodeAddressString(_:completionHandler:)`
+    method and pass a `CLPlacemark` instance into the completion handler. To create
+    a `CLPlacemark` instance in a test, we need to import the `Intents` and `Contacts`
+    frameworks, because the initializer we need is defined in the `Intents` framework
+    and uses classes from the `Contacts` framework (I got this tip from the *StackOverflow*
+    answer fo[und at https://stackoverflow.com/a/52932708](https://stackoverflow.com/a/52932708/498796)/498796):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we can start with writing the tests. Add the following fragment of a test
+    to `APIClientTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Xcode tells us that we need to add a property for the `geoCoder` property to
+    `APIClient`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go to the `APIClient` class and add the following property:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `lazy` keyword means that the initializer is called the first time the property
+    is accessed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go back to the test and make it look like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: After we have set up the `geoCoderMock` instance, we create dummy variables
+    and call the method we want to test. The `GeoCoderProtocolMock` class captures
+    the completion handler of the `geocodeAddressString(_:complectionHandler:)` call.
+    This allows us to call this completion handler with a placemark we created. In
+    the test assertions, we check whether the method was called with the address string
+    we provided and whether the coordinate was passed into the `completion` closure
+    of the `coordinate(for:completion:)` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Replace the implementation of `coordinate(for:completion:)` in `APIClient`
+    with the following implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note that we added an internal name for the address string parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run the tests. The new test still fails, but the first assertion doesn''t fail
+    anymore. This tells us that our test does too much. We should split this test
+    into two tests: one that checks whether the method is called with the address
+    string we provide, and another one that checks that the coordinate is passed into
+    the completion closure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We should always only have one failing test, so add `x_` in front of the method
+    name of `test_coordinate_fetchesCoordinate`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As the test runner searches for methods beginning with the word `test`, adding
+    `x_` hides the method from the test runner. To confirm that this is true, run
+    all tests again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, add the following test method to `APIClientTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Remove the code we added to `coordinate(for:completion:)` in `APIClient` and
+    run the tests to see this new test fail.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the code again and run the tests. All tests should pass now.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now, we can remove the check for the address string from `test_coordinate_fetchesCoordinate()`
+    because it is now asserted in `test_coordinate_shouldCallGeoCoderWithAddress()`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run all tests to see this test fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make this test pass, we need to get the coordinate from the `CLGeoCoder`
+    instance and pass it into the completion handler. Replace the `coordinate(for:completion:)`
+    method with the following implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, Xcode complains that `@escaping` keyword to the `completion` parameter
+    in the `APIClientProtocol` protocol.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Replace the `APIClientProtocol` definition with the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run all tests to confirm that now all tests pass.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With this implementation, our app can now fetch the coordinate of an address
+    string. This feature enables our users to add a location to a to-do item.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we will implement fetching to-do items from a server. We
+    don't need an actual server to write the tests and the implementation for this
+    feature. This is one of the many advantages of test-driven development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing async/await code that communicates with URLSession
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In 2021, Apple introduced async/await in Swift. With async/await, asynchronous
+    code (for example, fetching information from a server) is easier to write and
+    easier to understand. In this section, we will learn how to implement fetching
+    data from a web server using the async/await APIs of the `URLSession` class; and
+    we will do this, of course, using test-driven development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unit tests need to be fast and repeatable. This means we don't want to rely
+    on a connection to a real server in our unit tests. Instead, we will replace the
+    communication with the server with a mock object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Follow these steps to implement fetching to-do items from a server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the test, we will use a mock object of a `URLSession` class instead of the
+    real `URLSession` instance. To be able to replace the real `URLSession` instance
+    with the mock, we need a protocol that defines the interface we want to replace.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following protocol definition to `APIClient.swift`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, we need to tell the compiler that the `URLSession` class already conforms
+    to this protocol. Add the following code to `APIClient.swift`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Select the `URLSessionProtocolMock`. Replace its contents with the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This mock object allows us to define the return value of `data(for:delegate:)`
+    in the test we are going to write.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this preparation, we can start writing the test. Add the following fragment
+    of the test method to `APIClientTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this code, we define the URL and the data to be used in the mock response.
+    The `urlSessionMock` class returns a JSON object with one `ToDoItem` object and
+    an `HTTPURLResponse` instance with the expected URL and the status code `200`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have to pause writing the test because the system under test (the `APIClient`
+    class) doesn't have a `session` property yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go to `APIClient` and add the property like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Switch back to the test class and add the call to fetch the to-do items:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Again, we have to pause because this method is not defined yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Go to `APIClient` and add the minimal implementation to make the test compile:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, we can finish the test. Add the assertion call as shown in this code
+    snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests to confirm that this new test fails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make the test pass, replace the `toDoItems` method in the `APIClient` class
+    with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this code, we define the URL, create a request, call `data(for:delegate:)`
+    on the session property, and try to decode the result into an array of `ToDoItems`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the tests to confirm that this code makes the tests pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But, there is something strange with this code. The URL is wrong. We need to
+    expand the test to also check for the used URL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following assert function call to the end of `test_doToItems_shouldFetchesItems`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests to confirm that the test now fails because we used the wrong URL
+    in the implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make the test pass, replace the URL initialization in the `toDoItems` method
+    with this implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests to confirm that now all tests pass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course, this implementation is just an example to get you started testing
+    network calls. In a real app, you would add authorization to the network calls
+    to ensure that users can only access their to-do items and not the ones of other
+    users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fetching data from a web service can go wrong. In the following section, we
+    will test whether the error from the `URLSession` instance is passed down to the
+    caller of `toDoItems`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling errors
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To test the handling of errors in the `URLSession` call to the web service,
+    we first need to enhance `URLSessionProtocolMock`. Follow these steps to test
+    that an error in fetching data is passed down to the caller of the `APIClient`
+    instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following property to `URLSessionProtocolMock`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, add the following handling of the error to the start of `data(for:delegate:)`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If there is an error set to the `dataForDelegateError` property, we throw it
+    before we do anything else in this method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we are ready to add the test method to `APIClientTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this code, we create an error and assign it to the `dataForDelegateError`
+    property of `urlSessionMock`. Then, we call `sut.toDoItems()` within a `do-catch`
+    block to catch the error we expect from the call. If no error is thrown from `toDoItems()`
+    the test fails with `XCTFail`. Otherwise, we compare the error with the expected
+    value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the tests. All tests pass already. This is bad. As you already learned,
+    in test-driven development we need to see a test fail before we make it green.
+    Otherwise, we can't be sure that the tests can fail. It's easy to write tests
+    that always pass. So, let's make the test fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Change the implementation of `data(for:delegate:)` in `URLSessionProtocolMock`
+    so that it looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests again to confirm that with this change, the new test fails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Remove the `throw NSError(domain: "dummy", code: 0)` line again and run the
+    tests to see all tests pass again.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With this test, we have confirmed that an error in fetching the data from the
+    web service is passed down to the caller of `toDoItems()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But what happens when the data from the web service is not in the format we
+    expect? What should happen in this case? Follow these steps to add a test for
+    this case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following test method to `APIClientTests`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The data we return here when `toDoItems` of `urlSessionMock` is called is a
+    JSON object of the `dummy` string. Trying to decode this into an array of `ToDoItem`
+    objects should result in an error of the `Swift.DecodingError` type. This is what
+    the last assertion in the test asserts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the tests. Again, all tests pass. And again, we need to change something
+    to see this test fail.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Go to `APIClient` and replace `toDoItems()` with the following implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this code, we have changed the last three lines of that method. Instead of
+    `try`, we use `try?` when we try to decode the data from the web service. When
+    the data cannot be decoded into an array of `ToDoItem`s, the result is optional
+    and no error is thrown. As a result, we also need to change the `return` value.
+    When the value of the `items` property is `nil`, we return an `empty` array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the tests. The test we added last now fails and we have confirmed that it
+    actually can fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Change the implementation of `toDoItems()` to what it was before:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the tests again to see all tests pass again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are many more tests to write for the implementation of this web service
+    call. For example, you should also write tests for cases when the web service
+    answers with an HTTP status code other than `200`. These tests are left as an
+    exercise for you. Add tests for this API call until you are confident that this
+    feature does not break unnoticed in the future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have learned how to write tests for calls to `CLGeoCoder`
+    and how to test the async/await REST API calls of `URLSession`. We have seen what
+    we need to do in the test method to test whether an error is thrown in an async/await
+    call. In addition, we have learned how to make our network code tests independent
+    from the implementation of server infrastructure. This way we made our tests fast
+    and robust.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use the skills gained in this chapter to write tests for the complete
+    network layer of your apps. But you don't have to stop there. The strategies we've
+    covered in this chapter also help to write tests for all kinds of async/await
+    APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will put all the code that we wrote up to now together,
+    and finally see the app running on the simulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have deactivated a test method using the `x_` prefix to hide it from the
+    test runner. There are other ways to deactivate a single test. Do some research
+    on the internet to figure these out.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In this chapter, we wrote tests for the async/await API of `URLSession`. But,
+    `URLSession` also provides an API that uses the delegate pattern and one that
+    uses Combine. Do some research on the internet to find out how to write unit tests
+    for these APIs. Make sure that these tests also run when there is no connection
+    to the server.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
