@@ -1,0 +1,341 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;8.&#xA0;Richer Keys and Data Structures"><div class="titlepage"><div><div><h1 class="title"><a id="ch08"/>Chapter 8. Richer Keys and Data Structures</h1></div></div></div><p>In this chapter of the book we will review some classical database theory as it relates to LevelDB. The motivation for this starts with a richer application study. <a class="link" href="ch06.html" title="Chapter 6. Integrating with a Cocoa UI">Chapter 6</a> <span class="emphasis"><em>Integrating with a Cocoa UI</em></span>, introduced the basics of how to connect a database to a GUI with record addition. Most applications also need to deal with changing or deleting data. This chapter's code adds these actions to <code class="literal">Sample06</code>, in a copy which keeps the same filenames, for easy comparison with the simpler sample. The first part of the chapter is structured similarly to <a class="link" href="ch06.html" title="Chapter 6. Integrating with a Cocoa UI">Chapter 6</a>, <span class="emphasis"><em>Integrating with a Cocoa UI</em></span>, to help further with this comparison.</p><p>
+<code class="literal">Sample06x</code> also improves searching via case-insensitive names and smart phone numbers. Searching needs support by customizing the indexing features of LevelDB. As part of that <code class="literal">Comparator</code> discussion we will look at ways to cope with binary integer keys.</p><div class="section" title="Completing the data source for a rich GUI"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec36"/>Completing the data source for a rich GUI</h1></div></div></div><p>The extended version of <a id="id200" class="indexterm"/>
+<code class="literal">Sample06</code> adds two major aspects:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Changing the data listed <a id="id201" class="indexterm"/>in the <code class="literal">tableview</code>, viewing a secondary index</li><li class="listitem" style="list-style-type: disc">Deleting and renaming records, implying key updates</li></ul></div><p>When it comes to updates, <code class="literal">Sample06</code> showed how a <span class="strong"><strong>Save</strong></span> button can simply trigger writing the record values back for the current key. Our first version was quite flawed as it created visible copies of records each time we changed a name. We need to ensure renaming occurs, rather than <span class="strong"><strong>Save</strong></span> behaving as if it's really <span class="strong"><strong>Save a Copy As</strong></span>.</p><p>Adding the phone number secondary index for listing implies writing a second key, each time we save from the GUI. This is easy for new records. However, when we save an existing record there are old key values which may need to be removed because they point to obsolete data. This implies a smart cleanup in the model that  knows when to remove keys and when to rewrite. If these <a id="id202" class="indexterm"/>concepts are familiar, skim this <a id="id203" class="indexterm"/>part but still have a look at how the key prefix is used as a flag to track the current listing mode.</p></div></div>
+<div class="section" title="Extending the OS X GUI to fully support editing"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec37"/>Extending the OS X GUI to fully support editing</h1></div></div></div><p>The full OS X GUI adds more <a id="id204" class="indexterm"/>action buttons for editing and <a id="id205" class="indexterm"/>sorting the list. The following screenshot shows a choice of lists:</p><div class="mediaobject"><img src="graphics/1015OS_08_01.jpg" alt="Extending the OS X GUI to fully support editing"/><div class="caption"><p>An OS X sample app showing a list with choice of lists and more editing controls</p></div></div><p>The extended OS X app <a id="id206" class="indexterm"/>is also a single window that adds:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">More buttons and menu <a id="id207" class="indexterm"/>items to provide the <span class="strong"><strong>View</strong></span> commands</li><li class="listitem" style="list-style-type: disc">Buttons and menu items for the <span class="strong"><strong>Revert</strong></span> and <span class="strong"><strong>Delete</strong></span> commands</li></ul></div></div>
+<div class="section" title="Connecting the database to the NSTableView"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec38"/>Connecting the database to the NSTableView</h1></div></div></div><p>In simple OS X apps, the <a id="id208" class="indexterm"/>
+<code class="literal">AppDelegate</code> object takes the role of the <code class="literal">ViewController</code> <a id="id209" class="indexterm"/>class in iOS apps. So, all of these interface methods and outlets are in <code class="literal">GSwLDB06osxAppDelegate</code>. The graphical interface is in <code class="literal">MainMenu06.xib</code>.</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The <span class="strong"><strong>View All</strong></span> button <a id="id210" class="indexterm"/>and the <span class="strong"><strong>View – All Records with Prefixes</strong></span> menu item are connected to the <code class="literal">(IBAction)viewAllRecords</code></li><li class="listitem" style="list-style-type: disc">The <span class="strong"><strong>View Names</strong></span> <a id="id211" class="indexterm"/>button and <a id="id212" class="indexterm"/><span class="strong"><strong>View – Names</strong></span> menu item are connected to the <code class="literal">(IBAction)viewNamesOnly</code></li><li class="listitem" style="list-style-type: disc">The <span class="strong"><strong>View Phones</strong></span> <a id="id213" class="indexterm"/>button and the <span class="strong"><strong>View – Phone numbers</strong></span> menu item are connected to the <code class="literal">(IBAction)viewPhonesOnly</code></li><li class="listitem" style="list-style-type: disc">The action of the <code class="literal">NSSearchField</code> <a id="id214" class="indexterm"/>class, and the <code class="literal">datasource</code> and <code class="literal">delegate</code> outlets of the <code class="literal">NSTableView</code> class are connected as in <code class="literal">Sample06</code></li></ul></div><p>The expanded declaration of <a id="id215" class="indexterm"/>
+<code class="literal">GSwLDB06osxAppDelegate</code> is shown in the following code. We will discuss the other actions and outlets below when we talk about editing records:</p><div class="informalexample"><pre class="programlisting">@interface GSwLDB06osxAppDelegate: NSObject
+  &lt;NSApplicationDelegate, NSTableViewDataSource,
+   NSTableViewDelegate&gt;
+- (IBAction)viewAllRecords:(id)sender;
+- (IBAction)viewNamesOnly:(id)sender;
+- (IBAction)viewPhonesOnly:(id)sender;
+- (IBAction)viewMatches:(id)sender;
+- (IBAction)newRecord:(id)sender;
+- (IBAction)saveRecord:(id)sender;
+- (IBAction)revertRecord:(id)sender;
+- (IBAction)deleteRecord:(id)sender;
+@property (weak) IBOutlet NSTextField *FirstNameEntry;
+...
+@property (weak) IBOutlet NSTextField *EmailEntry;
+@property (assign) IBOutlet NSWindow *window;
+@property (retain) IBOutlet NSTableView *tableView;
+@end</pre></div><p>The mechanism for loading a set of rows and copying them to the <code class="literal">tableview</code> object is the same as the simpler example of <code class="literal">Sample06</code>. All the knowledge of what it means to be viewing by phone, or by name, is hidden in the model <a id="id216" class="indexterm"/>class. So, to change the entire list to phones, we have an action invoked <code class="literal">viewPhonesOnly</code>:</p><div class="informalexample"><pre class="programlisting">- (IBAction)viewPhonesOnly:(id)sender {
+  [self.model loadPhones];
+  [self.tableView reloadData];
+  [self loadFieldsForCurrentSelectedRow];  // explicitly reload 
+}</pre></div><p>The expanded public interface <a id="id217" class="indexterm"/>of the model is in <code class="literal">Sample06_Model.h</code>, adding:</p><div class="informalexample"><pre class="programlisting">- (void)loadAllRecords;
+- (void)loadNames;
+- (void)loadPhones;
+- (void)deleteMatching:(NSString*)key;
+- (NSArray*)fieldsForKey:(NSString*)key;
+- (BOOL)saveRecord:(NSArray*)fields
+    replacingKey:(NSString*)oldKey;</pre></div><p>The class extension in <code class="literal">Sample06_Model.m</code> is also a little different, adding some methods and properties and replacing <code class="literal">addRecord</code> with a more complex one:</p><div class="informalexample"><pre class="programlisting">@interface Sample06_Model() {}
+- (NSString*)mainKeyFrom:(NSString*)key;
+- (void)addRecord:(NSArray*)fields 
+    indexingPhone:(BOOL)addPhoneKey
+    using:(id&lt;APLevelDBWriteBatch&gt;)batch;
+@property (retain) NSString* lastPrefixUsed;
+@property (nonatomic) BOOL neverLoaded;</pre></div><p>The database creation and loading from <code class="literal">sample50000.txt</code> are very similar to <code class="literal">Sample05</code>, and the same as <code class="literal">Sample06</code>, except that we're using 50,000 records to see performance implications. We will look at record addition in detail later, when discussing editing. Continuing with our focus on loading the table, the big difference between this model code and <code class="literal">Sample05</code> is that it caches results in an array rather than just printing keys as they are iterated (costing 200 MB of memory for 50,000 records). It has the same use of a prefix <code class="literal">N~</code> or <code class="literal">P~</code> to distinguish key types. Added to <code class="literal">Sample05</code> simple model, support for the GUI means the model remembers <code class="literal">lastPrefixUsed</code>, which depends on the user's choice of <span class="strong"><strong>Names</strong></span> or <span class="strong"><strong>Phones</strong></span>. The two <a id="id218" class="indexterm"/>load methods we saw called from the GUI are:</p><div class="informalexample"><pre class="programlisting">- (void)loadPhones {
+  self.rowsForUI = [self.db keysWithPrefix:@"P~"
+    strippingFirst:2];
+  self.lastPrefixUsed = @"P~";
+}
+
+- (void)loadStartingWith:(NSString*)partialKey {
+  NSString* prefixedKey = [self.lastPrefixUsed 
+    stringByAppendingString:partialKey];
+  self.rowsForUI = [self.db keysWithPrefix:prefixedKey 
+    strippingFirst: [self.lastPrefixUsed length]];
+}</pre></div><p>These both use a method which was added <a id="id219" class="indexterm"/>to APLevelDB in the class category <code class="literal">APLevelDB_ADSearches</code>, alongside the <code class="literal">enumerateKeysWithPrefix</code> we saw in <code class="literal">Sample05</code>. It extends that method with the <code class="literal">strippingFirst</code> parameter to <a id="id220" class="indexterm"/>let a caller specify the length of a non-printing prefix on the key. When we are getting all records of a given type, the prefix length will be the same two characters as we have seen (<code class="literal">N~</code> or <code class="literal">P~</code>).</p><p>However, when responding to the GUI <code class="literal">viewMatches</code> action, we are searching for a prefix that includes their search term, for example, <code class="literal">N~Smith</code> for names starting with <code class="literal">Smith</code>. Our prefix is seven characters long but we want to strip two for display. Looking in <code class="literal">APLevelDB_APLevelDB_ADSearches.mm</code> we see the search implemented as follows:</p><div class="informalexample"><pre class="programlisting">- (NSArray*)keysWithPrefix:(NSString*)prefix 
+    strippingFirst:(int)numCharsToStrip
+{
+  NSMutableArray *keys = [NSMutableArray array];
+  if (numCharsToStrip &gt; 0) {
+    [self enumerateKeysWithPrefix:prefix 
+      block:^(NSString* key, BOOL* stop) {
+        [keys addObject:[key substringFromIndex:numCharsToStrip]];
+      }];
+  }
+  else {  // for speed use a different block that copies whole
+    [self enumerateKeysWithPrefix:prefix 
+      block:^(NSString* key, BOOL* stop) {
+        [keys addObject:key];
+      }];
+  }
+  return keys;
+}</pre></div><p>With this understanding of the keys array generation, let's review <code class="literal">Sample06_Model.m</code> and see how the array of keys is used to <a id="id221" class="indexterm"/>provide values for the tableview. The <code class="literal">Sample06</code> <code class="literal">countRows</code> and <code class="literal">keyForRow</code> methods are <a id="id222" class="indexterm"/>unchanged but our list is now smarter. The following code snippet shows how an array of keys is used to provide values for the <code class="literal">tableview</code> object:</p><div class="informalexample"><pre class="programlisting">- (void)loadListForUI {
+  if (self.neverLoaded) {
+    self.neverLoaded = NO;
+    [self loadNames];  // default UI is to give them names first
+  }
+  else if (self.lastPrefixUsed == @"N~") 
+    [self loadNames];
+  else if (self.lastPrefixUsed == @"P~") 
+    [self loadPhones];
+  else
+    [self loadAllRecords];
+}</pre></div><p>Did you notice the slight cheat? We are only displaying a single column table but the <code class="literal">Name</code> key is a combination of last and first name with a tab between. We just get that as a single string and allow the GUI to have a waver down the middle, rather than splitting into two columns. That makes it easier to flip to the single-column phone list.</p></div>
+<div class="section" title="Connecting record details to the editing form"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec39"/>Connecting record details to the editing form</h1></div></div></div><p>The <a id="id223" class="indexterm"/>extended <a id="id224" class="indexterm"/>editing behaviors are:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Revert</strong></span>: To discard any charged details and reload the current record</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Save</strong></span>: To copy the details entered back to the database, including changing keys and refreshing the list</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Delete</strong></span>: To remove the current record and secondary key from the database</li></ul></div><p>Allowing and responding to selection changes is no different from <code class="literal">Sample06</code> with a horizontal array of values from the record <a id="id225" class="indexterm"/>being copied to the entry fields. The core logic in the <code class="literal">fieldsForRow</code> method in <code class="literal">Sample06_Model</code> is the same—the basic record structure hasn't changed. However, the code has been split out into the separate <a id="id226" class="indexterm"/>
+<code class="literal">fieldsForKey</code> method which is used <a id="id227" class="indexterm"/>from several places.</p><div class="informalexample"><pre class="programlisting">- (NSArray*)fieldsForRow:(NSInteger)index {
+  NSString* key = [self keyForRow:index];
+  return [self fieldsForKey:key];    
+}
+
+- (NSString*) keyForRow:(NSInteger)row {
+  if (self.rowsForUI == nil)
+    [self loadListForUI];
+  return (NSString*)(self.rowsForUI[row]);
+}
+
+- (NSArray*)fieldsForKey:(NSString*)key {
+  NSData* mainRec = [self.db dataForKey:[self mainKeyFrom:key]];
+  NSError* decodeErr;
+  NSArray* fields = [NSJSONSerialization 
+    JSONObjectWithData:mainRec options:0 error:&amp;decodeErr];
+  assert(decodeErr == nil);
+  return fields;
+}</pre></div><p>There's one bit of complexity introduced because our GUI allows the user to list either the main <code class="literal">Name</code> index or <code class="literal">Phone</code> keys. We <a id="id228" class="indexterm"/>need a <code class="literal">Name</code> key to get the detailed record from the database but it's possible that the current table is showing <code class="literal">Phones</code>. This means that the selected value in the list is not the type of key we need. Or, to think in database terms, we are listing it by a foreign key.</p><p>This is where it is vital for the model to remember the type of list, which it sees as the <code class="literal">lastPrefixUsed</code> set by a method such as <code class="literal">loadPhones</code>. The model doesn't know anything about the GUI. It just knows it was last asked for phones or names. If we have a <code class="literal">Phone</code> key, we need to read its record to get the main key (remember this <span class="strong"><strong>secondary index</strong></span> in <code class="literal">Sample05</code>). It is done in the following way:</p><div class="informalexample"><pre class="programlisting">- (NSString*)mainKeyFrom:(NSString*)key {
+  if ([key hasPrefix:@"N~"])
+    return key;  // original is already prefixed
+  if ([self.lastPrefixUsed isEqualToString:@"N~"]) 
+    return [@"N~" stringByAppendingString:key];
+  if ([self.lastPrefixUsed isEqualToString:@"P &amp;&amp;
+    ![key hasPrefix:@"P~"])
+      key = [@"P~" stringByAppendingString:key];
+  // if get here need to translate a Phone key into a main one,
+  // read the main key indexed by phone number
+  return [self.db stringForKey:key];  // read fully prefixed key
+}</pre></div><p>Most of <code class="literal">mainKeyFrom</code> is about key <a id="id229" class="indexterm"/>construction, as string prefixing. The last line uses <code class="literal">stringForKey</code> to get the main key as a foreign key operation; the same <a id="id230" class="indexterm"/>relational searches we discussed in <a class="link" href="ch04.html" title="Chapter 4. Iteration and Searching Keys">Chapter 4</a>, <span class="emphasis"><em>Iteration and Searching Keys</em></span>.</p></div>
+<div class="section" title="Saving data with key updates"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec40"/>Saving data with key updates</h1></div></div></div><p>We've seen data loading extended to <a id="id231" class="indexterm"/>cope with listing and searching by different indexes. As seen in the original <code class="literal">Sample06</code>, to save we will need to send an array of fields <a id="id232" class="indexterm"/>back to the model to update the database. This time we're going to update the indexes properly. This starts with <code class="literal">GSwLDB06osxAppDelegate</code> knowing when it is saving a new record or an old one—the model needs to know what it replaces.</p><div class="informalexample"><pre class="programlisting">- (IBAction)saveRecord:(id)sender {
+  NSArray* fields = [NSArray arrayWithObjects:
+    [self.FirstNameEntry stringValue],
+    ...
+    [self.EmailEntry stringValue],
+    nil
+  ];
+
+  if (self.isNewRecord) {
+    [self.model saveRecord:fields];
+    self.isNewRecord = NO;
+    [self.tableView reloadData];  // list shows new record
+  } else {
+    NSString* origKey = [self.model keyForRow:
+      [self.tableView selectedRow]];
+    if ( [self.model saveRecord:fields replacingKey:origKey] )
+      [self.tableView reloadData]; // list shows new Name/Phone
+  }
+}</pre></div><p>The simple save case is when a new record has been saved, so the model knows it is creating a new record. We now see our common <code class="literal">addRecord</code> method works like <code class="literal">Sample05</code>, adding a phone record <a id="id233" class="indexterm"/>pointing to the main key and using JSON for the body, as shown in the following code:</p><div class="informalexample"><pre class="programlisting">- (void)saveRecord:(NSArray*)fields {
+  id&lt;APLevelDBWriteBatch&gt; wb = [self.db beginWriteBatch];  
+  [self addRecord:fields indexingPhone:YES using:wb];
+  [self.db commitWriteBatch:wb];  
+  self.rowsForUI = nil; // force reload when UI refreshes
+  return YES;
+}
+- (void)addRecord:(NSArray*)fields indexingPhone:(BOOL)addPhoneKey 
+    using:(id&lt;APLevelDBWriteBatch&gt;)batch
+{
+  NSString* nameKey = nameKeyFromFields(fields); 
+  NSError* encErr;
+  NSData* enc = [NSJSONSerialization dataWithJSONObject:fields 
+    options:0 error:&amp;encErr];
+  assert(encErr == nil);
+  [batch setData:enc forKey:nameKey];  // main record
+  if (addPhoneKey &amp;&amp; [fields[ePhone] length] &gt; 0) {
+    NSString* phoneKey = phoneKeyFromFields(fields);
+    [batch setString:nameKey forKey:phoneKey];  
+  }
+}</pre></div><p>The complex case of saving an existing <a id="id234" class="indexterm"/>record has to cope with the need to change the secondary index of the <code class="literal">Phone</code> key, if either the phone number or the main key has changed. As shown in the following code:</p><div class="informalexample"><pre class="programlisting">- (BOOL)saveRecord:(NSArray*)fields replacingKey:(NSString*)oldKey 
+{
+  NSArray* oldRecord = [self fieldsForKey:oldKey];
+  const int numFields = [oldRecord count];
+  bool allSame = true;
+  for (int i=0; i&lt;numFields &amp;&amp; allSame; ++i) {
+    allSame = [fields[i] isEqualToString:oldRecord[i]];
+  }
+  if (allSame)
+    return NO;  // so caller knows no change
+    
+  id&lt;APLevelDBWriteBatch&gt; wb = [self.db beginWriteBatch];      
+  NSString* keyToUpdate = [self mainKeyFrom:oldKey];
+  NSString* newKey = nameKeyFromFields(fields);
+  BOOL replacePhone = NO;
+  if ( ![newKey isEqualToString:keyToUpdate] ) {
+    [wb removeKey:keyToUpdate];
+    replacePhone = YES; // value (names) of phone record changed 
+  }
+  NSString* phoneKey = phoneKeyFromFields(fields);
+NSString* oldPhoneKey = phoneKeyFromFields(oldRecord);
+if ( ![phoneKey isEqualToString:oldPhoneKey] ) {
+  replacePhone = YES;  // key changed
+  [wb removeKey:oldPhoneKey];
+}
+  [self addRecord:fields indexingPhone:replacePhone using:wb];
+  [self.db commitWriteBatch:wb];  
+  self.rowsForUI = nil;  // forced reload when UI refreshes
+  return YES;
+}</pre></div><p>The save method could be as simple as <a id="id235" class="indexterm"/>just one record being written, if all the keys stayed the same but only some non-key values <a id="id236" class="indexterm"/>changed, such as e-mail. In the worst case, the previous code performs two deletions and two writes, if both the phone number and one of the names changed.</p></div>
+<div class="section" title="Responding to the new and delete commands"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec41"/>Responding to the new and delete commands</h1></div></div></div><p>A <code class="literal">new</code> command is just a GUI action clearing all the entry fields. It sets a property of the delegate <code class="literal">isNewRecord</code>, as you <a id="id237" class="indexterm"/>saw used previously in <a id="id238" class="indexterm"/>
+<code class="literal">saveRecord</code>. The model doesn't know it's a new record until you invoke the simple save shown earlier. The following code shows the <code class="literal">new</code> command:</p><div class="informalexample"><pre class="programlisting">- (IBAction)newRecord:(id)sender 
+{
+  self.isNewRecord = YES;
+  if ([self.tableView numberOfSelectedRows] == 0)
+    [self clearEntryFields];
+  else  // selecting none will trigger clearEntryFields
+    [self.tableView deselectAll:sender]; 
+}</pre></div><p>The <code class="literal">delete</code> command <a id="id239" class="indexterm"/>removes the current record and tries to keep the selection in the same place, reloading data to suit. As you saw earlier in methods such as <code class="literal">viewPhonesOnly</code>, we need to explicitly call <code class="literal">loadFieldsForCurrentSelectedRow</code> when the list content changes, but the selection may have stayed on the same row number. The following code shows the <code class="literal">delete</code> command:</p><div class="informalexample"><pre class="programlisting">- (IBAction)deleteRecord:(id)sender  {
+  if ([self.tableView numberOfSelectedRows] == 0)
+    return;
+  int row = [self.tableView selectedRow];
+  NSString* originalKey = [self.model keyForRow:row];
+  [self.model deleteMatching:originalKey];
+  [self.tableView reloadData];
+  int lastRow = [self.model countRows] - 1;
+  if (row &gt; lastRow)
+    row = lastRow;
+  // usually select the same row
+  [self.tableView selectRowIndexes:
+    [NSIndexSet indexSetWithIndex:row] 
+    byExtendingSelection:NO];
+  [self loadFieldsForCurrentSelectedRow];
+}</pre></div><p>The <code class="literal">model</code> method just needs to delete the main and secondary phone index records as shown:</p><div class="informalexample"><pre class="programlisting">- (void)deleteMatching:(NSString*)key 
+{
+  NSString* delKey = [self mainKeyFrom:key];
+  NSArray* delRecord = [self fieldsForKey: delKey];
+  NSString* delPhoneKey = phoneKeyFromFields(delRecord);
+  [self.db removeKey:delKey];
+  [self.db removeKey:delPhoneKey];
+  self.rowsForUI = nil;  // force reload when UI refreshes
+}</pre></div><p>Note how we read the main record to get the phone key. There's a possible optimization that you could do depending on the current list being by phone but this is clearer code.</p><div class="section" title="Key design for LevelDB versus relational theory and SQL"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec14"/>Key design for LevelDB versus relational theory and SQL</h2></div></div></div><p>A key should exist in <a id="id240" class="indexterm"/>LevelDB because:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">You want to directly use the associated value.</li><li class="listitem" style="list-style-type: disc">The key itself provides information without a value.</li><li class="listitem" style="list-style-type: disc">You can navigate from the key via a portion of it, or the associated value, to another key. Ultimately, this chain of keys leads to the value you want.</li></ul></div><p>There is a limitation in the design of the keys and values we've been storing so far for phone numbers—the problem of uniqueness. Our pair of keys and values looks like the following:</p><div class="mediaobject"><img src="graphics/1015OS_08_02.jpg" alt="Key design for LevelDB versus relational theory and SQL"/><div class="caption"><p>Current keys and values in the Sample06 names and addresses database</p></div></div><p>The convention used in this and other diagrams in this chapter is that keys by themselves will be in plain rectangles with the associated values in a 3D box pointed to by a diamond and arrow (UML style for contained relationship). So, if you see a rectangle which doesn't point to a 3D box, then that's a key without a value (as seen in the next image).</p><p>The problem with this naive key design is that it only allows a given phone number to occur once in the entire database, as we're composing a key just from the phone number. That's an obvious flaw—people share phone numbers. A similar problem occurs with the names—there's only one <span class="emphasis"><em>Andy Dent</em></span> allowed. If this seems confusing, remember that the key-value store in LevelDB works like a giant dictionary—<span class="strong"><strong>keys are unique</strong></span> and the only way to have keys repeat values is to add more information so that each key is still unique.</p><p>Names can be fixed by simply adding a unique suffix to the end of the key, such as an integer incremented for each record. To make phone numbers work, we need to move the associated name out of the value and into the key, so we have the phone key with <span class="strong"><strong>no value</strong></span>. That move by itself would just allow for a single phone key per unique name, so if we want many phones we must also add a unique suffix to the end of each phone key.</p><div class="mediaobject"><img src="graphics/1015OS_08_03.jpg" alt="Key design for LevelDB versus relational theory and SQL"/><div class="caption"><p>Changes to key structures to support duplicate names and phone numbers in the names and addresses database</p></div></div><p>If you have studied relational theory or <a id="id241" class="indexterm"/>
+<span class="strong"><strong>normal forms</strong></span>, in your use of SQL databases, this will be starting to seem familiar. There's a simple <a id="id242" class="indexterm"/>principle we can apply here—when in doubt, regard your LevelDB keys as equivalent to relational tables and only move non-key attributes into the associated value.</p></div></div>
+<div class="section" title="Deciding when to store one record or split values"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec42"/>Deciding when to store one record or split values</h1></div></div></div><p>Our record so far has been a <a id="id243" class="indexterm"/>simple array encoded with a JSON serializer. As you saw earlier, when we update any fields in the GUI, we need to rewrite that record. If we change the phone number or names, we also need to rewrite the phone number secondary <a id="id244" class="indexterm"/>index record. We can make it more flexible for updates by moving data into the keys as shown in the following figure:</p><div class="mediaobject"><img src="graphics/1015OS_08_04.jpg" alt="Deciding when to store one record or split values"/><div class="caption"><p>Keys and values if the refactored Sample06 database to allow multiple phones</p></div></div><p>In the previous diagram, it looks like we have a bit of an explosion of keys, from two to four. Phone numbers are now paired keys, prefixed with <code class="literal">P~</code> and <code class="literal">R~</code>. This is a common pattern for building a <a id="id245" class="indexterm"/>
+<span class="strong"><strong>graph database</strong></span> on top of a Key-value store. A single fact of two things being related must be described by at least two keys, so you can search by either related item. As the phones are not in the main data, we need to be able to go back to them via the nameId when they are updated.</p><p>Another consideration is that duplicating the names in many keys costs a lot of storage. In order to avoid the storage overhead of the name being part of the phone key, we need a unique nameId that can be used with the phone. We can use that instead of the unique suffix that was part of the name key before, <a id="id246" class="indexterm"/>so our name key is still almost identical. However, the main value is no longer associated directly with that name key. Instead, the nameId is used as the key for the detailed record. The immediate implication is that we have doubled the reads to get more details when listing people by name. This is not <a id="id247" class="indexterm"/>actually very expensive if we consider the usage patterns in <code class="literal">Sample06</code>—the list of items for the <code class="literal">tableview</code> object still comes from a single iteration through name keys. It just adds a bit of overhead to load the details when we select a given name.</p><p>We will no longer store the phone number in the JSON array, but we will rely on a key to supply that number. This means we have to be able to retrieve the Phone number from a name. Hence we have the paired keys that use the P~ and R~ prefixes. People change phone numbers frequently so by pulling the phone number out of the main details, we have avoided a rewrite of the major key and associated value. </p><p>We can now trivially extend the database to allow for multiple phone numbers, although that would require significant GUI rework, like Apple's contacts for editing the numbers. <a class="link" href="ch10.html" title="Chapter 10. Tuning and Key Policies">Chapter 10</a>, <span class="emphasis"><em>Tuning and Key Policies</em></span>, discusses the implications of this key refactoring in more detail.</p><p>If you are familiar with relational database normalization, the reasons for the factoring out above should be common patterns for you. The apparent difference is that a single relational table would allow querying from either aspect, for example, a single row (tuple) linking phone number, nameId, and phone role. However, on most database servers, a DBA will usually specify an index on at least two of those columns, for better search performance, so the actual data stored in a SQL database would start resembling our key diagram.</p><p>A relational database forces you to factor data out into separate tables whenever you need to represent multiples, such as, our <a id="id248" class="indexterm"/>phone numbers. We can store multiple items in JSON values in our record to have much more flexibility. Thousands of individual details could be buried in an individual's record <a id="id249" class="indexterm"/>without requiring complex table structures. The only downside is that searching by those details would require reading the entire database.</p></div>
+<div class="section" title="Implementing schemas for LevelDB"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec43"/>Implementing schemas for LevelDB</h1></div></div></div><p>In a classical relational <a id="id250" class="indexterm"/>database, the schema definition describes each table. The tables have strict data types and every row has the same content. A lot of <a id="id251" class="indexterm"/>work has been done on <span class="strong"><strong>ORM</strong></span> (<span class="strong"><strong>Object-Relational Mapping</strong></span>) products and there are multiple patterns that can be applied. See <span class="emphasis"><em>Scott Ambler's</em></span> <a class="ulink" href="http://www.agiledata.org/essays/mappingObjects.html">http://www.agiledata.org/essays/mappingObjects.html</a> and <span class="emphasis"><em>Martin Fowler's</em></span> <a class="ulink" href="http://martinfowler.com/eaaCatalog/">http://martinfowler.com/eaaCatalog/</a> for detailed discussions on ORM.</p><p>One of the reasons for the rise of NoSQL databases is the flexibility they add. While we have been storing quite uniform data in our records, just using the JSON serialization approach allows us to easily map a complex dictionary into a record. Nothing in LevelDB cares about the structure of one record being different from the next. Remember that, while we've been talking as if our different keys are in different indexes, they are really just in the one key-value store with only our prefixing convention differentiating them.</p><p>So, what value can schema support provide in LevelDB? It's not a constraining or mandatory thing, but as an extension to APLevelDB, provides helpers to manage complex keys. All that work we added in the first part of this chapter was just to maintain two keys pointing to the main record. Imagine adding another five keys into the mix and also having to generate unique identifiers. It would be nice to just declare the relationships between keys and how they are derived, supplying the minimum amount of code for any custom key assembly.</p><p>The schema support also helps map to the content of the detail record or to data stored in associated keys, such as the phone number. The original <code class="literal">Sample06</code> used enums to index the JSON array of values. Using a schema allows us to supplement those by key paths in the dotted style of Apple's key-value coding. The schema also provides a generic interface to read those details to help you include a REPL for debugging. Each schema entry is stored in the database with a simple key such as <code class="literal">~~Person</code> with the entire schema entry details in a JSON dictionary in the value for the key.</p><p>All of the changes to-date in <a id="id252" class="indexterm"/>APLevelDB plus schema support have been rolled up and published online at <a class="ulink" href="https://github.com/AndyDentFree/APLevelDBSS">https://github.com/AndyDentFree/APLevelDBSS</a> and shown in another copy of <code class="literal">Sample06</code>. <a id="id253" class="indexterm"/>The extended functionality of <code class="literal">Sample06</code> is combined with the refactored key structure in the previous figure with <code class="literal">Sample06sch</code>.</p></div>
+<div class="section" title="Dealing with integer key endianness"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec44"/>Dealing with integer key endianness</h1></div></div></div><p>LevelDB doesn't actually care if <a id="id254" class="indexterm"/>you store string values or arbitrary binary bytes—we've already seen how you can just push the structure into a record and that the <code class="literal">Slice</code> structure works with binary for keys and values. If you want an efficient, unique, compact key, storing a binary integer is an obvious choice for all or part of a key, such as our nameId.</p><p>However, the <code class="literal">BytewiseComparator</code>, used by default, will cause problems if you try making keys using integers straight from memory. Both Intel and ARM chips (Mac and iPhone) store integers in <a id="id255" class="indexterm"/>
+<span class="strong"><strong>Little Endian</strong></span> order which means the least-significant byte is to the left and sorting of an integer key by bytes won't work. This is only a problem if you want the keys sorted. If your binary integers just provide a unique suffix, ignore this.</p><p>The code for this chapter includes a file, <code class="literal">Log of Listing Binary Keys Sample08 OSX.txt</code>, that shows the effect of this and how it can be fixed by a custom comparator (see<span class="emphasis"><em> Using comparators to vary key ordering</em></span> section) or simply by flipping the order of bytes in the integer:</p><div class="informalexample"><pre class="programlisting">Using database with standard BytewiseComparator
+Listing the keys in decimal and hex
+ 256 ( 100)
+ 512 ( 200)
+ 768 ( 300)
+   1 (   1)
+ 257 ( 101)
+ ...
+Using database with binaryComparator
+Listing the keys in decimal and hex
+   1 (   1)
+   2 (   2)
+   3 (   3)
+…</pre></div><p>The same code generates both lists—a simple function that loops to add a bunch of keys and then iterates the database, reading back those keys that were added:</p><div class="informalexample"><pre class="programlisting">  for (int i=1; i&lt;1000; i+=1) {
+    assert( [db addBinaryKey:&amp;i length:sizeof(i)] );
+  }
+  printStr(@"Listing the keys in decimal and hex");
+  [db enumerateBinaryKeys:^(NSData *key, BOOL *stop) {
+    long n;
+    [key getBytes:&amp;n length:sizeof(n)];
+    printStr( [NSString stringWithFormat:@"%4ld (%4lx)",n, n] );
+  }];</pre></div><p>We get the same ordered result by using a database with a default <code class="literal">BytewiseComparator,</code> but flipping keys to store bytes in Little <a id="id256" class="indexterm"/>Endian order. If we were doing searches we would also need to flip the search value entered:</p><div class="informalexample"><pre class="programlisting">  for (long i=1; i&lt;1000; i+=1) {
+    long flippedI = <span class="strong"><strong>htonl(i);</strong></span>
+    assert( [db addBinaryKey:&amp;flippedI length:sizeof(flippedI)] );
+  }
+  printStr(@"Listing the keys in decimal and hex");
+  [db enumerateBinaryKeys:^(NSData *key, BOOL *stop) {
+    long n;
+    [key getBytes:&amp;n length:sizeof(n)];
+    <span class="strong"><strong>n = htonl(n);</strong></span>
+    printStr( [NSString stringWithFormat:@"%4ld (%4lx)",n, n] );
+  }];</pre></div><p>The system function <code class="literal">htonl</code> is a very efficient byte swapper. It has siblings <code class="literal">htnoll</code> and <code class="literal">htons</code> for 64 and 16 bit integers. If your key has more than one integer component, maybe mixing binary integers with strings, you would swap each integer individually.</p><div class="section" title="Using comparators to vary key ordering"><div class="titlepage"><div><div><h2 class="title"><a id="ch08lvl2sec15"/>Using comparators to vary key ordering</h2></div></div></div><p>The LevelDB documentation <a id="id257" class="indexterm"/>discusses the use of custom comparators, and they can be a powerful addition to your database toolkit, but people often misunderstand their role. Comparators are like the sort functions you pass into standard library sorts but they have a <span class="strong"><strong>lasting effect on the database</strong></span>. The core data structures of LevelDB tables store keys sorted by the <code class="literal">Comparator</code>. When you are searching, the comparator's <code class="literal">Compare</code> function is called as part of the tree traversal. Writing a comparator is a lifetime commitment, for the lifetime of that database. Your code provides the comparator, so to open and use the database, you have to keep supplying that comparator. Comparator objects supply a <code class="literal">Name</code> through a virtual function, checked on opening to confirm you have specified a matching comparator for that used to create the database.</p><p>As we have seen already, you can accomplish a lot with careful use of key prefixes and flipping the order of integers in binary keys. However, there are some things that can only be done with a custom comparator. The enhanced <code class="literal">Sample06</code> shows two examples:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">For names, we ignore case. That provides a more natural user experience.</li><li class="listitem" style="list-style-type: disc">For Phones, we ignore any non-digits. It won't matter if the number is entered with dashes, spaces, dots, or no separator.</li></ul></div><p>These are two distinct roles but only <a id="id258" class="indexterm"/>one comparator can be used for a database. We're still using APLevelDB as our basic Objective-C interface, but it needed a bit more modification to allow us to specify that comparator which is simply passed as a function pointer to the <code class="literal">leveldb::Options</code> structure that is used when we open a database. We start by adding a pointer type into <code class="literal">APLevelDB.h</code> and an extra database factory method that takes a comparator, as shown in the following code:</p><div class="informalexample"><pre class="programlisting">#ifdef __cplusplus
+  typedef leveldb::Comparator* leveldbComparatorPtr;
+#else
+  typedef void* leveldbComparatorPtr;
+#endif
+...
+@interface APLevelDB : NSObject
+...
++ (APLevelDB *)levelDBWithPath:(NSString *)path 
+    error:(NSError **)errorOut
+    comparator:(leveldbComparatorPtr)adoptedComparator;
+- (leveldbComparatorPtr) getComparator;</pre></div><p>The matching changes in <a id="id259" class="indexterm"/>
+<code class="literal">APLevelDB.mm</code> include adding an <span class="strong"><strong>ivar</strong></span> to point to the comparator and <a id="id260" class="indexterm"/>rewriting the original <code class="literal">init</code> method so it takes a comparator as shown in the following code.</p><div class="informalexample"><pre class="programlisting">@interface APLevelDB () {
+  ...
+<span class="strong"><strong>  leveldbComparatorPtr _comparator;</strong></span>
+}
+- (id)initWithPath:(NSString *)path error:(NSError **)errorOut
+     comparator:(leveldbComparatorPtr)adoptedComparator;
+  ...
+@end
+
+@implementation APLevelDB
+...
++ (APLevelDB *)levelDBWithPath:(NSString *)path 
+  error:(NSError **)errorOut {
+    return [[APLevelDB alloc] initWithPath:path 
+      error:errorOut comparator:NULL];
+}
+
++ (APLevelDB *)levelDBWithPath:(NSString *)path 
+  error:(NSError **)errorOut 
+  comparator:(leveldbComparatorPtr)adoptedComparator {
+    return [[APLevelDB alloc] initWithPath:path 
+      error:errorOut comparator:adoptedComparator];
+}
+
+- (id)initWithPath:(NSString *)path error:(NSError **)errorOut
+  comparator:(leveldbComparatorPtr)adoptedComparator 
+{
+  if ((self = [super init])) {
+    _path = path;
+    _comparator = adoptedComparator;  // maybe NULL    
+    leveldb::Options options = [[self class]defaultCreateOptions];
+   <span class="strong"><strong> if (adoptedComparator != NULL)</strong></span>
+<span class="strong"><strong>      options.comparator = adoptedComparator;</strong></span>
+    leveldb::Status status = leveldb::DB::Open(options, 
+      [_path UTF8String], &amp;_db);
+...</pre></div><p>After passing in the comparator function pointer to the options, it will automatically be used by the database. However, you must make sure all programs using that database continue to use the same comparator. The core of the comparator is the <code class="literal">Compare</code> function which either calls our own case-insensitive <a id="id261" class="indexterm"/>
+<code class="literal">Name</code> comparison, digit-only phone comparison, or defaults to the standard <code class="literal">BytewiseComparator</code>. I highly recommend including a default fallback, if you have key types that are detected like our prefixes. We assume from our key scheme that a <code class="literal">~</code> in the second character indicates a special key, the following code shows this:</p><div class="informalexample"><pre class="programlisting">  virtual int Compare(const Slice&amp; a, const Slice&amp; b) const {
+    const char* adata = a.data();
+    const char* bdata = b.data();
+    if (adata[0] != bdata[0]) { // check first character
+      if (adata[0] &lt; bdata[0])
+        return -1;
+      return 1;
+    } // 1st char the same, is it a N~ or P~ key?   
+    if (adata[1] != '~' || bdata[1] != '~')  // not special key
+      return BytewiseComparator()-&gt;Compare(a, b); // USE DEFAULT
+    if (adata[0] == 'P') // only check digits, skipping any others
+      return ComparePhones(adata+2, bdata+2, 
+               a.size()-2, b.size()-2); 
+    return CompareCaseInsensitive(adata+2, bdata+2, 
+               a.size()-2, b.size()-2);
+  }  </pre></div><p>Inside LevelDB, the use of a comparator is automatic but in my code for iterating keys I fell into a common trap that <span class="strong"><strong>bypassed</strong></span> it. The extension <code class="literal">APLevelDB_ADSearches</code> adds a method that compares two keys and <a id="id262" class="indexterm"/>our first implementation used the efficient <code class="literal">Slice::starts_with</code> function. <a id="id263" class="indexterm"/>That is only safe with the standard <code class="literal">Comparator</code> function, which uses the same logic as <code class="literal">starts_with</code>:</p><div class="informalexample"><pre class="programlisting"> - (void)enumerateKeysWithPrefix:(NSString*)prefix 
+         block:(void (^)(NSString* key, BOOL* stop))block
+{
+  BOOL stop = NO;
+  leveldb::Slice prefixSlice = SliceFromString(prefix);
+  std::unique_ptr&lt;leveldb::Iterator&gt; iter( 
+    [self getDB]-&gt;NewIterator(leveldb::ReadOptions()) );
+  leveldbComparatorPtr customComp = [self getComparator];
+  if (customComp == nullptr) {  // safe to use starts_with
+    for (iter-&gt;Seek(prefixSlice); iter-&gt;Valid() &amp;&amp; 
+      iter-&gt;key().starts_with(prefixSlice); iter-&gt;Next()) {
+      NSString *k = StringFromSlice( iter-&gt;key() );
+      block(k, &amp;stop);
+      if (stop)
+        break;
+    }
+  } else {
+    // custom comparator so have to use it to check the prefix
+    const size_t prefixLen = prefixSlice.size();
+    for (iter-&gt;Seek(prefixSlice); iter-&gt;Valid(); iter-&gt;Next()) {
+      leveldb::Slice key(iter-&gt;key());
+      leveldb::Slice partKey( key.data(), 
+        std::min(key.size(), prefixLen));
+      if (customComp-&gt;Compare(partKey, prefixSlice) != 0)
+        break;
+      NSString *k = StringFromSlice( iter-&gt;key() );
+      block(k, &amp;stop);
+      if (stop)
+        break;
+    }   
+  }
+}</pre></div><p>The same bug is exhibited by the sample <a id="id264" class="indexterm"/>code on the LevelDB site for iteration that compares a string <code class="literal">it-&gt;key().ToString() &lt; limit</code>, and so is not using the custom comparator. This example is part of the source so the gotcha has been propagated widely!</p></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch08lvl1sec45"/>Summary</h1></div></div></div><p>The following summarizes this chapter’s techniques, in order of their dependencies.</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Add extra secondary (foreign) keys</strong></span>:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Gain extra search performance without having to read all content</li><li class="listitem" style="list-style-type: disc">Cost added code and disk space</li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Refactoring data out into Multiple Keys</strong></span>:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Gains and Costs same as other extra keys</li><li class="listitem" style="list-style-type: disc">Gain more stable main data not being rewritten</li><li class="listitem" style="list-style-type: disc">Cost extra read overhead of initial key then going via another key (maybe the ID key) to the main data</li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Using ID keys to provide indirection to the main record</strong></span>: Use this if you have multiple keys which need to refer to the same data and the primary key is long or changeable:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Gains and Costs same as other extra keys</li><li class="listitem" style="list-style-type: disc">Gain smaller indexes by smaller secondary keys</li><li class="listitem" style="list-style-type: disc">Gain stability of secondary keys if the main value is updated with less dependency on changed items (such as use of nameId instead of full name)</li><li class="listitem" style="list-style-type: disc">Cost extra logic to generate unique ID values</li><li class="listitem" style="list-style-type: disc">Cost extra read overhead even for the most common keys as they have to use the ID key to get the data</li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Use multiple keys in pairs (graph database) style</strong></span>: Use this when you have factored out a separate key to avoid frequently updated data being included in the main record:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Cost added complexity to maintain keys</li><li class="listitem" style="list-style-type: disc">Cost index space doubled for paired key</li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Endian flipping of integers in keys</strong></span>: Use this when you have binary integer values in keys and care about their impact on sorting order but don’t want to use a custom comparator</li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Custom comparators (use)</strong></span>: Reasons to use custom comparators are:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Sorting needs custom logic such as locale dependencies like some European languages</li><li class="listitem" style="list-style-type: disc">If you want to use keys directly in the GUI so can’t tolerate the loss of information from preprocessing,  such as forcing all incoming keys to lowercase</li><li class="listitem" style="list-style-type: disc">If you can optimize the way the delta to the next key is calculated, a custom Comparator might save significant index space</li><li class="listitem" style="list-style-type: disc">When the key contains significant data that should be ignored as it doesn’t aid sorting</li></ul></div></li><li class="listitem" style="list-style-type: disc"><span class="strong"><strong>Custom comparators (avoid)</strong></span>: Reasons to avoid using custom comparators are:<div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">If you are using multiple languages or frameworks and some don’t have support for setting the comparator on database open</li><li class="listitem" style="list-style-type: disc">When the database will be shared with others and you have no way to supply them with the comparator code</li></ul></div></li></ul></div><p>We rounded out the <code class="literal">Sample06</code> GUI sample with more complex scenarios of editing and saving data. With the ability to flip the list between names and phones we saw again how a secondary index can be used in LevelDB. We also saw the burden of maintaining that index when data changes or it is deleted.</p><p>After gaining a slightly painful awareness of how much work there is for just one table and two indexes, we took a more theoretical look at designing a key structure and learned how much more complex a database could have been used for <code class="literal">Sample06</code>. Schema support from APLevelDBSS was introduced to make using a complex key structure easier.</p><p>Revisiting binary values in keys, we finished with a look at how comparators support binary values or just making the searching experience more user-friendly.</p><p>In the next chapter, we will build a different real-world sample with a complex database using all these techniques and LevelDB extensions, tracking and finding documents.</p></div></body></html>
