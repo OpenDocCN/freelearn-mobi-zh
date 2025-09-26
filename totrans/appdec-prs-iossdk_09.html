@@ -1,0 +1,61 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;9.&#xA0;Error Handling and Security"><div class="titlepage"><div><div><h1 class="title"><a id="ch09"/>Chapter 9. Error Handling and Security</h1></div></div></div><p>While dealing with the cloud code, it's possible that a user could send invalid parameters in his/her queries. To handle such conditions on the cloud code, we have to send an error code in response to such queries. Errors can be in several forms, such as timeouts, ACL lists, undefined operations, and many more.</p><p>In this chapter, we will cover:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Error handling in order to enhance your application stability to handle such errors and respond accordingly</li><li class="listitem" style="list-style-type: disc">The measures to enhance the security of the data</li><li class="listitem" style="list-style-type: disc">The way to export your Parse data</li></ul></div><div class="section" title="Error handling"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec50"/>Error handling</h1></div></div></div><p>While <a id="id217" class="indexterm"/>working with Parse, you may come across two types of errors. The first is <a id="id218" class="indexterm"/>the logical error, which can occur because of the way you are using the SDK. This kind of error will usually raise an exception called <a id="id219" class="indexterm"/>
+<code class="literal">NSException</code>.</p><p>Let's say in the case of logging in, the ideal login process is to provide a username and password before calling <code class="literal">signUp</code> on the <code class="literal">PFUser</code> class. So, according to the following code, you are bypassing the username and password and calling <code class="literal">signUp</code> directly:</p><div class="informalexample"><pre class="programlisting">PFUser *user = [PFUser user];
+[user signUp];</pre></div><p>In such cases, the operation will throw an <code class="literal">NSInternalInconsistencyException</code> because <code class="literal">signUp</code> was called without username and password properties.</p><p>Errors can also occur while interacting with the Parse Cloud over the network. The error can be either because of connection with the Parse Cloud or it can be because of any requested operation. Let's look at another example:</p><div class="informalexample"><pre class="programlisting">- (void)fetchCourse {
+    PFQuery *query = [PFQuery queryWithClassName:@"Course"];
+    [query getObjectInBackgroundWithId:@"invalidObjectId"
+                                target:self
+              selector:@selector(callbackForFetch:error:)];
+}</pre></div><p>In the<a id="id220" class="indexterm"/> previous code, we are trying to fetch the object which is not available on the Parse Cloud. In such cases, Parse will throw an error in the dictionary format where the error code is readable through <code class="literal">error.code</code>, and the message is readable through <code class="literal">error.userinfo</code>.</p><p>The following code demonstrates the <code class="literal">callback</code> method for the previous method call:</p><div class="informalexample"><pre class="programlisting">- (void)callbackForFetch:(PFObject *)result error:(NSError *)error {
+    if (result) {
+        NSLog(@"Success!");
+    } else {
+        if ([error code] == kPFErrorObjectNotFound) {
+            NSLog(@"Object not available!");
+        } else if (error) {
+            NSLog(@"Error: %@", [[error userInfo] objectForKey:@"error"]);
+        }
+    }
+}</pre></div><p>In the preceding code, you will notice that we are using <code class="literal">kPFErrorObjectNotFound</code> for checking the error code. Parse provides various predefined constants for the errors. You can find all the predefined error codes in the <code class="literal">PFConstants</code> header file.</p><p>There may be several other possible reasons for the query failure, such as the device being unable to connect to the Parse Cloud server. In such cases, you will receive an error message in response with the description of the error. For this the <code class="literal">callback</code> method will be something like the following piece of code:</p><div class="informalexample"><pre class="programlisting">- (void)callbackForFetch:(PFObject *)result error:(NSError *)error {
+    if (result) {
+        NSLog(@"Success!");
+    } else {
+        if ([error code] == kPFErrorObjectNotFound) {
+            NSLog(@"Object not available!");
+        // Now also check for connection errors:
+        } else if ([error code] == kPFErrorConnectionFailed) {
+            NSLog(@"Connection failed with Parse Cloud!");
+        } else if (error) {
+            NSLog(@"Error: %@", [[error userInfo] objectForKey:@"error"]);
+        }
+    }
+}</pre></div><p>When you have sent <code class="literal">NSNumber</code> in response to the cloud code, its Boolean value is used to check <a id="id221" class="indexterm"/>whether the operation was successful or not. For example, you have invoked a <code class="literal">cloud</code> function to fetch the average marks of a student. In this case the <code class="literal">callback</code> method should be similar to the following method:</p><div class="informalexample"><pre class="programlisting">- (void)callbackForAverageMarks:(NSNumber *)result error:(NSError *)error {
+    if ([result boolValue]) {
+        NSLog(@"Success!");
+    } else {
+        if ([error code] == kPFErrorConnectionFailed) {
+            NSLog(@"Connection failed with Cloud!");
+        } else if (error) {
+            NSLog(@"Error: %@", [[error userInfo] objectForKey:@"error"]);
+        }
+    }
+}</pre></div><p>In the previous method, if the Boolean value for the result is <code class="literal">true</code>, the operation succeeds, else it fails with an error. Error handling is the same for all the foreground tasks as well.</p><p>The request timeout for all the commotions is 10 seconds, so the synchronous calls will not hang for long period of time. The connection timeout is the same for synchronous and asynchronous tasks.</p><p>Parse provides you with the list of Error codes along with their explanations. You can check this list at <a class="ulink" href="https://www.parse.com/docs/ios/api/Classes/PFConstants.html">https://www.parse.com/docs/ios/api/Classes/PFConstants.html</a>.</p></div></div>
+<div class="section" title="Securing your application data"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec51"/>Securing your application data</h1></div></div></div><p>It is considered<a id="id222" class="indexterm"/> best practice in the software industry<a id="id223" class="indexterm"/> to secure your application data as much as possible. For securing your data, you can specify an access control list provided by Parse to provide security to your object based on the user. It's recommended to enable an anonymous user automatically when the application is launched. It's also recommended to provide public writability only on the required objects. Such settings will protect your application data from unauthorized access. Following code will illustrate the usage of security in your application:</p><div class="informalexample"><pre class="programlisting">[PFUser enableAutomaticUser];
+PFACL *defaultACL = [PFACL ACL];
+// Optionally enable public read access while disabling public write access.
+// [defaultACL setPublicReadAccess:YES];
+[PFACL setDefaultACL:defaultACL withAccessForCurrentUser:YES];</pre></div><p>It's <a id="id224" class="indexterm"/>recommended to provide ACL to all your objects, as you have already learned in <a class="link" href="ch06.html" title="Chapter 6. Users and Roles">Chapter 6</a>, <span class="emphasis"><em>Users and Roles</em></span>.</p><p>You can secure your application even more by customizing the following settings on your <span class="strong"><strong>App Settings</strong></span> page:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Disable all the login mechanisms if you aren't using them. For example, if your app allows the user to log in using Facebook only, then disable all the other login methods from the settings.</li><li class="listitem" style="list-style-type: disc">Provide your Facebook <span class="strong"><strong>App Id</strong></span> and Twitter <span class="strong"><strong>Consumer Key</strong></span> information in your Parse application settings page to enable server-side validation for user login attempts.</li></ul></div></div>
+<div class="section" title="Exporting data"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec52"/>Exporting data</h1></div></div></div><p>Parse<a id="id225" class="indexterm"/> also<a id="id226" class="indexterm"/> allows you to export your database. For exporting your data, navigate to the <span class="strong"><strong>Settings</strong></span> page of the application and click on the <span class="strong"><strong>Export Data</strong></span> button. Once you click on the <span class="strong"><strong>Export Data</strong></span> button, Parse will compress all your data and export it to your e-mail ID, which is used for login. Exported data is in JSON format. The ZIP file will contain all your class objects in a separate file. The following is the example data of the <code class="literal">Class</code> object exported from Parse:</p><div class="informalexample"><pre class="programlisting">{ "results": [
+{
+  "name": "buy groceries",
+  "createdAt": "2013-07-03T11:04:05.062Z",
+  "updatedAt": "2013-07-05T10:15:08.909Z",
+  "objectId": "fYQ5ZfsM9m"
+},
+{
+  "name": "team planning",
+  "createdAt": "2013-08-15T07:22:51.976Z",
+  "updatedAt": "2013-08-15T07:22:51.976Z",
+  "objectId": "sBsAfr2Fm5"
+}
+] }</pre></div></div>
+<div class="section" title="Summary"><div class="titlepage"><div><div><h1 class="title"><a id="ch09lvl1sec53"/>Summary</h1></div></div></div><p>In this chapter, we explored the Parse Cloud code and its various implementations to simplify the application development on the mobile end.</p><p>We started by exploring the types of errors and the ways to handle them in your project.</p><p>Then, we learned how to enhance the application security.</p><p>Finally, we have seen the way to export our data from Parse.</p></div></body></html>
