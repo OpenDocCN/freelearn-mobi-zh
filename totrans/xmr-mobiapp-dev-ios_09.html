@@ -1,0 +1,309 @@
+<html><head></head><body>
+  <div class="book" title="Chapter&#xA0;9.&#xA0;Threading Tasks">
+    <div class="book">
+      <div class="book">
+        <div class="book">
+          <h1 class="title"><a class="calibre1" id="ch09"/>Chapter 9. Threading Tasks</h1>
+        </div>
+      </div>
+    </div>
+
+    <p class="calibre9">In the previous chapter, we took a look at the basics of using threads within an iOS application and the pitfalls that may confront you if you use them. In this chapter, I'll be carrying it on and we'll have a look at the other aspects of threading as well as asynchronous calls.</p>
+
+    <p class="calibre9">In this chapter we will be covering the following topics:</p>
+
+    <div class="book">
+      <ul class="itemizedlist">
+        <li class="listitem">Using background threading and <code class="email">System.Threading.Tasks</code> within your code</li>
+
+        <li class="listitem">Using asynchronous code</li>
+
+        <li class="listitem">Problems that using tasks may have on the threading model</li>
+      </ul>
+    </div>
+
+    <div class="book" title="A brief introduction to threading">
+      <div class="book">
+        <div class="book">
+          <div class="book">
+            <h1 class="title"><a class="calibre1" id="ch09lvl1sec38"/>A brief introduction to threading</h1>
+          </div>
+        </div>
+      </div>
+
+      <p class="calibre9">Threading moved on from its <a class="calibre1" id="id801"/>humble beginnings when developers discovered its power, and with that created background threading and task threading. Background threads are just that—you set something running in the background and look in on it sometimes, or when it's finished it will report back to you. On the college analogy I used in the previous chapter, the background threads are the admin staff—they're there in the background working away and report when they are done.</p>
+
+      <p class="calibre9">Threading tasks need to be thought of as almost miniature applications in themselves. They start, end, and can continue with the next task on the list—all this time, the app is free to be working on other tasks. There is an overhead to be considered with any threading operation, but unless you're doing something insanely complex, it's not going to be horrible.</p>
+
+      <div class="book" title="Using background threading within your app">
+        <div class="book">
+          <div class="book">
+            <div class="book">
+              <h2 class="title1"><a class="calibre1" id="ch09lvl2sec45"/>Using background threading within your app</h2>
+            </div>
+          </div>
+        </div>
+
+        <p class="calibre9">Background <a class="calibre1" id="id802"/>threading comes from <a class="calibre1" id="id803"/>the <a class="calibre1" id="id804"/> <code class="email">System.ComponentModel</code> namespace and is known as a <code class="email">BackgroundWorker</code> thread. <a class="calibre1" id="id805"/>Alternatively, <code class="email">ThreadPool.QueueUserWorkItem()</code> <a class="calibre1" id="id806"/>does the same thing (as <code class="email">ThreadPool</code> is from <code class="email">System.Threading</code>).</p>
+
+        <div class="book" title="BackgroundWorker">
+          <div class="book">
+            <div class="book">
+              <div class="book">
+                <h3 class="title2"><a class="calibre1" id="ch09lvl3sec101"/>BackgroundWorker</h3>
+              </div>
+            </div>
+          </div>
+
+          <p class="calibre9">The <code class="email">BackgroundWorker</code> <a class="calibre1" id="id807"/>thread is recommended when you don't want to tie up the UI, so creating large files or sending a large amount of data to a server can be considered to be used with <code class="email">BackgroundWorker</code>. When the thread is complete, the <code class="email">WorkerCompleted</code> <a class="calibre1" id="id808"/>event is raised. During the operation of <code class="email">BackgroundWorker</code>, the UI can be <a class="calibre1" id="id809"/>updated with the <code class="email">ProgressChanged</code> event. A background lasts for a finite amount of time. It is important to remember that <code class="email">BackgroundWorker</code> is an asynchronous task.</p>
+
+          <p class="calibre9">When you use a <code class="email">BackgroundWorker</code> <a class="calibre1" id="id810"/>thread, you need to write a code using three events (<code class="email">ProgressChanged</code> can be omitted if you don't want to use it).</p>
+
+          <div class="informalexample">
+            <pre class="programlisting">DoWork(object sender, DoWorkEventArgs e);
+RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e);
+ProgressChanged(object sender, ProgressChangedEventArgs e);</pre>
+          </div>
+
+          <p class="calibre9">The preceding code demonstrates using <code class="email">BackgroundWorker</code> within an app. It's simple enough; it puts a counter on the screen, which will carry on counting while it downloads a picture that is then displayed when the <a class="calibre1" id="id811"/> <code class="email">RunWorkerCompleted</code> event is raised.</p>
+
+          <div class="informalexample">
+            <pre class="programlisting">private UIImage downloadedImage;
+private BackgroundWorker bgWorker;
+private Timer t;
+private int counter = 0;
+
+public override void ViewDidLoad()
+{
+    base.ViewDidLoad();
+    bgWorker = new BackgroundWorker();
+    bgWorker.DoWork += HandleDoWork;
+    bgWorker.RunWorkerCompleted += HandleRunWorkerCompleted;
+    btnStart.TouchUpInside += delegate
+    {
+        t = new Timer(1000); // 1 second
+        t.Elapsed += delegate
+        {
+            counter++;
+            InvokeOnMainThread(delegate()
+            {
+                lblCountValue.Text = counter.ToString();
+            });
+        };
+        t.Start();
+        bgWorker.RunWorkerAsync();
+    };
+}
+
+private void HandleRunWorkerCompleted(object sender,RunWorkerCompletedEventArgs e)
+{
+    uiImageView.Image =UIImage.FromImage(downloadedImage.CGImage).Scale(newSizeF(240f, 240f));
+    t.Stop();
+}
+
+private void HandleDoWork(object sender, DoWorkEventArgs e)
+{
+    NSUrl url = new NSUrl("http://edmullen.net/test/rc.jpg");
+    NSData data = NSData.FromUrl(url);
+    downloadedImage = new UIImage(data);
+}</pre>
+          </div>
+
+          <p class="calibre9">The preceding code is simple enough to follow, it creates the <code class="email">BackgroundWorker</code> object and it also creates the handles and a click event for the button. Inside the button, it sets up a timer to update the counter every <a class="calibre1" id="id812"/>second and start <code class="email">BackgroundWorker</code>. When <a class="calibre1" id="id813"/> <code class="email">BackgroundWorker</code> <code class="email">DoWork</code> thread is completed, the image is displayed and scaled. The result of the preceding code is shown in the form of the following image:</p>
+
+          <div class="mediaobject"><img alt="BackgroundWorker" class="calibre11" src="../Images/00041.jpeg"/></div>
+
+          <p class="calibre12"/>
+
+          <p class="calibre9">Remember though, this is a background task—the UI can't act on the data until the data is ready. When you run the application, the <a class="calibre1" id="id814"/>counter value will differ as well, depending on if you're on a wireless network or outside, using 3G or 4G.</p>
+        </div>
+
+        <div class="book" title="ThreadPool.QueueUserWorkItem">
+          <div class="book">
+            <div class="book">
+              <div class="book">
+                <h3 class="title2"><a class="calibre1" id="ch09lvl3sec102"/>ThreadPool.QueueUserWorkItem</h3>
+              </div>
+            </div>
+          </div>
+
+          <p class="calibre9">Having seen how the <a class="calibre1" id="id815"/>background worker operates, let us <a class="calibre1" id="id816"/>consider using <code class="email">ThreadPool.QueueUserWorkItem</code> for the same task:</p>
+
+          <div class="informalexample">
+            <pre class="programlisting">private UIImage downloadedImage;
+private System.Timers.Timer t;
+private int counter = 0;
+
+public override void ViewDidLoad()
+{
+    base.ViewDidLoad();
+    btnStart.TouchUpInside += delegate
+    {
+        t = new Timer(100);
+        t.Elapsed += delegate
+        {
+            counter++;
+            InvokeOnMainThread(delegate()
+            {
+                lblCountValue.Text = counter.ToString();
+            });
+        };
+        t.Start();
+        ThreadPool.QueueUserWorkItem(delegate
+        {
+            ProcessFile();
+        }); 
+    };
+}
+
+private void ProcessFile()
+{
+    NSUrl url = new NSUrl("http://edmullen.net/test/rc.jpg");
+    NSData data = NSData.FromUrl(url);
+    downloadedImage = new UIImage(data);
+    InvokeOnMainThread(delegate()
+    {
+        uiImageView.Image =UIImage.FromImage(downloadedImage.CGImage).Scale(newSizeF(240f, 240f));
+    });
+    t.Stop();
+}</pre>
+          </div>
+
+          <p class="calibre9">The <span class="strong"><strong class="calibre2">callback</strong></span> is a piece of code <a class="calibre1" id="id817"/>passed as an argument, <a class="calibre1" id="id818"/>which needs to be executed at some point in time. In threading terms, it is typically executed within the <a class="calibre1" id="id819"/>thread being called or created. The callback tells the thread when it has called the thread back to the main thread. The end result is the same, <a class="calibre1" id="id820"/>but the <code class="email">QueueUserWorkItem</code> method can be used for both foreground and background tasks.</p>
+        </div>
+      </div>
+
+      <div class="book" title="Using System.Threading.Tasks">
+        <div class="book">
+          <div class="book">
+            <div class="book">
+              <h2 class="title1"><a class="calibre1" id="ch09lvl2sec46"/>Using System.Threading.Tasks</h2>
+            </div>
+          </div>
+        </div>
+
+        <p class="calibre9">The <code class="email">System.Threading.Tasks</code> <a class="calibre1" id="id821"/>namespace sets <a class="calibre1" id="id822"/>up tasks within a thread, so a thread can perform a type of mini <a class="calibre1" id="id823"/>program and then report back. It can also be used to start a task.</p>
+
+        <div class="informalexample">
+          <pre class="programlisting">var scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+Task.Factory.StartNew(() =&gt; GetMessage(currentPosition)).ContinueWith(ShowResults, scheduler);</pre>
+        </div>
+
+        <p class="calibre9">The call starts a new thread task that calls <code class="email">GetMessage</code>. Once that has returned, the task continues with <code class="email">ShowResults</code>. The <a class="calibre1" id="id824"/>scheduler prevents the timing from getting out of hand.</p><img alt="Note" class="calibre10" src="../Images/00001.gif"/>
+
+        <div class="informalexample" title="Note">
+          <h3 class="title2"><a class="calibre1" id="note04"/>Note</h3>
+
+          <p class="calibre9">While the code available at <a class="calibre1" href="http://www.gregshackles.com/2011/04/using-background-threads-in-mono-for-android-applications/">http://www.gregshackles.com/2011/04/using-background-threads-in-mono-for-android-applications/</a> is for Android, the same code can (more or less) be used in Xamarin.iOS and gives a fantastic cover of the different types of threading and how they're used.</p>
+        </div><img alt="Note" class="calibre10" src="../Images/00001.gif"/><br class="book"/>
+      </div>
+
+      <div class="book" title="Problems while using Tasks on threads">
+        <div class="book">
+          <div class="book">
+            <div class="book">
+              <h2 class="title1"><a class="calibre1" id="ch09lvl2sec47"/>Problems while using Tasks on threads</h2>
+            </div>
+          </div>
+        </div>
+
+        <p class="calibre9">Whenever an additional task <a class="calibre1" id="id825"/>is created, the processor has to start swapping between the tasks themselves, which slows the code down. You have the additional problem of tracking the tasks and how they work with the main UI thread. In general, they shouldn't cause a problem, but you also have to consider that unless you explicitly program the threads to run synchronously, they run asynchronously. To prevent the code from getting out of hand, locks or callbacks need to be used. <span class="strong"><strong class="calibre2">Locks</strong></span> may lead to <span class="strong"><strong class="calibre2">deadlock</strong></span> conditions, so be careful! Refer back to <a class="calibre1" href="../Text/part0040.html#page" title="Chapter 8. Threading">Chapter 8</a>, <span class="strong"><em class="calibre15">Threading</em></span>, for an overview of deadlocks and avoiding them.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="book" title="Using Asynchronous code">
+    <div class="book">
+      <div class="book">
+        <div class="book">
+          <h1 class="title"><a class="calibre1" id="ch09lvl1sec39"/>Using Asynchronous code</h1>
+        </div>
+      </div>
+    </div>
+
+    <p class="calibre9">Async is one of the big changes <a class="calibre1" id="id826"/>to .NET and was released in .NET v4, but has only quite recently landed within the Mono framework, and therefore within Xamarin.Android and Xamarin.iOS. As I explained in a previous chapter, asynchronous code can be a bit of a handful, but thankfully that bit of a handful is simple to understand.</p>
+
+    <div class="book" title="Tasks and EventHandlers">
+      <div class="book">
+        <div class="book">
+          <div class="book">
+            <h2 class="title1"><a class="calibre1" id="ch09lvl2sec48"/>Tasks and EventHandlers</h2>
+          </div>
+        </div>
+      </div>
+
+      <p class="calibre9">Take the following <a class="calibre1" id="id827"/>code as an example:</p>
+
+      <div class="informalexample">
+        <pre class="programlisting">var webView = new UIWebView();
+webView.LoadStarted += HandleLoadStarted;
+…
+private void HandleLoadStarted (object sender, EventArgs e)
+{}</pre>
+      </div>
+
+      <p class="calibre9">The handler for <a class="calibre1" id="id828"/> <code class="email">LoadStarted</code> is a synchronous process—in other words, it is like a walk to the pub in a straight line. The problem is that while <code class="email">webView</code> is loading a page, everything is being held up—so if it's a slow page or you need something else to be running (say a piece of music to play), there are going to be sticking points. This is where an asynchronous <code class="email">LoadStarted</code> event can be used.</p>
+
+      <div class="informalexample">
+        <pre class="programlisting">var webView = new UIWebView();
+webView.LoadStarted += async(object sender, EventArgs e) =&gt;{HandleLoadStarted(sender, e);};</pre>
+      </div>
+
+      <p class="calibre9">The <code class="email">async</code> <a class="calibre1" id="id829"/>method looks <a class="calibre1" id="id830"/>different from a normal method as shown in the following code:</p>
+
+      <div class="informalexample">
+        <pre class="programlisting">private async void HandleLoadStarted(object sender, EventArgs e)</pre>
+      </div>
+    </div>
+
+    <div class="book" title="A more practical example">
+      <div class="book">
+        <div class="book">
+          <div class="book">
+            <h2 class="title1"><a class="calibre1" id="ch09lvl2sec49"/>A more practical example</h2>
+          </div>
+        </div>
+      </div>
+
+      <p class="calibre9">Prior to the <a class="calibre1" id="id831"/> <code class="email">async</code> method being implemented, a system of events had to be implemented so that once the data had been returned it can be handled by the method (say, from a web data download). For example (the following is a psuedo code, so you get the idea):</p>
+
+      <div class="informalexample">
+        <pre class="programlisting">login.name = "nodoid201213";
+login.password = "312102diodon";
+login.DataReturned += HandleDataReturned;
+callLoginService(login);
+private void HandleDataReturned { … }</pre>
+      </div>
+
+      <p class="calibre9">The preceding code can now be handled in a single <code class="email">async</code> method, as shown in the following code:</p>
+
+      <div class="informalexample">
+        <pre class="programlisting">private async Task&lt;bool&gt; LogUserIn()
+{
+    login.name = "nodoid201213";
+    login.password = "312102diodon";
+    bool loginResult = await callLoginService(login);
+    return loginResult;
+}</pre>
+      </div>
+
+      <p class="calibre9">The key here is <code class="email">await</code>—this prevents the next line from executing until <code class="email">callLoginService</code> <a class="calibre1" id="id832"/>has returned. This greatly improves responsiveness—less code, fewer events to listen to, and far less messing about.</p>
+
+      <p class="calibre9">If a method returns a value, the <a class="calibre1" id="id833"/> <code class="email">Task&lt;T&gt;</code> parameter needs to be used prior to the method name. If there isn't a return value (as, when responding to a button click), <code class="email">void</code> needs to be used.</p>
+    </div>
+  </div>
+
+
+  <div class="book" title="Summary">
+    <div class="book">
+      <div class="book">
+        <div class="book">
+          <h1 class="title"><a class="calibre1" id="ch09lvl1sec40"/>Summary</h1>
+        </div>
+      </div>
+    </div>
+
+    <p class="calibre9">There are many uses for background threads as well as asynchronous calls, and the general recommendation is that if a process takes a long time, throw it at the background. Be careful when using threads. While for the majority of the time they are fine, you still need to test all apps on a real device to ensure the threads are working. Remember, the simulator is buggy (for example, the simulator works on a <span class="strong"><strong class="calibre2">Just In Time</strong></span> processor model rather than <span class="strong"><strong class="calibre2">Ahead Of Time</strong></span>, which the phone uses—the results are that web services may not work as planned) and doesn't work the same way as a phone.</p>
+  </div>
+</body></html>
