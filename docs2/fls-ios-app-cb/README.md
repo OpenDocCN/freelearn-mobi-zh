@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# Flash IOS 应用秘籍
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/9b329a16897637011cf7e4717543e930`](https://zh.annas-archive.org/md5/9b329a16897637011cf7e4717543e930)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
