@@ -1,4 +1,4 @@
-# *第二十五章*：SharePlay 入门
+# 第二十五章：*第二十五章*：SharePlay 入门
 
 苹果公司在 2021 年的 WWDC 上推出了 **SharePlay**，该功能允许用户通过将您的应用集成到 FaceTime 中使用 **Group Activities** 框架来共享体验。
 

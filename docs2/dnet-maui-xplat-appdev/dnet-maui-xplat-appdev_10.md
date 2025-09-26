@@ -1,6 +1,6 @@
 
 
-# 介绍 Blazor 混合应用程序开发
+# 第八章：介绍 Blazor 混合应用程序开发
 
 在.NET MAUI 中，构建**用户界面**（**UI**）的另一种方法是使用 Blazor。Blazor 是由微软开发的现代 Web 框架，允许开发人员使用 C#和 Razor 语法而不是 JavaScript 来创建交互式 Web 应用程序。此外，Blazor 还可以用于.NET MAUI 应用程序的开发，作为 Blazor 混合应用程序的一部分。Blazor 的基本构建块是 Razor 组件，当使用 Blazor 和 Blazor 混合时，这些组件可以在原生和 Web 应用程序之间重用。与 XAML UI 相比，Blazor UI 提供了更高的可重用性，包括原生和 Web 应用程序。在本章中，我们将介绍 Blazor 及其在各种场景中的实现。此外，我们将介绍 Razor 组件，并解释如何使用这些组件开发 Blazor 混合应用程序。
 

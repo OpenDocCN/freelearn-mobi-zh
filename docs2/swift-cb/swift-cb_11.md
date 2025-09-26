@@ -20,7 +20,7 @@ Swift 编程语言自从首次推出以来已经走了很长的路，与许多�
 
 +   使用 CoreML 和 Vision 框架实时检测对象
 
-# 技术要求
+# 第十二章：技术要求
 
 您可以在 GitHub 上找到本章中提供的代码文件，网址为[`github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter11`](https://github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter11)
 

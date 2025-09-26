@@ -16,7 +16,7 @@ Swift 游乐场
 
 +   在 iPadOS 上使用 Swift 游乐场
 
-# 技术要求
+# 第八章：技术要求
 
 本章的所有代码都可以在本书的 GitHub 仓库中找到：[`github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter07`](https://github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter07)
 

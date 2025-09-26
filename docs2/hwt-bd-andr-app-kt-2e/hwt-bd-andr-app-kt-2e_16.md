@@ -1,6 +1,6 @@
 
 
-# 使用 CoordinatorLayout 和 MotionLayout 的动画和过渡
+# 第十六章：使用 CoordinatorLayout 和 MotionLayout 的动画和过渡
 
 本章将向你介绍动画以及如何处理布局之间的切换。它描述了在 Android 中使用`MotionLayout`和 Motion Editor 移动对象，以及约束集的详细解释。本章还涵盖了修改路径和向帧的运动添加关键帧。
 

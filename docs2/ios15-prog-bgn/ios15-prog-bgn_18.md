@@ -1,4 +1,4 @@
-# *第十五章*：开始使用表格视图
+# 第十五章：*第十五章*：开始使用表格视图
 
 在上一章中，您配置了 `ExploreViewController` 类，这是 `ExploreData.plist` 在集合视图中的视图控制器。
 

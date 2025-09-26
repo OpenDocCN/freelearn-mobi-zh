@@ -1,6 +1,6 @@
 
 
-# Android 权限和 Google Maps
+# 第七章：Android 权限和 Google Maps
 
 本章将教您如何在 Android 中请求和获取应用权限。您将通过使用 Google Maps API 深入了解如何将本地和全局交互式地图包含到您的应用中，以及如何请求使用提供更丰富功能的设备功能的权限。
 

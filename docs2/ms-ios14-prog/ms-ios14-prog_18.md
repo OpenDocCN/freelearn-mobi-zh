@@ -1,4 +1,4 @@
-# *第十八章*：使用 Catalyst 创建 macOS 应用程序
+# 第十八章：*第十八章*：使用 Catalyst 创建 macOS 应用程序
 
 在 2019 年的 WWDC 上，苹果向全球开发者推出了 Mac Catalyst。有了 Mac Catalyst，开发者可以轻松地将 iPad 应用程序带到 Mac 上。Catalyst 允许 iPad 应用程序无需太多努力即可移植到 Mac。这为 iPad 应用程序带来了全新的受众（Mac 用户），并扩大了 macOS 生态系统的可能性。
 

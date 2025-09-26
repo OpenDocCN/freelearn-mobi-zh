@@ -20,7 +20,7 @@
 
 +   在服务器和应用程序之间打包和共享模型
 
-# 技术要求
+# 第九章：技术要求
 
 本章的所有代码都可以在这个书的 GitHub 仓库中找到：[`github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter08`](https://github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter08)
 

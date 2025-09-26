@@ -34,7 +34,7 @@ Swift 5.3 是一个重要的版本，它添加了许多对 Apple 的 SwiftUI 框
 
 +   使用协议定义接口
 
-# 技术要求
+# 第二章：技术要求
 
 本章的所有代码都可以在书籍的 GitHub 仓库中找到，地址为 [`github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter01`](https://github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter01)
 

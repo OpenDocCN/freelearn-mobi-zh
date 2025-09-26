@@ -24,7 +24,7 @@
 
 让我们开始吧！
 
-# 技术要求
+# 第三章：技术要求
 
 本章的所有代码都可以在这本书的 GitHub 仓库中找到：[`github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter02`](https://github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter02)
 

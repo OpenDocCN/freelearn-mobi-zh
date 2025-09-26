@@ -1,6 +1,6 @@
 
 
-# 使用.NET MAUI Shell 和 NavigationPage 进行导航
+# 第五章：使用.NET MAUI Shell 和 NavigationPage 进行导航
 
 在前面的章节中，我们处理了**用户界面**（**UI**）设计、MVVM 模式和数据绑定。这些元素使我们能够在页面级别设计 UI。对于现实世界的应用，页面间的导航能力至关重要。因此，大多数应用框架都包括它们自己的独特导航机制，.NET MAUI 也不例外。在本章中，我们将介绍.NET MAUI 中的导航机制。我们将首先演示如何使用 NavigationPage 完成最基本的导航，然后我们将深入探讨一个更结构化的导航机制——`Shell`。
 

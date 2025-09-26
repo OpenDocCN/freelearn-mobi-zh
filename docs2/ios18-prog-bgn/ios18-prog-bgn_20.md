@@ -1,6 +1,6 @@
 
 
-# 开始使用 Core Location 和 MapKit
+# 第十七章：开始使用 Core Location 和 MapKit
 
 在上一章中，你学习了如何从“添加新日志条目”屏幕传递数据到日志列表屏幕，以及从日志列表屏幕传递数据到日志条目详情屏幕。你还学习了`UITextFieldDelegate`和`UITextViewDelegate`方法。
 

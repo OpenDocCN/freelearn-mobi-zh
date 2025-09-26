@@ -18,7 +18,7 @@ SwiftUI 和 Combine 框架
 
 +   Combine 和 SwiftUI 中的数据流
 
-# 技术要求
+# 第十一章：技术要求
 
 你可以在 GitHub 上找到本章的代码文件，链接为 [`github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter10`](https://github.com/PacktPublishing/Swift-Cookbook-Second-Edition/tree/master/Chapter10)
 
