@@ -1,0 +1,606 @@
+- en: Chapter 9. Memory Management and Debugging
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Back in the good old days of iOS 3 and previous versions, the management of
+    computer memory was a laborious affair as every pointer and memory allocation
+    needed to be tracked precisely, lest you experienced the dreaded situation of
+    memory leaks due to a missing `release` keycode in your code and so on. However,
+    with the release of iOS 4 and higher, Apple introduced ARC and developers all
+    over the world rejoiced as they thought that the days of memory management were
+    over. However, sadly, this is not the case as Objective-C is not like other programming
+    languages such as Java or C#, where there is a garbage collector that will do
+    the memory management and garbage collection for you. ARC only serves as an enabler
+    to simplify memory management for us so that we do not need to explicitly call
+    the `release` method such as `[myArray release]`, since ARC handles these for
+    us. So while there are less brain cells that we need to allocate for memory management
+    when developing an iOS app, we must still do some basic memory management even
+    with the introduction of ARC, and this chapter will help you along the way with
+    that. So to get things off the ground, here are the topics that we will cover
+    in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory leaks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Strong/weak references
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Retain cycles
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Memory overuse
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the debugger and breakpoints
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Collecting data on your AppPlumbing leaks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the LLVM / Clang Static Analyzer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using NSZombie
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Memory leaks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'If you are used to calling the `release` method after an `alloc`/`init` method
+    or a `retain` statement, ARC allows you to forgo all that as you can still call
+    your `alloc`/`init` methods or `retain` statements and not add in a `release`
+    statement as ARC takes care of this for you. This introduces brevity and makes
+    your code more concise. Here is an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before ARC:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After ARC:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you wrote the code without calling the `release` methods as seen under *After
+    ARC*, you will have two memory leaks that will appear in your code due to you
+    forgetting to put in the two `release` methods. You will notice that the number
+    of lines has been reduced and the code is easier to understand, as there is no
+    need to call any `release` statements. So with ARC, people will be fooled into
+    thinking that their memory management woes are over, but actually, memory leaks
+    can still happen with ARC and I will show you how.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ARC helps in that it automates the addition of `retain`/`release`/`autorelease`
+    statements to your code, but memory leaks can still occur with ARC. It is not
+    so obvious to spot because people think that with ARC, there will not be any memory
+    leaks. However, that is not the case and memory leaks can still occur with the
+    presence of ARC, but there are some methods that you can use to find memory leaks.
+    However, first, let's go through some terms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Strong/weak references
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A strong reference is synonymous with the `retain` property where you increment
+    the reference count of an object by 1\. In the world of ARC, the `retain` and
+    `assign` properties are no longer used and are replaced with `strong` and `weak`
+    respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `strong` reference is the default property of objects as it means that you
+    want to get ownership of an object while a `weak` reference means that another
+    object is holding ownership to the object you want and then you can't stop it
+    from being deallocated since ownership does not belong to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `strong` and `weak` references are denoted by the Objective-C `strong`
+    and `weak` keyword respectively. Even with ARC, you can still have memory leaks
+    appearing and some causes of memory leaks using ARC are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Retain cycles
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating secondary threads and not providing it with its own autorelease pool
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using frameworks that have non-ARC code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Referencing itself within a block, which creates a strong reference
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Retain cycles
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A retain cycle occurs when two objects such as a parent and child object have
+    strong references to each other. A simple example would be the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can create an object of the type `MyParent` with the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A retain cycle is created with the preceding line of code and here is how it
+    looks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Retain cycles](img/00035.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the preceding diagram, you can quickly see what is called a retain cycle
+    since **myParent** has a strong reference to **myChild**, and **myChild** has
+    a strong reference to **myParent**. This is a form of memory leak where if an
+    object tries to release an instance of the first object, it can't be released
+    because the second object has a strong reference to the first object and a retain
+    cycle is created. Do note that ARC will not fix all memory leaks for you, so you,
+    the developer have to fix this type of memory leaks using some tools, which we
+    will cover later on. As this type of memory leak is not very obvious, fixing it
+    will require more effort and thinking, but thankfully, Apple has provided some
+    tools that will aid us greatly in this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A general rule of thumb to avoid a situation where a retain cycle can occur
+    is to remember this—if object A wants to retain object B indefinitely, then object
+    A has to be higher up in the hierarchy tree than object B, where object A has
+    to have a strong reference to object B. If you have objects that are on the same
+    level in the hierarchy tree, then you should put a weak reference to avoid a retain
+    cycle. So in the preceding diagram, to avoid a retain cycles, `mySecondObject`
+    should not have a strong reference to `myFirstObject`. However, if you do need
+    to let `mySecondObject` have a reference to `myFirstObject`, then make it a weak
+    reference instead of a strong reference. Tree hierarchies are safe and do remember
+    that putting weak references will avoid a retain cycle and memory leaks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Memory overuse
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If you used enough iOS apps, you will notice that some apps will just force
+    close themselves after you innocuously tap on a button or do some action. This
+    is an iOS way of handling memory issues as it basically just says, "this app has
+    a memory leak and you do not have enough memory to handle it, so this app has
+    to be closed."
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Altogether there are three memory warning levels for iOS. Level 1 and 2 will
+    be displayed in your Xcode console when memory is running low, as shown in the
+    following diagram. Level 3 occurs when your application crashes and goes back
+    to Springboard, which is the term used to refer to the iOS home screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Memory overuse](img/00036.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Using the debugger and breakpoints
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'One of the most fundamental debugging concepts of using an IDE, such as Xcode,
+    is the concept of breakpoints, where you can stop your running program at a particular
+    point in time as denoted by the breakpoint where your code is. Using the breakpoint
+    is very simple; you just open up your Xcode project and click on the left side
+    of the window where you code it and a blue indicator will appear, as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using the debugger and breakpoints](img/00037.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Next, when you run your application and when the program hits line number **26**
+    at the `while(true)` statement, the program will halt and you can move your cursor
+    over any variable before line number **26**, and Xcode will show you the value
+    that the variable contains at that point in time. Breakpoints are useful in debugging
+    memory leaks where you have an idea of where a leak appears and you want to see
+    the value or memory address of that variable. You can put multiple breakpoints
+    and use the Step Over command to step over each line of code to see how your program
+    is executing. Here is a list of icons, that you will come across when debugging
+    using breakpoints:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using the debugger and breakpoints](img/00038.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The four icons from the left to right in the preceding screenshot that you
+    can use for breakpoint debugging are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Icons | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Continue program execution | This will let your program continue executing
+    until it encounters the next breakpoint, or the program ends |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Step Over | This will let your program execute the next line of code in the
+    current scope |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Step Into | This will let your program follow the method into its own code
+    and view the code for the method |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Step Out | This will take you out of the current context and into calling
+    a method one step up into the program stack |'
+  prefs: []
+  type: TYPE_TB
+- en: Breakpoints are very useful for checking the values of your variables at a specific
+    point in time when your program is halted due to the breakpoint and the four icons
+    for breakpoint debugging will aid you in debugging memory-related and other logic
+    bugs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Collecting data on your app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Do note that a memory warning level does not necessarily mean that your application
+    is leaking memory. There could be a situation where your application is loading
+    or performing operations on large resources such as data files, images, videos,
+    and so on and this will trigger the memory warning. ARC will handle the cleaning
+    up later. However, if you see a memory warning level 2, then you should start
+    to look at your code as the next memory warning level will be the actual application
+    crash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Debugging crashes and memory leaks are like the game of hide and seek or playing
+    detective. There will be a lot of clues lying around, which will lead you to the
+    culprit in your code that is causing a bothersome crash or memory leak. Apple
+    has provided us with a lot of tools and logs, which will be useful for us in debugging
+    our code. We will cover some of the commonly used methods here so that you can
+    get cracking with regards to fixing those problems as soon as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One of the easier ways is to plug your device into your machine via your cable,
+    fire up Xcode, which will automatically detect your plugged-in device and then
+    press *Shift* + *Command* + *C* to activate your debug console, which is a black
+    screen on the bottom right of your Xcode screen. Or you can select **View** |
+    **Debug Area** | **Activate Console** from your Xcode menu as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Collecting data on your app](img/00039.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This will show all NSLog and crash output when you are running your app via
+    a cable connection to Xcode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, there are occasions when you are testing your application, when it
+    is not connected to your Xcode and it crashes at that moment. The preceding method
+    does not work in this case, so what can you do? Do not fret, as there is another
+    way to get your crash log once you are at your table and have plugged your iOS
+    device into your machine and fired up Xcode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you have started Xcode and plugged in your device where your app crashed,
+    Xcode will actually be able to access your crash log on the device. To do so,
+    all you need to do is click on the window and select **Organizer** from your Xcode
+    menu, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Collecting data on your app](img/00040.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This will open your **Organizer**, which actually is a repository of all the
+    devices that have been connected to Xcode and shows information such as the application's
+    provisioning profile and screenshots. However, what we are really interested in
+    is the crash logs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, click on the **Devices** button at the top and you will be shown all the
+    developer information about all the devices that have connected to your device
+    so far.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Click on your currently connected device, which is denoted by a green circle.
+    Then, select the **Device Logs** option, which will then open another list of
+    apps that have crashed. There you can sort the results by **Process**, which is
+    the application name, **Type**, or **Date/Time**. Clicking on an item will reveal
+    the crash log on the right side of the screen. There you can see the backtrace,
+    which is actually a listing of all the methods that were called leading up to
+    your crash. The last section of the code that caused your crash will be at the
+    top of the backtrace, and you should start by looking from the bottom up to see
+    how your app works and see all the functions and methods that it traversed through
+    leading up to the crash:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Collecting data on your app](img/00041.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Plumbing memory leaks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Next, we will look at a special tool present in Xcode to get in-depth information
+    about your app while it is running. This special tool is actually a suite of tools
+    that can perform the following functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examine and monitor one or more processes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Record a sequence of user actions and replay them, just like a video recorder
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Save user interface recordings and then access them from Xcode
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This set of tools is known collectively as Instruments and they are more useful
+    than NSLogs when tracking down difficult-to-reproduce bugs, such as random crashes
+    and debugging memory leaks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Analyze the performance of your app
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Perform stress testing on your app
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gain a better understanding of how your application works
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In this section, I will teach you the basics of Instruments and how to debug
+    some code using it. So, to start off, you just need to follow these three simple
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click the **Xcode** menu on the top left of your Xcode IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select **Open Developer Tool** from the list that appears.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: A submenu will appear with the **Instruments** item, which you should click
+    on:![Plumbing memory leaks](img/00042.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, you should see a pop-up window with the following options:![Plumbing memory
+    leaks](img/00043.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: There are options such as **Leaks**, **Allocations**, and **Time Profiler**,
+    which show all the various tools.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: To have a little test run, open the `Instruments.xcodeproj` file, which has
+    very leaky code and we will see how to use the Xcode debugging tool called **Instruments**
+    to understand how the memory allocation spikes up when the code is running. So,
+    to start things off, let's use the Xcode profiling tool to see our memory spike
+    by clicking on the **Product** | **Profile** menu option as shown here:![Plumbing
+    memory leaks](img/00044.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, Xcode will show the **Instruments** window and then you need to select
+    **Allocations** options and click on the **Profile** button. Once you have clicked
+    the **Profile** button, the leaky app will start executing and you will see the
+    following screen. Keep an eye on the graph that you will see spiking up rapidly
+    and also the **All Heap Allocations** row, which will show the amount of memory
+    being consumed increasing in a very fast rate:![Plumbing memory leaks](img/00045.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'So, to reiterate the steps, we need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open Xcode.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **Product** | **Profile**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **Allocations** | **Profile**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Look at the **All Heap Allocations** section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Look at the memory allocation on the graph.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Check for retain cycles or usages of itself within blocks that can hint or create
+    a retain cycle.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Using the LLVM / Clang Static Analyzer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Instruments suite of tools is meant to be used when your app is running.
+    However, sometimes, as the saying goes, *an ounce of prevention is worth a pound
+    of cure*. So, before you pull up Instruments to debug your app during runtime,
+    there is a good step that you should follow and which is performing a static analysis
+    on your code base.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Static analysis is a mechanism where a collection of algorithms and techniques
+    are used to analyze your source code to find bugs. This may sound like what you
+    do during the compilation stage, but there is an important difference. The act
+    of compiling your code will tell Xcode to check your code base for syntax errors
+    and flag out any errors or warnings that it detects. Static analysis goes one
+    step deeper in that it analyzes your code to find potential bugs that will surface
+    during runtime. Static analysis lets the program calculate all possible executions
+    of a program, and the code is analyzed for quality, safety, and security so that
+    you are alerted to bugs such as overflows, divide by zero, pointer errors, and
+    so on. So, think of static analysis as runtime testing, but before your code has
+    begun executing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As static analysis goes deeper into your code, the amount of time Xcode takes
+    to do the static analysis will be longer. So, use static analysis only for debugging
+    hard-to-fix bugs or as a final step before submitting your app to the iTunes App
+    Store. To activate static analysis of your app, click on **Product** | **Analyze**
+    to let Xcode start its static analysis of your code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using the LLVM / Clang Static Analyzer](img/00046.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Depending on the size of your code base, static analysis can take seconds to
+    even minutes while it dives deep into your code to ferret out any potential issues.
+    A project that has only a few lines of code will take a few seconds to do the
+    static analysis while a large project with thousands of lines of code will take
+    a few minutes or more, depending on the size of the project. Then, click on the
+    left side of your Xcode screen as shown in the preceding screenshot, to see the
+    potential issues that Xcode found through static analysis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By default, static analysis goes down to a deep level to analyze every corner
+    of your code base. This consumes a lot of resources on your machine, and if you
+    have a large code base or a slow machine, the amount of time used for static analysis
+    can be quite big. Hence, you can adjust the level of static analysis that Xcode
+    uses if you don''t want an in-depth analysis, which may not find as many issues
+    as a deep static analysis, but can still help surface some issues. Static analysis
+    is useful as it can surface errors such as overflows, divide by zero, and so on,
+    which a compiler can''t detect. To change the level of static analysis, click
+    on your project on the left, then select **Build Settings** and then look for
+    the **Mode of analysis for ''Analyze''** option and set it to **Shallow (faster)**
+    as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using the LLVM / Clang Static Analyzer](img/00047.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Using NSZombie
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Last but not least, let me introduce you to the concept of NSZombie. NSZombie
+    is a memory debugging aid that helps you in debugging memory leaks. As you may
+    know, when an object has a retain count of 0, that object will be deallocated
+    and not exist anymore. However, if you enable NSZombie, the object with a retain
+    count of 0 will turn into a NSZombie instance instead. Then, when this NSZombie
+    receives a message from another place in your code, it will show a warning instead
+    of crashing your app or exhibiting unpredictable behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NSZombie is useful for debugging subtle overrelease or autorelease bugs as these
+    types of bugs tend to manifest itself in crashes or weird behavior. NSZombie will
+    show these crashes and weird behavior as a warning instead, which will help in
+    your debugging.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NSZombies exist in a strange half-alive/half-dead state as they are not deallocated
+    when the retain count is 0, but they are not fully alive either. So, NSZombie
+    is an apt term to use to describe these half-living/half-dead objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, an important point to note is that NSZombies are to be disabled once
+    you have finished debugging. NSZombies consume memory like any object with a retain
+    count of 0, which is turned into NSZombie, which still occupies memory instead
+    of being deallocated. So, if you do not disable NSZombie it will occupy more memory.
+    In order to harness the power of NSZombie where it will log a warning instead
+    of crashing your app or exhibiting unpredictable behavior, just follow these simple
+    steps to activate NSZombie:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click on the **Product** menu in your Xcode IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select the **Scheme** menu item.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Proceed to click on **Edit Scheme...** to open the popup to enable NSZombie:![Using
+    NSZombie](img/00048.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, you will see a popup appear with an **Enable Zombie Objects** option.
+    Click on this checkbox and NSZombie will be enabled.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finally, run your project and you will see NSZombie in action:![Using NSZombie](img/00049.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Finally, here is a table outlining which debugging tools should be used in
+    which context so that you can use the right tool for the right situation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Debugging tool | Appropriate context |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Xcode Instruments | This is used to find memory leaks that cause crashes
+    during runtime |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Static Analyzer | This is used to analyze your code base for issues such
+    as divide by 0, memory issues before the code is executed, and so on |'
+  prefs: []
+  type: TYPE_TB
+- en: '| NSZombie | This is used to show warnings instead of crashing due to memory
+    leaks |'
+  prefs: []
+  type: TYPE_TB
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We covered some aspects of the theory of memory management, such as retain cycles
+    and strong/weak references. Then, we moved to the repercussions of memory leaks
+    and the various warning levels. Following this, we discovered how to get crash
+    logs to help you get information about your app and code. We then looked at a
+    list of the various tools that Xcode possesses, such as Instruments and NSZombies,
+    which will help us to debug memory leaks that can be caused by a myriad of causes,
+    such as not releasing objects or releasing objects prematurely. Finally, we closed
+    off with a description of static analysis and enabling NSZombies and their uses.
+    With all these tools and information at your fingertips, I hope debugging memory
+    leaks and errors have been made much easier for you since you have the tools required
+    to make this a less painful journey.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will cover some developer tips for memory management,
+    such as getters, setters, and other tips. So, let's head to the next chapter.
+  prefs: []
+  type: TYPE_NORMAL

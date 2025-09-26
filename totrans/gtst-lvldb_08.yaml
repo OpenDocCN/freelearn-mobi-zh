@@ -1,0 +1,789 @@
+- en: Chapter 8. Richer Keys and Data Structures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter of the book we will review some classical database theory as
+    it relates to LevelDB. The motivation for this starts with a richer application
+    study. [Chapter 6](ch06.html "Chapter 6. Integrating with a Cocoa UI") *Integrating
+    with a Cocoa UI*, introduced the basics of how to connect a database to a GUI
+    with record addition. Most applications also need to deal with changing or deleting
+    data. This chapter's code adds these actions to `Sample06`, in a copy which keeps
+    the same filenames, for easy comparison with the simpler sample. The first part
+    of the chapter is structured similarly to [Chapter 6](ch06.html "Chapter 6. Integrating
+    with a Cocoa UI"), *Integrating with a Cocoa UI*, to help further with this comparison.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Sample06x` also improves searching via case-insensitive names and smart phone
+    numbers. Searching needs support by customizing the indexing features of LevelDB.
+    As part of that `Comparator` discussion we will look at ways to cope with binary
+    integer keys.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Completing the data source for a rich GUI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The extended version of `Sample06` adds two major aspects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changing the data listed in the `tableview`, viewing a secondary index
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Deleting and renaming records, implying key updates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When it comes to updates, `Sample06` showed how a **Save** button can simply
+    trigger writing the record values back for the current key. Our first version
+    was quite flawed as it created visible copies of records each time we changed
+    a name. We need to ensure renaming occurs, rather than **Save** behaving as if
+    it's really **Save a Copy As**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding the phone number secondary index for listing implies writing a second
+    key, each time we save from the GUI. This is easy for new records. However, when
+    we save an existing record there are old key values which may need to be removed
+    because they point to obsolete data. This implies a smart cleanup in the model
+    that knows when to remove keys and when to rewrite. If these concepts are familiar,
+    skim this part but still have a look at how the key prefix is used as a flag to
+    track the current listing mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending the OS X GUI to fully support editing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The full OS X GUI adds more action buttons for editing and sorting the list.
+    The following screenshot shows a choice of lists:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Extending the OS X GUI to fully support editing](img/1015OS_08_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: An OS X sample app showing a list with choice of lists and more editing controls
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The extended OS X app is also a single window that adds:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: More buttons and menu items to provide the **View** commands
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Buttons and menu items for the **Revert** and **Delete** commands
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Connecting the database to the NSTableView
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In simple OS X apps, the `AppDelegate` object takes the role of the `ViewController`
+    class in iOS apps. So, all of these interface methods and outlets are in `GSwLDB06osxAppDelegate`.
+    The graphical interface is in `MainMenu06.xib`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The **View All** button and the **View – All Records with Prefixes** menu item
+    are connected to the `(IBAction)viewAllRecords`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The **View Names** button and **View – Names** menu item are connected to the
+    `(IBAction)viewNamesOnly`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The **View Phones** button and the **View – Phone numbers** menu item are connected
+    to the `(IBAction)viewPhonesOnly`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The action of the `NSSearchField` class, and the `datasource` and `delegate`
+    outlets of the `NSTableView` class are connected as in `Sample06`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The expanded declaration of `GSwLDB06osxAppDelegate` is shown in the following
+    code. We will discuss the other actions and outlets below when we talk about editing
+    records:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The mechanism for loading a set of rows and copying them to the `tableview`
+    object is the same as the simpler example of `Sample06`. All the knowledge of
+    what it means to be viewing by phone, or by name, is hidden in the model class.
+    So, to change the entire list to phones, we have an action invoked `viewPhonesOnly`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The expanded public interface of the model is in `Sample06_Model.h`, adding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The class extension in `Sample06_Model.m` is also a little different, adding
+    some methods and properties and replacing `addRecord` with a more complex one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The database creation and loading from `sample50000.txt` are very similar to
+    `Sample05`, and the same as `Sample06`, except that we''re using 50,000 records
+    to see performance implications. We will look at record addition in detail later,
+    when discussing editing. Continuing with our focus on loading the table, the big
+    difference between this model code and `Sample05` is that it caches results in
+    an array rather than just printing keys as they are iterated (costing 200 MB of
+    memory for 50,000 records). It has the same use of a prefix `N~` or `P~` to distinguish
+    key types. Added to `Sample05` simple model, support for the GUI means the model
+    remembers `lastPrefixUsed`, which depends on the user''s choice of **Names** or
+    **Phones**. The two load methods we saw called from the GUI are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: These both use a method which was added to APLevelDB in the class category `APLevelDB_ADSearches`,
+    alongside the `enumerateKeysWithPrefix` we saw in `Sample05`. It extends that
+    method with the `strippingFirst` parameter to let a caller specify the length
+    of a non-printing prefix on the key. When we are getting all records of a given
+    type, the prefix length will be the same two characters as we have seen (`N~`
+    or `P~`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, when responding to the GUI `viewMatches` action, we are searching
+    for a prefix that includes their search term, for example, `N~Smith` for names
+    starting with `Smith`. Our prefix is seven characters long but we want to strip
+    two for display. Looking in `APLevelDB_APLevelDB_ADSearches.mm` we see the search
+    implemented as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With this understanding of the keys array generation, let''s review `Sample06_Model.m`
+    and see how the array of keys is used to provide values for the tableview. The
+    `Sample06` `countRows` and `keyForRow` methods are unchanged but our list is now
+    smarter. The following code snippet shows how an array of keys is used to provide
+    values for the `tableview` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Did you notice the slight cheat? We are only displaying a single column table
+    but the `Name` key is a combination of last and first name with a tab between.
+    We just get that as a single string and allow the GUI to have a waver down the
+    middle, rather than splitting into two columns. That makes it easier to flip to
+    the single-column phone list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connecting record details to the editing form
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The extended editing behaviors are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Revert**: To discard any charged details and reload the current record'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Save**: To copy the details entered back to the database, including changing
+    keys and refreshing the list'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Delete**: To remove the current record and secondary key from the database'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Allowing and responding to selection changes is no different from `Sample06`
+    with a horizontal array of values from the record being copied to the entry fields.
+    The core logic in the `fieldsForRow` method in `Sample06_Model` is the same—the
+    basic record structure hasn't changed. However, the code has been split out into
+    the separate `fieldsForKey` method which is used from several places.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: There's one bit of complexity introduced because our GUI allows the user to
+    list either the main `Name` index or `Phone` keys. We need a `Name` key to get
+    the detailed record from the database but it's possible that the current table
+    is showing `Phones`. This means that the selected value in the list is not the
+    type of key we need. Or, to think in database terms, we are listing it by a foreign
+    key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is where it is vital for the model to remember the type of list, which
+    it sees as the `lastPrefixUsed` set by a method such as `loadPhones`. The model
+    doesn''t know anything about the GUI. It just knows it was last asked for phones
+    or names. If we have a `Phone` key, we need to read its record to get the main
+    key (remember this **secondary index** in `Sample05`). It is done in the following
+    way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of `mainKeyFrom` is about key construction, as string prefixing. The last
+    line uses `stringForKey` to get the main key as a foreign key operation; the same
+    relational searches we discussed in [Chapter 4](ch04.html "Chapter 4. Iteration
+    and Searching Keys"), *Iteration and Searching Keys*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Saving data with key updates
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've seen data loading extended to cope with listing and searching by different
+    indexes. As seen in the original `Sample06`, to save we will need to send an array
+    of fields back to the model to update the database. This time we're going to update
+    the indexes properly. This starts with `GSwLDB06osxAppDelegate` knowing when it
+    is saving a new record or an old one—the model needs to know what it replaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The simple save case is when a new record has been saved, so the model knows
+    it is creating a new record. We now see our common `addRecord` method works like
+    `Sample05`, adding a phone record pointing to the main key and using JSON for
+    the body, as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The complex case of saving an existing record has to cope with the need to
+    change the secondary index of the `Phone` key, if either the phone number or the
+    main key has changed. As shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The save method could be as simple as just one record being written, if all
+    the keys stayed the same but only some non-key values changed, such as e-mail.
+    In the worst case, the previous code performs two deletions and two writes, if
+    both the phone number and one of the names changed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Responding to the new and delete commands
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A `new` command is just a GUI action clearing all the entry fields. It sets
+    a property of the delegate `isNewRecord`, as you saw used previously in `saveRecord`.
+    The model doesn''t know it''s a new record until you invoke the simple save shown
+    earlier. The following code shows the `new` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `delete` command removes the current record and tries to keep the selection
+    in the same place, reloading data to suit. As you saw earlier in methods such
+    as `viewPhonesOnly`, we need to explicitly call `loadFieldsForCurrentSelectedRow`
+    when the list content changes, but the selection may have stayed on the same row
+    number. The following code shows the `delete` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `model` method just needs to delete the main and secondary phone index
+    records as shown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note how we read the main record to get the phone key. There's a possible optimization
+    that you could do depending on the current list being by phone but this is clearer
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Key design for LevelDB versus relational theory and SQL
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A key should exist in LevelDB because:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You want to directly use the associated value.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The key itself provides information without a value.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You can navigate from the key via a portion of it, or the associated value,
+    to another key. Ultimately, this chain of keys leads to the value you want.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'There is a limitation in the design of the keys and values we''ve been storing
+    so far for phone numbers—the problem of uniqueness. Our pair of keys and values
+    looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Key design for LevelDB versus relational theory and SQL](img/1015OS_08_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Current keys and values in the Sample06 names and addresses database
+  prefs: []
+  type: TYPE_NORMAL
+- en: The convention used in this and other diagrams in this chapter is that keys
+    by themselves will be in plain rectangles with the associated values in a 3D box
+    pointed to by a diamond and arrow (UML style for contained relationship). So,
+    if you see a rectangle which doesn't point to a 3D box, then that's a key without
+    a value (as seen in the next image).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The problem with this naive key design is that it only allows a given phone
+    number to occur once in the entire database, as we're composing a key just from
+    the phone number. That's an obvious flaw—people share phone numbers. A similar
+    problem occurs with the names—there's only one *Andy Dent* allowed. If this seems
+    confusing, remember that the key-value store in LevelDB works like a giant dictionary—**keys
+    are unique** and the only way to have keys repeat values is to add more information
+    so that each key is still unique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Names can be fixed by simply adding a unique suffix to the end of the key, such
+    as an integer incremented for each record. To make phone numbers work, we need
+    to move the associated name out of the value and into the key, so we have the
+    phone key with **no value**. That move by itself would just allow for a single
+    phone key per unique name, so if we want many phones we must also add a unique
+    suffix to the end of each phone key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Key design for LevelDB versus relational theory and SQL](img/1015OS_08_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Changes to key structures to support duplicate names and phone numbers in the
+    names and addresses database
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you have studied relational theory or **normal forms**, in your use of SQL
+    databases, this will be starting to seem familiar. There's a simple principle
+    we can apply here—when in doubt, regard your LevelDB keys as equivalent to relational
+    tables and only move non-key attributes into the associated value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deciding when to store one record or split values
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Our record so far has been a simple array encoded with a JSON serializer. As
+    you saw earlier, when we update any fields in the GUI, we need to rewrite that
+    record. If we change the phone number or names, we also need to rewrite the phone
+    number secondary index record. We can make it more flexible for updates by moving
+    data into the keys as shown in the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Deciding when to store one record or split values](img/1015OS_08_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Keys and values if the refactored Sample06 database to allow multiple phones
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous diagram, it looks like we have a bit of an explosion of keys,
+    from two to four. Phone numbers are now paired keys, prefixed with `P~` and `R~`.
+    This is a common pattern for building a **graph database** on top of a Key-value
+    store. A single fact of two things being related must be described by at least
+    two keys, so you can search by either related item. As the phones are not in the
+    main data, we need to be able to go back to them via the nameId when they are
+    updated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another consideration is that duplicating the names in many keys costs a lot
+    of storage. In order to avoid the storage overhead of the name being part of the
+    phone key, we need a unique nameId that can be used with the phone. We can use
+    that instead of the unique suffix that was part of the name key before, so our
+    name key is still almost identical. However, the main value is no longer associated
+    directly with that name key. Instead, the nameId is used as the key for the detailed
+    record. The immediate implication is that we have doubled the reads to get more
+    details when listing people by name. This is not actually very expensive if we
+    consider the usage patterns in `Sample06`—the list of items for the `tableview`
+    object still comes from a single iteration through name keys. It just adds a bit
+    of overhead to load the details when we select a given name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will no longer store the phone number in the JSON array, but we will rely
+    on a key to supply that number. This means we have to be able to retrieve the
+    Phone number from a name. Hence we have the paired keys that use the P~ and R~
+    prefixes. People change phone numbers frequently so by pulling the phone number
+    out of the main details, we have avoided a rewrite of the major key and associated
+    value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can now trivially extend the database to allow for multiple phone numbers,
+    although that would require significant GUI rework, like Apple's contacts for
+    editing the numbers. [Chapter 10](ch10.html "Chapter 10. Tuning and Key Policies"),
+    *Tuning and Key Policies*, discusses the implications of this key refactoring
+    in more detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are familiar with relational database normalization, the reasons for
+    the factoring out above should be common patterns for you. The apparent difference
+    is that a single relational table would allow querying from either aspect, for
+    example, a single row (tuple) linking phone number, nameId, and phone role. However,
+    on most database servers, a DBA will usually specify an index on at least two
+    of those columns, for better search performance, so the actual data stored in
+    a SQL database would start resembling our key diagram.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A relational database forces you to factor data out into separate tables whenever
+    you need to represent multiples, such as, our phone numbers. We can store multiple
+    items in JSON values in our record to have much more flexibility. Thousands of
+    individual details could be buried in an individual's record without requiring
+    complex table structures. The only downside is that searching by those details
+    would require reading the entire database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing schemas for LevelDB
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In a classical relational database, the schema definition describes each table.
+    The tables have strict data types and every row has the same content. A lot of
+    work has been done on **ORM** (**Object-Relational Mapping**) products and there
+    are multiple patterns that can be applied. See *Scott Ambler's* [http://www.agiledata.org/essays/mappingObjects.html](http://www.agiledata.org/essays/mappingObjects.html)
+    and *Martin Fowler's* [http://martinfowler.com/eaaCatalog/](http://martinfowler.com/eaaCatalog/)
+    for detailed discussions on ORM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the reasons for the rise of NoSQL databases is the flexibility they add.
+    While we have been storing quite uniform data in our records, just using the JSON
+    serialization approach allows us to easily map a complex dictionary into a record.
+    Nothing in LevelDB cares about the structure of one record being different from
+    the next. Remember that, while we've been talking as if our different keys are
+    in different indexes, they are really just in the one key-value store with only
+    our prefixing convention differentiating them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, what value can schema support provide in LevelDB? It's not a constraining
+    or mandatory thing, but as an extension to APLevelDB, provides helpers to manage
+    complex keys. All that work we added in the first part of this chapter was just
+    to maintain two keys pointing to the main record. Imagine adding another five
+    keys into the mix and also having to generate unique identifiers. It would be
+    nice to just declare the relationships between keys and how they are derived,
+    supplying the minimum amount of code for any custom key assembly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The schema support also helps map to the content of the detail record or to
+    data stored in associated keys, such as the phone number. The original `Sample06`
+    used enums to index the JSON array of values. Using a schema allows us to supplement
+    those by key paths in the dotted style of Apple's key-value coding. The schema
+    also provides a generic interface to read those details to help you include a
+    REPL for debugging. Each schema entry is stored in the database with a simple
+    key such as `~~Person` with the entire schema entry details in a JSON dictionary
+    in the value for the key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of the changes to-date in APLevelDB plus schema support have been rolled
+    up and published online at [https://github.com/AndyDentFree/APLevelDBSS](https://github.com/AndyDentFree/APLevelDBSS)
+    and shown in another copy of `Sample06`. The extended functionality of `Sample06`
+    is combined with the refactored key structure in the previous figure with `Sample06sch`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dealing with integer key endianness
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: LevelDB doesn't actually care if you store string values or arbitrary binary
+    bytes—we've already seen how you can just push the structure into a record and
+    that the `Slice` structure works with binary for keys and values. If you want
+    an efficient, unique, compact key, storing a binary integer is an obvious choice
+    for all or part of a key, such as our nameId.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, the `BytewiseComparator`, used by default, will cause problems if you
+    try making keys using integers straight from memory. Both Intel and ARM chips
+    (Mac and iPhone) store integers in **Little Endian** order which means the least-significant
+    byte is to the left and sorting of an integer key by bytes won't work. This is
+    only a problem if you want the keys sorted. If your binary integers just provide
+    a unique suffix, ignore this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code for this chapter includes a file, `Log of Listing Binary Keys Sample08
+    OSX.txt`, that shows the effect of this and how it can be fixed by a custom comparator
+    (see *Using comparators to vary key ordering* section) or simply by flipping the
+    order of bytes in the integer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The same code generates both lists—a simple function that loops to add a bunch
+    of keys and then iterates the database, reading back those keys that were added:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We get the same ordered result by using a database with a default `BytewiseComparator,`
+    but flipping keys to store bytes in Little Endian order. If we were doing searches
+    we would also need to flip the search value entered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The system function `htonl` is a very efficient byte swapper. It has siblings
+    `htnoll` and `htons` for 64 and 16 bit integers. If your key has more than one
+    integer component, maybe mixing binary integers with strings, you would swap each
+    integer individually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using comparators to vary key ordering
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The LevelDB documentation discusses the use of custom comparators, and they
+    can be a powerful addition to your database toolkit, but people often misunderstand
+    their role. Comparators are like the sort functions you pass into standard library
+    sorts but they have a **lasting effect on the database**. The core data structures
+    of LevelDB tables store keys sorted by the `Comparator`. When you are searching,
+    the comparator's `Compare` function is called as part of the tree traversal. Writing
+    a comparator is a lifetime commitment, for the lifetime of that database. Your
+    code provides the comparator, so to open and use the database, you have to keep
+    supplying that comparator. Comparator objects supply a `Name` through a virtual
+    function, checked on opening to confirm you have specified a matching comparator
+    for that used to create the database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we have seen already, you can accomplish a lot with careful use of key prefixes
+    and flipping the order of integers in binary keys. However, there are some things
+    that can only be done with a custom comparator. The enhanced `Sample06` shows
+    two examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For names, we ignore case. That provides a more natural user experience.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: For Phones, we ignore any non-digits. It won't matter if the number is entered
+    with dashes, spaces, dots, or no separator.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'These are two distinct roles but only one comparator can be used for a database.
+    We''re still using APLevelDB as our basic Objective-C interface, but it needed
+    a bit more modification to allow us to specify that comparator which is simply
+    passed as a function pointer to the `leveldb::Options` structure that is used
+    when we open a database. We start by adding a pointer type into `APLevelDB.h`
+    and an extra database factory method that takes a comparator, as shown in the
+    following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The matching changes in `APLevelDB.mm` include adding an **ivar** to point to
+    the comparator and rewriting the original `init` method so it takes a comparator
+    as shown in the following code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After passing in the comparator function pointer to the options, it will automatically
+    be used by the database. However, you must make sure all programs using that database
+    continue to use the same comparator. The core of the comparator is the `Compare`
+    function which either calls our own case-insensitive `Name` comparison, digit-only
+    phone comparison, or defaults to the standard `BytewiseComparator`. I highly recommend
+    including a default fallback, if you have key types that are detected like our
+    prefixes. We assume from our key scheme that a `~` in the second character indicates
+    a special key, the following code shows this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Inside LevelDB, the use of a comparator is automatic but in my code for iterating
+    keys I fell into a common trap that **bypassed** it. The extension `APLevelDB_ADSearches`
+    adds a method that compares two keys and our first implementation used the efficient
+    `Slice::starts_with` function. That is only safe with the standard `Comparator`
+    function, which uses the same logic as `starts_with`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: The same bug is exhibited by the sample code on the LevelDB site for iteration
+    that compares a string `it->key().ToString() < limit`, and so is not using the
+    custom comparator. This example is part of the source so the gotcha has been propagated
+    widely!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The following summarizes this chapter’s techniques, in order of their dependencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Add extra secondary (foreign) keys**:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gain extra search performance without having to read all content
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cost added code and disk space
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Refactoring data out into Multiple Keys**:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gains and Costs same as other extra keys
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gain more stable main data not being rewritten
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cost extra read overhead of initial key then going via another key (maybe the
+    ID key) to the main data
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Using ID keys to provide indirection to the main record**: Use this if you
+    have multiple keys which need to refer to the same data and the primary key is
+    long or changeable:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gains and Costs same as other extra keys
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gain smaller indexes by smaller secondary keys
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gain stability of secondary keys if the main value is updated with less dependency
+    on changed items (such as use of nameId instead of full name)
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cost extra logic to generate unique ID values
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cost extra read overhead even for the most common keys as they have to use the
+    ID key to get the data
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Use multiple keys in pairs (graph database) style**: Use this when you have
+    factored out a separate key to avoid frequently updated data being included in
+    the main record:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cost added complexity to maintain keys
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cost index space doubled for paired key
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Endian flipping of integers in keys**: Use this when you have binary integer
+    values in keys and care about their impact on sorting order but don’t want to
+    use a custom comparator'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Custom comparators (use)**: Reasons to use custom comparators are:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sorting needs custom logic such as locale dependencies like some European languages
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you want to use keys directly in the GUI so can’t tolerate the loss of information
+    from preprocessing, such as forcing all incoming keys to lowercase
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you can optimize the way the delta to the next key is calculated, a custom
+    Comparator might save significant index space
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When the key contains significant data that should be ignored as it doesn’t
+    aid sorting
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Custom comparators (avoid)**: Reasons to avoid using custom comparators are:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you are using multiple languages or frameworks and some don’t have support
+    for setting the comparator on database open
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When the database will be shared with others and you have no way to supply them
+    with the comparator code
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We rounded out the `Sample06` GUI sample with more complex scenarios of editing
+    and saving data. With the ability to flip the list between names and phones we
+    saw again how a secondary index can be used in LevelDB. We also saw the burden
+    of maintaining that index when data changes or it is deleted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After gaining a slightly painful awareness of how much work there is for just
+    one table and two indexes, we took a more theoretical look at designing a key
+    structure and learned how much more complex a database could have been used for
+    `Sample06`. Schema support from APLevelDBSS was introduced to make using a complex
+    key structure easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Revisiting binary values in keys, we finished with a look at how comparators
+    support binary values or just making the searching experience more user-friendly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will build a different real-world sample with a complex
+    database using all these techniques and LevelDB extensions, tracking and finding
+    documents.
+  prefs: []
+  type: TYPE_NORMAL

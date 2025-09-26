@@ -1,0 +1,1615 @@
+- en: Chapter 4. 3D Graphics Rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The graphics hardware inside the average smartphone is now capable of rendering
+    3D graphics of a surprisingly high quality for a device that is small enough to
+    fit into your pocket.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Marmalade SDK makes using 3D graphics in your own games extremely easy
+    to do, as you will discover when we cover the following topics in this very chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The basics of 3D graphics rendering—projection, clipping, lighting, and so on
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating and rendering a simple 3D model entirely in code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exporting 3D model data from a modeling package
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Loading exported 3D models into memory and rendering them
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A quick 3D graphics primer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we get our hands dirty with rendering code, let's just touch on some
+    of the basics of how 3D rendering can be achieved. If you already have a good
+    handle of 3D rendering techniques then feel free to skip this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Describing a 3D model
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In computer graphics a 3D representation of an object is often referred to as
+    a **model**. When we build a model in three dimensions for use in a video game,
+    we create a group of triangles that define the shape of the model. We can also
+    use quadrilaterals to make the modeling process easier, but these ultimately get
+    converted into two triangles when it comes to rendering time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The simplest representation of a 3D model is therefore little more than a big
+    list of vertices which define the triangles required to render the model, but
+    we often specify a host of extra information so we can control exactly how the
+    model should appear on screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifying a model's vertex stream
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Every 3D model has a **pivot point**, also called its **origin**, which is the
+    point around which the model will rotate and scale. In a 3D modeling package this
+    point can be positioned wherever you want it to be, but to make the mathematics
+    easier in a game we would normally treat the point (0, 0, 0) as the pivot point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each triangle in the model is defined by three vertices, and each vertex consists
+    of an x, y, and z component which declares the position of the vertex in what
+    is called **model space** (sometimes also referred to as **object space**). This
+    just means that the components of each vertex are relative to the model's pivot
+    point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following diagram shows an example of a cube. The pivot point is positioned
+    at the very centre of the cube and is hence the origin of model space. The corner
+    points use both positive and negative values, but each component has an absolute
+    value of **100**, which yields a cube with edges of length 200 units. For clarity,
+    the three front faces of the cube also show how they have been built from two
+    triangles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Specifying a model''s vertex stream](img/3363_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In order to provide Marmalade with the vertices of the cube, we simply use Marmalade's
+    three-component floating pointer vector class `CIwFVec3` to provide an array of
+    vertices. As with the 2D rendering, we've already seen this is called a vertex
+    stream, except that this time the stream consists of three component vectors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifying a model's index stream
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You will notice that the corners of the cube in the previous diagram have been
+    labeled with a number as well as their model space coordinates. If we cast our
+    minds back to our work with 2D graphics, we will remember that Marmalade renders
+    polygons by accepting a stream of vertices as input and also a stream of indices
+    that defines the order in which those vertices should be processed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The same approach applies when rendering 3D graphics. We specify the index stream
+    as an array of unsigned 16-bit integers (`uint16`) and this dictates the order
+    in which the vertices will be read out of the stream for rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One advantage of using an index stream is that we can potentially refer to the
+    same point several times without having to duplicate it in the vertex stream,
+    thus saving us some memory. Since the index stream is just telling the GPU which
+    order it has to process the data contained in the vertex, color, UV, and normal
+    streams, it can be as long or as short as we want it to be. The index stream doesn't
+    even need to reference every single element of the other streams, meaning we could
+    potentially create one set of streams that can be referenced by multiple different
+    index streams.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another advantage of index streams is that we can use them to speed up rendering.
+    You will recall that we used the function call `IwGxDrawPrims` to render a 2D
+    polygon. To render 3D polygons, we use the exact same call. Each call to this
+    function results in the rendering engine having to perform some initialization,
+    so if we can find a way to minimize the number of draw calls we have to make,
+    we can render the game world more quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use the index stream to achieve this by inserting degenerate polygons
+    into the polygon render list. A **degenerate polygon** is one that does not modify
+    any pixels when it is drawn and this is achieved by ensuring that all the vertices
+    that make up the polygon will lie on the same line. Most graphics hardware are
+    clever enough to recognize a degenerate polygon and will not waste time trying
+    to render it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an example, let's assume we are rendering some triangle strips. We could
+    render them by calling `IwGxDrawPrims` twice, or we could join the two strips
+    with some degenerate polygons and render them both with a single call to `IwGxDrawPrims`.
+    We can continue to do this to join together as many triangle strips as we want.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How do we specify the degenerate triangle? The easiest way, shown in the following
+    diagram, is to duplicate the last point of the first strip and the first point
+    of the second strip. This yields four degenerate triangles (A3A4A4, A4A4B0, A4B0B0,
+    B0B0B1) but is preferable to making several draw calls. The dotted line in the
+    following diagram shows the extra degenerate triangles (which collapse to form
+    a line!) that join the strips together:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Specifying a model''s index stream](img/3363_04_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Specifying a model's color, UV, and normal streams
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Just as with 2D rendering, there are a number of other stream types we can supply
+    to make the polygons we render look more interesting. We can provide both color
+    and texture UV streams in exactly the same way we did when rendering in two dimensions,
+    but we can also specify a third stream type called a **normal stream**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In 3D mathematics, a **normal vector** is defined as the vector which is perpendicular
+    to two other non-parallel vectors, or in other words a vector that points in the
+    direction in which the polygon is facing. The following diagram shows an example
+    illustrating this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Specifying a model''s color, UV, and normal streams](img/3363_04_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Why is the normal stream useful? Well, it allows us to simulate the effects
+    of lights on our 3D model. By providing each vertex of our model with a **unit
+    normal** (that is, a vector that points in the direction of the polygon's normal
+    and which has a length of one unit), we can calculate the amount of light reflected
+    from that vertex and adjust the color it is rendered with accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Real time lighting of a 3D model can be a time-intensive task, so when writing
+    a game we try to avoid doing so when possible in order to speed up rendering.
+    If we do not want to light a 3D model, there is no need to specify a normal stream;
+    so, by not lighting a model we save memory too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are a couple of points to bear in mind when specifying these additional
+    streams.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Firstly, Marmalade expects the number of colors, UVs, and normals provided to
+    match the number of vertices provided. While you can specify streams of different
+    lengths, this will normally cause an assert to be fired and obviously it could
+    yield unexpected results when rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secondly, and perhaps most importantly, these additional streams may require
+    us to add extra copies of our vertices into the vertex stream since we can only
+    provide a single index stream.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Take the example of a cube where each vertex is a corner point of three different
+    faces of the cube. Since each face points in a different direction, we will need
+    to duplicate each vertex three times so it can be referenced in the index stream
+    along with the three different normal vectors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Specifying a model''s color, UV, and normal streams](img/3363_04_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We can also run into the same problem when the UV or color at a vertex varies
+    across each polygon that it forms a part of.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each different combination of color, UV, and normal we encounter, we need
+    to provide an additional copy of each vertex, and therefore also an additional
+    color, UV, and normal value so that all the streams are the same length.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing 3D to 2D projection
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When rendering our 3D world to the display, we have to somehow convert our 3D
+    model vertex data into 2D screen coordinates before we can draw anything. This
+    process is called **projection** and is normally carried out using matrix mathematics
+    to convert vertices between coordinate systems until we end up with screen coordinates
+    that allow the triangles that make up a 3D model to be rendered on screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Performing 3D to 2D projection](img/3363_04_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The following sections provide an overview of the steps involved in projecting
+    a point on to the screen to make sure you are familiar with the key concepts involved.
+    A thorough explanation of the mathematics of 3D graphics is beyond the scope of
+    this book, so it is expected that you will be familiar with what a matrix is,
+    and with geometric operations such as rotations, scaling, and translations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding matrices for 3D graphics
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Think back to school math lessons and you will hopefully remember matrices being
+    described as a useful tool when trying to perform operations such as rotations,
+    translations, and scaling on vectors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: My personal recollection about learning matrices was that they seemed slightly
+    magical at the time. Here was a grid of numbers that could be used to perform
+    a range of really useful geometric operations and, what's more, you could combine
+    several matrices by multiplying them together to perform several operations in
+    one go. The concept itself made sense, but there were so many numbers involved
+    that it seemed a bit bewildering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In 3D geometry we generally use a 4 x 4 matrix, with the top left 3 x 3 grid
+    of numbers representing the rotation and scaling part of the matrix, and the first
+    three numbers of the bottom row representing the required translation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While the translation part made perfect sense to me, the 3 x 3 rotation and
+    scaling part of the matrix was something I never really had a good handle on until
+    the day I found out that what this part of the matrix actually represents is the
+    size and direction of the x, y, and z axes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Take a look at the following image that shows the **identity matrix** for a
+    4 x 4 matrix. All this means is that every element in the matrix is `0` except
+    for those in the top-left to bottom-right diagonal, which are all `1`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Understanding matrices for 3D graphics](img/3363_04_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Notice that the first three numbers on the top row are (1, 0, 0), which just
+    so happens to be a unit vector along the x axis. Similarly, the second row is
+    (0, 1, 0), which represents a unit vector along the y axis and the third row (0,
+    0, 1) is a unit vector along the z axis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once I realized this, it became much more obvious how to create matrices to
+    perform different kinds of geometric operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Want a rotation around the y axis? Just work out vectors for the directions
+    in which the x axis and z axis would need to lie for the desired rotation, and
+    slot these into the relevant parts of the matrix. Similarly, a scale operation
+    just means that we provide a non-unit-sized vector for each axis we want to scale
+    along.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some of you may be reading this and thinking "that's obvious", but if this helps
+    just one person to get a better understanding of how to understand matrix mathematics,
+    my work is done!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Converting between coordinate systems
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When we looked at how a 3D model is represented in terms of data, we talked
+    about the vertices of the model being in model space. In order to use these vertices
+    for rendering, we therefore have to convert our model space vertices into screen
+    coordinates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first step in this process is to use a **model matrix** to convert the vertices
+    from model space into **world space**. Each vertex in the model is multiplied
+    by the model matrix, which will first rotate and scale the vertices so that the
+    model is orientated correctly, then translate each point so that the model's pivot
+    point is now at the translation provided in the matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that all our vertices are positioned correctly in our virtual world, the
+    next step is to convert them into **view space**, which is the coordinate system
+    defined by the position and orientation of our viewpoint, which for obvious reasons
+    is normally referred to as our camera. We do this by providing another matrix
+    called the **view matrix** (or **camera matrix** if you prefer), which will rotate,
+    scale, and translate the world space vertices so that they are now relative to
+    our camera view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the vertices now in view space, the final operation is to convert the vertices
+    into 2D screen coordinates. We have two ways of doing this, these being an **orthographic
+    projection** or a **perspective projection**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An orthographic projection takes the view space coordinates and just scales
+    and translates the x and y components of each vertex to put them onto the screen.
+    The z component of the vertex plays no part in calculating the actual screen coordinates
+    but it is used for working out the drawing order of polygons since it is used
+    as a depth value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, in most cases we use a perspective projection. Again the x and y components
+    of each view space vertex are used to generate the x and y screen coordinates,
+    but this time they are divided by the z component of the vertex, which has the
+    effect of making objects that are further away appear smaller.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The components are also multiplied by a constant value called the **perspective
+    multiplier** . This value is actually the distance at which the **view plane**
+    lies from the camera. The view plane is the plane which contains the rectangular
+    area of the screen display.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Normally, when we think about a camera view it is more convenient to think
+    about the **field of view**, which is the horizontal angle of our viewing cone.
+    The following diagram shows how we can convert this angle into the correct perspective
+    multiplier value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Converting between coordinate systems](img/3363_04_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The next part of perspective projection is to translate the projected point.
+    Normally we want a point that is directly in front of the camera to be in the
+    center of the screen, so we would add an offset of half the screen width to the
+    x component and half the screen height to the y-component. It is possible to specify
+    a different offset position, which is particularly useful if we ever want to display
+    a 3D model as part of a game's user interface. Let's say you wanted to draw a
+    3D model of a collectable object that the player has just picked up at the top
+    right of the screen. Specifying the offset to be this screen position is much
+    easier than trying to calculate a position in 3D space relative to the camera
+    position that equates to the required area of the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clipping planes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We've already discussed the view plane as being the plane which contains the
+    final screen display, but there are some further planes which are used to help
+    speed up rendering and also avoid some strange graphical glitches from occurring.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First we have the **far clip plane** and the **near clip plane**, which lie
+    parallel to the view plane. We tell Marmalade where we want these planes to reside
+    by supplying the perpendicular distance of these planes from the camera view point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The far clip plane prevents polygons that are too far away from the camera from
+    being rendered, while the near clip plane, unsurprisingly, prevents polygons that
+    are too close to the camera from being rendered. The near clip plane is particularly
+    important because if we were not to use it we would start to see models that lie
+    behind the camera being rendered on screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You should generally try to keep the far and near clip planes as close together
+    as possible, as these values are also used for calculating depth buffer values.
+    If the planes are too far apart, you can start to encounter render issues that
+    are sometimes called **shimmering** or **Z-fighting**. These can occur when there
+    is not enough resolution in the depth buffer values, which results in far distance
+    polygons rendering with jagged edges or worse still, randomly poke through each
+    other as they or the camera are moved. The following image shows another example
+    of Z-fighting that can occur when trying to render two overlapping co-planar polygons:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Clipping planes](img/3363_04_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There are also four more clipping planes named left, right, top, and bottom.
+    These are planes which pass through the camera position and one of the left, right,
+    top, or bottom borders of the screen display area on the view plane. Together
+    they form a pyramid-shaped volume that emanates from the camera and defines the
+    part of 3D space that is visible and could therefore appear on screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The clipping planes are managed automatically for us by Marmalade, and they
+    are very useful as they allow us to quickly reject an entire model from being
+    submitted for rendering if it is completely off screen. The off-screen check is
+    performed using a bounding sphere for the model we are rendering, which is simply
+    a sphere centered at the model's pivot point that encompasses all the vertices
+    of the model. The bounding sphere can be quickly tested against all six clip planes
+    and the model can be skipped if the bounding sphere is completely outside the
+    clipping volume.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lighting
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To finish up our 3D primer, let's take a quick look at how real-time lighting
+    is achieved. We won't dwell on the mathematics of it all, since Marmalade mostly
+    takes care of this for us, so instead we'll just explain the different types of
+    lighting we can take advantage of.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each of the lighting types we are about to discuss can be enabled or disabled
+    whenever you want. Disabling different lighting types can yield faster render
+    times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Emissive lighting
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The simplest type of lighting Marmalade provides is **emissive lighting**, which
+    is little more than the amount of color that a rendered polygon will naturally
+    have. The emissive lighting color is provided by the `CIwMaterial` instance that
+    is set when rendering the polygon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Emissive lighting is useful if you want to draw polygons in a single flat color,
+    but normally we want a bit more flexibility than that, so we might set a color
+    stream instead, or use one of the other forms of lighting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ambient lighting
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Ambient lighting** provides the background level of light in our scene, such
+    as the light which might be provided by the Sun.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Without ambient lighting, any polygon that is not facing a light source directly
+    would have very little light applied to it and so would appear black. Normally
+    this is not very desirable, so we can use ambient lighting to provide a base level
+    of color and brightness to our polygons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Marmalade, we set a global ambient lighting term as an RGB color. The `CIwMaterial`
+    instance used when rendering also has an ambient light value that is combined
+    with the global ambient light. If the material ambient light is set to bright
+    white, the polygon will be rendered with the full amount of the global ambient
+    light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the global ambient lighting is disabled, the material ambient color is used
+    directly to control the color of the rendered polygons. This provides an easy
+    way of brightening or darkening a model at rendering time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Diffuse lighting
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In order to use **diffuse lighting** our model data must provide a normal stream.
+    A diffuse light comprises of both a color and a direction in which the light is
+    pointing. The light's direction vector is combined with the normal vector for
+    each vertex in the model using the dot product operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The result of the dot product operation is multiplied by the global diffuse
+    lighting color and the current `CIwMaterial` diffuse color or the RGB value from
+    the color stream, if one has been provided. This will yield the final color value
+    that is used when rendering the polygon to the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specular lighting
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As with diffuse lighting, **specular lighting** can only work if we have provided
+    a normal stream. It also needs a diffuse light to be specified as it relies on
+    the direction of the diffuse light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This type of lighting allows us to make a model appear shinier by causing it
+    to briefly become brighter when it is facing the direction of the diffuse light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can specify both a global and a specular light color specific to `CIwMaterial`,
+    and additionally the material also provides a setting for the **specular power**
+    . This value allows us to narrow down the response of the specular lighting. A
+    higher number means that the vertex normal must be almost parallel to the lighting
+    direction before the specular lighting will take effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using IwGx to render 3D graphics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Remember when we were looking at 2D graphics rendering in [Chapter 2](ch02.html
+    "Chapter 2. Resource Management and 2D Graphics Rendering"), *Resource Management
+    and 2D Graphics Rendering*, I said we would be using IwGx because it would make
+    the transition to rendering 3D graphics that much easier. Now's the time to see
+    if my claim was true!
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we shall look at how we can implement the 3D equivalent of
+    the "Hello World" program—a spinning cube.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preparing IwGx for 3D rendering
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As with 2D rendering, the very first thing we need to do is initialize the IwGx
+    API by calling `IwGxInit`, and of course we should call `IwGxTerminate` at the
+    end of our program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With IwGx ready to go we next need to set up our projection. We''re going to
+    be using a perspective projection, so we need to be able to specify the perspective
+    multiplier value that we want to use. The code to do this is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: This line of code sets the perspective multiplier up, to provide a 90 degree
+    field of view. See the section *Converting Between Coordinate Systems* earlier
+    in this chapter for more information on how to calculate the required perspective
+    multiplier value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next we have to set the far and near clipping planes'' distances. For our demo
+    purposes we''ll choose a value of `10` for the near plane and `1000` for the far
+    plane; these values are set as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: These values are in view space units and can be set to any value greater than
+    zero (the far value should be greater than the near value too!) that works well
+    for the needs of our game. Normally it is the far clip distance that is most important,
+    as it needs to be set far enough out that our world is rendered satisfactorily,
+    but not so far that the frame rate suffers because we are rendering too much.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may be wondering why these numbers have been written as `10.0f` and not
+    just 10 or 10.0? The reason is to ensure that the compiler treats these values
+    as a single precision `float` value. The latter two forms will both be interpreted
+    as a `double` and this can lead to a time consuming conversion from `double` to
+    `float`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting lighting information
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In order to make our spinning cube look a little more attention grabbing, we'll
+    set up some lights so that as the cube spins its faces change color accordingly.
+    The lighting support provided by Marmalade may look a little limited, but is generally
+    adequate for most mobile games' needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Marmalade only allows us to define a single ambient light and a single diffuse
+    light. Let's start by setting the global ambient lighting value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first function we call is `IwGxSetLightType`, which takes an ID number to
+    identify the light we wish to modify and a definition describing the type of light
+    we are specifying. Presumably this API has been chosen so that Marmalade can easily
+    be made to support more lights in the future, but for now the ID number can only
+    be zero or one, and the light type must be one of `IW_GX_LIGHT_AMBIENT`, `IW_GX_LIGHT_DIFFUSE`,
+    or `IW_GX_LIGHT_UNUSED`. The latter value can be used to disable the light.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the type of light taken care of, we set the color of light using the function
+    call `IwGxSetLightCol`. There are two versions of this function. Both take the
+    ID of the light we wish to modify, but the RGB color of the light can either be
+    specified as three `uint8` values for red, green, and blue, or a pointer to a
+    `CIwColour` instance can be supplied instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code sets the light with ID zero to be an ambient light with
+    a mid-grey color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now let''s create a diffuse light with a specular highlight. We''ll need two
+    additional functions to do this, `IwGxSetLightSpecularCol` to set the color of
+    the specular highlight, and `IwGxSetLightDirn` to set the direction in which the
+    light is pointing. The direction is specified as a unit vector in terms of world
+    space coordinates. Here''s some code to illustrate this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code snippet sets up the light ID one to be a diffuse light with mid-grey
+    intensity and a brighter grey specular highlight. The light is pointing at a 45
+    degree angle between the x and z axes of the world.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our lights have now been initialized, so all that is left to do is let Marmalade
+    know we want to switch them on! There are a number of functions available to allow
+    us to do this. We can either use `IwGxLightingOn` and `IwGxLightingOff` to enable
+    or disable all the initialized light sources, or we can enable each part of the
+    lighting model independently. The following example code disables emissive lighting
+    but enables ambient, diffuse, and specular lighting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since we are using specular lighting, there is one more thing to do. The material
+    that is used to render our polygons must have a specular color and power specified.
+    The material''s specular color is used to modulate the global specular color,
+    while the power value indicates how close the vertex normal must be to the light
+    direction for the specular highlight to kick in. The power value is a `uint8`
+    value and only very low values (that is, less than 8) produce notable differences
+    in the rendered effect. Here is the code to illustrate this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The previous examples are just making use of Marmalade's built-in lighting model
+    since it is easy to use and works well enough for most needs. However, there is
+    absolutely no reason we have to use this lighting model, as there is nothing stopping
+    us from generating our own color stream using whatever lighting algorithm we want
+    to use. Alternatively we could employ OpenGL ES 2.0 shaders, although discussion
+    of this particular topic is beyond the scope of this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Model data for the cube
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We're going to render a lit cube with a different color on each face, so we
+    need to provide some data streams for the vertices, colors, and normals, and an
+    index stream to show how this data should be interpreted by the rendering engine.
+    Since we are not using textures in this example, there is no need to provide a
+    UV stream.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also want to be as efficient as possible in our drawing, so our aim is to
+    draw the entire cube with just a single call to `IwGxDrawPrims`. To do so we'll
+    need to have three copies of each vertex (one for each face that the vertex is
+    part of) so we can assign different colors and normals to it, and we'll also need
+    to specify some degenerate triangles in our index stream to join all the faces
+    together into one big triangle strip.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's start with the vertex stream. We allocate an array of `CIwFVec3` and initialize
+    it with the vertex data. The cube pivot point will be dead center, so all the
+    vertex coordinates will have the same magnitude.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The vertices have been ordered a face at a time, so the first four vertices
+    form the front of the cube, the next four the right hand face, and so on. You
+    are free to specify the order however you see fit, since ultimately it will be
+    the index stream that determines how the individual triangles will be rendered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we''ll create the normal stream. Normals in Marmalade are also specified
+    as instances of `CIwFVec3`, and they are expected to have unit length. This means
+    that the magnitude of the vector should be one. Here''s a code snippet that will
+    do the job:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now we need a color stream. Just as with 2D rendering, this requires an array
+    of `CIwColour` instances. Here comes the code snippet!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, it''s time for the index stream to be created. Again, as with 2D rendering,
+    this is just an array of `uint16` values which indicate the order in which elements
+    of the streams should be accessed. Here''s the code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note than the first four values in the stream define the first full face of
+    the cube. The next two values form a degenerate triangle that allows us to link
+    the first face to the second face without actually rendering anything. As we saw
+    earlier in this chapter, the easiest way to link two triangle strips is to repeat
+    the last index of the first strip and start the next strip with two copies of
+    its first index. This pattern continues until we've drawn the last face of the
+    cube.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The order in which the vertices are specified is the most important consideration,
+    as we must ensure we get this correct for the culling mode we'll be using. For
+    back-face culling (so faces that are away from the camera are not rendered) we
+    need the vertex order to be in anti-clockwise order for the first triangle specified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we are using triangle strips, the order of the vertices actually alternates
+    between anti-clockwise and clockwise. Normally we don't have to worry about this
+    too much since the natural order of the vertices in the strip takes care of it,
+    but it can cause problems when you try to join together triangle strips that contain
+    an odd number of vertices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The general rule for joining triangle strips with degenerate triangles is that
+    a strip with an odd number of points will require the order of the points in the
+    next strip to be reversed. For example, if your first triangle strip contains
+    an odd number of points, the first triangle of the next strip will need to be
+    specified in clockwise rather than anti-clockwise order; otherwise it will not
+    be culled correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The view matrix
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When rendering 3D graphics, we need to be able to provide a position and direction
+    that we want to view our game world from. We do this by supplying a view or camera
+    matrix; in Marmalade this can be done using an instance of the `CIwFMat` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CIwFMat` class represents a 4 x 4 matrix using a 3 x 3 array of `float`
+    for the rotation part, and `CIwFVec3` for the translation part. The remaining
+    elements of the 4 x 4 matrix (that is, the right-most column of numbers) are fixed
+    to be the same as the identity matrix (0, 0, 0, and 1 from top to bottom of the
+    column). These values never have any influence on normal 3D transformations; so
+    by leaving them out we save memory, and also the matrix multiplication code can
+    be made slightly more efficient by not having to perform multiplications for these
+    parts of the matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Time to create a suitable view matrix. For the purposes of our spinning cube,
+    it would be good if we could specify a position for the camera and then calculate
+    the correct rotation for the matrix to view our cube. Luckily the matrix classes
+    have a method called `LookAt` that makes this easy to do:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The previous code declares a new `CIwMat` instance and sets its translation
+    to (0, 0, -400). We then call the `LookAt` method, which is passed the position
+    we want the camera to be placed at, the point in space we want it to be orientated
+    towards, and a unit vector in the vertically up direction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Marmalade's default coordinate system when rendering in 3D has the x axis positive
+    direction running from left to right across the screen, while the z axis positive
+    direction runs into the screen. However, the positive y axis runs in a direction
+    from the top of the screen to the bottom, which may not be what you initially
+    expect. We are used to thinking about the height above the ground as a positive
+    number, but in Marmalade it would be negative.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have a view matrix, we can call the function `IwGxSetViewMatrix` with
+    a `const` pointer to the matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The model matrix
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The model matrix is used to position our 3D model in the world and allow it
+    to be rotated or scaled as desired. As with the view matrix, the model matrix
+    can be specified using a `CIwFMat` instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For our spinning cube we will create a matrix that spins the cube around the
+    x and y axes. We do this by creating two matrices, one for x axis rotation and
+    another for y axis rotation, which we then multiply together. We will be positioning
+    our cube at the world origin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The code shown declares two instances of `CIwFMat` and uses the methods `SetRotY`
+    and `SetRotX` to generate the rotation matrices around the y and x axes respectively.
+    The rotation angles are provided by two variables `lRotationY` and `lRotationX`,
+    which are both of the type `float` and represent an angle (in radians) to rotate
+    by. If we increase the values of these two variables with each iteration of the
+    main game loop, it will change the orientation of the cube and make it appear
+    to rotate when rendered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Be careful when using the `SetRotX`, `SetRotY`, and `SetRotZ` methods of the
+    matrix classes. These methods take two further `bool` parameters that allow the
+    translation part of the matrix and any elements of the 3 x 3 rotation part of
+    the matrix that are not used in the rotation to be zeroed. Both of these parameters
+    default to `true`; so, in particular, if you set up a translation in the matrix
+    before calling one of these methods, it will get lost unless you specify `false`
+    as the second parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have our two rotation matrices, we multiply them together to generate
+    the final model matrix using the `PreMult` method. The order in which matrices
+    are multiplied together is very important as the end rotation will vary depending
+    on the order used. Marmalade provides us with `PreMult` and `PostMult` methods
+    to allow us to determine whether the calling matrix is the first matrix or the
+    second in the multiplication.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we have our model matrix ready, we just call `IwGxSetModelMatrix` to use
+    it for rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering the model
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'All the hard work is now done and we can finally submit our cube for rendering.
+    The following code will submit all our streams and our cube will be rendered.
+    Hopefully you''ll see just how close it is to the code we used for rendering in
+    2D:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using a 3D modeling package to create model data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've seen how to create the streams of data for a cube in code, and to be honest
+    it's not pretty! Even a simple shape such as a cube requires so much data that
+    it becomes very difficult for us to keep track of it all and almost impossible
+    to create a more complex 3D shape.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Luckily there is an easier way. We can use a 3D modeling package to create,
+    color, and texture a 3D model and export all the required data in a format that
+    Marmalade can then load and use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Marmalade 3D exporter plugins
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Marmalade comes with exporter plugins for the two modeling packages used in
+    most professional game development studios—Maya and 3DS Max. The details in the
+    following sections apply equally to the exporters for both of these modeling packages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the plugins
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The exporter plugins are installed to your computer when you install the main
+    SDK, but they are not automatically installed into the modeling package for use.
+    In order to use the exporters, we must use the **Marmalade Launch Pad** program
+    to set them up, as shown in the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Start the **Marmalade LaunchPad** program. On Windows it can be found inside
+    the **Marmalade** folder in the **Start** menu. You should see a window appear,
+    containing a tabbed view.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the tab labeled **Install Exporters**. The following screen shown should
+    appear:![Installing the plugins](img/3363_04_05.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the tabs on this screen to select the version of the 3D modeling package
+    you want to install. You must choose both the correct version of your package
+    and whether it is a 32-bit or 64-bit installation. Maya 7.0 and 3DS Max 8.0 are
+    the oldest supported versions. The older versions of the exporters are contained
+    in the tabs labeled **Maya 32bit Legacy** and **Max 32bit legacy**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the **Install…** button next to the required version of your modeling
+    package and the exporter will be installed. Windows User Account Control will
+    probably pop up a request first to ensure you want to proceed, so just click the
+    **Yes** button in this dialog.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Exporting a model
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: With the plugin installed, start up your 3D modeling package and create or load
+    a model that you wish to export. Since this is a coding book, we won't be going
+    into any details about how to create a 3D model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you are a programmer by trade and have no idea how to use a 3D modeling package,
+    don't feel bad. I have seen some truly terrible "programmer art" over the years;
+    so think of this lack of knowledge as a good thing and get a real artist involved
+    in making the artwork for your game. You'll be glad you did!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Assuming you have a 3D model ready to export, let''s get the Marmalade exporter
+    plugin going. The exporter window itself is shown in the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Exporting a model](img/3363_04_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The manner in which the exporter window will be displayed depends on the modeling
+    package you are using.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In Maya you can access the exporter by using the menu option **Marmalade Tools**
+    | **Marmalade Studio: Maya Exporter** or from the icon in the **Marmalade Studio**
+    tab.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In 3DS Max, the exporter can be opened by clicking on the **Utilities** tab,
+    then clicking on the **Marmalade Studio Exporter** button to open the rollout
+    section. Within the rollout, there is another button labeled **Marmalade Studio
+    Exporter**, which will display the exporter window.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The exporter window should now be on screen, and as you can see there are a
+    great many options available. We can do without most of them for now, so we'll
+    only cover the ones we need in order to export a non-animated 3D model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first thing we need to set is the **Current Project** field. The exporter
+    maintains a list of projects that, at its simplest level, is just a quick way
+    of choosing a directory where the exported model files will be created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since we''ve not yet created an exporter project, let''s do so by clicking
+    on the button labeled **Set Project**. The following dialog will appear:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Exporting a model](img/3363_04_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: To create a new project click on the **Add…** button at the bottom of the dialog
+    and you will be prompted to enter a name for the project. Once you've accepted
+    the name, the project will appear in the **Projects:** list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click on the **Browse…** button and locate the `data` directory in our code
+    project. All resource files need to reside with our code project's `data` directory;
+    this will make exporting model files to the correct place much easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For now we will ignore the other settings in this dialog as they are beyond
+    the scope of this chapter; so click the **OK** button to return to the main exporter
+    window, which should now have our newly created project selected in the **Current
+    Project** drop-down list and the `data` directory we set above in the **Project
+    Data Directory** field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the project set, we can now follow these steps to export the model:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First locate the **Export Type** field. Next to this field is a button with
+    a greater-than symbol. Click this button and choose **model** from the pop-up
+    menu that appears. The **Export Type** field should change to **scene (model)**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now look at the first set of checkboxes labeled **Enable export of**. We only
+    need the **geometry** and **exportgroup** options to be ticked to export the correct
+    set of files.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The next set of checkboxes is labeled **Export Flags**. We don't need to have
+    any of these settings checked.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now we reach the **Asset Name** field. This specifies the base filename that
+    will be used when the exporter generates the various output files.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Save To Location** field allows a directory path relative to the **Project
+    Data Directory** field to be provided. All files generated will be created within
+    this directory, which will itself be created if it does not already exist.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Scale Factor** allows us to provide a numeric scaling factor that will be
+    applied to the x, y, and z components of every exported vertex. This allows artists
+    to create their models using familiar units such as meters in the modeling package,
+    but then convert those units into a different scale for use in the game, such
+    as the ever popular "number that is a power of 2" so beloved of us programmer
+    types. Note, however, that it is vital to ensure that all artists working on a
+    project use the same units and scale factors as each other, otherwise you''ll
+    have real problems trying to get all these models to work together properly in
+    the game!'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Next we can choose to export either everything in the current scene, just the
+    selected objects, or just the visible objects using the drop-down list labeled
+    **Export**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Transform Type** drop-down box lets us choose whether the exported vertices
+    should be in model space or world space. In most cases, when exporting individual
+    models we would choose the **local** option (another way of saying model space!).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The final setting we may be interested in is the **Texture Dir** field. This
+    allows a directory to be specified, from which any textures to be used on the
+    model will be exported. It can be either an absolute path or relative to the **Project
+    Data Directory**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: That completes all the fields we currently need to be concerned with. All that
+    is left to do is click on the **Export!** button, which will generate the necessary
+    files and then display a window listing all the files that were created during
+    the export process.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Blender plugin
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There's no doubt that both Maya and 3DS Max are superb products, but it's also
+    true that they carry a fairly hefty price tag. Unfortunately, Marmalade does kind
+    of rely on using one of these two heavyweight packages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Admittedly, Marmalade does also ship with a converter for **Collada** , a file
+    format that was created to enable the interchange of 3D models between different
+    packages. I hesitate to recommend this approach however, as at the time of writing,
+    the Collada converter that ships with Marmalade is known to be a little buggy,
+    particularly when it comes to exporting animations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Luckily there is a cheaper alternative. There is a 3D modeling package by the
+    name of Blender, which is free to download and use; however, the Blender team
+    is always happy to accept donations to continuously improve the product, so if
+    you find it useful do consider helping them out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Marmalade SDK does not come with support for Blender, but thankfully due
+    to the efforts of Benoit Muller there is a rather groovy exporter plugin that
+    does a great job of replacing the 3DS Max and Maya exporters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing Blender and the exporter plugin
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you do not already have Blender installed, head over to the Blender website
+    and download a copy. The URL is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.blender.org/](http://www.blender.org/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing Blender is just a case of executing the downloaded installer and
+    following the on-screen instructions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With Blender installed, we now need to get hold of the exporter plugin, which
+    can be found at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Import-Export/Marmalade_Exporter](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Import-Export/Marmalade_Exporter)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The plugin is a Python script that can be installed into Blender using the
+    following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy the downloaded plugin file `io_export_marmalade.py` into the Blender plugins
+    directory. On Windows this will normally be something like `C:\Program Files\Blender
+    Foundation\Blender\2.63\scripts\addons`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Start Blender and go to **File** | **User Preferences…**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the **Addons** tab at the top of the preferences window.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the **Categories** list on the left-hand side of the window, click on **Import-Export**.
+    You should see a screen that looks something like the one shown in the following
+    figure:![Installing Blender and the exporter plugin](img/3363_04_08.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Find the **Import-Export: Marmalade Cross-platform Apps (.group)** entry and
+    click the checkbox on the right-hand side of it to enable the plugin.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Exporting a model
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To export a 3D model using the Blender exporter, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create or load the model you wish to export into Blender.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Go to **File** | **Export** | **Marmalade cross-platform Apps (.group)**. The
+    main 3D view will be replaced with a filename requester. The bottom-left corner
+    of the window should contain the exporter options and look like the following
+    image:![Exporting a model](img/3363_04_09.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: First choose the location you want to export the datafiles to, using the file
+    requester. There are two text edit boxes at the top of the screen; the topmost
+    is the directory to save to and the bottom specifies the filename we want to use
+    for exporting. This filename should be a GROUP file, so its extension should always
+    be `.group`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the exporter settings, first use the **Export** drop-down list to select
+    whether you want just the selected models to be exported or all models in the
+    current scene.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Merge** option controls what happens when there are several models in
+    the scene to be exported. The default option, **None**, exports each model individually
+    with its coordinates in model space, and is the option we require for now. The
+    other two options allow multiple models to be merged as either a single big mesh
+    of polygons or as a number of separate meshes, with all vertices specified in
+    world space coordinates.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Scale Percent** value allows model vertices to be scaled up or down so
+    that the artist can build the models using the most convenient measurement units
+    in Blender, yet still allow the exported model to have vertices scaled to a set
+    of units that may be more useful in the game.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Flip Normals** checkbox will reverse the direction of all exported normals.
+    Normally this can be left unchecked, but it can be useful to fix models that have
+    been lit incorrectly and have their normals pointing in the wrong direction.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Apply** **Modifiers** checkbox will cause any mesh modifiers applied to
+    the model in Blender to be evaluated before the export data is created. This defaults
+    to being switched off.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If vertex colors have been applied to the model, they will only be exported
+    if the **Export Vertices Colors** checkbox is selected.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The next checkbox, **Export Material Colors**, determines whether materials
+    created during the export process will be exported with their defined colors.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The **Export Textures and UVs** checkbox should be checked if you have texture-mapped
+    polygons in your model.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Since Marmalade will need access to any images used in texturing the model,
+    the **Copy Textures Files** checkbox can be selected to ensure image files are
+    also copied across to the export directory.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The remaining settings are mostly concerned with exporting animations, so we
+    can ignore them for now; however, it is worth mentioning the **Verbose** checkbox
+    which logs information about the export process to Blender's console window. This
+    may help you solve problems with your models when the export process doesn't work
+    exactly as expected.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When all settings have been made, click on the **Export Marmalade** button,
+    which is at the top right of the Blender window. Alternatively, if you wish to
+    cancel the export process, there is a **Cancel** button underneath the export
+    button.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Marmalade 3D model datafile formats
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've now seen how we can export 3D model data from a modeling package, but
+    we haven't yet looked at the files themselves that are generated as part of the
+    export process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While we shouldn't need to make manual changes to these files, it is useful
+    to know a little about them as it can help to discover why a model hasn't been
+    exported quite as expected to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's take a look at the files that would be generated for a cube model similar
+    to the one we created in code earlier in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GROUP file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The first file generated is a GROUP file that will be created in the directory
+    specified in the exporter settings. The GROUP file contains a list of the individual
+    model files (called **GEO files**) that were exported. Here''s what the GROUP
+    file for the example cube model would look like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The exporter helpfully includes the name of the source modeling package file
+    that was used to do the export, details about when the export was made, and by
+    whom.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It then just declares a new `CIwResGroup` instance, named based on the asset
+    name specified at export time. The resource group is populated by a list of the
+    GEO files that need to be loaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The MTL file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ve already created an MTL file by hand when working with 2D graphics, so
+    it should already look familiar. Here is what the file might look like for the
+    cube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again the exporter includes the name of the source modeling package file used
+    to generate the MTL file. The `CIwMaterial` instances defined in this file are
+    all generated from the materials used in the modeling package, so it's easy for
+    an artist to change colors and other material attributes in the comfort of their
+    favorite modeling tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The exporter creates a sub-directory called `models` in the specified export
+    directory and the MTL files are written into this directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GEO file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The most important file type to be exported is the GEO file, as this is the
+    file that actually contains all the data to describe our 3D model. In common with
+    all Marmalade resources, this file is yet another use of the ITX file format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GEO files are processed by way of a resource handler class called `CIwResHandlerGEO`.
+    This class takes care of loading all the data from the GEO file and submitting
+    it to a singleton class called `CIwModelBuilder`. This class processes the model
+    data and generates an optimized version of the data for fast rendering, which
+    is then serialized to a file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CIwModelBuilder` class is only available in debug builds, so you can only
+    load model data in a release build by loading the serialized version of the GROUP
+    file that references the GEO file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The exporter will write the GEO files into the model's sub-directory in the
+    same way as it does with MTL files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may have noticed that the GROUP file shown earlier only references the GEO
+    files, not the MTL files. The GEO resource handler takes care of loading the MTL
+    files automatically by checking to see if an MTL file exists with the same base
+    filename as the GEO file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's look at the innards of the GEO file for our cube model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Yet again the exporter will include a comment referencing the source modeling
+    package file before beginning to define an instance of `CIwModel`, which is the
+    class used by Marmalade to represent a complete collection of 3D model data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CIwModel` instance is first given a name. This name actually comes from
+    the name given to the model in the modeling package and is the name used to access
+    the model in our code, so it is important for the artist to name things sensibly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `CMesh` instance is declared next, which is a class that groups together all
+    the various bits of model data. This class, and all the other classes we are about
+    to see that are contained within it, are only ever used internally to the model
+    builder. Once the model has been processed these classes will no longer exist
+    in memory, so we can't use them in our code to access the raw model data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `scale` value used to export the vertex data is listed first in the `CMesh`
+    instance, and this is followed by classes which declare the various types of model
+    data. In the cube example we can see `CVerts`, `CVertNorms`, and `CVertCols`,
+    which are little more than big lists of vertex, normal, and color data respectively.
+    A similar class called `CUVs` also exists to provide texture information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next we see a class called `CSurface`. This class provides polygon information
+    for the model, and an instance will exist for every material used in the model.
+    The material used is specified first, and then comes the polygon information.
+    A `CQuads` instance is used to provide a list of all the quadrilateral polygons
+    using the material, and a `CTris` instance lists the triangular polygons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A polygon is defined by supplying a collection of data for each vertex in the
+    polygon. The polygon is supplied as a group of five numbers enclosed in curly
+    braces. These numbers are indices into the blocks of data specified earlier in
+    the file and occur in the following order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are two UV values as it is possible for a material to specify two textures
+    that will be blended together at render time, and each of these textures can have
+    its own UV stream.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once all this data has been loaded, the model builder class will analyze it
+    and create a version of the data that is far more optimal for real-time rendering
+    purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading and rendering an exported 3D model
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: OK, so now we've got the model data exported, how do we go about loading it
+    into our program and rendering it? It's actually surprisingly easy, as these next
+    sections will show.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding the IwGraphics API to a project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Marmalade's 3D model rendering code is part of the IwGraphics API, so before
+    we can draw anything we need to add this library to our project. This is done
+    by adding `iwgraphics` to the `subprojects` section of the MKB file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then need to add a call to `IwGraphicsInit` at the start of our program,
+    and `IwGraphicsTerminate` at the end. This API relies on both IwGx and IwResManager,
+    so we must call the initialization functions for both of these APIs before calling
+    the IwGraphics one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading and accessing an exported 3D model
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You''ve probably already guessed that this is almost trivially easy. The exporter
+    generated a GROUP file, so all we have to do is load it into memory and then dig
+    the model out of the resource group. Here''s a block of code which does just that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Or alternatively you could do the following if you don''t want to be bothered
+    with retaining a pointer to the resource group instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: That's it. The model is now loaded into memory and ready to render.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering an exported 3D model
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'It is time to render the model on the screen and this too is incredibly easy.
+    All we have to do is set our view and model matrices using `IwGxSetViewMatrix`
+    and `IwGxSetModelMatrix`, then execute the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The variable `lpCube` is the pointer to the `CIwModel` instance that we retrieved
+    from the resource manager in the previous section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In actual fact the `Render` method can take two optional parameters. The first
+    parameter is a `bool` value that tells Marmalade to check a bounding sphere for
+    the model against the clipping planes to see if it actually needs to be rendered.
+    This parameter defaults to `true`, so the check is done by default. The bounding
+    sphere is generated automatically for us by the model builder code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second parameter is a flags field. Aside from one flag that is supposed
+    to have something to do with a 2D screen rotation (I say "supposed" because I
+    can't say it did very much when I tried it), the other flags are only relevant
+    when dealing with animated 3D models that contain normal data, so we will not
+    worry over these for now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Releasing 3D model data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Since our 3D model data has been loaded into memory using the resource group
+    system, we can make use of the same mechanism of destroying groups to release
+    model data from memory that we no longer need. As a recap, we just do the following
+    if we have a pointer to the `CIwResGroup` containing the 3D data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Alternatively we can release a group from memory by destroying it by name,
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Example code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Here are some details about the example projects that accompany this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Cube project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This is a complete example of the first spinning cube project discussed in
+    this chapter, where we generate the model data in code and submit it to IwGx for
+    rendering using `IwGxDrawPrims`. See the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Cube project](img/3363_04_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The Cube2 project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This project is almost identical to the previous project, except that the model
+    data for the cube has been exported as a GEO file from a 3D modeling package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Skiing project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'For this chapter the Skiing game waves goodbye to its old bitmapped graphics
+    and instead says hello to some new 3D models instead. A screenshot of the game
+    with its new 3D skin can be seen in the following figure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Skiing project](img/3363_04_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The following sections describe some of the other more interesting changes to
+    the game code for this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Migration to 3D
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The first step was to change all position and velocity information from being
+    2D vectors to 3D vectors, which meant changing `CIwVec2` instances to `CIwFVec3`
+    and making sure that the extra component in the vector was initialized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since we tend to think about the y axis being the height above the ground, the
+    y component was used for height in the game too. However, since the skier and
+    trees are stuck to the floor, this means the y component of all position vectors
+    is always zero.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The game therefore scrolls the trees along the z axis and the camera is placed
+    high in the air and orientated to look at the skier. This still provides the effect
+    of the trees moving up the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second step was to get rid of all the old 2D textures and replace them with
+    3D models. Since the `GameObject` class dealt with all the rendering, all that
+    had to be done was to change this class to use `CIwModel` instances instead of
+    `CIwMaterial` instances. The child classes then just provided a pointer to a model
+    instead of a pointer to the material.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `GameObject` class also had a y axis rotation added to it. This is used
+    to rotate the skier model, which leads to a far smoother motion than we had previously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The trees also use the rotation feature. The game features only one tree model,
+    but by rotating it at random angles it makes the game look far more interesting
+    without having to add more game resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Addition of a collision detection system
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The code now features a very simple collision detection system. The `GameObject`
+    class now allows a collision radius to be set, which is then used to perform sphere
+    intersection tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ModeGame::Update` method now steps through every game object (currently
+    just trees, of course) in the game world and finds out how far away it is from
+    the skier. If the distance is less than the combined collision radius of the skier
+    and the other game object, a collision has occurred.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, to act on these collisions, a virtual method called `OnCollide` has been
+    added to the `GameObject` class. Child objects can override this class and then
+    react accordingly whenever they collide with another object. The `Skier` class
+    implements this method so that whenever the skier collides with a tree, the game
+    is over.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We now know how to render 3D graphics that have either been generated in code
+    or have been exported from a 3D modeling package. Which method we eventually use
+    depends on what we are trying to do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If rendering in game characters or scenery, the exported model route is definitely
+    the best way to go; but creating our own polygon data in code is a much better
+    and more efficient way of creating effects such as particle systems, since it
+    is much easier to batch a large number of individual polygons into a single draw
+    call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We've also learnt how to export 3D model data from three different modeling
+    packages—Maya, 3DS Max, and Blender—and load this exported data into our program
+    and render it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We'll be sticking with 3D rendering for a little while longer as the next chapter
+    is all about making our models animated.
+  prefs: []
+  type: TYPE_NORMAL

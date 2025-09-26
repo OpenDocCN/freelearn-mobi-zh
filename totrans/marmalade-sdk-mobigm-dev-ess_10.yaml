@@ -1,0 +1,894 @@
+- en: Chapter 10. Extending Marmalade with the Extensions Development Kit (EDK)
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter we mentioned how Marmalade's **Extensions Development
+    Kit** (**EDK**) was a possible way of adding functionality to a Marmalade application
+    that had not been otherwise exposed, by using the standard Marmalade APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter we''ll be looking at the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An overview of what the EDK is and why it is needed
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to extend Marmalade by creating an EDK extension for Windows, iOS, and Android
+    to support reading gyroscope information
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Why is the EDK necessary?
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Marmalade SDK manages to work its magic of being able to take one codebase
+    and deploy it to multiple platforms by providing a set of APIs that sit on top
+    of the APIs specific to each platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A deployed application executable actually consists of two separate files. Our
+    application code is compiled into an **S3E file**, which is the Marmalade equivalent
+    of a Windows **Dynamic Link Library** (**DLL**). This file is the same across
+    all platforms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to execute our S3E file, a Loader program is used. This program is
+    the glue between the platform we are running on and our own code. The loader program
+    starts up first, loads the S3E file into memory, and then passes control to the
+    code within it. If our code needs to make a platform-dependant call, it actually
+    makes a request to a function in the loader that will then call the correct operating
+    system function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The loader program is a fixed entity and cannot be changed by us, so Marmalade
+    provides us with the EDK system to enable us to make platform-specific function
+    calls. Certain parts of the Marmalade SDK have actually been implemented in just
+    this manner; for example, the s3eFacebook API is actually an extension!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The only problem with the EDK is that it is not a completely cross-platform
+    solution. At the time of writing, it was only possible to write extensions for
+    iOS, Android, Windows, and Mac OSX.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since this book is primarily concerned with development using the Windows version
+    of Marmalade, we won't be looking at how to build a Mac extension here, however
+    we will need access to a Mac computer in order to build iOS extensions since,
+    by necessity, we have to use the Apple iOS SDK, which is not available as a Windows
+    download. For details on creating Mac extensions, look in the Marmalade documentation
+    by going to **Marmalade (C++)** | **Extensions Development Kit (EDK)** | **EDK
+    Guides by Platform** | **OS X EDK Guide**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating an extension for gyroscope input
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To illustrate the process of creating a Marmalade extension, we'll take a look
+    at how to add support for gyroscope input. This is a useful addition since it
+    lets us add a whole new input method to our games yet it also demonstrates just
+    how easy it is to extend Marmalade's functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our extension will consist of the following functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Function | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GyroscopeAvailable` | This function is automatically generated for us by
+    the EDK build process. It returns `S3E_TRUE` if the Gyroscope extension is supported
+    for the current platform, and `S3E_FALSE` if it isn''t. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GyroscopeSupported` | Not all mobile devices actually contain gyroscope
+    hardware, so this function is provided to determine whether or not we can make
+    use of the gyroscope in our game. The function returns a normal C++ `bool` value
+    indicating whether a gyroscope is present. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GyroscopeStart` and`GyroscopeStop` | These two functions start and stop
+    the hardware generating gyroscope input data. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `GyroscopeGetX` ,`GyroscopeGetY` , and`GyroscopeGetZ` | Returns the current
+    gyroscope data values for the X, Y, and Z axes. The values are returned as `float`
+    values in radians per second. |'
+  prefs: []
+  type: TYPE_TB
+- en: The API detailed earlier provides the bare minimum functionality required to
+    provide gyroscope support and has deliberately been kept simple in order to demonstrate
+    the process of building an extension more clearly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Declaring the extension API
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The first step in creating an extension is to specify the functions it will
+    contain, which we will do using an **S4E file**. This file is used to define the
+    API of our extension and is best illustrated by an example. If you want to follow
+    along, create a new directory called `Gyroscope` and create a file called `Gyroscope.s4e`
+    inside it with the following contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The example starts with the line `include:`, which is then followed by any number
+    of C preprocessor commands, include files, structure definitions, and class definitions
+    that will become part of the extension's main header file. In our case we are
+    just including the `s3eTypes.h` file; but if we needed to pass lots of data between
+    the extension and the calling code, we might want to add structures or classes,
+    enumerations, and definitions here too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next we have the `functions:` section of the file, which is little more than
+    a list of the functions that our extension will contain and can be called from
+    within a Marmalade project that makes use of the extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We do not have to list the `GyroscopeAvailable` function explicitly in the list
+    of functions. The EDK build process automatically generates this function for
+    us by taking the name of the S4E file and appending "Available" to the end of
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, the functions are listed almost as if they were normal C function
+    prototypes. Each function is listed on its own line by first stating the return
+    type and then its name and parameter list (which all just happen to be empty in
+    this example!).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Additionally, each function in the S4E file function list also specifies a
+    default value it will return and can be followed by a number of optional directives
+    that control the behavior of the function, how it is added to the extension, and
+    how it is called. Our example makes no use of these directives, but the following
+    table shows what can be specified:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Directive | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `run_on_osthread` | Specifies that the extension function should only be
+    executed on the main OS thread of the application. This is particularly important
+    if the function performs any kind of user interface interaction, as many platforms
+    will only allow UI calls to be made on the main thread. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `no_lock` | Disables thread-safe locking when calling this function. By default
+    all extension functions can only be called on a single thread at any particular
+    time and locking code is automatically generated to ensure that this happens.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `fast` | Enables fast stack switching. This is an optimization option, which
+    means less data needs to be passed between our application and the loader when
+    making an extension function call by using the same stack as the loader module.
+    Normally the loader module and our application code have separate stacks. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `no_assert` | Stops an assert from being raised if an extension function
+    is called on a platform for which the extension has not been built. The default
+    value for the function will be returned. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `order` | By default each function listed in the S4E file will be added to
+    the extension in list order and this order is used internally to locate the correct
+    function pointer to call. As our extension develops over time, we may want to
+    add or depreciate functions but still keep related functions together in the S4E
+    file. By adding `order=x` after a function declaration we say that this function
+    will occupy position `x` in the function order, with *x=1* being immediately after
+    the last function that does not specify an order value. If that sounds confusing,
+    don''t worry; for our own projects we will probably never need to make use of
+    this feature as it is only really an issue if we are making our extension available
+    for other people to use! |'
+  prefs: []
+  type: TYPE_TB
+- en: 'There are also a number of global directives that can be specified in the S4E
+    file and these should be listed at the very start of the file before the `include:`
+    line. Again our example makes no use of these directives, but for your information
+    they are listed in the following table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Directive | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `no_init_term` | Specifies that the extension needs no initialization or
+    termination functions to be automatically generated. It is unlikely you will ever
+    use this directive since these functions are generally required in order to set
+    up the interface between the extension and our project code. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `errors` | Allows access to some macros that make communication of errors
+    easier to implement by automatically generating functions, such as `GetError`,
+    present in many of the S3E APIs that make up the low-level Marmalade API. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `globals` | Declares that the extension will require a global structure block
+    allocated for its internal use and makes some macros available in order to support
+    getting and setting values in this structure. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `callbacks` | States that this extension wants to make use of callbacks and
+    will automatically define callback IDs to support this using the same approach
+    used in other built-in S3E APIs. |'
+  prefs: []
+  type: TYPE_TB
+- en: Making an extension for Windows
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We'll begin by creating our extension for use on Windows. Obviously it's unlikely
+    that a Windows PC would feature gyroscope hardware (though I guess not impossible!),
+    but starting with the Windows version is easiest as it does not require us to
+    install any additional software or SDKs in order to build it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Windows extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since we won't actually be supporting gyroscope input on Windows, our API only
+    needs to return `false` in the `GyroscopeSupported` function and the functions
+    for accessing current gyroscope values should always return a `0` value. Obviously
+    the start and stop functions need to do absolutely nothing!
+  prefs: []
+  type: TYPE_NORMAL
+- en: We've already created the S4E file, so now we'll put it to use. Open Windows
+    Explorer, navigate to the `Gyroscope` directory, and then right-click on the `Gyroscope.s4e`
+    file. Select the menu option **Build Windows Extension**, which will run a Python
+    script that generates a number of new files and directories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the main `Gyroscope` directory three new files are created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Gyroscope_build.mkf` is the MKF file for the extension that allows us to specify
+    additional generic or platform-dependant source files that are needed for building
+    it'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Gyroscope.mkf` is the MKF file any Marmalade project that makes use of our
+    extension will need to include as a subproject to access the extension functions'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Gyroscope_windows.mkb` is the MKB file that creates a Visual Studio project
+    that we can use to compile the extension code'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There are four subdirectories created as well. We can safely ignore the `stamp`
+    directory, which contains a file used internally by the EDK build scripts to track
+    changes to the extension API. We can also ignore the files in the `interface`
+    directory, which are autogenerated and should not be altered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `h` directory contains a single file, `Gyroscope.h`, which again we should
+    not modify, as any changes we make will be overwritten by the extension creation
+    scripts. This file is very useful, however, as it is the file we will include
+    in our project sources to access the functions in the extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally there is the `source` directory that in turn contains three more subdirectories.
+    The `generic` subdirectory contains source files that will define the default
+    behavior of the extension if platform-specific source files are not provided.
+    The `h` directory also contains files that are used across all platforms for building
+    the extension code. While we can make changes to these files, it is unlikely we
+    will ever need to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This leaves us with the `windows` subdirectory that contains a single file called
+    `Gyroscope_platform.cpp`. This file contains stubs for each of our extension functions
+    that were generated from the data provided in the functions list of the S4E file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note however that all the stubbed functions end with the suffix `_platform`.
+    The EDK system actually generates a set of generic functions with the exact names
+    specified in the S4E file that calls the equivalent functions that are suffixed
+    with `_platform`, if they exist. This is necessary so that code that uses an extension
+    can still be compiled and executed on a platform for which an extension has not,
+    or cannot, be created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing a Windows extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Ordinarily we would need to modify the `Gyroscope_platform.cpp` file to implement
+    the extension; but for our purposes no changes are actually necessary as the generated
+    stubs provide the desired functionality on Windows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Obviously, in this case a Windows extension is a little redundant, but bear
+    in mind we could always create a more complex extension that somehow emulates
+    gyroscope behavior, perhaps using a joystick or some other input device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a Windows extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To build the extension, we just double-click the `Gyroscope\Gyroscope_windows.mkb`
+    file to create a Visual Studio project. Once Visual Studio starts up, select the
+    **(x86) Release** build type from the drop-down menu at the top of the Visual
+    Studio IDE, go to the menu option **Build** | **Build Solution** (or just press
+    the *F7* key), and the Windows version of the extension will be created. Simple!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making an Android extension
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we'll turn our attention to Android. We'll need to install some software
+    before we can begin, though, as the build process needs to be able to access Java
+    development tools and the Android SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the required software for Android development
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'First of all you will need to install the Java JDK, which is available for
+    download at the following address:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.oracle.com/technetwork/java/javase/downloads/index.html](http://www.oracle.com/technetwork/java/javase/downloads/index.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When downloading the JDK, make sure it is Version 6 that you download and not
+    the newer Version 7\. The Android SDK is not guaranteed to work correctly with
+    Version 7.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the install package has downloaded, execute it and follow the instructions
+    to install the Java development tools to your PC.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next you will need to download the Android SDK and NDK. The Android SDK is the
+    Java library normally used to develop Android applications, while the NDK is an
+    additional set of libraries that allows Java Android code to interface with compiled
+    C++ code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Android SDK is available at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It comes as a Windows installer file; so just execute it, accept all the default
+    install options, and wait for it to install.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Once the Android SDK has been installed, it is useful to set the environment
+    variable `ANDROID_ROOT` to the installation directory. This lets the Marmalade
+    deployment tool know where the Android platform tools can be found so that it
+    can automatically install and run generated package files on an Android device
+    connected to your PC using a USB cable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next you can visit the following URL to download the Android NDK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You will need different versions of the NDK depending on which version of Marmalade
+    you are using. If you are using Marmalade 6.1 or higher, as expected in this book,
+    you will need NDK version 8\. For earlier versions of Marmalade, you will need
+    NDK version 7.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The NDK is supplied as a ZIP archive, so you will need to decompress it using
+    a suitable archiving program (for example, WinZip). The NDK should be contained
+    in a directory named something like `android-ndk-xxx`, where `xxx` refers to the
+    version number of the NDK. You can either copy this directory into the root of
+    your `C:` or you can set the environment variable `NDK_ROOT` to point to the installation
+    path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating an Android extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that we have the necessary development tools in place, we can create the
+    Android extension files by again using the Windows Explorer to locate the `Gyroscope.s4e`
+    file. Right-click on the file and select the **Build Android Extension** menu
+    option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The files `Gyroscope_android.mkb` and `Gyroscope_android_java.mkb` will be created
+    in the main `Gyroscope` directory. These files will be used later to build the
+    extension code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `source` directory will now contain a new directory called `android` that
+    contains two files `Gyroscope.java` and `Gyroscope_platform.cpp`. The former is
+    where we can add Java code that uses the Android SDK code to implement our extension
+    API. The latter is the C++ code that our Marmalade project will call, which in
+    turn calls the Java implementation code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is possible to implement the entire extension in the `Gyroscope_platform.cpp`
+    file by using the **Java Native Interface** (**JNI**) to access and call into
+    the compiled Java code; but this adds an extra layer of complexity and implementing
+    the extension in Java is normally a far easier proposition!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing an Android extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To implement the gyroscope code for Android, we will need to edit the file
+    `source\android\Gyroscope.java`. First we need to make a reference to the Java
+    classes we''ll be using; so change the list of import declarations at the top
+    of the file to look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first two imports allow us access to some helper functions that provide
+    access to things such as the application's main `Activity` class (all applications
+    in Android need to be derived from this base class). We'll need this to access
+    some system resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The remaining imports are for the parts of the Android SDK that we will need
+    to use to access the gyroscope data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The EDK system has generated a Java class called `Gyroscope` that contains
+    stubs for all the methods we need to implement. We will need to alter the class
+    definition slightly, though, as we need to implement some methods that will receive
+    gyroscope updates. Change the class definition as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`SensorEventListener` is a Java interface that our class must implement in
+    order to receive sensor events (in our case, gyroscope data).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll also add some member variables for caching the gyroscope values and
+    a flag that we''ll use to handle the fact that some Android devices return gyroscope
+    values in degrees per second rather than radians per second. Add the following
+    code to the bottom of the class definition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before we start implementing the EDK itself, we''ll add a couple of private
+    helper functions to allow us to access the Android `SensorManager` and gyroscope
+    `Sensor` instances that will allow us to retrieve the current gyroscope data.
+    Add the following two methods at the beginning of the class definition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `GetSensorManager` method accesses the global `SensorManager` instance by
+    using the main `Context` class of the Marmalade application. We do this using
+    Marmalade's `LoaderActivity` class that contains a member variable that is a reference
+    to the main Android SDK `Activity` class instance. This reference can then be
+    cast into a reference to a `Context` instance, since `Activity` derives from `Context`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have the `Context` reference, we use it to obtain a reference to the
+    Android `SensorManager` class that is responsible for controlling input devices,
+    including the gyroscope. If no reference is available, a `null` reference will
+    be returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `GetGyroscopeSensor` method lets us check for the presence of a gyroscope
+    by requesting the `SensorManager` class for the default gyroscope handler. If
+    a suitable handler is not found (that is, a return value of `null`), there is
+    no gyroscope hardware available on this device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we can start implementing the API by looking at the `GyroscopeSupported`
+    method. This function needs to return `true` only if the device has gyroscope
+    hardware. We can do this as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It is now time to implement the function that will allow us to start receiving
+    gyroscope data. Find the `GyroscopeStart` method and change it to the following
+    code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this method we start by ensuring that the cached gyroscope values are zero
+    and we assume that the device will return values in radians per second. We then
+    obtain the gyroscope's `Sensor` class instance using our private `GetGyroscopeSensor`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To determine whether this device returns values in degrees or radians, we look
+    at the maximum range value of the gyroscope sensor. We set the `mUsesDegrees`
+    member variable to `true` if the maximum range is greater than 100, as there does
+    not appear to be any more robust way of determining this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then set our class instance to be a listener for gyroscope data. Periodically,
+    the `onSensorChanged` method (which we have yet to implement) will be called with
+    new gyroscope values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next we will implement the `GyroscopeStop` function, which should look like
+    this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Yet again we obtain the `SensorManager` class reference and tell it that we
+    no longer want to receive gyroscope data. We also clear the cached gyroscope values
+    just in case our code tries to access them while the gyroscope hardware is not
+    active.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next three methods we need to implement are those that return the cached
+    gyroscope values. These are easy to implement and should look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are now almost finished. All that is left to do is implement the listener
+    methods that are part of the `SensorEventListener` interface that we have derived
+    the `Gyroscope` class from. Add the following code after the `GyroscopeGetZ` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `onAccuracyChanged` method is left empty since it must be implemented to
+    satisfy the interface. The `onSensorChanged` method is important, though, as this
+    will receive the new gyroscope input values. We first check to see if the passed
+    in `SensorEvent` contains reliable data (the device itself will determine what
+    constitutes reliable data); then, we just pull out the new gyroscope values and
+    store them in our member variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we determined that the device is returning values in degrees per second,
+    we do a quick conversion to radians to ensure that our extension always returns
+    consistent values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building an Android extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Our Android extension code is now ready to be built and this is even simpler
+    than it was with the Windows version. All we have to do is open Windows Explorer
+    and navigate to the `Gyroscope` directory, and double-click first the `Gyroscope_android_java.mkb`
+    file and then the `Gyroscope_android.mkb` file. The first MKB file will build
+    the Java code, while the second will build the C++ code that will be called from
+    our project code and that will in turn call the Java code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making an iOS extension
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Building an EDK extension for iOS is a little more involved as it requires us
+    to have access to the Apple iOS SDK and therefore an Apple Mac.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the required software for iOS development
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Firstly, you will need to download the iOS SDK that is bundled together with
+    Apple''s XCode development environment. Head over to the following web page, which
+    will contain a link to open the Mac App Store where the latest version of XCode
+    can be downloaded:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developer.apple.com/xcode/index.php](https://developer.apple.com/xcode/index.php)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once XCode has downloaded and you have installed it, you will then need to download
+    the Marmalade SDK in its Mac OS X incarnation. Head over to the Marmalade website
+    at the following URL, log in, and download the Mac version of Marmalade.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.madewithmarmalade.com/downloads](https://www.madewithmarmalade.com/downloads)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Install the Marmalade SDK to the default location. If you only have a single
+    Marmalade license, you will need to use the Marmalade website to release the license
+    from your PC so you can use it on the Mac. Refer to [Chapter 1](ch01.html "Chapter 1. Getting
+    Started with Marmalade"), *Getting Started with Marmalade*, of this book for more
+    information on how to do this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating an iOS extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Unsurprisingly, we create the files needed for the iOS Extension in a similar
+    manner to the Windows and Android extensions. Just right-click on the `Gyroscope.s4e`
+    file and select the menu option **Build iPhone Extension**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Just two new files will be created for the iOS extension. These are `Gyroscope_iphone.mkb`,
+    which is the MKB file that we will use to build the extension code, and `source\iphone\Gyroscope_platform.mm`,
+    which contains the auto-generated stubs for our API functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing an iOS extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To implement the iOS version of the Gyroscope extension, we need to edit the
+    `Gyroscope_platform.mm` file. This file is an Objective-C source file that also
+    allows us to use C and C++ code in the same file. The function stubs are all standard
+    C-style functions, but we can still make use of Objective-C classes and features
+    within them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On iOS, we use an Objective-C class called `CMMotionManager` to gain access
+    to gyroscope data, so we first need to let our code know about this class by changing
+    the list of included files as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll also declare a global pointer to a `CMMotionManager` instance that we
+    will use throughout the rest of our code. Add the following line after the include
+    files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll need to allocate an instance of this class before we can access the
+    gyroscope. Luckily, the EDK build script has generated a function called `GyroscopeInit_platform`
+    that is automatically called for us when we use the extension in our project,
+    so this will make a good place to allocate a new `CMMotionManager` instance, as
+    shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also need to free the instance when our application is terminated and once
+    again the EDK build script has come to our rescue with the function `GyroscopeTerminate_platform`.
+    We need to modify this function so that it stops the gyroscope, if it is still
+    active, and then releases the `CMMotionManager` instance. Here''s the completed
+    function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The rest of the implementation is actually surprisingly easy, as the `CMMotionManager`
+    class works in a very similar manner to the API we have chosen for the extension.
+    We''ll start with checking to see if gyroscope hardware is available. The `GyroscopeSupported_platform`
+    function looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Starting and stopping the gyroscope hardware is also little more than calling
+    a method of the `CMMotionManager` class. For safety we wrap these calls with further
+    checks to make sure the gyroscope is available and not already started or stopped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The only thing left to do is get hold of the current gyroscope input values.
+    The `CMMotionManager` class contains a property called `gyroData` of class `CMGyroData`,
+    which in turn contains a `CMRotationRate` property called, funnily enough, `rotationRate`
+    that holds the current gyroscope data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following code shows the implementation for getting hold of the gyroscope
+    data for the x axis. How to obtain the y and z axes values should be fairly obvious
+    from this!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is one final thing we have to do before we can build the extension, and
+    that is to tell the EDK build tools that we need to include the iOS SDK framework
+    `CoreMotion`, as this contains the code for the `CMMotionManager` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To add a framework to our extensions, we must edit the `Gyroscope.mkf` file.
+    Look for the `deployments` section for iOS towards the bottom of the file (Marmalade
+    refers to it as the "iphone platform" for legacy reasons) and add the following
+    line to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Building an iOS extension
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: So far, all of the previous steps for creating an iOS extension can be done
+    equally well on Windows or Mac, but this final step absolutely requires us to
+    use a Mac.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We need to ensure the Mac has access to the entire `Gyroscope` directory. How
+    you achieve this is up to you, but a good way is to share the `Gyroscope` directory
+    out on your development Windows PC and then access this share on the Mac. This
+    way the code is built on the Mac but all the compiled files are already in the
+    correct place on your Windows development machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To build the extension you first need to open a Mac terminal window. Make the
+    `Gyroscope` directory the current directory in the terminal window and then enter
+    the following command line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will build the extension and our work on the Mac is done. Simple, but kind
+    of annoying that we only needed to execute one command, isn't it?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the Gyroscope extension
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've now seen how to create and build extension modules for Windows, Android,
+    and iOS, but how do we make use of them in our Marmalade projects?
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's actually surprisingly easy. All we have to do is reference our extension
+    in the project MKB file's `subprojects` section (the easiest way to do this is
+    to provide a relative path to the `Gyroscope` directory from the main project
+    directory), just as we would with any normal code module, and then include the
+    auto-generated `Gyroscope.h` header file so we can call the extension functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The only thing to bear in mind is that because an extension may not have been
+    created for every platform we wish to target, we must make sure the extension
+    is available for use before we call any of its functions. This is easily done
+    by using the `GyroscopeAvailable` function that is automatically generated for
+    us by the EDK build scripts. If this function returns `S3E_TRUE`, the extension
+    is available for use. If it returns `S3E_FALSE`, any call to an extension function
+    will fire an assert but will otherwise do nothing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are also no special steps required for building or deploying our application,
+    even on Android, where any code written in Java needs to be supplied in a JAR
+    file. The deployment tool will automatically add any required extension files
+    to the install package without us having to do a thing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The following sections detail the code samples that accompany this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Gyroscope project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This project contains the complete source code for the Gyroscope extension developed
+    throughout the course of this chapter. Compiled versions of the extension have
+    also been included so you can build the other example projects for this chapter
+    without having to first build the extension itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GyroTest project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The GyroTest project is a simple example that makes use of the Gyroscope extension.
+    It demonstrates how to include the Gyroscope extension into a project, how to
+    check if the extension is available, and then how to call the extension function
+    if it is available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The sample will be displayed on screen whether or not gyroscope support is available.
+    If it is, the raw gyroscope values will also be displayed on screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Skiing project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Our final update to the Skiing project sees it make use of the Gyroscope extension
+    developed in this chapter as another possible control method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with the other input methods in the game, a class called `GyroscopeManager`
+    has been created, which wraps up the Gyroscope extension. This then keeps all
+    use of the extension functions in a single source file, which makes it easier
+    to update should we ever change the API of the extension in any way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: No matter how still the device is, even if left lying on a stable surface, the
+    gyroscope values will always have a certain amount of jitter. The `GyroscopeManager`
+    class deals with this by maintaining a filtered version of the gyroscope inputs
+    that are used to control the skier in the game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In every update of the main game loop, a new filtered value for each gyroscope
+    axis is calculated by adding a percentage of the difference between the current
+    filtered value and the new raw value for each axis to the current filtered value.
+    This results in the smaller effects of jitter mostly being ignored without losing
+    the larger intentional gyroscope inputs from the player.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter we've looked at how to use the Extensions Development Kit to
+    extend the functionality of Marmalade. As you can see, it is relatively easy to
+    create an extension that can make use of the APIs available on each of the platforms
+    currently supported by the EDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Gyroscope extension is a good example of supporting a hardware feature that
+    hasn't yet been exposed in the main Marmalade SDK, but extensions can also come
+    in extremely handy if you want to use any third party libraries that may have
+    been created directly for a particular platform using its native SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As this book draws to a close, you should now have a good grasp of the power
+    of the Marmalade SDK and will hopefully be jumping at the opportunity of developing
+    a game and launching it on a number of extremely popular platforms. Happy coding
+    and best of luck writing the next big gaming phenomenon!
+  prefs: []
+  type: TYPE_NORMAL

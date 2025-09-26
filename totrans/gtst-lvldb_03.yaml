@@ -1,0 +1,216 @@
+- en: Chapter 3. Basic Key-value Operations – Creating and Deleting Data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The core of LevelDB and any key-value store is the ability to `Put`, `Get`,
+    and `Delete` values by keys. These three operations are all we need to store and
+    retrieve specific pieces of data, treating our database as a persistent dictionary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter is about how to use the `Put`, `Get`, and `Delete` operations at
+    their simplest to store and retrieve data. We'll also cover when and how to combine
+    operations into batches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code in this chapter is going to start being a little more idiomatic C++
+    than the trivial examples so far. The basic LevelDB interface is C++, not just
+    C, and that introduces a couple of issues you need to understand for safe coding.
+    The many other language bindings for LevelDB sit on top of this C++ API, although
+    it is invisible in most of them. For the benefit of people who are pure Objective-C
+    programmers, some C++ idioms will be explained in detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The sample code used for this and the next chapter is written as OS X console
+    programs to have the simplest environment for testing. It's about the database
+    concepts rather than the platforms. Duplicating projects in Xcode is awkward so
+    we will just create new projects each time (which of course you can download in
+    the accompanying code). The sample code uses a lot of `assert` statements around
+    different actions. Normally, you would write more robust error-handling code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following screenshot shows the entire console output from running the `Sample03`
+    code, including the strange characters drawn because of embedded nulls in one
+    key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Like most of our samples, the code creates a database from scratch, using the
+    same logic to put it in a temporary directory as we did in [Chapter 01](ch01.html
+    "Chapter 1. Downloading LevelDB and Building with OS X"), *Downloading LevelDB
+    and Building with OS X*. Download the complete sample code to compile and try
+    it for yourself or just refer back to this console output to see the results of
+    the following code snippets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Basic Key-value Operations – Creating and Deleting Data](img/1015OS_03_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Console output for Sample03 showing messages as data put and retrieved
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding C++ idioms in LevelDbHelper.h
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A couple of C++ idioms for LevelDbHelper.h are about being able to write to
+    standard I/O.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Never put an unscoped `using` statement into a header file because that propagates
+    to any source that `#includes` the header, causing obscure errors. However, it's
+    perfectly acceptable to simplify a function as seen in `testRead` (in the following
+    code snippet) by putting the `using` statements inside.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A function such as `operator<<` starting with `template` and using the template
+    type in its declaration will automatically create code for different data types.
+    This shows how to add an `operator<<` function so your own data types can be written
+    to streams for output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The LevelDB `Get` function fills in `std::string` as its only way of returning
+    values. Unlike a classical `const char*` C string, C++ `std::string` can contain
+    binary data. It''s basically a size and a pointer to bytes, which normally behaves
+    like a string of characters but can also be used as an arbitrary container. You
+    can see the `leveldb::Status` object returned by calling `Get` and how we check
+    its `ok()` function and human-readable error message via `ToString()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of the LevelDB functions take an `options` object as their first parameter.
+    Just for this test, you saw how to create a default just using `leveldb::ReadOptions()`.
+    The variables `ropt` and `wopt` in `main03.cpp` are used for a single set of consistent
+    options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Get and Put for strings
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `testString` function from `main03.cpp` stores and retrieves string values.
+    We start by trying to read a non-existent key. Note that either a literal quoted
+    string or a `std::string` object can be passed as a key. The `Get` call in `testRead`
+    fails with the message **NotFound**, and you could test for that with `if (s.IsNotFound())`.
+    See the `leveldb::Status` class declaration in `leveldb/status.h` for all these
+    helpers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After using the `Put` call to add a value for a given key, it can be read only
+    by using the exact key again—see the following code—how a different case fails.
+    Updating a value is simply done by using `Put` again with a different value but
+    the same key:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Understanding Slice – the efficient LevelDB parameter object
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `testRead` function was templated to allow it to take any data type for
+    a key. In practice, that's any data type from which you can create a `leveldb::Slice`
+    object. These objects are used as parameters in most of the LevelDB interfaces.
+    A `Slice` object contains a length and a data pointer. It does not own its data
+    so is very efficient to copy around but also dangerous to hang onto. If you keep
+    a `Slice` object then make sure the data it was initialized with is also retained
+    and the context is thread-safe. This is one reason why you should never share
+    LevelDB objects across threads—they have internal storage referred to by `Slices`,
+    and those buffers can be corrupted by operations on other threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See `slice.h` for the full class declaration. A `Slice` constructor can take
+    a `const char*` parameter by itself as a C string, or take a `std::string` or
+    `const char*` with `size_t` length to define a sized value. The `Slice` methods
+    `data()` and `size()` return that data pointer and size. The input keys and values
+    for `Get` and `Put` are `const` references to `Slice` objects. This implies the
+    unique C++ idiom of conversion by construction can create a temporary `Slice`
+    object from any single value which can be used as a Slice constructor parameter,
+    such as a `const char*` or `std:string&`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Get and Put with binary values
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that you understand how `Slice` objects are used, let''s go back to the
+    simple `Put` and `Get` operations. Binary values can be stored just the same as
+    string values, remembering a `std::string` value can be regarded, such as `Slice`
+    as containing just data bytes and a length. The difference is that a `std::string`
+    retains ownership of its bytes and so is a safe container for binary data. In
+    the following `testBin()` sample we create a `Slice` object with a pointer and
+    length of an arbitrary binary `struct`, and do the opposite to get the binary
+    `struct` back out of the `std::string` value returned from `Get`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using Delete – the final third of key-value operations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Earlier in this chapter, we saw how you can change the value for a given key
+    just by using `Put` again with that same key. If you want to effectively rename
+    a key, or get rid of it altogether, you use `Delete`. It will cope if the key
+    doesn''t exist, as seen in the second `Delete` of `Packt`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Delete` operation removes a key-value pair from storage. As mentioned
+    previously, we must also use it as part of renaming to ensure an original key
+    is no longer there. Unlike other database architectures, the log-based storage
+    of LevelDB doesn''t have an index table which can be updated. Thus, a `rename`
+    implies both a new key being created and the entire associated value is rewritten:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: This rename-by-copy starts by retrieving the value we're going to add back in,
+    so we start with a `Get` with the old key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wrapping operations in WriteBatch for increased safety
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The previous example of renaming a key, like any other sequence of LevelDB
+    operations, runs the risk of leaving the database in an inconsistent state if
+    the program was terminated partway through. We can wrap any sequence of `Put`
+    and `Delete` operations in a `WriteBatch` object. Using sync will guarantee we
+    wait for the disk I/O to complete and allow the batch to optimize its sequence
+    of writes. A safer version of the rename is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you are familiar with other database concepts, `WriteBatch` is similar to
+    performing a transaction and a commit. That implies the ability to abandon operations
+    which is also a part of `WriteBatch`, using its `Clear` operation. Alternatively,
+    you can just free a `WriteBatch` object and never apply it with `db->Write()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This was very much a chapter focused on C++, showing templated functions for
+    different kinds of content and writing data to the console. The vital `Slice`
+    class was discussed in detail, with its efficient but dangerous reference-only
+    behavior and how it enables storing binary data. We covered the `Put`, `Get`,
+    and `Delete` operations and the safe way to wrap a combination of data changes
+    with `WriteBatch`. Next, we will learn to search keys.
+  prefs: []
+  type: TYPE_NORMAL

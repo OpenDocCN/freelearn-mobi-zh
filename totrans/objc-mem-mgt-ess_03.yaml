@@ -1,0 +1,399 @@
+- en: Chapter 3. Using Autorelease Pools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Consider that you are returning an object you've created (and therefore own)
+    to a caller. If it's released inside your method, the returning object will be
+    an invalid one. On the other hand, there is the basic rule that you have to release
+    the objects you own; then, how do you release them? Simply put the object in the
+    autorelease pool. The object is then released when the autorelease pool is drained.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will cover the following topics in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the autorelease pool mechanism
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How autorelease pool helps
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Autoreleased classes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Autoreleased pool blocks and threads
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Memory model in Objective-C
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: ARC with weak references
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Understanding the autorelease pool mechanism
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When you first start developing for Cocoa (iOS or Mac OS) you quickly learn
+    to follow the standard `alloc`, `init`, and (eventually) `release` cycles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is great until you discover the convenience of just doing the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s look inside and see what actually happens:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This approach is called autorelease pools and they are a part of the **Automated
+    Reference Counting** (**ARC**) memory management model used by the Cocoa platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ARC compiler will autorelease any object for you, unless it's returned from
+    a method that starts with `new`, `alloc`, `init`, `copy`, or `mutableCopy` in
+    its name. As before, these objects are placed into an autorelease pool, but in
+    order to introduce a new language construct, `NSAutoreleasePool` has been replaced
+    by `@autoreleasepool`, a compiler directive. Even using ARC, we are still free
+    to use `autorelease` messages to drain/create our pool at any time. It doesn't
+    affect the compiler when implementing `retain` and `release` messages, but provides
+    hints when it's safe to make autoreleased objects go out of scope.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cocoa frameworks (Foundation Kit, Application Kit, and Core Data) have some
+    suitable methods to handle basic classes that inherit from `NSObject`, as `NSString`,
+    `NSArray`, `NSDictionary`, and many more. These methods quickly allocate, initialize,
+    and return the created object for you, which will also be autoreleased without
+    you worrying about it so much.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note that I really meant "without worrying so much", not "without worrying at
+    all" because even with these handy frameworks that create and clear the object
+    for you, there will be cases when you want to take more control and create additional
+    autorelease pools yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basically, an autorelease pool stores objects and when it's drained, it just
+    sends the object a `release` message. The `NSAutoreleasePool` class is used to
+    support Cocoa's reference-counted memory management system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Autorelease pools were made by Apple and have been part of the language itself
+    since OS X 10.7\. If a program references the `NSAutoreleasePool` class while
+    in ARC mode, it''s considered invalid and is rejected in the build phase. Instead,
+    in ARC mode, you need to replace it with `@autoreleasepool` blocks, thus defining
+    a region where an autorelease pool is valid, as you can see in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In ARC mode, however, you should write:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Even if you don't use ARC, you can take advantage of `@autoreleasepool` blocks
+    that are far more effective than the `NSAutoreleasePool` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Opposite to an environment that uses garbage collection, in one with reference
+    counting, every object that receives an `autorelease` message is placed into an
+    `NSAutoreleasePool` object. This `NSAutoreleasePool` class is like a collection
+    of these objects and goes one by one sending a release message when it's drained.
+    It drains the pool when you're out of scope. Then, every object retain's count
+    is decreased by 1\. By using an autorelease as an alternative to a release message,
+    you extend the object's lifetime, this time maybe even longer if the object is
+    later retained or at least until the `NSAutoreleasePool` class is drained. If
+    you put an object into the same pool more than once, for each time, it will receive
+    a `release` message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While into an environment with reference counting, Cocoa presumes there will
+    always be an autorelease pool available; otherwise, objects that have received
+    an `autorelease` message won't get released. This practice will leak memory and
+    generate proper warning messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the beginning of a cycle of the event loop, an autorelease pool is created
+    by the Application Kit (one of the Cocoa frameworks, also known as AppKit). It
+    provides code to create and interact with GUI, and it's drained at the end of
+    this cycle, then every autoreleased object created when processing an event is
+    just released. It means you don't need to create the pools yourself as the Application
+    Kit does it for you. However, if there are many autoreleased objects created by
+    your application, you should consider the creation of "local" autorelease pools;
+    this is an advantage to avoid the peak memory footprint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create an `NSAutoreleasePool` object, you can use the regular `alloc` and
+    `init` methods and use `drain` to dismiss it. A pool cannot be retained; the consequences
+    of `drain` is like a deallocation, and it's very important to do so in the same
+    context you created it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every thread has its own stack of autorelease pools. These stacks contain `NSAutoreleasePool`
+    objects, which in turn contain autoreleased objects. Every new autoreleased object
+    is placed on the top of the pool and every new pool is placed on the top of the
+    stack. A pool is removed from a stack when it''s drained. Before a thread is finished,
+    it drains every autorelease pool on its stack. Despite the fact that an autorelease
+    pool can be manually created and objects can be manually added to it, ARC still
+    drains the pool automatically: you''re not allowed to do it yourself.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To ensure that you don''t have to worry about ownership, this is what ARC does:
+    easily create autorelease pools, and make them temporarily handle the holding
+    and releasing of autoreleased objects for you.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Autorelease pool mechanism
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There will be times when you need to renounce an object's ownership and a good
+    way to do it is by using autorelease pool blocks. Those blocks provide a mechanism
+    where you can renounce it and avoid any chance of the object's immediate deallocation.
+    Even if sometimes you will need to create your own blocks, or it will be in your
+    advantage to do this way, you normally don't need to create them, but there are
+    situations where you may need it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As in the following code, an autorelease pool block is marked by the usage
+    of `@autoreleasepool`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Objects that were created inside the block receive a release message when the
+    block is terminated. An object receives release messages as many times as it receives
+    an autorelease message inside the block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Autorelease pool blocks can be nested as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If an autorelease message is not sent inside the autorelease pool block, Cocoa
+    will return error messages and your application will leak memory. You generally
+    don''t need to create your own autorelease pool blocks, but there are three situations
+    where you will be required to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: While creating a program that is not based on UI, such as a command-line one
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: While creating a loop that generates a large number of temporary objects
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When a secondary thread has to be created
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Reducing peak memory footprint with autorelease pool blocks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Memory footprint is basically the primary amount of memory used by a program
+    in runtime. Temporary autoreleased objects are created in countless applications,
+    and they add to the application's memory footprint until the block is ended. Allowing
+    this accumulation until the current event loop finally ends, in some cases, may
+    result in an exorbitant overhead and you might want to quickly get rid of those
+    temporary objects; after all, they are highly adding to the memory footprint.
+    In this case, the creation of your own "local" autorelease pool blocks is a solution.
+    In the end, all objects are released, consequently deallocated, beneficially reducing
+    the memory footprint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here, you can see how to use an autorelease pool block for a `for` loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is `NSArray` with many files' URLs and the loop processes one file at
+    a time. Every object created inside the block is released when it's ended.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every object that was autoreleased inside the autorelease pool block is considered
+    disposed of after the block''s termination. If you want to keep a temporary object
+    and use it after the autorelease pool block is ended, you must do two things:
+    inside the block, send a `retain` message to that object and then, only after
+    the block, send the `autorelease` message, as we can see in the following code
+    sample:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: As the comments in the preceding code explain, by sending a `retain` message
+    to `myMatch` inside the autorelease pool block and then, only after the block,
+    sending it an `autorelease` message increases this object's lifetime, making it
+    available to receive messages outside and properly return it to the method's invoker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An overview of Apple autoreleased classes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As it was said before, the Cocoa framework provides factory methods with autorelease
+    for many of the basic classes such as `NSString`, `NSArray`, `NSDictionary`, `NSColor`,
+    and `NSDate`. However, in the same time, there are some classes that deserve special
+    attention.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NSRunLoop
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'While using `NSRunLoop`, at the beginning of every run loop, an autorelease
+    pool will be created, and it will only be destroyed at the end of this run loop.
+    To clarify, every temporary object created inside it will be deallocated at the
+    end of the running iteration. It might not be beneficial if you are creating a
+    large number of temporary objects inside the block; in this case, you should consider
+    creating a new autorelease pool, as shown here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![NSRunLoop](img/00005.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following code demonstrates what was discussed earlier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that in order to end the autorelease pool, instead of sending a `release`
+    message, we sent a `drain` message. It was done this way because in garbage collector
+    mode, Objective-C runtime will simply ignore `release` messages, while the `drain`
+    message won't be ignored, providing a hint to the collector; however, it doesn't
+    destroy the autorelease pool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application Kit creates an autorelease pool in the main thread at the beginning
+    of each iteration, event, and releases it at the end of each iteration, thus exempting
+    all autorelease objects created during the processing of the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basically, the run loop in iOS waits for the complete execution of an event
+    until the application does something else. These events can be touchscreen interactions,
+    incoming calls, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each iOS event handling, a new autorelease pool is created at the beginning
+    and released (drained) when the event's processing is completed. Theoretically,
+    it can be any number of nested autorelease pools, but remember they are created
+    at the beginning of the event's processing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NSException
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Exceptions may happen, and if they do occur, autorelease pools are automatically
+    cleaned up after them. Autorelease pools prove to be a handful tool in order to
+    write exception-safe code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Even an exception object itself should be autoreleased:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using one of the preceding patterns will properly free the memory if an exception
+    is thrown. It will free the memory in garbage collector mode as well, even if
+    it''s not required in this GC mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: ARC and autorelease
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: ARC does still use autorelease as a mechanism, but besides that, its compiled
+    code is created to interoperate with no problem with MRC compiled code, thus autorelease
+    is present.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Despite the fact that ARC does a good job handling the memory management for
+    us, there is still a situation when you need to use autorelease. Sometimes, we
+    create a large number of temporary objects and many of them are only used once.
+    In this case, you might want to free up the memory used by them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to dealloc those objects into the autorelease pool instead of waiting
+    for them to be freed naturally, check out the following code sample in a non-ARC
+    environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following sample code is for an ARC environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Autorelease pool blocks and threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You will need to create your own autorelease pool if you are making Cocoa calls
+    outside the main thread of the Application Kit. It may happen that you create
+    a foundation-only application for example, or separate a thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If your application generates a large number of autoreleased objects, instead
+    of maintaining a single autorelease pool, you are highly advised to drain the
+    autorelease pool and create a new one frequently. This behavior is used by Application
+    Kit on the main thread. If you neglect this, your autoreleased objects don't deallocate,
+    growing the memory footprint. On the other hand, if your thread doesn't make Cocoa
+    calls, you can easily ignore this advice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we reviewed autorelease pools and how to properly use them.
+    We also highlighted the differences between `NSAutoreleasePool` and the new `@autoreleasepool`
+    classes and its benefits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will talk about a few concepts related to object creation
+    and initialization, such as immutability, inheritance, and so on. We will delve
+    into design patterns such as singletons, which are commonly used in the iOS SDK,
+    such as the `UIApplication` class that has a method called `sharedApplication`.
+    We will also look into properties as a way to define the information that a class
+    intends to encapsulate. We will also look into custom methods and format specifiers
+    in [Chapter 4](part0032_split_000.html#page "Chapter 4. Object Creation and Storage"),
+    *Object Creation and Storage*. We will cover a lot of materials in the next chapter,
+    so sit tight and hang on while we head to [Chapter 4](part0032_split_000.html#page
+    "Chapter 4. Object Creation and Storage"), *Object Creation and Storage*!
+  prefs: []
+  type: TYPE_NORMAL

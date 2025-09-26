@@ -1,0 +1,231 @@
+- en: Chapter 4. Iteration and Searching Keys
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '[Chapter 3](ch03.html "Chapter 3. Basic Key-value Operations – Creating and
+    Deleting Data"), *Basic Key-value Operations Creating and Deleting Data*, found
+    that `Put`, `Get`, and `Delete` values by keys was all we needed, but some way
+    of getting more than one value back at a time is generally very useful. If you
+    don''t know what data may be in your keys, then you need a way to search for partial
+    matches or just start from the beginning of the database. This ability to search
+    for and iterate through keys in sorted order is what completes LevelDB''s ability
+    to be the foundation of a database. The default sorting order is a `BytewiseComparator`,
+    effectively ASCII.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Sample04 to show you loops and searches
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`Sample04` uses the same `LevelDbHelpers.h` as before. Please download the
+    entire sample and look at `main04.cpp` to see the code in context. Running `Sample04`
+    starts by printing the output from the entire database, as shown in the following
+    screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing Sample04 to show you loops and searches](img/1015OS_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Console output of listing keys
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating test records with a loop
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The test data being used here was created with a simple loop and forms a linked
+    list as well. It is explained in more detail in the Simple Relational Style section.
+    The loop creating the test data uses the new C++11 range-based for style of the
+    loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note how we're using a `string` to hang onto the `prevKey`. There may be a temptation
+    to use a `Slice` here to refer to the previous value of `key`, but remember the
+    warning about a `Slice` only having a data pointer. This would be a classic bug
+    introduced with a `Slice` pointing to a value that can be changed underneath it!
+  prefs: []
+  type: TYPE_NORMAL
+- en: We're adding all the keys using a `WriteBatch` not just for consistency, but
+    also so that the storage engine knows it's getting a bunch of updates in one go
+    and can optimize the file writing. I will be using the term **Record** regularly
+    from now on. It's easier to say than **Key-value Pair** and is also indicative
+    of the richer, multi-value data we're storing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stepping through all the records with iterators
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The model for multiple record reading in LevelDB is a simple iteration. Find
+    a starting point and then step forwards or backwards.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is done with an `Iterator` object that manages the order and starting point
+    of your stepping through keys and values. You call methods on `Iterator` to choose
+    where to start, to step and to get back the key and value. Each `Iterator` gets
+    a consistent snapshot of the database, ignoring updates during iteration. Create
+    a new `Iterator` to see changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you have used declarative database APIs such as SQL-based databases, you
+    would be used to performing a query and then operating on the results. Many of
+    these APIs and older, record-oriented databases have a concept of a **cursor**
+    which maintains the current position in the results which you can only move forward.
+    Some of them allow you to move the cursor to the previous records. Iterating through
+    individual records may seem clunky and old-fashioned if you are used to getting
+    collections from servers. However, remember LevelDB is a local database. Each
+    step doesn't represent a network operation!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The **iterable cursor** approach is all that LevelDB offers, called an `Iterator`.
+    If you want some way of mapping a collected set of results directly to a **listbox**
+    or other containers, you will have to implement it on top of the `Iterator`, as
+    we will see later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Iterating forwards, we just get an `Iterator` from our database and jump to
+    the first record with `SeekToFirst()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Going backwards is very similar, but inherently less efficient as a storage
+    trade-off:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you wanted to see the value as well as the keys, just use the `value()`
+    method on the iterator (the test data in `Sample04` would make it look a bit confusing
+    so it isn''t being done here):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Unlike some other programming iterators, there's no concept of a special forward
+    or backward iterator and no obligation to keep going in the same direction. Consider
+    searching an HR database for the ten highest-paid managers. With a key of *Job+Salary*,
+    you would iterate through a range until you know you have hit the end of the managers,
+    then iterate backwards to get the last ten.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An iterator is created by `NewIterator()`, so you have to remember to delete
+    it or it will leak memory. Iteration is over a consistent snapshot of the data,
+    and any data changes through `Put`, `Get`, or `Delete` operations won't show until
+    another `NewIterator()` is created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Searching for ranges of keys
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The second half of the console output is from our examples of iterating through
+    partial keys, which are case-sensitive by default, with the default `BytewiseComparator`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Searching for ranges of keys](img/1015OS_04_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Console output of searches
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we've seen many times, the `Get` function looks for an **exact** match for
+    a key. However, if you have an `Iterator`, you can use `Seek` and it will jump
+    to the first key that either matches exactly or is immediately after the partial
+    key you specify.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we are just looking for keys with a common prefix, the optimal comparison
+    is using the `starts_with` method of the `Slice` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Going backwards is a little bit more complicated. We use a key that is guaranteed
+    to fail. You could think of it as being between the last key starting with our
+    prefix and the next key out of the desired range. When we `Seek` to that key,
+    we need to step once to the previous key. If that''s valid and matching, it''s
+    the last key in our range:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'What if you want to get keys within a range? For the first time, I disagree
+    with the documentation included with LevelDB. Their iteration example shows a
+    similar loop to that shown in the following code, but checks the key values with
+    `idb->key().ToString() < limit`. That is a more expensive way to iterate keys
+    as it''s generating a temporary string object for every key being checked, which
+    is expensive if there were thousands in the range:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can use another built-in method of `Slice`; the `compare()` method, which
+    returns a result <0, 0, or >0 to indicate if `Slice` is less than, equal to, or
+    greater than the other `Slice` it is being compared to. This is the same semantics
+    as the standard C `memcpy`. The code shown in the previous snippet will find keys
+    that are the same, or after the `startKey` and are before the `endKey`. If you
+    want the range to include the `endKey`, change the comparison to `compare(endKey)
+    <= 0`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Linking records in a simple relational style
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There are many ways to implement richer relational indexing which will be discussed
+    later. This simple example shows the value associated with a key storing both,
+    some data and another key value. It is the classic linked list of records:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Linking records in a simple relational style](img/1015OS_04_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The chain of keys followed by storing a key in the value
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, each record contains the information to find another related
+    record. In this case, the relationship is just that the records were created in
+    a particular order but it could be any consistent meaning, for example, a parent-child
+    relationship.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The loop we saw earlier, creating the records composed the record value by
+    storing a combination `prevKey + "\tsome more content` (where "some more content")
+    would normally vary per-record. We extract that previous key and use it to navigate
+    to another record:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note how we used a simple tab character as the separator in the record value,
+    between the next key to use and the text which was the real content. This principle
+    is the same as a relational database; key values for other searches are contained
+    in a record. This example only has one kind of a record data. In the next chapter,
+    we will use this technique to build a secondary index where phone number keys
+    are used to find the main record key. If you need to find data, adding multiple
+    keys is the only way to achieve speed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned the concept of an iterator in LevelDB as a way to
+    step through records sorted by their keys. The database became far more useful
+    with searches to get the starting point for the iterator, and samples showing
+    how to efficiently check keys as you step through a range. Finally, we went back
+    to the simple `Get` for a key lookup to help implement a linked list through the
+    database. Now, we will leave C++ behind for the world of Objective-C.
+  prefs: []
+  type: TYPE_NORMAL

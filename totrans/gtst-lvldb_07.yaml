@@ -1,0 +1,234 @@
+- en: Chapter 7. Debugging with REPLs and Command Lines
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter takes a break from programming the database API by looking at two
+    different support tools and how to include a debugging web server in your iOS
+    apps. This server can be used in any app to provide additional access supplementing
+    the normal user interface. Being able to dump data is an important feature expected
+    by most database developers—SQL systems usually have a way to execute raw SQL
+    against the server. Including the server is more work than using the tools, but
+    they can't be run against data on a device; only on OS X (which includes data
+    in your simulator working directory).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building and running the LevelDB dump utility
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The standard LevelDB source distribution includes a dump utility, but it is
+    not built by default with the `Makefile`. This dump lets you see a raw copy of
+    the content of your tables. After you have built LevelDB for a given setting,
+    you can build the dump with the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you built your LevelDB using a `CXXFlags` setting, then you need to build
+    the `util` with the same settings and repeat them in `LDFlags` to ensure LevelDB
+    builds. The single command line looks like the following (without wrapping):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you have already seen, a LevelDB database creates a number of files within
+    a folder. The roles of these files are explained further in [Chapter 10](ch10.html
+    "Chapter 10. Tuning and Key Policies"), *Tuning and Key Policies*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Depending on what you have been doing with a database, it may not have generated
+    any `.sst` files. Some of our quick operations which only add a few records will
+    only create `.log` files. `Sample06x` uses 50,000 records and writes in batches
+    of 1,000 so it guarantees writing more than one `.sst` file to give us a much
+    more interesting dump. You will see `Sample06x` discussed in more detail in the
+    next chapter, but for now it has two key types, prefixed by `N~` and `P~`, which
+    are added in an alternating sequence in our code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The accompanying code contains a log of the build of the `leveldbutil` as well
+    as several logs of running it. A heavily elided one for the large `Sample06x`
+    is in the file `log of dump` `testLeveldb06x.txt` and shows the utility being
+    run over the database folder created by running `Sample06x` on OS X.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first file that we will look at is the `MANIFEST` file which shows how the
+    number of writing passes was batched and also that a special comparator was used
+    (explained in the next chapter). Your main concern with comparators for now, is
+    that the dump utility ignores them, but other tools such as lev (see the following
+    code) cannot open a database using a custom comparator. So, using `leveldbutil`
+    to check the `MANIFEST` file lets you check for this as a point of failure, if
+    you have other programs getting errors on opening.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The next file is the log file—there's only one active log file so you can use
+    a command using `*.log` as shown here. The log contains the last lot of records
+    written, from line 42001 in the input file onwards.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The log then shows an elided dump of two `.sst` files which are the sorted tables.
+    The LevelDB processing creates these as an immutable store, leaving only recent
+    entries in the `.log` file. Note how the two tables have an apparently interleaved
+    set of keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing Node.js and the lev utility
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The popular node environment provides a server-side or command-line environment
+    for running JavaScript programs that also supports console and even desktop programs
+    (using packagers such as `AppJS`). Among the many libraries created for node are
+    LevelUP and LevelDOWN. LevelDOWN is a simple wrapper for the C++ binding to LevelDB,
+    providing the standard LevelDB API mapped to JavaScript functions. LevelUP started
+    as a high-level interface to LevelDOWN but is now also an abstraction layer allowing
+    other backends to be used that provide the LevelDB functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The **lev** utility , from [https://github.com/hij1nx/lev](https://github.com/hij1nx/lev)
+    provides a commandline and GUI for directly working with a LevelDB database using
+    these libraries. It installs both LevelUP and LevelDOWN. We are just concerned
+    with using lev as a utility without caring about how it is implemented. The installer
+    for node is available from [http://nodejs.org/](http://nodejs.org/) and is a simple
+    GUI installer putting both node and the **npm** (**Node Package Manager**) into
+    `/usr/local/bin`. You will also need to install Python 2.7 from [http://www.python.org/download/releases/2.7.5/](http://www.python.org/download/releases/2.7.5/)
+    in order to build LevelDown (ironically, yes, Python is used to script building
+    a C++ binding for a JavaScript tool).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The accompanying `log of lev install with node package manager.txt` shows the
+    installation of these packages in detail including the errors that occur if you
+    have not upgraded the default Python version in your OS X. The install is triggered
+    by a single command which automates downloading, building, and installing the
+    packages in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once you have lev installed, it offers command-line dumping of keys, deleting
+    records, and adding new ones. See `log of dump testLeveldb06x.txt` for more examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding a REPL for debugging inside your iOS app
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The term **REPL** is commonly used in scripting languages and means **Read Eval
+    Print Loop**. A REPL typically accepts commands and prints their result, then
+    loops to accept the next command. It's like the terminal command line but embedded
+    in an app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Sample07` code provides an example of an iPhone app that includes a small
+    web server and provides a REPL for database operations. This app can be run on
+    a simulator as well as a device. The following screenshot shows it running on
+    the simulator, so the IP address shown is that of the OS X development system
+    running the simulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Adding a REPL for debugging inside your iOS app](img/1015OS_07_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The status report when debugging in Simulator, showing the address used to browse
+    to the device
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you are running the application, you can launch a web browser and type
+    in this address, **192.168.0.51:8080,** as shown in the preceding screenshot.
+    You can connect multiple browsers to the server from anything—use an iPad to query
+    the database on an iPhone or iPod Touch! The web server is running totally in
+    the background so your normal app behavior can continue. This makes it a debugging
+    tool you can drop into any application (warning: this will be a security hole
+    if included in distributed apps, unless you add authentication).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first version of the REPL looks for known commands, or if it doesn''t recognize
+    a command, it assumes you''re entering a partial key to be searched. The results
+    of entering `Am` are shown in the following screenshot. Some server commands are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`help` lists commands and their syntax, see the `readme.md` document'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`prefix aKey` sets `aKey` as the prefix on any keys from now'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`unprefix` clears the key prefix'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`put akey aValue`adds key `aKey` value `aValue`, quoted to include spaces,
+    using `\` to embed quotes, for example `put Author "Andy Dent"`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`get akey` returns the full value associated with `akey`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`del akey` deletes the key `akey`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`count fromPart toPart` just counts records, with both `fromPart` and `toPart`
+    being optional (it runs an iterator over that range of partial keys)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`keys fromPart toPart` lists keys, both `fromPart` and `toPart` being optional'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`stats` displays the database statistics'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '![Adding a REPL for debugging inside your iOS app](img/1015OS_07_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The browser result after entering Am as a command, connected to iPhone
+  prefs: []
+  type: TYPE_NORMAL
+- en: The web server engine being used is the open source `GCDWebServer` from [https://github.com/swisspol/GCDWebServer](https://github.com/swisspol/GCDWebServer)
+    and templated page generation uses `GRMustache` from [https://github.com/groue/GRMustache](https://github.com/groue/GRMustache)
+    to provide templates using the common **Mustache** syntax of double braces `{{bracketing}}`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The combination of these two source suites are being rolled up into one product
+    adds code to make it easier to write your own REPL for embedded debugging, at
+    [https://github.com/AndyDentFree/REPLierGCDWebServer](https://github.com/AndyDentFree/REPLierGCDWebServer)
+    that will continue to be maintained after the book launch as a generic REPL toolkit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Sample07` logic to provide web templates is inside `ASDLevelDBREPL.m` and
+    can be added very easily to any app with just one property. Add a `ASDLevelDBREPL`
+    `*` property then start it and set its db property to the `APLevelDB*` property
+    that you created in `Sample06`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In `Sample07`, this is done in `GSdLDB07ViewController.m` in `viewDidLoad`,
+    a slightly simplified version being:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have covered a couple of pre-built utilities for looking at different aspects
+    of a database and learned a valuable way to add a debugging REPL to any iOS app.
+    Next, we will go back to the intricacies of our GUI support with a richer version
+    of `Sample06`. The next chapter will also discuss ways to store more information
+    making our databases self-describing, so a more powerful database layer can be
+    built up to abstract away some of these responsibilities.
+  prefs: []
+  type: TYPE_NORMAL

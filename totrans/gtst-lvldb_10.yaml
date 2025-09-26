@@ -1,0 +1,469 @@
+- en: Chapter 10. Tuning and Key Policies
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: LevelDB has two key architectural principles—immutability and speed in writing.
+    The immutability is subtle but important to understand—data is never updated in
+    LevelDB. Instead, it is marked as deleted or superseded by a new copy. From the
+    application code, this may seem like a moot point, as you seem to be updating
+    key values. However, it is vital to understanding the database structure and following
+    behavior described.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With your newly gained experience in LevelDB programming, we will study the
+    implementation with an eye to tunable aspects. More details and file formats are
+    explained in the code comments and the files in the `doc` folder of the LevelDB
+    source.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will discuss the settings for tuning and the places where LevelDB gives you
+    the ability to drop in your own classes. It can be used as we have done in our
+    examples so far, as *out of the open-source box*, but there are also extension
+    points and parameters that let you change its behavior. Some organizations take
+    it even further, customizing the LevelDB source and then releasing their versions.
+    The Riak and HyperDex servers are two significant NoSQL servers that have released
+    their modifications to LevelDB as separate **forks**. We will discuss them briefly
+    in the following tuning explanation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding the Level in LevelDB
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As you can see in the following diagram, the main storage in LevelDB is a series
+    of **levels** of *Sorted String Table* files. They currently have an `.sst` extension
+    but that will change to `.ldb` in the near future, to avoid conflict with Microsoft.
+    The files at each deeper level are up to ten times the size of the files in the
+    previous level. The top level is an unsorted mix of records and sorting occurs
+    as records are written to the next level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copying, sorting, and compaction is performed each time files from one level
+    are amalgamated down to the next one. This **Write Amplification** is the single
+    biggest performance trade-off in the LevelDB architecture. In a huge database,
+    a given value may be written to disk up to eleven times over its lifetime as it
+    is copied down the different levels. The big benefit of this approach is the speed
+    of writing data without pausing for index updates. Conventional B-tree indexes
+    also rewrite data as they balance trees.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Data doesn''t just leap straight from your function call to the level tables.
+    The first place the data goes from a `write()` is into a `memtable` which is a
+    skip list structure. It is simultaneously written to a log file on disk that provides
+    for data recovery if there is an application failure. When this log hits a 4 MB
+    limit (governed by `write_buffer_limit)`, LevelDB starts writing a new log and
+    flips over to the alternate `memtable`. There are only two of these structures
+    maintained in memory. The one being written is referred to as imm as it is then
+    regarded as immutable and a background thread copies it to a new `.sst` file at
+    level 0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Understanding the Level in LevelDB](img/1015OS_10_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: LevelDB's data lifecycle of copying and sorting into bigger levels
+  prefs: []
+  type: TYPE_NORMAL
+- en: To manage this collection of files in a persistent way, a **manifest** file
+    is written that records the key ranges and levels for each of the `.sst` files
+    in use. Remember that these are immutable files. The manifest has a record added
+    each time a new `.sst` file is added by either writing out the current `memtable`
+    or the compaction thread combining files and pushing them down a level. Also in
+    the database directory is the plain text file CURRENT which just contains the
+    name of the latest manifest file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding that deleting is another form of write
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The explanation of immutable levels and writing above should enable you to understand
+    how it can appear that we update a key—a newer value is written with the same
+    key and trickles down the levels. Deleting a key similarly works from the top
+    down. Unlike a tree index, we can't actually remove a key. Instead, what is written
+    is a copy of the same key with a special marker to say it has been deleted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding how reads work from the top down
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ve seen how writing values pushes from the top down, through the `memtable`
+    into the level files. Reading could be said to pull from the top down and is a
+    process of **maybe** and **elimination**. When a `Get` call looks for a key, the
+    following steps occur until it is found, including finding a key with a delete
+    marker, or there''s a definite no such key:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The current memtable skip list is scanned (can exit with found key).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The imm memtable skip list is scanned, if it is not empty. It will only have
+    contents if in the process of being written to disk (can exit with found key).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Manifest is checked to determine if the key is in a range that is known to exist
+    in a level file (can say no).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The candidate level file is opened if it is not already cached as open.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If using a **filter policy**, described in detail later in this chapter, the
+    filter is checked to see if the key is possibly in the level file (can say no).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The file's index is used to determine if the file contains a block with a key
+    range including the key (can say no).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the block possibly containing the key is not in the block cache, read the
+    block from the level file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Sequentially walk through the key-value pairs in the block to read the value,
+    or determine that the key is not after all in that file (final found or no).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remember that keys and values are arbitrarily long so there's no way to calculate
+    an offset to jump to the start of a given key's value, hence all this work of
+    delving through the levels. The in-memory caches and filters help a lot. See `doc/table_format.txt`
+    for more details on the layout and how the index points to blocks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding how snapshots make reading predictable
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: One other subtle aspect of the immutable table architecture is the way that
+    snapshots are used. The name is a bit misleading as it suggests something heavyweight
+    which is a picture of the database. They do provide a way to effectively freeze
+    your view of the database but at a low cost—they are basically just a special
+    number.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The keys that are used inside the database are composed of your key, a flag
+    value, and the snapshot number. The flag indicates if this is a data key or a
+    delete key—the special keys that are added as a result of a `Delete`, operation
+    as we saw earlier. Simultaneous reading while writing is protected by the snapshot
+    number, effectively isolating the keys being iterated from any deletes or rewrites
+    of those key values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can think of the snapshot as affecting any individual `Get` or `Iterator`
+    reads, specifying it via the `ReadOptions` structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Although `GetSnapshot` returns an object that should be deleted to help with
+    database state, its behavior is just as if you passed in the snapshot number to
+    form the key used in the reads. Each new write or batch of writes will increment
+    the current number and so the actual keys being searched for in your reads with
+    the snapshot will not see the later ones.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using snapshots is only a transitory activity within the current open session
+    of the database. They are represented under the hood in an opaque way which means
+    there is no safe way to persist a snapshot to disk and continue using it in a
+    later run of your program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding how Bloom filters help guesses
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Failing to find something is usually slower than finding it—when do you give
+    up? In most applications, you will not have every possible key value stored in
+    the database. One of the biggest optimizations in LevelDB is the use of a filter
+    policy to decide if a given key is present in a level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We know from the manifest file which level file contains a key range for our
+    key. If you are using a filter, the filter data is cached for each open file so
+    it provides a quick answer as to the key presence in that table, without reading
+    the index and scanning blocks. The default filter provided for you to use is a
+    Bloom filter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Understanding how Bloom filters help guesses](img/1015OS_10_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: A Bloom filter in operation from Jason Davies' online demonstrator
+  prefs: []
+  type: TYPE_NORMAL
+- en: The preceding figure shows a snapshot of having entered seven values into the
+    animated demonstrator at [http://www.jasondavies.com/bloomfilter/](http://www.jasondavies.com/bloomfilter/),
+    which is a good way to understand how they work. If the site is still in operation,
+    go and play with entering some values and watch the bit vector changes with different
+    values, then resume reading this chapter. I had my "aha" moment with the benefit
+    of his site, after a few attempts of reading papers and looking at static diagrams.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hopefully, you've just seen a great demo of filters in action and the following
+    will make a lot more sense. Bloom filters work with one simple insight—a bunch
+    of simple, quick hash functions can be used in combination to decrease their chance
+    of collision. The combined hash functions all write their results to the same
+    bitmask. Calculating three simple hashes is much faster in general than trying
+    to calculate a perfect hash. The filter doesn't work like a hash table—it fails
+    to handle collisions because that's the job of the other LevelDB data structures
+    getting to the actual key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Hash functions aim to provide a small value that maps to a much larger key.
+    Depending on your data, there may be colliding values. A bad hash is where too
+    many of the original strings generate the same hash value. If you are completely
+    new to the idea of hash values, just imagine taking the lowercase first letter
+    of your key as the hash. This would be a perfect hash if you just had twenty names,
+    starting with different letters. It would be a disaster if they were all Smith.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Bloom filter guarantees no **false negatives**. If it says a key is not there,
+    it is absolutely not there. But, if it says the key is present, there's only a
+    chance it is present—another key may have had the same series of hashes. Deciding
+    to use a filter is a classic trade-off gaining performance at the cost of more
+    space on disk, storing the filter data. This is further refined by changing the
+    bits-per-key or even the filter algorithm—more bits usually yields better performance
+    at the cost of more space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you know your keys will almost always be in the database, there is no point
+    using Bloom filters!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tuning using Bloom filters or alternatives
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: LevelDB doesn't care what kind of filter you use, if any. It provides a single
+    hook for you to specify a `FilterPolicy` object. You can subclass that interface
+    to provide any filter you like. It is not mandatory to use a filter but you will
+    usually improve performance at least by using the default one from `NewBloomFilterPolicy`.
+    However, if you have a custom comparator which ignores areas of the key or treats
+    them out of order, you can't use the default filter policy. You might also want
+    a custom policy if your keys contained a lot of information and only a small part
+    of them was mostly unique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your custom filter might still use the Bloom algorithm or could be your own.
+    There is no assumption about the data stored on the disk by the filter—LevelDB
+    just stores and retrieves the bytes the filter object provides, at the end of
+    each level file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are using the standard filter, there's a tuning opportunity as it requires
+    you to specify how many bits are used per key. The recommended value is 10 bits
+    per key, which is the memory impact of the filter cached for that particular file.
+    If you have a database with a lot of sparse keys, you might use more bits to improve
+    accuracy and avoid index scans.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basho's Riak server uses the Erlang-wrapper **eleveldb** which has a LevelDB
+    clone. It's available at [http://github.com/basho/leveldb](http://github.com/basho/leveldb)
+    and it includes an improved Bloom filter, as well as other changes that are more
+    suited to their server environment. They claim their filter takes up less space
+    on disk and has an 0.05 percent false positive rate, compared to the 1 percent
+    false positive rate in the standard Google version (at the 10 bits per key mentioned
+    earlier). A 1 percent false positive rate means that, when the filter says a key
+    is there, 1 out of 100 times you will walk through the SSTable and find that key
+    is not really there. Their filter can be copied and used as a drop-in replacement
+    for the standard one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using settings that affect performance
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The following settings are documented in `include/options.h` with significant
+    comments and are all set in the `LevelDB::Options` structure passed into `Open`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`write_buffer_size` defaults to 4 MB and much larger values will improve write
+    performance, as used on Riak, but can result in blocking when the memtable is
+    written to disk. Remember there are only two memtable buffers so stalling will
+    occur if `imm` is still being written and the current buffer fills.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`max_open_files` defaults to 1000 and will be adequate for most databases.
+    If you have a massive database on a server, this could be increased as it would
+    allow more level files to be cached open and avoid the cost of opening them and
+    reading in their index and filter blocks.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`block_cache` is a pointer to cache that takes the object created by `NewLRUCache`,
+    and defaults to 8 MB, see the following discussion.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`block_size` user data per block, default 4 KB, affects the indexing of the
+    level tables with one index entry per block. Leave this alone unless you have
+    many keys that are much larger than 4 KB. It also is used for the flushing of
+    I/O, so picking a much larger size may leave a very active database vulnerable
+    to an OS crash losing data.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`block_restart_interval` defaults to 16, leaves alone unless you have a lot
+    of sequential keys with minimal changes. It is the checkpointing interval at which
+    a new entire key is written rather than just the trailing changes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`filter_policy` defaults to NULL, use `NewBloomFilterPolicy` to create a policy
+    unless using a replacement such as the Riak one discussed earlier. Using a filter
+    policy costs storage and uses a bit of memory but optimizes key lookups if there''s
+    a reasonable chance of keys not being in tables.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tuning and structuring data by scenario
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The following scenarios provide context for the settings and key design techniques
+    we've discussed here and in earlier chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Choosing to structure data according to update rate
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As we discussed in [Chapter 8](ch08.html "Chapter 8. Richer Keys and Data Structures"),
+    *Richer Keys and Data Structures*, you can decide to move some values into separate
+    keys rather than keeping them in a main record. As you should now understand,
+    if the main record is very static, it will tend to migrate to a level table and
+    then sit there, while new key values are pushed down from the top for your regularly
+    updated data. This warehousing approach will work even better if the main records
+    are indexed with an ascending identifier, as their level tables won't require
+    resorting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's an optimization in the compaction process which simply copies such tables
+    down into the larger one when merging, if no resorting is required. You can also
+    call the `CompactRange` function to force compaction for a given key range.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Caching choices for key performance based on expected access
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Caching is a complicated process. One interesting additional option you can
+    apply in the `ReadOptions` is to **bypass** the cache, by setting the `fill_cache`
+    flag to false. For example, imagine you have a database open and some user action
+    requires you to go off and read a number of keys somewhat out of the flow of most
+    of the user-driven actions. Their use of the database to-date may have nicely
+    loaded the cache with records being heavily reused. Creating an iterator with
+    `fill_cache=false` will avoid flushing the current cache.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The other consideration is to use a larger cache size. The cache is an object
+    that is created either using a standard call or your own factory if you subclassed
+    theirs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The cache is a read cache—it will only help if you are doing a lot of reading
+    and its size should be based on the volumes of data being read. Otherwise, you're
+    wasting memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using multiple databases depending on role
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Riak server achieves great database throughput by using 7 to 64 LevelDB
+    databases per platform, partly to improve write performance. You can also use
+    different databases as an opportunity to tune settings differently depending on
+    role. Imagine that you have a very dynamic audit trail—it could use a small cache
+    and avoid the overhead of the filter policy, being optimized for writing. To optimize
+    for robustness, you could reduce its `write_buffer_size` or dramatically increase
+    the size to get high throughput. However, experience reports suggest that choosing
+    to segment your use across databases is a late optimization unless you have radically
+    different user profiles. The natural unpredictability of much user behavior will
+    often be best served by having a single database cache data and react by building
+    the levels as they accumulate data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reconsidering policies for generating keys
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We have just discussed how the desire to avoid table updates may lead to using
+    different keys and explained how stable key ranges allow for optimal compaction.
+    There are a few points we may want to consider about how keys are generated that
+    can affect the level tables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The simplest scenario to consider is the kind of bulk loading of data we used
+    in the name and address databases. When `Sample06` moved to using multiple keys,
+    we loaded them with a single loop creating two differently prefixed keys. That
+    causes a lot of key overlapping and consequential sorting in the compaction from
+    level 0 to level 1\. If there's such a once-off load of many records, like our
+    50,000 line sample, consider using two passes through the data being loaded. A
+    separate pass for each prefix means the keys we generate will already be grouped
+    by prefix and reduces sorting at compaction time..
+  prefs: []
+  type: TYPE_NORMAL
+- en: Two-pass loading may not always be easy if you are generating unique ID suffixes
+    such as the `nameId` we added to make names unique. However, even with such unique
+    primary keys, you can still loop through the database and generate the secondary
+    keys in a later pass. This is a lot more processing for data loading but could
+    be a good trade-off as a single hit compared to many read operations later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember that key values in the level tables are stored as trailing deltas,
+    skipping the common prefix. You should be careful to avoid adding suffixes that
+    might break this. If there is a common value that you had considered adding as
+    a key suffix, see if it makes sense to make it a prefix instead. This would normally
+    require some application logic change but might yield major table improvements.
+    This kind of complicated change would only be useful if you have extreme performance
+    requirements but is mentioned for your consideration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another thing to consider to take advantage of the key deltas is if your keys
+    have a common value field. If there is something in the value that doesn't change
+    for many keys, it will be duplicated for each key. If you moved it into the key
+    rather than the value side of the record, you might be able to get benefits from
+    key compression.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, remember that LevelDB's Bloom filters and key range behavior make it
+    very good at determining if a key value is not in the database. If you have binary
+    flags, consider whether you can invert their behavior and store a key to indicate
+    the opposite, so your normal searches would be if the flag key was missing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have learned a lot more about the structures in memory and on disk that give
+    LevelDB its name and behavior. Putting these in context of the API that we have
+    been programming throughout the book gave you a more informed way to structure
+    your programs and think about your key policies. You also learned about different
+    settings that can affect performance and memory use, which might lead you to use
+    multiple databases with varied settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rounding off the LevelDB ecosystem, we will leave the native code world behind
+    and end with an appendix reviewing some of the more common scripting language
+    wrappers that let you use LevelDB without compilation.
+  prefs: []
+  type: TYPE_NORMAL

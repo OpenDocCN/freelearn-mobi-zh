@@ -1,0 +1,237 @@
+- en: Chapter 6. Integrating with a Cocoa UI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The emphasis upto this point has been on how to program the database calls
+    in C++ or Objective-C with as little user interface as possible. Now we will see
+    some simple approaches to presenting that data in Cocoa applications, sufficient
+    to build a full application. For the first time, our sample code will be an application
+    driven by the user rather than just a series of test functions. These discussions
+    assume you''re comfortable using Xcode to edit interfaces, including making connections
+    to `IBOutlets` and `IBActions`. See the references at the end of this chapter
+    (section: *Recommended Xcode books*) for help with Xcode.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Meeting the data source needs with LevelDB
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The problem with presenting lists of data in either `NSTableView` or `UITableView`
+    is that they expect an array-like data model with two characteristics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The number of rows is known
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Row contents can be retrieved at arbitrary indexes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This is not a great fit with LevelDB which doesn't know the total number of
+    keys, and can only get the tenth key by stepping through the nine others before.
+    The typical solution, which we use in these samples, is to copy from the database
+    into an `NSArray` class, to fill the table view. This performs well for usable
+    data quantities in a single scrolling table. I tested with 50,000 records like
+    the 500 bundled here and it's still fast and usable on an iPhone4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get the full details of data associated with a given row, when the row is
+    selected, you need to be able to map from a row number to a position in the data
+    source. This is complicated if you allow resorting of the table by clicking headers
+    or dragging and dropping new content. We will not go into a great level of detail
+    with this example but the usual technique is to use an `NSMutableArray` subclass
+    so that cells can be moved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While the discussion following is all about the OS X app, the iOS version is
+    included online and is nearly identical, substituting `UITableview` for `NSTableview`.
+    The other major difference is where to put the controller logic. In simple OS
+    X apps, the `AppDelegate` is used where you would use the `ViewController` class
+    in iOS apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the OS X GUI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The OS X UI combines a searchable list of records with an adjacent data entry
+    form to see and change the details of a record, including creating new records.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating the OS X GUI](img/1015OS_06_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: OS X sample app showing list with search results and record details
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The OS X app is a single window `MainMenu06.xib` with:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An `NSTableView` class for listing records
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An `NSSearchField` class to enter searches, that triggers as you type
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A series of `NSTextField` fields for editing the individual parts of the record
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Two `NSButtons` for issuing the commands, **Save** and **New**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A menu bar with the same commands as the buttons (for example, **File** | **Save**)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It was created using the Xcode template for a new Cocoa app, not checking the
+    **Document-based** option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connecting the database to the NSTableView
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: All these interface methods and outlets are in `GSwLDB06osxAppDelegate`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Live searching as you type occurs automatically because the action of the `NSSearchField`
+    object is connected to the `IBActionviewMatches`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `datasource` and `delegate` outlets of the `NSTableView` class are connected
+    to `GSwLDB06osxAppDelegate`, which has a corresponding outlet `tableView` referencing
+    the `NSTableView` class
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In order to support table operations, two independent protocols were added
+    to the object. `NSTableViewDelegate` is about table behaviour, responding to events
+    such as editing and dragging items. The vital two methods supplying displayed
+    data to the table are provided by the `NSTableViewDataSource` protocol. It is
+    common, but not mandatory, for these two protocols to be satisfied by one object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There is a clear separation between this GUI delegate and a `Model` class which
+    is responsible for managing a data selection and is reused in the iOS app. As
+    an `NSTableViewDataSource` protocol, the delegate asks the model for data. The
+    GUI knows nothing about LevelDB.The table-related methods in `GSwLDB06osxAppDelegate`
+    are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The public interface of the Model is in `Sample06_Model.h`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Private methods and properties are added by a class extension in `Sample06_Model.m`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: There's a consistent pattern assuming that `loadListForUI` might need to be
+    called at any time. Although it's just one line, it's separated out into a method
+    so later code can be smarter about loading the list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connecting record details to the editing form
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The editing GUI displays details of a record next to the table, based on the
+    current selection in the table. We can change records and save them back, or click
+    on a different row without warning of losing our changes. The simplest editing
+    behaviours are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Respond** to changing table selection by displaying the details'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Save** to copy the details entered back to the database'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**New** to clear the entry fields so a record can be added'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The record details are presented by the model as an `NSArray` class of `NSString`
+    values, indexed by the enum `fieldOffsets`. You could think of this as a horizontal
+    array, in contrast to the vertical array of keys displayed in the table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Allowing and responding to **selection** changes is simple. The two selection-related
+    methods declared by the protocol `NSTableViewDelegate` are also used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Sample06_Model.m` support for the GUI knows how to map a row number from
+    the GUI to a database key, as we saw, used to provide the tableview contents.
+    Similar logic provides the key we now use to retrieve a database record:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That takes care of data loading. To save we will need to send an array of fields
+    back to the model and update the database. This starts with `(IBAction)saveRecord`
+    in `GSwLDB06osxAppDelegate`. It calls the model''s `saveRecord` method which in
+    turn uses `addRecord` to save a key of combined names with JSON for the body:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: A new action is just a GUI action clearing all the entry fields. It sets a property
+    of the delegate `isNewRecord`, as you saw, used in the preceding code in `saveRecord`,
+    but has no effect on the Model or leveldb. Only if you save a new record will
+    the database be used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recommended Xcode books
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The following Packt books are very straightforward with good examples walking
+    you through the Xcode interface editor and explaining the table classes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Cocoa and Objective-C Cookbook*, *Jeff Hawkins*, *Packt Publishing* for `NSTableView`
+    on OS X'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Xcode 4 Cookbook*, *Steven F Daniel*, *Packt Publishing*, for `UITableView`
+    on iOS'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We now have a good start on a real database app with a separation between the
+    GUI and data model. Your understanding of adding data and searching was used in
+    the model layer. We covered the needs of loading lists of records and how to show
+    detailed data based on our selection. Now that we have a more complex application,
+    the next chapter will show us how to use some debugging techniques to see data
+    changes. After that we'll come back to `Sample06` and add a secondary index, delete,
+    and more complex data updates.
+  prefs: []
+  type: TYPE_NORMAL

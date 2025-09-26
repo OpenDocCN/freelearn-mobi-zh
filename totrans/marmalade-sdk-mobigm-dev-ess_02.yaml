@@ -1,0 +1,1565 @@
+- en: Chapter 2. Resource Management and 2D Graphics Rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Unless you happen to be writing an old school text adventure game (and perhaps
+    even if you are), chances are that you will want more than just text in a simple
+    debug font to appear on screen. Drawing nice-looking graphics demands that we
+    should also be able to load those graphics into memory in order to display them;
+    so in this chapter we will be looking at the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Marmalade's resource manager to load games resources
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extending the resource management system with our own custom classes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The programming choices we have available to us for rendering purposes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to display a bitmapped image on screen using the IwGx API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Marmalade ITX file format
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An ITX file is Marmalade's built-in file format that can be used for loading
+    all kinds of data into our program. The extension ITX is short for Ideaworks TeXt;
+    Ideaworks being the original name of the company that created the SDK before they
+    rebranded themselves as Marmalade.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ITX files have a simple text format and are used as the basis for resource loading.
+    While it is possible to load resources ourselves, it is a bit like reinventing
+    the wheel when Marmalade already provides a great deal of support for this truly
+    tedious aspect of coding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Marmalade has an API called IwUtil that contains a wide range of useful utility
+    functions ranging from memory management and debugging through to the serialization
+    of objects and random number generation. It also contains a class called `CIwTextParserITX`,
+    which allows us to load and process an ITX file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To add this functionality to our own project, we just need to add `iwutil` to
+    the `subprojects` list of the MKB file and then add a call to `IwUtilInit` at
+    the start of our program, and `IwUtilTerminate` in our shutdown code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we can use the text parser, we will need to create an instance of it
+    by using `new CIwTextParserITX`. This class is a singleton class, so we can create
+    an instance of it at the start of our program and then reuse it as much as we
+    like in the rest of our code (don''t forget to release it on shutdown!). The instance
+    can be accessed using the `IwGetTextParserITX` function, and we can then load
+    and parse an ITX file using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'An ITX file is little more than a big collection of class definitions. An instance
+    of a class is defined by first putting the name of the class followed by a list
+    of parameters for that instance enclosed in curly braces. Let''s say we had a
+    class called `WidgetClass` that was defined as follows (don''t worry about the
+    `CIwManaged` class and the `IW_MANAGED_DECLARE` macro for now, we''ll come to
+    these in a bit):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is an example of how we might instantiate this class from within an ITX
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This sample declares two instances of `WidgetClass`, and initializes those instances
+    with a name, color value, size, and a flag indicating whether the widget in question
+    is sparkly or not. Each of these settings is called an attribute, and they can
+    be of any type we desire—string, integer, floating point, boolean, or an array
+    of values (the `color` attribute provides an example of this).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hopefully, you are looking at this and thinking how exactly this format can
+    be magically loaded and instanced by the Marmalade text parser, since it obviously
+    knows nothing about `WidgetClass`. A good question! The answer is that any class
+    that you wish to parse from an ITX file must first be derived from the Marmalade
+    class `CIwManaged`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CIwManaged class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `CIwManaged` class is the base class used throughout the Marmalade SDK and
+    by our own classes whenever we want to be able to create instances of them by
+    loading from a file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The class provides some virtual methods that we can override to allow the parser
+    to recognize our own custom classes, and also to serialize them into a binary
+    format and resolve any references to other classes or resources. It also provides
+    the coding glue required to instantiate copies of our class at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This facility is really useful for us as it allows us to make our code more
+    data-driven. Say we have a class that describes an item that the player can collect.
+    We might have lots of different item types in our game, so rather than creating
+    instances of them all in the source code, which only a programmer can then change,
+    we could instead instantiate them from an ITX file, which a game designer with
+    no coding knowledge can then edit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instantiating a class with the class factory
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The first thing `CIwTextParserITX` will encounter in the ITX file is the class
+    name, which it will use to create a brand new instance of our class. It achieves
+    this by using the class factory, which is another part of the IwUtil API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A class factory is a programming pattern that allows us to generate new instances
+    of objects at runtime by asking another class (the so-called factory) to create
+    a relevant class instance for us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Marmalade class factory system allows us to add our own classes to those
+    provided by the SDK itself by registering a unique hash value identifying the
+    class and a method that creates a new instance of it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The hash value is normally derived by converting the name of the class into
+    a number by passing its name as a string to the IwUtil API's function `IwHashString`.
+    While this isn't guaranteed to produce a unique number, it is usually good enough
+    for our purposes and clashes with hash values from other class names are rare.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To add our own custom `CIwManaged` derived class to the class factory, we just
+    need to do the following (if you want to see a full example of this and indeed
+    the things we''ll be covering in the next few sections, take a look at the source
+    code for the ITX project that accompanies this chapter):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add the `IW_MANAGED_DECLARE(CustomClassName)` macro to the public section of
+    the class. This declares a method called `GetClassName`, which will return the
+    name of the class as a string, and also adds a couple of type definitions to allow
+    the class to be used more easily with the `CIwArray` class, which is yet another
+    piece of functionality provided by IwUtil.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the macro `IW_MANAGED_IMPLEMENT_FACTORY(CustomClassName)` to the source
+    file for the class. This macro implements the `GetClassName` method and also creates
+    the necessary class factory function that will be used to create a new instance
+    of our class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finally, we have to register our class with the class factory itself by adding
+    the macro `IW_CLASS_REGISTER(CustomClassName)` somewhere in our initialization
+    code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With this done, we can now include our class in an ITX file. The `CIwTextParserITX`
+    class can now create a brand new instance of it with a call to the class factory
+    function `IwClassFactoryCreate("CustomClassName")`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parsing a class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'With the creation of a new instance of our class taken care of, the next step
+    is to allow `CIwTextParserITX` to configure that instance by modifying its members.
+    This is done with the following `CIwManaged` class'' virtual methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Method | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ParseOpen` | This method gets called when the text parser reaches the open
+    curly brace of the class definition. It can be used to initialize anything that
+    might be needed internally during the process of parsing an object.It is important
+    that you do not use this method to initialize all the member variables of your
+    class to some default values. The class constructor is a far better place to do
+    this, as it is guaranteed to be called however the instance ends up being created.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ParseAttribute` | This method is called whenever an attribute is encountered
+    in the object definition. The attribute is passed as a standard C-style string
+    to this method, which can then process it as needed.The text parser can be used
+    within this method to extract any data elements in a variety of different ways,
+    including strings, integers, and Boolean values. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ParseClose` | This method is called when the closing curly brace of the
+    class definition is encountered. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `ParseCloseChild` | It is possible to embed class definitions inside other
+    class definitions in an ITX file. If a class does not implement the `ParseClose`
+    method then when its closing curly brace is encountered, the `ParseCloseChild`
+    method will be called on the parent class with a pointer to the child class.In
+    this case parent and child do not refer to class inheritance hierarchies, but
+    rather to how the classes have been defined in the ITX file. For example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When overriding any of these methods, you should normally call the version of
+    the method from the superclass, be that `CIwManaged` or some other class derived
+    from it. For example, the `name` attribute is parsed by `CIwManaged::ParseAttribute`,
+    which not only reads the name for the class but also generates a hash value of
+    the name. The hash value is very important when it comes to serializing and resolving
+    class instances later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following diagram shows an example of how an instance of `WidgetClass`
+    defined earlier in this chapter would be processed by the ITX parser:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Parsing a class](img/3363_02_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'For `WidgetClass` the only method we would definitely need to implement is
+    the `ParseAttribute` method, which might look like the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Serializing a class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Serializing an object instance is the process of converting the current state
+    of the object into (or from) a binary format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While not strictly necessary when parsing an ITX file, it is still very much
+    a useful part of the functionality provided by `CIwManaged`, and forms an integral
+    part of the resource handling process that we will be seeing later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The serialization functionality can also be useful when it comes to saving out
+    things such as current game progress or high score tables, though of course we
+    can still use normal file handling operations to do this if we prefer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Serialization of our class is handled by overriding the virtual method `Serialise`.
+    This method can then use the serialization functions provided by IwUtil, which
+    all start with the prefix `IwSerialise`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, `IwSerialiseInt32` will serialize an `int32` value. All these functions
+    make use of the Marmalade type definitions for the basic variable types, as these
+    are far more explicit when it comes to the memory footprint of a variable. Take
+    a look at the header files `IwSerialise.h` and `s3eTypes.h` in the Marmalade SDK
+    installation for more information on the `IwSerialise` functions and the variable
+    types respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We must make sure to call our superclass implementation of `Serialise` as well
+    to ensure every part of the object is serialized. Normally this would be the first
+    thing we do in our implementation of `Serialise`, but it does not have to be so
+    as long as it is called at some point.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can serialize our objects to a file of our choosing by calling `IwSerialiseOpen`.
+    This allows us to specify the filename and a Boolean flag that indicates whether
+    we are reading or writing the file. We then call the `Serialise` method of each
+    object we want to serialize, and finally call `IwSerialiseClose` to finish the
+    process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One nice feature of the `IwSerialise` functions is that, in most cases, we do
+    not have to worry about whether the `Serialise` method has been called to write
+    data to a file or if it has been called to read data from a file. We just call
+    the function and it will read or write the value, as appropriate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are times that we will care about reading or writing values to a file;
+    for example, if we need to allocate a block of memory to read some values into.
+    The functions `IwSerialiseIsReading` and `IwSerialiseIsWriting` allow us to make
+    the appropriate decisions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code snippet illustrates how the serialization functions are
+    used by showing what the `Serialise` method might look like for `WidgetClass`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Resolving a class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The act of resolving a class instance is to fix up any parts of our class that
+    are not initialized correctly when parsing the object from an ITX file or having
+    created it from the serialization process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When might this happen? The most frequent reason for needing to resolve our
+    instances is when the instance requires a pointer to another class that may not
+    exist when it is first created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is best illustrated by an example. Let's say our class contains a pointer
+    to another instance of our class in order to implement a linked list. When we
+    read in our instances, it is possible we might refer to an instance that has not
+    yet been created and so we can't create the linked list yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To solve this problem we instead store a value in our data that will allow us
+    to look up the required instance later. This might be a string representing the
+    name of the instance or perhaps a unique identifier number.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once all the instances have been read in, we can then call the `CIwManaged`
+    class' virtual method `Resolve` on each instance in turn and obtain the required
+    pointer to the correct instance using whatever methodology we see fit. For example,
+    we might maintain a list of all instances of our class that gets added to whenever
+    a new instance is created. We can then use this list to look up the required instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is not always necessary to create our own implementation of `Resolve`, but
+    if we do we must be sure to call the inherited version of the method from our
+    superclass.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We'll take one more look at `WidgetClass` to wrap this all up. You may remember
+    that it had a member `mpNextWidget` that points to another instance of `WidgetClass`.
+    In the ITX file, we supplied a value for this member by specifying the name of
+    another `WidgetClass` instance. In the `ParseAttribute` method, we read in this
+    name and calculated a hash value from it which was stored in the `mNextWidgetHash`
+    member variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can implement the `Resolve` method and look up a pointer to the correct
+    instance but we''ll also need to maintain a list of all `WidgetClass` instances
+    in order to do this. One way of doing this is to implement `ParseClose` and store
+    each instance in a list. The following code shows how this could be achieved:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The Marmalade resource manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Most bitmap art packages are capable of saving images in a number of different
+    file formats, but we really need access to the actual bitmap data itself, which
+    may well be stored in a compressed format with any particular file format.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Marmalade makes the task of loading images simple by way of the IwResManager
+    API. This API relies upon the ITX file format we have just discussed, and is not
+    just limited to loading images. It can also be used to load in data such as 3D
+    models and animations, and we can also use it to keep track of our own custom
+    classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Earlier we had to create our own instance of `CIwTextParserITX` in order to
+    parse an ITX file. IwResManager creates its own instance of `CIwTextParserITX`
+    when it needs it, so we don't need to worry about creating our own instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding IwResManager to a project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To make the IwResManager API available to a project, all that needs to be done
+    is to add `iwresmanager` to the subprojects list in the MKB file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To initialize the API just add a call to `IwResManagerInit`, which will create
+    a singleton instance of the Marmalade resource manager class `CIwResManager`.
+    This class is used to load, free, and of course access our projects resources,
+    whatever they may be. The singleton can be accessed using the function `IwGetResManager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When our project terminates we should call `IwResManagerTerminate`, which will
+    destroy the resource manager singleton and any resources it may still have loaded
+    in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifying resources with a GROUP file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Marmalade allows us to collect different types of resources together into a
+    resource group. We are free to mix images, sounds, 3D models, and any other data
+    types we might need to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Why would we want to group resources together? Well, let's say you are writing
+    a game with a number of different levels. Each level will have some common resources
+    (for example, the player graphics) but might have unique elements specific to
+    that level, so it would make sense to only have these resources in memory when
+    the level is being played. You could therefore create one resource group for the
+    player graphics, and individual ones for each level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to load a resource group into our program, we first need to create
+    a GROUP file. A GROUP file is actually an ITX file with the extension `.group`
+    that allows us to list all the resources we want to gather together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start by taking a look at a sample GROUP file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first line of this file is defining a new `CIwResGroup` class instance,
+    which is the class used to implement a resource group, and the first thing we
+    do inside the curly braces of the definition is to give the resource group a name.
+    This name will be used later to allow us to access the resource group.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A GROUP file should only contain a single `CIwResGroup` definition. The Marmalade
+    SDK documentation states that behavior is undefined should you specify more than
+    one. In practice this is not a problem since the GROUP file is the lowest level
+    block of resources that can be loaded at a time, so there would be no real benefit
+    in specifying more than one `CIwResGroup` anyway.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The remaining lines of the example definition specify the resources we want
+    to include in this group, and most often these will just be filenames for the
+    resources in question. As we progress through this book we will see some extra
+    functionality that the group file provides us with, but for now we'll just concentrate
+    on the main task of loading resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the example, we are specifying three files that we want to be part of this
+    resource group. The first is a bitmapped image saved in the PNG file format. The
+    next resource is a reference to another GROUP file. When this GROUP file is loaded,
+    the `sounds.group` file will be loaded into memory as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The final file we are including is `levels.itx`, which is a standard ITX file
+    and would be used to create instances of our own classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading groups and accessing resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To load a GROUP file in our program, we do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will look in the project's `data` directory for the specified GROUP file,
+    and then load it into memory. The `LoadGroup` method returns a pointer to the
+    `CIwResGroup` instance that was created, which we can store away somewhere so
+    we can release the resource group and all its resources later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the resource group in memory, we can access the individual resources in
+    one of two ways. The first way is to ask the `CIwResGroup` instance itself to
+    locate a particular resource for us. Here''s how we do this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the call to `GetResNamed`, the `name` parameter is a null terminated string
+    containing the name of the resource we want to access. This is the value that
+    is specified using the `name` attribute in an ITX file. If no `name` value is
+    explicitly specified, the name of the first resource encountered in the GROUP
+    file (minus any extension) will be used for the name. In the example GROUP file
+    in the previous section this name would become `titlescreen`, since the first
+    resource in the file is the `titlescreen.png` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `type` parameter indicates the class of the resource that we are trying
+    to locate. This parameter is also a string and is simply the class name of the
+    resource type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally there is the `flags` parameter that we can normally leave out entirely
+    as it defaults to a value of zero. There are various flags we can use that alter
+    the way the search for our resource is performed. For example, `IW_RES_PERMIT_NULL_F`
+    will prevent an assert from being fired if the required resource could not be
+    found. Check the Marmalade documentation for more information on these flags,
+    though in most cases the default value of zero is what we need to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the resource can't be found, the `GetResNamed` call will return `NULL`, otherwise
+    it returns our resource as a pointer to a `CIwResource` instance, which we can
+    then cast to the required class type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second way of accessing a resource is to ask the resource manager to find
+    it by searching through all the currently loaded groups. This can be very useful
+    since it means we don''t have to know exactly which resource group to search in.
+    Obviously a full search of all currently loaded resource groups will be slower,
+    but it means we don''t have to keep track of every resource group we load. After
+    all, that''s what the resource manager is for! The call required to search all
+    loaded groups for a particular resource is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The parameters are exactly the same as calling the `CIwResGroup::GetResNamed`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we can remove a resource group and everything it contains from memory
+    by making the following call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: We should destroy a group whenever we no longer need those resources in memory
+    (for example, a group containing resources for a particular level of a game only
+    needs to be in memory when playing that level). It isn't strictly necessary to
+    destroy all groups on shutdown however, as Marmalade will ensure everything that
+    has been allocated will be freed whenever an application is terminated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CIwResource class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We've already seen how the `CIwManaged` class can be used to allow us to easily
+    create instances of our own classes by loading them out of a file. This functionality
+    is improved further by the `CIwResource` class, which allows us to include our
+    own classes into a resource group.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the GROUP file example shown in the previous section, we specified the `levels.itx`
+    file that may contain definitions of our own classes. If our custom classes used
+    `CIwResource` as their base class (or of course another class that was in turn
+    derived from `CIwResource`) then all of our resources can be added to the resource
+    group, saving us the bother of keeping track of them ourselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GROUP file serialization
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'It is great that we can load different types of resources so easily, but ultimately
+    we probably do not want to deploy our application with a collection of easily
+    recognized or editable files. There are several reasons for this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Loading speed: Parsing a text file and converting it into a class is a slower
+    operation than just loading in a ready parsed serialized version. It is also possible
+    that we might need to do some sort of conversion on the original data to make
+    it usable in the game, so if we can avoid doing this we will improve the loading
+    time of our game.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To prevent hacking: If we ship a collection of text files and common file formats
+    such as PNG files, we make it very easy for someone to hack and modify our game
+    or make unauthorized use of the game''s resources.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Smaller code size: If we are loading resource data that is already in a form
+    that our game code can use directly, there is no need to include any code for
+    converting the original data format into our own internal one. This makes the
+    code size smaller and also helps guard against hackers a little more.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Deployment size: Text files are often much larger than their serialized binary
+    equivalents, so shipping a binary version could reduce the size of our install
+    package.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Marmalade tackles all these issues by automatically converting every GROUP file
+    we load into its binary equivalent using the serialization functionality provided
+    by the `CIwManaged` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the resource group has been fully loaded, the resource manager will call
+    the `Serialise` method on every instance of every resource contained within the
+    group, creating a file with `.bin` added to the original GROUP's filename. For
+    example, the resources in a file called `images.group` would be serialized to
+    a file called `images.group.bin`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the serialized version of the GROUP file has been created, the resource
+    manager destroys the resource group and then recreates it from the newly serialized
+    version. This step is present as it makes catching problems, such as forgetting
+    to serialize a member variable of a class, easier to spot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is a useful ICF setting that controls the resource building process.
+    Simply add the following to the ICF file (refer back to [Chapter 1](ch01.html
+    "Chapter 1. Getting Started with Marmalade"), *Getting Started with Marmalade*,
+    for a discussion of what an ICF file is):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: When set to `1`, the `ResBuild` setting will ensure that the resource manager
+    always loads the GROUP file and serializes it. By setting it to `0`, the GROUP
+    file parsing stage is skipped and instead any existing serialized version of the
+    GROUP file will be loaded directly. This can be very useful during development,
+    to both increase application startup time when no resources have been added or
+    changed, and also to match more closely the loading process on the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you've made changes to the resources for your game but they aren't appearing
+    when you run it, the `ResBuild` flag is always a good first port of call. It's
+    amazing how easy it is to make a resource change and forget that you've disabled
+    resource building!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resource handlers
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There is one final part of the IwResManager API that is worth mentioning, and
+    this is the concept of **resource handlers**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You may have wondered how the resource manager is able to load and process files
+    of different types. It's great that we can just list a bunch of filenames in a
+    GROUP file, but how exactly does a PNG format image file end up being loaded into
+    a form that we can use for rendering? Resource handlers, of course!
+  prefs: []
+  type: TYPE_NORMAL
+- en: A resource handler is a subclass of `CIwResHandler` that is used to load and
+    process resources of a particular type, identified by one or more filename extensions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the text parser comes across a filename in the GROUP file, it looks at
+    the file extension and then checks to see if a resource handler has been registered
+    for that extension. If no suitable handler is found an error will be raised, otherwise
+    the filename is passed to the relevant resource handler class that will then do
+    whatever needs to be done to the file to make it usable in our code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The entire resource manager system in Marmalade relies on resource handlers
+    in order to work. GROUP files, ITX files, and bitmapped image files are all processed
+    by classes derived from `CIwResHandler`, and we can create our own custom resource
+    handlers should we want to make use of some other file type not supported by the
+    core Marmalade SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will be coming back to the subject of resource handlers when we talk about
+    implementing sound in [Chapter 7](ch07.html "Chapter 7. Adding Sound and Video"),
+    *Adding Sound and Video* of this book, since Marmalade does not have support for
+    any sound file formats as part of the core SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Graphics APIs provided by the Marmalade SDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we are familiar with resource management, we can get on to the more
+    interesting task of showing a picture on the display.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Marmalade spoils us by providing several different ways in which we can draw
+    graphics on the screen. The following sections provide an overview of the different
+    options available to us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The s3eSurface API
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The lowest level of display access is the `s3eSurface` API. This provides access
+    to the display by using a memory pointer that you can then use to directly read
+    or alter pixels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can discover the width and height of the display in pixels and also the
+    pitch, which is the number of bytes that you need to skip through memory to get
+    to the next row of the display image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The pitch is affected by the pixel format of the display (16-, 24-, or 32-bit
+    displays are all possible) and often extra padding bytes are also added to allow
+    each row to begin on a word-aligned memory address, which can improve display
+    memory access times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In practice this API is very rarely used, partly because it provides no support
+    for drawing bitmapped images or lines, but mostly because it is incredibly slow
+    on many modern devices due to the display being drawn by a **Graphics Processing
+    Unit** (**GPU**), which may place restrictions on how and when this memory can
+    be accessed by the CPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will not be using this API anywhere in this book, but if you wish to use
+    it there is nothing you have to add to your project as it is always available
+    in any Marmalade project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The IwGL API and OpenGL ES
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As mentioned above, most mobile devices available today contain a GPU that is
+    used to speed up drawing operations and free the CPU for other tasks, such as
+    updating the current state of a game. The standard API that has been adopted across
+    most mobile platforms is OpenGL ES.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The OpenGL ES API is a derivative of the OpenGL API, which has been used on
+    many desktop systems for many years. OpenGL ES was conceived as a cut-down version
+    of OpenGL designed for embedded systems (hence the ES part of the name!).
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two main versions of the OpenGL ES. The 1.x standard is intended for
+    devices that have fixed, function rendering pipelines, which means that while
+    control is provided in how a 3D point is transformed to 2D coordinates, and how
+    a polygon and its associated textures (if any) are rasterized to the screen, you
+    are completely limited to the options provided by the hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The 2.x standard of OpenGL ES is intended for GPU hardware where the act of
+    both transforming 3D points and rasterizing the resultant polygons can be programmed
+    by way of **shaders**. A shader is a short program that can be applied very quickly
+    to either transform 3D points (a vertex shader) or work out the required color
+    of a rendered pixel (a pixel or fragment shader).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In most cases a device supporting OpenGL ES 2.x will also support OpenGL ES
+    1.x, but the two cannot be mixed. When initializing OpenGL, you request one or
+    the other of these interfaces to be created as the OpenGL context. The context
+    is really nothing more than a big structure which stores all the information that
+    OpenGL needs in order to operate, such as the current frame buffer, pixel blending
+    mode, and available shaders.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So what exactly is the IwGL API? Put simply, it is a wrapper for OpenGL ES
+    that allows us to make normal OpenGL ES function calls directly, but it also provides
+    some other very useful functionality:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: IwGL simplifies the process of initializing OpenGL ES to a single function call—`IwGLInit`.
+    This function call will initialize the frame buffer and set up the OpenGL context
+    so that it is ready and raring to go, with settings that should be optimal for
+    the type of hardware available. Fine control over initialization is also provided
+    to allow display and depth buffer formats to be chosen using settings made in
+    the application's ICF file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It provides context state caching functions, such as keeping a copy of all textures
+    currently uploaded to OpenGL ES. In the event of your application being suspended
+    (for example, by an incoming call) all its textures and other resources could
+    be lost, and normally it would be your responsibility to reload everything you
+    need. IwGL automatically takes care of all this for us.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Any OpenGL ES extension functions (extra functionality that a particular GPU
+    may provide over and above the required base level of OpenGL ES) become mapped
+    to functions that can be called directly and will not cause an error if that function
+    is not actually supported. Normally you would need to specifically check if an
+    extension exists before trying to call it.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It also provides a Virtual Resolution system that makes it easy to take existing
+    code that was hardcoded to a particular resolution or screen orientation and make
+    it run at a different resolution or orientation by resizing or rotating the rendered
+    image.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: IwGL is an invaluable part of the Marmalade SDK when you are porting existing
+    code written using OpenGL ES, as it allows you to take advantage of Marmalade's
+    ability to deploy to multiple platforms without having to completely recode the
+    entire project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, we won't be using IwGL in this book either. While there is nothing
+    to stop us from using this API to develop a new project, it does mean we are limited
+    to targeting only devices that feature GPUs (or support a software emulated version
+    of OpenGL), and we still need to take care of things like loading textures ourselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use the IwGL API in your own project by adding `iwgl` to the `subprojects`
+    section of the MKB file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Iw2D API
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Given that this is a chapter about 2D graphics rendering, the Iw2D API must
+    surely be the way to go, right?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Well, yes and no. It certainly has a lot going for it, like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It provides us with the ability to render flat shaded primitives such as lines,
+    arcs, rectangles, and polygons, either as outlines or filled shapes.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It allows us to easily load bitmapped images and render them on screen and also
+    apply scaling or rotational transforms to those images.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It makes it easy for us to draw text on screen that looks substantially better
+    than the default debug font we've currently seen.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It provides certain optimizations that allow us to speed up rendering. For example,
+    it can batch together several requests to draw a particular image into a single
+    call, which can yield good performance increases on many devices.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: However, as you've probably already inferred from the tone of this section,
+    we won't be using Iw2D in this book either.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are only interested in rendering 2D graphics, Iw2D may well be perfectly
+    adequate for your needs, but if you ever want to make the jump to 3D graphics
+    you will eventually find that the Iw2D API just doesn't do everything you need,
+    such as rendering textured polygons of any shape, not just rectangular.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since we will be tackling 3D graphics later in this very book, it makes sense
+    for us to begin our journey into rendering with Marmalade by using 3D graphics
+    itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to use this API in your own project, just add `iw2d` to the `subprojects`
+    section of the MKB file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The IwGx API
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Finally we come to the API that we will be using in this book; in fact we have
+    already used a very small part of it in the creation of our "Hello World" project.
+    Ladies and gentlemen, I give you the IwGx API!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This API is extremely flexible and boasts the following functionalities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It supports both hardware and software rendering pipelines, so your code can
+    potentially run unaltered on modern hardware featuring a GPU yet still fall back
+    to a software-based renderer for older or less capable hardware. You can even
+    mix the two pipelines, so you could use the GPU for rasterization but still use
+    the CPU for transform and lighting operations.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It takes care of the nitty-gritty for us, such as initializing the display and
+    texture management, in a similar way to the IwGL API.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It allows us to use features such as texture mapping and flat or gouraud shading
+    on arbitrary polygons.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It provides some debugging functionality, such as simple text rendering (as
+    in our "Hello World" project) and rendering shapes like rectangles and circles.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It makes targeting OpenGL ES 2.x devices much easier, as it provides the necessary
+    shader programs to emulate the fixed function pipeline of Open GL ES 1.x while
+    still allowing us to provide our own custom shaders when we want to.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By using IwGx for rendering 2D graphics from the start, we will find it a whole
+    lot easier to move on to drawing 3D polygons later, as the techniques involved
+    are incredibly similar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: With Version 6.1 of Marmalade, the IwGx API underwent a little modernization
+    and standardized using floating point values for specifying polygon information.
+    Prior to this version, some information (for example, texture UV values) was specified
+    in fixed point integer formats. There was also a software-based rendering engine
+    for targeting old devices with no GPU hardware. If you have existing code that
+    still needs the old fixed point way of doing things, you can revert back by adding
+    `define IW_USE_LEGACY_MODULES` to the project MKB file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It should come as no surprise by now that we can use IwGx in our project simply
+    by adding `iwgx` to the `subprojects` section of the MKB file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using IwGx to render 2D graphics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we know how to load resources, we can get on with the fun stuff. We're
+    going to look at how we can draw a bitmapped image on screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: IwGx initialization and termination
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We've already seen how to do this in the "Hello World" project of [Chapter 1](ch01.html
+    "Chapter 1. Getting Started with Marmalade"), *Getting Started with Marmalade*.
+    We just call `IwGxInit` to set up IwGx at the start of our program and `IwGxTerminate`
+    to close it down again at the end.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering a polygon
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In IwGx, the most commonly used polygon types are lines, triangles, and quads
+    (basically two triangles that share a common edge).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also supported are sprites, which are always rectangular in shape and do not
+    allow any scaling of textures, and n-polys, which can contain up to 63 vertices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sprites are rarely used since triangles and quads are more flexible, though
+    they can be faster to draw especially in software rendering mode. The n-poly can
+    also be faster to draw for the software renderer than a series of triangles, but
+    they are generally best avoided since they need to be converted into triangles
+    on the fly in order to be drawn using hardware rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To render a polygon on screen, we at least need to specify where we want it
+    to appear on screen and what color we want it to be in. Additionally, we might
+    want to draw the polygon using a bitmapped image. The following sections show
+    how we can provide this information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Materials and textures
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'First we let IwGx know what color (or indeed colors) and image we want applied
+    to our polygon. We do this by specifying the material we want to use, which is
+    an instance of the `CIwMaterial` class that groups together this information.
+    To set the material we want to use, we must provide IwGx with a pointer to the
+    relevant `CIwMaterial` instance using the following function call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we are drawing a polygon with no image applied to it, then the very minimum
+    information the material will need to provide is the color we want to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A material actually contains four different colors that, if you are at all familiar
+    with 3D graphics rendering, you will probably recognize. They are the ambient,
+    diffuse, emissive, and specular colors. For 2D rendering purposes, it is only
+    the ambient color that we are concerned with. We'll look into the others when
+    we move on to 3D rendering in [Chapter 4](ch04.html "Chapter 4. 3D Graphics Rendering"),
+    *3D Graphics Rendering*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The material also specifies the texture we want to apply. A texture specifies
+    a bitmapped image that we want to apply to our polygon, and is represented in
+    Marmalade by the `CIwTexture` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CIwTexture` class is actually a wrapper for the `CIwImage` class that actually
+    stores the pixel information for an image. `CIwTexture` adds functionality to
+    control how the image is actually rendered, with support for enabling and disabling
+    features such as bilinear filtering and mipmapping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Materials also provide control over other polygon rendering features, such as
+    whether the polygon is rendered flat or gouraud shaded, and how it should be blended
+    with the current screen contents when it is drawn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Materials can either be created in code or they can be instanced by the resource
+    manager. The following sections illustrate this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating materials in code
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Creating a material in code requires little more than making a new instance
+    of `CIwMaterial` and using the available methods to set the color, textures, and
+    other settings. For example, to create a material that will render bright red,
+    semi-transparent polygons we could use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that Marmalade will raise an assert message if you try to create a local
+    `CIwMaterial` instance on the program stack. This happens because rendering does
+    not happen the moment you make a drawing function call, so by the time rendering
+    does occur, the material data will likely have been trashed by other functions
+    reusing the same area of stack space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating materials using an MTL file
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: While creating materials in code is simple enough, there is an easier way, especially
+    when it comes to specifying materials with textures. This involves yet another
+    use of our friend, the ITX file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A material file has the extension `.mtl` and again uses the same formatting
+    rules as an ITX file. We can create any number of `CIwMaterial` instances in an
+    MTL file and initialize them with the required colors, textures, and other settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a bonus, any texture we refer to in the MTL file will also be loaded automatically,
+    meaning we don't have to list it separately in a GROUP file. In order for this
+    to work, all the source image files must reside in a subdirectory named `textures`,
+    which is located in the same directory as the MTL file, or alternatively they
+    must already have been loaded into memory either from another GROUP file or in
+    the same GROUP file prior to referencing the MTL file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Marmalade natively supports the PNG, TGA, GIF, and BMP image file formats. If
+    you want to load any other type of bitmap, you will need to provide your own custom
+    resource handler to do so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is an example of what an MTL file might look like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example generates a semi-transparent red material equivalent to that created
+    in the previous section, and also a material using a texture named `grid.png`,
+    which is drawn flat shaded with additive transparency at half the original image
+    brightness and without bilinear filtering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may have noticed that the image is specified using an attribute called `texture0`.
+    Marmalade materials can actually be assigned two textures that can be blended
+    together when rendering a polygon and they are referred to as `texture0` and `texture1`.
+    In this book we will only be concerned with single texture materials.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are far too many attribute names to list here, so for a complete list
+    take a look at the Marmalade documentation page for the `CIwMaterial` class. This
+    page lists all of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To make these materials available in our code, we just need to reference the
+    MTL file inside a GROUP file that we are loading. We can then get hold of the
+    materials by searching for them by name using the resource manager functions described
+    earlier in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It is recommended that when materials are created using an MTL file, you do
+    not modify any of their settings using the methods in the `CIwMaterial` class.
+    Instead, make a copy of the material using the `CIwMaterial::Copy` method. While
+    it is possible to do so, problems can occur if the same material is used to render
+    several different things, since rendering does not occur as soon as a drawing
+    function call is made. The end result is therefore unpredictable as it would depend
+    on how the `CIwMaterial` happens to be configured when rendering finally occurs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Vertex streams
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In order to display a polygon on screen, we need to specify a list of screen
+    coordinates that define the corner points. Since we are only rendering in 2D at
+    the moment, each coordinate is specified as a `CIwSVec2` instance, which is a
+    vector class defined in another Marmalade API called **IwGeom**. Any list of data
+    items used when rendering polygons, be it vertices, colors, or whatever, is often
+    referred to as a **stream**, so a list of vertices is called a **vertex stream**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While we can specify this API to be part of our project by adding `iwgeom` to
+    the `subprojects` section of the MKB file and calling `IwGeomInit` and `IwGeomTerminate`,
+    there isn't actually a need to, since IwGx relies on this API itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `CIwSVec2` class defines a two-component vector using signed 16-bit integers,
+    so it is perfect for specifying screen coordinates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The default screen coordinate system in IwGx places the origin at the top-left
+    corner of the screen, with the x component increasing horizontally to the right
+    and the y component increasing vertically downwards. It is possible to change
+    the position of the origin, however, by passing a `CIwSVec2` instance containing
+    the desired position of the origin to the function `IwGxSetScreenSpaceOrg`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following diagram illustrates how we could specify the coordinates for a
+    triangle on a standard iPhone resolution screen (320 x 480 pixels). The top left
+    of the screen is the origin and has a coordinate position of **(0,0)**, while
+    the bottom-right corner has a position of **(320,480)**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Vertex streams](img/3363_02_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'To render this triangle all we have to do is fill in an array of `CIwSVec2`
+    with the coordinates and submit them to IwGx, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The function call, `IwGxSetVertStreamScreenSpace`, allows us to specify a list
+    of screen space (that is, pixel) coordinates we want to use for rendering, but
+    we must also explicitly state how many vertices we are submitting. In the case
+    of our triangle, this is three.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is also possible to specify our coordinates using sub-pixel positioning with
+    the function call `IwGxSetVertStreamScreenSpaceSubPixel`. It may be getting a
+    bit on the long side to type, but using sub-pixel positioning does provide the
+    advantage of smoother movement on screen, as we are no longer limited to only
+    moving things around the screen in terms of whole pixels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using sub-pixel coordinates can also improve the quality of the final rendered
+    image, as slow moving objects won't appear to jump between pixel positions if
+    we are rendering using bilinear filtering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: IwGx only supports eight sub-pixel positions per pixel; so to convert our coordinates
+    to use sub-pixel positioning, all we need to do is multiply the screen coordinates
+    by eight or use the bitwise shift operator to shift left by three places.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Color streams
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If we want to draw a polygon using flat shading, so that every pixel rendered
+    is the same color, we can just set the ambient color of our material and our work
+    is done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, if we want to render a polygon using gouraud shading, we need to specify
+    a color to be used at each vertex. This can't be done with a material, so we need
+    to override the material's color information by providing our own color stream.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We do this by creating an array of `CIwColour` objects, which is Marmalade's
+    chosen method of representing a color. This class has four public member variables
+    of type `uint8` (an unsigned byte) called `r`, `g`, `b`, and `a`, which (probably
+    not surprisingly) represent the red, green, blue, and alpha values of a color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note that because Marmalade was developed in the UK, all instances of the word
+    *color* in the API will actually be spelled *colour*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`CIwColour` also provide several methods to make setting and manipulating colors
+    easier.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Returning to the triangle defined in the earlier diagram, if we wanted to color
+    the top of it red, the bottom-right corner green, and the bottom-left corner blue,
+    we can use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that `IwGxSetColStream` does not require us to specify the number of colors
+    in our stream. This is because IwGx expects to find the same number of colors
+    as there are vertices. If we do not want to specify a color stream, we can just
+    pass `NULL` into the `IwGxSetColStream` function and the selected material's colors
+    will be used instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: UV streams
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When rendering a polygon with a texture, we need to somehow indicate how that
+    texture should be mapped to the polygon. We do this by specifying a UV stream
+    that allows us to state which part of the texture should appear at each vertex.
+    The part of the texture required for each rendered pixel can then be worked out
+    by the rendering engine by interpolating the UV values across the surface of the
+    polygon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In IwGx, UV coordinates are specified using floating point numbers. An individual
+    UV value is often written as (u, v) and is represented in IwGx using the `CIwFVec2`
+    class, which is a floating point equivalent of `CIwSVec2` that we came across
+    earlier. The x component of the vector represents **u**, and the y component represents
+    **v**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: UV values are mapped to a texture so that **(0.0, 0.0)** is the top left of
+    the image and **(1.0, 1.0)** is the bottom-right corner. We can repeatedly tile
+    a texture up to a maximum of eight times across our polygon by using values larger
+    than one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![UV streams](img/3363_02_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Prior to Marmalade version 6.1, UV values were given as 16-bit signed integers
+    using a 12-bit fixed point representation. The value 4096 is equivalent to 1.0,
+    8192 is equivalent to 2.0, and 2048 is equivalent to 0.5\. The IwGeom API provides
+    us with the define `IW_GEOM_ONE`, which we can use to avoid having nasty-looking
+    magic numbers throughout our code. This functionality can still be used by reverting
+    to the legacy version of the IwGx API, as detailed earlier in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By mapping UV values in this way, we make them independent of the actual size
+    of the texture image. If we change the size of the image for any reason, it won't
+    mess up rendering as our UV values do not need to change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As with vertex streams, all we have to do to specify a set of UV values is
+    allocate an array of `CIwSVec2`, populate the array, and submit it to IwGx. We
+    don''t need to specify the number of UV values we are submitting, as IwGx expects
+    to see the same number of UVs as there are vertices. Here is some sample code
+    that we might want to use to apply a texture to a triangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The second parameter of `IwGxSetUVStream` indicates which texture the UV values
+    apply to. If the material we are using only has a single texture, we can just
+    leave this parameter out entirely as it will default to `0`, but if the material
+    does have a second texture, we need to supply a UV stream to be used with it by
+    changing the second parameter of `IwGxSetUVStream` to 1\. This UV stream could
+    be the same as the stream for the first texture or it could be a completely different
+    set of UV values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If our material does not have a texture applied to it, there is no need to set
+    the UV stream to `NULL` as it will be ignored completely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing a polygon
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We''ve now seen how to set just about all the information we need to specify
+    how we want our polygon to appear, so we can finally instruct IwGx to draw it.
+    To do so, we need to let IwGx know how our various input streams should be interpreted
+    by using the following function call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `polygon_type` parameter indicates whether we are drawing triangles, quads,
+    lines, sprites, or n-polys, while the `indices` parameter is an array of `uint16`
+    values showing the order in which the elements of our input streams should be
+    accessed. This is called an **index stream**. The `num_indices` parameter is just
+    a count of how many elements are in the `indices` array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following diagram shows the types of polygons supported by IwGx. Note that
+    it is possible to draw more than one polygon at a time by providing longer streams
+    of data. This is something we should try to do as much as possible, since it prevents
+    the GPU from idling while it is waiting to be supplied with new polygon information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Drawing a polygon](img/3363_02_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The numbers labeling the vertices in the diagram correspond to the elements
+    of the index stream. When rendering, the `indices` array is traversed in the order
+    shown for each polygon type, and the values it contains indicate which element
+    of the various input streams should be used to render each vertex.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To draw the triangle we''ve been building up to, we can use the following code
+    snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We could simplify this a little more as the index stream isn''t actually necessary
+    in this instance since our input streams are accessed one element at a time in
+    the order they occur in the stream, so we can just specify `NULL` for the `indices`
+    parameter like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: When creating the index stream there is one other point to bear in mind, which
+    is the order in which we supply our vertices. Because IwGx can also be used to
+    render 3D polygons on screen, it supports back face culling, which prevents any
+    polygon that is facing away from the viewer from being rendered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How is a polygon classified as facing toward or away from the viewer? If we
+    label each vertex of a polygon with an incrementing number, starting with zero
+    for the first vertex and following around the edges of the polygon from vertex
+    to vertex, then a polygon is facing the viewer if its vertices form an anti-clockwise
+    pattern when rendered on screen and considered in ascending numerical order. The
+    order the vertices are supplied in is called the **winding order**, and the following
+    diagram shows this more clearly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Drawing a polygon](img/3363_02_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Putting the vertices in the correct order is not the only way to solve this
+    problem, but it is worth getting in the habit of ordering the vertices in this
+    way for when we progress to rendering 3D polygons. We can disable or reverse the
+    back face culling operation on a per material basis by calling the `CIwMaterial::SetCullMode`
+    method with one of the following enumeration values: `CULL_FRONT`, `CULL_BACK`,
+    or `CULL_NONE`. The default is `CULL_BACK`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you are trying to draw a polygon and you just can't get it to appear, the
+    first thing to do is double-check the winding order of your vertices. They may
+    just be getting culled by the GPU and not being drawn!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our polygon information has now been submitted for rendering; but we won't see
+    it appear on screen just yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Displaying the rendered image
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The final step in making something appear on screen is to flush all the drawing
+    requests to the screen, and then display the final image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: IwGx automatically provides us with a double-buffered display setup. All this
+    means is we do all our rendering to an off-screen buffer and then switch to displaying
+    this buffer when all the drawing is complete. If we did not do this, we would
+    likely see an incomplete, flickering screen display as our graphics could be displayed
+    in an incomplete state if we drew straight to the visible display.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To complete the cycle of drawing, all we have to do is add the following two
+    lines of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: That's it! We've drawn our first polygon!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If you download the code package for this chapter, you will find three projects
+    that illustrate the use of the Marmalade functionality we have learnt about in
+    this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ITX project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The ITX project demonstrates use of the ITX text parser and the `CIwManaged`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The example first creates custom instances of our own class by parsing an ITX
+    file, then serializes those instances out to a file. All the instances are then
+    destroyed and re-created by loading the serialized file back in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The example also demonstrates the use of two more parts of the IwUtil API, which
+    we haven't covered in depth, but are very useful to know about. First is the class
+    `CIwManagedList`, which is used for maintaining a list of objects derived from
+    `CIwManaged`, and the second is the `IwTrace` system that allows us to log information
+    to a file (and to the standard output) in order to aid debugging.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Graphics2D project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The Graphics2D project pulls everything we''ve learnt in this chapter together
+    to render a rotating, textured polygon on screen. The following screenshot depicts
+    this project in action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Graphics2D project](img/3363_02_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The Skiing project
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Throughout this book, we will be building up an entire game example that puts
+    the things we have learnt into real practice. The game in question will be a simple
+    version of that old favorite, the slalom skiing game, where the player guides
+    a skier down a mountain, attempting to pass through as many flags as possible
+    while avoiding obstacles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter we kick things off by having a skier graphic at the top of the
+    screen that moves from side to side, while some random trees scroll up the edges
+    of the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot shows the project as it currently stands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Skiing project](img/3363_02_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: While this book is not intended to teach you the ins and outs of programming
+    a game (it's assumed you already know how to do that) it might still be worthwhile
+    providing a few notes on how the sample game is put together.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GameObject class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `GameObject` class is the base class for anything that makes up a part of
+    the game world. Currently there are two classes which inherit from this class,
+    `Skier` and `Tree`. No prizes for guessing what they represent!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GameObject` provides two virtual methods that can be overridden by child classes
+    to implement the behavior of an in-game object. The `GameObject::Update` method
+    provides support for changing the position of an object by applying a velocity
+    to it, while the `GameObject::Render` method allows a size and a material to be
+    defined, and it will draw a textured polygon at the object''s current position
+    using this information.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ModeManager and Mode classes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The main flow of most games is often represented internally as some kind of
+    state machine. Even the simplest game will normally have at least a title screen
+    and the main game screen, but add to this things such as pause modes, high score
+    tables, options screen, and the like, and you soon end up with a large number
+    of states that your game could be in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Often these states are completely mutually exclusive, but sometimes we might
+    want several states active, or at least visible, at the same time. For example,
+    quite often the pause mode will appear on top of the game screen. Only the pause
+    mode will be accepting input, but both it and the game screen need to be drawn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One approach (and this is purely my own personal preference; your own may vary
+    wildly) is to create a separate class which handles a single part of the game.
+    For want of a better word, I represent these using a base class called `Mode`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Mode` class is similar to the `GameObject` class in that it provides two
+    virtual methods called `Update` and `Render`. A mode can be made active, which
+    means its `Update` method will be executed in each frame, and it can be visible,
+    which means its `Render` method will be called. These two states are completely
+    independent of each other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a `Mode` instance is created, it is automatically added to a list maintained
+    by a singleton class called `ModeManager`. The `ModeManager` class uses the list
+    of `Mode` instances to update all active modes and render all visible modes on
+    each iteration of the main game loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Currently the project only consists of a single mode called `ModeGame`, which
+    is responsible for loading and freeing the required resources and also initializing,
+    updating, and rendering all the `GameObject`s that make up the game world.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter we've learnt about Marmalade's powerful resource management
+    system. We know how to use it at a simple level to just load and release resources
+    such as bitmapped images or our own custom classes; we also have a good idea of
+    how the resource management system is put together, and how we can extend it with
+    our own functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We've also covered the options available for rendering on-screen images, and
+    seen how to use one of these, IwGx, to render polygons on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter we'll be learning how we can start using the various input
+    options available on modern mobile devices, since the whole point of games is
+    that they are interactive.
+  prefs: []
+  type: TYPE_NORMAL

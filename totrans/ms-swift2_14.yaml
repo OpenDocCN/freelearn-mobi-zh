@@ -1,0 +1,1018 @@
+- en: Chapter 14. Concurrency and Parallelism in Swift
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When I first started learning Objective-C, I already had a good understanding
+    of concurrency and multitasking with my background in other languages such as
+    C and Java. This background made it very easy for me to create multithreaded applications
+    using threads in Objective-C. Then, Apple changed everything for me when they
+    released **Grand Central Dispatch** (**GCD**) with OS X 10.6 and iOS 4\. At first,
+    I went into denial; there was no way GCD could manage my application's threads
+    better than I could. Then I entered the anger phase, GCD was hard to use and understand.
+    Next was the bargaining phase, maybe I can use GCD with my threading code, so
+    I could still control how the threading worked. Then there was the depression
+    phase, maybe GCD does handle the threading better than I can. Finally, I entered
+    the wow phase; this GCD thing is really easy to use and works amazingly well.
+    After using Grand Central Dispatch and Operation Queues with Objective-C, I do
+    not see a reason for using manual threads with Swift.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will learn the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basics of concurrency and parallelism
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to use GCD to create and manage concurrent dispatch queues
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to use GCD to create and manage serial dispatch queues
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to use various GCD functions to add tasks to the dispatch queues
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to use `NSOperation` and `NSOperationQueues` to add concurrency to our applications
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Concurrency and parallelism
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Concurrency is the concept of multiple tasks starting, running, and completing
+    within the same time period. This does not necessarily mean that the tasks are
+    executing simultaneously. In order for tasks to be run simultaneously, our application
+    needs to be running on a multicore or multiprocessor system. Concurrency allows
+    us to share the processor or cores with multiple tasks; however, a single core
+    can only execute one task at a given time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parallelism is the concept of two or more tasks running simultaneously. Since
+    each core of our processor can only execute one task at a time, the number of
+    tasks executing simultaneously is limited to the number of cores within our processors.
+    Therefore, if we have, for example, a four-core processor, then we are limited
+    to only four tasks running simultaneously. Today's processors can execute tasks
+    so quickly that it may appear that larger tasks are executing simultaneously.
+    However, within the system, the larger tasks are actually taking turns executing
+    subtasks on the cores.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to understand the difference between concurrency and parallelism, let's
+    look at how a juggler juggles balls. If you watch a juggler, it seems they are
+    catching and throwing multiple balls at any given time; however, a closer look
+    reveals that they are, in fact, only catching and throwing one ball at a time.
+    The other balls are in the air waiting to be caught and thrown. If we want to
+    be able to catch and throw multiple balls simultaneously, we need to add multiple
+    jugglers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This example is really good because we can think of jugglers as the cores of
+    a processer. A system with a single core processor (one juggler), regardless of
+    how it seems, can only execute one task (catch and throw one ball) at a time.
+    If we want to execute more than one task at a time, we need to use a multicore
+    processor (more than one juggler).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Back in the old days when all the processors were single core, the only way
+    to have a system that executed tasks simultaneously was to have multiple processors
+    in the system. This also required specialized software to take advantage of the
+    multiple processors. In today's world, just about every device has a processor
+    that has multiple cores, and both the iOS and OS X operating systems are designed
+    to take advantage of the multiple cores to run tasks simultaneously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Traditionally, the way applications added concurrency was to create multiple
+    threads; however, this model does not scale well to an arbitrary number of cores.
+    The biggest problem with using threads was that our applications ran on a variety
+    of systems (and processors), and in order to optimize our code, we needed to know
+    how many cores/processors could be efficiently used at a given time, which is
+    sometimes not known at the time of development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to solve this problem, many operating systems, including iOS and OS
+    X, started relying on asynchronous functions. These functions are often used to
+    initiate tasks that could possibly take a long time to complete, such as making
+    an HTTP request or writing data to disk. An asynchronous function typically starts
+    the long running task and then returns prior to the task completion. Usually,
+    this task runs in the background and uses a callback function (such as closure
+    in Swift) when the task completes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These asynchronous functions work great for the tasks that the OS provides them
+    for, but what if we needed to create our own asynchronous functions and do not
+    want to manage the threads ourselves? For this, Apple provides a couple of technologies.
+    In this chapter, we will be covering two of these technologies. These are GCD
+    and operation queues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GCD is a low-level C-based API that allows specific tasks to be queued up for
+    execution and schedules the execution on any of the available processor cores.
+    Operation queues are similar to GCD; however, they are Cocoa objects and are internally
+    implemented using GCD.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's begin by looking at GCD.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Grand Central Dispatch
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Grand Central Dispatch provides what is known as dispatch queues to manage submitted
+    tasks. The queues manage these submitted tasks and execute them in a **first-in,
+    first-out** (**FIFO**) order. This ensures that the tasks are started in the order
+    they were submitted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A task is simply some work that our application needs to perform. As examples,
+    we can create tasks that perform simple calculations, read/write data to disk,
+    make an HTTP request, or anything else that our application needs to do. We define
+    these tasks by placing the code inside either a function or a closure and adding
+    it to a dispatch queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'GCD provides three types of queues:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Serial queues**: Tasks in a serial queue (also known as a **private queue**)
+    are executed one at a time in the order they were submitted. Each task is started
+    only after the preceding task is completed. Serial queues are often used to synchronize
+    access to specific resources because we are guaranteed that no two tasks in a
+    serial queue will ever run simultaneously. Therefore, if the only way to access
+    the specific resource is through the tasks in the serial queue, then no two tasks
+    will attempt to access the resource at the same time or be out of order.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Concurrent queues**: Tasks in a concurrent queue (also known as a **global
+    dispatch queue**) execute concurrently; however, the tasks are still started in
+    the order that they were added to the queue. The exact number of tasks that can
+    be executing at any given instance is variable and is dependent on the system''s
+    current conditions and resources. The decision on when to start a task is up to
+    GCD and is not something that we can control within our application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Main dispatch queue**: The main dispatch queue is a globally available serial
+    queue that executes tasks on the application''s main thread. Since tasks put into
+    the main dispatch queue run on the main thread, it is usually called from a background
+    queue when some background processing has finished and the user interface needs
+    to be updated.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dispatch queues offer a number of advantages over traditional threads. The first
+    and foremost advantage is, with dispatch queues, the system handles the creation
+    and management of threads rather than the application itself. The system can scale
+    the number of threads, dynamically based on the overall available resources of
+    the system and the current system conditions. This means that dispatch queues
+    can manage the threads with greater efficiency than we could.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another advantage of dispatch queues is we are able to control the order that
+    our tasks are started. With serial queues, not only do we control the order in
+    which tasks are started, but also ensure that one task does not start before the
+    preceding one is complete. With traditional threads, this can be very cumbersome
+    and brittle to implement, but with dispatch queues, as we will see later in this
+    chapter, it is quite easy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating and managing dispatch queues
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s look at how to create and use a dispatch queue. The following three
+    functions are used to create or retrieve queues. These functions are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`dispatch_queue_create`: This creates a dispatch queue of either the concurrent
+    or serial type'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dispatch_get_global_queue`: This returns a system-defined global concurrent
+    queue with a specified quality of service'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dispatch_get_main_queue`: This returns the serial dispatch queue associated
+    with the application''s main thread'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We will also be looking at several functions that submit tasks to a queue for
+    execution. These functions are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`dispatch_async`: This submits a task for asynchronous execution and returns
+    immediately.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dispatch_sync`: This submits a task for synchronous execution and waits until
+    it is complete before it returns.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dispatch_after`: This submits a task for execution at a specified time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dispatch_once`: This submits a task to be executed once and only once while
+    this application is running. It will execute the task again if the application
+    restarts.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Before we look at how to use the dispatch queues, we need to create a class
+    that will help us demonstrate how the various types of queues work. This class
+    will contain two basic functions. The first function will simply perform some
+    basic calculations and then return a value. Here is the code for this function,
+    which is named `doCalc()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The other function, which is named `performCalculation()`, accepts two parameters.
+    One is an integer named `iterations`, and the other is a string named `tag`. The
+    `performCalculation()` function calls the `doCalc()` function repeatedly until
+    it calls the function the same number of times as defined by the iterations parameter.
+    We also use the `CFAbsoluteTimeGetCurrent()` function to calculate the elapsed
+    time it took to perform all of the iterations and then print the elapse time with
+    the `tag` string to the console. This will let us know when the function completes
+    and how long it took to complete it. The code for this function looks similar
+    to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: These functions will be used together to keep our queues busy, so we can see
+    how they work. Let's begin by looking at the GCD functions by using the `dispatch_queue_create()`
+    function to create both concurrent and serial queues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating queues with the dispatch_queue_create() function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The `dispatch_queue_create()` function is used to create both concurrent and
+    serial queues. The syntax of the `dispatch_queue_create()` function looks similar
+    to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It takes the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`label`: This is a string label that is attached to the queue to uniquely identify
+    it in debugging tools, such as Instruments and crash reports. It is recommended
+    that we use a reverse DNS naming convention. This parameter is optional and can
+    be nil.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`attr`: This specifies the type of queue to make. This can be `DISPATCH_QUEUE_SERIAL,
+    DISPATCH_QUEUE_CONCURRENT` or nil. If this parameter is nil, a serial queue is
+    created.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The return value for this function is the newly created dispatch queue. Let's
+    see how to use the `dispatch_queue_create()` function by creating a concurrent
+    queue and seeing how it works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Some programming languages use the reverse DNS naming convention to name certain
+    components. This convention is based on a registered domain name that is reversed.
+    As an example, if we worked for company that had a domain name `mycompany.com`
+    with a product called `widget`, the reverse DNS name will be `com.mycompany.widget`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating concurrent dispatch queues with the dispatch_queue_create() function
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The following line creates a concurrent dispatch queue with the label of `cqueue.hoffman.jon`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we saw in the beginning of this section, there are several functions that
+    we can use to submit tasks to a dispatch queue. When we work with queues, we generally
+    want to use the `dispatch_async()` function to submit tasks because when we submit
+    a task to a queue, we usually do not want to wait for a response. The `dispatch_async()`
+    function has the following signature:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following example shows how to use the `dispatch_async()` function with
+    the concurrent queue we just created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding code, we created a closure, which represents our task, that
+    simply calls the `performCalculation()` function of the `DoCalculation` instance
+    requesting that it runs through 1000 iterations of the `doCalc()` function. Finally,
+    we use the `dispatch_async()` function to submit the task to the concurrent dispatch
+    queue. This code will execute the task in a concurrent dispatch queue, which is
+    separate from the main thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While the preceding example works perfectly, we can actually shorten the code
+    a little bit. The next example shows that we do not need to create a separate
+    closure as we did in the preceding example; we can also submit the task to execute
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This shorthand version is how we usually submit small code blocks to our queues.
+    If we have larger tasks, or tasks that we need to submit multiple times, we will
+    generally want to create a closure and submit the closure to the queue as we showed
+    originally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how the concurrent queue actually works by adding several items
+    to the queue and looking at the order and time that they return. The following
+    code will add three tasks to the queue. Each task will call the `performCalculation()`
+    function with various iteration counts. Remember that the `performCalculation()`
+    function will execute the calculation routine continuously until it is executed
+    the number of times as defined by the iteration count passed in. Therefore, the
+    larger the iteration count we pass into the `performCalculation()` function, the
+    longer it should take to execute. Let''s take a look at the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Notice that each of the functions is called with a different value in the `tag`
+    parameter. Since the `performCalculation()` function prints out the `tag` variable
+    with the elapsed time, we can see the order in which the tasks complete and the
+    time it took to execute. If we execute the preceding code, we should see the following
+    results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The elapse time will vary from one run to the next and from system to system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the queues function in a FIFO order, the task that had the tag of `async1`
+    was executed first. However, as we can see from the results, it was the last task
+    to finish. Since this is a concurrent queue, if it is possible (if the system
+    has available resources), the blocks of code will execute concurrently. This is
+    why the tasks with the tags of `async2` and `async3` completed prior to the task
+    that had the `async1` tag, even though the execution of the `async1` task began
+    before the other two.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's see how a serial queue executes tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a serial dispatch queue with the dispatch_queue_create() function
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'A serial queue functions is a little different than a concurrent queue. A serial
+    queue will only execute one task at a time and will wait for one task to complete
+    before starting the next task. This queue, like the concurrent dispatch queue,
+    follows a first-in first-out order. The following line of code will create a serial
+    queue with the label of `squeue.hoffman.jon`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that we create the serial queue with the `DISPATCH_QUEUE_SERIAL` attribute.
+    If you recall, when we created the concurrent queue, we created it with the `DISPATCH_QUEUE_CONCURRENT`
+    attribute. We can also set this attribute to `nil`, which will create a serial
+    queue by default. However, it is recommended to always set the attribute to either
+    `DISPATCH_QUEUE_SERIAL` or `DISPATCH_QUEUE_CONCURRENT` to make it easier to identify
+    which type of queue we are creating.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we saw with the concurrent dispatch queues, we generally want to use the
+    `dispatch_async()` function to submit tasks because when we submit a task to a
+    queue, we usually do not want to wait for a response. If, however, we did want
+    to wait for a response, we would use the `dispatch_synch()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Just like with the concurrent queues, we do not need to create a closure to
+    submit a task to the queue. We can also submit the task like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see how the serial queues works by adding several items to the queue
+    and looking at the order and time that they complete. The following code will
+    add three tasks, which will call the `performCalculation()` function with various
+    iteration counts, to the queue:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Just like with the concurrent queue example, we call the `performCalculation()`
+    function with various iteration counts and different values in the `tag` parameter.
+    Since the `performCalculation()` function prints out the `tag` string with the
+    elapsed time, we can see the order that the tasks complete in and the time it
+    takes to execute. If we execute this code, we should see the following results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The elapse time will vary from one run to the next and from system to system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unlike the concurrent queues, we can see that the tasks completed in the same
+    order that they were submitted, even though the `sync2` and `sync3` tasks took
+    considerably less time to complete. This demonstrates that a serial queue only
+    executes one task at a time and that the queue waits for each task to complete
+    before starting the next one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have seen how to use the `dispatch_queue_create()` function to create
+    both concurrent and serial queues, let's look at how we can get one of the four
+    system-defined, global concurrent queues using the `dispatch_get_global_queue()`
+    function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Requesting concurrent queues with the dispatch_get_global_queue() function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The system provides each application with four concurrent global dispatch queues
+    of different priority levels. The different priority levels are what distinguish
+    these queues. The four priorities are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`DISPATCH_QUEUE_PRIORITY_HIGH`: The items in this queue run with the highest
+    priority and are scheduled before items in the default and low priority queues'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DISPATCH_QUEUE_PRIORITY_DEFAULT`: The items in this queue run at the default
+    priority and are scheduled before items in the low priority queue but after items
+    in the high priority queue'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DISPATCH_QUEUE_PRIORITY_LOW`: The items in this queue run with a low priority
+    and are schedule only after items in the high and default queues'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DISPATCH_QUEUE_PRIORITY_BACKGROUND`: The items in this queue run with a background
+    priority, which has the lowest priority'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Since these are global queues, we do not need to actually create them; instead,
+    we ask for a reference to the queue with the priority level needed. To request
+    a global queue, we use the `dispatch_get_global_queue()` function. This function
+    has the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, the following parameters are defined:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`identifier`: This is the priority of the queue we are requesting'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`flags`: This is reserved for future expansion and should be set to zero at
+    this time'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We request a queue using the `dispatch_get_global_queue()` function, as shown
+    in the following example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, we are requesting the global queue with the default priority.
+    We can then use this queue exactly as we used the concurrent queues that we created
+    with the `dispatch_queue_create()` function. The difference between the queues
+    returned with the `dispatch_get_global_queue()` function and the ones created
+    with the `dispatch_create_queue()` function is that with the `dispatch_create_queue()`
+    function, we are actually creating a new queue. The queues that are returned with
+    the `dispatch_get_global_queue()` function are global queues that are created
+    when our application first starts; therefore, we are requesting a queue rather
+    than creating a new one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we use the `dispatch_get_global_queue()` function, we avoid the overhead
+    of creating the queue; therefore, I recommend using the `dispatch_get_global_queue()`
+    function unless you have a specific reason to create a queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Requesting the main queue with the dispatch_get_main_queue() function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `dispatch_get_main_queue()` function returns the main queue for our application.
+    The main queue is automatically created for the main thread when the application
+    starts. This main queue is a serial queue; therefore, items in this queue are
+    executed one at a time, in the order that they were submitted. We will generally
+    want to avoid using this queue unless we have a need to update the user interface
+    from a background thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `dispatch_get_main_queue()` function has the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following code example shows how to request the main queue:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: We will then submit tasks to the main queue exactly as we would any other serial
+    queue. Just remember that anything submitted to this queue will run on the main
+    thread, which is the thread that all the user interface updates run on; therefore,
+    if we submitted a long running task, the user interface will freeze until that
+    task is completed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous sections, we saw how the `dispatch_async()` functions submit
+    tasks to concurrent and serial queues. Now, let's look at two additional functions
+    that we can use to submit tasks to our queues. The first function we will look
+    at is the `dispatch_after()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the dispatch_after() function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There will be times that we need to execute tasks after a delay. If we were
+    using a threading model, we would need to create a new thread, perform some sort
+    of delay or sleep function, and execute our task. With GCD, we can use the `dispatch_after()`
+    function. The `dispatch_after()` function takes the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, the `dispatch_after()` function takes the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`when`: This is the time that we wish the queue to execute our task in'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`queue`: This is the queue that we want to execute our task in'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`block`: This is the task to execute'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As with the `dispatch_async()` and `dispatch_synch()` functions, we do not need
+    to include our task as a parameter. We can include our task to execute between
+    two curly brackets exactly as we did previously with the `dispatch_async()` and
+    `dispatch_synch()` functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we can see from the `dispatch_after()` function, we use the `dispatch_time_t`
+    type to define the time to execute the task. We use the `dispatch_time()` function
+    to create the `dispatch_time_t` type. The `dispatch_time()` function has the following
+    syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, the `dispatch_time()` function takes the following parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`when`: This value is used as the basis for the time to execute the task. We
+    generally pass the `DISPATCH_TIME_NOW` value to create the time, based on the
+    current time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`delta`: This is the number of nanoseconds to add to the `when` parameter to
+    get our time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We will use the `dispatch_time()` and `dispatch_after()` functions like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding code will execute the task after a two-second delay. In the `dispatch_
+    time()` function, we create a `dispatch_time_t` type that is two seconds in the
+    future. The `NSEC_PER_SEC` constant is use to calculate the nanoseconds from seconds.
+    After the two-second delay, we print the message, `Times Up`, to the console.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is one thing to watch out for with the `dispatch_after()` function. Let''s
+    take a look at the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this code, we begin by creating a serial queue and then adding two tasks
+    to the queue. The first task uses the `dispatch_after()` function, and the second
+    task uses the `dispatch_sync()` function. Our initial thought would be that when
+    we executed this code within the serial queue, the first task would execute after
+    a two-second delay and then the second task would execute; however, this would
+    not be correct. The first task is submitted to the queue and executed immediately.
+    It also returns immediately, which lets the queue execute the next task while
+    it waits for the correct time to execute the first task. Therefore, even though
+    we are running the tasks in a serial queue, the second task completes before the
+    first task. The following is an example of the output if we run the preceding
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: The final GCD function that we are going to look at is `dispatch_once()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the dispatch_once() function
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `dispatch_once()` function will execute a task once, and only once, for
+    the lifetime of the application. What this means is that the task will be executed
+    and marked as executed, then that task will not be executed again unless the application
+    restarts. While the `dispatch_once()` function can be and has been used to implement
+    the singleton pattern, there are other easier ways to do this. Refer to [Chapter
+    17](ch17.html "Chapter 17. Adopting Design Patterns in Swift"), *Adopting Design
+    Patterns in Swift*, for examples on how to implement the singleton design pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `dispatch_once()` function is great for executing initialization tasks
+    that need to run when our application initially starts. These initialization tasks
+    can consist of initializing our data store or variables and objects. The following
+    code shows the syntax for the `dispatch_once()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s look at how to use the `dispatch_once()` function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this example, the line that prints the message, `Printed only on the first
+    call`, will be executed only once, no matter how many times the function is called.
+    However, the line that prints the `Printed for each call` message will be executed
+    each time the function is called. Let''s see this in action by calling this function
+    four times, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we execute this example, we should see the following output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice, in this example, that we only see the `Printed only on the first call`
+    message once whereas we see the `Printed for each call` message all the four times
+    that we call the function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have looked at GCD, let's take a look at operation queues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using NSOperation and NSOperationQueue types
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `NSOperation` and `NSOperationQueues` types, working together, provide us
+    with an alternative to GCD for adding concurrency to our applications. Operation
+    queues are Cocoa objects that function like dispatch queues and internally, operation
+    queues are implemented using GCD. We define the tasks (`NSOperations`) that we
+    wish to execute and then add the task to the operation queue (`NSOperationQueue`).
+    The operation queue will then handle the scheduling and execution of tasks. Operation
+    queues are instances of the `NSOperationQueue` class and operations are instances
+    of the `NSOperation` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The operation represents a single unit of work or task. The `NSOperation` type
+    is an abstract class that provides a thread-safe structure for modeling the state,
+    priority, and dependencies. This class must be subclassed in order to perform
+    any useful work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Apple does provide two concrete implementations of the `NSOperation` type that
+    we can use as-is for situations where it does not make sense to build a custom
+    subclass. These subclasses are `NSBlockOperation` and `NSInvocationOperation`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: More than one operation queue can exist at the same time, and actually, there
+    is always at least one operation queue running. This operation queue is known
+    as the **main queue**. The main queue is automatically created for the main thread
+    when the application starts and is where all the UI operations are performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are several ways that we can use the `NSOperation` and `NSOperationQueues`
+    classes to add concurrency to our application. In this chapter, we will look at
+    three different ways. The first one we will look at is using the `NSBlockOperation`
+    implementation of the `NSOperation` abstract class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the NSBlockOperation implementation of NSOperation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this section, we will be using the same `DoCalculation` class that we used
+    in the *Grand Central Dispatch* section to keep our queues busy with work so that
+    we can see how the `NSOpererationQueues` class work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `NSBlockOperation` class is a concrete implementation of the `NSOperation`
+    type that can manage the execution of one or more blocks. This class can be used
+    to execute several tasks at once without the need to create separate operations
+    for each task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how to use the `NSBlockOperation` class to add concurrency to our
+    application. The following code shows how to add three tasks to an operation queue
+    using a single `NSBlockOperation` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this code, we begin by creating an instance of the `DoCalculation` class
+    and an instance of the `NSOperationQueue` class. Next, we created an instance
+    of the `NSBlockOperation` class using the `init` constructor. This constructor
+    takes a single parameter, which is a block of code that represents one of the
+    tasks we want to execute in the queue. Next, we add two additional tasks to the
+    `NSBlockOperation` instance using the `addExecutionBlock()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is one of the differences between dispatch queues and operations. With
+    dispatch queues, if resources are available, the tasks are executed as they are
+    added to the queue. With operations, the individual tasks are not executed until
+    the operation itself is submitted to an operation queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we add all of the tasks to the `NSBlockOperation` instance, we then add
+    the operation to the `NSOperationQueue` instance that we created at the beginning
+    of the code. At this point, the individual tasks within the operation start to
+    execute.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This example shows how to use `NSBlockOperation` to queue up multiple tasks
+    and then pass the tasks to the operation queue. The tasks are executed in a FIFO
+    order; therefore, the first task that is added to the `NSBlockOperation` instance
+    will be the first task executed. However, since the tasks can be executed concurrently
+    if we have the available resources, the output from this code should look similar
+    to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'What if we do not want our tasks to run concurrently? What if we wanted them
+    to run serially like the serial dispatch queue? We can set a property in our operation
+    queue that defines the number of tasks that can be run concurrently in the queue.
+    The property is called `maxConcurrentOperationCount` and is used like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: However, if we added this line to our previous example, it will not work as
+    expected. To see why this is, we need to understand what the property actually
+    defines. If we look at Apple's `NSOperationQueue` class reference, the definition
+    of the property says, "The maximum number of queued operations that can execute
+    at the same time."
+  prefs: []
+  type: TYPE_NORMAL
+- en: What this tells us is that the `maxConcurrentOperationCount` property defines
+    the number of operations (this is the key word) that can be executed at the same
+    time. The `NSBlockOperation` instance, which we added all of our tasks to, represents
+    a single operation; therefore, no other `NSBlockOperation` added to the queue
+    will execute until the first one is complete, but the individual tasks within
+    the operation will execute concurrently. To run the tasks serially, we would need
+    to create a separate instance of the `NSBlockOperations` for each task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using an instance of the `NSBlockOperation` class good if we have a number of
+    tasks that we want to execute concurrently, but they will not start executing
+    until we add the operation to an operation queue. Let's look at a simpler way
+    of adding tasks to an operation queue using the queues `addOperationWithBlock()`
+    methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the addOperationWithBlock() method of the operation queue
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The `NSOperationQueue` class has a method named `addOperationWithBlock()` that
+    makes it easy to add a block of code to the queue. This method automatically wraps
+    the block of code in an operation object and then passes that operation to the
+    queue itself. Let''s see how to use this method to add tasks to a queue:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `NSBlockOperation` example, earlier in this chapter, we added the tasks
+    that we wished to execute into an `NSBlockOperation` instance. In this example,
+    we are adding the tasks directly to the operation queue, and each task represents
+    one complete operation. Once we create the instance of the operation queue, we
+    then use the `addOperationWithBlock()` method to add the tasks to the queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, in the `NSBlockOperation` example, the individual tasks did not execute
+    until all of the tasks were added to the `NSBlockOperation` object and then that
+    operation was added to the queue. This `addOperationWithBlock()` example is similar
+    to the GCD example where the tasks begin executing as soon as they are added to
+    the operation queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run the preceding code, the output should be similar to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You will notice that the operations are executed concurrently. With this example,
+    we can execute the tasks serially by using the `maxConcurrentOperationCount` property
+    that we mentioned earlier. Let''s try this by initializing the `NSOperationQueue`
+    instance like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, if we run the example, the output should be similar to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, we can see that each task waited for the previous task to complete
+    prior to starting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the `addOperationWithBlock()` method to add tasks, the operation queue
+    is generally easier than using the `NSBlockOperation` method; however, the tasks
+    will begin as soon as they are added to the queue, which is usually the desired
+    behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's look at how we can subclass the `NSOperation` class to create an
+    operation that we can add directly to an operation queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Subclassing the NSOperation class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The previous two examples showed how to add small blocks of code to our operation
+    queues. In these examples, we called the `performCalculations` method in the `DoCalculation`
+    class to perform our tasks. These examples illustrate two really good ways to
+    add concurrency for functionally that is already written, but what if, at design
+    time, we want to design our `DoCalculation` class for concurrency? For this, we
+    can subclass the `NSOperation` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `NSOperation` abstract class provides a significant amount of infrastructure.
+    This allows us to very easily create a subclass without a lot of work. We should
+    at least provide an `initialization` method and a `main` method. The `main` method
+    will be called when the queue begins executing the operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how to implement the `DoCalculation` class as a subclass of the
+    `NSOperation` class; we will call this new class `MyOperation`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: We begin by defining that the `MyOperation` class is a subclass of the `NSOperation`
+    class. Within the implementation of the class, we define two class constants,
+    which represent the iteration count and the tag that the `performCalculations()`
+    method uses. Keep in mind that when the operation queue begins executing the operation,
+    it will call the `main()` method with no parameters; therefore, any parameters
+    that we need to pass in must be passed in through the initializer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, our initializer takes two parameters that are used to set the
+    `iterations` and `tag` classes constants. Then the `main()` method, that the operation
+    queue is going to call to begin execution of the operation, simply calls the `performCalculation()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can now very easily add instances of our `MyOperation` class to an operation
+    queue, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run this code, we will see the following results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we saw earlier, we can also execute the tasks serially by adding the following
+    line, which sets the `maxConcurrentOperationCount` property of the operation queue:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we know that we need to execute some functionality concurrently prior to
+    writing the code, I will recommend subclassing the `NSOperation` class, as shown
+    in this example, rather than using the previous examples. This gives us the cleanest
+    implementation; however, there is nothing wrong with using the `NSBlockOperation`
+    class or the `addOperationWithBlock()` methods described earlier in this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we consider adding concurrency to our application, we should make sure
+    that we understand why we are adding it and ask ourselves whether it is necessary.
+    While concurrency can make our application more responsive by offloading work
+    from our main application thread to a background thread, it also adds extra complexity
+    to our code and overhead to our application. I have even seen numerous applications,
+    in various languages, which actually run better after we pulled out some of the
+    concurrency code. This is because the concurrency was not well thought out or
+    planned. With this in mind, it is always a good idea to think and talk about concurrency
+    while we are discussing the application's expected behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the start of this chapter, we had a discussion about running tasks concurrently
+    compared to running tasks in parallel. We also discussed the hardware limitation
+    that limits how many tasks can run in parallel on a given device. Having a good
+    understanding of those concepts is very important to understanding how and when
+    to add concurrency to our projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While GCD is not limited to system-level applications, before we use it in our
+    application, we should consider whether operation queues would be easier and more
+    appropriate for our needs. In general, we should use the highest level of abstraction
+    that meets our needs. This will usually point us to using operation queues; however,
+    there really is nothing preventing us from using GCD, and it may be more appropriate
+    for our needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One thing to keep in mind with operation queues is that they do add additional
+    overhead because they are Cocoa objects. For the large majority of applications,
+    this little extra overhead should not be an issue or even noticed; however, for
+    some projects, such as games that need every last resource that they can get,
+    this extra overhead might very well be an issue.
+  prefs: []
+  type: TYPE_NORMAL

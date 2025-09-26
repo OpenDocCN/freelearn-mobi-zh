@@ -1,0 +1,765 @@
+- en: Chapter 3. Thumping Moles for Fun
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will be continuing our journey through classic gameplay styles in this chapter.
+    We will talk a little about different approaches to solve the design challenges
+    in this chapter. In game programming, there are always many ways to solve the
+    same problem, there is no single right answer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tricking the eye with Z-ordering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Reusing objects
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Detecting touch on the part of a sprite
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Animations and movement actions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Randomized objects
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The project is…
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will be building a mole thumping game. Inspired by mechanical
+    games of the past, we will build molehills on the screen and randomly cause animated
+    moles to pop their heads out. The player taps them to score. Simple in concept,
+    but there are a few challenging design considerations in this deceptively easy
+    game. To make this game a little unusual, we will be using a penguin instead of
+    a mole for the graphics, but we will continue to use the mole terminology throughout,
+    since a molehill is easier to consider than a penguin-hill.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Design approach
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before diving into the code, let's start with a discussion of the design of
+    the game. First, we will need to have molehills on the screen. To be aesthetically
+    pleasing, the molehills will be in a 3 x 4 grid. Another approach would be to
+    use random molehill positions, but that doesn't really work well on the limited
+    screen space of the iPhone. Moles will randomly spawn from the molehills. Each
+    mole will rise up, pause, and drop down. We will need touch handling to detect
+    when a mole has been touched, and that mole will need to increase the player's
+    score and then go away.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How do we make the mole come up from underground? If we assume the ground is
+    a big sprite with the molehills drawn on it, we would need to determine where
+    to make the "slot" from which the mole emerges, and somehow make the mole disappear
+    when it is below that slot. One approach is to adjust the size of the mole's displayed
+    frame by clipping the bottom of the image so that the part below the ground is
+    not visible. This needs to be done as a part of every update cycle for every mole
+    for the entire game. From a programming standpoint this will work, but you may
+    experience performance issues. Another consideration is that this usually means
+    the hole in the molehill will always appear to be a straight-edged hole, if we
+    trim the sprite with a straight line. This lacks the organic feel we want for
+    this game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The approach we will take is to use Z-ordering to trick the eye into seeing
+    a flat playfield when everything is really on staggered Z-orders. We will create
+    a "stair step" board, with multiple "sandwiches" of graphics for every row of
+    molehills on the board.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Design approach](img/9007_03_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'For each "step" of the "stair step", we have a sandwich of Z-ordered elements
+    in this order, from back to front: molehill top, mole, ground, and molehill bottom.
+    We need to have everything aligned so that the molehill top graphic overlaps the
+    ground of the next "step" further towards the top of the screen. This will visually
+    contain the mole, so it appears to be emerging from inside the molehill.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We intentionally skipped the Z value of 1, to provide an extra expansion space
+    if we later decide that we need another element in the "sandwich". It is easier
+    to leave little holes like this than to worry about changing everything later,
+    if we enhance our design. So throughout our layout, we will consider it as a sandwich
+    of five Z values, even though we only use four elements in the sandwich.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we said, we need this to be a "stair step" board. So for each row of molehills,
+    from the top of the screen to the bottom, we will need to increase the Z-ordering
+    between layers to complete the illusion. This is needed so that each mole will
+    actually pass in front of the ground layer that is closer to the top of the screen,
+    yet will hide completely behind the ground layer in its own sandwich of layers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Designing the spawn
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'That covers the physical design of the game, but there is one additional design
+    aspect we need to discuss: spawning moles. We need to spawn the moles whenever
+    we need one to be put into the play. Just as we reviewed two approaches to the
+    hiding mole problem earlier, we will touch on two approaches to mole spawning.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first approach (and most common) is to create a new mole from scratch each
+    time you need one. When you are done with it, you destroy it. This works fine
+    for games with a small number of objects or games of more limited complexity,
+    but there is a performance penalty to create and destroy a lot of objects in a
+    short amount of time. Strictly speaking, our mole thumping game would likely work
+    fine with this approach. Even though we will be creating and destroying quite
+    a few moles all the time, we only have a dozen possible moles, not hundreds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other approach is to create a spawning pool. This is basically a set number
+    of the objects that are created when you start up. When you need a mole, in our
+    case, you ask the pool for an unused "blank mole", set any parameters that are
+    needed, and use it. When you are done with it, you reset it back to the "blank
+    mole" state, and it goes back into the pool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For our game the spawning pool might be a little more heavily coded than needed,
+    as it is doubtful that we would run into any performance issues with this relatively
+    simple game. Still, if you are willing to build the additional code as we are
+    doing here, it does provide a strong foundation to add more performance-heavy
+    effects later on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To clarify our design approach, we will actually implement a variation of the
+    traditional spawning pool. Instead of a general pool of moles, we will build our
+    "blank mole" objects attached to their molehills. A more traditional spawning
+    pool might have six "blank moles" in the pool, and they are assigned to a molehill
+    when they are needed. Both approaches are perfectly valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Portrait mode
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The default orientation supported by cocos2d is landscape mode, which is more
+    commonly used in games. However, we want our game to be in portrait mode. The
+    changes are very simple to make this work. If you click once on the project name
+    (and blue icon) in the **Project Navigator** pane (where all your files are listed),
+    and then click on the name of your game under **TARGETS**, you will see the **Summary**
+    pane. Under the **Supported Interface Orientations**, select **Portrait**, and
+    deselect **Landscape Left** and **Landscape Right**. That will change your project
+    to portrait. The one adjustment to the cocos2d template code we need is in the
+    `IntroLayer.m`. After it sets the background to `Default.png`, there is a command
+    to rotate the background. Remove, or comment out this line, and everything will
+    work correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom TTF fonts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In this project we will be using a custom TTF font. In cocos2d 1.x, you could
+    simply add the font to your project and use it. Under cocos2d 2.0, which we are
+    using, we have to approach this a little differently. We add the font to our project
+    (we are using `anudrg.ttf`). Then we edit the `Info.plist` for our project, and
+    add a new key to the list, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Custom TTF fonts](img/9007_03_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This tells the project that we need to know about this font. To actually use
+    the font, we need to call it by the proper name for the font, not the filename.
+    To find out this name, in **Finder**, select the file and choose **File Info**.
+    In the info box, there is an entry for **Full Name**. In our case, the file name
+    is `AnuDaw`. Any time we create a label with `CCLabelTTF`, we simply need to use
+    this as the font name, and everything works perfectly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining a molehill
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have created a new subclass of `CCNode` to represent the `MXMoleHill` object.
+    Yes, we will be using a subclass of `CCNode`, not a subclass of `CCSprite`. Even
+    though we initially would consider the molehill to be a sprite, referring back
+    to our design, it is actually made up of *two* sprites, one for the top of the
+    hill and one for the bottom. We will use `CCNode` as a container that will then
+    contain two `CCSprite` objects as variables inside the `MXMoleHill` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXMoleHill.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: If this seems rather sparse to you, it is. As we will be using this as a container
+    for everything that defines the hill, we don't need to override any methods from
+    the standard `CCNode` class. Likewise, the `@implementation` file contains nothing
+    but the `@synthesize` statements for these variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is worth pointing out that we could have used a `CCSprite` object for the
+    `hillTop` sprite, with the `hillBottom` object as a child of that sprite, and
+    achieved the same effect. However, we prefer consistency in our object structure,
+    so we have opted to use the structure noted previously. This allows us to refer
+    to the two sprites in exactly the same fashion, as they are both children of the
+    same parent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building the mole
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When we start building the playfield, we will be creating "blank mole" objects
+    for each hill, so we need to look at the `MXMole` class before we build the playfield.
+    Following the same design decision as we did with the `MXMoleHill` class, the
+    `MXMole` class is also a subclass of `CCNode`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXMole.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: We see a forward declaration here (the `@class` statement). Use of forward declaration
+    avoids creating a circular loop, because the `MXMoleHill.h` file needs to import
+    `MXMole.h`. In our case, `MXMole` needs to know there is a valid class called
+    `MXMoleHill`, so we can store a reference to an `MXMoleHill` object in the `parentHill`
+    instance variable, but we don't actually need to import the class. The `@class`
+    declaration is an instruction to the compiler that there is a valid class called
+    `MXMoleHill`, but doesn't actually import the header while compiling the `MXMole`
+    class. If we needed to call the methods of `MXMoleHill` from the `MXMole` class,
+    we could then put the actual `#import "MXMoleHill.h"` line in the `MXMole.m` file.
+    For our current project, we only need to know the class exists, so we don't need
+    that additional line in the `MXMole.m` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have built a simple state machine for `MoleState`. Now that we have reviewed
+    the `MXMole.h` file, we have a basic idea of what makes up a mole. It tracks the
+    state of the mole (dead, alive, and so on), it keeps a reference to its parent
+    hill, and it has `CCSprite` as a child where the actual mole sprite variable will
+    be held. There are a couple of other variables (`moleGroundY` and `isSpecial`),
+    but we will deal with these later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXDefinitions.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Unlike in the previous chapter, we do not have `typedef enum` that defines the
+    `MoleState` type inside this header file. We have moved our definitions to the
+    `MXDefinitions.h` file, which helps to maintain slightly cleaner code. You can
+    store these "universal" definitions in a single header file, and include the header
+    in any `.h` or `.m` files where they are needed, without needing to import classes
+    just to gain access to these definitions. The `MXDefinitions.h` file only includes
+    the definitions; there are no `@interface` or `@implementation` sections, nor
+    a related `.m` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making a molehill
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have our molehill class and we''ve seen the mole class, so now we can look
+    at how we actually build the molehills in the `MXPlayfieldLayer` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is a pretty dense method, so we'll walk through it one section at a time.
+    We start by creating two nested `for` loops so we can iterate over every possible
+    row and column position. For clarity, we named our loop variables as `row` and
+    `column`, so we know what each represents. If you recall from the design, we decided
+    to use a 3 x 4 grid, so we will have three columns and four rows of molehills.
+    We create a new hill using an `alloc`/`init`, and then we begin filling in the
+    variables. We set an ID number (1 through 12), and we build `CCSprite` objects
+    to fill in the `moleHillTop` and `moleHillBottom` variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: We also set the position using the helper method, `hillPositionForRow:andColumn:`,
+    that returns a `CGPoint` for each molehill. (It is important to remember that
+    `ccp` is a cocos2d shorthand term for a `CGPoint`. They are interchangeable in
+    your code.) These calculations are based on experimentation with the layout, to
+    create a grid that is both easy to draw as well as being visually appealing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The one variable that needs a little extra explaining is `moleHillBaseZ`. This
+    represents which "step" of the Z-order stair-step design this hill belongs to.
+    We use this to aid in the calculations to determine the proper Z-ordering across
+    the entire playfield. If you recall, we used Z-orders from 2 to 5 in the illustration
+    of the stack of elements. When we add the `moleHillTop` and `moleHillBottom` as
+    children of the `moleSheet` (our `CCSpriteBatchNode`), we add the Z-order of the
+    piece of the sandwich to the "base Z" times 5\. We will use a "base Z" of 5 for
+    the stack at the bottom of the screen, and a "base Z" of 2 at the top of the screen.
+    This will be easier to understand the reason if we look at the following chart,
+    which shows the calculations we use for each row of molehills:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Making a molehill](img/9007_03_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we start building our molehills at the bottom of the screen, we start with
+    a higher Z-order first. In the preceding chart, you will see that the mole in
+    hole 4 (second row of molehills from the bottom) will have a Z-order of 23\. This
+    will put it behind its own ground layer, which is at a Z-order of 24, but in front
+    of the ground higher on the screen, which would be at a Z-order of 19.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is worth calling out that since we have a grid of molehills in our design,
+    all Z-ordering will be identical for all molehills in the same row. This is why
+    the decrement of the `baseHillZ` variable occurs only when we are iterating through
+    a new row.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we refer back to the `drawHills` method itself, we also see a big calculation
+    for the actual position of the `moleHillTop` and `moleHillBottom` sprites. We
+    want the "seam" between these two sprites to be at the top edge of the ground
+    image of their stack, so we set the `y` position based on the position of the
+    `MXMoleHill` object. At first it may look like an error, because both `setPosition`
+    statements use `contentSize` of the `moleHillTop` sprite as a part of the calculation.
+    This is intentional, because we have a little jagged overlap between those two
+    sprites to give it a more organic feel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To wrap up the `drawHills` method, we allocate a new `MXMole`, assign it to
+    the molehill that was just created, and set the cross-referencing `hillMole` and
+    `parentHill` variables in the objects themselves. We add the molehill to our `moleHillsInPlay`
+    array, and we clean everything up by releasing both the `newHill` and the `newMole`
+    objects. Because the array retains a reference to the molehill, and the molehill
+    retains a reference to the mole, we can safely release both the `newHill` and
+    `newMole` objects in this method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing the ground
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now that we have gone over the Z-ordering "trickery", we should look at the
+    `drawGround` method to see how we accomplish the Z-ordering in a similar fashion:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: This format should look familiar to you. We create five `CCSprite` objects for
+    the five stripes of ground, tile them from the bottom of the screen to the top,
+    and assign the Z-order as `z:4+((5-i) * 5)`. We do include a randomizer with two
+    different background images, and we also include a skybox image at the top of
+    the screen, because we want some sense of a horizon line above the mole-thumping
+    area.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We saw `anchorPoints` briefly in [Chapter 1](ch01.html "Chapter 1. Thanks for
+    the Memory Game"), *Thanks for the Memory Game* but we should revisit them here,
+    as they will become more important in later projects. `anchorPoint` is the point
+    that is basically "center" for the sprite. The acceptable values are floats between
+    0 and 1\. For the x axis, an `anchorPoint` of 0 is the left edge, and 1 is the
+    right edge (0.5 is centered). For the y axis, an `anchorPoint` of 0 is the bottom
+    edge, and 1 is the top edge. This `anchorPoint` is important here because that
+    `anchorPoint` is the point on the object to which the `setPosition` method will
+    refer. So in our code, the first `groundStrip1` created will be anchored at the
+    bottom center. When we call `setPosition`, the coordinate passed to `setPosition`
+    needs to relate to that `anchorPoint`; the position set will be the bottom center
+    of the sprite. If this is still fuzzy for you, it is a great exercise to change
+    `anchorPoint` of your own `CCSprite` objects and see what happens on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mole spawning
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The only piece of the "sandwich" of elements we haven''t seen in detail is
+    the mole itself, so let''s visit the mole spawning method to see how the mole
+    fits in with our design:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first thing we check is to make sure we don't have active moles in every
+    molehill, and that we haven't reached the maximum number of simultaneous moles
+    we want on screen at the same time (the `maxMoles` variable). If we have enough
+    moles, we skip the rest of the loop. If we need a new mole, we enter a `do…while`
+    loop that will randomly pick a molehill and check if it has the `isOccupied` variable
+    set to `NO` (that is, no active mole in this molehill). If the randomizer picks
+    a molehill that is already occupied, the `do…while` loop will pick another molehill
+    and try again. When we find an unoccupied molehill, the code breaks out of the
+    loop and starts to set up the mole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we saw earlier, there is already a "blank mole" attached to every molehill.
+    At this point we build a new sprite to attach to the `moleSprite` variable of
+    `MXMole`, change the `moleState` to `kMoleAlive`, and set up the coordinates for
+    the mole to start. We want the mole to start from underground (hidden by the ground
+    image), so we set the mole's `y` position as the position of the molehill minus
+    the height of the mole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have set up the mole, we assign our calculated Z-order for this mole
+    (based on the `moleHillBaseZ` variable we stored earlier for each molehill), and
+    call the `raiseMole` method, which controls the animation and movement of the
+    mole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Special moles
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We have seen two references to the `isSpecial` variable from the `MXMole` class,
+    so now is a good time to explain how it is used. In order to break the repetitive
+    nature of the game, we have added a "special mole" feature. When a new mole is
+    requested to spawn in the `spawnMole` method, we generate a random number between
+    1 and 100\. If the resulting number is less than five, then we set the `isSpecial`
+    flag for that mole. This means that roughly 5 percent of the time the player will
+    get a special mole. Our special moles use the same graphics as the standard mole,
+    but we will make them flash a rainbow of colors when they are in the play. It
+    is a small difference, but enough to set up the scoring to give extra points for
+    the "special mole". To implement this special mole, we only need to adjust coding
+    in three logic areas:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When `raiseMole` is setting the mole's actions (to make it flashy)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When we hit the mole (to play a different sound effect)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When we score the mole (to score more points)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This is a very small task, but it is the small variations in the gameplay that
+    will draw the players in further. Let''s see the game with a special mole in the
+    play:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Special moles](img/9007_03_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Moving moles
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When we call the `raiseMole` method, we build all of the mole's behavior. The
+    absolute minimum we need is to raise the mole from the hill and lower it again.
+    For our game, we want to add a little randomness to the behavior, so that we don't
+    see exactly the same motions for every mole. We use a combination of pre-built
+    animations with actions to achieve our result. As we haven't used any `CCAnimate`
+    calls before, we should talk about them first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The animation cache
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Cocos2d has many useful caches to store frequently used data. When we use a
+    `CCSpriteBatchNode` , we are using the `CCSpriteFrameCache` to store all of the
+    sprites we need by name. There is an equally useful `CCAnimationCache` as well.
+    It is simple to use. You build your animation as a `CCAnimation`, and then load
+    it to the `CCAnimationCache` by whatever name you would like.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you want to use your named animation, you can create a `CCAnimate` action
+    that loads directly from `CCAnimationCache`. The only caution is that if you load
+    two animations with the same name to the cache, they will collide in the cache,
+    and the second one will replace the first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For our project, we preload the animation during the `init` method by calling
+    the `buildAnimations` method. We only use one animation here, but you could preload
+    as many as you need to the cache ahead of time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We only have three unique frames of animation, but we load them multiple times
+    into the `frameArray` to fit our desired animation. We create a `CCAnimation`
+    object from the `frameArray`, and then commit it to `CCAnimationCache` under the
+    name `penguinAnim`. Now that we have loaded it to the cache, we can reference
+    it anywhere we want it, just by requesting it from `CCAnimationCache`, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Combining actions and animation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: For the behavior of the moles, we will be combining actions and animation at
+    the same time to give more of a feeling of life to the game. In all, we define
+    six behaviors for a normal mole, and one specific behavior for a special mole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method takes one big shortcut to keep from repeating code. We define nine
+    separate actions for a standard mole, even though we will not use them all on
+    the same mole. We do this because there is a lot of overlap between the different
+    behaviors, and we don't want to repeat the same line of code again and again.
+    If we look at just two of the actions, `moveUp` and `moveUpHalf`, half of the
+    mole behaviors use the first, and half use the second. Instead of the path we
+    have taken here, the alternative would be to include seven individual `CCMoveBy`
+    definitions in this method to accommodate the six normal mole move up behaviors
+    plus the special mole behavior. On the surface this isn't a big concern, but it
+    does matter if we wanted to alter the behavior of how far a mole is raised up
+    from the `moveUp` action, we would have to change that in four places. If we only
+    defined the necessary actions after the behavior was determined, this would mean
+    31 lines to maintain instead of our current 9 lines. If performance is not negatively
+    affected, it is a good idea to always take the maintainable approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also define the special mole behavior in this method. If the `isSpecial`
+    flag is set, we use one set behavior, in two distinct actions. The `CCRepeatForever`
+    action loops over our tinting, which tints the mole to red, then blue, and then
+    green. At the same time, we are also running `CCSequence` of `moveUp`, rotating
+    side to side a couple of times, and then moving it down again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For a standard mole, we use a similar parallel action in the default section
+    of the `switch` statement. We play the animation (named `anim`), which does not
+    impact the moving up and down run by the second `runAction`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Simultaneous actions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This running of multiple simultaneous actions is a source of confusion for new
+    developers. Some actions cannot be run in parallel in this fashion. For example,
+    trying to run `CCMoveTo` and `CCMoveBy` at the same time will result in only the
+    second run action being run. Why? Both are affecting the position of the sprite,
+    and are therefore incompatible. The last one that is run "wins" and the former
+    is discarded. Earlier we were able to run `CCTintTo` at the same time as a full
+    `CCSequence` of movement and rotation actions. None of these other commands affected
+    the color of the sprite, so they were able to be run in parallel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When developing more complex sets of actions, it is important to evaluate what
+    the desired outcome is, and which actions could conflict. A good rule of thumb
+    is that you cannot run two of the "same" action on the "same" sprite at the "same"
+    time. If you need to use two `CCMoveBy` statements, for example, you either need
+    to chain them with `CCSequence` so they will run in order, or you need to revise
+    your logic to combine the parameters so you can make a single `CCMoveBy` action
+    that integrates both.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The final level of complexity would be to abandon actions for that behavior
+    and instead manually change the positioning in your `update` method. This is powerful,
+    but nothing we need to delve into at this time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Deleting moles
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: At the end of all of the mole actions, there was a `CCCallFuncND` action named
+    `delMole` called. `CCCallFuncND` is a very powerful action, yet it is extremely
+    simple at the same time. This action is used to call any selector and pass any
+    data object to it. In our case, we call the `deleteMole:data:` method, and pass
+    it a pointer to the current `MXMoleHill`. Using `CCCallFuncND` (and its similar
+    brethren `CCCallFunc` and `CCCallFuncN`), you can integrate other methods into
+    an action sequence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Because we implemented the "blank mole" model into our design, we aren't actually
+    deleting the moles. We reduce the counter `molesInPlay` and call the method to
+    reset the mole to become a "blank mole". This is the same `resetMole` we called
+    when we first created the "blank moles" in the beginning.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: That's all it takes to completely clean a mole when we're ready to make a "blank
+    mole" out of it. We reset everything to default values, and we remove the sprite
+    attached to it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Touching moles
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'By this point, we have moles that can be spawned, animated, and reset. What
+    about the real fun, the mole thumping? For that, we look at the `MXMole.m` file,
+    where all of the mole touch handling is coded:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXMole.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have registered the `MXMole` class with the `CCTouchDispatcher` as a Targeted
+    Delegate. This means that the mole will be notified of every touch individually.
+    As we are looking for a single touch per mole, this is perfect for our needs.
+    We registered with the dispatcher in the `init` method, and we built the matching
+    `destroyTouchDelgate` method, which is called in the `dealloc` method of `MXPlayfieldLayer`.
+    If we don't remove the delegate, the mole will be a leaked object and will cause
+    memory issues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the game design was reviewed at the beginning of the chapter, we discussed
+    the approach we would take with the Z-order "trick" to make the mole disappear
+    when it went behind the ground image. If we left it at that, there would be a
+    serious gameplay flaw. The normal touch handling would also accept the touch when
+    the mole was touched below the ground level. How do we fix this?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Correcting this issue is the reason we created the `moleGroundY` variable. When
+    we spawn a new mole, we set this variable to match the molehill's `y` position.
+    Since we also use the molehill's `y` value in the placement of the molehill graphics,
+    this represents the exact `y` position where the mole emerges from the ground.
+    In our `ccTouchBegan` method inside the `MXMole` class, we only accept the touch
+    if the mole is being touched and the touch has a `y` value greater than or equal
+    to the `moleGroundY` position. This will effectively limit the touched mole parts
+    to those above ground level. (It's not pixel-perfect, because the `moleHillBottom`
+    sprite has a few pixels above this "horizon" line, but it is so small a coordinate
+    variation that it does not affect the playability of the game).
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the mole is touched, it changes the `moleState` variable to a value of
+    `kMoleHit` and plays a sound.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tying it together
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'There are only two important methods left to review to tie this all together.
+    First is the `update` method. Let''s look at the applicable portions of the `update`
+    method (we have left placeholders for the other portions of the `update` method,
+    but those will not be addressed here. Please refer the code bundle for this book
+    to see those details):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: On every loop of the `update` method, we iterate through the `moleHillsInPlay`
+    array. We check each mole to see if we have one in the `kMoleHit` state. If a
+    hit mole is found, we change the state of that mole to `kMoleMoving`, and call
+    the `scoreMole` method. As we only set the `moleState` to `kMoleHit` within the
+    touch handler, and then immediately change it to `kMoleMoving` when we first trap
+    it in this loop, we can be assured that this is the first (and only) time we have
+    seen this particular scoring event. If we did not change the `moleState` here,
+    we would trigger `scoreMole` every time the `update` method ran, and the game
+    would grind to a halt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second section of the `update` method controls the spawning of new moles.
+    As we want to have a little delay between new moles being created, we use the
+    `spawnRest` variable to act as a timer to leave at least 10 update loops between
+    calls to `spawnMole`. We also make sure we don't have the maximum number of desired
+    moles in the play already. Combined, these two simple checks provide a very natural
+    spawn feeling. The player is never bored waiting for moles to spawn, and the moles
+    themselves don't appear in any synchronized pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scoring the mole
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We haven't addressed the details of the scoring system because it is trivially
+    simple. There is a variable called `playerScore`, and a label that displays that
+    score. (For details on the scoring, please see the code bundle for this book.)
+    In this game, the more interesting aspect of "scoring the mole" is the visual
+    way we show that it was scored.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `MXPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of this code should look familiar by now. After a "safety net" check to
+    prevent scoring a dead mole, we increment the score itself. After we update the
+    score, we build some new actions to move the mole to the score location, scale
+    it down, and then delete it when we're done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here we see one type of action we haven''t touched on before: `CCSpawn`. Despite
+    the name, it is completely unrelated to the mole spawning we built in this game.
+    Instead, a `CCSpawn` action allows two actions to be performed on the same target
+    at the same time. This is an alternate behavior compared to `CCSequence`, which
+    will run the actions one at a time. For our use, we want the sprite to move and
+    scale down by 50 percent at the same time. There are a couple of limitations of
+    `CCSpawn`. The first is that it must be a finite interval action. No `CCRepeatForever`
+    actions can be used inside a `CCSpawn`, for example. The other limitation is that
+    both actions inside the `CCSpawn` action should have the same duration. If their
+    duration is different, it will run until the longer of the two actions is complete.
+    With that in mind, we set the duration for both the `CCMoveTo` and `CCScaleTo`
+    actions to `0.2f` so the move and scale is quick and pleasant.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have navigated the challenges of a mole thumping game, and survived intact.
+    In this chapter we have covered a few interesting concepts. We learned how to
+    use Z-ordering to trick the eye. We created persistent objects that can be reused
+    (the moles). We have also worked with using instances of `CCNode` as containers
+    for other objects for both the molehills and the moles. We have spent considerable
+    time discussing actions and animations, both of which are core to a successful
+    cocos2d game design.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will explore a snake game. From snakes eating mice to
+    scaling difficulty levels, the chapter will cover some familiar ground and some
+    new terrain.
+  prefs: []
+  type: TYPE_NORMAL

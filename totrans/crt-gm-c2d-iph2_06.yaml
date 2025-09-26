@@ -1,0 +1,1566 @@
+- en: Chapter 6. Cycles of Light
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will be shifting gears and developing a multiplayer iPad
+    game. This game will include both two players on the same iPad as well as using
+    Bluetooth connectivity with GameKit for a real head-to-head battle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we cover the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: CCSprite movement without using actions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dynamic sprite stretching
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Efficient reuse of images
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing with CCRenderTexture
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using glScissor to clip drawing areas
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: GameKit PeerPicker
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Bluetooth connectivity
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sending and Receiving data
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The game is…
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will be making a tribute to the "Light Cycles of TRON" game
+    from the golden era of arcades. Each player has a bike driven in an enclosed game
+    field. The bike has a fixed speed, and can only turn at right angles. The bike
+    leaves a wall as a trail behind it. It is fatal to run into the walls created
+    by the bikes. It is also fatal to run into the outside walls. To put our own spin
+    on the game, our "bikes" will be light bulbs, each with their own "glow" of the
+    appropriate color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a two-player only game. Two players can play on the same iPad (positioned
+    at opposite ends), or via a Bluetooth connection between two iPads. The game will
+    be fully playable between Retina and non-Retina iPads at the same time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our finished game will look like the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The game is…](img/9007_06_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Design review
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We will begin by discussing the approach that we will use for the design. One
+    of our core design decisions for this game is to use as few graphic files as possible,
+    without sacrificing the look and feel of the game. If you look at the source graphics,
+    we only have four images: a white button with a right arrow on it, a light bulb,
+    a white "bulb glow" image, and a white square image 1 x 1 point in size. From
+    those images, we will drive the entire game.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Structurally, we want separate classes for the bike and the button. The bike
+    will handle all of its own movement, and the button class will send messages directly
+    to the bike it is controlling, so there is very little direct interaction with
+    the game layer itself. The walls will be generated from the white square graphic,
+    using on-the-fly scaling to stretch the walls behind the bike. All walls will
+    be stored inside the game layer, since there is substantial need to share the
+    walls between the bikes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will also use a separate layer for the "grid" graphics behind the playfield,
+    because it truly is visual "fluff" with no interaction with the actual game field.
+    This grid will have some visual effects, so it will never be static. This grid
+    will be generated completely by the code, using the `CCRenderTexture` class to
+    draw it when the game initializes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's build a bike
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We want to start with the basic element of the game, the `CLBike` class . We
+    will look at this class in detail here, but first we want to see the `CLDefinitions.h`
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLDefinitions.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we have a few definition for our graphic and sound assets. Centralizing
+    the definitions makes it much easier to change your filenames in one place, rather
+    than hunting through your code for all references.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also create two `typedef` `enum` definitions. The `PlayerID` holds a value
+    to make it easier to determine which player is being addressed. Likewise, we define
+    `Direction` so we can use our directions without needing to keep notes to identify
+    which number represents which direction. As we have mentioned before, these `typedef`
+    `enum` are "integers in disguise", so we can pass these in as an integer if we
+    ever need to (and we will later).
+  prefs: []
+  type: TYPE_NORMAL
+- en: CLBike header
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now, we will look at the complete header for the `CLBike` class .
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of these variables will be discussed during the explanation of the `CLBike.m`
+    file, but there are a few items to touch on here. We keep a variable for `myPlayfield`,
+    so the bike will be able to call methods from the main `CLPlayfieldLayer` class.
+    You will notice that we do not `#import` that class, but instead use an `@class`
+    line. As you may recall from [Chapter 3](ch03.html "Chapter 3. Thumping Moles
+    for Fun"), *Thumping Moles for Fun* and [Chapter 4](ch04.html "Chapter 4. Give
+    a Snake a Snack…"), *Give a Snake a Snack...*, this is a forward-declaration.
+    It identifies that there will be a class by that name, but it doesn't know anything
+    else about it in the header. The reason we use this is because the `CLPlayfieldLayer.m`
+    file will import the `CLBike.h` header, so we would be stuck in a loop as the
+    two classes try to import each other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also have a class "convenience" method here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `FileCLBike.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Even though the `CLBike` class is a subclass of `CCSprite`, we have several
+    other details of the class that we need to set up, so we have opted for this convenience
+    method. We need to know the `playerID` (`kRedPlayer` or `kBluePlayer`), and the
+    `playerNo` variable, which defines which "control position" the player is in.
+    Player no. 1 is on the "home button" end of the iPad, and player no. 2 will play
+    from the "top" of the iPad. We also pass the parent layer to the bike. The final
+    argument is the Boolean variable `isRemote`, which identifies whether or not this
+    bike will be controlled by someone who is not "local" to this iPad (that is during
+    a Bluetooth game).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also expose many variables and methods as properties in this class. This
+    is because we want the other classes to be able to "ask" the bike for a lot of
+    information. We also need to be able to completely control the bike from outside
+    the class. If you recall from our design discussion, we want the control buttons
+    to send messages directly to the bike, so we have to expose all of the control
+    methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CLBike implementation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we have a flavor for the `CLBike` header, we will move on to the implementation
+    file. We will step through the core of the class here, and will revisit it later
+    when we discuss playing over Bluetooth.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is worth pointing out that we do have the `#import "CLPlayfieldLayer.h"`
+    statement at the top of this file. This is the "pair" to the `@class` forward-declaration
+    statement we used in the header. We need to use the `#import` line here because
+    we will need the `CLBike` class to have access to the methods of the `CLPlayfieldLayer`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we said earlier, we built a convenience method for creating a new bike. To
+    adhere to the definition of a convenience method, we perform an `alloc`, an `init`,
+    and mark the instantiated object as an `autorelease` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m` (`initForPlayer`, part 1)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we begin the `initForPlayer:` method. The "super" class of `CLBike` is
+    `CCSprite`, so we can call `initWithSpriteFrameName:` from the super class. This
+    takes care of the initialization of the standard `CCSprite` aspects of our class.
+    We only need to concern ourselves with the specialized `CLBike` initialization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We keep the reference to the layer passed (in `myPlayfield`), the `playerID`
+    (in `self.thisPlayerID`), and the Boolean value of the `remotePlayer` variable
+    (in `isRemotePlayer`). The `playerNo` value is not stored in a variable, as it
+    will only be used while building the player's bike.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We set the default values for the bike to be facing up (`kUp`) with a `bikeSpeed`
+    of `3.0`, and a `scale` of `0.25`. We also set the `anchorPoint` to `ccp(0.5,
+    0)` which is a point which is centered on the rear end of the bike.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because we want to optimize our graphics, we will need to know what the player's
+    color is. We don't want to set the sprite's color at all, because it would make
+    the sprite look like a colored blob instead of a light bulb. Instead, we use `ccc3(r,g,b)`
+    to build the colors we want, which are tinted slightly off pure red and pure blue,
+    and then store them in the property `wallColor`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m` (`initForPlayer`, part 2)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we see the only code in the `CLBike` class that uses the `playerNo` value.
+    If this is player 1, then the bike's starting position is centered toward the
+    bottom of the screen. Player 2 is centered near the top of the screen, and their
+    direction is changed to `kDown`. Once we have changed the bike's direction, we
+    call the `rotateBike` method, which will correctly rotate the bike graphic (more
+    on that method shortly).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then add our "glow" graphic. This uses the solid white glow image, which
+    we set to the color stored as the player's `wallColor`. We set the position as
+    a little offset from the bike's position, to account for differences in the source
+    image dimensions. We set the anchor point using the same `anchorPoint` value as
+    the bike itself, and then we add the glow as a child of the bike (`self` in this
+    class refers to the `CLBike` object), with a Z value of `-1`. This puts the glow
+    behind the light bulb sprite. This lets us see the detail of the bulb, but also
+    have the glowing effect visible through the transparent parts of the light bulb
+    graphic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot shows the red bike, before and after we add the glow:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![CLBike implementation](img/9007_06_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We will add some code to the end of this method later, but this will suffice
+    for now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bike rotation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We have seen one method in this class that we haven't addressed yet, and it
+    is simple enough to address now. After we position the bike, we call the `rotateBike`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use a `switch` clause on the `self.bikeDirection` property. We then check
+    which direction the bike is facing. Depending on the direction, we set the rotation
+    for the sprite. The values chosen are simple right angles. So if the bike is facing
+    in direction `kRight`, for example, we rotate the sprite to 90 degrees. If the
+    bike is facing left, we rotate to -90 degrees. The movement will be controlled
+    separately, so this graphic rotation is purely cosmetic. If we had chosen a symmetrical
+    player graphic, we may not need to rotate at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Turning the bike
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Rotating the bike graphics is all well and good, but we need to be able to
+    change the actual direction in which the bike is travelling. We build two methods
+    to control this: `turnLeft` and `turnRight`. We will look at the `turnRight` method
+    here.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: When we call the `turnRight` method, we use a switch statement to determine
+    the current `bikeDirection`. We then set the new `bikeDirection` that is appropriate
+    for this turn. So, if you were going in the `kUp` direction and turned right,
+    your new direction is `kRight`. If you were going `kRight`, the new direction
+    is `kDown`. After the new direction has been set, we call to the `rotateBike`
+    method we just discussed. We play a simple sound effect for the turn, and that's
+    all we need to do at this point. We have placeholders for two additional pieces
+    of code that we will add later (wall assignments and remote game).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `turnLeft` method is nearly identical, except we obviously use a different
+    set of new directions in the `switch` statement, so the bike will correctly turn
+    to the left. There will be a slight difference in the remote game section that
+    we will add later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We could have compressed these two methods into one, with a conditional *if*
+    statement for the parts of the code that differ. We have opted for reading clarity
+    in this case, as the repeated code is really not that difficult to debug.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building walls
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Next, we will turn our attention to the creation of the game walls. There are
+    two types of walls we need to address: walls created by a player''s bike and the
+    border walls around the playing grid. We will start by looking at how we can build
+    our boundary walls.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Boundary walls
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before we look at the code, it is important to know two items that are set up
+    in our `init` method of the `CLPlayfieldLayer` class. First, our `CCSpriteBatchNode`
+    is in the variable `cyclesheet`. The second is that we have created an `NSMutableArray`
+    called `bikeWalls` that will hold the `CCSprite` objects for all created walls
+    (we will see this later, when we look at the `init` method in the `CLPlayfieldLayer`
+    class). This array will be used in our collision detection, so we need to have
+    our outer walls included in it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first method we need is the ability to create a wall between two specified
+    points, `orig` and `dest`, passed to it. If you recall from the beginning of the
+    chapter, we said one of our goals with this game was to optimize the use of graphics.
+    Here we see the first "real" use of that idea. We are using the image defined
+    as `IMG_SPECK`, which is the file `whitespeck.png` in the sprite sheet. This is
+    a 1 x 1 point white square image. We use this tiny image to create the wall sprite.
+    We set the color to yellow, which works really well on a white sprite. Using `setColor`
+    works in the opposite way to what most people expect. Instead of adding color
+    to the sprite, it actually reduces the appropriate color registers to give the
+    desired effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Setting a sprite to white (`ccWHITE`) actually sets the color to the original
+    color. This dynamic is important to know if you are doing anything interesting
+    with sprite colors. For example, if you set a sprite's color to blue and there
+    is nothing in the blue register, the sprite could turn black. It is these unintended
+    consequences that make it very appealing to use white sprites if your intention
+    is to colorize them in-game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Back to the code. We set the position of the sprite to the `orig` value we
+    were passed, and we set the anchor point to the bottom-left corner. We do this
+    to keep in check with the background we will be adding later. We then have a couple
+    of odd lines for the `setScaleX` and `setScaleY`. Because we want to use this
+    routine to draw all four walls, we won''t know in which direction we are drawing.
+    The formula in each of these lines does the same thing: Subtract the x (or y)
+    values from each other. Take the absolute value (`ABS`) of the result. This will
+    turn the negatives into positives. We then add 3 points, so we end up with a thick
+    line (and avoid zero scale in the "thin" direction). This will take that simple
+    1 x 1 point graphic and stretch it out into a line the full length we requested,
+    with a thickness of 3 points. This approach works well for horizontal or vertical
+    lines, but will make a big rectangle if you use coordinates that are not straight
+    lines. Our game uses only straight lines, so this will suit our needs perfectly.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We wrap up this method by adding the wall as a child of `cyclesheet`, and adding
+    the created wall to the `bikeWalls` array. Now we have seen how to build a wall,
+    we need another method to pass all of the coordinates we need to build the outer
+    walls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have decided that the desired offset from the left and right edges is 59
+    points. The offset from the top and bottom is 62 points. We call the `createWallFrom`
+    method for each of the four boundary walls, and our work is done here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bike walls
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now we get to the real core of the cycles of light experience: the bike walls.
+    Each bike will begin with a wall created behind it, and the walls will stretch
+    until the bike turns. We start a new wall from that point.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code is very similar to what we used for building the outer walls, with
+    a few notable exceptions. When this method is called, the `CLBike` instance of
+    the player's bike will be passed to it. We use this to get most of the parameters
+    we need for the wall. We set the wall's color to the `wallColor` of the bike.
+    We set the wall's position to the same position occupied by the bike. We also
+    set the `anchorPoint` using a method called `wallAnchorPoint` that is part of
+    the `CLBike` class (we'll look at that in just a moment).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We do not scale the wall sprite when it is created, so it is a single dot under
+    the bike. We will handle the scaling of these walls from within the bike's movement
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like the other method, we still add the wall to the `cyclesheet` and to the
+    `bikeWalls` array. However, we also return the wall to the caller. This is because
+    the bike will need to know what wall is being created. Let's hop over to the `CLBike`
+    class to see what's going on there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we have another method that uses the `bikeDirection` in a `switch` statement
+    to determine a course of action. We set the anchor point to be at the center rear
+    of the bike. So if the bike is currently going in direction `kRight`, then the
+    anchor point should be set so `x` is equal to `0` (left edge) and `y` is equal
+    to `0.5` (centered). We return the anchor point as a `ccp()` for all possible
+    values of `bikeDirection`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You will also notice that we return the value directly to the calling method.
+    The only place where this method is called is from the `createWallFromBike` method
+    we just reviewed. The reason we use the bike to determine the anchor point is
+    that we want the wall to be attached to the rear end of the bike, no matter what
+    direction it is heading. In this way, each time we create a bike, the wall is
+    anchored correctly. If you''re curious what it looks like when you incorrectly
+    anchor a wall in the game, consider the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Bike walls](img/9007_06_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The same code was used in both of these images, except the `wallAnchorPoint`
+    method was not used in the "Bad Anchor Points" example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bike integration
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now let's look at the code changes needed to integrate the walls into `CLBike`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Filename: `CLBike.m` (`initForPlayer` end of method)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we set a `wallWidth` to `5`, and we set the `priorWall` to `nil`. Then
+    we store the returned value of the `createWallFromBike` in the `self.currentWall`
+    property. To avoid colliding with the prior wall when you turn, we need to be
+    able to hold references to both the current wall and the wall just before it.
+    Of course, here we are simply initializing the `priorWall` as `nil` for good measure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also need to insert identical code in both the `turnRight` and `turnLeft`
+    methods of the `CLBike`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m` (inside `turnRight` method)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Both turn methods get identical "wall" code. This is the same as in the original
+    `init` method, except here we first point the `priorWall` to the `currentWall`
+    before we generate a new wall into the `currentWall` property. Because the `currentWall`
+    property will first release the reference to the old wall before it creates a
+    new one, this leaves the `priorWall` variable pointing to the previous wall, and
+    the `currentWall` is now connected to the newly instantiated wall.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bike movement
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will now move on to examine how we move the bike. Because the walls are central
+    to the bike movement code, we left the movement until we understood the walls.
+    The movement is broken down into two methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is the easy method. This looks a little silly now, but it will make more
+    sense once we add the "remote game" functionality later. For now, this is just
+    a pass-through to the `moveForDistance` method, passing the `bikeSpeed` parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: We again use the common `switch` statement on the `bikeDirection`. For each
+    direction the bike is travelling, we first set the new position for the bike.
+    This position is adding (or subtracting) the value of `dist` (the `bikeSpeed`
+    we passed in) to the appropriate x or y position. For example, if the bike is
+    moving in the `kUp` direction, we add `dist` to the `y` position. To move down,
+    we subtract `dist` from the `y` value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next two lines of code in each case are adjusting the `scaleX` and `scaleY`
+    of the `currentWall`. If the bike is travelling in a y direction (up or down),
+    we set the `scaleX` to the value of `wallWidth`. If the bike is travelling in
+    an x direction (left or right), we set the `scaleY` to the value of `wallWidth`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the scale in the direction the bike is travelling, we take the absolute
+    value (`ABS`) of the `currentWall` position minus the bike's current position.
+    This will effectively stretch the wall from its origin to the bike with every
+    move. This is exactly the same type of wall stretching we used when we created
+    the outer walls, except this is dynamically resizing the wall every time the bike
+    moves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That's all it takes to make the bike move, and for the walls to grow appropriately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Control buttons
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that the bike and walls are fleshed out, we turn our attention to the control
+    buttons. As we have mentioned before, we are optimizing our graphics, so we actually
+    only have a single black and white button to use for all the control buttons.
+    Let's look at the class header first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLButton.h`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we have kept references to both `myPlayfield` and the `parentBike`. The
+    variable `myPlayfield` references the main playfield layer of our game. The `parentBike`
+    is the bike that will be controlled by this button. The Boolean variable `isLeft`
+    is used to determine if this is a left turn button. If this is set to `NO`, it
+    is a right turn button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also have a convenience method to establish the class, which accepts values
+    on behalf of these three variables, as well as a `playerNo` variable. The buttons
+    need to know this for the same reason that we used it in the `CLBike` class; the
+    buttons need to know on which end of the iPad they should be drawn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLButton.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we see the beginning of the implementation. We flesh out the class method,
+    which follows the convenience method of building an autoreleased object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLButton.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the `initForBike` method, we begin by setting the three variables we saw
+    in the header to their passed values. We then call `setColor` and tint the (formerly
+    white) button to the `wallColor` of the `parentBike`. So now we will have a red
+    or blue button, reflecting the player it controls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We set "base" values of the `newX` to be ¼ of the screen width, and `newY` to
+    be 30\. We then have a switch statement using the `playerNo` variable to handle
+    the placement of the buttons. For player 1, we check if this is the left button
+    (the `isLeft` Boolean). If it is, we flip the button on its X axis. This is because
+    our source graphic has the arrow pointing to the right. If it is the right button,
+    we multiply the `newX` value by 3, so we are ¾ of the way across the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For player 2, the logic is a little different, because we need to create the
+    buttons at the top of the iPad, and completely backwards, compared to player 1\.
+    We reset the `newY` value to 994 (1024 – 30). We also flip the buttons on the
+    Y axis, so they will be facing the player. If the button is the left button, we
+    need multiply the `newX` by 3 to move it to ¾ of the way across the screen. This
+    will put it on the left, relative to the player. If it is the right button, we
+    flip it on the X axis. Notice the `flipX` and `newX` are exactly opposite to the
+    way we handled player 1\. Finally, we set the position to `newX`, `newY`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Touching buttons
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As you might imagine, we need a touch handler for the buttons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLButton.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: We begin by making sure that `myPlayfield` does not have the `isTouchBlocked`
+    Boolean set to `YES`. This is used during the game over routine to prevent rapid
+    touching of the screen from exiting the game screen too fast. Here, we don't want
+    to accept any touches on the buttons if the game is in this state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We then convert the touch to OpenGL coordinates so we can determine what we
+    touched. Now we define the `hitRect`, using something called `CGRectInset`. `CGRectInset`
+    is used for transforming a `CGRect`. In this case, we are altering the bounding
+    box for our evaluation. `CGRectInset` takes three arguments: a `CGRect`, the x
+    inset, and the y inset. Using positive values will shrink the `CGRect`. Negative
+    values will expand the `CGRect`. In our case, we are expanding the y value to
+    effectively double the hit zone for the button. We do this because during testing,
+    we determined that the button graphics, while visually satisfying, were a little
+    too small to hit effectively during an exciting game. Rather than make huge buttons,
+    we opted to simply expand the hit box.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then check to see if the `hitRect` contains the touched location. If it does,
+    we then send either the `turnLeft` or `turnRight` message to the `parentBike`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Flashing with blocks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We also call to `flashButton` to give visual feedback to the users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLButton.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here is the code for the `flashButton` method. We use the `CCTintTo` action
+    to set the button to its original white color, and immediately set it back, using
+    a `CCCallBlock` action. As we haven't really talked about blocks before, now is
+    a good time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A block is a self-contained chunk of code that can save a lot of "extra" code,
+    and can use variables internally. Our example here is extremely simple, but the
+    syntax might seem foreign. A block is wrapped in a structure like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: There's a lot that can be done with blocks, but here it really saves us from
+    building another method simply to make one call to `setColor`. (We could have
+    built a separate method, and called it with `CCCallFunc` if we didn't want to
+    use a block).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It is worth noting that blocks are only available in iOS 4.0 or higher, so
+    code meant for older devices cannot use them. To learn about using blocks, we
+    suggest consulting Apple''s documentation on the topic at: [http://developer.apple.com/library/ios/#documentation/cocoa/Conceptual/Blocks/Articles/00_Introduction.html](http://developer.apple.com/library/ios/#documentation/cocoa/Conceptual/Blocks/Articles/00_Introduction.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finishing the buttons
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We would be remiss if we didn't also include the `onEnter` and `onExit` methods
+    for the `CLButton` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLButton.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: We register a delegate with the touch dispatcher in the `onEnter` method, and
+    we remove that delegate in the `onExit` method. We also set both the `parentBike`
+    and `myPlayfield` to `nil`. It is always important to clean up after yourself.
+    If we had failed to remove the delegate, this object would never be deallocated,
+    and would leak.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building the background grid
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If we were to leave the background as it is, the game would look rather dull,
+    with a black background. One option would be to simply drop in a background graphic
+    to enhance the look. That would work, but we want to do something more dynamic
+    to give the game some life. We will begin by using `CCRenderTexture` to build
+    a sprite with a grid pattern on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `CCRenderTexture` can be thought of as a second "blank sheet of paper" on
+    which we can draw primitive shapes (like lines), draw sprites upon, and generally
+    do anything visual on it. The power of the `CCRenderTexture` is that you can then
+    use the resulting image as a sprite. One of the primary benefits for our project
+    is that we can draw our grid on it once, and use it. If we were to put the `ccDrawLine`
+    calls into our main layer's `draw` method, it would be drawing them from scratch
+    with every refresh. In our case, we are drawing the lines once, and then using
+    the resulting textured sprite without the additional overhead of redrawing the
+    lines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's look at the `init` method first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderGrid.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: We begin by creating `firstGrid` as a `CCRenderTexture` with the dimensions
+    700 x 950\. This is slightly larger than will be visible, but we want to be able
+    to move it around later without seeing the edges. We will skip the `drawGrid`
+    method call for now. We set the anchor point to the center and position the `firstGrid`
+    sprite in the center of the layer. It is important to note that to access the
+    sprite properties of the `CCRenderTexture`, you must specify `[firstGrid sprite]`
+    to get to them. The `CCRenderTexture` itself does not have these properties. We
+    also set our opacity to `50`, so the resulting sprite will be semi-transparent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next call, `setBlendFunc`, is not often seen in tutorials or code samples.
+    The values set here force the sprite to use the "normal" sprite blending function.
+    By default, a `CCRenderTexture` uses the blend function `GL_ONE, GL_ONE_MINUS_SRC_ALPHA`,
+    which effectively negates any opacity settings used. A tutorial on OpenGL blending
+    functions is beyond the scope of this discussion. For further reading on the topic,
+    a good starting point is: [http://www.khronos.org/opengles/sdk/docs/man/xhtml/glBlendFunc.xml](http://www.khronos.org/opengles/sdk/docs/man/xhtml/glBlendFunc.xml)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We wrap this up by adding the `firstGrid` to the layer. We have two placeholders
+    for code we will add later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing the grid
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we will see how we draw to the render texture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderGrid.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: To begin drawing on the render texture, we make the call to `begin`. To stop
+    drawing, we call `end`. Everything in the middle is direct OpenGL drawing commands.
+    We set the `glLineWidth` parameter to set the drawing pen size to 3 points wide.
+    Whenever you are diving into drawing with OpenGL, you must keep in mind it does
+    not have any direct knowledge of the points versus pixels scaling that cocos2d
+    converts for you. Everything is in pixels only. So, to draw a line 3 points wide,
+    we multiply the desired point size by the `CC_CONTENT_SCALE_FACTOR()`, which will
+    be 1 for non-Retina devices, and 2 for Retina devices. This will give us the desired
+    effect of a 3 point wide line, regardless of the display capabilities of the device.
+    By using this scale factor "helper", it also means the code will not fail if we
+    find ourselves using a device with a scale factor of 3 (though it doesn't exist,
+    yet). We then set the drawing color using `ccDrawColor4F()`. The values of 1,1,1,
+    and 1 translate to r, g, b, and a values, with all fully "on". This is an opaque
+    white color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We set floats to help us keep our code readable. We set the left and bottom
+    to `0`, since we want to fill the render texture's space with our drawing. Likewise,
+    we set the right and top to the total width and height (respectively) of the render
+    texture's canvas. By "asking" the `firstGrid.sprite` for the size of the texture,
+    it means we can change the size of the render texture in the `init` method without
+    adjusting this code at all. We also set the grid size to `40` pixels wide. This
+    is a fairly arbitrary number. Smaller numbers create a tighter grid, larger numbers
+    have more open space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then use a `for` statement to draw the vertical lines. We loop through the
+    `x` values from left to right, based on the floats we set earlier. One callout
+    here is that we are not using the typical `x++` as the incrementor. Instead, we
+    are using `x+=gridSize` as the incrementor. This controls the size of the "step"
+    between the iterations. Using this means that the first iteration will use a value
+    of 0, the second will be 40, then 80, and so forth. This will be perfectly placed
+    for each line. We use the `ccDrawLine` function to draw a line from the bottom
+    of the screen to the top with a constant value of x. This line is drawn every
+    step of the loop, so it will fill the render texture with the vertical lines we
+    need, at a 40 pixel spacing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then do exactly the same thing for the horizontal lines. This time we iterate
+    through values of y, and draw from the left to the right at a constant y value.
+    By the end, we have a perfectly drawn square grid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the interest of good memory management, we must remember that we have alloc'd
+    the `firstGrid`, so we need to dealloc it appropriately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderGrid.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is important to always release whatever you have retained.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second grid
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We actually want to have two grids to give more visual fluff. We could draw
+    the grid onto another render texture, but that seems a bit silly, since we already
+    have drawn it the way we want it. Instead, we will clone the texture into a new
+    sprite. Insert the following code at the "second grid" placeholder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderTexture.m` (inside `init` method)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is very similar to the settings we used for the `firstGrid`, except when
+    we instantiate the sprite, we use `spriteWithTexture`, and pass it the texture
+    of the sprite contained in the `firstGrid` object. This allows us to have a second
+    sprite exactly like the render texture's sprite, but it will only behave as a
+    sprite. This means we will not be able to draw more on the `secondGrid` (sprite
+    only), but we could draw more on the `firstGrid` (`CCRenderTexture`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moving grids
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we have two identical grids on top of each other. What we want is to set
+    them both into continuous motion, preferably something we can start and forget
+    about. We will be using `CCRepeatForever` actions to make it happen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderGrid.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we set up two "sets" of actions. The first set moves the grid around in
+    a perfectly repeating pattern (after all three actions are run, the coordinates
+    are back to where you started). The second set of actions uses the `TintBy` action
+    to alter the colors in a slow fading pattern. Looking at the durations, it is
+    a full 12 seconds for a complete cycle of this set of tints. We then wrap both
+    of these sets of actions into a `CCSequence` inside a `CCRepeatForever` action.
+    Because the two sets of actions affect different aspects of the sprite, they can
+    be run simultaneously. We run these both on the `firstGrid` sprite.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We do nearly the same thing on the second grid, although we move the grid in
+    the other diagonal direction, and we tint from black to white, in an 11 second
+    cycle. We run this on the `secondGrid`. (Consult the code bundle for this book
+    to see the movement code for the `secondGrid` sprite.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: To tie it all together, we insert the following lines into the `init` method
+    at the "start grids moving" placeholder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderGrid.m` (inside `init` method)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The glScissor
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We have one problem remaining. The grid is larger than the part of the screen
+    we want to draw it in. Ideally, we want the grid to move around, but only be visible
+    inside the yellow outer walls. Using the OpenGL `glScissor` is exactly what we
+    need. Like its name suggests, the `glScissor` is used to clip an image from being
+    visible. Here, we want to trim the visible graphics for this entire layer at the
+    yellow line.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot shows a before and after comparison:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The glScissor](img/9007_06_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As you may have noticed, the `CLRenderGrid` is a subclass of `CCLayer`, so we
+    have the same coordinate space for the layer that we do for the main grid. We
+    can easily use `glScissor` to fix the problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLRenderGrid.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we use the same coordinates we used for drawing the outer walls in the
+    main playfield layer. As we said earlier, OpenGL is not aware of the scale of
+    the device, so we multiply each value by the `CC_CONTENT_SCALE_FACTOR()`. This
+    will give the same clipping boundaries in Retina and non-Retina devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The playfield
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have assembled most of the "external" components, so it is time to turn our
+    attention to the `CLPlayfieldLayer` class itself. Let's dive into the class instantiation
+    and `init` methods first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use another convenience method here, this time only accepting one parameter,
+    `isRemoteGame`. For a local only game this will be `NO`, and `YES` if it is a
+    Bluetooth game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `initWithRemoteGame` method is fairly basic. We set up our `cyclesheet`
+    batch node, establish the `bikeWalls` array, and set a few Boolean values. We
+    also add our `CLRenderGrid` as a child with a Z order of `-1`, to keep it behind
+    the rest of the game. Then we add our outer walls, and that's it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We put the actual bike building calls in the `onEnterTransitionDidFinish` method.
+    We do this because if we choose to use a transition to enter the scene, we don't
+    want the game starting up before the transition is complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have left a small piece of the remote game code here, so you can see the
+    difference in how we set up the start of the game. For a local game only, we set
+    up both players, and schedule the update. We will look at the "generate" methods
+    next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generating the bikes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Adding the player bikes and buttons to the playfield is trivial here, since
+    we have done most of the work in the `CLBike` and `CLButton` classes. We use nearly
+    identical methods for the red and blue bikes, so we will only include one here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we instantiate a new `redBike`, specifying that it belongs to `kRedPlayer`,
+    and we add it to the sheet. We then check if this is a `remotePlayer`. If it is
+    not, then we also build the right and left buttons for the player. (Remote players
+    do not need to have buttons drawn for this device). You will notice that we do
+    not retain a reference to the buttons we create. The buttons need to know about
+    the layer (as we saw earlier), and they need to know about the bike they are controlling,
+    but the layer doesn't need to do anything special with the buttons except to add
+    them as children of the layer. They are self-sufficient, so we can build them
+    and ignore them here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `generateBlueAsPlayerNo:isRemote:` method is nearly identical, except the
+    initial bike creation is instantiated as `blueBike`, with `kBluePlayer` as the
+    parameter. As we discussed in the `CLBike` class earlier, we could probably collapse
+    this into a single method, but separate methods like this are easier to follow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Collision handling
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When it comes to collision handling, we have already put all of the pieces into
+    place to make collisions easy to check for. We have all walls in the game stored
+    in the `bikeWalls` array. Each bike keeps track of both the `currentWall` and
+    `priorWall` objects created by that bike. This is all we need to do to check for
+    all possible collisions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we check for collisions, we iterate through all the wall sprites in the
+    `bikeWalls` array. We first check for the `blueBike`. If its `boundingBox` intersects
+    with the wall and the wall is not the `currentWall` or `priorWall` of the `blueBike`,
+    then that bike crashed. We do the same check for the `redBike`, this time making
+    sure it is not the `currentWall` or `priorWall` of the `redBike`. The question
+    is probably coming to mind: why two walls for each bike? Isn''t tracking the `currentWall`
+    object enough?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a bike turns, it turns at an abrupt right angle. The ending of the `priorWall`
+    is at exactly the same point as the origin of the new `currentWall`. For a single
+    update cycle, the bike is on this exact point. If we don't track the `priorWall`,
+    then the bike will crash on that point. As there is no way the bike can correctly
+    crash into the `priorWall`, we can safely ignore any collisions with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making it move
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We use a very simple `update` method, which actually passes most of the control
+    to the bikes themselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: If the player is not a remote player, we tell the bike to move, using the `move`
+    method we saw earlier. (In case you're wondering, we will handle the remote player's
+    moves more explicitly). We then check for collisions after every move.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Crashing bikes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we will look at what happens when a bike crashes. We want a little visual
+    flair, so we will put the actual "crash" code in the `CLBike` class, but the core
+    handler is in the `CLPlayfieldLayer` class, because the entire game needs to know
+    about the crash, not just the bike.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename:** `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: We unscheduled the `update` method, told the bike that it crashed, and set a
+    couple ofBoolean values. We used the `isTouchesBlocked` variable to prevent the
+    player from rapidly mashing buttons and exiting the game without seeing the results.
+    Players need a little time to enjoy their victory, or ponder their defeat. We
+    will not cover the `displayGameOver` method in the book. Please consult the source
+    code for that method. (It is a fairly basic "Red Player Wins!" label, not much
+    more than that.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we see the `crash` method. We remove the glow image, scale the sprite up
+    to be really big, and then quickly fade it out. We also set the `isCrashed` variable
+    to `YES`, which is used in the `displayGameOver` method to determine who won and
+    who lost.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bluetooth multiplayer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We now have a complete two-player game on the same iPad. Now we will turn our
+    attention to using GameKit to create a local Bluetooth game between two iPads.
+    A word of caution to begin this discussion: this does not work correctly on the
+    simulator, so you must have two iPads (any generation will do) in order to test
+    this code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get the game prepared for using GameKit, we need to make sure the `GameKit.framework`
+    is included in our project. You can check this by selecting your target project,
+    and selecting the "Build Phases" heading. Then, expand the **Link Binary With
+    Libraries** tab, and see if it is listed. If it is not, click on the **+** button
+    at the bottom of the section, and select `GameKit.framework`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In Xcode, it looks like the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Bluetooth multiplayer](img/9007_06_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We also need to make a couple of additions to the `CLPlayfieldLayer.h` file
+    to include the GameKit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.h` (partial)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, we have imported GameKit with the "framework style" angle brackets,
+    and we have declared two delegate types for our `CLPlayfieldLayer` class. This
+    will let us receive the callbacks from GameKit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also need a few specific variables in the header.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.h` (partial):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first three are needed by GameKit itself, and the `playerNumber` is a variable
+    that we will be using to handle the issue of which player gets which color bike.
+    The `currentState` is our own variable that we will be using to handle refused
+    connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Peer Picker
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We will be using the default Peer Picker that comes as part of GameKit. This
+    is a full GUI interface for finding players and making the connection between
+    the devices. This GUI is called the **Peer Picker**. There are quite a few callbacks
+    that are needed, so don't be put off by the amount of code we are about to see.
+    Most of it is boilerplate and can be re-used with little, if any, modifications
+    in other projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: We begin by creating the `GKPeerPickerController`, setting its delegate, and
+    specifying the connection mask. The `connectionTypesMask` property controls what
+    types of connections are considered when looking for a game. The value we have
+    specified, `GKPeerPickerConnectionTypeNearby`, limits the Peer Picker to local
+    Bluetooth connections only. We also set the starting `playerNumber` to be 1\.
+    For the purposes of this game, player no. 1 is the red player, and player no.
+    2 is the blue player.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we establish the `GKSession` for the connection. We limit the available
+    connections even further by specifying the `SessionID`. In our case, it is `"Ch6_Cycles"`,
+    which is the way our game identifies itself. This `SessionID` must match between
+    the devices, or they will not be able to "see" each other. This does mean that
+    both players must have the game running at the same time in order to attempt to
+    connect with each other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also set the `sessionMode` to be `GKSessionModePeer`. There are three types
+    of sessions: client, server, and peer. A **peer** is essentially a client and
+    server at the same time. This means it can initiate connections to a server (or
+    another peer), or it can receive connections from a client (or another peer).
+    In most cases, you would want to set this to peer, so you can send and receive
+    connection requests.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: This callback will be called when a connection to a peer is made. It will configure
+    the `gkSession` that was created in the previous method to identify the receiver
+    of the data (self, in our case). We also dismiss the `gkPicker`, since we are
+    done picking our opponent. Finally, we store the `peerID` in the `gamePeerId`
+    variable. This `peerID` is how the devices identify themselves. We store this
+    because we will need it when we want to send messages to the other player.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: The final callback we need for the Peer Picker is the `peerPickerControllerDidCancel`
+    method. This is called if, at any point while the Peer Picker was active, the
+    user clicked on **Cancel**. In this method, we release the delegate and invalidate
+    (get rid of) the session that was created. The `invalidateSession` method will
+    be covered shortly. We also added our own behavior, the call to the `returnToMainMenu`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `returnToMainMenu` method checks to see if we have a `gkSession`, and will
+    invalidate the session if needed. We then call the `replaceScene` method to go
+    back to the menu scene.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot gives an example of what the Peer Picker GUI looks
+    like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Peer Picker](img/9007_06_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Session callbacks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we will look at the session delegate callback methods. These callbacks will
+    be triggered based on the current state of the `gkSession` we created with the
+    Peer Picker. There are a few smaller methods that we will examine first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method is called when the game receives a connection request from a peer.
+    This means that the other player is taking the role of client, and the current
+    device is being asked to take the role of the server. We made the design decision
+    that the client is always red, and the server is always blue. Since this request
+    makes us the server, we change the `playerNumber` variable to 2 to identify this
+    device as the blue player. Since this method will only be called by one of the
+    two devices, we can be certain the other player is red.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: These two methods are called when there is a connection error. There's nothing
+    we can do, so we have both methods dismiss the Peer Picker, and return the player
+    to the main menu.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method is called when we need to abandon the session. As we saw earlier,
+    this will be called when the user cancels out of the Peer Picker. If the session
+    exists, it disconnects from all peers, marks itself unavailable, removes all delegates,
+    and gets rid of the session.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This method is called whenever the session''s state changes. We begin by checking
+    for one specific condition. When PeerPicker receives a request, the device that
+    would be the server will be presented with the option to accept or decline the
+    connection. We need to identify if the user pressed the "Decline" button. We check
+    to see if the `currentState` (which is set at the bottom of this method, now holding
+    the value from the last call to this method) is `GKPeerStateConnecting`, and the
+    new state (the state variable) is not `GKPeerStateConnected`, then we reset the
+    `playerNumber`. Why do we do this? When the connection request is first received,
+    the `session:didReceiveConnectionRequestFromPeer:` method was called. As we saw
+    earlier, that sets the `playerNumber` to 2\. As there is no callback received
+    when the "Decline" button is pressed in the PeerPicker, this is the only way we
+    can trap this situation, so we can "undo" the `playerNumber` being set to 2\.
+    Why do we care? If we do not have this trap in place, here is a scenario that
+    can happen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Device 1 requests connection to Device 2\. (Device 2 is now PlayerNumber 2)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Device 2 declines the connection.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Device 2 requests connection to Device 1\. (Device 1 is now PlayerNumber 2)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Device 1 accepts the connection.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Game starts, and both players are BLUE, and think their opponent is RED.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: By trapping the "Decline" condition, we can avoid this undesirable situation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are two standard states we need to handle: `GKPeerStateConnected` and
+    `GKPeerStateDisconnected`. If the game is connected, we check which `playerNumber`
+    we are. If this is `playerNumber` 2 (server) we set up the bikes correctly for
+    this side of the game. The remote player is red, starting at the top of the device
+    (remember, that is what the `AsPlayerNo:2` represents), and we specify that this
+    is a remote player, which means there will be no control buttons created. The
+    local player is blue, in position 1 (bottom of iPad), with control buttons created.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If this is `playerNumber` 1 (client) then we do everything backwards. The local
+    player is red with buttons, the remote player is blue, without buttons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then schedule the update method, and the game is on!
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the state is changed to `GKPeerStateDisconnected`, we unschedule the update
+    (in case the game was running when disconnected), and we create a `UIAlert` object
+    to inform the player that they lost their connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sending messages
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'So we have a connection. Now what? We need to be able to send messages to the
+    remote device, and accept messages from the remote device. We have determined
+    we only need to send two types of data: move distance and turn direction. We will
+    never send "real" data for both at the same time, so we will need to parse out
+    the messages and take appropriate action. Let''s look at the data sending method
+    first.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we pass the turn direction, `dir`, and the distance travelled, `dist`.
+    We create an `NSMutableData` object and wrap that in an `NSKeyedArchiver`. We
+    encode both variables with explicitly named keys, and we send the data via the
+    `gkSession`. In the `sendData` method, you see that we are using the `gamePeerId`
+    we stored earlier, and we are also sending the data in a mode called `GKSendDataReliable`.
+    When you send data, you can either send it reliably or unreliably. The difference
+    is that reliable packets must arrive and be processed in order. Unreliable data
+    gives no guarantee of when it will be delivered, nor in which order the messages
+    will be received and processed. Since we definitely need our data to arrive in
+    order, on time, we send this reliably.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Receiving data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now let's see how to receive and process the data when we receive it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLPlayfieldLayer.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: When we receive data, we create an `NSKeyedUnarchiver` to interface with the
+    data received. We decode both variables, and store them in local variables `dir`
+    and `dist` (we use the same names in both methods to avoid confusion). We then
+    check to see which player is local to this device. If the local player is number
+    1, then the messages we are receiving must be for the blue bike. Otherwise, they
+    would be the red bike. We create `whichBike`, which will point to whichever bike
+    we have determined should be moved. Then, we check to see if the direction is
+    `kNoChange`. If it is, then this is a movement packet, so we call to the `moveForDistance`
+    method for `whichBike`, and pass it the value of `dist`. This will explicitly
+    move the remote player's bike on the local game. We then check to see if the direction
+    was `kLeft` or `kRight`. For each, we call to the bike's `turnLeft` or `turnRight`
+    method, as needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Upgrading our bikes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `receiveData` method we just reviewed will handle everything we need in
+    how to handle moving the remote bike on the local device. Now we need to upgrade
+    our `CLBike` class to be able to send the appropriate messages to the remote device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this method, we check to make sure we are playing a remote game, and that
+    this bike does not belong to a remote player. If both of these conditions pass,
+    we call to the `sendData` method in the `CLPlayfieldLayer`, and pass it the `distance`
+    argument. We also pass the direction as `kNoChange`, so we know there is no turn
+    included in this message. So what calls this method? In the `move` method of the
+    `CLBike` class, we left a placeholder "remote game". Let's fill that in now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you recall from the `update` method in the `CLPlayfieldLayer` class, we only
+    call `move` if the bike is a local player. So the local player's bike will move
+    itself (locally) and then send the message for the other device to move this bike
+    on the other device. This is the reason we separated the `move` method from the
+    `moveForDistance` method. The remote player's moves are processed directly through
+    the `moveForDistance` method, so we will not re-send the remote player's moves
+    back to this player's device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We follow a similar approach for the turn commands. First we build a similar
+    send method for turns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: Just as we did with the `sendPacketForMove` method earlier, we make sure this
+    is a remote game and that the bike does not belong to a remote player. We then
+    send the `turnDir` argument with a `distance` of `0`. As we saw with the `receiveData`
+    method, the turns will be processed first, so it actually doesn't matter what
+    value we send for distance, but it is a good idea to fill in default values to
+    avoid unintended consequences of unexpected data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To call this method, we insert code into the end of the `turnRight` and `turnLeft`
+    methods we discussed earlier. In both methods, we insert the new code at the "Remote
+    game" placeholder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Filename**: `CLBike.m` (`turnRight`)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: '**Filename**: `CLBike.m` (`turnLeft`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, every time the player turns, we call to the `sendPacketForTurn` method,
+    and if this is a local player, we will send the appropriate message to the remote
+    device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Why send moves?
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A natural question on a game like this is why do we send the move, if it is
+    a predetermined, constant rate? The primary reason we do this is to avoid game
+    glitches if a message was to get delayed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Imagine a game where red is the local player, and blue is the remote player.
+    We have implemented the game so we are only sending turns, not move forward messages.
+    So on each update, the local device moves both players forward a distance of 5
+    points. Blue turns, but the message is delayed slightly, so it is received two
+    update cycles late. On the local (red player) game, blue has moved forward 10
+    points, then turned. On the remote (blue player) game, the blue player has turned,
+    then moved forward 10\. This means the two devices have a different image of the
+    game board, and we cannot bring them back into sync. So blue might appear to crash
+    into a wall on the red player's iPad, but is actually still alive and playing
+    on their different version of the game board. The only way to avoid this sort
+    of board mutation on this type of game is to do as we have and explicitly send
+    every movement to the other player. This way we can guarantee that the game board
+    as seen by either player is exactly the same.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we implemented our first iPad game, our first simultaneous
+    two-player game, and our first two-player Bluetooth game. We spent some time learning
+    about how we can optimize our images to make a lot out of very few graphic assets.
+    We also saw how we can create a simple animated background using `CCRenderTexture`,
+    and used `glScissor` to cut that moving image to fit a non-moving screen area.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We covered the basics of a GameKit two player game, and hopefully we had some
+    fun along the way. There is a lot to learn about optimization for networked games,
+    and we have so far only scratched the surface with what is possible. There is
+    also a whole world of other connectivity and lag issues you will face when you
+    branch out to include Internet-based multiplayer games. If you are interested
+    in exploring that, I advise you to read up on Apple's documentation and use your
+    favorite search engine to find other resources, as network communication code
+    is a specialty unto itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will revisit Box2D to build an old school top-down pool
+    game. We will implement a rules system as well as experiment with different control
+    mechanics. Rack 'em up, and let's start the next chapter!
+  prefs: []
+  type: TYPE_NORMAL

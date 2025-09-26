@@ -1,0 +1,519 @@
+- en: Chapter 6. Resource Manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If we start developing our game, we’ll eventually need to create an entity that
+    handles all of our assets. We’ll call it `ResourceManager`. We’ll see how to create
+    one that allows you to add images, fonts, and sounds to your games.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main idea behind the resource manager is to cache assets that we’ll use
+    more than once and to have a centralized and abstracted way to create assets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resource definitions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In order to be able to define resources, we need to create a module that will
+    be in charge of handling this. The main idea is that before calling a certain
+    asset through `ResourceManager`, it has to be defined in `ResourceDefinitions`.
+    In this way, `ResourceManager` will always have access to some metadata it needs
+    to create the asset (filenames, sizes, volumes, and so on).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to identify the asset types (sounds, images, tiles, and fonts), we
+    will define some constants (note that the number values of these constants are
+    arbitrary; you could use whatever you want here). Let’s call them `RESOURCE_TYPE_[type]`
+    (feel free to use another convention if you want to). To make things easier, just
+    follow this convention for now since it’s the one we’ll use in the rest of the
+    book. You should enter them in `main.lua` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you want to understand the actual reason behind these resource type constants,
+    take a look at the `load` function of our `ResourceManager` entity in the next
+    section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need to create a file named `resource_definitions.lua` and add some simple
+    methods that will handle it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following line to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding line indicates that all of the code in the file should be treated
+    as a `module` function, being accessed through `ResourceDefinitions` in the code.
+    This is one of many Lua patterns used to create modules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you’re not used to the Lua’s `module` function, you can read about it in
+    the modules tutorial at [http://lua-users.org/wiki/ModulesTutorial](http://lua-users.org/wiki/ModulesTutorial).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we will create a table that contains these definitions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will be used internally and is not accessible through the module API, so
+    we create it using the keyword `local`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, we need to create the `setter`, `getter`, and `unload` methods for the
+    definitions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `setter` method (called `set`) stores the `definition` parameter (a table)
+    in the `definitions` table, using the `name` parameter (a string) as the key,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `getter` method (called `get`, duh!) retrieves the definition that was
+    previously stored (by use of `ResourceDefinitions:set ()`) using the `name` parameter
+    as the key of the `definitions` table, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `final` method that we’re creating is `remove`. We use it to clear the
+    memory space used by the definition. In order to achieve this we assign `nil`
+    to an entry in the `definitions` table indexed by the `name` parameter as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this way, we remove the reference to the object, allowing the memory to be
+    released by the garbage collector. This may seem useless here, but it’s a good
+    example of how you should manage your objects to be removed from memory by the
+    garbage collector. And besides this, we don’t know information comes in a resource
+    definition; it may be huge, we just don’t know.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is all we need for the resource definitions. We’re making use of the dynamism
+    that Lua provides. See how easy it was to create a repository for definitions
+    that is abstracted from the content of each definition. We’ll define different
+    fields for each asset type, and we don’t need to define them beforehand as we
+    probably would have needed to do in C++.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resource manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will now create our resource manager. This module will be in charge of creating
+    and storing our decks and assets in general. We’ll retrieve the assets with one
+    single command, and they’ll come from the cache or get created using the definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to create a file named `resource_manager.lua` and add the following
+    line to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is the same as in the resource definitions; we’re creating a module that
+    will be accessed using `ResourceManager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: We now create the `ASSETS_PATH` constant. This is the path where we will store
+    our assets. You could have many paths for different kinds of assets, but in order
+    to keep things simple, we’ll keep all of them in one single directory in this
+    example. Using this constant will allow us to use just the filename instead of
+    having to write the whole path when creating the actual resource definitions,
+    saving us some phalanx injuries!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, we’re creating a `cache` table as a local variable. This will be the
+    variable that will store our initialized assets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now we should take care of implementing the important functionality. In order
+    to make this more readable, I’ll be using methods that we define in the following
+    pages. So, I recommend that you read the whole section before trying to run what
+    we code now. The full source code can be downloaded from the book’s website, featuring
+    inline comments. In the book, we removed the comments for brevity’s sake.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getter
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The first thing we will implement is our `getter` method since it’s simple
+    enough:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method receives a `name` parameter that is the identifier of the resource
+    we’re working with. On the first line, we call `loaded` (a method that we will
+    define soon) to see if the resource identified by `name` was already loaded. If
+    it was, we just need to return the cached value, but if it was not we need to
+    load it, and that’s what we do in the `if` statement. We use the internal `load`
+    method (which we will define later as well) to take care of the loading. We will
+    make this `load` method store the loaded object in the `cache` table. So after
+    loading it, the only thing we have to do is return the object contained in the
+    `cache` table indexed by `name`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One of the auxiliary functions that we use here is `loaded`. Let’s implement
+    it since it’s really easy to do so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: What we do here is check whether the `cache` table indexed by the `name` parameter
+    is not equal to `nil`. If `cache` has an object under that key, this will return
+    `true`, and that’s what we were looking for to decide whether the object represented
+    by the `name` parameter was already loaded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loader
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '`load` and its auxiliary functions are the most important methods of this module.
+    They’ll be slightly more complex than what we’ve done so far since they make the
+    magic happen. Pay special attention to this section. It’s not particularly hard,
+    but it might get confusing. Like the previous methods, this one receives just
+    the `name` parameter that represents the asset we’re loading as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First of all, we retrieve the definition for the resource associated to `name`.
+    We make a call to the `get` method from `ResourceDefinitions`, which we defined
+    earlier as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the resource definition does not exist (because we forgot to define it before),
+    we print an error to the screen, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: If the resource definition was retrieved successfully, we create a variable
+    that will hold the resource and (pay attention) we call the correct `load` auxiliary
+    function, depending on the asset type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Remember the `RESOURCE_TYPE_[type]` constants that we created in the `ResourceDefinitions`
+    module? This is the reason for their existence. Thanks to the creation of the
+    `RESOURCE_TYPE_[type]` constants, we now know how to load the resources correctly.
+    When we define a resource, we must include a `type` key with one of the resource
+    types. We’ll insist on this soon. What we do now is call the correct `load` method
+    for images, tiled images, fonts, and sounds, using the value stored in `resourceDefinition.type`
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After loading the current resource, we store it in the `cache` table, in an
+    entry specified by the `name` parameter, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, let’s take a look at all of the different load methods. The expected definitions
+    are explained before the actual functions so you have a reference when reading
+    them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Images
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Loading images is something that we’ve already done, so this is going to look
+    somewhat familiar.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this book, we’ll have two ways of defining images. Let’s take a look at
+    them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you may have guessed, the `type` key is the one used in the `load` function.
+    In this case, we need to make it of type `RESOURCE_TYPE_IMAGE`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here we are defining an image that has specific `width` and `height` values,
+    and that is located at `assets/title_back.png`. Remember that we will use `ASSET_PATH`
+    in order to avoid writing `assets/` a zillion times. That’s why we’re not writing
+    it on the definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another useful definition is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is handy when you want a specific rectangle inside a bigger image. You
+    can use the `cords` attribute to define this rectangle. For example, we get a
+    square with 20 pixel long sides centered in the image by specifying `coords =
+    { -10, -10, 10, 10 }`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let’s take a look at the actual `loadImage` method to see how this all
+    falls into place:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First of all, we use the same technique of defining an empty variable that
+    will hold our image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We create the actual full path by appending the value of `fileName` in the
+    definition to the value of the `ASSETS_PATH` constant. `if` checks whether the
+    `coords` attribute is defined:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, we use another auxiliary function called `loadGfxQuad2D`. This will be
+    in charge of creating the actual image. The reason why we’re using another auxiliary
+    function is that the code used to create the image is the same for both definition
+    styles, but the data in the definition needs to be processed differently. In this
+    case, we just pass the coordinates of the rectangle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If there were no `coords` attribute, we’d assume the image is defined using
+    `width` and `height`. So what we do is to define a rectangle that covers the whole
+    width and height for the image. We do this by calculating `halfWidth` and `halfHeight`
+    and then passing these values to the `loadGfxQuad2D` method. Remember the discussion
+    about the texture coordinates in Moai SDK; this is the reason why we need to divide
+    the dimensions by 2 and pass them as negative and positive parameters for the
+    rectangle. This allows it to be centered on (0, 0). After loading the image, we
+    return it so it can be stored in the cache by the `load` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now the last method we need to write is `loadGfxQuad2D`. This method is basically
+    doing the same as what we did in the previous chapter to display an image as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Lua’s `unpack` method is a nice tool that allows you to pass a table as separate
+    parameters. You can use it to split a table into multiple variables as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: What we do here is instantiate the `MOAIGfxQuad2D` class, set the texture we
+    defined in the previous function, and use the coordinates we constructed to set
+    the rectangle this image will use from the original texture. Then we return it
+    so `loadImage` can use it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Well! That was it for images. It may look complicated at first, but it’s not
+    that complex.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The rest of the assets will be simpler than this, so if you understood this
+    one, the rest will be a piece of cake.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tiled images
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Another useful type of asset is tiled images. In gaming, we usually use tiled
+    images to load a single texture and use fragments of it for specific purposes
+    (for example, animations can be achieved using this technique). This will be handy
+    in our game *Concentration*, to define which tiles should be placed in the matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The tiled image definition is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is basically the same as the normal image, but we need to add `tileMapSize`
+    and remove `width` and `height`. This table will be unpacked as the parameters
+    for `MOAITileDeck2D:setRect` (check it out at [http://getmoai.com/docs/class_m_o_a_i_tile_deck2_d.html#a504da8814f74038af9d453ebbc7fd5ae](http://getmoai.com/docs/class_m_o_a_i_tile_deck2_d.html#a504da8814f74038af9d453ebbc7fd5ae)).
+    In this case, it says that the tile map has three columns and two rows, giving
+    a total of six tiles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`loadTiledImage` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is essentially the same as what we did with the image. We append `fileName`
+    to `ASSETS_PATH` to get the final texture `filePath`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The only real difference is that we unpack the `tileMapSize` attribute to pass
+    it to `setSize`. You may use all of the possible parameters that can be passed
+    to `setSize`; these are explained in the Moai SDK API documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: And this is pretty much the same as for the normal image. We return `tiledImage`
+    to be used later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fonts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Fonts are easier, and the definition is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: The specific attributes that we have here, besides the type and the filename,
+    are `glyphs` (these are the characters that we will use; in this example, we only
+    use the numbers from 0 to 9), `fontSize`, and `dpi` for font.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `loadFont` method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: The whole method is basically the same as the other loaders; the differences
+    are that we use `MOAIFont` as the class, and we use `loadFromTTF` with the necessary
+    parameters to initialize it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sounds
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The definition for sounds is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The specific attributes for sounds are `loop` (whether the sound should loop
+    constantly or not) and `volume` (the initial volume for it).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moai SDK comes with support for two different sound engines, **Untz**, an open
+    source engine created specifically for Moai SDK, and **FMOD**, an industry standard
+    sound library. It’s worth mentioning that FMOD costs money, while Untz is free.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We’re going to show you how to use Untz in this book, but you can safely code
+    `loadSound` to use FMOD instead (take a look at `MOAIFmodExSound` and `MOAIFmodExChannel`
+    in the Moai SDK API documentation).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is basically the same logic as for the previous loaders, but we’re using
+    `setVolume` and `setLooping` to use the attributes we chose on our resource definition.
+    We’ve not initialized Untz yet; this will be done later, but this code has been
+    explained here for the completeness of `ResourceManager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exercises
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Putting this together should be something you can achieve now. So, take the
+    source code of the `main.lua` file we created previously and modify it in order
+    to make use of our `ResourceManager` and `ResourceDefinitions` entities. You’ll
+    need to include `resource_definition.lua` and `resource_manager.lua` in `main.lua`
+    and then make good use of them. If you download the source code for this chapter
+    from the website, `main.lua` has already been modified to work with `ResourceManager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another exercise is to code a way to unload assets from `ResourceManager`. This
+    has also been done in the code for this chapter, which you can download from the
+    website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `unload` method is pretty important since it will be needed in order to
+    actually free the memory reserved for assets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another interesting topic to enhance our `ResourceManager` entity is the use
+    of serialized fonts so font loading is faster at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter we created a simple framework to work with assets. We created
+    ways to define images, sounds, and fonts and coded the `ResourceDefinitions` class
+    to store this data. We wrote our `ResourceManager` class, which is in charge of
+    loading the different assets and caching them. We also went through the creation
+    of loading functions for these different assets and explained a way to define
+    them. Now we’re ready to start developing the gameplay for our game; how awesome
+    is that!
+  prefs: []
+  type: TYPE_NORMAL
