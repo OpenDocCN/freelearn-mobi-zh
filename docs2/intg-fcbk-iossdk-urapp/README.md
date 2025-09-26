@@ -1,6 +1,6 @@
-# Python 卖空算法教程
+# 脸书 IOS SDK 应用集成指南
 
-> 原文：[`zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1`](https://zh.annas-archive.org/md5/ceefdd89e585c59c20db6a7760dc11f1)
+> 原文：[`zh.annas-archive.org/md5/1c6f68a435c688f454f4b91bab4dd11c`](https://zh.annas-archive.org/md5/1c6f68a435c688f454f4b91bab4dd11c)
 > 
 > 译者：[飞龙](https://github.com/wizardforcel)
 > 
