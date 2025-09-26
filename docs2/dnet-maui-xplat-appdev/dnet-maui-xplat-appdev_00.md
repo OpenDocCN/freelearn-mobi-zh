@@ -1,0 +1,187 @@
+# 前言
+
+.NET MAUI 是由微软开发的一种跨平台技术。本书的首版是在 .NET 6 上编写的。然而，第二版与 .NET 8 的发布同步，带来了各种改进。最新的 .NET MAUI 版本主要寻求提升代码质量。同时，对支持 iOS 和 Android 的开发环境也进行了更新，分别升级到 Xcode 15 和 Android API 34。
+
+目标改进集中在一系列关键方面，如纠正内存泄漏、改进 UI 控件、实施特定平台的修复和优化性能。这些改进的目标是加强内存管理、提高应用程序的稳定性，并确保在不同平台间用户体验的一致性，从而提升整体应用程序的性能和响应速度。专注于这些组件，我努力为您提供对 .NET MAUI 技术最新进展的全面理解。
+
+尽管如今有众多跨平台编程选项可供选择，包括 Flutter 和 React Native，但 .NET MAUI 因其独特的特性而脱颖而出，这些特性在选择跨平台解决方案时应予以考虑。
+
+.NET MAUI 的一个显著优势是其单一项目结构，这比 Xamarin.Forms 有明显改进。这种简化的结构增强了多个领域，例如：
+
++   **提升调试和测试**：通过单一的项目结构，可以在同一项目中选择和调试多个目标，从而消除了在不同项目之间切换以针对不同目标的需求。
+
++   **资源共享**：在 Xamarin 中，传统上必须为每个平台单独管理资源。然而，.NET MAUI 通过允许跨平台共享大多数资源（包括字体、图像、图标等）改进了这一方面。
+
++   **简化配置**：通过使用单个应用程序清单来处理大多数任务，不再需要单独管理平台配置文件，如 `AndroidManifest.xml`、`Info.plist` 或 `Package.appxmanifest`。
+
+相比之下，在 Flutter 或 React Native 中访问原生设备功能，你必须依赖 Flutter 插件或 React Native 模块，而这些插件或模块又依赖于开发者社区或需要个人开发。此外，这些接口是由开发者设计的，因此缺乏标准化。幸运的是，微软在 .NET MAUI 的发布中为大多数常用原生设备功能标准化了 API。
+
+.NET MAUI 通过使用基于 XAML 的传统 UI 或 Blazor 混合应用中的 Blazor UI，促进了应用程序开发中的高级代码重用。这种优势对于包含 Web 和移动应用程序的项目尤其有价值，因为它允许共享用户界面设计和源代码。
+
+由于.NET MAUI 现在是.NET 平台发布的一部分，我们可以通过每次.NET 发布始终访问最新的.NET 平台和 C#语言功能。这种包含使得可以使用高级功能，如.NET 泛型托管、依赖注入和 MVVM 工具包等。
+
+在这本书中，我将引导你通过我使用我设计的开源应用程序在.NET MAUI 开发中的旅程。在这本书的整个版本中，我们将彻底探索.NET MAUI 和.NET 平台的功能。
+
+# 这本书面向的对象
+
+这本书主要面向对跨平台编程技术感兴趣的面向前端开发者或本地应用程序开发者。它假设读者具备 C#编程知识或任何类似于 C#的对象导向编程语言知识。
+
+# 这本书涵盖的内容
+
+## 第一部分，探索.NET MAUI
+
+**第一章**，**.NET MAUI 入门**，提供了一个关于跨平台技术的简介概述。作为介绍的一部分，.NET MAUI 与其他跨平台技术进行了比较，以突出其独特功能。此外，本章还指导你通过设置.NET MAUI 开发环境的过程。通过阅读本章，你将获得对跨平台技术的广泛理解，这将帮助你选择最适合你项目的选项。
+
+**第二章**，**构建我们的第一个.NET MAUI 应用程序**，指导你设置新项目的过程，该项目将作为本书中展示的开发工作的基础。此外，本章还详细阐述了.NET MAUI 项目结构，并全面讨论了应用程序生命周期。到本章结束时，你将掌握如何创建新项目，并掌握与.NET MAUI 应用程序相关的基本调试技能。
+
+**第三章**，**使用 XAML 进行用户界面设计**，介绍了使用 XAML 进行用户界面设计的概念。本章探讨了 XAML 的基本理解以及.NET MAUI 的 UI 元素。完成本章后，你将获得创建自己的用户界面设计所需的必要技能。
+
+**第四章**，**探索 MVVM 和数据绑定**，介绍了.NET MAUI 应用程序开发中的关键主题，包括 MVVM 模式和数据绑定。我们将从理论开始，然后将所学应用到密码管理应用程序的开发工作中。你将学习如何使用数据绑定并将其应用于 MVVM 模式。
+
+*第五章*，*使用.NET MAUI Shell 和 NavigationPage 进行导航*，探讨了.NET MAUI 应用开发中导航的基本方面。这包括利用.NET MAUI Shell 和`NavigationPage`进行高效导航等主题。本章从理论概述开始，然后过渡到实际用例，特别是关注密码管理应用的开发。到本章结束时，您将深入理解如何在您的.NET MAUI 应用中有效地实现导航。
+
+*第六章*，*使用依赖注入进行软件设计*，深入探讨了设计原则，特别是提供了 SOLID 设计原则的概述。随后，本章阐述了在.NET MAUI 中使用依赖注入，并将此技术融入我们的应用开发过程中。到本章结束时，您不仅将广泛了解 SOLID 设计原则，还将深入理解依赖注入。
+
+*第七章*，*使用平台特定功能*，涵盖了与.NET MAUI 开发中利用平台特定功能相关的复杂主题。本章将指导您了解实现平台特定代码所涉及的基本步骤。随着您深入开发应用中的平台特定功能，这些知识将得到进一步巩固。
+
+## 第二部分，实现.NET MAUI Blazor
+
+*第八章*，*介绍 Blazor 混合应用开发*，介绍了使用.NET MAUI Blazor 开发应用的概念。本章指导您创建新的 Blazor 混合应用，并提供将.NET MAUI XAML 应用转换为.NET MAUI Blazor 混合应用的说明。
+
+您将获得的知识包括理解基本环境设置和 Razor 语法，这对于.NET MAUI Blazor 应用开发至关重要。
+
+*第九章*，*理解 Blazor 路由和布局*，专注于 Blazor 混合应用的路由和布局方面。本章提供了路由设置过程和布局组件使用的见解。到本章结束时，您将了解如何设计布局并为您的应用设置路由。
+
+*第十章*，*实现 Razor 组件*，深入探讨了 Razor 组件的概念以及它们内部的数据绑定使用。本章将教会您如何创建 Razor 类库，并指导您改进现有的 Razor 代码以构建可重用的 Razor 组件。到本章结束时，您将实际理解如何有效地实现 Razor 组件。
+
+## 第三部分，测试和部署
+
+*第十一章*，*开发单元测试*，介绍了.NET MAUI 可用的单元测试框架。本章将教你如何利用 xUnit 和 bUnit 开发有效的单元测试用例。此外，你还将学习如何为.NET 类构造单元测试用例，以及如何使用 bUnit 为 Razor 组件创建特定的单元测试用例。
+
+*第十二章*，*在应用商店中部署和发布*，讨论了为应用商店准备应用包以及使用 GitHub Actions 设置 CI/CD 工作流程的流程。本章提供了创建适合 Google Play、Apple Store 和 Microsoft Store 的包的见解。此外，你还将学习如何使用 GitHub Actions 自动化包创建过程，从而简化你的发布工作。
+
+# 为了充分利用本书
+
+完成第一章后，你可以选择继续阅读*第一部分*或跳转到*第二部分*。本书的第一部分深入探讨了利用 XAML UI 开发经典.NET MAUI 应用的开发过程。相比之下，第二部分介绍了.NET MAUI 中的新概念 Blazor 混合应用开发。本书的最后一部分专注于单元测试和部署策略。
+
+请注意，构建本书中讨论的项目需要 Windows 和 macOS 计算机。我们将使用 Visual Studio 2022 和.NET 8 SDK 进行整个过程的操作。要在 Windows 上构建 iOS 和 macOS 目标，需要连接到一个可网络访问的 Mac，具体操作请参考 Microsoft 提供的文档：[`learn.microsoft.com/en-us/dotnet/maui/ios/pair-to-mac`](https://learn.microsoft.com/en-us/dotnet/maui/ios/pair-to-mac)。
+
+由于 Visual Studio for Mac 计划于 2024 年 8 月 31 日退役，你可以在 Mac 上安装.NET SDK 和 Visual Studio Code 来替代它。
+
+| 本书涵盖的软件/硬件 | **操作系统要求** |
+| --- | --- |
+| Visual Studio 2022 | Windows |
+| 带有.NET SDK 的 Visual Studio Code | macOS |
+
+## 下载示例代码文件
+
+你可以从 GitHub 下载本书的示例代码文件[`github.com/PacktPublishing/.NET-MAUI-Cross-Platform-Application-Development-Second-edition`](https://github.com/PacktPublishing/.NET-MAUI-Cross-Platform-Application-Development-Second-edition)。如果代码有更新，它将在 GitHub 仓库中更新。
+
+我的作业仓库是[`github.com/shugaoye/PassXYZ.Vault2`](https://github.com/shugaoye/PassXYZ.Vault2)。
+
+我将首先在我的作业仓库中更新源代码，然后将提交推送到 Packt 仓库。
+
+我们还有其他来自我们丰富的图书和视频目录的代码包，可在[`github.com/PacktPublishing/`](https://github.com/PacktPublishing/)找到。查看它们！
+
+## 下载彩色图片
+
+我们还提供了一份包含本书中使用的截图和图表彩色图片的 PDF 文件。你可以从这里下载：[`packt.link/gbp/9781835080597`](https://packt.link/gbp/9781835080597)。
+
+## 使用的约定
+
+本书使用了多种文本约定。
+
+`文本中的代码`：表示文本中的代码单词、数据库表名、文件夹名、文件名、文件扩展名、路径名、虚拟 URL、用户输入和 Twitter 昵称。以下是一个示例：“`CreateMauiApp`的返回值是一个`MauiApp`实例，这是我们应用程序的入口点。”
+
+代码块应如下设置：
+
+```swift
+private async Task<bool> UpdateItemAsync(string key, 
+string value)
+{
+  if (listGroupItem == null) return false;
+  if (string.IsNullOrEmpty(key) || 
+      string.IsNullOrEmpty(value)) 
+    return false;
+  listGroupItem.Name = key;
+  listGroupItem.Notes = value;
+  if (_isNewItem) {...}
+  else {...}
+  StateHasChanged();
+  return true;
+} 
+```
+
+当我们希望您注意代码块中的特定部分时，相关的行或项目将以粗体显示：
+
+```swift
+Image image = new Image {
+    BackgroundColor = Color.FromHex("#D1D1D1")
+};
+image.Source = new **FontImageSource** {
+    Glyph = "\uf007",
+    FontFamily = "FontAwesomeRegular",
+    Size = 32
+}; 
+```
+
+任何命令行输入或输出都应如下编写：
+
+```swift
+git clone -b chapter09
+https://github.com/PacktPublishing/Modern-Cross-Platform-Application-Development-with-.NET-MAUI PassXYZ.Vault2 
+```
+
+**粗体**：表示新术语、重要单词或屏幕上看到的单词。例如，菜单或对话框中的单词以**粗体**显示。以下是一个示例：“启动 Visual Studio 2022 并在启动屏幕上选择**创建新项目**。”
+
+**技巧**
+
+看起来是这样的。
+
+**重要提示**
+
+看起来是这样的。
+
+# 联系我们
+
+我们始终欢迎读者的反馈。
+
+**一般反馈**：请通过`feedback@packtpub.com`发送电子邮件，并在邮件主题中提及书籍的标题。如果您对本书的任何方面有疑问，请通过`questions@packtpub.com`与我们联系。
+
+**勘误表**：尽管我们已经尽一切努力确保内容的准确性，但错误仍然可能发生。如果您在这本书中发现了错误，我们将不胜感激，如果您能向我们报告，我们将不胜感激。请访问[`www.packtpub.com/submit-errata`](http://www.packtpub.com/submit-errata)，选择您的书籍，点击勘误表提交表单链接，并输入详细信息。
+
+**盗版**：如果您在互联网上以任何形式遇到我们作品的非法副本，如果您能提供位置地址或网站名称，我们将不胜感激。请通过`copyright@packtpub.com`与我们联系，并提供材料的链接。
+
+**如果您有兴趣成为作者**：如果您在某个主题上具有专业知识，并且您有兴趣撰写或为书籍做出贡献，请访问[`authors.packtpub.com`](http://authors.packtpub.com)。
+
+# 分享您的想法
+
+一旦您阅读了*.NET MAUI 跨平台应用开发，第 2 版*，我们很乐意听听您的想法！请[点击此处直接访问此书的亚马逊评论页面](https://packt.link/r/1835080596)并分享您的反馈。
+
+您的评论对我们和科技社区都非常重要，并将帮助我们确保我们提供高质量的内容。
+
+# 下载此书的免费 PDF 副本
+
+感谢您购买此书！
+
+您喜欢随时随地阅读，但无法携带您的印刷书籍到处走吗？
+
+您的电子书购买是否与您选择的设备不兼容？
+
+别担心，现在，随着每本 Packt 书籍，您都可以免费获得该书的 DRM 免费 PDF 版本。
+
+在任何地方、任何地方、任何设备上阅读。直接从您最喜欢的技术书籍中搜索、复制和粘贴代码到您的应用程序中。
+
+优惠不止于此，您还可以获得独家折扣、时事通讯和每日免费内容的邮箱访问权限
+
+按照以下简单步骤获取优惠：
+
+1.  扫描下面的二维码或访问以下链接
+
+*![二维码描述自动生成](img/B21554_QR.png)*
+
+[`packt.link/free-ebook/9781835080597`](https://packt.link/free-ebook/9781835080597)
+
+1.  提交您的购买证明
+
+1.  就这样！我们将直接将您的免费 PDF 和其他优惠发送到您的电子邮件

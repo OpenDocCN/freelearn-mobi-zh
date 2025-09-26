@@ -1,0 +1,660 @@
+# 第二章：SpriteKit
+
+在本章中，我们将介绍以下食谱：
+
++   学习 SpriteKit 的基础知识 – 飞船教程
+
++   理解场景、节点和精灵
+
++   游戏项目的解剖学
+
++   在精灵上应用动作
+
++   添加无限滚动
+
++   移动角色
+
+本章详细解释了 SpriteKit。我们将从对 SpriteKit 基础的讨论开始，然后我们将学习游戏项目的解剖学。继续前进，我们将学习场景、精灵和节点。这将为我们提供对 SpriteKit 基本结构模型的更深入理解。然后我们将通过向精灵添加一些动作来探索 SpriteKit 的深度。继续前进，我们将向本章中创建的游戏添加无限滚动。
+
+# 简介
+
+SpriteKit 是一个图形渲染和动画框架，具有用于动画任意纹理图像（称为 Sprites）的功能。它有一个渲染循环，渲染帧的内容。作为一个过程，每个帧的内容（即输入）被给出，处理，然后最终由渲染循环渲染。
+
+基本上，你的游戏识别帧的内容以及在该帧中内容如何改变。
+
+作为游戏行业的新手，SpriteKit 表现得非常好，因为它采用了 cocos2d 的基础知识，cocos2d 是一个广泛使用的 2D 游戏引擎。它编写得很好，文档齐全，并且与 iOS 深度集成。然而，即使你对游戏开发领域不熟悉，这本书也会为你提供一本入门级开发指南。每一章都包含一个食谱，以确保你学习到游戏开发的所有概念。
+
+现在是两个最基本的概念：场景和精灵。iOS 游戏由场景组成，而场景则包含精灵。
+
+要开始使用 SpriteKit，我们将创建一个小游戏，这将指导我们了解 SpriteKit 的所有概念。
+
+# 学习 SpriteKit 的基础知识 – 飞船教程
+
+在本节中，我们将学习和探索 SpriteKit 的基本概念。我们还将开发一个迷你游戏，这将有助于通过一些稳健的实现来理解这些概念。学习 SpriteKit 的最佳方式是看到它在实际中的应用。
+
+## 准备工作
+
+要构建 SpriteKit 游戏，首先你需要了解 SpriteKit 项目的结构。你可以从一个包含 `SKScene` 和 `SKNode` 的起始项目开始。这将为你提供构建基本游戏所需的设置。
+
+## 如何做到这一点...
+
+为了理解游戏编程的基本概念，让我们创建一个名为 `FlyingSpaceship` 的新项目，使用 SpriteKit 游戏模板。该项目将展示 SpriteKit 项目的结构。项目的最终目标是屏幕上可见一艘飞船，在接下来的主题中我们可以让它飞起来。
+
+我们将遵循与 第一章 中相同的步骤，*iOS 游戏开发*，并最终将飞船添加到屏幕上：
+
+1.  启动 Xcode 并导航到 **文件** | **新建** | **项目**。然后从提示窗口导航到 **iOS** | **应用程序** | **SpriteKit 游戏**，点击 **下一步**。![如何操作...](img/00016.jpeg)
+
+1.  在提示窗口中填写所有项目详情，并将项目名称设置为 `FlyingSpaceship`，**组织名称**，**设备**选择 **iPhone**，**类前缀**设置为 `FS`。点击 **下一步**，如图所示：![如何操作...](img/00017.jpeg)
+
+1.  选择一个位置在驱动器上保存项目，并点击 **创建**。
+
+1.  因此，项目中将创建 `FSViewController` 和 `FSMyScene` 文件，同时项目目录中也有 `Spaceship.png` 文件。项目目录应类似于以下截图：![如何操作...](img/00018.jpeg)
+
+1.  前往 **常规** 选项卡，取消勾选 **纵向** 以便最终方向为横屏。
+
+1.  将类型转换代码 `UIView` 到 `SKView` 以及将 `FSMyScene` 呈现到 `SKView` 从 `FSViewController` 的 `(void)viewDidLoad` 中删除。
+
+1.  实现 `- (void)viewWillLayoutSubviews` 并将 `viewDidLoad` 中的代码复制到 `viewWillLayoutSubviews` 中。
+
+1.  最终，代码将看起来像这样：![如何操作...](img/00019.jpeg)
+
+1.  现在，让我们转到 `FSMyScene.m`，删除在 `init` 方法中添加的默认代码以及触摸检测方法。
+
+1.  在私有接口中为 `SKSpriteNode` 创建一个名为 spaceship 的属性：
+
+    ```swift
+    @interface FSMyScene()
+    @property (nonatomic, strong) SKSpriteNode*     spaceShipSprite;
+    @end
+    ```
+
+1.  在 `FSMyScene` 文件的 `init` 方法中将此 `spaceShipSprite` 添加到其中：
+
+    ```swift
+    self.spaceShipSprite = [SKSpriteNode spriteNodeWithImageNamed:@"Spaceship"];
+    self.spaceShipSprite.position = CGPointMake(self.spaceShipSprite.size.width, size.height/2);        
+    [self addChild:self.spaceShipSprite];
+    ```
+
+    默认提供的 `Spaceship.png` 是合适的，因此删除并添加 Starter kit 的 `Resources` 文件夹中提供的 `Spaceship.png`。
+
+1.  现在如果您运行应用程序，飞船在黑色背景上看起来不好，因此将 `FSMyScene` 文件的背景颜色设置为天空颜色，在它的 `init` 方法中。
+
+    ```swift
+    self.backgroundColor = [UIColor colorWithRed:135.0/255.0 green:206.0/255.0 blue:235.0/255.0 alpha:1.0];
+    ```
+
+    因此，我们最终达到了目标，将飞船放置到了天空之中。
+
+    最终的 `FSMyScene` 类看起来像这样：
+
+    ![如何操作...](img/00020.jpeg)
+
+在前面的截图，您将在 `.m` 文件中观察到 `update:` 方法。此方法在屏幕上渲染每一帧时自动调用。如果游戏的帧率为 60，则此方法每秒将执行 60 次。任何实时计算都可以在此方法中执行，因此可以在此方法中处理如计算玩家实时位置等动作。
+
+Starter kit 游戏 `FlyingSpaceship` 看起来是这样的：
+
+![如何操作...](img/00021.jpeg)
+
+## 它是如何工作的...
+
+SpriteKit 的结构基本上是从 UIKit 框架继承和派生出来的。操作系统通过将 UIKit 视图控制器的视图类型转换为 SpriteKit 视图（称为 SKView）来提供从 UIKit 到 SpriteKit 的平滑过渡。在此之后，你就可以开始使用 SpriteKit 了。如图所示，创建一个场景，向其中添加一些节点（即作为玩家的精灵、背景等），你就构建了游戏环境。你还可以通过向节点应用一些动作（旋转、移动、缩放等）来使环境更加生动。
+
+因此，结合这些，这个场景具有不同类型的节点和一些应用的动作，这构成了你的 SpriteKit 的基本结构，以及你想要构建的游戏的基本结构。
+
+![如何工作...](img/00022.jpeg)
+
+## 还有更多...
+
+SpriteKit 可用于 iOS 和 OS X 平台上的游戏开发。它使用宿主设备的可用图形硬件以高帧率渲染复合 2D 图像。SpriteKit 还有其他一些功能，支持以下类型的内容，包括：
+
++   可以是任何形式的精灵，如无纹理或有纹理的矩形
+
++   文本
+
++   基于任意 CGPath 的形状
+
++   视频
+
+如果你想了解更多信息，请访问苹果的开发者链接 [`developer.apple.com/library/ios/documentation/GraphicsAnimation/Conceptual/SpriteKit_PG/Introduction/Introduction.html`](https://developer.apple.com/library/ios/documentation/GraphicsAnimation/Conceptual/SpriteKit_PG/Introduction/Introduction.html)。
+
+你也可以通过尝试更改太空船的位置并为其背景应用各种颜色来尝试修改你刚刚创建的示例。
+
+# 理解场景、节点和精灵
+
+整个游戏被组织成场景，这些场景由`SKScene`对象表示的内容构成。
+
+场景是一个包含所有内容的实体，即将要渲染的节点和精灵。它还实现了内容的设置或每一帧的更新结构。
+
+`SKScene`类是`SKNode`的子类，它是 SpriteKit 的基本构建块。SpriteKit 中的每个实体都是继承或派生自节点（SKNode）。因此，`SKScene`是其他节点的根节点，用于在场景中填充内容。
+
+与 UIKit 类似，每个节点的位置是根据其父坐标系统指定的。节点还具有内容项或实体应具备的基本属性，如移动、旋转、缩放、淡出等。最重要的是，所有节点对象都是响应对象，响应`UIResponder`的委托。这用于检测场景中的输入触摸以移动对象以及根据游戏玩法的一些其他内容。
+
+现在，精灵由 `SKSpriteNode` 对象表示。它们是带有图像的节点。我们可以指定内容或纹理图像，就像我们必须要制作一些玩家或敌人一样。`SKSpriteNode` 也继承自 `SKNode`。此外，其内容可以更改和动画化。精灵通过添加一些动作到场景中创建并添加，以使游戏场景更加生动。
+
+## 准备工作
+
+要理解 SpriteKit 的这些元素，我们需要创建一个空白项目，就像我们在本章入门项目中做的那样。正如入门套件中所示，这里有一个基本的 `SKScene` 和 `SKNode`。因此，我们现在将介绍这些术语及其示例代码片段。
+
+## 如何做到这一点...
+
+正如我们在入门套件中所做的那样，遵循相同的步骤创建一个 `SKScene` 并向其中添加一个 `SKSpriteNode` 方法：
+
+1.  从 Xcode 创建 SpriteKit 游戏模板。
+
+1.  将默认的 ViewController 和场景为您创建。
+
+1.  通过启用 `showsFPS` 和 `showsNodeCount` 属性为 `YES`，将 ViewController 视图类型转换为 `SKView`。
+
+    ```swift
+    // Configure the view.
+    SKView * skView = (SKView *)self.view;
+    skView.showsFPS = YES;
+    skView.showsNodeCount = YES;
+    ```
+
+1.  使用 `SKScene` 的类方法创建一个场景，指定场景的大小，然后将其显示在之前类型转换的 `SKView` 上。
+
+    ```swift
+    // Create and configure the scene.
+    SKScene * scene = [SKScene sceneWithSize:skView.bounds.size];
+    scene.scaleMode = SKSceneScaleModeAspectFill;
+
+    // Present the scene.
+    [skView presentScene:scene];
+    ```
+
+    所有这些都应该在 `- (void)viewWillLayoutSubviews` 方法中完成。
+
+1.  现在我们必须向之前创建的场景中添加一些精灵。通过调用类方法创建一个 `SKSpriteNode` 对象，并指定精灵的图像。现在指定它需要放置的位置，最后将其添加到场景中。
+
+    ```swift
+    SKSpriteNode * spriteNode = [SKSpriteNode spriteNodeWithImageNamed:@"Spaceship.png"];
+    spriteNode.position = CGPointMake(100,100);
+    [self addChild:spriteNode];
+    ```
+
+## 它是如何工作的...
+
+如在 *学习 SpriteKit 基础 – 飞船教程* 菜谱的 *How it works...* 部分的结构块图中所述，它与 UIKit 框架深度关联。为了构建游戏，我们应该有一个环境，即我们的场景，以及一些在环境中可见的实体，即精灵。因此，为了使其工作，或者说为了在屏幕上显示某些内容，我们需要创建一个环境（即场景），并在其上添加实体（即精灵），如下所示：
+
++   当我们将 UIView 转换为 `SKView` 时，我们就进入了 SpriteKit 的领域：
+
+    ```swift
+    SKView * skView = (SKView *)self.view;
+    ```
+
++   为了调试目的，我们启用两个布尔参数以显示 FPS（每秒帧数）和 NodesCount（添加到场景中的节点数）：
+
+    ```swift
+        skView.showsFPS = YES;
+        skView.showsNodeCount = YES;
+    ```
+
++   在创建场景时，我们需要指定场景的大小，这正好是内容大小和缩放模式，以便场景适合 `SKView`（即缩放透视），这里使用的是 `SKSceneScaleModeAspectFill` 模式，以便按照 `SKView` 的宽高比进行适配：
+
+    ```swift
+        SKScene * scene = [SKScene sceneWithSize:skView.bounds.size];
+        scene.scaleMode = SKSceneScaleModeAspectFill;
+    ```
+
++   要使场景内容在视图中可见，我们需要在 `SKView` 上显示场景：
+
+    ```swift
+        // Present the scene.
+        [skView presentScene:scene];
+    ```
+
++   现在关于精灵的工作原理。通过类方法创建一个精灵对象，该对象实例化一个具有图像内容的节点：
+
+    ```swift
+        SKSpriteNode * spriteNode = [SKSpriteNode spriteNodeWithImageNamed:@"Spaceship.png"];
+    ```
+
++   以下代码行指定了精灵需要放置的确切位置：
+
+    ```swift
+        spriteNode.position = CGPointMake(100,100);
+    Lastly, to make the sprite visible, it is added to SKScene as a child:
+        [self addChild:spriteNode];
+    ```
+
+# 游戏项目的结构
+
+在本节中，我们将了解游戏项目的基础知识。这包括理解游戏项目的基本架构和工作流程。在这里，我们将了解场景和层及其在游戏中的重要性。
+
+## 准备中
+
+完整的游戏开发依赖于前面提到的三个核心组件：场景、节点和精灵。我们需要对这些组件有控制权，才能有效地开始游戏开发。
+
+## 如何做...
+
+在内部，生命周期按照场景执行——节点被添加，并在这些节点上应用动作。它还包括将一些物理体附加到节点上，支持裁剪，将动画和效果应用到内容的所有或部分，检测力与碰撞，在 OpenGL 中绘制，以及许多其他事情。
+
+除了所有这些，`SKScene` 中还有一个覆盖的更新方法，该方法在每个游戏帧中都会被调用，并使用当前时间间隔作为参数。在那里，你可以添加你的实际游戏逻辑，指定在什么时间做什么，以及许多其他事情，因为它是通过每个渲染的帧调用的。
+
+例如，我们可以跟踪当前时间和最后更新时间之间的时间差。
+
+1.  由于在更新方法中接收到了当前时间间隔，因此定义时间差和最后更新时间的属性。
+
+    ```swift
+    @property (nonatomic, assign) NSTimeInterval lastUpdatedTime;
+    @property (nonatomic, assign) NSTimeInterval    diffTime;
+    ```
+
+1.  现在通过从当前时间减去最后更新时间来计算时间差，并将 lastUpdatedTime 更新为当前时间。
+
+    ```swift
+    self.diffTime = currentTime - self.lastUpdatedTime;    
+    self.lastUpdatedTime = currentTime;
+    ```
+
+1.  最后，更新方法看起来是这样的：
+
+    ```swift
+    - (void)update:(CFTimeInterval)currentTime
+    {
+        /* Called before each frame is rendered */
+        self.diffTime = currentTime - self.lastUpdatedTime;    
+        self.lastUpdatedTime = currentTime;
+    }
+    ```
+
+现在这是我们要添加最大游戏逻辑的地方——所有添加、删除、动画化和更新节点、精灵和动作都将在这个方法内部进行。我们还可以利用 `currentTime` 通过简单的浮点变量来维护一些计时器（通过 `diffTime` 更新它们，并根据我们的游戏设计或逻辑在需要时触发时间事件）。
+
+## 它是如何工作的...
+
+我们在屏幕上看到的所有运行内容都只是由时间间隔驱动的帧，这些帧是通过在作为游戏主场景的 `SKView` 上添加子 `SKScene` 来实现的。
+
+如以下图所示，存在一个帧循环，它描述了每个帧的游戏项目的执行周期：
+
+![它是如何工作的...](img/00023.jpeg)
+
+以下是对前面图中一些方法的解释：
+
++   在 `SKScene` 的更新方法中被调用，我们可以添加、删除、动画化和更新不同类型的节点和动作。
+
++   `SKScene` 根据一些生命周期调用（如 `didEvaluateActions`）评估当前帧正在运行的动作。
+
++   `SKScene` 有自己的物理模拟，因此如果向其中添加了一些物体，物理模拟也会被评估，例如碰撞检测、应用力等。
+
++   所提到的所有方法都贡献于最终渲染的 SKView，它被显示为用户看到的帧。因此，这些帧的常规运行使游戏看起来像一个环境。
+
+# 在精灵上应用动作
+
+精灵只是没有生命的静态图像。因此，动作为精灵添加了生命，使你的游戏变得生动。动作通过移动精灵和以不同的方式动画它们来帮助构建游戏玩法。动作是一个使场景看起来生动的对象。
+
+动作应用于节点和精灵，例如，我们想要移动一些作为精灵的对象，因此我们创建一个移动动作并在该精灵上运行它。SpriteKit 会自动将精灵的位置以动画的形式改变，直到动作完成。
+
+所有动作都是使用名为`SKAction`的类实现的，不同类型的动作是通过`SKAction`类提供的类方法实例化的，这些方法提供了各种动画功能。
+
+这里是 SpriteKit 中可用的最常见动作：
+
++   应用变换（平移、旋转和缩放）
+
++   改变可见性（淡入和淡出）
+
++   改变精灵的内容
+
++   改变精灵的颜色
+
++   移除精灵
+
++   调用一个块或选择器
+
++   重复和排序动作
+
+## 准备工作
+
+要在精灵上应用不同的动作并看到它们动画化，我们需要了解场景、精灵以及 SpriteKit 项目的整体生命周期。我们还需要了解一些应用于任何实体（如移动、旋转、缩放）的基本动作，还有许多其他特殊效果可以探索。
+
+## 如何做到这一点...
+
+有许多动作可以应用于节点和精灵，以下列出了一些：
+
+要理解这一点，我们将以宇宙飞船作为精灵来应用不同的动作。
+
+SpriteKit 框架提供了几个单独的动作。以下是一些解释：
+
++   **移动动作**：要移动一个精灵，调用以下所示类方法，指定精灵需要移动的位置和所需时间。然后，在精灵上调用`runAction`方法，使用创建的移动动作。
+
+    ```swift
+    SKAction* moveAction = [SKAction moveTo:CGPointMake(100,100) duration:1.0];
+    [self.spaceShipSprite runAction:moveAction];
+    ```
+
++   **旋转动作**：要旋转一个精灵，我们必须指定一个弧度角度，这将使精灵在指定的时间内旋转到或绕该角度旋转。因此，指定角度为度数，将其转换为弧度，然后将其输入到函数中，从而将该动作应用于精灵。
+
+    ```swift
+    CGFloat angleInDegree = 90.0;
+    CGFloat angleInRadian = angleInDegree * M_PI/180.0; 
+    SKAction* rotateAction = [SKAction rotateByAngle:angleInRadian duration:2.0];
+    [self.spaceShipSprite runAction:rotateAction];
+    ```
+
++   **缩放动作**：要缩放一个精灵，我们必须指定一个缩放因子，这将根据缩放因子在一段时间内增加或减小精灵的大小。
+
+    ```swift
+    SKAction* scaleAction = [SKAction scaleBy:2.0 duration:2.0];
+    [self.spaceShipSprite runAction:scaleAction];
+    ```
+
++   **淡入淡出动作**：要通过动画使精灵可见或不可见，有淡入和淡出精灵的方法。目前，以下代码展示了淡出，它接受一个参数或淡出的时间。
+
+    ```swift
+    SKAction* fadeOutAction = [SKAction fadeOutWithDuration:1.0];
+    [self.spaceShipSprite runAction:fadeOutAction];
+    ```
+
+在 SpriteKit 中，还有许多其他动作，用于提供延迟、更改内容、调用对象或选择器、调用块以及许多特殊效果。
+
+与单个动作类似，还有序列和重复动作，这些都属于 SpriteKit 提供的不同类别的动作。序列动作用于按照我们想要的顺序运行动作。如下面的代码所示，创建了两个动作——一个用于精灵淡出，另一个用于淡入。因此，这两个动作按照我们想要的顺序被输入到序列动作中，并运行我们要求的序列：
+
+```swift
+SKAction* fadeOutAction = [SKAction fadeOutWithDuration:1.0];
+SKAction* fadeInAction = [SKAction fadeInWithDuration:1.0];
+SKAction* sequenceAction = [SKAction sequence:@[fadeOutAction, fadeInAction]];
+[self.spaceShipSprite runAction:sequenceAction];
+```
+
+重复动作允许动作在固定的时间数内重复或无限重复。因此，使用前面的序列动作，我们做了这两件事。
+
++   按规律重复三次动画序列：
+
+    ```swift
+    SKAction* repeatThreeTimesAction = [SKAction repeatAction:sequenceAction count:3];
+    [self.spaceShipSprite runAction:repeatThreeTimesAction];
+    ```
+
++   无限重复动画序列：
+
+    ```swift
+    SKAction* repeatForeverAction = [SKAction repeatActionForever:sequenceAction];
+    [self.spaceShipSprite runAction:repeatForeverAction];
+    ```
+
+另一种动作类型是组动作。在游戏中，我们可能需要多次重复一系列动作，这意味着在任意时间间隔内以特定顺序运行动作。如前所述，创建了两个动作，一个用于精灵淡出，另一个用于淡入。因此，这两个动作按照我们想要的顺序被输入到序列动作中，并运行我们要求的序列。
+
+当我们需要在同一时间运行多个动作时，使用组动作。因此，我们可以创建一个通过淡出移动精灵的组函数：
+
+```swift
+SKAction* moveAction = [SKAction moveTo:CGPointMake(100,100) duration:1.0];
+SKAction* fadeOutAction = [SKAction fadeOutWithDuration:1.0];
+SKAction *groupAction = [SKAction group:@[moveAction, fadeOutAction]];
+[self.spaceShipSprite runAction:groupAction];
+```
+
+## 它是如何工作的...
+
+我们之前讨论的所有动作都将按照相同的流程工作。以下是所有动作的基本结构，我们将其应用于精灵上：
+
++   决定我们想要应用的动作，它们的执行顺序，以及是否需要重复某些动作。
+
++   对于每个动作，无论其类型如何，都要指定其相应的参数和持续时间。
+
++   动作最终确定后，只需在要动画的精灵上调用`runAction`并使用构建的动作即可。
+
+# 添加无限滚动
+
+现在我们已经准备好了我们的飞船。是时候在游戏中添加更多内容了。因此，我们的下一个目标是添加无限滚动，这样我们就可以让我们的飞船在太空中无限移动。在这个菜谱中，我们将学习如何将无限滚动添加到游戏中。
+
+## 准备工作
+
+对于无限滚动背景，你需要了解之前展示的 SpriteKit 的结构。你应该了解渲染循环，在特定帧中更新方法是如何工作的，以及`SKScene`如何评估动作和物理模拟，从而在`SKView`中渲染所有内容。现在使用这个循环，你实现天空无限滚动，给人一种飞船飞行的感觉。
+
+## 如何做...
+
+现在是采取行动的时候了；按照以下步骤添加无限滚动背景到你的游戏中。
+
+1.  导入`Resources`文件夹中提供的`SpaceBackground.png`文件。
+
+1.  在`FSMyScene`中添加一个初始化无限背景的功能。
+
+1.  为了启用滚动，我们必须连续添加两个相同的背景精灵节点。
+
+1.  在函数中，运行一个`for`循环，为两个背景节点指定位置、一个名称（标签），然后添加到`SKMyScene`。
+
+1.  因此，`initalizingScrollingBackground`函数看起来是这样的：
+
+    ```swift
+    - (void)initalizingScrollingBackground
+    {
+        for (int index = 0; index < 2; index++)
+        {
+            SKSpriteNode *spaceBGNode =
+            [SKSpriteNode spriteNodeWithImageNamed:@"SpaceBackground.png"];
+            {
+                spaceBGNode.position =
+                CGPointMake(index * spaceBGNode.size.width, 0);
+                spaceBGNode.anchorPoint = CGPointZero;
+                spaceBGNode.name = @"SpaceBG";
+
+                [self addChild:spaceBGNode];
+            }
+        }
+    }
+    ```
+
+1.  将此方法添加到`init`方法中，并将添加飞船的代码移动到另一个名为`addSpaceship`的不同方法中。
+
+    ### 注意
+
+    在游戏编程中，对象的层是通过它们添加的顺序来制作的。所以对于前面的例子，飞船应该在`SpaceBackground`之后添加，以给人一种飞船在背景之上的外观。
+
+屏幕上显示的视图顺序可以通过改变它们的*z*坐标来改变；具有最高*z*坐标的视图将始终位于顶部。这意味着我们可以明确地定义我们希望保持在顶层的哪一层，以及我们希望保持在底层的哪一层，这将在以下步骤中解释：
+
+1.  初始背景已经添加，但它没有滚动。这可以通过在*Anatomy of game projects*配方中讨论的更新方法来实现。
+
+1.  为了做到这一点，需要一些数学来实现这个功能。构建一些内联函数和常量，用于无限移动背景。这是所需的代码：
+
+    ```swift
+    static const float SPACE_BG_VELOCITY = 100.0;
+    static inline CGPoint CGPointAdd(const CGPoint a, const CGPoint b)
+    {
+        return CGPointMake(a.x + b.x, a.y + b.y);
+    }
+    static inline CGPoint CGPointMultiplyScalar(const CGPoint a, const CGFloat b)
+    {
+        return CGPointMake(a.x * b, a.y * b);
+    }
+    ```
+
+1.  只需将这些代码行添加到`FSMyScene`的实现之前。
+
+1.  现在真正的做法是在更新方法中，迭代在`FSMyScene`中添加的所有节点，通过初始化函数中分配的名称识别`SpaceBackground`节点，并调整其位置以启用无限滚动。所有这些都在一个名为`moveSpaceBackground`的函数中完成。
+
+    ```swift
+    - (void)moveSpaceBackground
+    {
+        [self enumerateChildNodesWithName:@"SpaceBG"
+                               usingBlock: ^(SKNode *node, BOOL *stop)
+         {
+             SKSpriteNode * spaceBGNode = (SKSpriteNode *) node;
+
+             CGPoint bgVelocity = CGPointMake(-SPACE_BG_VELOCITY, 0);
+
+             CGPoint amtToMove = CGPointMultiplyScalar(bgVelocity,self.diffTime);
+
+             spaceBGNode.position = CGPointAdd(spaceBGNode.position, amtToMove);
+
+             //Checks if Background node is completely scrolled of the screen, if yes then put it at the end of the other node
+
+             if (spaceBGNode.position.x <= -spaceBGNode.size.width)
+             {
+                 spaceBGNode.position =
+                 CGPointMake(spaceBGNode.position.x + spaceBGNode.size.width*2,
+                             spaceBGNode.position.y);
+             }
+         }];
+    }
+    ```
+
+1.  最后，在游戏场景的更新方法中每次调用此方法。之后，你应该看到飞船在天空中飞行，有一些漂亮的白色云朵。
+
+## 它是如何工作的...
+
+无限滚动的实现分为三个部分。为了完成我们游戏的无限滚动，我们需要遵循以下步骤：
+
++   初始化 SpaceBackground：连续添加两个空间背景，以便它们同时移动，给人一种无限滚动背景的感觉。
+
++   SpaceBackground 移动代码：在这里，使用 SKScene 的块方法来迭代场景中的所有节点。
+
+    ```swift
+    [self enumerateChildNodesWithName:@"SpaceBG"
+                               usingBlock: ^(SKNode *node, BOOL *stop)
+         {
+
+         }];
+    ```
+
+在这个迭代中，通过名称识别 SpaceBgNode，以便更新其位置。
+
+```swift
+SKSpriteNode * spaceBGNode = (SKSpriteNode *) node;
+```
+
+使用`CGPointMultiplyScalar`内联函数计算要移动的距离，该函数使用常量值`SPACE_BG_VELOCITY`和从每一帧的更新方法中获得的时间的差值。
+
+```swift
+CGPoint bgVelocity = CGPointMake(-SPACE_BG_VELOCITY, 0);
+CGPoint amtToMove = CGPointMultiplyScalar(bgVelocity,self.diffTime);
+```
+
+之后，计算出的距离被添加到 SpaceBGNode 的当前位置。
+
+```swift
+spaceBGNode.position = CGPointAdd(spaceBGNode.position, amtToMove);
+```
+
+启用滚动的最后但最重要的步骤是将`SpaceBGNode`的位置设置为屏幕的右侧，每次它到达屏幕的左侧边缘时。
+
+```swift
+if (spaceBGNode.position.x <= -spaceBGNode.size.width)
+{
+  	spaceBGNode.position =
+             CGPointMake(spaceBGNode.position.x + spaceBGNode.size.width*2,
+                         spaceBGNode.position.y);
+  }
+```
+
+下一个任务是更新每一帧以使其无限地在场景中移动。现在为了使其规律地移动，每个帧在`FSMyScene`的更新方法中调用`moveSpaceBackground`方法。
+
+```swift
+- (void)update:(CFTimeInterval)currentTime
+{
+    /* Called before each frame is rendered */
+    self.diffTime = currentTime - self.lastUpdatedTime;
+
+    self.lastUpdatedTime = currentTime;
+
+    [self moveSpaceBackground];
+}
+```
+
+更新循环将在每一帧执行。因此，为了在每一步移动我们的背景，我们在更新循环中调用了`moveSpaceBackground`方法。使用这种无限滚动的技术，我们还可以实现视差游戏，这在当今非常常见。在视差滚动游戏中，背景和玩家将在不同的层中，并且它们将以不同的速度同时移动。这将使用户感觉到玩家相对于背景的实时移动。
+
+# 移动角色
+
+最有趣的部分是让某个角色变得生动，这是我们将在本部分做的。我们将检测屏幕上的触摸，然后对一些节点应用一些酷炫的动作，即移动宇宙飞船上下飞行。
+
+## 准备工作
+
+要使角色移动，你应该知道可以应用于节点（`SKNode`）的基本动作（`SKAction`）。
+
+## 如何做到这一点...
+
+现在，我们已经让宇宙飞船在无限空间中移动，是时候给游戏添加更多乐趣了。我们将现在给我们的宇宙飞船添加上下运动。按照以下步骤给宇宙飞船添加上下运动：
+
+1.  在`FSMyScene`中声明一些动作属性，即上升和下降动作。
+
+    ```swift
+    @property (nonatomic, strong) SKAction*         moveUpAction;
+    @property (nonatomic, strong) SKAction*         moveDownAction;
+    ```
+
+1.  在`FSMyScene`的`touchLocation`实现上方定义宇宙飞船在屏幕触摸时移动的距离和所需时间。
+
+    ```swift
+    static const float SPACE_BG_ONE_TIME_MOVE_DISTANCE = 30.0;
+    static const float SPACE_BG_ONE_TIME_MOVE_TIME = 0.2;
+    ```
+
+1.  在启动器项目中的`addSpaceShip`方法中，将上升和下降动作分配给相应的属性。
+
+    ```swift
+        self.moveUpAction = [SKAction moveByX:0
+                            y:SPACE_BG_ONE_TIME_MOVE_DISTANCE
+                            duration:SPACE_BG_ONE_TIME_MOVE_TIME];
+        self.moveDownAction = [SKAction moveByX:0
+                              y:-SPACE_BG_ONE_TIME_MOVE_DISTANCE
+                              duration:SPACE_BG_ONE_TIME_MOVE_TIME];
+    ```
+
+1.  现在实现`UIResponder`的一个代理方法，该方法检测触摸和 UI 事件。该方法输入`NSSet`形式的触摸，从中取出任何触摸并将其转换为相对于发生触摸事件的场景的位置。
+
+    ```swift
+    - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+    {
+        UITouch *touch = [touches anyObject];
+
+        CGPoint touchLocation = [touch locationInNode:self.scene];
+    }
+    ```
+
+现在，使用这个`touchLocation`和`SpaceShip`位置，代码决定何时对宇宙飞船应用上升或下降动作。它还检查屏幕边界，以确保宇宙飞船不会移动到屏幕外。
+
+这就是代码的样子：
+
+```swift
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    UITouch *touch = [touches anyObject];
+
+    CGPoint touchLocation = [touch locationInNode:self.scene];
+
+    CGPoint spaceShipPosition = self.spaceShipSprite.position;
+    CGFloat minYLimitToMove = SPACE_BG_ONE_TIME_MOVE_DISTANCE;
+    CGFloat maxYLimitToMove =
+    self.frame.size.height - SPACE_BG_ONE_TIME_MOVE_DISTANCE;
+    if(touchLocation.y > spaceShipPosition.y)
+    {
+        if (spaceShipPosition.y < maxYLimitToMove)
+        {
+            [self.spaceShipSprite runAction:self.moveUpAction];
+        }
+    }
+    else
+    {
+        if (spaceShipPosition.y > minYLimitToMove)
+        {
+            [self.spaceShipSprite runAction:self.moveDownAction];
+        }
+    }
+}
+```
+
+## 它是如何工作的...
+
+当用户触摸屏幕时，会调用`UIResponder`的一个代理方法。
+
+```swift
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+}
+```
+
+在这个方法中，触摸的位置被转换为`SKScene`的局部坐标。根据检测到的位置，它与宇宙飞船的位置进行比较，并对其应用上升或下降动作。
+
+最后，作为本章的成果，你拥有一个小型的基本游戏，其环境是一片蓝天白云，背景以无限滚动的方式移动，一艘宇宙飞船在直线运动中上下飞行。
+
+这就是游戏现在的样子：
+
+![它是如何工作的...](img/00024.jpeg)
+
+## 还有更多...
+
+可以有很多其他的动画来动画化飞船。所有之前讨论的动画动作都可以用于飞船。这些动作的整合结果可以在游戏中的几个地方使用。在下一章中，我们将更详细地学习动画和效果。
+
+## 参见
+
+本章已经向您介绍了可以在精灵和节点上进行的动画制作。您还可以访问苹果的开发者文档以获取更多详细信息。您在本章中学到的知识已经足够让您开始对精灵进行动画和动作的制作。

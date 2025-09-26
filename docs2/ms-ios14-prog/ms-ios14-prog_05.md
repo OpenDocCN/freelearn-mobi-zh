@@ -1,0 +1,806 @@
+# *第五章*：通过动画让用户沉浸其中
+
+你的应用现在看起来真的很好，而且我们已经在这几章中覆盖了很多内容，但 UIKit 还有很多令人惊叹的功能我们尚未探索——其中之一就是动画。
+
+在本章中，你将学习一些使用 UIKit 的高级技术，UIKit 是 Apple 直接集成到 UIKit 中的动画框架。我们将从了解小事物如何产生巨大差异的基础知识开始，然后继续学习一些更高级的技术，包括`UIViewPropertyAnimator`以及它如何比你在前几章中实现的动画提供更多控制。你还将了解 UIKit Dynamics。UIKit Dynamics 可以通过应用物理来使对象对其周围环境做出反应。
+
+最后，你将学习如何在从一个视图控制器移动到下一个视图控制器时实现自定义过渡。
+
+本章将涵盖以下主题：
+
++   使用`UIView.animate`和`UIViewPropertyAnimator`
+
++   使用 UIKit Dynamics 中的弹簧实现生动的动画
+
++   自定义视图控制器过渡
+
+# 技术要求
+
+对于本章，你需要从 Apple 的 AppStore 下载 Xcode 版本 11.4 或更高版本。
+
+你还需要运行最新的 macOS（Catalina 或更高版本）。只需在 App Store 中搜索`Xcode`，选择并下载最新版本。启动 Xcode，并遵循系统可能提示的任何其他安装说明。一旦 Xcode 完全启动，你就可以开始了。
+
+从以下 GitHub 链接下载示例代码：
+
+[`github.com/PacktPublishing/Mastering-iOS-14-Programming-4th-Edition`](https://github.com/PacktPublishing/Mastering-iOS-14-Programming-4th-Edition)
+
+# 使用 UIView.animate 和 UIViewPropertyAnimator
+
+正如我在简介中所说，我们的应用已经取得了很大的进步，但往往，正是我们可以做的那些小事会产生巨大的差异；你只需再次查看*第二章*，*使用深色模式*，就能体会到这一点。
+
+在本节中，我们将首先通过使用标准实践添加一些基本动画到我们的应用中，以实现简单而有效的结果。
+
+在完成这些后，我们将探讨如何通过重构和改进代码库的维护性来进一步扩展这一点。因此，让我们开始添加我们的第一个动画到我们的应用中。
+
+## 创建我们的第一个动画
+
+在它们最基本的形式中，动画简单易用。以下是一个典型动画的示例，可以执行：
+
+```swift
+UIView.animate(withDuration: 0.8) {
+    self.cell.familyNameLabel.alpha = 1.0
+}
+```
+
+那么，这究竟意味着什么呢？嗯，`UIView.animate`函数（它本身也是一个闭包）正在将我们的 cell 属性的不透明度设置为`1.0`。如果我们假设这个属性的不透明度被设置为`0.0`，那么在`0.8`秒的动画过程中，`animate`函数将不透明度从`0.0`渐变到`1.0`——从而给我们一个简单但极其有效的淡入效果！
+
+让我们将其付诸实践，继续我们上一章的项目。前往我们的`DetailsViewController.swift`文件。
+
+首先，让我们将联系图片的不透明度设置为`0.0`。我们可以通过扩展我们的 outlet 属性来包括`didSet`来实现这一点。在视图控制器中做出以下突出显示的更改：
+
+```swift
+@IBOutlet weak var contactImageView: UIImageView! {
+    didSet {
+        contactImageView.alpha = 0
+    }
+}
+```
+
+在这里，我们只是添加了一个 setter 并设置了一个额外的属性在我们的`UIImageView`上——在这种情况下，我们将不透明度设置为`0`。
+
+现在，回到我们视图控制器的主体。将以下内容添加到你的`viewWillAppear()`函数中：
+
+```swift
+UIView.animate(withDuration: 0.8) {
+    self.contactImageView.alpha = 1
+}
+```
+
+正如我们在前面的例子中看到的，我们只是设置动画的持续时间，然后在闭包中设置我们属性的不透明度值。
+
+继续在模拟器中运行你的代码；你会看到当`DetailsViewController`现在加载时，你会得到一个很棒的淡入动画。只需稍微调整一个属性和几行代码，你的应用就取得了巨大的进步！
+
+## 与多个动画一起工作
+
+现在我们再进一步，给`tapped`时的`UICollectionViewCell`添加一个弹跳效果。
+
+前往我们的视图控制器，找到`didSelectItemAt:`函数。记得在*第三章*，*使用列表和表格*中，我们确定了如何获取当前选中 cell 的实例，如果我们想对它做些什么？好吧，这就是我们的机会。
+
+将以下代码添加到`didSelectItemAt:`cell 的开始部分：
+
+```swift
+guard let cell = collectionView.cellForItem(at: indexPath) as? ContactCell else {
+    return
+}
+```
+
+与`cellForItem:`不同，在那里我们使用`re-us`标识符来回收使用我们的 cell，这里我们只关心选中的实例——这是我们想要使用并对其做些事情的 cell。
+
+接下来，我们将添加一大块可能让人困惑的“初始”代码，所以我们会一步一步地分解它。在前面代码的下方，添加以下内容：
+
+```swift
+UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseOut], animations: {
+    cell.conatctImageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+})
+```
+
+这里，我们扩展了之前看到的`.animate`函数，但这次你看到我们有一个延迟参数，我们将其设置为`0`，因为我们希望动画立即开始（但我猜如果我们想的话，我们也可以延迟它）。
+
+接下来，我们现在有一个`options`参数，我们可以传递一个包含通过 UIKit 可用的动画选项的数组。在这里，我们将传递`curveEaseOut`（别担心，我们将在本章后面介绍不同类型的动画选项）。
+
+最后，我们通过将 `CGAffineTransform` 设置为特定的 *x* 和 *y* 缩放比例来设置我们的图像视图的变换。通过在图像上设置变换，我们实际上是根据新的 *x* 和 *y* 值来缩放原始尺寸。
+
+好吧，启动应用 – 你看到了什么？希望没有太多东西 – 你可能会想知道为什么没有。那是因为我们仍然有 `performSegue` 调用在那里，它在动画完成之前被调用（并执行）。暂时注释掉它，然后再次尝试。如果有任何运气，当你点击单元格时，你应该看到联系人图像缩小（或者给出一个按下外观）。
+
+因此，在我们担心恢复 `performSegue` 调用之前，让我们首先确保动画看起来正确。我们新的动画块中还有一个技巧。在闭包内部，我们可以添加一个完成处理程序，该处理程序将在动画完成后立即被调用（我知道你在想什么，但让我们先完成动画）。
+
+使用以下突出显示的行更新代码：
+
+```swift
+UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseOut], animations: {
+    cell.conatctImageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+}, completion: { finished in
+    UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseOut], animations: {
+        cell.conatctImageView.transform = CGAffineTransform.identity
+    })
+})
+```
+
+因此，我们在这里所做的只是通过添加 `completion: { finished in` 并加入另一个动画函数来扩展我们初始动画函数的完成处理程序。
+
+在这个闭包内部，我们通过将其设置为 `CGAffineTransform.identity`（一种快速将任何变换恢复到原始状态的好方法）来重置我们的图像视图的变换。
+
+现在在模拟器中运行应用，一切正常；你应该会看到一个非常好的弹跳效果。现在，让我们再次扩展我们的第二个动画函数，添加一个完成处理程序，以便再次加入 `performSegue`：
+
+```swift
+UIView.animate(withDuration: 0.1, delay:       0, options: [.curveEaseOut], animations: {
+    cell.conatctImageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+}, completion: { finished in
+    UIView.animate(withDuration: 0.1, delay: 0, options: [.curveEaseIn], animations: {
+        cell.conatctImageView.transform = CGAffineTransform.identity
+    }, completion: { [weak self] finished in
+        self?.performSegue(withIdentifier: "detailViewSegue", sender:self)
+    })
+})
+```
+
+再次运行你的应用，以全貌欣赏你美丽的动画，紧接着立即过渡到 `DetailViewController` – 在那里，你会看到一个微妙而有效的淡入动画，展示你的联系人图像。做得好，你做得非常出色！
+
+在本节中，我们学习了如何处理 UIKit 中的基本动画 – 我们有所进步，探讨了如何将基本动画扩展以执行更复杂的任务。
+
+在下一节中，我们将探讨如何使用 `UIViewPropertyAnimator` 来简化这个过程。
+
+## 使用 UIViewPropertyAnimator 进行重构
+
+因此，在掌握了一些基本的动画之后，我们现在可以深入探讨 iOS 提供了哪些功能。虽然我们之前的代码功能强大，代码行数也不多，但它却相当丑陋，包含嵌套的完成处理程序 – 这样的代码维护起来可能真的会变成一场噩梦，尤其是如果你需要将动画扩展得更加复杂的话。
+
+倾向于使用 `UIViewPropertyAnimator` 而不是你刚刚看到的实现的一个原因是可读性。让我们看看当重构为使用 `UIViewPropertyAnimator` 时，同样的弹跳动画看起来是什么样子：
+
+```swift
+let downAnimator = UIViewPropertyAnimator(duration: 0.1, curve: .easeOut) {
+    cell.conatctImageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+}
+
+let upAnimator = UIViewPropertyAnimator(duration: 0.1, curve: .easeIn) {
+    cell.conatctImageView.transform = CGAffineTransform.identity
+}
+
+downAnimator.addCompletion { _ in
+    upAnimator.startAnimation()
+}
+
+upAnimator.addCompletion { [weak self] _ in
+    self?.performSegue(withIdentifier: "detailViewSegue", sender: self)
+}
+
+downAnimator.startAnimation()
+```
+
+现在，乍一看，您可能会觉得这里的代码行数比之前多得多，您并没有错，但这确实使阅读和维护变得更加容易。
+
+使用 `UIViewPropertyAnimator`，它确实如其名称所描述的那样：它允许您将动画分配给一个属性，然后您可以在函数中独立执行该属性。
+
+之前的代码与我们对原始实现进行分解的简化版本没有区别。
+
+将此添加到您的代码中并运行您的应用程序。您会发现与之前的版本没有任何区别。
+
+示例代码使用了一个接受计时函数的 `UIViewPropertyAnimator` 版本，以使最终的弹跳动画更加生动。如果您查看示例代码，传递给 `UIViewPropertyAnimator` 初始化器的第一个参数是动画的持续时间（以秒为单位）。
+
+第二个参数控制计时函数。计时函数描述了动画应该如何随时间进行。例如，`easeIn` 选项描述了动画如何以缓慢的速度开始，并随着时间的推移而加速。
+
+下面的图表描述了一些最常用的计时函数：
+
+![Figure 5.1 – Curve timing function scales]
+
+![Figure 5.01_B14717.jpg]
+
+![Figure 5.1 – Curve timing function scales]
+
+在这些图表中，*水平* 轴代表动画的进度。对于每个图表，动画时间线从左到右在 *x* 轴上描述。动画的进度从下到上在 *y* 轴上可视化。在左下角，动画尚未开始。在图表的右侧，动画已经完全完成。垂直轴代表时间。
+
+传递给 `UIViewPropertyAnimator` 初始化器的最后一个参数是您希望执行的动画的可选参数。这与 `UIView.animate` 方式执行事情非常相似；最显著的区别是您可以在创建动画器之后添加更多动画，这意味着动画的参数可以是 `nil`，您可以在稍后添加您希望执行的动画。这非常强大，因为您甚至可以在动画运行时向 `UIViewPropertyAnimator` 添加新的动画！
+
+在您之前看到的示例代码中的第二个部分添加了完成闭包到动画器中。这两个完成闭包都接收一个单一参数。接收到的参数描述了在动画的哪个点调用了完成闭包。这个属性通常具有 `.end` 的值，这表示动画在结束位置结束。
+
+然而，这并不总是正确的，因为如果您愿意，您可以在动画进行到一半时完成动画。您还可以反转动画，这意味着完成位置将是 `.start`。
+
+一旦添加了完成闭包，并且属性动画器完全配置好，最后一步是通过在动画器对象上调用`startAnimation()`来开始动画。一旦调用`startAnimation()`方法，动画就会立即开始执行。如果需要，你可以通过调用`startAnimation(afterDelay:)`来使动画延迟开始。
+
+现在你已经更好地理解了`UIViewPropertyAnimator`的工作原理，为什么不尝试更改我们在`DetailViewController`中添加的淡入淡出效果呢？对于这样简单的一段代码，`UIViewPropertyAnimator`可能有点过度，但仅仅为了乐趣可能也不错。
+
+在示例项目中，我会包括这两种场景，并在你需要时注释掉另一个以供参考。
+
+在本节中，我们迈出了巨大的一步，进入了 iOS 开发中的动画世界，学习了如何简单地添加动画以及如何使用`UIViewPropertyAnimator`构建更复杂的动画，以提升代码的可维护性。
+
+在下一节中，我们将探讨如何控制动画。
+
+# 理解和控制动画进度
+
+`UIViewPropertyAnimator`的最好特性之一是你可以用它来创建可以被中断、反转或与之交互的动画。iOS 中你看到的许多动画都是交互式动画——例如，在页面上滑动以返回上一页就是一个交互式过渡。
+
+在主屏幕上滑动页面、打开控制中心或下拉通知中心都是通过与之交互来操作的动画的例子。
+
+尽管交互式动画的概念可能听起来很复杂，但`UIViewPropertyAnimator`使得实现它们变得相当简单。
+
+例如，你将看到如何在我们的应用中实现联系人详情页上的抽屉。首先，你将准备视图，以便抽屉在应用中部分可见。一旦视图全部设置好，你将编写代码以执行抽屉的交互式显示和隐藏动画。
+
+让我们从回到`Main.storyboard`并执行以下操作开始：
+
+1.  通过对象库将一个 UIView 添加到我们的画布上（确保它位于父 UIStackView 的顶部，而不是内部）。
+
+1.  设置自动布局约束以确保抽屉视图的宽度等于主视图的宽度（试行和尾行都设置为`0`）。
+
+1.  将视图的高度设置为`350pt`。
+
+1.  然后，将底部约束设置为`-305`。
+
+这应该会让视图刚好可见，足以覆盖屏幕底部的安全区域。接下来，我们需要在我们的新视图中添加一个按钮：
+
+1.  通过对象库添加按钮。
+
+1.  将顶部约束设置为从新视图（其父视图）顶部`8pt`。
+
+1.  将首行和尾行间距设置为大约`16pts`。
+
+1.  将按钮的标签设置为`Toggle`。
+
+1.  同时，将背景设置为**系统次要背景颜色**。
+
+如果一切顺利，你应该会有类似以下的内容：
+
+![图 5.2 – 带有图像视图的详细视图]
+
+![图 5.02 – 图 5.02_B14717.jpg]
+
+![图 5.2 – 带有图像视图的详细视图]
+
+现在我们已经整理好了布局，让我们连接所需的代码。我们的抽屉功能应实现以下功能：
+
+1.  通过点击**切换**按钮来切换抽屉。
+
+1.  在抽屉上滑动时，交互式地切换抽屉。
+
+1.  允许用户点击**切换**按钮，然后滑动抽屉来操作或反转动画。
+
+这种行为并不简单；没有 `UIViewPropertyAnimator`，你将不得不编写大量的复杂代码，而且你离期望的结果还相当远。让我们看看 `UIViewPropertyAnimator` 是如何使实现这种效果变得可管理的。
+
+为了准备实现抽屉，请将以下属性添加到 `DetailsViewController` 中：
+
+```swift
+@IBOutlet var drawer: UIView!
+var isDrawerOpen = false
+var drawerPanStart: CGFloat = 0
+var animator: UIViewPropertyAnimator?
+```
+
+此外，为 `DetailsViewController` 添加一个扩展，其中包含一个用于点击操作的 `@IBAction`。`@IBAction` 与 `@IBOutlet` 类似，但它用于在响应特定用户操作时调用特定方法。使用扩展，可以很好地组织动画代码：
+
+```swift
+extension DetailsViewController {
+    @IBAction func toggleDrawerTapped() {
+    }
+}
+```
+
+现在，让我们连接我们的输出：
+
+1.  将我们的 UIView 连接到我们刚刚添加的 `IBOutlet`。
+
+1.  将你的 UIButton 连接到我们在扩展中刚刚创建的 `IBAction`。
+
+当你从操作拖动到按钮时，会出现一个菜单，你可以从中选择要触发 `@IBAction` 的操作。要响应按钮点击，请从该菜单中选择**触摸内部**。
+
+最后，将以下行添加到 `viewDidLoad()` 的末尾：
+
+```swift
+let panRecognizer = UIPanGestureRecognizer(target: self, action:#selector(didPanOnDrawer(recognizer:)))
+drawer.addGestureRecognizer(panRecognizer)
+```
+
+此外，将以下方法添加到之前创建的扩展中，用于 `@IBAction`。这是当用户在抽屉上执行平移手势时调用的方法：
+
+```swift
+@objc func didPanOnDrawer(recognizer: UIPanGestureRecognizer) {
+}
+```
+
+现在所有占位符都已实现，让我们创建一个简单的打开抽屉动画的第一版本。
+
+当用户点击切换按钮时，抽屉应根据抽屉的当前状态打开或关闭。以下代码片段实现了这样的动画：
+
+```swift
+animator = UIViewPropertyAnimator(duration: 1, curve: .easeOut) { [unowned self] in
+    if self.isDrawerOpen {
+        self.drawer.transform = CGAffineTransform.identity
+    } else {
+        self.drawer.transform = CGAffineTransform(translationX: 0, y: -305)
+    }
+}
+
+animator?.addCompletion { [unowned self] _ in 
+    self.animator = nil
+    self.isDrawerOpen = !(self.drawer.transform == CGAffineTransform.identity)
+}
+
+animator?.startAnimation()
+```
+
+传递给属性动画器的动画使用 `isDrawerOpen` 的值来确定动画应该打开还是关闭抽屉。当抽屉当前打开时，它应该关闭，反之亦然。
+
+一旦动画完成，`isDrawerOpen` 变量就会更新以反映抽屉的新状态。为了确定当前状态，应用程序读取抽屉的当前转换。如果抽屉没有转换，其转换将等于 `CGAffineTransform.identity`，则认为抽屉是关闭的。否则，认为抽屉是打开的。
+
+现在就构建并运行你的应用程序，看看它是如何工作的。你会看到它工作得有多好。
+
+## 与平移手势识别器的交互
+
+为了允许用户通过在屏幕上拖动手指来中断或开始动画，代码必须检查是否存在正在执行动画的现有属性动画器。
+
+如果不存在动画器或者当前动画器没有运行任何动画，应该创建一个新的动画器实例。在所有其他情况下，都可以利用现有的动画器。
+
+让我们重构 `toggleDrawerTapped()` 中的动画器创建代码，以便尽可能重用动画器，并在需要时创建新的动画器。
+
+将以下新函数 `setUpAnimation()` 添加到我们的扩展中：
+
+```swift
+private func setUpAnimation() {
+
+    guard animator == nil || animator?.isRunning == false else { return }
+
+        animator = UIViewPropertyAnimator(duration: 1, curve: .easeOut) { [unowned self] in
+        if self.isDrawerOpen {
+            self.drawer.transform = CGAffineTransform.identity
+        } else {
+            self.drawer.transform = CGAffineTransform(translationX: 0, y: -305)
+        }
+    }
+
+    animator?.addCompletion { [unowned self] _ in 
+        self.animator = nil
+        self.isDrawerOpen = !(self.drawer.transform == CGAffineTransform.identity)
+    }
+}
+```
+
+你会注意到我们刚刚从 `IBAction` 中提取了大部分代码——现在我们需要更新 `IBAction` 以调用这个新函数：
+
+```swift
+@IBAction func toggleDrawerTapped() {
+    setUpAnimation()
+    animator?.startAnimation()
+}
+```
+
+现在，为 `didPanOnDrawer(recognizer: UIPanGestureRecognizer)` 添加以下实现：
+
+```swift
+switch recognizer.state {
+case .began:
+    setUpAnimation()
+    animator?.pauseAnimation()
+    drawerPanStart = animator?.fractionComplete ?? 0
+case .changed:
+    if self.isDrawerOpen {
+        animator?.fractionComplete = (recognizer.translation(in: drawer).y / 305) + drawerPanStart
+    } else {
+        animator?.fractionComplete = (recognizer.translation(in: drawer).y / -305) + drawerPanStart
+    }
+default:
+    drawerPanStart = 0
+    let timing = UICubicTimingParameters(animationCurve: .easeOut)
+    animator?.continueAnimation(withTimingParameters: timing, durationFactor: 0)
+
+    let isSwipingDown = recognizer.velocity(in: drawer).y > 0
+    if isSwipingDown == !isDrawerOpen {
+        animator?.isReversed = true
+    }
+}
+```
+
+这个方法会在滑动手势识别器发生任何变化时被调用。当滑动手势第一次开始时，动画被配置，然后在对动画器对象调用 `pauseAnimation()`。
+
+这允许我们根据用户的滑动行为来改变动画进度。因为用户可能在动画进行中开始滑动——例如，在先点击切换按钮之后——当前 `fractionComplete` 的值将被存储在 `drawerPanStart` 变量中。
+
+`fractionComplete` 的值是一个介于 `0` 和 `1` 之间的值，它与你的动画运行时间解耦。所以，想象一下你正在使用一个缓动进入和缓动退出时间参数来动画一个从 *x* 值为 `0` 到 *x* 值为 `100` 的正方形。*x* 值为 `10` 并不是动画完成所需时间的 `10%`。
+
+然而，`fractionComplete` 将是 `0.1`，这对应于动画完成 `10%`。这是因为 `UIViewPropertyAnimator` 在暂停动画后会将你的动画时间尺度转换为线性。
+
+通常，这是交互式动画的最佳行为。然而，你可以通过将你的动画器的 `scrubsLinearly` 属性设置为 `false` 来改变这种行为。如果你这样做，`fractionComplete` 将考虑你应用的所有时间参数。
+
+你可以尝试玩一下这个，看看抽屉动画的感觉如何。一旦初始动画配置并暂停，用户可以移动手指。
+
+当这种情况发生时，通过将用户手指移动的距离除以总距离来计算并设置在动画器上的 `fractionComplete` 属性。然后，将中断前的动画进度添加到这个新值中。
+
+最后，如果手势结束、被取消，或者发生其他任何情况，起始位置将被重置。同时，配置了一个用于剩余动画的时间参数，并将动画设置为继续进行。跳过 `durationFactor` 值为 `0`，动画师知道在考虑其新的时间函数的同时，使用剩余的任何时间进行动画。
+
+如果用户在动画中途点击切换按钮关闭抽屉，然后向上滑动，动画应该向上完成。最后几行处理了这个逻辑。
+
+创建完美的动画没有正确或错误的方法。尝试调整您和您的应用感觉合适的各种值。在本节中，我们通过查看如何通过事件动作（如 UIButton 切换）或用户手势交互来控制动画，将我们关于动画所学的所有内容进一步深化。
+
+在下一节中，我们将通过查看如何为我们的应用添加一些弹簧和弹跳来为我们的动画增添一些真正的活力！
+
+# 为动画添加活力
+
+许多 iOS 动画看起来有弹跳感，感觉自然。例如，当物体在现实世界中开始移动时，它很少是平滑的。通常，某物移动是因为其他物体对其施加了初始力，使其具有某种动量。弹簧动画帮助您将这种现实世界的动量应用到动画中。
+
+弹簧动画通常配置了初始速度。这个速度是物体开始移动时应该具有的动量。所有弹簧动画都需要设置阻尼。
+
+此属性的值指定了一个对象可以超出其目标值多少。较小的阻尼值会使动画感觉更有弹跳性，因为它会在其结束值周围更剧烈地浮动。
+
+探索弹簧动画的最简单方法是对您为抽屉创建的动画进行轻微重构。
+
+当用户点击`setUpAnimation()`时，不要使用`easeOut`动画：
+
+```swift
+guard animator == nil || animator?.isRunning == false else {
+    return
+}
+
+let spring: UISpringTimingParameters
+if self.isDrawerOpen {
+    spring = UISpringTimingParameters(dampingRatio: 0.8, initialVelocity: CGVector(dx: 0, dy: 10))
+} else {
+    spring = UISpringTimingParameters(dampingRatio: 0.8, initialVelocity: CGVector(dx: 0, dy: -10))
+}
+
+animator = UIViewPropertyAnimator(duration: 1, timingParameters: spring)
+
+animator?.addAnimations { [unowned self] in
+    if self.isDrawerOpen {
+        self.drawer.transform = CGAffineTransform.identity
+    } else {
+        self.drawer.transform = CGAffineTransform(translationX: 0, y: -305)
+    }
+}
+animator?.addCompletion { [unowned self] _ in self.animator = nil
+    self.isDrawerOpen = !(self.drawer.transform == CGAffineTransform.identity)
+}
+```
+
+当您实现弹簧动画时，您使用`UIViewPropertyAnimator`的特殊初始化器。由于您不能将动画传递给此初始化器，您必须通过调用`addAnimations(_:)`来添加它们。添加弹簧动画不需要大量的代码更改，但尝试运行应用并点击切换按钮。抽屉现在感觉更真实，因为其动画曲线不再像之前那样静态。
+
+尝试调整弹簧阻尼和速度的值。如果您使用一些极端值，您将得到有趣的结果。请记住，阻尼应该是一个介于`0`和`1`之间的值，并且接近`1`的值会使动画的弹跳性更小。
+
+由平移识别器执行动画在此阶段感觉并不好。它非常静态，没有考虑到用户在抽屉上平移的速度。
+
+当用户结束他们的平移手势时，您可以根据实际的平移速度设置弹簧时序的`initialVelocity`值。这将使动画感觉更加真实，因为它现在将实际的平移速度作为动画的初始速度。
+
+使用以下代码更新默认情况语句：
+
+```swift
+drawerPanStart = 0
+let currentVelocity = recognizer.velocity(in: drawer)
+let spring = UISpringTimingParameters(dampingRatio: 0.8,
+initialVelocity: CGVector(dx: 0, dy: currentVelocity.y))
+
+animator?.continueAnimation(withTimingParameters: spring, durationFactor: 0)
+let isSwipingDown = currentVelocity.y > 0
+if isSwipingDown == !isDrawerOpen {
+    animator?.isReversed = true
+}
+```
+
+正如你所看到的，使用弹簧动画可以改善你的动画，而且它们并不难添加到你的应用中。虽然它们可能并不总是最好的解决方案，但它们的易于实现使得弹簧动画成为实验动画是否需要弹簧的一个值得尝试的候选者。
+
+你刚刚实现的动画相当逼真和真实，但你的动画可能需要更多的真实性。下一节将介绍 UIKit Dynamics，这是一种使用物理引擎并能够检测对象之间碰撞的特殊动画方法。
+
+# 使用 UIKit Dynamics 添加动态效果
+
+大多数应用实现简单的动画，就像你在本章中看到的那样。然而，一些动画可能需要更多的真实性——这就是 UIKit Dynamics 的作用。
+
+使用 UIKit Dynamics，你可以在使用物理引擎的场景中放置一个或多个视图，并对其包含的视图施加某些力。例如，你可以给一个特定的对象施加重力，使其从屏幕上掉落。你甚至可以让对象相互碰撞，如果你给你的视图分配一个质量，当两个对象相撞时，这个质量会被考虑进去。
+
+当你给一个质量非常小的对象施加一定的力时，它会被移动得比质量大的对象更多，就像你在现实世界中预期的那样。
+
+为了做到这一点，我们将在当前应用之外创建另一个小项目，这样我们就可以进行一些物理实验。
+
+因此，让我们从在 Xcode 中创建一个新的项目开始：
+
+1.  创建一个新的项目，并将其命名为`Dynamics`。
+
+1.  在`Main.Storyboard`中，将预览配置为**横幅**。
+
+1.  添加三个大小约为`100 x 100`的 UIView（对于这个项目，不用担心约束）。
+
+1.  给每个 UIView 设置一个背景颜色（想想来自*第三章*，*使用列表和表格*的颜色）。
+
+如果一切顺利，它应该看起来像这样：
+
+![Figure 5.3 – Main storyboard with views
+
+![img/Figure_5.03_B14717.jpg]
+
+图 5.3 – 主故事板中的视图
+
+接下来，在`ViewController.swift`中为刚刚添加的视图添加`@IBOutlet`实例，并以与之前相同的方式将它们连接到故事板中。你可以将出口命名为任何你喜欢的名字，但我会将我的命名为`ball1`、`ball2`和`ball3`（关于这一点稍后会有更多说明）。
+
+目前你可以实施的最简单的事情就是设置一个包含三个正方形的场景，并给它们施加一些重力。这将导致正方形从屏幕上掉落，因为一旦施加重力，它们就会开始下落，而且没有地板来阻止正方形掉出屏幕。
+
+要设置一个如上所述的场景，请将以下突出显示的代码添加到你的`ViewController.swift`文件中：
+
+```swift
+var animator: UIDynamicAnimator?
+
+override func viewDidLoad() {
+    super.viewDidLoad()
+
+    let balls: [UIDynamicItem] = [ball1, ball2, ball3]
+    animator = UIDynamicAnimator(referenceView: view)
+
+    let gravity = UIGravityBehavior(items: balls)
+    animator?.addBehavior(gravity)
+}
+```
+
+如果你现在测试你的应用，你会注意到你的视图立即开始下落。使用 UIKit Dynamics 设置这样一个简单的场景很容易。
+
+这个简单示例的缺点是它并不特别有趣。在你添加功能使这个示例更有趣之前，让我们看看前面四行代码的作用。
+
+动态场景中的视图必须是`UIDynamicItem`类型。UIView 可以用作`UIDynamicItem`，因此通过将它们添加到具有`[UIDynamicItem]`的列表中，它们会自动工作。
+
+然后，我们创建一个`UIDynamicAnimator`的实例，并告诉它将应用其物理引擎的视图。最后一步是配置并应用一个行为。这个例子使用`UIGravityBehavior`，但你的场景中还可以使用其他几种行为。
+
+例如，你可以创建`UIAttachmentBehavior`将一个项目附加到另一个项目或屏幕上的某个点上。
+
+以下代码为屏幕上每个方块实现了附加行为，并将其附加到屏幕顶部。这将导致方块暂时下落，然后它们会弹跳并轻微摆动，直到最终静止。您可以将以下代码添加到`viewDidLoad()`中以实现此功能：
+
+```swift
+var nextAnchorX = 250
+
+for ball in balls {
+    let anchorPoint = CGPoint(x: nextAnchorX, y: 0)
+    nextAnchorX -= 30
+    let attachment = UIAttachmentBehavior(item: ball, attachedToAnchor: anchorPoint)
+    attachment.damping = 0.7
+    animator?.addBehavior(attachment)
+}
+```
+
+在这个例子中，每个方块都设置了略微不同的附加点。请注意，附加行为有一个`damping`属性。
+
+这种阻尼与弹簧动画中使用的阻尼类似。尝试调整`attachment.damping`的值，看看它会产生什么效果。
+
+如果你现在运行应用程序，你会注意到每个方块都附着在屏幕上的一个看不见的点，防止它们下落。尽管如此，还有一些东西是缺失的。
+
+现在方块可以简单地相互交叉——如果它们相互碰撞会怎么样，那会多么酷？
+
+要做到这一点，请将以下代码行添加到`viewDidLoad()`中：
+
+```swift
+let collisions = UICollisionBehavior(items: balls)
+animator?.addBehavior(collisions)
+```
+
+你相信 UIKit Dynamics 很酷吗？我也这么认为；代码如此之少就能做到这么多真是太神奇了。让我们给方块添加一些质量，使它们更具弹性，看看这会对方块碰撞有什么影响。
+
+使用以下代码更新你的`for`循环：
+
+```swift
+let dynamicBehavior = UIDynamicItemBehavior()
+dynamicBehavior.addItem(ball)
+dynamicBehavior.density = CGFloat(arc4random_uniform(3) + 1)
+dynamicBehavior.elasticity = 0.8
+animator?.addBehavior(dynamicBehavior)
+```
+
+上述代码应该增强你已经在循环中拥有的内容；它不应该替换现有的逻辑。
+
+通过在`UIDynamicItemBehavior`上设置`density`，引擎可以推导出项目的质量。这将改变物理引擎在项目与其他项目碰撞时如何处理该项目。
+
+再次强调，这是你远离 Apple 提供的行为和物理引擎去玩耍的绝佳时机。现在，一个摆动方块游戏可能对任何人都没有兴趣——但将你的球属性更新如下并再次运行……现在是不是更有趣了？
+
+```swift
+@IBOutlet weak var ball1: UIView! {
+    didSet {
+
+    // Make a ball
+    ball1.layer.cornerRadius = ball1.frame.size.width/2
+    ball1.clipsToBounds = true
+
+    // Cool gradient effect!
+    let gradient = CAGradientLayer()
+    gradient.frame = ball1.bounds
+    gradient.colors = [UIColor.systemBlue.cgColor, UIColor.systemTeal.cgColor]
+    ball1.layer.insertSublayer(gradient, at: 0)
+
+    }
+}	
+```
+
+在最后一节中，我们将学习关于视图控制器转换所需了解的一切，这又是另一种真正改变我们应用程序默认行为的方法。
+
+# 自定义视图控制器转换
+
+实现自定义视图控制器过渡是那些需要一段时间才能习惯的事情之一。实现自定义过渡涉及实现多个对象，而且并不总是容易理解其工作原理。本节旨在详细解释自定义视图控制器过渡是如何工作的，以便您可以将另一个强大的工具添加到您的开发者工具箱中。
+
+一个实现良好的自定义视图控制器过渡将使您的用户感到愉快并感到惊讶。使您的过渡交互式甚至可以确保您的用户在您的应用中花费更多时间玩耍，这正是您想要的。
+
+我们将继续处理我们之前开始的联系人应用。首先，您将了解您如何实现自定义模态转换。一旦实现了这个，您将了解 `UINavigationController` 的自定义过渡，这样您就可以使用自定义过渡显示和隐藏联系人详情页面。模态视图控制器和联系人详情页面的关闭都将交互式，这样用户可以滑动返回到他们来的地方。
+
+在本节中，您将完成以下步骤：
+
+1.  实现一个自定义的模态显示过渡。
+
+1.  使过渡交互式。
+
+1.  实现一个自定义的 `UINavigationController` 过渡。
+
+## 实现自定义模态显示过渡
+
+许多应用程序实现了模态显示的视图控制器。一个模态显示的视图控制器通常是一个覆盖在当前屏幕上的视图控制器。默认情况下，模态显示的视图控制器从屏幕底部向上动画，通常用于向用户展示表单或其他临时内容。在本节中，您将了解默认的模态显示过渡以及如何自定义它以满足您的需求。
+
+让我们从创建一个全新的视图控制器开始。为此，我们将回到我们的联系人应用项目，我们可以在那里添加这个功能（或者您可以自由地开始一个新的项目）：
+
+1.  创建一个新的 `TransitionViewController`（`UIViewController` 的子类）。
+
+1.  向 `Main.Storyboard` 中添加一个新的视图控制器。
+
+1.  将那个新视图控制器的对象类设置为 `TransitionViewController`。
+
+    完成这些后，我们将在现有的导航中添加一个条形按钮项，以便我们可以展示模态。
+
+1.  从我们的对象库中添加 `BarButtonItem` 到 `rootViewContoller` 的导航栏中（基本上是我们的第一个视图控制器）。
+
+1.  将按钮的文本设置为 `Show Modal`（或您想要的任何文本）。
+
+1.  现在，按 *Ctrl* 并将条形按钮项的连接器拖到我们刚刚创建的新视图控制器上。
+
+1.  当出现选项时，选择**以模态方式显示**。
+
+如果一切顺利，它应该看起来像以下这样：
+
+![图 5.4 – 模态动作转换](img/Figure_5.04_B14717.jpg)
+
+图 5.4 – 模态动作转换
+
+最后，给我们的新视图控制器一个系统橙色背景色，这样在稍后观察过渡时会更清晰。
+
+如果你现在运行你的应用，你可以点击**显示模态**按钮，你将看到一个空视图控制器从底部弹出。
+
+在 iOS 13 之前，你必须创建一个界面，以便用户可以关闭模态。现在，除非隐式设置，否则你可以直接向下滑动来关闭模态，这在开发 iOS 13 之前的旧应用时值得注意。
+
+自定义视图控制器过渡使用几个对象来简化动画。你首先需要查看的是`UIViewController`的`transitioningDelegate`。`transitioningDelegate`属性负责提供提供自定义过渡的动画控制器。
+
+动画控制器使用一个提供有关参与过渡的视图控制器信息的过渡上下文对象。通常，这些视图控制器将是当前视图控制器和即将被展示的视图控制器。
+
+可以用以下步骤描述过渡流程：
+
+1.  一个过渡开始了。目标视图控制器被要求提供`transitioningDelegate`。
+
+1.  `transitioningDelegate`被要求提供一个动画控制器。
+
+1.  动画控制器被要求提供动画持续时间。
+
+1.  动画控制器被告知执行动画。
+
+当动画完成后，动画控制器会在过渡上下文中调用`completeTransition(_:)`来标记动画已完成。
+
+如果*步骤 1*或*步骤 2*返回`nil`，或者根本未实现，则使用默认的过渡动画。涉及自定义过渡的对象在以下图中显示：
+
+![Figure 5.5 – 动画过渡流程]
+
+![Figure 5.05_B14717.jpg]
+
+Figure 5.5 – 动画过渡流程
+
+创建一个单独的对象来控制动画通常是一个好主意，因为它允许你重用过渡，并保持你的代码整洁。动画控制器应该是一个符合`UIViewControllerAnimatedTransitioning`的对象。此对象将负责将展示的视图动画化到屏幕上。
+
+接下来，让我们创建动画控制器对象：
+
+1.  创建一个新的`CustomAnimator`（使用`NSObject`作为子类）。
+
+1.  添加以下扩展，以便使类符合`UIViewControllerAnimatedTransitioning`：
+
+    ```swift
+    extension CustomAnimator: UIViewControllerAnimatedTransitioning {
+    }
+    ```
+
+    这使得新类符合成为动画控制器所需的协议。Xcode 会显示构建错误，因为你还没有实现所有方法以符合`UIViewControllerAnimatedTransitioning`。
+
+让我们逐个查看这些方法，以便你最终为动画控制器获得完整的实现。
+
+必须为动画控制器实现的第一方法是`transitionDuration(using:)`。此方法的实现如下所示：
+
+```swift
+func transitionDuration(using transitionContext:   UIViewControllerContextTransitioning?) -> TimeInterval {
+    return 0.6
+}
+```
+
+此方法用于确定总的过渡持续时间（以秒为单位）。在这种情况下，实现很简单——动画应该持续*0.6*秒。
+
+需要实现的第二个方法是 `animateTransition(using:)`。它的目的是处理自定义过渡的实际动画。
+
+此实现将目标视图控制器从屏幕顶部向下动画到其最终位置。它还将进行一些缩放，并动画视图的不透明度；为此，将使用 `UIViewPropertyAnimator`。
+
+向动画器添加以下实现：
+
+```swift
+func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+
+    // 1
+    guard let toViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.to) else {
+        return        
+    }
+    // 2
+    let transitionContainer = transitionContext.containerView
+
+    // 3
+    var transform = CGAffineTransform.identity
+    transform = transform.concatenating(CGAffineTransform(scaleX: 0.6, y: 0.6))
+    transform = transform.concatenating(CGAffineTransform(translationX: 0, y: -200))
+
+    toViewController.view.transform = transform
+    toViewController.view.alpha = 0
+
+    // 4
+    transitionContainer.addSubview(toViewController.view)
+
+    // 5
+    let animationTiming = UISpringTimingParameters(dampingRatio: 0.5,
+                                                   initialVelocity: CGVector(dx: 1, dy: 0))
+
+    let animator = UIViewPropertyAnimator(duration: transitionDuration(using: transitionContext), timingParameters: animationTiming)
+
+    animator.addAnimations {
+        toViewController.view.transform = CGAffineTransform.identity
+        toViewController.view.alpha = 1
+    }
+
+    // 6
+    animator.addCompletion { finished in
+        transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
+    }
+
+    // 7
+    animator.startAnimation()
+
+}
+```
+
+代码片段中发生了很多事情。让我们一步一步地分析代码，看看发生了什么：
+
+1.  从过渡上下文中提取目标视图控制器。这允许您在即将执行的动画中使用视图控制器视图。
+
+1.  获取动画的容器视图。容器视图是一个常规的 UIView，它旨在包含所有动画视图。
+
+1.  准备目标视图控制器视图以进行动画。视图被转换，因此它离开了屏幕，透明度被设置为使视图完全透明。
+
+1.  一旦视图准备就绪，它就被添加到容器视图中。
+
+1.  动画被设置并添加到属性动画器中。
+
+1.  属性动画器的完成处理程序被配置，因此当动画正常完成时，会在上下文中调用 `completeTransition(_:)`。`transitionWasCancelled` 变量用于确定动画是否正常完成。
+
+1.  启动属性动画器，以便动画开始。
+
+现在动画控制器已完成，应在 `TransitionViewController` 上实现 `UIViewControllerTransitioningDelegate` 协议，以便它可以充当自己的 `transitioningDelegate`。
+
+打开文件并添加以下代码：
+
+```swift
+extension TransitionViewController: UIViewControllerTransitioningDelegate {
+    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return CustomAnimator()
+    }
+
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return nil
+    }
+}
+```
+
+现在，将以下代码添加到 `TransitionViewController` 中：
+
+```swift
+    public required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        transitioningDelegate = self
+    }
+```
+
+此代码添加了对 `UIViewControllerTransitioningDelegate` 协议的遵守，并将视图控制器指定为其自己的过渡代理。`animationController(forPresented:presenting:source:)` 方法返回您之前创建的动画控制器。`animationController(forDismissed:)` 方法目前返回 `nil`。
+
+好吧，测试您的自定义过渡！创建自定义显示过渡所需的全部代码都在这里。
+
+在本章中，我们学习了如何精细调整和润色我们的应用。视觉效果在任何应用中都扮演着如此重要的角色——因此，了解动画过渡对于任何 iOS 开发者来说都是绝对必须的。
+
+# 摘要
+
+在本章中，我们用动画和活力装饰了我们的联系人应用的核心。我们首先学习了动画的基础知识以及几行代码如何带来巨大的变化。然后，我们更进一步，重构了更复杂的代码，使其不仅易于维护，而且更容易理解。
+
+UIKit 提供的不仅仅是花哨的动画。从动态学的角度来看，我们看到了如何将物理应用到 UIView 上，从而为我们的应用带来真正令人惊叹的体验。
+
+最后，我们探讨了过渡效果，这在 iOS 开发中非常强大，但我们却常常轻易地将其视为理所当然。我们创建了一个自定义类，使我们能够创建我们自己的模态过渡效果。
+
+在下一章中，我们将更深入地探讨 Swift 编程语言，并了解 Swift 的类型系统。

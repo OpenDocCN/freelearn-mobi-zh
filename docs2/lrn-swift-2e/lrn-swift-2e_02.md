@@ -1,0 +1,805 @@
+# 第二章. 构建块 – 变量、集合和流程控制
+
+编程中最酷的事情之一是概念是如何相互构建的。如果你以前从未编写过任何程序，即使是功能最基本的应用程序也可能看起来非常复杂。现实是，如果你将应用程序中发生的一切分析到处理器中流动的零和一，它是非常复杂的。然而，使用计算机的每个方面都是一个抽象。当你使用应用程序时，编程的复杂性正在为你抽象化。学习编程就是深入一层，让计算机为你工作。
+
+随着你学习编程背后的基本概念，它们将变得像第二本能一样自然，这将使你的思想能够把握更复杂的概念。当你第一次学习阅读时，逐个发音每个单词是具有挑战性的。然而，最终你会达到一个水平，你只需瞥一眼一个单词，就能立刻知道它的意思。这让你能够开始从文本中寻找更深层次的意义。
+
+在本章中，我们将构建你在 Swift 中编程构建块的知识。每个构建块本身都很有趣，随着我们开始看到它们开启的可能性，它们将变得更加有趣。无论编程现在对你来说可能多么复杂，我保证有一天你会回过头来，惊叹于所有这些概念是如何变得像第二本能一样的。
+
+在本章中，我们将涵盖：
+
++   核心 Swift 类型
+
++   Swift 的类型系统
+
++   打印到控制台
+
++   控制程序流程
+
++   所有涵盖概念的综合示例
+
+# 核心 Swift 类型
+
+每种编程语言都需要命名信息的一部分，以便以后可以引用它。这是代码在编写后保持可读性的基本方法。Swift 提供了一系列核心类型，帮助你以非常易于理解的方式表示你的信息。
+
+## 常数和变量
+
+Swift 提供了两种类型的信息：**常数**和**变量**：
+
+```swift
+// Constant
+let pi = 3.14
+
+// Variable
+var name = "Sarah"
+```
+
+所有常数都是使用 `let` 关键字后跟一个名称来定义的，所有变量都是使用 `var` 关键字来定义的。Swift 中的常数和变量在使用之前必须包含一个值。这意味着，当你定义一个新的时，你很可能会给它一个初始值。你是通过使用赋值运算符（`=`）后跟一个值来做到这一点的。
+
+两个之间的唯一区别是常数永远不能改变，而变量可以改变。在先前的例子中，代码定义了一个名为 `pi` 的常数，它存储了信息 `3.14`，以及一个名为 `name` 的变量，它存储了信息 `"Sarah"`。将 `pi` 定义为常数是有意义的，因为 `pi` 将始终是 `3.14`。然而，我们需要在未来更改 `name` 的值，所以我们将其定义为变量。
+
+管理程序中最困难的部分之一是所有变量的状态。作为程序员，即使在相对较小的程序中，通常也不可能计算出变量可能具有的所有不同值。由于变量通常可以被遥远的、看似无关的代码更改，更多的状态会导致更多难以追踪的 bug。始终最好默认使用常量，直到您遇到需要修改信息值的实际场景。
+
+## 容器
+
+给更复杂的信息命名通常很有帮助。我们经常必须处理一系列相关的信息或一系列类似的信息，如列表。Swift 提供了三种主要的集合类型，称为**元组**、**数组**和**字典**。
+
+### 元组
+
+元组是由两个或更多信息片段组成的固定大小集合。例如，一副扑克牌中的一张牌有三个属性：`颜色`、`花色`和`数值`。我们可以使用三个单独的变量来完全描述一张牌，但最好在一个表达式中表达它：
+
+```swift
+var card = (color: "Red", suit: "Hearts", value: 7)
+```
+
+每条信息由一个名称和一个值组成，名称和值之间用冒号(`:`)分隔，每个值之间用逗号(`,`)分隔。最后，整个结构被括号(`()`)包围。
+
+您可以使用点(`.`)通过名称单独访问元组的每个部分，这通常被称为点：
+
+```swift
+card.color // "Red"
+card.suit // "Hearts"
+card.value // 7
+```
+
+您还可以为每个部分创建一个没有名称的元组。然后，您可以根据它们在列表中的位置访问它们，从零开始作为第一个元素：
+
+```swift
+var diceRoll = (4, 6)
+diceRoll.0 // 4
+diceRoll.1 // 6
+```
+
+访问元组中的特定值的另一种方法是分别捕获每个值：
+
+```swift
+let (first, second) = diceRoll
+first // 4
+second // 6
+```
+
+如果您想在元组中更改一个值，您可以一次分配所有值，或者可以使用与前面代码相同的引用更新单个值：
+
+```swift
+diceRoll = (4, 5)
+diceRoll.0 = 2
+```
+
+### 数组
+
+数组本质上是一个可变长度的信息列表。例如，我们可以创建一个列表，列出我们想要邀请参加派对的人，如下所示：
+
+```swift
+var invitees = ["Sarah", "Jamison", "Marcos", "Roana"]
+```
+
+数组始终以方括号开始和结束，每个元素之间用逗号分隔。您甚至可以使用开闭括号声明一个空数组：`[]`。
+
+您可以通过向数组中添加另一个数组来向数组中添加值，如下所示：
+
+```swift
+invitees += ["Kai", "Naya"]
+```
+
+注意，`+=`是以下内容的缩写：
+
+```swift
+invitees = invitees + ["Kai", "Naya"]
+```
+
+您可以根据数组中元素的索引位置访问数组中的值，通常称为索引，如下所示：
+
+```swift
+invitees[2] // Marcos
+```
+
+索引是通过在数组名称后立即使用方括号(`[]`)来指定的。索引从`0`开始，像元组一样向上递增。因此，在前面的例子中，索引`2`返回了数组中的第三个元素，`Marcos`。您还可以检索有关数组的其他信息，例如随着我们向前移动可以看到的元素数量。
+
+### 字典
+
+字典是一组**键**和**值**的集合。键用于在容器中存储和查找特定的值。这种容器类型以单词“dictionary”命名，你可以在其中查找单词的定义。在那个现实生活中的例子中，单词将是键，定义将是值。作为一个例子，我们可以定义一个按类型组织的电视节目字典：
+
+```swift
+var showsByGenre = [
+   "Comedy": "Modern Family",
+   "Drama": "Breaking Bad",
+]
+```
+
+字典看起来与数组相似，但每个键和值都由冒号（`:`）分隔。请注意，Swift 对空白的使用相当宽容。数组可以定义为每个元素单独一行，字典可以定义为每行包含一个元素。使用空白来使你的代码尽可能可读是你的责任。
+
+如上所示定义的字典，如果你查找键`Comedy`，你会得到值`Modern Family`。在代码中访问值的方式类似于在数组中，但你不是在方括号中提供索引，而是提供键：
+
+```swift
+showsByGenre["Comedy"] // Modern Family
+```
+
+你可以像定义空数组一样定义一个空字典，但使用字典时，你必须在括号之间包含一个冒号：`[:]`。
+
+向字典中添加值的方式类似于检索值，但你使用赋值运算符（`=`）：
+
+```swift
+showsByGenre["Variety"] = "The Colbert Report"
+```
+
+作为额外的好处，这也可以用来更改现有键的值。
+
+你可能已经注意到，我所有的变量和常量名称都以小写字母开头，并且每个后续单词都以大写字母开头。这被称为驼峰式命名法，并且是编写变量和常量名称的广泛接受的方式。遵循此约定使得其他程序员更容易理解你的代码。
+
+现在我们已经了解了 Swift 的基本容器，让我们更详细地探讨它们是什么。
+
+# Swift 的类型系统
+
+Swift 是一种强类型语言，这意味着每个常量和变量都使用特定的**类型**进行定义。只有匹配类型的值可以分配给它们。到目前为止，我们已经利用了 Swift 的一个名为**类型推断**的功能。这意味着如果可以在声明时从分配给它的值中推断出类型，则代码不需要显式声明类型。
+
+没有类型推断的情况下，之前的`name`变量声明将写成如下所示：
+
+```swift
+var name: String = "Sarah"
+```
+
+这段代码明确地将`name`声明为类型`String`，其值为`Sarah`。可以通过在名称后添加一个冒号（`:`）和类型来指定常量或变量的类型。
+
+字符串由一系列字符组成。这对于存储文本来说非常完美，就像我们名称的例子一样。我们不需要指定类型的原因是`Sarah`是一个**字符串字面量**。被引号包围的文本是字符串字面量，可以推断其类型为`String`。这意味着如果你将其初始值设置为`Sarah`，则`name`必须为`String`类型。
+
+类似地，如果我们没有为其他变量声明使用类型推断，它们看起来会是这样：
+
+```swift
+let pi: Double = 3.14
+
+var invitees: [String] = ["Sarah", "Jamison", "Roana"]
+
+let showsByGenre: [String:String] = [
+    "Comedy": "Modern Family",
+    "Drama": "Breaking Bad",
+]
+```
+
+`Double`是一种可以存储小数的数值类型。数组的类型通过将存储的元素类型放在方括号中来声明。最后，字典的类型以`[KeyType:ValueType]`的形式定义。所有这些类型都可以推断，因为每个类型都被分配了一个具有可推断类型的值。
+
+如果我们像原始示例那样省略类型，代码会更干净、更容易理解。只需记住，这些类型始终隐含存在，即使它们没有明确写出。如果我们尝试将一个数字赋值给`name`变量，我们会得到一个错误，如下所示：
+
+![Swift 的类型系统](img/B05103_02_01.jpg)
+
+在这里，我们试图将一个数字，特别是`Int`，赋值给被推断为`String`类型的变量。Swift 不允许这样做。
+
+当处理推断类型时，询问 Xcode 一个变量被推断为何种类型非常有用。你可以通过按住键盘上的*Option*键并点击变量名称来实现。这将显示一个如下所示的弹出窗口：
+
+![Swift 的类型系统](img/B05103_02_02.jpg)
+
+如预期的那样，变量确实被推断为`String`类型。
+
+类型是 Swift 的一个基本组成部分。它们是 Swift 作为编程语言如此安全的主要原因之一。它们帮助编译器更多地了解你的代码，因此，编译器可以在不运行你的代码的情况下自动警告你关于错误。
+
+# 打印到控制台
+
+将输出写入日志非常有用，这样你可以追踪代码的行为。随着代码库的复杂性增加，很难追踪事情发生的顺序以及数据在代码中流动时的确切样子。游乐场在这方面有很大帮助，但并不总是足够。
+
+在 Swift 中，这个过程被称为打印到控制台。要这样做，你使用一个叫做`print`的东西。它是通过写入`print`后跟括号内的文本来使用的。例如，要将`Hello World!`打印到控制台，代码看起来会是这样：
+
+```swift
+print("Hello World!")
+```
+
+如果你将这段代码放入游乐场，你会在结果面板中看到`Hello World!`被写入。然而，这并不是真正的控制台。要查看控制台，你可以转到**视图** | **调试区域** | **显示调试区域**。窗口底部将出现一个新的视图，其中包含代码打印到控制台的所有文本：
+
+![打印到控制台](img/B05103_02_03.jpg)
+
+你不仅可以打印静态文本到控制台，还可以打印出任何变量。例如，如果你想打印出`name`变量，你会这样写：
+
+```swift
+print(name)
+```
+
+你甚至可以使用 Swift 的一个功能，称为**字符串插值**，将变量插入到字符串中，如下所示：
+
+```swift
+print("Hello \(name)!")
+```
+
+在字符串字面量的任何位置，即使不是在打印时，你都可以通过将代码用 `\(` 和 `)` 包围起来来插入代码的结果。通常这将是变量的名称，但它可以是任何返回值的代码。
+
+当我们开始使用更复杂的代码时，向控制台打印信息就更加有用。
+
+# 控制流程
+
+如果一个程序只是一系列固定的命令列表，总是做同样的事情，那么它就不会很有用。使用单一的代码路径，计算器应用只能执行一个操作。我们可以做很多事情来使应用更强大，并收集数据以决定下一步做什么。
+
+## 条件语句
+
+控制程序流程的最基本方法是指定只有在满足特定条件时才应该执行的代码。在 Swift 中，我们使用 `if` 语句来实现这一点。让我们看看一个例子：
+
+```swift
+if invitees.count > 20 {
+   print("Too many people invited")
+}
+```
+
+从语义上看，前面的代码是：如果受邀人数大于 20，则打印 'Too many people invited'。这个例子如果条件为真，则只执行一行代码，但你可以在花括号 `{}` 内放置尽可能多的代码。
+
+任何可以评估为真或假的任何内容都可以用在 `if` 语句中。然后你可以使用 `else if` 和/或 `else` 将多个条件链接在一起：
+
+```swift
+if invitees.count > 20 {
+    print("Too many people invited")
+}
+else if invitees.count <= 3 {
+    print("Not really a party")
+}
+else {
+    print("Just right")
+}
+```
+
+每个条件都会从上到下进行检查，直到满足某个条件。在这一点上，代码块将被执行，剩余的条件将被跳过，包括最后的 `else` 块。
+
+作为一项练习，我建议在前面代码的基础上添加一个额外的场景，如果恰好没有受邀者，则打印 "One is the loneliest number"。你可以通过调整添加到 `invitees` 声明中的受邀者数量来测试你的代码。记住，条件的顺序非常重要。
+
+尽管条件语句很有用，但如果有很多条件链接在一起，它们可能会变得非常冗长。为了解决这类问题，还有一种名为 **switch** 的控制结构。
+
+## `switch`
+
+`switch` 是编写一系列 `if` 语句的更表达性的方式。条件语句部分的示例的直接翻译如下：
+
+```swift
+switch invitees.count {
+    case let x where x > 20:
+        print("Too many people invited")
+    case let x where x <= 3:
+        print("Not really a party")
+    default:
+        print("Just right")
+}
+```
+
+`switch` 由一个值和该值的条件列表组成，如果条件为真，则执行相应的代码。要测试的值紧跟在 `switch` 命令之后，所有条件都包含在花括号 `{}` 中。每个条件称为一个 **case**。使用这个术语，前面代码的语义是：“考虑到受邀人数，如果它大于 20，则打印 `"Too many people invited"`，否则，如果它小于或等于三个，则打印 `"Too many people invited"`，否则，默认打印 `"Just right"`。
+
+这是通过创建一个临时常量`x`来实现的，该常量被赋予开关测试的值。然后它对`x`进行测试。如果条件通过，它将执行该情况的代码，然后退出开关。
+
+就像在条件语句中一样，只有当所有前面的情况都不满足时，才会考虑每个情况。与条件语句不同，所有的情况都需要穷尽。这意味着你需要为变量可能传递的每个可能的值设置一个情况。例如，`invitees.count`是一个整数，所以理论上可以是负无穷大到正无穷大之间的任何值。
+
+处理这种情况最常见的方式是使用由`default`关键字指定的默认情况。有时，你实际上不想在默认情况下做任何事情，甚至可能在特定情况下也不做。为此，你可以使用`break`关键字，如下所示：
+
+```swift
+switch invitees.count {
+    case let x where x > 20:
+        print("Too many people invited")
+    case let x where x <= 3:
+        print("Not really a party")
+    default:
+        break
+}
+```
+
+注意，默认情况必须始终是最后一个。
+
+到目前为止，我们已经看到开关很棒，因为它们强制执行穷尽条件的规则。这对于让编译器为你捕获错误非常有用。然而，开关也可以更加简洁。我们可以像这样重写前面的代码：
+
+```swift
+switch invitees.count {
+    case 0...3:
+        print("Not really a party")
+    case 4...20:
+        print("Just right")
+    default:
+        print("Too many people invited")
+}
+```
+
+在这里，我们将每种情况描述为可能值的范围。第一种情况包括介于`0`和`3`之间（包括这两个数）的所有值。这比使用`where`子句表达得更加丰富。这个例子也展示了逻辑的重新思考。我们不是为超过`20`的值设置特定的情况，而是为已知的闭区间设置情况，然后在默认情况下捕获超过`20`的所有情况。请注意，这个版本的代码没有正确处理计数可能为负的情况，而原始版本可以处理。在这个版本中，如果计数是`-1`，它将一直通过到默认情况并打印出`"Too many people invited"`。对于这个用例来说，这是可以接受的，因为数组的计数永远不会是负数。
+
+开关不仅与数字一起工作。它们非常适合执行任何类型的测试：
+
+```swift
+switch name {
+    case "Marcos", "Amy":
+       print("\(name) is an honored guest")
+    case let x where x.hasPrefix("A"):
+        print("\(name) will be invited first")
+        fallthrough
+    default:
+        print("\(name) is someone else")
+}
+```
+
+这段代码展示了开关的一些其他有趣特性。第一种情况实际上由两个单独的条件组成。每个情况可以有任意数量的条件，条件之间用逗号（`,`）分隔。当你有多个情况想要使用相同的代码时，这很有用。
+
+第二种情况使用自定义测试对名称进行检查，以查看它是否以字母 A 开头。这对于展示开关的执行方式非常出色。尽管字符串`Amy`会满足第二个条件，但这段代码只会打印出`"Amy is an honored guest"`，因为一旦第一个条件得到满足，就不会再评估其他情况。现在，如果你不完全理解`hasPrefix`是如何工作的，请不要担心。
+
+最后，第二种情况使用了 `fallthrough` 关键字。这告诉程序执行下一个情况的代码。重要的是，这绕过了下一个情况的条件；无论值是否通过条件，代码仍然会被执行。
+
+为了确保你理解 `switch` 的执行方式，将以下代码放入游乐场中，并尝试预测使用各种名称时将打印出什么内容：
+
+```swift
+let testName = "Andrew"
+switch testName {
+    case "Marcos", "Amy":
+        print("\(testName) is an honored guest")
+    case let x where x.hasPrefix("A"):
+        print("\(testName) will be invited first")
+        fallthrough
+    case "Jamison":
+        print("\(testName) will help arrange food")
+    default:
+        print("\(testName) is someone else")
+}
+```
+
+一些值得尝试的好名字有 `Andrew`、`Amy` 和 `Jamison`。
+
+现在我们完全控制了在什么情况下执行哪种代码。然而，一个程序通常需要我们多次执行相同的代码。例如，如果我们想要对数组中的每个元素执行一个操作，复制和粘贴一大堆代码是不可行的。相反，我们可以使用称为 **循环** 的控制结构。
+
+## 循环
+
+有许多不同类型的循环，但它们都会在条件不再为真时重复执行相同的代码。最基本类型的循环称为 `while` 循环：
+
+```swift
+var index = 0
+while index < invitees.count {
+    print("\(invitees[index]) is invited")
+
+    index+=1
+}
+```
+
+`while` 循环由一个用于测试的条件和直到该条件失败为止要运行的代码组成。在上面的例子中，我们遍历了 `invitees` 数组中的每个元素。我们使用变量 `index` 来跟踪我们当前在哪个邀请者。为了移动到下一个索引，我们使用了一个新的运算符 `+=`，它将一个加到现有值上。这和写 `index = index + 1` 是一样的。
+
+关于这个循环有两个重要的事情需要注意。首先，我们的索引从 `0` 开始，而不是 `1`，并且它一直持续到小于邀请者的数量，而不是小于或等于它们。这是因为，如果你记得，数组索引从 `0` 开始。如果我们从 `1` 开始，我们会错过第一个元素，如果我们包含了 `invitees.count`，代码会崩溃，因为它会尝试访问数组末尾之外的元素。始终记住：*数组的最后一个元素在索引上比计数少一个*。
+
+另一点需要注意的是，如果我们忘记在循环中包含 `index+=1`，我们就会有一个无限循环。循环将永远继续运行，因为 `index` 从不会超过 `invitees.count`。
+
+这种想要遍历列表的模式如此常见，以至于有一个更简洁、更安全的循环称为 **for-in** 循环：
+
+```swift
+for invitee in invitees {
+    print("\(invitee) is invited")
+}
+```
+
+现在事情变得相当酷了。我们不再需要担心索引。没有意外从 `1` 开始或越过末尾的风险。此外，我们可以在遍历数组时给特定的元素起自己的名字。需要注意的是，我们没有用 `let` 或 `var` 声明 `invitee` 变量。这特别适用于 `for-in` 循环，因为那里使用的常量每次通过循环都会被新声明。
+
+`for-in` 循环非常适合遍历不同类型的容器。它们也可以用来遍历字典，如下所示：
+
+```swift
+for (genre, show) in showsByGenre {
+    print("\(show) is a great \(genre) series")
+}
+```
+
+在这种情况下，我们可以访问字典的键和值。这应该看起来很熟悉，因为`(genre, show)`实际上是一个元组，用于循环的每次迭代。在确定是否从类似数组或元组的`for-in`循环中有一个单一值时可能会感到困惑。在这个时候，最好记住这两个常见的案例。背后的原因将在我们开始讨论第六章中的**序列**时变得清晰，*让 Swift 为你工作 – 协议和泛型*。
+
+`for-in`循环的另一个特性是能够只遍历通过给定测试的元素。你可以使用`if`语句实现这一点，但 Swift 提供了一个更简洁的方式来写它，使用`where`关键字：
+
+```swift
+for invitee in invitees where invitee.hasPrefix("A") {
+    print("\(invitee) is invited")
+}
+```
+
+现在，循环将只为以字母`A`开头的每个邀请人运行。
+
+这些循环很棒，但有时我们需要访问当前所在的索引，而在其他时候，我们可能想要遍历一组数字而不使用数组。为此，我们可以使用类似于`Switch`的`range`，如下所示：
+
+```swift
+for index in 0 ..< invitees.count {
+    print("\(index): \(invitees[index])")
+}
+```
+
+此代码使用变量`index`从值`0`运行到但不包括`invitees.count`。实际上有两种类型的范围。这种类型被称为**半开范围**，因为它不包括最后一个值。另一种类型，我们在开关中看到的那种类型，被称为**闭包范围**：
+
+```swift
+print("Counting to 10:")
+for number in 1 ... 10 {
+    print(number)
+}
+```
+
+闭包范围包括最后一个值，因此循环将打印出从`1`开始到`10`结束的每个数字。
+
+所有循环都有两个特殊关键字，可以修改它们的行为，这些关键字被称为`continue`和`break`。`continue`用于跳过循环的其余部分，并返回到条件以查看是否应该再次运行循环。例如，如果我们不想打印以`A`开头的邀请人，我们会使用以下代码：
+
+```swift
+for invitee in invitees {
+    if invitee.hasPrefix("A") {
+        continue
+    }
+    print("\(invitee) is invited")
+}
+```
+
+如果条件`invitee.hasPrefix("A")`得到满足，`continue`命令将被执行，并且它会跳过循环的其余部分，转到下一个邀请人。正因为如此，只有不以`A`开头的邀请人会被打印出来。
+
+`break`关键字用于立即退出循环：
+
+```swift
+for invitee in invitees {
+   print("\(invitee) is invited")
+
+   if invitee == "Tim" {
+       print("Oh wait, Tim can't come")
+       break
+   }
+}
+print("Jumps here")
+```
+
+一旦遇到`break`，执行就会跳转到循环之后。在这种情况下，它跳转到最后一行。
+
+循环非常适合处理可变数量的数据，比如我们的邀请人列表。在编写代码时，你可能不知道列表中会有多少人。使用循环可以让你灵活地处理任何长度的列表。
+
+作为练习，我建议你尝试编写一个循环来找出 10,000 以下所有 3 的倍数的总和。你应该得到 16,668,333。
+
+循环也是重用代码而不重复代码的绝佳方式，但它们只是高质量代码重用的第一步。接下来，我们将讨论函数，这将开启一个全新的可理解和可重用代码的世界。
+
+# 函数
+
+我们迄今为止探索的所有代码都非常线性地沿着文件排列。每一行一次被处理，然后程序继续执行下一行。这是编程的伟大之处之一：程序所做的每一件事都可以通过你自己逐行地 mentally stepping through 程序来预测。
+
+然而，随着你的程序变得越来越大，你会注意到有些地方重复使用非常相似或相同的代码，而这些代码不能通过使用循环来重用。此外，你写的代码越多，就越难确切知道它在做什么。代码注释可以帮助解决这个问题，但有一个更好的解决方案可以解决这两个问题，它们被称为**函数**。函数本质上是一组可以被执行和通过该名称重用的代码集合。
+
+存在着各种不同类型的函数，但每种类型都是建立在之前类型的基础上的。
+
+## 基本函数
+
+最基本的函数类型仅仅有一个名称和一些稍后要执行的静态代码。让我们看看一个简单的例子。以下代码定义了一个名为 `sayHello` 的函数：
+
+```swift
+func sayHello() {
+    print("Hello World!")
+}
+```
+
+函数是通过使用关键字 `func` 后跟一个名称和括号（`()`）来定义的。要在函数中运行的代码被大括号（`{}`）包围。就像在循环中一样，一个函数可以由任意数量的代码行组成。
+
+从我们对打印的了解中，我们知道这个函数将打印出文本 `Hello World!`。然而，它将在什么时候做这件事呢？用于告诉函数执行的操作的术语是“调用函数”。你通过使用函数的名称后跟括号（`()`）来调用函数：
+
+```swift
+sayHello() // Prints "Hello World!"
+```
+
+这是一个非常简单的函数，虽然它并不那么有用，但我们已经可以看到函数的一些非常显著的好处。实际上，当你调用这个函数时，执行会进入函数内部，当它执行完函数中的每一行代码后，它会退出并从函数被调用的地方继续执行。然而，作为程序员，我们通常并不关心函数内部发生的事情，除非出了什么问题。如果函数命名得当，它们会告诉你它们将做什么，这就是你需要知道的所有信息，以便理解代码的其余部分。实际上，命名良好的函数几乎可以替代代码中的注释，这真的减少了代码的杂乱，同时又不损害代码的可读性。
+
+这个函数相较于直接使用 `print` 的另一个优点是代码的可维护性更高。如果你在代码的多个地方使用 `print`，然后改变你想要表达`Hello`的方式，你不得不更改很多代码。然而，如果你使用上述这样的函数，你可以通过更改函数来轻松地改变它表达`Hello`的方式，并且它将在你使用该函数的每个地方都相应地改变。
+
+你可能已经注意到，我们在命名`sayHello`函数和使用`print`的方式上有一些相似之处。这是因为`print`是 Swift 本身内置的一个函数。`print`函数中包含复杂的代码，使得向控制台打印变得可能并且对所有程序员都是可访问的。但是，`print`能够接受一个值并对其进行操作，我们如何编写这样的函数呢？答案是：参数。
+
+## 参数化函数
+
+一个函数可以接受零个或多个参数，这些是输入值。让我们修改我们的`sayHello`函数，使其能够使用字符串插值对任意名称说`Hello`：
+
+```swift
+func sayHelloToName(name: String) {
+    print("Hello \(name)!")
+}
+```
+
+现在我们这个函数接受一个任意参数，称为`name`，类型为`String`，并向其打印`hello`。这个函数的名字现在是`sayHelloToName:`。我们没有包含参数名，因为当你调用方法时，默认情况下不会使用第一个参数的名称：
+
+```swift
+sayHelloToName("World") // Prints "Hello World!"
+```
+
+我们在名称的末尾包含了一个冒号（`:`），以表示它在那里接受一个参数。这使得它与不接收参数的`sayHelloToName`函数不同。命名可能看起来不重要且随意，但确保我们都能使用共同和精确的术语来交流我们的代码非常重要，这样我们才能更有效地相互学习和合作。
+
+如前所述，一个函数可以接受多个参数。参数列表看起来很像一个元组。每个参数都有一个名称和一个类型，由冒号（`:`）分隔，然后由逗号（`,`）分隔。除此之外，函数不仅可以接受值，还可以向调用代码返回值。
+
+## 返回值的函数
+
+函数返回值的类型定义在所有参数之后，由箭头`->`分隔。让我们编写一个函数，它接受一个邀请者列表和另一个要添加到列表中的人。如果有空位，该函数会将这个人添加到列表中，并返回新版本。如果没有空位，它就只返回原始列表，如下所示：
+
+```swift
+func addInviteeToListIfSpotAvailable
+    (
+    invitees: [String],
+    newInvitee: String
+    )
+    -> [String]
+{
+    if invitees.count >= 20 {
+        return invitees
+    }
+    return invitees + [newInvitee]
+}
+```
+
+在这个函数中，我们测试了邀请者列表上的名称数量，如果它大于 20，我们就返回传递给`invitees`参数的相同列表。请注意，`return`在函数中的使用方式与在循环中`break`的使用方式相似。一旦程序执行了返回的行，它就会退出函数，并将该值提供给调用代码。因此，最后的`return`行只有在`if`语句未通过时才会执行。然后它将`newinvitee`参数添加到列表中，并将其返回给调用代码。
+
+你可以这样调用这个函数：
+
+```swift
+var list = ["Sarah", "Jamison", "Marcos"]
+var newInvite = "Roana"
+list = addInviteeToListIfSpotAvailable(list, newInvite: newInvitee)
+```
+
+需要注意的是，我们必须将函数返回的值赋给`list`，因为新值可能会被函数修改。如果我们不这样做，列表将不会有任何变化。
+
+如果你尝试在游乐场中输入这段代码，你会注意到一个非常酷的现象。当你开始输入函数名时，你会看到一个小的弹出窗口，建议你可能想要输入的函数名，如下所示：
+
+![返回值的函数](img/B05103_02_04.jpg)
+
+你可以使用箭头键在列表中上下移动以选择你想要输入的函数，然后按 *Tab* 键让 Xcode 帮你完成函数的输入。不仅如此，它还会突出显示第一个参数，这样你就可以立即开始输入你想要传递的内容。当你完成第一个参数的定义后，你可以再次按 *Tab* 键来移动到下一个参数。这大大提高了你编写代码的速度。
+
+这是一个相当好命名的函数，因为它清楚地说明了它的功能。然而，我们可以通过使其更像一个句子来给它一个更自然、更富有表现力的名称：
+
+```swift
+func addInvitee
+    (
+    invitee: String,
+    ifPossibleToList invitees: [String]
+    )
+    -> [String]
+{
+    if invitees.count >= 20 {
+        return invitees
+    }
+    return invitees + [invitee]
+}
+list = addInvitee(newInvite, ifPossibleToList: list)
+```
+
+这是 Swift 的一项伟大特性，允许你使用带**命名参数**的函数。我们可以通过给第二个参数两个名称，用空格分隔来实现这一点。第一个名称是在调用函数时要使用的名称，也称为**外部名称**。第二个名称是在函数内部引用传入的常量时要使用的名称，也称为**内部名称**。作为一个练习，尝试更改函数，使其使用相同的内外部名称，并查看 Xcode 的建议。更具挑战性的是，编写一个函数，它接受一个邀请人列表和一个特定邀请人的索引，以便写一条消息请他们只带自己。例如，对于前面列表中的索引 `0`，它会打印 `Sarah, just bring yourself`。
+
+## 带有默认参数的函数
+
+有时我们编写的函数中有一个参数通常具有相同的值。如果能提供一个参数值，以便调用者没有覆盖该值时使用，那就太好了。Swift 有一个名为**默认参数**的特性。要为参数定义一个默认值，你只需在参数后添加一个等号，然后跟上一个值。我们可以在 `sayHelloToName:` 函数中添加一个默认参数，如下所示：
+
+```swift
+func sayHelloToName(name: String = "World") {
+    print("Hello \(name)!")
+}
+```
+
+这意味着我们现在可以带或不带指定名称调用这个函数：
+
+```swift
+sayHelloToName("World") // Prints "Hello World!"
+sayHelloToName() // Also Print "Hello World!"
+```
+
+当使用默认参数时，参数的顺序变得不再重要。我们可以在我们的 `addInvitee:ifPossibleToList:` 函数中添加默认参数，然后以任何组合或顺序调用它：
+
+```swift
+func addInvitee
+    (
+    invitee: String = "Default Invitee",
+    ifPossibleToList invitees: [String] = []
+    )
+    -> [String]
+{
+    // ...
+}
+list = addInvitee(ifPossibleToList: list, newInvite)
+list = addInvitee(newInvite, ifPossibleToList: list)
+list = addInvitee(ifPossibleToList: list)
+list = addInvitee(newInvite)
+list = addInvitee()
+```
+
+显然，当以相同的顺序编写时，调用仍然读起来更好，但并非所有函数都是这样设计的。这个特性的最重要部分是，你可以指定你想要与默认值不同的参数。
+
+## 保护语句
+
+我们将要讨论的函数的最后一个特性是另一种称为`guard`语句的条件类型。我们之前没有讨论它，因为它除非在函数或循环中使用，否则没有太多意义。`guard`语句的行为与`if`语句类似，但编译器强制你提供一个`else`条件，该条件必须从函数、循环或`switch`案例中退出。让我们重新设计我们的`addInvitee:ifPossibleToList:`函数，看看它是什么样子：
+
+```swift
+func addInvitee
+    (
+    invitee: String,
+    ifPossibleToList invitees: [String]
+    )
+    -> [String]
+{
+    guard invitees.count < 20 else {
+        return invitees
+    }
+    return invitees + [newInvitee]
+}
+```
+
+从语义上讲，`guard`语句指示我们确保受邀人数少于 20 人，否则返回原始列表。这与我们之前使用的逻辑相反，当时如果有 20 人或更多受邀者，我们会返回原始列表。这种逻辑实际上更有意义，因为我们规定了先决条件并提供了失败路径。使用`guard`语句的另一个优点是我们不会忘记从`else`条件中返回。如果我们这样做，编译器会给我们一个错误。
+
+重要的一点是，要注意`guard`语句没有在通过时执行的代码块。只能指定一个`else`条件，假设你想要为通过条件运行的任何代码将简单地跟在语句之后。这之所以安全，仅仅是因为编译器强制`else`条件退出函数，从而确保语句之后的代码不会运行。
+
+总体来说，`guard`语句是一种很好的定义函数或循环先决条件的方法，而无需为通过情况缩进代码。对我们来说，这还不是什么大问题，但如果你有很多先决条件，通常会使缩进代码变得繁琐。
+
+# 将所有内容结合起来
+
+到目前为止，我们已经了解了 Swift 的基本工作原理。让我们花点时间将这些概念在单个程序中结合起来。我们还将看到一些我们所学内容的新变体。
+
+程序的目标是接受一个受邀者列表和一个电视节目列表，并随机要求人们从每个类型中带一个节目。它还应要求其他人只带自己。
+
+在我们查看代码之前，我将提到我将要使用的三个小新特性：
+
++   生成随机数
+
++   使用变量仅存储真或假
+
++   重复-直到循环
+
+最重要的特性是生成随机数的能力。为了做到这一点，我们必须导入`Foundation`框架。这是苹果提供的基本框架中最基础的框架。正如其名所示，它构成了 OS X 和 iOS 框架的基础。
+
+`Foundation` 包含一个名为 `rand` 的函数，它返回一个随机数。实际上，计算机无法生成真正的随机数，并且默认情况下，`rand` 总是在相同的顺序返回相同的值。为了使它在每次程序运行时返回不同的值，我们使用一个名为 `srand` 的函数，代表种子随机。播种随机意味着我们提供一个值给 `rand`，作为其第一个值的基础。一种常见的播种随机数的方法是使用当前时间。我们将使用来自 `Foundation` 的 `clock` 方法。
+
+最后，`rand` 函数返回一个从 `0` 到一个非常大的数字，但正如您将看到的，我们希望将随机数限制在 `0` 和受邀人数之间。为此，我们使用取余运算符 (`%`)。这个运算符给出第一个数除以第二个数后的余数。例如，`14 % 4` 返回 `2`，因为 `4` 可以进入 `14`，`3` 次后还剩下 `2`。这个运算符的伟大之处在于它强制任何大小的数字始终在 `0` 和除数减 `1` 之间。这对于改变所有可能的随机值是完美的。
+
+生成随机数的完整代码如下：
+
+```swift
+// Import Foundation so that "rand" can be used
+import Foundation
+
+// Seed the random number generator
+srand(UInt32(clock()))
+
+// Random number between 0 and 9
+var randomNumber = Int(rand()) % 10
+```
+
+您可能还会注意到代码中的另一个特点。我们正在使用新的语法 `UInt32()` 和 `Int()`。这是一种将一种类型转换为另一种类型的方法。例如，`clock` 函数返回 `clock_t` 类型的值，但 `srand` 函数需要一个 `UInt32` 类型的参数。记住，就像变量一样，您可以按住选项键并单击一个函数来查看它接受和返回的类型。
+
+我们将使用的第二个特性是一个只能存储真或假的变量。这被称为 `Bool`，是布尔（Boolean）的简称。我们之前已经多次使用过这种类型，因为它用于所有条件和循环中，但这是我们第一次将 `Bool` 直接存储在变量中。在最基本的情况下，布尔变量是这样定义和使用的：
+
+```swift
+var someBool = false
+if someBool {
+    print("Do This")
+}
+```
+
+注意，我们可以在条件语句中直接使用布尔值。这是因为布尔值正是条件语句所期望的类型。我们所有的其他测试，如 `<=`，实际上都导致一个 `Bool`。
+
+最后，我们将使用的第三个特性是 `while` 循环的一种变体，称为 **重复-直到** 循环。与 `repeat-while` 循环的唯一区别是条件是在循环的末尾而不是开始时检查。这很重要，因为与 `while` 循环不同，`repeat-while` 循环至少会执行一次，如下所示：
+
+```swift
+var inviteeIndex: Int
+repeat {
+    inviteeIndex = Int(rand()) % 5
+} while inviteeIndex != 3
+```
+
+使用这个循环，我们将继续生成 `0` 到 `4` 之间的随机数，直到我们得到一个不等于 `3` 的数字。
+
+代码中的其他一切都是基于我们已知的概念构建的。我建议你阅读代码并尝试理解它。尝试不仅从它如何工作的角度理解它，还要理解为什么我以这种方式编写它。我包含了注释来帮助解释代码正在做什么以及为什么以这种方式编写：
+
+```swift
+// Import Foundation so that "rand" can be used
+import Foundation
+
+// Seed the random number generator
+srand(UInt32(clock()))
+
+// -----------------------------
+// Input Data
+// -----------------------------
+
+// invitees
+//
+// Each element is a tuple which contains a name
+// that is a String and a Bool for if they have been
+// invited yet. It is a variable because we will be
+// tracking if each invitee has been invited yet. 
+var invitees = [
+    (name: "Sarah", alreadyInvited: false),
+    (name: "Jamison", alreadyInvited: false),
+    (name: "Marcos", alreadyInvited: false),
+    (name: "Roana", alreadyInvited: false),
+    (name: "Neena", alreadyInvited: false),
+]
+
+// showsByGenre
+//
+// Constant because we will not need to modify
+// the show list at all
+let showsByGenre = [
+    "Comedy": "Modern Family",
+    "Drama": "Breaking Bad",
+    "Variety": "The Colbert Report",
+]
+```
+
+这段代码的第一个部分为我们提供了一个局部位置，我们可以在这里放置所有数据。如果我们想修改数据，可以轻松回到程序中，而不必在程序的其余部分中搜索以更新它：
+
+```swift
+// -----------------------------
+// Helper functions
+// -----------------------------
+
+// inviteAtIndex:toBringShow:
+//
+// Another function to help make future code
+// more comprehensible and maintainable
+func inviteAtIndex
+    (
+    index: Int,
+    toBringShow show: (genre: String, name: String)
+    )
+{
+    let name = invitees[index].name
+    print("\(name), bring a \(show.genre) show")
+    print("\(show.name) is a great \(show.genre)")
+
+    invitees[index].alreadyInvited = true
+ }
+
+// inviteToBringThemselvesAtIndex:
+//
+// Similar to the previous function but this time for
+// the remaining invitees
+func inviteToBringThemselvesAtIndex(index: Int) {
+    let invitee = invitees[index]
+    print("\(invitee.name), just bring yourself")
+
+    invitees[index].alreadyInvited = true
+ }
+```
+
+在这里，我提供了一些函数，它们简化了程序后面更复杂的代码。每个函数都有一个有意义的名称，这样，当它们被使用时，我们就不必去查看它们的代码来理解它们正在做什么：
+
+```swift
+// -----------------------------
+// Now the core logic
+// -----------------------------
+
+// First, we want to make sure each genre is assigned
+// to an invitee
+for show in showsByGenre {
+    // We need to pick a random invitee that has not
+    // already been invited. With the following loop
+    // we will continue to pick an invitee until we
+    // find one that has not already been invited
+    var inviteeIndex: Int
+    repeat {
+        inviteeIndex = Int(rand()) % invitees.count
+    } while invitees[inviteeIndex].alreadyInvited
+
+    // Now that we have found an invitee that has not
+    // been invited, we will invite them
+    inviteAtIndex(inviteeIndex, toBringShow: (show))
+}
+
+// Now that we have assigned each genre, we
+// will ask the remaining people to just bring
+// themselves
+for index in 0 ..< invitees.count {
+    let invitee = invitees[index]
+    if !invitee.alreadyInvited {
+        inviteToBringThemselvesAtIndex(index)
+    }
+}
+```
+
+最后一段包含程序的真正逻辑，通常被称为**业务逻辑**。上一段中的函数只是细节，最后一段是真正定义程序做什么的逻辑。
+
+这绝不是组织程序的唯一方法。随着我们学习更多高级组织技术，这一点将变得更加清晰。然而，这种分解展示了你应该组织代码的一般哲学。你应该努力编写每一行代码，就像它将要被发表在书中一样。随着你对 Swift 的熟练程度提高，这个例子中的许多注释将变得过多，但当你不确定时，使用注释或命名良好的函数来解释你正在做什么。这不仅有助于他人理解你的代码，当你六个月后再次回到代码时，它也会帮助你理解代码。不仅如此，如果你强迫自己在编写代码时使思想形式化，你会发现你创建的 bug 会少得多。
+
+让我们也看看这个实现的一个有趣限制。如果邀请人数少于演出数量，这个程序将遇到一个主要问题。`repeat-while`循环将永远继续，永远不会找到一个未被邀请的邀请人。你的程序不需要处理所有可能的输入，但你至少应该意识到它的局限性。
+
+# 摘要
+
+在本章中，我们为 Swift 知识打下了坚实的基础。我们学习了 Swift 如何以表达性和易于访问的方式表示复杂信息的各种内置机制。我们知道，默认情况下，我们应该将信息声明为常量，直到我们发现实际需要改变它的时候，然后我们应该将其变为变量。我们探讨了在 Swift 中，每一条信息都通过编译器与一个类型相关联，无论是通过类型推断还是显式声明。我们对许多内置类型都很熟悉，包括简单的类型如`String`、`Int`和`Bool`，以及容器类型如元组、数组和字典。我们可以使用控制台输出更好地调查我们的程序，特别是通过使用字符串插值来实现动态输出。我们认识到使用`if`语句、条件语句、`switch`语句和循环来控制程序流程的强大功能。我们的技能集中包含编写更易读、可维护和可重用代码的函数。最后，我们看到了如何将这些概念结合起来编写一个完整程序的例子。
+
+作为对你的一次挑战，我建议你修复最终的程序，使其在邀请人不足时停止尝试分配节目。当你能够做到这一点时，你就已经准备好继续下一个主题了，这个主题是**类型**、**作用域**和**项目**。
+
+这些都是我们可以用来编写更加有序代码的工具，随着我们编写越来越大的项目，它们将变得更加关键。

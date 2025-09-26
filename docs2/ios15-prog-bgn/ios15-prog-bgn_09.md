@@ -1,0 +1,279 @@
+# *第八章*：协议、扩展和错误处理
+
+在上一章中，你已经学习了如何使用类或结构体来表示复杂对象，以及如何使用枚举将相关值分组在一起。
+
+在结束 Swift 的章节时，你将学习**协议**、**扩展**和**错误处理**。协议定义了一个蓝图，其中包含了可以被类、结构体或枚举采用的函数、属性和其他要求。扩展允许你为现有的类、结构体或枚举提供新的功能。错误处理涵盖了如何在程序中响应和恢复错误。
+
+到本章结束时，你将能够编写自己的协议以满足你应用程序的需求，使用扩展为现有类型添加新功能，并在你的应用程序中处理错误条件而不会崩溃。
+
+本章将涵盖以下主题：
+
++   理解协议
+
++   理解扩展
+
++   探索错误处理
+
+# 技术要求
+
+本章的 Xcode 游乐场位于本书代码包的`Chapter08`文件夹中，可以在此处下载：
+
+[`github.com/PacktPublishing/iOS-15-Programming-for-Beginners-Sixth-Edition`](https://github.com/PacktPublishing/iOS-15-Programming-for-Beginners-Sixth-Edition)
+
+查看以下视频，看看代码的实际效果：
+
+[`bit.ly/3H1XWkQ`](https://bit.ly/3H1XWkQ)
+
+如果你希望从头开始，创建一个新的游乐场，并将其命名为`Protocols, ExtensionsAndErrorHandling`。你可以一边阅读一边在这个章节中输入和运行所有代码。让我们从协议开始，协议是一种指定类、结构体或枚举应该具有的属性和方法的方式。
+
+# 理解协议
+
+协议就像蓝图，决定了对象应该具有哪些属性或方法。在你声明了一个协议之后，类、结构体和枚举可以采用这个协议，并为所需的属性和方法提供自己的实现。
+
+下面是一个协议声明的样子：
+
+```swift
+protocol ProtocolName {
+   var readWriteProperty1 {get set}
+   var readOnlyProperty2 {get}
+   methodName1()
+   methodName2()
+}
+```
+
+就像类和结构体一样，协议名称以大写字母开头。属性需要使用`var`关键字声明。如果你想创建一个可读写的属性，使用`{get set}`，如果你想创建一个只读属性，使用`{get}`。请注意，你只需指定属性和方法名称。实现是在采用该协议的类、结构体或枚举内部完成的。
+
+重要信息
+
+更多关于协议的信息，请访问：[`docs.swift.org/swift-book/LanguageGuide/Protocols.html`](https://docs.swift.org/swift-book/LanguageGuide/Protocols.html)。
+
+为了帮助你理解协议，想象一个快餐店使用的应用程序。管理层已经决定显示所提供餐点的卡路里含量。该应用程序目前有以下类、结构体和枚举，它们都没有实现卡路里含量：
+
++   一个`Burger`类
+
++   一个`Fries`结构体
+
++   一个`Sauce`枚举
+
+将以下代码添加到您的 playground 中，以声明`Burger`类、`Fries`结构和`Sauce`枚举：
+
+```swift
+class Burger {
+}
+struct Fries {
+}
+enum Sauce { 
+   case chili 
+   case tomato
+}
+```
+
+这些代表应用中现有的类、结构和枚举。不用担心空定义，因为它们对于本课程不是必需的。如您所见，它们目前都没有卡路里计数。让我们看看如何使用协议来指定实现卡路里计数所需的属性和方法。您将在下一节中声明一个指定所需属性和方法的协议。
+
+## 创建协议声明
+
+让我们创建一个指定所需属性`calories`和所需方法`description()`的协议。在类、结构和枚举声明上方输入以下内容到您的 playground 中：
+
+```swift
+protocol CalorieCount {
+   var calories: Int { get }
+   func description() -> String
+}
+```
+
+此协议命名为`CalorieCount`。它指定了采用它的任何对象都必须有一个属性`calories`，用于存储卡路里计数，以及一个返回字符串的方法`description()`。`{ get }`表示您只需要能够读取存储在`calories`中的值，而不需要写入它。请注意，`description()`方法的定义没有指定，因为这将在类、结构或枚举中完成。您要采用协议，只需在类名后跟一个冒号，然后跟协议名，并实现所需的属性和方法。
+
+要使`Burger`类符合此协议，按照以下方式修改您的代码：
+
+```swift
+class Burger: CalorieCount {
+   let calories = 800
+   func description() -> String {
+      return "This burger has \(calories) calories"
+   }
+}
+```
+
+如您所见，`calories`属性和`description()`方法已被添加到`Burger`类中。尽管协议指定了一个变量，但在这里您可以使用常量，因为协议只要求您能够获取`calories`的值，而不需要设置它。
+
+让我们将`Fries`结构也采用这个协议。按照以下方式修改您的`Fries`结构代码：
+
+```swift
+struct Fries: CalorieCount {
+   let calories = 500
+   func description() -> String {
+      return "These fries have \(calories) calories"
+   }
+}
+```
+
+用于`Burger`类的相同过程也用于`Fries`结构，现在它也符合`CalorieCount`协议。
+
+您也可以以同样的方式修改`Sauce`枚举，但让我们使用扩展来完成它。扩展扩展了一个现有类的功能。您将在下一节中使用扩展将`CalorieCount`协议添加到`Sauce`枚举中。
+
+# 理解扩展
+
+扩展允许您在不修改原始对象定义的情况下为对象提供额外的功能。您可以在苹果提供的对象上使用它们（您没有访问对象定义的权限）或者当您希望将代码分离以提高可读性和易于维护时使用它们。以下是一个扩展的示例：
+
+```swift
+class ExistingType {
+   property1
+   method1()
+}
+extension ExistingType : ProtocolName {
+   property2
+   method2()
+}
+```
+
+在这里，扩展被用来为一个现有的类提供额外的属性和方法。
+
+重要信息
+
+想要了解更多关于扩展的信息，请访问[`docs.swift.org/swift-book/LanguageGuide/Extensions.html`](https://docs.swift.org/swift-book/LanguageGuide/Extensions.html)。
+
+让我们看看如何使用扩展。你将首先通过在下一节中使用扩展使`Sauce`枚举遵循`CalorieCount`协议。
+
+## 通过扩展采用协议
+
+目前，`Sauce`枚举不遵循`CalorieCount`协议。你将使用扩展来添加使其遵循所需的属性和方法。在`Sauce`枚举声明之后输入以下代码：
+
+```swift
+enum Sauce {
+   case chili 
+   case tomato
+}
+extension Sauce: CalorieCount {
+   var calories: Int {
+      switch self {
+      case .chili:
+return 20 
+case .tomato: 
+         return 15
+      }
+   }
+   func description() -> String {
+      return "This sauce has \(calories) calories"
+   }
+} 
+```
+
+如您所见，没有对`Sauce`枚举的原始定义进行任何更改。如果你想要扩展现有的 Swift 标准类型，如`String`和`Int`，这同样非常有用。
+
+枚举不能有存储属性，因此使用`switch`语句根据枚举的值返回卡路里数，使用`self`关键字。`description()`方法与`Burger`类和`Fries`结构中的方法相同。
+
+到目前为止，所有三个对象都有一个`calories`属性和一个`description()`方法。太棒了！
+
+让我们看看如何将它们放入一个数组中，并执行一个操作来获取一顿饭的总卡路里数。
+
+## 创建不同类型对象的数组
+
+通常，数组的元素必须是同一类型。然而，由于`Burger`类、`Fries`结构和`Sauce`枚举都遵循`CalorieCount`协议，你可以创建一个包含遵循此协议的元素的数组。按照以下步骤操作：
+
+1.  要将`Burger`类的实例、`Fries`结构和`Sauce`枚举添加到数组中，在所有协议和对象声明之后，输入以下代码：
+
+    ```swift
+    let burger = Burger()
+    let fries = Fries()
+    let sauce = Sauce.tomato
+    let foodArray: [CalorieCount] = [burger, fries, sauce]
+    ```
+
+1.  要获取总卡路里数，在创建`foodArray`常量的行之后添加以下代码：
+
+    ```swift
+    var totalCalories = 0
+    for food in foodArray {
+       totalCalories += food.calories
+    }
+    print(totalCalories)
+    ```
+
+    `for`循环遍历`foodArray`数组中的每个元素。对于每次迭代，每个食物项目的`calories`属性中的值将添加到`totalCalories`中，总卡路里数`1315`将在调试区域中显示。
+
+你已经学会了如何创建一个协议，并使类、结构或枚举遵循它，无论是在类定义中还是在扩展中。接下来，让我们看看错误处理，它探讨了如何响应或从程序中的错误中恢复。
+
+# 探索错误处理
+
+当你编写应用程序时，请记住可能会发生错误条件，错误处理是应用程序如何响应和从这些条件中恢复的方式。
+
+首先，你创建一个符合 Swift 的`Error`协议的类型，这使得该类型可用于错误处理。枚举通常用于此目的，因为你可以为不同类型的错误指定关联值。当发生意外情况时，你可以通过抛出错误来停止程序执行。你使用`throw`语句来做这件事，并提供一个符合`Error`协议的类型的实例，并带有适当的值。这允许你看到出了什么问题。
+
+当然，如果您能够在不停止程序的情况下响应错误，那就更好了。为此，您可以使用 `do-catch` 块，其外观如下：
+
+```swift
+do {
+   try expression1
+   statement1
+} catch {
+   statement2
+}
+```
+
+在这里，您尝试使用 `try` 关键字在 `do` 块中执行代码。如果抛出错误，则执行 `catch` 块中的语句。您可以有多个 `catch` 块来处理不同的错误类型。
+
+重要信息：
+
+有关错误处理的更多信息，请访问 [`docs.swift.org/swift-book/LanguageGuide/ErrorHandling.html`](https://docs.swift.org/swift-book/LanguageGuide/ErrorHandling.html)。
+
+例如，假设您有一个需要访问网页的应用程序。然而，如果该网页所在的服务器宕机，编写处理错误（例如尝试备用网页服务器或通知用户服务器已宕机）的代码就取决于您了。
+
+让我们创建一个符合 `Error` 协议的枚举，当发生错误时使用 `throw` 语句停止程序执行，并使用 `do-catch` 块来处理错误。按照以下步骤操作：
+
+1.  将以下代码输入到您的游乐场中：
+
+    ```swift
+    enum WebsiteError: Error {
+       case noInternetConnection
+       case siteDown
+       case wrongURL
+    }
+    ```
+
+    这声明了一个采用 `Error` 协议的枚举，`WebsiteError`。它涵盖了三种可能的错误条件：没有互联网连接、网站不可用或 URL 无法解析。
+
+1.  在 `WebpageError` 声明后输入以下代码以声明一个函数，该函数检查网站是否可用：
+
+    ```swift
+    func checkWebsite(siteUp: Bool) throws -> String {
+       if siteUp == false {
+         throw WebsiteError.siteDown
+       }
+       return "Site is up"
+    }
+    ```
+
+    如果 `siteUp` 是 `true`，则返回 `"Site is up"`。如果 `siteUp` 是 `false`，程序将停止执行并抛出错误。
+
+1.  在函数声明后输入以下代码以调用您的函数，并运行您的程序：
+
+    ```swift
+    let siteStatus = true
+    try checkWebsite(siteUp: siteStatus)
+    ```
+
+    由于 `siteStatus` 是 `true`，`Site is up` 将出现在结果区域。
+
+1.  将 `siteStatus` 的值更改为 `false` 并运行您的程序。您的程序崩溃，并在调试区域显示以下错误消息：
+
+    ```swift
+    Playground execution terminated: An error was thrown and was not caught:
+    __lldb_expr_5.WebsiteError.siteDown
+    ```
+
+1.  当然，如果您能够在不使程序崩溃的情况下处理错误，那就更好了。您可以通过使用 `do-catch` 块来实现这一点。按照以下方式修改您的代码并运行它：
+
+    ```swift
+    let siteStatus = false
+    do block tries to execute the checkWebsite(siteUp:) function and prints the status if successful. If there is an error, instead of crashing, the statements in the catch block are executed, and the error message siteDown appears in the Debug area.TipYou can make your program handle different error conditions by implementing multiple `catch` blocks. See this link for details: [`docs.swift.org/swift-book/LanguageGuide/ErrorHandling.html`](https://docs.swift.org/swift-book/LanguageGuide/ErrorHandling.html).
+    ```
+
+您已经学会了如何在您的应用程序中处理错误而不会使其崩溃。给自己鼓掌吧；您已经完成了这本书的第一部分！
+
+# 摘要
+
+在本章中，您学习了如何编写协议以及如何使类、结构和枚举符合这些协议。您还学习了如何通过使用扩展来扩展类的功能。最后，您学习了如何使用 `do-catch` 块来处理错误。
+
+现在可能看起来相当抽象且难以理解，但正如您将在本书的 *第三部分* 中看到的，您将使用协议来实现程序不同部分中的常见功能，而不是一遍又一遍地编写相同的程序。您将看到扩展在组织代码方面的有用性，这使得维护变得容易。最后但同样重要的是，您将看到良好的错误处理如何使您能够轻松地定位在编写应用程序时犯下的错误。
+
+在下一章中，你将通过使用故事板来创建应用程序的界面，开始编写你的第一个 iOS 应用程序，这允许你快速原型化一个应用程序，而无需编写大量代码。

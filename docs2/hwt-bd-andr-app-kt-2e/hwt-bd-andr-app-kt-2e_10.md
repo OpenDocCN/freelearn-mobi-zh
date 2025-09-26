@@ -1,0 +1,2350 @@
+# 10
+
+# 使用 JUnit、Mockito 和 Espresso 进行单元测试和集成测试
+
+在本章中，你将了解在 Android 平台上的测试以及如何创建单元测试、集成测试和 UI 测试。你将看到如何创建每种类型的测试，分析它们的运行方式，并使用 JUnit、Mockito、Robolectric 和 Espresso 等框架进行工作。
+
+你还将了解测试驱动开发（TDD），这是一种软件开发实践，它将测试优先于实现。在本章结束时，你将能够结合你的新测试技能来参与一个真实的项目。
+
+在前面的章节中，你学习了如何加载后台数据并在 UI 中显示它，以及如何设置 API 调用以检索数据。但你如何确保一切正常工作？如果你处于必须修复一个你过去很少与之交互的项目中的 bug 的情况怎么办？你如何知道你正在应用修复不会触发另一个 bug？这些问题的答案是测试。
+
+在本章中，我们将分析开发者可以编写的测试类型，并查看可用的测试工具以简化测试体验。首先出现的问题是，桌面或笔记本电脑（它们具有不同的操作系统）用于开发移动应用程序。这意味着测试也必须在设备或模拟器上运行，这将减慢测试速度。
+
+为了解决这个问题，我们提供了两种类型的测试：`test`文件夹将在你的机器上运行，而`androidTest`文件夹将在设备或模拟器上运行。
+
+在本章中，我们将涵盖以下主题：
+
++   JUnit
+
++   Android Studio 测试技巧
+
++   Mockito
+
++   集成测试
+
++   UI 测试
+
++   TDD
+
+# 技术要求
+
+本章中所有练习和活动的完整代码可在 GitHub 上找到：[`packt.link/pNbuk`](https://packt.link/pNbuk)
+
+# 测试类型
+
+这两种测试都依赖于 Java **JUnit**库，它帮助开发者设置他们的测试并将它们分组到不同的类别。它还提供了不同的配置选项，以及其他库可以构建在其上的扩展。我们还将研究测试金字塔，它有助于指导开发者如何构建他们的测试。
+
+我们将从金字塔的底部开始，底部由**单元测试**表示，然后向上通过**集成测试**，最终达到顶部，顶部由**端到端测试**（UI 测试）表示。你将有机会了解辅助编写这些测试类型所需的工具：
+
++   `mockito-kotlin`主要帮助进行单元测试，并且对于创建我们可以操作输入以断言不同场景的模拟或测试双倍对象非常有用。（模拟或测试双倍对象是模仿另一个对象实现的对象。每次测试与模拟交互时，你都可以指定这些交互的行为。）
+
++   **Robolectric**，这是一个开源库，将 Android 框架带到您的机器上，允许您在本地测试活动片段，而不是在模拟器上。这可以用于单元测试和集成测试。
+
++   `EditText`组件等）以及断言（验证视图是否显示特定文本、是否正在向用户显示、是否启用等）在仪器化测试中的应用程序 UI 上。
+
+在本章中，我们还将探讨**TDD**。这是一种软件开发流程，其中测试优先。描述它的简单方法是先编写测试。我们将分析在开发 Android 应用程序功能时如何采取这种方法的实例。要记住的一件事是，为了使应用程序得到适当的测试，其类必须得到适当的编写。做到这一点的一种方法是通过明确定义类之间的边界，并根据您希望它们完成的任务来拆分它们。
+
+一旦您实现了这一点，您也可以在编写类时依赖**依赖倒置**和**依赖注入**原则。当这些原则得到正确应用时，您应该能够将假对象注入到测试的主题中，并操纵输入以适应您的测试场景。
+
+依赖注入在编写仪器化测试时也有帮助，可以帮助您交换执行网络调用的模块与本地数据，以便使您的测试独立于外部因素，例如网络。仪器化测试是在设备或模拟器上运行的测试。`instrument`关键字来自仪器化框架，该框架组装这些测试，然后在设备上执行它们。
+
+理想情况下，每个应用程序都应该有三种类型的测试：
+
++   **单元测试**：这些是本地测试，用于验证单个类和方法。它们应该代表您的大部分测试，并且应该快速、易于调试和易于维护。它们也被称为小型测试。
+
++   **集成测试**：这些是使用 Robolectric 的本地测试或验证应用程序模块和组件之间交互的仪器化测试。它们比单元测试更慢、更复杂。复杂性的增加是由于组件之间的交互。它们也被称为中型测试。
+
++   **UI 测试（端到端测试）**：这些是验证完整用户旅程和场景的仪器化测试。这使得它们更复杂，更难维护；它们应该代表您总测试数量中最小的一部分。它们也被称为大型测试。
+
+在以下图中，您可以观察到**测试金字塔**。谷歌的建议是保持测试的 70:20:10（单元测试：集成测试：UI 测试）的比例：
+
+![图 10.1 – 测试金字塔](img/B19411_10_01.jpg)
+
+图 10.1 – 测试金字塔
+
+如前所述，单元测试是验证代码一小部分的测试，并且大多数测试应该是覆盖所有各种场景（成功、错误、限制等）的单元测试。理想情况下，这些测试应该是本地的，但有一些例外，你可以使它们成为可测量的。这些情况很少见，应该限制在你想与设备的具体硬件交互时。
+
+# JUnit
+
+JUnit 是一个用于在 Java 和 Android 中编写单元测试的框架。它负责测试的执行方式，允许开发者配置他们的测试。它提供了许多功能，例如以下内容：
+
++   `@Before`和`@After`注解。
+
++   **断言**：这些用于验证操作的结果与预期值是否一致。
+
++   **规则**：这些允许开发者设置多个测试共有的输入。
+
++   **运行器**：使用这些，你可以指定测试如何执行。
+
++   **参数**：这些允许测试方法使用多个输入执行。
+
++   **排序**：这些指定了测试应该执行的顺序。
+
++   **匹配器**：这些允许你定义可以用来验证测试主题结果的模式，或者帮助你控制模拟的行为。
+
+在 Android Studio 中，创建新项目时，`app`模块在 Gradle 中带有 JUnit 库。这应该在`app/build.gradle`中可见：
+
+```swift
+testImplementation 'junit:junit:4.13.2'
+```
+
+让我们看看我们需要测试的以下类：
+
+```swift
+class MyClass {
+    fun factorial(n: Int): Int {
+        return IntArray(n) {
+            it+1
+        }.reduce { acc, i ->
+            acc * i
+        }
+    }
+}
+```
+
+此方法应返回数字`n`的阶乘。我们可以从一个简单的测试开始，检查值。要创建一个新的单元测试，你需要在项目的`test`目录下创建一个新类。
+
+大多数开发者遵循的典型约定是在类名后添加`Test`后缀，并将其放置在`test`目录下的同一包中。例如，`com.mypackage.ClassA`的测试将在`com.mypackage.ClassATest`中：
+
+```swift
+import org.junit.Assert.assertEquals
+import org.junit.Test
+class MyClassTest {
+    private val myClass = MyClass()
+    @Test
+    fun computesFactorial() {
+        val n = 3
+        val result = myClass.factorial(n)
+        assertEquals(6, result)
+    }
+}
+```
+
+在这个测试中，你可以看到我们初始化了被测试的类，并且测试方法本身被`@Test`注解所标记。测试方法本身将断言`(3!)==6`。断言是通过 JUnit 库中的`assertEquals`方法完成的。开发中的常见做法是将测试分为三个区域，也称为**安排-执行-断言**（**AAA**）：
+
++   **安排**：初始化输入的地方
+
++   **执行**：测试方法被调用的地方
+
++   **断言**：验证的地方
+
+我们可以再写一个测试来确保值是正确的，但最终我们会重复代码。现在我们可以尝试编写一个参数化测试。为此，我们需要使用参数化测试运行器。前面的测试由 JUnit 提供的内置运行器提供。
+
+参数化运行器将针对我们提供的不同值重复运行测试，并且看起来如下——请注意，为了简洁起见，已经删除了`import`语句：
+
+```swift
+@RunWith(Parameterized::class)
+class MyClassTest(
+    private val input: Int,
+    private val expected: Int
+) {
+    companion object {
+        @Parameterized.Parameters
+        @JvmStatic
+        fun getData(): Collection<Array<Int>> = listOf(
+            arrayOf(0, 1),
+            arrayOf(1, 1),
+            arrayOf(2, 2),
+            arrayOf(3, 6),
+            arrayOf(4, 24),
+            arrayOf(5, 120)
+        )
+    }
+    private val myClass = MyClass()
+    @Test
+    fun computesFactorial() {
+        val result = myClass.factorial(input)
+        assertEquals(expected, result)
+    }
+}
+```
+
+这将运行六个测试。`@Parameterized`注解的使用告诉 JUnit 这是一个具有多个参数的测试，并允许我们为测试添加一个构造函数，该构造函数将代表我们的`factorial`函数的输入值和输出。然后我们使用`@Parameterized.Parameters`注解定义了一个参数集合。
+
+这个测试的每个参数都是一个包含输入和预期输出的单独列表。当 JUnit 运行这个测试时，它将为每个参数运行一个新实例，然后执行测试方法。当我们测试`0!`时，这将产生五个成功和一个失败，这意味着我们找到了一个错误。
+
+我们从未考虑到`n = 0`的情况。现在，我们可以回到我们的代码中修复失败。我们可以通过用允许我们指定初始值的`fold`函数替换不允许我们指定初始值的`reduce`函数来实现这一点：
+
+```swift
+fun factorial(n: Int): Int {
+        return IntArray(n) {
+            it + 1
+        }.fold(1, { acc, i -> acc * i })
+    }
+```
+
+现在运行测试，它们都将通过。但这并不意味着我们已经完成了。还有很多事情可能会出错。如果`n`是一个负数会发生什么？由于我们处理的是阶乘，我们可能会得到很大的数。在我们的例子中，我们使用整数，这意味着整数将在`12!`之后溢出。
+
+通常，我们会在`MyClassTest`类中创建新的测试方法，但由于使用了参数化运行器，我们所有的新方法都将多次运行，这将花费我们时间，因此我们将创建一个新的测试类来检查我们的错误：
+
+```swift
+class MyClassTest2 {
+    private val myClass = MyClass()
+    @Test(expected =
+        MyClass.FactorialNotFoundException::class)
+    fun computeNegatives() {
+        myClass.factorial(-10)
+    }
+}
+```
+
+这将导致以下被测试的类中的变化：
+
+```swift
+class MyClass {
+    @Throws(FactorialNotFoundException::class)
+    fun factorial(n: Int): Int {
+        if (n < 0) {
+            throw FactorialNotFoundException
+        }
+        return IntArray(n) {
+            it + 1
+        }.fold(1, { acc, i -> acc * i })
+    }
+    object FactorialNotFoundException : Throwable()
+}
+```
+
+让我们解决非常大的阶乘的问题。我们可以使用`BigInteger`类，它可以存储大数。我们可以按如下方式更新测试（省略了`import`语句）：
+
+```swift
+@RunWith(Parameterized::class)
+class MyClassTest(
+    private val input: Int,
+    private val expected: BigInteger
+) {
+    companion object {
+        @Parameterized.Parameters
+        @JvmStatic
+        fun getData(): Collection<Array<Any>> = listOf(
+            arrayOf(0, BigInteger.ONE),
+            arrayOf(1, BigInteger.ONE),
+            arrayOf(2, BigInteger.valueOf(2)),
+            arrayOf(3, BigInteger.valueOf(6)),
+            arrayOf(4, BigInteger.valueOf(24)),
+            arrayOf(5, BigInteger.valueOf(120)),
+            arrayOf(13, BigInteger("6227020800")),
+            arrayOf(25, BigInteger(
+            "15511210043330985984000000"))
+        )
+    }
+    private val myClass = MyClass()
+    @Test
+    fun computesFactorial() {
+        val result = myClass.factorial(input)
+        assertEquals(expected, result)
+    }
+}
+```
+
+被测试的类现在看起来像这样：
+
+```swift
+    @Throws(FactorialNotFoundException::class)
+    fun factorial(n: Int): BigInteger {
+        if (n < 0) {
+            throw FactorialNotFoundException
+        }
+        return IntArray(n) {
+            it + 1
+        }.fold(BigInteger.ONE, { acc, i -> acc *
+            i.toBigInteger() })
+    }
+```
+
+在前面的例子中，我们通过`IntArray`实现了阶乘。这种实现更多地基于 Kotlin 将方法链在一起的能力，但它有一个缺点：当它不需要时，它仍然使用内存来存储数组。
+
+我们只关心阶乘，而不是存储从`1`到`n`的所有数字。我们可以将实现更改为简单的`for`循环，并在重构过程中使用测试来引导我们。
+
+我们可以观察到在应用程序中拥有测试的两个好处：
+
++   它们作为如何实现特性的更新文档。
+
++   当重构代码时，它们通过保持相同的断言并检测代码的新更改是否破坏了它来引导我们。
+
+让我们更新代码以去除`IntArray`：
+
+```swift
+    @Throws(FactorialNotFoundException::class)
+    fun factorial(n: Int): BigInteger {
+        if (n < 0) {
+            throw FactorialNotFoundException
+        }
+        var result = BigInteger.ONE
+        for (i in 1..n){
+            result = result.times(i.toBigInteger())
+        }
+        return result
+    }
+```
+
+如果我们修改`factorial`函数，如前例所示，并运行测试，我们应该看到它们都通过。
+
+在某些情况下，你的测试将使用测试或应用程序共有的资源（数据库、文件等）。理想情况下，单元测试不应该发生这种情况，但总会有例外。
+
+让我们分析这个场景，看看 JUnit 如何帮助我们。我们将添加一个`companion`对象，用于存储结果，以模拟这种行为：
+
+```swift
+    companion object {
+        var result: BigInteger = BigInteger.ONE
+    }
+    @Throws(FactorialNotFoundException::class)
+    fun factorial(n: Int): BigInteger {
+        if (n < 0) {
+            throw FactorialNotFoundException
+        }
+        for (i in 1..n) {
+            result = result.times(i.toBigInteger())
+        }
+        return result
+    }
+```
+
+如果我们执行前面代码的测试，我们会开始看到一些测试会失败。这是因为第一次测试执行`factorial`函数后，结果将具有已执行测试的值，当执行新的测试时，阶乘的结果将被乘以前一个结果值。
+
+通常，这会很好，因为测试告诉我们我们在做错事，我们应该纠正它，但在这个例子中，我们将直接在测试中解决这个问题：
+
+```swift
+    @Before
+    fun setUp(){
+        MyClass.result = BigInteger.ONE
+    }
+    @After
+    fun tearDown(){
+        MyClass.result = BigInteger.ONE
+    }
+    @Test
+    fun computesFactorial() {
+        val result = myClass.factorial(input)
+        assertEquals(expected, result)
+    }
+```
+
+在测试中，我们添加了两个带有`@Before`和`@After`注解的方法。当这些方法被引入时，JUnit 将改变执行流程如下：所有带有`@Before`注解的方法将被执行，一个带有`@Test`注解的方法将被执行，然后所有带有`@After`注解的方法将被执行。这个过程将针对您类中的每个`@Test`方法重复。
+
+如果您发现自己正在`@Before`方法中重复相同的语句，您可以考虑使用`@Rule`来消除重复。我们可以为前面的例子设置一个测试规则。测试规则应在`test`或`androidTest`包中，因为它们的用途仅限于测试。它们通常在多个测试中使用，因此您可以将您的规则放在一个`rules`包中（未显示`import`语句）：
+
+```swift
+class ResultRule : TestRule {
+    override fun apply(
+        base: Statement,
+        description: Description?
+    ): Statement? {
+        return object : Statement() {
+            @Throws(Throwable::class)
+            override fun evaluate() {
+                MyClass.result = BigInteger.ONE
+                try {
+                    base.evaluate()
+                } finally {
+                    MyClass.result = BigInteger.ONE
+                }
+            }
+        }
+    }
+}
+```
+
+在前面的例子中，我们可以看到规则将实现`TestRule`，它反过来又带有`apply()`方法。然后我们创建一个新的`Statement`对象，该对象将执行`base`语句（即测试本身）并在语句前后重置结果值。现在我们可以按如下方式修改测试：
+
+```swift
+    @JvmField
+    @Rule
+    val resultRule = ResultRule()
+    private val myClass = MyClass()
+    @Test
+    fun computesFactorial() {
+        val result = myClass.factorial(input)
+        assertEquals(expected, result)
+    }
+```
+
+要将规则添加到测试中，我们使用`@Rule`注解。由于测试是用 Kotlin 编写的，我们使用`@JvmField`来避免生成 getter 和 setter，因为`@Rule`需要一个公共字段而不是方法。
+
+在本节中，我们学习了如何使用 JUnit 编写测试，通过验证不同参数的结果、错误或行为来验证我们代码的小单元。我们还学习了当它们是测试类的一部分时，每个测试是如何运行的以及操作调用的顺序。在下一节中，我们将探讨如何使用 Android Studio 来了解如何运行测试和查看结果。
+
+# Android Studio 测试技巧
+
+Android Studio 自带了一套良好的快捷键和可视化工具，有助于进行测试。如果您想为您的类创建一个新的测试或转到您类中的现有测试，您可以使用*Ctrl* + *Shift* + *T*（Windows）或*Command* + *Shift* + *T*（Mac）快捷键。您需要确保在编辑器中当前聚焦的是您类的内容，以便快捷键生效。
+
+运行测试有多种选项：右键单击文件或包，然后选择 **运行 'Tests in…'** 选项，或者如果您想独立运行测试，可以进入特定的测试方法，并选择类顶部的绿色图标，这将执行该类中的所有测试。
+
+![图 10.2 – 运行测试组](img/B19411_10_02.jpg)
+
+图 10.2 – 运行测试组
+
+对于单个测试，您可以点击 `@Test` 注释方法旁边的绿色图标。
+
+![图 10.3 – 运行单个测试的图标](img/B19411_10_03.jpg)
+
+图 10.3 – 运行单个测试的图标
+
+这将触发测试执行，将在 **运行** 选项卡中显示，如下面的截图所示。当测试完成后，它们将根据其成功状态变为红色或绿色：
+
+![图 10.4 – Android Studio 中的测试输出](img/B19411_10_04.jpg)
+
+图 10.4 – Android Studio 中的测试输出
+
+测试中可以找到的另一个重要功能是调试功能。这很重要，因为您既可以调试测试，也可以调试被测试的方法，所以如果您在修复问题时遇到问题，可以使用此功能查看测试使用的输入以及您的代码如何处理输入。在测试旁边的绿色图标旁边，您还可以找到的第三个功能是 **带有覆盖率运行** 选项。
+
+这有助于开发者识别哪些代码行被测试覆盖，哪些被跳过。覆盖率越高，发现崩溃和错误的机会就越大：
+
+![图 10.5 – Android Studio 中的测试覆盖率](img/B19411_10_05.jpg)
+
+图 10.5 – Android Studio 中的测试覆盖率
+
+在前面的图中，您可以看到我们类的覆盖率分解为受测试的类数量、受测试的方法数量和受测试的行数。
+
+运行 Android 应用测试的另一种方式是通过命令行。这在项目设置了 **持续集成** 的情况下通常很方便，这意味着每次您将代码上传到云端的代码库时，都会触发一系列脚本来测试它并确保其功能。
+
+由于这是在云端完成的，因此不需要安装 Android Studio。为了简化，我们将使用 Android Studio 中的 **终端** 选项卡来模拟这种行为。**终端** 选项卡通常位于 Android Studio 底部栏中，靠近 **日志输出** 选项卡。
+
+在每个 Android Studio 项目中，都存在一个名为 `gradlew` 的文件。这是一个可执行文件，允许开发者执行 Gradle 命令。要运行本地单元测试，您可以使用以下命令：
+
++   `gradlew.bat test`（适用于 Windows）
+
++   `./gradlew test`（适用于 macOS 和 Linux）
+
+执行该命令后，应用将被构建和测试。您可以在 Android Studio 右侧的 **Gradle** 选项卡中找到可以在 **终端** 中输入的各种命令。
+
+如果你看到消息说**任务列表尚未构建**，请点击它并取消选中**在 Gradle 同步期间不构建 Gradle 任务列表**，点击**确定**，然后同步项目的 Gradle 文件。然后任务列表应出现在列表中。
+
+当从`app/build/reports`文件夹执行测试时，测试的输出。
+
+![图 10.6 – Android Studio 中的 Gradle 命令](img/B19411_10_06.jpg)
+
+图 10.6 – Android Studio 中的 Gradle 命令
+
+在本节中，我们学习了 Android Studio 提供的各种测试选项以及我们如何可视化测试结果。在下一节中，我们将探讨如何在测试中模拟对象以及如何使用 Mockito 来实现这一点。
+
+# Mockito
+
+在前面的示例中，我们看到了如何设置单元测试以及如何使用断言验证操作的结果。如果我们想验证某个方法是否被调用呢？或者如果我们想操纵测试输入以测试特定场景呢？在这些情况下，我们可以使用**Mockito**。
+
+这是一个帮助开发者设置可以注入到测试对象中的虚拟对象并允许他们验证方法调用、设置输入，甚至监控测试对象的库。
+
+应将此库添加到您的`test` Gradle 设置中，如下所示：
+
+```swift
+testImplementation 'org.mockito:mockito-core:4.5.1'
+```
+
+现在，让我们看看以下代码示例（请注意，为了简洁，以下代码片段中已删除`import`语句）：
+
+```swift
+class StringConcatenator(private val context: Context) {
+    fun concatenate(@StringRes stringRes1: Int,
+      @StringRes stringRes2: Int): String {
+          return context.getString(stringRes1).plus(context
+          .getString(stringRes2))
+    }
+}
+```
+
+在这里，我们有`Context`对象，它通常不能进行单元测试，因为它属于 Android 框架的一部分。我们可以使用`mockito`创建一个测试替身并将其注入到`StringConcatenator`对象中。然后，我们可以操纵对`getString()`的调用，使其返回我们选择的任何输入。这个过程被称为**模拟**：
+
+```swift
+class StringConcatenatorTest {
+    private val context = Mockito.mock(Context::class.java)
+    private val stringConcatenator =
+        StringConcatenator(context)
+    @Test
+    fun concatenate() {
+        val stringRes1 = 1
+        val stringRes2 = 2
+        val string1 = "string1"
+        val string2 = "string2"
+        Mockito.`when`(context.getString(stringRes1))
+            .thenReturn(string1)
+        Mockito.`when`(context.getString(stringRes2))
+            .thenReturn(string2)
+        val result =
+            stringConcatenator.concatenate(stringRes1,
+            stringRes2)
+        assertEquals(string1.plus(string2), result)
+    }
+}
+```
+
+在测试中，我们创建了一个`mock`上下文。当测试`concatenate`方法时，我们使用 Mockito 在调用`getString()`方法并传入特定输入时返回一个特定的字符串。这允许我们随后断言结果。
+
+注意
+
+`` ` ``是 Kotlin 中存在的一个转义字符，不应与引号混淆。它允许开发者给方法起任何他们想要的名称，包括特殊字符或保留字。
+
+Mockito 不仅限于模拟 Android 框架类。我们可以创建一个`SpecificStringConcatenator`类，它将使用`StringConcatenator`将`strings.xml`中的两个特定字符串连接起来：
+
+```swift
+class SpecificStringConcatenator(private val
+stringConcatenator: StringConcatenator) {
+    fun concatenateSpecificStrings(): String {
+        return stringConcatenator.concatenate(
+            R.string.string_1, R.string.string_2)
+    }
+}
+```
+
+我们可以按照以下方式编写测试：
+
+```swift
+class SpecificStringConcatenatorTest {
+    private val stringConcatenator = Mockito
+        .mock(StringConcatenator::class.java)
+    private val specificStringConcatenator =
+        SpecificStringConcatenator(stringConcatenator)
+    @Test
+    fun concatenateSpecificStrings() {
+        val expected = "expected"
+        Mockito.'when'(stringConcatenator.concatenate(
+            R.string.string_1, R.string.string_2))
+            .thenReturn(expected)
+        val result = specificStringConcatenator
+            .concatenateSpecificStrings()
+        assertEquals(expected, result)
+    }
+}
+```
+
+在这里，我们正在模拟之前的`StringConcatenator`并指示模拟返回一个特定的结果。如果我们运行测试，它将失败，因为 Mockito 无法模拟最终类。在这里，它与 Kotlin 发生冲突，使得所有类都成为*final*，除非我们指定它们为*open*。
+
+幸运的是，有一个配置我们可以应用，以解决这个困境，而不必使测试中的类成为*open*：
+
+1.  在`test`包中创建一个名为`resources`的文件夹。
+
+1.  在`resources`中，创建一个名为`mockito-extensions`的文件夹。
+
+1.  在`mockito-extensions`文件夹中，创建一个名为`org.mockito.plugins.MockMaker`的文件。
+
+1.  在文件内部，添加以下行：
+
+    ```swift
+    mock-maker-inline
+    ```
+
+在你拥有回调或异步工作且不能使用 JUnit 断言的情况下，你可以使用`mockito`来验证回调或 lambda 的调用：
+
+```swift
+class SpecificStringConcatenator(private val
+stringConcatenator: StringConcatenator) {
+    fun concatenateSpecificStrings(): String {
+        return stringConcatenator.concatenate(
+        R.string.string_1, R.string.string_2)
+    }
+    fun concatenateWithCallback(callback: Callback) {
+        callback.onStringReady(concatenateSpecificStrings())
+    }
+    interface Callback {
+        fun onStringReady(input: String)
+    }
+}
+```
+
+在前面的例子中，我们添加了`concatenateWithCallback`方法，它将使用`concatenateSpecificStrings`方法的输出调用回调。这个方法的测试可能看起来像这样：
+
+```swift
+    @Test
+    fun concatenateWithCallback() {
+        val expected = "expected"
+        Mockito.`when`(stringConcatenator.concatenate(
+            R.string.string_1, R.string.string_2))
+            .thenReturn(expected)
+        val callback = Mockito.mock(
+            SpecificStringConcatenator.Callback::class.java
+        )
+        specificStringConcatenator.concatenateWithCallback(
+            callback)
+        Mockito.verify(callback).onStringReady(expected)
+    }
+```
+
+在这里，我们创建一个模拟的`Callback`对象，我们可以在最后用预期结果来验证它。注意，我们必须复制`concatenateSpecificStrings`方法的设置来测试`concatenateWithCallback`方法。你永远不应该模拟你正在测试的对象；然而，你可以使用`spy`来改变它们的行为。我们可以监视`stringConcatenator`对象来改变`concatenateSpecificStrings`方法的输出：
+
+```swift
+    @Test
+    fun concatenateWithCallback() {
+        val expected = "expected"
+        val spy = Mockito.spy(specificStringConcatenator)
+        Mockito.`when`(spy.concatenateSpecificStrings())
+            .thenReturn(expected)
+        val callback =
+         Mockito.mock(SpecificStringConcatenator.Callback::
+            class.java)
+        specificStringConcatenator.concatenateWithCallback(
+            callback)
+        Mockito.verify(callback).onStringReady(expected)
+    }
+```
+
+Mockito 还依赖于依赖注入来初始化类变量，并有一个自定义构建的 JUnit 测试运行器。这可以简化我们的变量初始化，如下所示：
+
+```swift
+@RunWith(MockitoJUnitRunner::class)
+class SpecificStringConcatenatorTest {
+    @Mock
+    lateinit var stringConcatenator: StringConcatenator
+    @InjectMocks
+    lateinit var specificStringConcatenator:
+        SpecificStringConcatenator
+}
+```
+
+在前面的例子中，`MockitoRunner`将使用带有`@Mock`注解的模拟对象注入变量。接下来，它将创建一个新的带有`@InjectMocks`注解的非模拟实例。当这个实例被创建时，Mockito 将尝试注入与该对象构造函数签名匹配的模拟对象。
+
+在本节中，我们探讨了在编写测试时如何模拟对象，以及如何使用 Mockito 来实现这一点。在接下来的章节中，我们将探讨一个更适合与 Kotlin 编程语言一起使用的 Mockito 专用库，即 mockito-kotlin。
+
+你可能已经注意到，在前面的例子中，Mockito 的`when`方法已经逃逸了。这是因为与 Kotlin 编程语言的冲突。Mockito 主要是为 Java 构建的，当 Kotlin 被创建时，它引入了`this`关键字。像这样的冲突可以通过反引号字符`` ` ``来避免。
+
+这，加上一些其他小问题，在使用 Mockito 时造成了一些不便。一些库被引入来包装 Mockito，并提供更好的使用体验。其中之一是`mockito-kotlin`。你可以使用以下命令将此库添加到你的模块中：
+
+```swift
+testImplementation "org.mockito.kotlin:
+mockito-kotlin:4.1.0"
+```
+
+这个库带来的一个重大可见变化是用`whenever`替换了`when`方法。另一个有用的变化是将`mock`方法改为依赖于泛型，而不是类对象。其余的语法与 Mockito 语法类似。
+
+我们现在可以使用新库更新之前的测试，从`StringConcatenatorTest`开始（为了简洁，已删除`import`语句）：
+
+```swift
+class StringConcatenatorTest {
+    private val context = mock<Context>()
+    private val stringConcatenator =
+        StringConcatenator(context)
+    @Test
+    fun concatenate() {
+        val stringRes1 = 1
+        val stringRes2 = 2
+        val string1 = "string1"
+        val string2 = "string2"
+        whenever(context.getString(stringRes1)).thenReturn(
+            string1)
+        whenever(context.getString(stringRes2)).thenReturn(
+            string2)
+        val result = stringConcatenator.concatenate(
+            stringRes1, stringRes2)
+        assertEquals(string1.plus(string2), result)
+    }
+}
+```
+
+如你所见，反引号 ` `` 字符已经消失，我们对 `Context` 对象的模拟初始化已经简化。我们可以对 `SpecificStringConcatenatorTest` 类（为了简洁，已删除 `import` 语句）做同样的事情：
+
+```swift
+@RunWith(MockitoJUnitRunner::class)
+class SpecificStringConcatenatorTest {
+    @Mock
+    lateinit var stringConcatenator: StringConcatenator
+    @InjectMocks
+    lateinit var specificStringConcatenator:
+        SpecificStringConcatenator
+    @Test
+    fun concatenateSpecificStrings() {
+        val expected = "expected"
+        whenever(stringConcatenator.concatenate(
+            R.string.string_1, R.string.string_2))
+            .thenReturn(expected)
+        val result = specificStringConcatenator
+            .concatenateSpecificStrings()
+        assertEquals(expected, result)
+    }
+    @Test
+    fun concatenateWithCallback() {
+        val expected = "expected"
+        val spy = spy(specificStringConcatenator)
+        whenever(spy.concatenateSpecificStrings())
+            .thenReturn(expected)
+        val callback =
+            mock<SpecificStringConcatenator.Callback>()
+        specificStringConcatenator.concatenateWithCallback(
+            callback)
+        verify(callback).onStringReady(expected)
+    }
+}
+```
+
+在本节中，我们探讨了如何使用 `mockito-kotlin` 库以及它如何简化 Kotlin 中的 Mockito 函数。在接下来的内容中，我们将进行一项练习，展示如何使用 JUnit 和 Mockito 编写单元测试。
+
+## 练习 10.01 – 测试数字之和
+
+使用 JUnit、Mockito 和 `mockito-kotlin` 为以下类编写一组测试，以覆盖以下场景：
+
++   断言 `0`、`1`、`5`、`20` 和 `Int.MAX_VALUE` 的值
+
++   断言负数的输出结果
+
++   修复代码，并将数字之和替换为公式 *n*(n+1)/2*
+
+注意
+
+在整个练习过程中，没有显示 `import` 语句。要查看完整的代码文件，请参阅 [`packt.link/rv8C2`](https://packt.link/rv8C2)。
+
+要测试的代码如下：
+
+```swift
+class NumberAdder {
+    @Throws(InvalidNumberException::class)
+    fun sum(n: Int, callback: (BigInteger) -> Unit) {
+        if (n < 0) {
+            throw InvalidNumberException
+        }
+        var result = BigInteger.ZERO
+        for (i in 1..n){
+            result = result.plus(i.toBigInteger())
+        }
+        callback(result)
+    }
+    object InvalidNumberException : Throwable()
+}
+```
+
+执行以下步骤来完成这个练习：
+
+1.  确保将必要的库添加到 `app/build.gradle` 文件中：
+
+    ```swift
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:4.5.1'
+    testImplementation 'org.mockito.kotlin:
+    mockito-kotlin:4.1.0'
+    ```
+
+1.  创建一个名为 `NumberAdder` 的类，并将前面的代码复制到其中。
+
+1.  将光标移至新创建的类内部，使用 *Command* + *Shift* + *T* 或 *Ctrl* + *Shift* + *T* 创建一个名为 `NumberAdderParameterTest` 的测试类。
+
+1.  在这个类内部创建一个参数化测试，该测试将断言 `0`、`1`、`5`、`20` 和 `Int.MAX_VALUE` 的输出结果：
+
+    ```swift
+    @RunWith(Parameterized::class)
+    class NumberAdderParameterTest(
+        private val input: Int,
+        private val expected: BigInteger
+    ) {
+        companion object {
+            @Parameterized.Parameters
+            @JvmStatic
+            fun getData(): List<Array<out Any>> = listOf(
+                arrayOf(0, BigInteger.ZERO),
+                arrayOf(1, BigInteger.ONE),
+                arrayOf(5, 15.toBigInteger()),
+                arrayOf(20, 210.toBigInteger()),
+                arrayOf(Int.MAX_VALUE, BigInteger(
+                "2305843008139952128"))
+            )
+        }
+        private val numberAdder = NumberAdder()
+        @Test
+        fun sum() {
+            val callback = mock<(BigInteger) -> Unit>()
+            numberAdder.sum(input, callback)
+            verify(callback).invoke(expected)
+        }
+    }
+    ```
+
+1.  创建一个单独的测试类来处理当存在负数时抛出的异常，命名为 `NumberAdderErrorHandlingTest`：
+
+    ```swift
+    @RunWith(MockitoJUnitRunner::class)
+    class NumberAdderErrorHandlingTest {
+        @InjectMocks
+        lateinit var numberAdder: NumberAdder
+        @Test(expected =
+            NumberAdder.InvalidNumberException::class)
+        fun sum() {
+            val input = -1
+            val callback = mock<(BigInteger) -> Unit>()
+            numberAdder.sum(input, callback)
+        }
+    }
+    ```
+
+1.  由于 *1 + 2 + ...n = n * (n + 1) / 2*，我们可以在代码中使用这个公式，这将使方法的执行速度更快：
+
+    ```swift
+    class NumberAdder {
+        @Throws(InvalidNumberException::class)
+        fun sum(n: Int, callback: (BigInteger) -> Unit) {
+            if (n < 0) {
+                throw InvalidNumberException
+            }
+            callback(n.toBigInteger()
+            .times((n.toBigInteger() +
+            1.toBigInteger())).divide(2.toBigInteger()))
+        }
+        object InvalidNumberException : Throwable()
+    }
+    ```
+
+1.  通过右键单击包含测试的包并选择 **Run all in** [**package_name**] 来运行测试。将出现类似于以下输出的结果，表示测试已通过：
+
+![图 10.7 – 练习 10.01 的输出](img/B19411_10_07.jpg)
+
+图 10.7 – 练习 10.01 的输出
+
+通过完成这个练习，我们迈出了单元测试的第一步，为单个操作创建了多个测试用例，迈出了理解 Mockito 的第一步，并使用测试来指导我们如何重构代码而不引入任何新问题。
+
+# 集成测试
+
+假设你的项目已经覆盖了单元测试，其中包含大量的逻辑。现在你必须将这些测试过的类添加到活动或片段中，并要求它们更新你的 UI。你如何确保这些类能够很好地协同工作？这个问题的答案是通过对集成测试。
+
+这种测试类型背后的思想是确保你的应用程序内部的不同组件能够很好地相互集成。以下是一些例子：
+
++   确保您的 API 相关组件能够很好地解析数据并与您的存储组件良好交互
+
++   存储组件能够正确存储和检索数据
+
++   UI 组件加载并显示适当的数据
+
++   应用程序中不同屏幕之间的转换
+
+为了帮助进行集成测试，有时要求以`Given - When - Then`的格式编写。这些通常代表用户故事的验收标准。以下是一个例子：
+
+```swift
+Given I am not logged in
+And I open the application
+When I enter my credentials
+And click Login
+Then I see the Main screen
+```
+
+我们可以使用这些步骤来探讨我们如何为正在开发的功能编写集成测试。
+
+在 Android 平台上，可以通过两个库来实现集成测试：
+
++   **Robolectric**：这个库让开发者能够将 Android 组件作为单元测试进行测试——也就是说，在没有实际设备或模拟器的情况下执行集成测试
+
++   **Espresso**：这个库在 Android 设备或模拟器上的仪器化测试中非常有用
+
+我们将在下一节中详细探讨这些库。
+
+## Robolectric
+
+**Robolectric**最初是一个开源库，旨在让用户能够在本地测试中作为单元测试的一部分对 Android 框架中的类进行测试，而不是使用仪器化测试。最近，它得到了谷歌的支持，并已与 AndroidX Jetpack 组件集成。
+
+这个库的主要好处之一是测试活动和片段的简单性。当涉及到集成测试时，这是一个优点，因为我们可以使用这个特性来确保我们的组件能够很好地相互集成。
+
+Robolectric 的一些功能如下：
+
++   实例化和测试活动和片段生命周期的可能性
+
++   测试视图膨胀的可能性
+
++   提供不同 Android API、方向、屏幕尺寸、布局方向等配置的可能性
+
++   改变`Application`类的可能性，这有助于将模块更改以允许插入数据模拟
+
+要添加 Robolectric 以及 AndroidX 集成，我们需要以下库：
+
+```swift
+    testImplementation 'org.robolectric:robolectric:4.9'
+    testImplementation 'androidx.test.ext:junit:1.1.4'
+```
+
+第二个库将提供一组用于测试 Android 组件的实用方法和类。
+
+假设我们必须交付一个功能，其中我们显示文本`Result x`，其中`x`是用户将在`EditText`元素中输入的数字的阶乘函数。我们将假设我们将使用一个带有`EditText`、`TextView`和`Button`的活动。当按钮被点击时，我们将在`TextView`中显示在`EditText`中输入的数字的阶乘结果。
+
+为了实现这一点，我们有两个类，一个用于计算阶乘，另一个将单词`Result`与正数的阶乘连接起来，如果数字是负数，它将返回文本`Error`。
+
+`factorial`类看起来可能如下（在整个示例中，为了简洁起见，已删除`import`语句）：
+
+```swift
+class FactorialGenerator {
+    @Throws(FactorialNotFoundException::class)
+    fun factorial(n: Int): BigInteger {
+        if (n < 0) {
+            throw FactorialNotFoundException
+        }
+        var result = BigInteger.ONE
+        for (i in 1..n) {
+            result = result.times(i.toBigInteger())
+        }
+        return result
+    }
+    object FactorialNotFoundException : Throwable()
+}
+```
+
+`TextFormatter` 类将看起来像这样：
+
+```swift
+class TextFormatter(
+    private val factorialGenerator: FactorialGenerator,
+    private val context: Context
+) {
+    fun getFactorialResult(n: Int): String {
+        return try {
+            context.getString(R.string.result,
+            factorialGenerator.factorial(n).toString())
+        } catch (e: FactorialGenerator
+          .FactorialNotFoundException) {
+               context.getString(R.string.error)
+        }
+    }
+}
+```
+
+我们可以在我们的活动中结合这两个组件，得到如下所示的内容：
+
+```swift
+class MainActivity : AppCompatActivity() {
+    private lateinit var textFormatter: TextFormatter
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        textFormatter = TextFormatter(FactorialGenerator(),
+            applicationContext)
+        findViewById<Button>(R.id.button)
+            .setOnClickListener {
+                findViewById<TextView>(R.id.text_view)
+                .text = textFormatter.getFactorialResult(
+                findViewById<EditText>(R.id.edit_text).text
+                .toString()
+                .toInt())
+        }
+    }
+}
+```
+
+在这种情况下，我们可以观察到三个组件正在相互交互。我们可以使用 Robolectric 来测试我们的活动。通过测试创建组件的活动，我们也可以测试所有三个组件之间的交互。我们可以编写如下所示的测试：
+
+```swift
+@RunWith(AndroidJUnit4::class)
+class MainActivityTest {
+    private val context =
+        getApplicationContext<Application>()
+    @Test
+    fun `show factorial result in text view`() {
+        val scenario = launch(MainActivity::class.java)
+        scenario.moveToState(Lifecycle.State.RESUMED)
+        scenario.onActivity { activity ->
+            activity.findViewById<EditText>(R.id.edit_text)
+                .setText(5.toString())
+            activity.findViewById<Button>(R.id.button)
+                .performClick()
+            assertEquals(
+                context.getString(R.string.result, "120"),
+                activity.findViewById<TextView>(
+                R.id.text_view).text
+            )
+        }
+    }
+}
+```
+
+在前面的示例中，我们可以看到 AndroidX 对活动测试的支持。`AndroidJUnit4` 测试运行器将设置 Robolectric 并创建必要的配置，而 `launch` 方法将返回一个 `scenario` 对象，然后我们可以通过它来达到测试所需的条件。我们还可以观察到我们如何使用 `` ` `` 字符来为我们的函数提供更长的名称，其中可以包括空白字符。
+
+如果我们想要为测试添加配置，我们可以在类和每个测试方法上使用 `@Config` 注解：
+
+```swift
+@Config(
+    sdk = [Build.VERSION_CODES.TIRAMISU],
+    minSdk = Build.VERSION_CODES.KITKAT,
+    maxSdk = Build.VERSION_CODES.TIRAMISU,
+    application = Application::class,
+    assetDir = "/assetDir/"
+)
+@RunWith(AndroidJUnit4::class)
+class MainActivityTest
+```
+
+我们还可以在 `test/resources` 文件夹中的 `robolectric.properties` 文件中指定全局配置，如下所示：
+
+```swift
+sdk=33
+minSdk = 14
+maxSdk = 33
+```
+
+最近添加到 Robolectric 中的另一个重要功能是对 Espresso 库的支持。这允许开发者使用 Espresso 的语法与视图交互并对视图进行断言。
+
+另一个可以与 Robolectric 结合使用的库是 `FragmentScenario`，它允许测试片段。这些库可以通过以下方式添加到 Gradle 中：
+
+```swift
+    testImplementation 'androidx.fragment:
+    fragment-testing:1.5.5'
+    testImplementation 'androidx.test.espresso:
+    espresso-core:3.5.0'
+```
+
+使用 `scenario` 设置测试片段就像活动一样：
+
+```swift
+val scenario = launchFragmentInContainer<MainFragment>()
+scenario.moveToState(Lifecycle.State.CREATED)
+```
+
+## Espresso
+
+Espresso 是一个旨在以简洁方式执行交互和断言的库。它最初是为了在仪器化测试中使用而设计的，现在它已经迁移到与 Robolectric 一起使用。执行操作的典型用法如下：
+
+```swift
+onView(Matcher<View>).perform(ViewAction)
+```
+
+为了验证，我们可以使用以下方法：
+
+```swift
+onView(Matcher<View>).check(ViewAssertion)
+```
+
+如果在 `ViewMatchers` 类中找不到任何自定义的 `ViewMatchers`，我们可以提供自定义的 `ViewMatchers`。其中一些最常见的是 `withId` 和 `withText`。这两个允许我们根据它们的 `R.id.myId` 标识符或文本标识符来识别视图。理想情况下，第一个应该用来识别特定的视图。
+
+Espresso 的另一个有趣方面是它依赖于 `Hamcrest` 库进行匹配器。这是一个旨在改进测试的 Java 库。这允许在必要时组合多个匹配器。假设相同的 ID 出现在您的 UI 的不同视图中。您可以使用以下表达式来缩小对特定视图的搜索：
+
+```swift
+onView(allOf(withId(R.id.edit_text),
+withParent(withId(R.id.root))))
+```
+
+`allOf` 表达式将评估所有其他操作符，并且只有当所有内部操作符都通过时才会通过。前面的表达式将翻译为“找到具有 id=edit_text 的视图，其父视图具有 id=R.id.root”。其他 `Hamcrest` 操作符可能包括 `anyOf`、`both`、`either`、`is`、`isA`、`hasItem`、`equalTo`、`any`、`instanceOf`、`not`、`null` 和 `notNull`。
+
+`ViewActions` 与 `ViewMatchers` 有相似的方法。我们可以在 `ViewActions` 类中找到共同的实现。常见的包括 `typeText`、`click`、`scrollTo`、`clearText`、`swipeLeft`、`swipeRight`、`swipeUp`、`swipeDown`、`closeSoftKeyboard`、`pressBack`、`pressKey`、`doubleClick` 和 `longClick`。如果你有自定义视图并且需要某些特定操作，那么你可以通过实现 `ViewAction` 接口来创建自己的 `ViewAction` 元素。
+
+与前面的示例类似，`ViewAssertions` 有自己的类。通常使用 `matches` 方法，然后你可以使用 `ViewMatchers` 和 `Hamcrest` 匹配器来验证结果：
+
+```swift
+onView(withId(R.id.text_view)).check(matches(withText(
+"My text"))))
+```
+
+以下示例将验证具有 `text_view` ID 的视图将包含文本 `My text`：
+
+```swift
+onView(withId(R.id.button)).perform(click())
+```
+
+这将点击具有 ID 按钮的视图。
+
+我们现在可以重写 Robolectric 测试并添加 Espresso，这将给我们以下结果（这里没有显示 `import` 语句）：
+
+```swift
+@RunWith(AndroidJUnit4::class)
+class MainActivityTest {
+    @Test
+    fun `show factorial result in text view`() {
+        val scenario = launch(MainActivity::class.java)
+        scenario.moveToState(Lifecycle.State.RESUMED)
+        scenario.onActivity { activity ->
+            onView(withId(R.id.edit_text)).perform(
+                typeText("5"))
+            onView(withId(R.id.button)).perform(click())
+            onView(withId(R.id.text_view))
+                .check(matches(withText(activity.getString(
+                R.string.result, "120"))))
+        }
+    }
+}
+```
+
+在前面的代码示例中，我们可以观察到如何使用 Espresso 将数字 `5` 输入到 `EditText` 中，然后点击按钮，然后使用 `onView()` 方法获取视图引用，并通过 `perform()` 执行操作或使用 `check()` 进行断言来断言 `TextView` 中显示的文本。
+
+注意
+
+对于以下练习，你需要一个启用了 USB 调试的模拟器或物理设备。你可以在 Android Studio 中通过选择 **工具** | **AVD 管理器** 来这样做。然后，你可以通过选择模拟器类型，点击 **下一步**，然后选择一个 x86 图像来创建一个。对于这个练习，任何大于 Lollipop 的图像都将是合适的。接下来，你可以给你的图像命名并点击 **完成**。
+
+## 练习 10.02 – 双重积分
+
+开发一个满足以下要求的应用程序：
+
+```swift
+Given I open the application
+And I insert the number n
+When I press the Calculate button
+Then I should see the text "The sum of numbers from 1 to n is [result]"
+Given I open the application
+And I insert the number -n
+When I press the Calculate button
+Then I should see the text "Error: Invalid number"
+```
+
+你应该使用 Robolectric 和 Espresso 实现单元测试和集成测试，并将集成测试迁移为仪器测试。
+
+注意
+
+在整个练习过程中，没有显示 `import` 语句。要查看完整的代码文件，请参考 [`packt.link/EcmiV`](https://packt.link/EcmiV)。
+
+实现以下步骤来完成这个练习：
+
+1.  让我们从向 `app/build.gradle` 添加必要的测试库开始：
+
+    ```swift
+        testImplementation 'junit:junit:4.13.2'
+        testImplementation
+            'org.mockito:mockito-core:4.5.1'
+        testImplementation
+            'org.mockito.kotlin:mockito-kotlin:4.1.0'
+        testImplementation
+            'org.robolectric:robolectric:4.9'
+        testImplementation 'androidx.test.ext:junit:1.1.4'
+        testImplementation
+            'androidx.test.espresso:espresso-core:3.5.0'
+        androidTestImplementation
+            'androidx.test.ext:junit:1.1.4'
+        androidTestImplementation
+            'androidx.test.espresso:espresso-core:3.5.0'
+        androidTestImplementation
+            'androidx.test:rules:1.5.0'
+    ```
+
+1.  对于 Robolectric，我们需要添加额外的配置，首先是向 `app/build.gradle` 中的 `android` 封闭添加以下行：
+
+    ```swift
+    testOptions.unitTests.includeAndroidResources = true
+    ```
+
+1.  在 `test` 包中创建一个 `resources` 目录。你需要将 Android Studio 项目视图从 **Android** 切换到 **Project**。
+
+1.  添加 `robolectric.properties` 文件，并将以下配置添加到该文件中：
+
+    ```swift
+    sdk=32
+    ```
+
+1.  在 `resources` 中创建一个名为 `mockito-extensions` 的文件夹。
+
+1.  在 `mockito-extensions` 文件夹中，创建一个名为 `org.mockito.plugins.MockMaker` 的文件，并在文件中添加以下行：
+
+    ```swift
+    mock-maker-inline
+    ```
+
+1.  创建 `NumberAdder` 类。这与 *练习 10.01* 中的类似：
+
+    ```swift
+    class NumberAdder {
+        @Throws(InvalidNumberException::class)
+        fun sum(n: Int, callback: (BigInteger) -> Unit) {
+            if (n < 0) {
+                throw InvalidNumberException
+            }
+            callback(n.toBigInteger().times((n.toLong() +
+            1).toBigInteger()).divide(2.toBigInteger()))
+        }
+        object InvalidNumberException : Throwable()
+    }
+    ```
+
+1.  在`test`文件夹中为`NumberAdder`创建测试。首先创建`NumberAdderParameterTest`：
+
+    ```swift
+    @RunWith(Parameterized::class)
+    class NumberAdderParameterTest(
+        private val input: Int,
+        private val expected: BigInteger
+    ) {
+        private val numberAdder = NumberAdder()
+        @Test
+        fun sum() {
+            val callback = mock<(BigInteger) -> Unit>()
+            numberAdder.sum(input, callback)
+            verify(callback).invoke(expected)
+        }
+    }
+    ```
+
+本步骤的完整代码可以在[`packt.link/ghcTs`](https://packt.link/ghcTs)找到。
+
+1.  然后，创建`NumberAdderErrorHandlingTest`测试：
+
+    ```swift
+    @RunWith(MockitoJUnitRunner::class)
+    class NumberAdderErrorHandlingTest {
+        @InjectMocks
+        lateinit var numberAdder: NumberAdder
+        @Test(expected =
+            NumberAdder.InvalidNumberException::class)
+        fun sum() {
+            val input = -1
+            val callback = mock<(BigInteger) -> Unit>()
+            numberAdder.sum(input, callback)
+        }
+    }
+    ```
+
+1.  在根包的`main`文件夹中，创建一个将格式化总和并将其与必要的字符串连接的类：
+
+    ```swift
+    class TextFormatter(
+        private val numberAdder: NumberAdder,
+        private val context: Context
+    ) {
+        fun getSumResult(n: Int, callback: (String) ->
+        Unit) {
+            try {
+                numberAdder.sum(n) {
+                    callback(context.getString(
+                    R.string
+                    .the_sum_of_numbers_from_1_to_is,
+                    n, it.toString())
+                    )
+                }
+            } catch (
+              e: NumberAdder.InvalidNumberException) {
+                  callback(context.getString(
+                  R.string.error_invalid_number))
+            }
+        }
+    }
+    ```
+
+1.  对此类进行单元测试，以测试成功和错误场景。从成功场景开始：
+
+    ```swift
+    @RunWith(MockitoJUnitRunner::class)
+    class TextFormatterTest {
+        @InjectMocks
+        lateinit var textFormatter: TextFormatter
+        @Mock
+        lateinit var numberAdder: NumberAdder
+        @Mock
+        lateinit var context: Context
+        @Test
+        fun getSumResult_success() {
+            val n = 10
+            val sumResult = BigInteger.TEN
+            val expected = "expected"
+            whenever(numberAdder.sum(eq(n),
+            any())).thenAnswer {
+                (it.arguments[1] as (BigInteger) ->
+                Unit).invoke(sumResult)
+            }
+            whenever(context.getString(
+            R.string.the_sum_of_numbers_from_1_to_is,
+            n, sumResult.toString())
+            ).thenReturn(expected)
+            val callback = mock<(String) -> Unit>()
+            textFormatter.getSumResult(n, callback)
+            verify(callback).invoke(expected)
+        }
+    }
+    ```
+
+然后，创建错误场景的测试：
+
+```swift
+    @Test
+    fun getSumResult_error() {
+        val n = 10
+        val expected = "expected"
+        whenever(numberAdder.sum(eq(n),
+            any())).thenThrow(NumberAdder
+            .InvalidNumberException)
+            whenever(context.getString(
+            R.string.error_invalid_number))
+            .thenReturn(expected)
+        val callback = mock<(String) -> Unit>()
+        textFormatter.getSumResult(n, callback)
+        verify(callback).invoke(expected)
+    }
+```
+
+1.  在`main/res/values/strings.xml`中添加以下字符串：
+
+    ```swift
+        <string name="the_sum_of_numbers_from_1_to_is">
+            The sum of numbers from 1 to %1$d is:
+            %2$s</string>
+        <string name="error_invalid_number">Error: Invalid
+            number</string>
+        <string name="calculate">Calculate</string>
+    ```
+
+1.  在`main/res/layout`文件夹中创建`activity_main.xml`布局：
+
+    ```swift
+        <EditText
+            android:id="@+id/edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number" />
+        <Button
+            android:id="@+id/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/calculate" />
+    ```
+
+本步骤的完整代码可以在[`packt.link/hxZ0I`](https://packt.link/hxZ0I)找到。
+
+1.  在根包的`main`文件夹中，创建`MainActivity`类，它将包含所有其他组件：
+
+    ```swift
+    class MainActivity : AppCompatActivity() {
+        private lateinit var textFormatter: TextFormatter
+        override fun onCreate(savedInstanceState: Bundle?)
+        {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_main)
+            textFormatter = TextFormatter(NumberAdder(),
+                applicationContext)
+            findViewById<Button>(R.id.button)
+            .setOnClickListener {
+                textFormatter.getSumResult(findViewById
+                <EditText>(R.id.edit_text).text.toString()
+                .toIntOrNull() ?: 0) {
+                    findViewById<TextView>(R.id.text_view)
+                    .text = it
+                }
+            }
+        }
+    }
+    ```
+
+1.  在`test`目录中创建`MainActivity`的测试，它将包含两个测试方法，一个用于成功，一个用于错误：
+
+    ```swift
+    @RunWith(AndroidJUnit4::class)
+    class MainActivityTest {
+        @Test
+        fun `show sum result in text view`() {
+            val scenario =
+                launch(MainActivity::class.java)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.onActivity { activity ->
+                onView(withId(R.id.edit_text))
+                    .perform(replaceText("5"))
+                onView(withId(R.id.button)).perform(click(
+                ))
+                onView(withId(R.id.text_view))
+                  .check(matches(withText(
+                  activity.getString(
+                  R.string.the_sum_of_numbers_from_1_to_is
+                  , 5, "15"))))
+            }
+        }
+    }
+    ```
+
+本步骤的完整代码可以在[`packt.link/fZI3u`](https://packt.link/fZI3u)找到。
+
+如果您通过右键单击包含测试的包并选择**运行所有在** [**包名**]，则会显示如下输出：
+
+![图 10.8 – 执行 10.02 练习测试文件夹中测试的结果](img/B19411_10_08.jpg)
+
+图 10.8 – 执行 10.02 练习测试文件夹中测试的结果
+
+如果您执行前面的测试，您应该会看到一个类似*图 10**.8*的输出。Robolectric 测试的执行方式与常规单元测试相同；然而，执行时间有所增加。
+
+1.  现在，将前面的测试迁移到仪器化集成测试。为此，我们将从`test`包中复制前面的测试到`androidTest`包，并从测试中删除与场景相关的代码。确保在`androidTest`文件夹中有一个包含与`main/java`文件夹同名包的 Java 文件夹。您需要将测试移动到这个包。
+
+1.  在复制文件后，我们将使用`ActivityTestRule`，它将在每个测试执行之前启动我们的活动。我们还需要重命名类以避免重复，并重命名测试方法，因为语法不支持对仪器化测试的支持：
+
+    ```swift
+    @RunWith(AndroidJUnit4::class)
+    class MainActivityUiTest {
+        @Test
+        fun showSumResultInTextView() {
+            val scenario =
+                launch(MainActivity::class.java)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            onView(withId(R.id.edit_text)).perform(
+                replaceText("5"))
+            onView(withId(R.id.button)).perform(click())
+            onView(withId(R.id.text_view)).check(matches(
+               withText(getApplicationContext<Application>
+               ().getString(R.string
+               .the_sum_of_numbers_from_1_to_is, 5, "15"))
+               ))
+        }
+    }
+    ```
+
+本步骤的完整代码可以在[`packt.link/hNB4A`](https://packt.link/hNB4A)找到。
+
+如果您通过右键单击包含测试的包并选择**运行所有在** [**包名**]，则会显示如下输出：
+
+![图 10.9 – 执行 10.02 练习 androidTest 文件夹中测试的结果](img/B19411_10_09.jpg)
+
+图 10.9 – 执行 10.02 练习 androidTest 文件夹中测试的结果
+
+在*图 10.9*中，我们可以看到 Android Studio 显示的结果输出。如果在测试执行时注意模拟器，你可以看到对于每个测试，你的活动将被打开，输入将被设置在字段中，按钮将被点击。
+
+我们的两个集成测试（在工作站和模拟器上）都试图匹配需求的接受标准。集成测试验证相同的行为，唯一的区别是其中一个在本地检查，而另一个在 Android 设备或模拟器上检查。这里的主要好处是 Espresso 能够弥合它们之间的差距，使得集成测试更容易设置和执行。
+
+在本节中，我们实现了一个练习，其中我们使用 Robolectric 库和 Espresso 库编写了测试，并探讨了如何将我们的 Robolectric 测试从`test`文件夹迁移到`androidTest`文件夹。在接下来的部分，我们将探讨如何通过在物理设备或模拟器上运行的 instrumented 测试来扩展现有的测试套件。
+
+# UI 测试
+
+UI 测试是 instrumented 测试，开发者可以模拟用户旅程并验证应用程序不同模块之间的交互。它们也被称为端到端测试。对于小型应用程序，你可以有一个测试套件，但对于大型应用程序，你应该将测试套件拆分以覆盖用户旅程（登录、创建账户、设置流程等）。
+
+因为它们是在设备上执行的，所以你需要将它们写入`androidTest`包中，这意味着它们将使用**Instrumentation**框架运行。Instrumentation 的工作原理如下：
+
++   应用程序在设备上构建和安装
+
++   还将在设备上安装一个测试应用程序来监控你的应用程序
+
++   测试应用程序将在你的应用程序上执行测试并记录结果
+
+这其中的一个缺点是测试将共享持久数据，所以如果一个测试在设备上存储了数据，那么第二个测试就可以访问这些数据，这意味着存在失败的风险。另一个缺点是如果测试遇到崩溃，这将停止整个测试，因为被测试的应用程序已经停止。
+
+这些问题在 Jetpack 更新中通过引入**orchestrator**框架得到了解决。Orchestrators 允许你在每个测试执行后清除数据，从而免除开发者进行任何调整的需要。Orchestrator 由另一个应用程序表示，该应用程序将管理测试应用程序如何协调测试和数据。
+
+为了将其添加到你的项目中，你需要在`app/build.gradle`文件中有一个类似的配置：
+
+```swift
+android {
+    ...
+    defaultConfig {
+        ...
+        testInstrumentationRunner
+            "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments
+            clearPackageData: 'true'
+    }
+    testOptions {
+        execution 'ANDROIDX_TEST_ORCHESTRATOR'
+    }
+}
+dependencies {
+    ...
+    androidTestUtil 'androidx.test:orchestrator:1.4.2'
+}
+```
+
+你可以使用 Gradle 的`connectedCheck`命令在连接的设备上执行 orchestrator 测试，无论是从终端还是从 Gradle 命令列表中。
+
+在配置中，您会注意到以下行：`testInstrumentationRunner`。这允许我们为测试创建一个自定义配置，这给了我们向模块注入模拟数据的机会：
+
+```swift
+testInstrumentationRunner "com.android.CustomTestRunner"
+```
+
+`CustomTestRunner` 看起来像这样（以下代码片段中未显示 `import` 语句）：
+
+```swift
+class CustomTestRunner: AndroidJUnitRunner() {
+    @Throws(Exception::class)
+    override fun newApplication(
+        cl: ClassLoader?,
+        className: String?,
+        context: Context?
+    ): Application? {
+        return super.newApplication(cl,
+        MyApplication::class.java.name, context)
+    }
+}
+```
+
+测试类本身可以通过使用 `androidx.test.ext.junit.runners.AndroidJUnit4` 测试运行器的帮助，应用 JUnit4 语法来编写：
+
+```swift
+@RunWith(AndroidJUnit4::class)
+class MainActivityUiTest {
+}
+```
+
+`@Test` 方法本身在专用的测试线程中运行，这就是为什么像 Espresso 这样的库很有帮助。Espresso 将自动将每个与 UI 上的视图交互的操作移动到 UI 线程。Espresso 可以像 Robolectric 测试一样用于 UI 测试：
+
+```swift
+    @Test
+    fun myTest() {
+        onView(withId(R.id.edit_text)).perform(replaceText
+            ("5"))
+        onView(withId(R.id.button)).perform(click())
+        onView(withId(R.id.text_view)).check(matches(
+            withText("my test")))
+    }
+```
+
+通常，在 UI 测试中，您会发现可能重复的交互和断言。为了避免在您的代码中重复多个场景，您可以使用名为 `Robot` 类的模式，其中交互和断言可以组合到特定的方法中。您的测试代码将使用机器人并断言它们。一个典型的机器人可能如下所示：
+
+```swift
+class MyScreenRobot {
+    fun setText(): MyScreenRobot {
+        onView(ViewMatchers.withId(R.id.edit_text))
+            .perform(ViewActions.replaceText("5"))
+        return this
+    }
+    fun pressButton(): MyScreenRobot {
+        onView(ViewMatchers.withId(R.id.button))
+            .perform(ViewActions.click())
+        return this
+    }
+    fun assertText(): MyScreenRobot {
+        onView(ViewMatchers.withId(R.id.text_view))
+            .check(ViewAssertions.matches(ViewMatchers
+            .withText("my test")))
+        return this
+    }
+}
+```
+
+测试将看起来像这样：
+
+```swift
+    @Test
+    fun myTest() {
+       MyScreenRobot()
+           .setText()
+           .pressButton()
+           .assertText()
+    }
+```
+
+由于应用程序可以是多线程的，并且有时需要一段时间从各种来源（互联网、文件、本地存储等）加载数据，UI 测试将需要知道何时 UI 可用于交互。实现这一点的其中一种方法是通过使用空闲资源。
+
+这些是在测试之前可以注册到 Espresso 中，并注入到应用程序组件中进行多线程工作的对象。当工作正在进行时，应用程序将它们标记为非空闲，当工作完成时，它们将变为空闲。Espresso 将在此时开始执行测试。最常用的之一是 `CountingIdlingResource`。
+
+这种特定的实现使用一个计数器，当您希望 Espresso 等待您的代码完成执行时，计数器应该增加；当您希望 Espresso 验证您的代码时，计数器应该减少。当计数器达到 `0` 时，Espresso 将继续测试。一个具有空闲资源的组件示例可能如下所示：
+
+```swift
+class MyHeavyliftingComponent(private val
+countingIdlingResource:CountingIdlingResource) {
+    fun doHeavyWork() {
+        countingIdlingResource.increment()
+        // do work
+        countingIdlingResource.decrement()
+    }
+}
+```
+
+可以使用 `Application` 类注入空闲资源，如下所示：
+
+```swift
+class MyApplication : Application(){
+    val countingIdlingResource =
+        CountingIdlingResource("My heavy work")
+    val myHeavyliftingComponent =
+        MyHeavyliftingComponent(countingIdlingResource)
+}
+```
+
+然后，在测试中，我们可以访问 `Application` 类并将资源注册到 Espresso 中：
+
+```swift
+@RunWith(AndroidJUnit4::class)
+class MyTest {
+    @Before
+    fun setUp() {
+        val myApplication =
+            getApplicationContext<MyApplication>()
+        IdlingRegistry.getInstance()
+            .register(myApplication.countingIdlingResource)
+    }
+}
+```
+
+Espresso 附带一套可以用来断言不同 Android 组件的扩展。其中一个扩展是意图测试。当您想单独测试一个活动时，这很有用（更适合集成测试）。为了使用此功能，您需要将库添加到 Gradle：
+
+```swift
+androidTestImplementation 'androidx.test.espresso:
+espresso-intents:3.5.0'
+```
+
+在添加库之后，您需要使用 `Intents` 类的 `init` 方法设置必要的意图监控，并且要停止监控，可以使用同一类的 `release` 方法。这些操作可以在您的测试类的 `@Before` 和 `@After` 注解方法中完成。
+
+为了断言意图的值，你需要触发适当的行为，然后使用 `intended` 方法：
+
+```swift
+        onView(withId(R.id.button)).perform(click())
+        intended(allOf(hasComponent(hasShortClassName
+            (".MainActivity")), hasExtra(MainActivity
+            .MY_EXTRA, "myExtraValue")))
+```
+
+`intended` 方法与 `onView` 方法的工作方式类似。它需要一个可以与 `Hamcrest` 匹配器结合的匹配器。与意图相关的匹配器可以在 `IntentMatchers` 类中找到。这个类包含了一系列断言 `Intent` 类不同方法的方法：extras、data、components、bundles 等。
+
+另一个重要的扩展库也帮助了 `RecyclerView`。Espresso 的 `onData` 方法只能测试 `AdapterViews`，例如 `ListView`，而不能断言 `RecyclerView`。为了使用这个扩展，你需要将以下库添加到你的项目中：
+
+```swift
+androidTestImplementation
+'com.android.support.test.espresso:espresso-contrib:3.5.0'
+```
+
+这个库提供了一个 `RecyclerViewActions` 类，它包含了一系列允许你在 `RecyclerView` 内部项目上执行操作的方法：
+
+```swift
+onView(withId(R.id.recycler_view))
+.perform(RecyclerViewActions.actionOnItemAtPosition(0,
+click()))
+```
+
+前面的语句将点击位置 `0` 的项目：
+
+```swift
+onView(withId(R.id.recycler_view)).perform(
+RecyclerViewActions.scrollToPosition<RecyclerView
+.ViewHolder>(10))
+```
+
+这将滚动到列表中的第 10 个项目：
+
+```swift
+onView(withText("myText")).check(matches(isDisplayed()))
+```
+
+前面的代码将检查是否显示了带有 `myText` 文本的视图，这同样适用于 `RecyclerView` 项目。
+
+## 在 Jetpack Compose 中的测试
+
+Jetpack Compose 提供了使用与 Espresso 类似的方法来测试 `@Composable` 函数。如果我们使用 Robolectric，我们可以在 `test` 文件夹中编写我们的测试代码；如果不使用，我们可以使用 `androidTest` 文件夹，并且我们的测试将被视为仪器化测试。测试库如下：
+
+```swift
+androidTestImplementation "androidx.compose.ui:
+ui-test-junit4:1.1.1"
+```
+
+如果我们还想测试设置 `@Composable` 函数作为内容的 `Activity`，那么我们还需要添加以下库：
+
+```swift
+debugImplementation "androidx.compose.ui:
+ui-test-manifest:1.1.1"
+```
+
+为了进行测试，我们需要使用一个提供用于与 `@Composable` 元素交互和对其执行断言的方法集的测试规则。我们可以通过以下方法获得该规则：
+
+```swift
+class MyTest {
+    @get:Rule
+    var composeTestRuleForActivity =
+        createAndroidComposeRule(MyActivity::class.java)
+    @get:Rule
+    var composeTestRuleForNoActivity = createComposeRule()
+    @Test
+    fun testNoActivityFunction(){
+        composeTestRuleForNoActivity.setContent {
+            // Set method you want to test here
+        }
+    }
+}
+```
+
+在前面的代码片段中，我们有两条测试规则。第一条，`composeTestRuleForActivity`，将启动包含我们想要测试的 `@Composable` 函数的 `Activity`，并将包含我们想要断言的所有节点。
+
+第二个，`composeTestRuleForNoActivity`，提供了将我们想要测试的函数设置为内容的权限。这样，规则就可以访问所有的 `@Composable` 元素。
+
+如果我们想要从我们的函数中识别元素，我们有以下方法：
+
+```swift
+        composeTestRule.onNodeWithText("My text")
+        composeTestRule.onNodeWithContentDescription(
+            "My content description")
+        composeTestRule.onNodeWithTag("My test tag")
+```
+
+在前面的代码片段中，我们有 `onNodeWithText` 方法，它将使用用户可见的文本标签来识别特定的 UI 元素。`onNodeWithContentDescription` 方法将使用设置的内容描述来识别元素，而 `onNodeWithTag` 将使用测试标签来识别元素，该标签是通过 `Modifier.testTag` 方法设置的。
+
+与 Espresso 类似，一旦我们确定了想要与之交互或对其执行断言的元素，我们就有类似的方法来处理这两种情况。对于与元素交互，我们有以下方法：
+
+```swift
+        composeTestRule.onNodeWithText("My text")
+            .performClick()
+            .performScrollTo()
+            .performTextInput("My new text")
+            .performGesture {
+            }
+```
+
+在前面的代码片段中，我们对元素执行了点击、滚动、文本插入和手势操作。对于断言，以下是一些示例：
+
+```swift
+        composeTestRule.onNodeWithText("My text")
+            .assertIsDisplayed()
+            .assertIsNotDisplayed()
+            .assertIsEnabled()
+            .assertIsNotEnabled()
+            .assertIsSelected()
+            .assertIsNotSelected()
+```
+
+在前面的示例中，我们断言元素是显示的、未显示的、启用的、未启用的、选中的或未选中的。
+
+如果我们的用户界面有多个具有相同文本的元素，我们可以使用以下方法提取所有这些元素：
+
+```swift
+        composeTestRule.onAllNodesWithText("My text")
+        composeTestRule.onAllNodesWithContentDescription(
+            "My content description")
+        composeTestRule.onAllNodesWithTag("My test tag")
+```
+
+在这里，我们提取所有具有`My text`作为文本、`My content description`作为内容描述和`My test tag`作为测试标签的节点。返回的是一个集合，允许我们单独断言集合中的每个元素，如下所示：
+
+```swift
+        composeTestRule.onAllNodesWithText("My text")[0]
+            .assertIsDisplayed()
+```
+
+在这里，我们断言第一个具有`My text`文本的元素是显示的。我们还可以对集合执行断言，如下所示：
+
+```swift
+        composeTestRule.onAllNodesWithText("My text")
+            .assertCountEquals(3)
+            .assertAll(SemanticsMatcher.expectValue(
+            SemanticsProperties.Selected, true))
+            .assertAny(SemanticsMatcher.expectValue(
+            SemanticsProperties.Selected, true))
+```
+
+在这里，我们断言具有`My text`作为文本集的元素数量为三个，断言所有元素是否匹配`SemanticsMatcher`，或断言任何元素是否匹配`SemanticMatcher`。在这种情况下，它将断言所有元素都是选中的，并且至少有一个元素被选中。
+
+在测试 Jetpack Compose 时，与 Espresso 相似的一个相似之处是`IdlingResource`的使用。Compose 提供自己的`IdlingResource`抽象，它独立于 Espresso，可以注册到我们的测试规则中，如下所示：
+
+```swift
+    @Before
+    fun setUp() {
+        composeTestRule.registerIdlingResource(
+        idlingResource)
+    }
+    @After
+    fun tearDown() {
+        composeTestRule.unregisterIdlingResource(
+        idlingResource)
+    }
+```
+
+在前面的代码片段中，我们在`@Before`注解的方法中注册`IdlingResource`，并在`@After`方法中注销它。
+
+## 练习 10.03 – 随机等待时间
+
+编写一个应用程序，它将有两个屏幕。第一个屏幕将有一个按钮。当用户按下按钮时，它将在 1 到 5 秒之间等待随机的时间，然后启动第二个屏幕，该屏幕将显示文本**在 x 秒后打开**，其中**x**是经过的秒数。编写一个 UI 测试，以涵盖此场景，并调整以下功能以进行测试：
+
++   当测试运行时，`random`函数将返回`1`的值
+
++   `CountingIdlingResource`将用于指示计时器何时停止
+
+注意
+
+在整个练习中，没有显示`import`语句。要查看完整的代码文件，请参阅[`packt.link/GG32r`](https://packt.link/GG32r)。
+
+按以下步骤完成此练习：
+
+1.  创建一个新的没有 Activity 的 Android Studio 项目。
+
+1.  将以下库添加到`app/build.gradle`：
+
+    ```swift
+        implementation 'androidx.test.espresso:
+            espresso-idling-resource:3.5.1'
+        testImplementation 'junit:junit:4.13.2'
+        androidTestImplementation
+            'androidx.test.espresso:espresso-core:3.5.1'
+        androidTestImplementation
+            'androidx.test.ext:junit:1.1.5'
+        androidTestImplementation
+            'androidx.test:rules:1.5.0'
+    ```
+
+1.  在根包的`main`文件夹中创建一个类；从`Randomizer`类开始：
+
+    ```swift
+    open class Randomizer(private val random: Random) {
+        open fun getTimeToWait(): Int {
+            return random.nextInt(5) + 1
+        }
+    }
+    ```
+
+1.  在根包的`main`文件夹中创建一个类；创建一个`Synchronizer`类，该类将使用`Randomizer`和`Timer`来等待随机的时长间隔。它还将使用`CountingIdlingResource`来标记任务的开始和结束：
+
+    ```swift
+    class Synchronizer(
+        private val randomizer: Randomizer,
+        private val timer: Timer,
+        private val countingIdlingResource:
+            CountingIdlingResource
+    ) {
+        fun executeAfterDelay(callback: (Int) -> Unit) {
+            val timeToWait = randomizer.getTimeToWait()
+            countingIdlingResource.increment()
+            timer.schedule(CallbackTask(callback,
+                timeToWait), timeToWait * 1000L)
+        }
+        inner class CallbackTask(
+            private val callback: (Int) -> Unit,
+            private val time: Int
+        ) : TimerTask() {
+            override fun run() {
+                callback(time)
+                countingIdlingResource.decrement()
+            }
+        }
+    }
+    ```
+
+1.  现在，创建一个`Application`类，它将负责创建前面所有类的实例：
+
+    ```swift
+    class MyApplication : Application() {
+        val countingIdlingResource =
+            CountingIdlingResource("Timer resource")
+        val randomizer = Randomizer(Random())
+        val synchronizer =
+            Synchronizer(randomizer, Timer(),
+            countingIdlingResource)
+    }
+    ```
+
+1.  将`MyApplication`类添加到`AndroidManifest`中的`application`标签，并使用`android:name`属性。
+
+1.  创建一个`activity_1`布局文件，它将包含一个父布局和一个按钮：
+
+    ```swift
+    <?xml version="1.0" encoding="utf-8"?>
+    <LinearLayout
+    xmlns:android=
+      "http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <Button
+            android:id="@+id/activity_1_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/press_me" />
+    </LinearLayout>
+    ```
+
+1.  创建一个`activity_2`布局文件，它将包含一个父布局和一个`TextView`：
+
+    ```swift
+    <?xml version="1.0" encoding="utf-8"?>
+    <LinearLayout
+    xmlns:android=
+      "http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/activity_2_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+    </LinearLayout>
+    ```
+
+1.  创建`Activity1`类，它将实现按钮点击的逻辑：
+
+    ```swift
+    class Activity1 : AppCompatActivity() {
+        override fun onCreate(savedInstanceState: Bundle?)
+        {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_1)
+            findViewById<Button>(R.id.activity_1_button)
+            .setOnClickListener {
+                (application as MyApplication)
+                .synchronizer.executeAfterDelay {
+                    startActivity(Activity2.newIntent(this
+                    , it))
+                }
+            }
+        }
+    }
+    ```
+
+1.  创建`Activity2`类，它将通过 intent 显示接收到的数据：
+
+    ```swift
+    class Activity2 : AppCompatActivity() {
+        companion object {
+            private const val EXTRA_SECONDS =
+                "extra_seconds"
+            fun newIntent(context: Context, seconds: Int)
+                = Intent(context, Activity2::class.java)
+                .putExtra(EXTRA_SECONDS, seconds)
+        }
+        override fun onCreate(savedInstanceState: Bundle?)
+        {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_2)
+            findViewById<TextView>(
+                R.id.activity_2_text_view).text =
+                getString(R.string.opened_after_x_seconds,
+                intent.getIntExtra(EXTRA_SECONDS, 0))
+        }
+    }
+    ```
+
+1.  确保将相关字符串添加到`strings.xml`中：
+
+    ```swift
+        <string name="press_me">Press Me</string>
+        <string name="opened_after_x_seconds">Opened after
+        %d seconds</string>
+    ```
+
+1.  确保将两个活动添加到`AndroidManifest.xml`中：
+
+    ```swift
+        <application
+            … >
+            <activity
+                android:name=".Activity1"
+                android:exported="true">
+        </application>
+    ```
+
+这个步骤的完整代码可以在[`packt.link/TkEX9`](https://packt.link/TkEX9)找到。
+
+1.  在`androidTest`目录中创建一个`FlowTest`类，它将注册来自`MyApplication`对象的`IdlingResource`并断言点击的结果：
+
+    ```swift
+    @RunWith(AndroidJUnit4::class)
+    @LargeTest
+    class FlowTest {
+        @Test
+        fun verifyFlow() {
+            onView(withId(R.id.activity_1_button))
+                .perform(click())
+            onView(withId(R.id.activity_2_text_view))
+               .check(matches(withText(myApplication
+               .getString(R.string.opened_after_x_seconds,
+               1))))
+        }
+    }
+    ```
+
+这个步骤的完整代码可以在[`packt.link/711Vw`](https://packt.link/711Vw)找到。
+
+1.  多次运行测试并检查测试结果。注意，测试有 20%的成功率，但它会等待`Activity1`中的按钮被点击。这意味着 idling 资源正在工作。另一个需要注意的事情是这里存在随机性元素。
+
+1.  测试不喜欢随机性，因此我们需要通过使`Randomizer`类对外开放并在`androidTest`目录中创建一个子类来消除它。我们也可以对`MyApplication`类做同样的事情，并提供一个名为`TestRandomizer`的不同随机器：
+
+    ```swift
+    class TestRandomizer(random: Random) :
+    Randomizer(random) {
+        override fun getTimeToWait(): Int {
+            return 1
+        }
+    }
+    ```
+
+1.  现在，以可以覆盖子类中的随机器的方式修改`MyApplication`类：
+
+    ```swift
+    open class MyApplication : Application() {
+        val countingIdlingResource =
+            CountingIdlingResource("Timer resource")
+        lateinit var synchronizer: Synchronizer
+        override fun onCreate() {
+            super.onCreate()
+            synchronizer =
+                Synchronizer(createRandomizer(), Timer(),
+                countingIdlingResource)
+        }
+        open fun createRandomizer() = Randomizer(Random())
+    }
+    ```
+
+1.  在`androidTest`目录下创建`TestMyApplication`，它将扩展`MyApplication`并重写`createRandomizer`方法：
+
+    ```swift
+    class TestMyApplication : MyApplication() {
+        override fun createRandomizer(): Randomizer {
+            return TestRandomizer(Random())
+        }
+    }
+    ```
+
+1.  最后，在根包的`androidTest/java`文件夹中创建一个 instrumentation 测试运行器，它将在测试中使用这个新的`Application`类：
+
+    ```swift
+    class MyApplicationTestRunner : AndroidJUnitRunner() {
+        @Throws(Exception::class)
+        override fun newApplication(
+            cl: ClassLoader?,
+            className: String?,
+            context: Context?
+        ): Application? {
+            return super.newApplication(cl,
+            TestMyApplication::class.java.name, context)
+        }
+    }
+    ```
+
+1.  将新的测试运行器添加到 Gradle 配置中：
+
+    ```swift
+    android {
+        ...
+        defaultConfig {
+            ...
+            testInstrumentationRunner
+                "com.android.testable.myapplication
+                .MyApplicationTestRunner"
+        }
+    }
+    ```
+
+如果我们现在运行测试，测试应该通过；然而，我们在依赖项上遇到了一些问题。对于`Randomizer`类，我们不得不使我们的类对外开放，以便在`androidTest`文件夹中扩展它。
+
+另一个问题是我们应用程序代码中包含了对测试库中 idling 资源的引用。为了解决这两个问题，我们需要为`Randomizer`和`Synchronizer`类定义抽象。
+
+1.  在根包的`main/java`文件夹中创建一个名为`Randomizer`的接口：
+
+    ```swift
+    interface Randomizer {
+        fun getTimeToWait(): Int
+    }
+    ```
+
+1.  将之前的`Randomizer`类重命名为`RandomizerImpl`并按照以下方式实现`Randomizer`接口：
+
+    ```swift
+    class RandomizerImpl(private val random: Random) :
+    Randomizer {
+        override fun getTimeToWait(): Int {
+            return random.nextInt(5) + 1
+        }
+    }
+    ```
+
+1.  在`MyApplication`中修改`createRandomizer`方法，使其返回类型为`Randomizer`，这将返回一个`RandomizerImpl`实例：
+
+    ```swift
+    open class MyApplication : Application() {
+        …
+        open fun createRandomizer() : Randomizer =
+            RandomizerImpl(Random())
+    }
+    ```
+
+1.  修改`TestRandomizer`以实现`Randomizer`接口：
+
+    ```swift
+    class TestRandomizer : Randomizer {
+        override fun getTimeToWait(): Int {
+            return 1
+        }
+    }
+    ```
+
+1.  修改`TestMyApplication`以纠正编译错误：
+
+    ```swift
+    class TestMyApplication : MyApplication() {
+        override fun createRandomizer(): Randomizer {
+            return TestRandomizer()
+        }
+    }
+    ```
+
+1.  在`app/build.gradle`中，将 idling 资源依赖项设置为`androidTestImplementation`：
+
+    ```swift
+        androidTestImplementation 'androidx.test.espresso:
+        espresso-idling-resource:3.5.1'
+    ```
+
+1.  在根包的`main/java`文件夹中创建一个名为`Synchronizer`的接口：
+
+    ```swift
+    interface Synchronizer {
+        fun executeAfterDelay(callback: (Int) -> Unit)
+    }
+    ```
+
+1.  将之前的 `Synchronizer` 类重命名为 `SynchronizerImpl`，实现 `Synchronizer` 接口，并删除对 `CountingIdlingResource` 的使用：
+
+    ```swift
+    class SynchronizerImpl(
+        private val randomizer: Randomizer,
+        private val timer: Timer
+    ) : Synchronizer {
+        override fun executeAfterDelay(callback: (Int) ->
+        Unit) {
+            val timeToWait = randomizer.getTimeToWait()
+                timer.schedule(CallbackTask(callback,
+                timeToWait), timeToWait * 1000L)
+        }
+        inner class CallbackTask(
+            private val callback: (Int) -> Unit,
+            private val time: Int
+        ) : TimerTask() {
+            override fun run() {
+                callback(time)
+            }
+        }
+    }
+    ```
+
+1.  修改 `MyApplication` 以使其能够从 `TestMyApplication` 类中提供不同的 `Synchronizer` 实例：
+
+    ```swift
+    open class MyApplication : Application() {
+        lateinit var synchronizer: Synchronizer
+        override fun onCreate() {
+            super.onCreate()
+            synchronizer = createSynchronizer()
+        }
+        open fun createRandomizer(): Randomizer =
+            RandomizerImpl(Random())
+        open fun createSynchronizer(): Synchronizer =
+            SynchronizerImpl(createRandomizer(), Timer())
+    }
+    ```
+
+1.  在 `androidTest` 文件夹中，创建一个名为 `TestSynchronizer` 的类，它将包装一个 `Synchronizer`，然后使用 `CountingIdlingResource` 在 `executeAfterDelay` 开始和结束时增加和减少计数器：
+
+    ```swift
+    class TestSynchronizer(
+        private val synchronizer: Synchronizer,
+        private val countingIdlingResource:
+            CountingIdlingResource
+    ) : Synchronizer {
+        override fun executeAfterDelay(callback: (Int) ->
+        Unit) {
+            countingIdlingResource.increment()
+            synchronizer.executeAfterDelay {
+                callback(it)
+                countingIdlingResource.decrement()
+            }
+        }
+    }
+    ```
+
+在前面的示例中，我们有一个对 `Synchronizer` 实例的引用。当调用 `executeAfterDelay` 时，我们通知 Espresso 等待。然后我们调用实际的 `Synchronizer` 实例，当它完成执行后，我们通知 Espresso 继续执行。
+
+1.  修改 `TestMyApplication` 以提供 `TestSynchronizer` 的实例：
+
+    ```swift
+    class TestMyApplication : MyApplication() {
+        val countingIdlingResource =
+            CountingIdlingResource("Timer resource")
+        override fun createRandomizer(): Randomizer {
+            return TestRandomizer()
+        }
+        override fun createSynchronizer(): Synchronizer {
+            return
+              TestSynchronizer(super.createSynchronizer(),
+              countingIdlingResource)
+        }
+    }
+    ```
+
+在前面的代码片段中，我们创建了一个新的 `TestSynchronizer`，它包装了在 `MyApplication` 中定义的 `Synchronizer` 并添加了 `CountingIdlingResource`。
+
+1.  在 `FlowTest` 中，将 `MyApplication` 的引用更改为 `TestMyApplication`:
+
+    ```swift
+    private val myApplication =
+        getApplicationContext<TestMyApplication>()
+    ```
+
+当现在运行测试时，一切应该通过，如图 *图 10.10* 所示：
+
+![图 10.10 – 练习 10.03 的输出](img/B19411_10_010.jpg)
+
+图 10.10 – 练习 10.03 的输出
+
+这种类型的练习展示了如何避免测试中的随机性，并提供具体且可重复的输入以使我们的测试可靠。在依赖注入框架中，也采取了类似的方法，可以在测试套件中替换整个模块以确保测试的可靠性。
+
+最常见需要替换的是 API 通信。这种方法解决的另一个问题是减少等待时间。如果这种类型的场景在测试中重复出现，那么它们的执行时间会因为这一点而增加。
+
+在这个练习中，我们探讨了如何编写仪器化测试并在模拟器或物理设备上执行它们。我们还分析了如何使用 `CountingIdlingResources` 装饰我们的对象以监控异步操作，以及如何切换导致不稳定的依赖并提供存根数据。
+
+# TDD
+
+假设你被分配了一个任务来构建一个显示带有加、减、乘、除选项的计算器的活动。你还必须为你的实现编写测试。通常，你会构建你的 UI 和活动以及一个单独的 `Calculator` 类。然后，你会为你的 `Calculator` 类编写单元测试，然后为你的 `activity` 类编写测试。
+
+如果你将 TDD 流程转换为在 Android 应用中实现功能，你将需要首先编写你的 UI 测试用例。为了实现这一点，你可以创建一个骨架 UI 以避免编译时错误。在完成 UI 测试后，你需要编写你的 `Calculator` 测试。在这里，你还需要在 `Calculator` 类中创建必要的函数以避免编译时错误。
+
+如果你在这个阶段运行了测试，它们将失败。这将迫使你实现代码直到测试通过。一旦你的`Calculator`测试通过，你就可以将计算器连接到你的 UI，直到你的 UI 测试通过。虽然这看起来像是一种反直觉的方法，但一旦掌握了这个过程，它就能解决两个问题：
+
++   由于你需要确保你的代码是可测试的，并且只需编写通过测试所需的最少代码，因此编写代码所需的时间会更少
+
++   由于开发者将能够分析不同的结果，因此引入的 bug 会更少
+
+看看以下图，它显示了 TDD 周期：
+
+![图 10.11 – TDD 周期](img/B19411_10_011.jpg)
+
+图 10.11 – TDD 周期
+
+在前面的图中，我们可以看到 TDD 过程中的开发周期。你应该从一个测试失败的点开始。实现更改以通过测试。当你更新或添加新功能时，你可以重复此过程。
+
+回到我们的阶乘示例，我们从一个没有涵盖所有场景的`factorial`函数开始，每次添加新测试时都必须更新该函数。TDD 正是基于这个想法构建的。你从一个空函数开始。你开始定义你的测试场景：成功的条件是什么？最小值是多少？最大值是多少？是否有任何违反主要规则的例外情况？它们是什么？这些问题可以帮助开发者定义他们的测试用例。然后，这些案例可以编写。现在让我们通过下一个练习看看如何实际操作。
+
+## 练习 10.04 – 使用 TDD 计算数字之和
+
+编写一个函数，该函数以整数`n`作为输入，并返回从`1`到`n`的数字之和。该函数应使用 TDD 方法编写，并满足以下标准：
+
++   对于`n<=0`，函数将返回值`-1`
+
++   函数应该能够返回`Int.MAX_VALUE`的正确值
+
++   函数应该快速，即使是对于`Int.MAX_VALUE`
+
+执行以下步骤以完成此练习：
+
+1.  创建一个新的没有活动的 Android Studio 项目
+
+1.  确保将以下库添加到`app/build.gradle`中：
+
+    ```swift
+    testImplementation 'junit:junit:4.13.2'
+    ```
+
+1.  在根包的`main/java`文件夹中，创建一个`Adder`类，并带有返回`0`的`sum`方法，以满足编译器：
+
+    ```swift
+    class Adder {
+        fun sum(n: Int): Int = 0
+    }
+    ```
+
+1.  在`test`目录下创建一个`AdderTest`类并定义我们的测试用例。我们将有以下测试用例：`n=1`，`n=2`，`n=0`，`n=-1`，`n=10`，`n=20`，以及`n=Int.MAX_VALUE`。我们可以将成功的场景拆分到一个方法中，而将不成功的场景拆分到另一个方法中：
+
+    ```swift
+    class AdderTest {
+        private val adder = Adder()
+        @Test
+        fun sumSuccess() {
+            assertEquals(1, adder.sum(1))
+            assertEquals(3, adder.sum(2))
+            assertEquals(55, adder.sum(10))
+            assertEquals(210, adder.sum(20))
+            assertEquals(2305843008139952128L,
+                adder.sum(Int.MAX_VALUE))
+        }
+        @Test
+        fun sumError(){
+            assertEquals(-1, adder.sum(0))
+            assertEquals(-1, adder.sum(-1))
+        }
+    }
+    ```
+
+如果我们运行`AdderTest`类的测试，我们将看到以下图所示的输出，这意味着所有测试都失败了：
+
+![图 10.12 – 练习 10.04 的初始测试状态](img/B19411_10_012.jpg)
+
+图 10.12 – 练习 10.04 的初始测试状态
+
+1.  让我们先通过在`1`到`n`的循环中实现求和来处理成功场景：
+
+    ```swift
+    class Adder {
+        fun sum(n: Int): Long {
+            var result = 0L
+            for (i in 1..n) {
+                result += i
+            }
+            return result
+        }
+    }
+    ```
+
+如果我们现在运行测试，你会看到其中一个会通过，另一个会失败，就像以下图所示：
+
+![图 10.13 – 解决 10.04 练习的成功场景后的测试状态](img/B19411_10_013.jpg)
+
+图 10.13 – 解决 10.04 练习的成功场景后的测试状态
+
+1.  如果我们看看执行成功测试所需的时间，似乎有点长。当在一个项目中存在成千上万的单元测试时，这可能会累积起来。现在，我们可以通过应用 *n(n+1)/2* 公式来优化我们的代码以处理这个问题：
+
+    ```swift
+    class Adder {
+        fun sum(n: Int): Long {
+            return (n * (n.toLong() + 1)) / 2
+        }
+    }
+    ```
+
+现在运行测试将大大减少执行时间到几毫秒。
+
+1.  现在，让我们专注于解决我们的失败场景。我们可以通过添加一个当 `n` 小于或等于 `0` 的条件来完成这个任务：
+
+    ```swift
+    class Adder {
+        fun sum(n: Int): Long {
+            return if (n > 0) (n * (n.toLong() + 1)) / 2
+    else -1
+        }
+    }
+    ```
+
+如果我们现在运行测试，我们应该看到它们都通过，就像以下图所示：
+
+![图 10.14 – 10.04 练习的通过测试](img/B19411_10_014.jpg)
+
+图 10.14 – 10.04 练习的通过测试
+
+在这个练习中，我们将 TDD 的概念应用于一个非常小的示例，以展示该技术如何被使用。我们观察到，从骨架代码开始，我们可以创建一系列测试来验证我们的条件，并且通过不断运行测试，我们改进了代码，直到所有测试都通过。正如你可能已经注意到的，这个概念并不是直观的。一些开发者发现很难定义骨架代码应该有多大才能开始创建测试用例，而另一些开发者，出于习惯，首先编写代码然后再开发测试。在任何情况下，开发者都需要大量练习这项技术，直到熟练掌握。
+
+## 10.01 活动活动 – 使用 TDD 进行开发
+
+使用 TDD 方法，开发一个包含三个活动并按以下方式工作的应用程序：
+
++   在活动 1 中，你将显示一个数字 `EditText` 元素和一个按钮。当按钮被点击时，`EditText` 中的数字将被传递到活动 2。
+
++   活动二将异步生成一个项目列表。项目的数量将由活动 1 传递的数字表示。你可以使用具有 1 秒延迟的 `Timer` 类。列表中的每个项目将显示文本 `Item x`，其中 `x` 是列表中的位置。当点击一个项目时，你应该将点击的项目传递到活动 3。
+
++   活动三将显示文本 `您点击了 y`，其中 `y` 是用户点击的项目文本。
+
+应用程序的测试如下：
+
++   使用 Mockito 和 `mockito-kotlin` 注解的 `@SmallTest` 的单元测试
+
++   使用 Robolectric 和 Espresso 注解的 `@MediumTest` 的集成测试
+
++   使用 `Robot` 模式并注解为 `@LargeTest` 的 Espresso 的 UI 测试
+
+从命令行运行测试命令。为了完成这个活动，你需要采取以下步骤：
+
+1.  你需要 Android Studio 4.1.1 或更高版本，以及 Kotlin 1.4.21 或更高版本，用于 Parcelize Kotlin 插件。
+
+1.  创建三个活动以及每个活动的 UI。
+
+1.  在`androidTest`文件夹中，为每个活动创建三个机器人：
+
+    +   机器人 1 将包含与`EditText`和按钮的交互
+
+    +   机器人 2 将断言屏幕上的项目数量并与列表中的项目进行交互
+
+    +   机器人 3 将断言在`TextView`中显示的文本
+
+1.  创建一个具有一个使用前面机器人的测试方法的仪器化测试类。
+
+1.  创建一个`Application`类，该类将包含所有将进行单元测试的类的实例。
+
+1.  创建三个类来表示集成测试，每个活动一个类。这些类中的每一个将包含一个用于交互和数据加载的测试方法。每个集成测试都将断言活动之间传递的意图。
+
+1.  创建一个类，该类将提供所需的 UI 文本。它将引用一个`Context`对象，并包含两个方法，这些方法将提供 UI 的文本，并返回一个空字符串。
+
+1.  为前面的类创建测试，以测试这两个方法。
+
+1.  实现前面的类，以便测试通过。
+
+1.  创建一个类，该类将负责在`Activity2`中加载列表，并提供一个用于加载的空方法。该类将引用计时器和空闲资源。在这里，你还应该创建一个数据类，该类将代表`RecyclerView`的模型。
+
+1.  为前面的类创建一个单元测试。
+
+1.  为前面的类创建实现并运行单元测试，直到它们通过。
+
+1.  在`Application`类中，实例化已进行单元测试的类，并在您的活动中开始使用它们。这样做，直到您的集成测试通过。
+
+1.  提供`IntegrationTestApplication`，这将返回负责加载的新实现类。这是为了避免使您的`Activity2`集成测试等待加载完成。
+
+1.  提供`UiTestApplication`，这将再次减少您模型的加载时间，并将空闲资源连接到 Espresso。实现剩余的 UI 测试，以便通过。
+
+注意
+
+该活动的解决方案可以在[`packt.link/Ma4tD`](https://packt.link/Ma4tD)找到。
+
+# 摘要
+
+在本章中，我们探讨了不同的测试类型和实现这些测试的框架。我们还探讨了测试环境，以及如何为每个环境构建它，以及如何将代码结构化成多个组件，这些组件可以单独进行单元测试。
+
+我们分析了不同的测试代码的方法，我们应该如何进行测试，以及通过查看不同的测试结果，我们可以如何改进我们的代码。通过 TDD，我们了解到，通过从测试开始，我们可以更快地编写代码，并确保它更少出错。
+
+活动是所有这些概念汇集在一起构建简单 Android 应用程序的地方，我们可以观察到，通过添加测试，开发时间会增加，但长期来看，这通过消除代码修改时可能出现的潜在错误而得到回报。
+
+我们研究过的框架是最常见的其中一些，但还有其他一些建立在它们之上，并被开发者在他们的项目中使用，例如 Mockk（一个为 Kotlin 设计的模拟库，利用了语言的大量功能）和 Barista（基于 Espresso 编写，简化了 UI 测试的语法），仅举几个例子。
+
+将这里提出的所有概念视为构建块，它们适合软件工程世界中存在的两个过程：自动化和持续集成。自动化将冗余和重复的工作从开发者的手中移走，并将其交给机器。
+
+而不是让一个质量保证团队测试你的应用程序以确保满足要求，你可以通过各种测试和测试案例指导机器来测试应用程序，并且只需要一个人来审查测试结果。
+
+持续集成建立在自动化的概念之上，以便在你将代码提交给其他开发者进行审查时立即验证你的代码。具有持续集成功能的项目将按照以下方式进行设置：开发者将工作提交到源代码控制仓库，例如 GitHub。
+
+然后，云中的机器将开始执行整个项目的测试，确保没有出现任何问题，开发者可以继续新的任务。如果测试通过，那么其他开发者可以审查代码，当代码正确时，它可以被合并，并在云中创建一个新的构建版本，然后分发到整个团队和测试人员。
+
+所有这些都在初始开发者安全地从事其他工作的同时进行。如果在过程中有任何失败，他们可以暂停新任务，并去解决他们工作中出现的问题。然后可以将持续集成过程扩展到持续交付，当准备提交到 Google Play 时，可以设置类似的自动化，几乎可以由机器完全处理，开发者的参与度很小。
+
+在接下来的章节中，你将了解如何在构建更复杂的应用程序时组织代码，这些应用程序利用设备的存储功能并连接到云以请求数据。这些组件中的每一个都可以单独进行单元测试，并且你可以应用集成测试来断言多个组件的成功集成。

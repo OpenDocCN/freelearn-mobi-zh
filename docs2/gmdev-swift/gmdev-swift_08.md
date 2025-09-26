@@ -1,0 +1,418 @@
+# 第八章. 精益求精——HUD、垂直背景、粒子效果等
+
+我们的核心游戏机制已经就绪；现在我们可以提高整体的用户体验。我们将把重点转向使我们的游戏更加出色的非游戏功能。首先，我们将添加一个抬头显示（**HUD**）来显示玩家的生命值和金币计数。然后，我们将实现多层垂直背景，为游戏世界增加深度和沉浸感。我们还将探索 SpriteKit 的粒子系统，并使用粒子发射器为游戏增加制作价值。这些步骤的结合将增加游戏体验的乐趣，邀请玩家更深入地进入游戏世界，并给我们的应用带来专业、精致的感觉。
+
+本章包括以下内容：
+
++   添加 HUD
+
++   垂直背景层
+
++   使用粒子系统
+
++   游戏开始时提供安全保障
+
+# 添加抬头显示
+
+我们的游戏需要一个 HUD 来显示玩家的当前生命值和金币分数。我们可以用心形来表示生命值——就像过去的一些经典游戏一样——并使用`SKLabelNode`在屏幕上绘制文本以显示收集到的金币数量。
+
+我们将把 HUD 附加到场景本身，而不是`world`节点，因为它不会随着玩家向前飞行而移动。我们不希望阻挡玩家对右侧即将到来的障碍物的视线，因此我们将 HUD 元素放置在屏幕的左上角。
+
+当我们完成时，我们的 HUD 将看起来像这样（在玩家收集了 110 个金币并受到一点伤害后）：
+
+![添加抬头显示](img/Image_B04532_08_01.jpg)
+
+要实现 HUD，请按照以下步骤操作：
+
+1.  首先，我们需要将 HUD 艺术资源添加到游戏中。在资源包中找到`HUD.atlas`纹理图集并将其添加到项目中。
+
+1.  接下来，我们将创建一个`HUD`类来处理所有的 HUD 逻辑。向项目中添加一个新的 Swift 文件`HUD.swift`，并添加以下代码以开始对`HUD`类的工作：
+
+    ```swift
+    import SpriteKit
+
+    class HUD: SKNode {
+        var textureAtlas:SKTextureAtlas = 
+            SKTextureAtlas(named:"hud.atlas")
+        // An array to keep track of the hearts:
+        var heartNodes:[SKSpriteNode] = []
+        // An SKLabelNode to print the coin score:
+        let coinCountText = SKLabelNode(text: "000000")
+    }
+    ```
+
+1.  我们需要一个初始化风格的函数来为每个心形创建一个新的`SKSpriteNode`，并为金币计数配置新的`SKLabelNode`。向`HUD`类添加一个名为`createHudNodes`的函数，如下所示：
+
+    ```swift
+    func createHudNodes(screenSize:CGSize) {
+        // --- Create the coin counter ---
+        // First, create and position a bronze coin icon:
+        let coinTextureAtlas:SKTextureAtlas = 
+            SKTextureAtlas(named:"goods.atlas")
+        let coinIcon = SKSpriteNode(texture: 
+            coinTextureAtlas.textureNamed("coin-bronze.png"))
+        // Size and position the coin icon:
+        let coinYPos = screenSize.height - 23
+        coinIcon.size = CGSize(width: 26, height: 26)
+        coinIcon.position = CGPoint(x: 23, y: coinYPos)
+        // Configure the coin text label:
+        coinCountText.fontName = "AvenirNext-HeavyItalic"
+        coinCountText.position = CGPoint(x: 41, y: coinYPos)
+        // These two properties allow you to align the text
+        // relative to the SKLabelNode's position:
+        coinCountText.horizontalAlignmentMode = 
+            SKLabelHorizontalAlignmentMode.Left
+        coinCountText.verticalAlignmentMode = 
+            SKLabelVerticalAlignmentMode.Center
+        // Add the text label and coin icon to the HUD:
+        self.addChild(coinCountText)
+        self.addChild(coinIcon)
+
+        // Create three heart nodes for the life meter:
+        for var index = 0; index < 3; ++index {
+            let newHeartNode = SKSpriteNode(texture: 
+                textureAtlas.textureNamed("heart-full.png"))
+            newHeartNode.size = CGSize(width: 46, height: 40)
+            // Position the hearts below the coin counter:
+            let xPos = CGFloat(index * 60 + 33)
+            let yPos = screenSize.height - 66
+            newHeartNode.position = CGPoint(x: xPos, y: yPos)
+            // Keep track of nodes in an array property:
+            heartNodes.append(newHeartNode)
+            // Add the heart nodes to the HUD:
+            self.addChild(newHeartNode)
+        }
+    }
+    ```
+
+1.  我们还需要一个函数，使得`GameScene`类可以调用以更新金币计数标签。向`HUD`类添加一个名为`setCoinCountDisplay`的新函数，如下所示：
+
+    ```swift
+    func setCoinCountDisplay(newCoinCount:Int) {
+        // We can use the NSNumberFormatter class to pad
+        // leading 0's onto the coin count:
+        let formatter = NSNumberFormatter()
+        formatter.minimumIntegerDigits = 6
+        if let coinStr = formatter.stringFromNumber(newCoinCount) {
+            // Update the label node with the new coin count:
+            coinCountText.text = coinStr
+        }
+    }
+    ```
+
+1.  我们还需要一个函数来更新玩家生命值变化时的心形图形。向`HUD`类添加一个名为`setHealthDisplay`的新函数，如下所示：
+
+    ```swift
+    func setHealthDisplay(newHealth:Int) {
+        // Create a fade SKAction to fade out any lost hearts:
+        let fadeAction = SKAction.fadeAlphaTo(0.2, 
+            duration: 0.3)
+        // Loop through each heart and update its status:
+        for var index = 0; index < heartNodes.count; ++index {
+            if index < newHealth {
+                // This heart should be full red:
+                heartNodes[index].alpha = 1
+            }
+            else {
+                // This heart should be faded:
+                heartNodes[index].runAction(fadeAction)
+            }
+        }
+    }
+    ```
+
+1.  我们的`HUD`类已经完成。接下来，我们将在`GameScene`类中连接它。打开`GameScene.swift`文件，并向`GameScene`类添加一个新属性，实例化`HUD`类的一个实例：
+
+    ```swift
+    let hud = HUD()
+    ```
+
+1.  我们需要将`HUD`节点放置到场景中，位于其他游戏对象之上。在`GameScene didMoveToView`函数的底部添加以下代码：
+
+    ```swift
+    // Create the HUD's child nodes:
+    hud.createHudNodes(self.size)
+    // Add the HUD to the scene:
+    self.addChild(hud)
+    // Position the HUD above any other game element
+    hud.zPosition = 50
+    ```
+
+1.  我们准备向 `HUD` 发送健康和金币更新。首先，当玩家受到伤害时，我们将使用健康更新来更新 `HUD`。在 `GameScene didBeginContact` 函数内部，找到玩家受到伤害的接触情况——当他或她接触地面或敌人时——并添加以下（粗体）新代码，以向 `HUD` 发送健康更新：
+
+    ```swift
+    case PhysicsCategory.ground.rawValue:
+        player.takeDamage()
+     hud.setHealthDisplay(player.health)
+    case PhysicsCategory.enemy.rawValue:
+        player.takeDamage()
+     hud.setHealthDisplay(player.health)
+
+    ```
+
+1.  最后，每当玩家收集到一个金币时，我们将更新 `HUD`。找到玩家接触金币的接触情况，并调用 `HUD setCoinCountDisplay` 函数（粗体新代码）如下：
+
+    ```swift
+    case PhysicsCategory.coin.rawValue:
+        // Try to cast the otherBody's node as a Coin:
+        if let coin = otherBody.node as? Coin {
+            coin.collect()
+            self.coinsCollected += coin.value
+     hud.setCoinCountDisplay(self.coinsCollected)
+        }
+    ```
+
+1.  运行项目，你应该会看到你的金币计数器和健康仪表出现在左上角，如这个截图所示：![添加抬头显示](img/Image_B04532_08_02.jpg)
+
+干得好！我们的 HUD 已经完成。接下来，我们将构建我们的背景层。
+
+# 视差背景层
+
+通过绘制单独的背景层并将它们以不同的速度移动过相机，视差为你的游戏增加了深度感。非常慢的背景给人一种距离感，而快速移动的背景看起来似乎非常接近玩家。我们可以通过用越来越不饱和的颜色绘制远处的物体来增强效果。
+
+在我们的游戏中，我们将通过将背景附加到世界并随着世界向左移动而缓慢地将背景推向右侧来实现视差效果。当世界向左移动（带着背景一起移动）时，我们将背景的 *x* 位置向右移动，以便总移动距离小于正常游戏对象。结果将是背景层看起来比游戏中的其他部分移动得更慢，因此看起来更远。
+
+此外，每个背景将只有 3000 点宽，但将在精确的间隔内向前跳跃以无缝循环，类似于 `Ground` 类。
+
+## 添加背景资源
+
+首先，按照以下步骤添加艺术作品：
+
+1.  在 Xcode 中打开你项目中的 `Images.xcassets` 文件。
+
+1.  在提供的游戏资源中，在 `Backgrounds` 文件夹中找到四个背景图像。
+
+1.  将四个背景拖放到 `Images.xcassets` 文件的左侧面板中。
+
+你应该会看到背景如这里所示出现在左侧面板中：
+
+![添加背景资源](img/Image_B04532_08_03.jpg)
+
+## 实现背景类
+
+我们需要一个新类来管理视差和无缝循环的重定位逻辑。我们可以为每个背景层实例化一个 `Background` 类的新实例。要创建 `Background` 类，请将一个新的 Swift 文件 `Background.swift` 添加到你的项目中，使用以下代码：
+
+```swift
+import SpriteKit
+
+class Background: SKSpriteNode {
+    // movementMultiplier will store a float from 0-1 to indicate
+    // how fast the background should move past.
+    // 0 is full adjustment, no movement as the world goes past
+    // 1 is no adjustment, background passes at normal speed
+    var movementMultiplier = CGFloat(0)
+    // jumpAdjustment will store how many points of x position
+    // this background has jumped forward, useful for calculating
+    // future seamless jump points:
+    var jumpAdjustment = CGFloat(0)
+    // A constant for background node size:
+    let backgroundSize = CGSize(width: 1000, height: 1000)
+
+    func spawn(parentNode:SKNode, imageName:String, 
+        zPosition:CGFloat, movementMultiplier:CGFloat) {
+        // Position from the bottom left:
+        self.anchorPoint = CGPointZero
+        // Start backgrounds at the top of the ground (y: 30)
+        self.position = CGPoint(x: 0, y: 30)
+        // Control the order of the backgrounds with zPosition:
+        self.zPosition = zPosition
+        // Store the movement multiplier:
+        self.movementMultiplier = movementMultiplier
+        // Add the background to the parentNode:
+        parentNode.addChild(self)
+
+        // Build three child node instances of the texture,
+        // Looping from -1 to 1 so the backgrounds cover both
+        // forward and behind the player at position zero.
+        // closed range operator: "..." includes both endpoints:
+        for i in -1...1 {
+            let newBGNode = SKSpriteNode(imageNamed: imageName)
+            // Set the size for this node from constant: 
+            newBGNode.size = backgroundSize
+            // Position these nodes by their lower left corner:
+            newBGNode.anchorPoint = CGPointZero
+            // Position this background node:
+            newBGNode.position = CGPoint(
+                x: i * Int(backgroundSize.width), y: 0)
+            // Add the node to the Background:
+            self.addChild(newBGNode)
+        }
+    }
+
+    // We will call updatePosition every frame to
+    // reposition the background:
+    func updatePosition(playerProgress:CGFloat) {
+        // Calculate a position adjustment after loops and 
+        // parallax multiplier:
+        let adjustedPosition = jumpAdjustment + playerProgress * 
+            (1 - movementMultiplier)
+        // Check if we need to jump the background forward:
+        if playerProgress - adjustedPosition > 
+            backgroundSize.width {
+            jumpAdjustment += backgroundSize.width
+        }
+        // Adjust this background forward as the world 
+        // moves back so the background appears slower:
+        self.position.x = adjustedPosition
+    }
+}
+```
+
+## 在 GameScene 类中连接背景
+
+我们需要在`GameScene`类中添加三个代码修改来连接我们的背景。首先，我们将创建一个数组来跟踪背景。接下来，当场景开始时，我们将生成背景。最后，我们可以从`GameScene didSimulatePhsyics`函数中调用`Background`类的`updatePosition`函数，以便在每一帧之前重新定位背景。按照以下步骤连接背景：
+
+1.  在`GameScene`类本身上创建一个新的数组属性来存储我们的背景，如下所示：
+
+    ```swift
+    var backgrounds:[Background] = []
+    ```
+
+1.  在`didMoveToView`函数的底部，实例化和生成我们的四个背景：
+
+    ```swift
+    // Instantiate four Backgrounds to the backgrounds array:
+    for i in 0...3 {
+        backgrounds.append(Background())
+    }
+    // Spawn the new backgrounds:
+    backgrounds[0].spawn(world, imageName: "Background-1", zPosition: -5, movementMultiplier: 0.75)
+    backgrounds[1].spawn(world, imageName: "Background-2", zPosition: -10, movementMultiplier: 0.5)
+    backgrounds[2].spawn(world, imageName: "Background-3", zPosition: -15, movementMultiplier: 0.2)
+    backgrounds[3].spawn(world, imageName: "Background-4", zPosition: -20, movementMultiplier: 0.1)
+    ```
+
+1.  最后，在`didSimulatePhysics`函数的底部添加以下代码，以便在每一帧之前重新定位背景：
+
+    ```swift
+    // Position the backgrounds:
+    for background in self.backgrounds {
+        background.updatePosition(playerProgress)
+    }
+    ```
+
+1.  运行项目。您应该看到四个背景图像作为单独的层在动作后面移动，并带有视差效果。此截图显示了背景在您的游戏中应该出现的样子：![在 GameScene 类中连接背景](img/Image_B04532_08_04.jpg)
+
+### 小贴士
+
+如果您正在使用 iOS 模拟器测试您的游戏，在向游戏中添加这些大型背景纹理后，帧率降低是正常的。游戏仍然可以在 iOS 设备上良好运行。
+
+太棒了！你已经成功实现了你的背景系统。背景让皮埃尔的企鹅世界感觉更加完整，增加了游戏的沉浸感。接下来，我们将使用粒子发射器在皮埃尔飞行时在其身后添加一条轨迹——这是一个有趣的添加，有助于玩家掌握控制。
+
+# 检查点 8-A
+
+要下载到这一点的项目，请访问此 URL：
+
+[`www.thinkingswiftly.com/game-development-with-swift/chapter-8`](http://www.thinkingswiftly.com/game-development-with-swift/chapter-8)
+
+# 利用 SpriteKit 的粒子系统
+
+SpriteKit 包含一个强大的粒子系统，这使得向游戏中添加令人兴奋的图形变得容易。粒子发射器节点创建了许多图像的小实例，这些实例组合在一起创建了一个看起来很棒的效果。您可以使用发射器节点生成雪、火、火花、爆炸、魔法和其他有用的效果，这些效果在其他情况下可能需要大量的工作。
+
+对于我们的游戏，您将学习如何使用发射器节点在皮埃尔企鹅飞行时在其身后创建一条小点轨迹，这使得玩家更容易了解他们的点击如何影响皮埃尔的飞行路径。
+
+当我们完成时，皮埃尔的轨迹将看起来像这样：
+
+![利用 SpriteKit 的粒子系统](img/Image_B04532_08_05.jpg)
+
+## 添加圆形粒子资源
+
+每个粒子系统都会发射单个图像的多个版本，以创建累积的粒子效果。在我们的例子中，这个图像是一个简单的圆圈。要将圆圈图像添加到游戏中，请按照以下步骤操作：
+
+1.  在 Xcode 中打开`Images.xcassets`文件。
+
+1.  在提供的游戏资源中找到`Particles`文件夹中的`dot.png`图像。
+
+1.  将图像文件拖放到`Images.xcassets`左侧面板中。
+
+## 创建 SpriteKit 粒子文件
+
+Xcode 提供了一个出色的 UI 用于创建和编辑粒子系统。要使用 UI，我们将向我们的项目添加一个新的**SpriteKit 粒子文件**。按照以下步骤添加新文件：
+
+1.  首先，向你的项目添加一个新文件，并定位到**SpriteKit 粒子文件**类型。你可以在这个**资源**类别下找到这个模板，如图所示：![创建 SpriteKit 粒子文件](img/Image_B04532_08_06.jpg)
+
+1.  在以下提示中，选择**雪花**作为**粒子模板**。
+
+1.  将文件命名为 `PierrePath.sks` 并点击**创建**以将新文件添加到你的项目中。
+
+Xcode 将在主框架中打开新的粒子发射器，它应该看起来像这样：
+
+![创建 SpriteKit 粒子文件](img/Image_B04532_08_07.jpg)
+
+在 Xcode 的粒子编辑器中预览雪花模板
+
+### 小贴士
+
+在撰写本文时，Xcode 的粒子编辑器仍然有些古怪。如果你在中间看不到白色雪花粒子效果，请尝试在深灰色中心区域点击任何位置以重新定位粒子发射器 - 有时它不会从预期的位置开始。
+
+这对于测试不与旧粒子重叠的设置更改也很有用。只需在编辑器中点击任何位置即可重新定位发射器。
+
+确保你打开了右侧侧边栏，通过在 Xcode 右上角点亮工具按钮，如图所示：
+
+![创建 SpriteKit 粒子文件](img/Image_B04532_08_08.jpg)
+
+你可以使用工具栏编辑粒子发射器的动画质量。你可以编辑几个属性：粒子的数量、粒子的寿命、粒子移动的速度、粒子缩放的大小，等等。这是一个非常棒的工具，因为你可以立即看到你的更改的反馈。请随意通过更改粒子属性进行实验。
+
+## 配置路径粒子设置
+
+要创建 Pierre 的点状轨迹，更新你的粒子设置以匹配此截图所示的设置：
+
+![配置路径粒子设置](img/Image_B04532_08_09.jpg)
+
+当你的编辑器显示一个没有明显运动的微小白色圆圈时，你就有了正确的设置。
+
+## 将粒子发射器添加到游戏中
+
+我们将把新的发射器连接到 `Player` 节点，这样发射器就会在玩家飞行的任何地方创建新的白色圆圈。我们可以轻松地在代码中引用编辑器中刚刚创建的发射器设计。打开 `Player.swift` 并在 `spawn` 函数底部添加以下代码：
+
+```swift
+// Instantiate a SKEmitterNode with the PierrePath design:
+let dotEmitter = SKEmitterNode(fileNamed: "PierrePath.sks")
+// Place the particle zPosition behind the penguin:
+dotEmitter.particleZPosition = -1
+// By adding the emitter node to the player, the emitter will move 
+// with the penguin and emit new dots wherever the player moves
+self.addChild(dotEmitter)
+// However, the particles themselves should attach to the world,
+// so they trail behind as the player moves forward.
+// (Note that self.parent refers to the world node)
+dotEmitter.targetNode = self.parent
+```
+
+运行项目。你应该会看到 Pierre 背后拖曳的白色点，如图所示：
+
+![将粒子发射器添加到游戏中](img/Image_B04532_08_10.jpg)
+
+干得好。现在玩家可以看到他们飞行的路径，这既有趣又有教育意义。点的反馈将帮助玩家学习控制系统的灵敏度，从而更快地掌握游戏。
+
+这只是你可以使用粒子发射节点创建的许多特殊效果之一。现在你知道了如何创建、编辑和在世界中放置粒子发射器，你可以探索其他创造性的可能性。其他有趣的想法包括皮埃尔碰到敌人时产生的火花，或者在背景中轻轻飘落的雪花。
+
+# 游戏开始时提供安全保障
+
+你可能已经注意到，当你启动游戏时，皮埃尔企鹅会迅速跌落到地上，这并不是很有趣。相反，我们可以在游戏开始时将皮埃尔发射到一个优雅的循环弧线，给玩家一个准备飞行的时间。要做到这一点，打开`Player.swift`文件，在`spawn`函数的底部添加以下代码：
+
+```swift
+// Grant a momentary reprieve from gravity:
+self.physicsBody?.affectedByGravity = false
+// Add some slight upward velocity:
+self.physicsBody?.velocity.dy = 50
+// Create a SKAction to start gravity after a small delay:
+let startGravitySequence = SKAction.sequence([
+    SKAction.waitForDuration(0.6),
+    SKAction.runBlock {
+        self.physicsBody?.affectedByGravity = true
+    }])
+self.runAction(startGravitySequence)
+```
+
+# 检查点 8-B
+
+下载到目前这个阶段的项目，请访问以下网址：
+
+[`www.thinkingswiftly.com/game-development-with-swift/chapter-8`](http://www.thinkingswiftly.com/game-development-with-swift/chapter-8)
+
+# 摘要
+
+在本章中，我们将游戏世界栩栩如生。我们绘制了一个 HUD 来显示玩家的剩余生命值和金币分数，添加了透视背景以增加世界的深度和沉浸感，并学会了如何使用粒子发射器在我们的游戏中创建特殊图形。此外，我们在每次飞行开始时，在重力将我们的英雄拖下来之前添加了一个小的延迟。我们的游戏既有趣又看起来很棒！
+
+接下来，我们需要一个菜单，这样我们就可以在不需要重新构建项目或手动关闭应用程序的情况下重新启动游戏。在第九章《添加菜单和声音》中，我们将设计一个开始菜单，当玩家死亡时添加一个重试按钮，并播放声音和音乐以创造更深入的游戏体验。

@@ -1,0 +1,262 @@
+# 3
+
+# 创建一个呼吸应用
+
+到目前为止，我们已经了解了 SwiftUI 的基础知识，一些可以用来以某种方式改变视图的修饰符，以及许多可以动画化的属性。现在是时候将所学知识付诸实践，并构建我们的第一个项目。
+
+在本章中，我们将构建一个类似于在 Apple Watch 和 iPhone 上流行的呼吸应用的动画。我们将结合三个动画，使六个圆圈视图移动，重现 Apple 应用缓慢而有节奏的运动。
+
+制作这个应用不需要很多代码；然而，随着我们阅读本书，我们将在此基础上构建项目，并逐渐增加难度。
+
+完成项目所需的步骤如下：
+
++   使用 Xcode 设置项目
+
++   添加变量
+
++   实现背景颜色
+
++   添加圆圈
+
++   动画圆圈
+
+# 技术要求
+
+你可以从 GitHub 的 `Chapter 3` 文件夹下载完成的项目的代码：[`github.com/PacktPublishing/Animating-SwiftUI-Applications`](https://github.com/PacktPublishing/Animating-SwiftUI-Applications)。
+
+# 使用 Xcode 设置项目
+
+让我们先打开 Xcode。然后，选择**iOS**选项以仅将项目构建在 iPhone 上，或者选择**多平台**如果你想让这个项目在 iPhone、iPad 或 Mac 上运行。之后，从模板列表中选择名为**App**的模板，然后点击**下一步**。
+
+现在，给项目起一个名字。我的是 `Animating Circles`，但你可以取任何你喜欢的名字。然后，填写页面上的其余详细信息。两个复选框可以保持未选中状态，因为我们不使用**Core Data**或**测试**。最后，选择一个保存项目的地方。我通常直接将它们保存在我的桌面上。
+
+然后，我们将进入 Xcode 界面；你会注意到 Xcode 自动导入了 SwiftUI 框架，因此我们可以直接进入我们的项目。
+
+# 添加变量
+
+我们的首要任务是添加一些变量来跟踪动画。将会有三个动画，所以在 `ContentView` 中，我们需要为它们准备三个布尔变量。我们需要给它们一个初始值 `false`，当应用首次启动时，这个值将被改为 `true`：
+
+```swift
+struct ContentView: View {
+    //animation bools
+    @State var scaleUpDown = false
+    @State var rotateInOut = false
+    @State var moveInOut = false
+```
+
+变量名为 `scaleUpDown`、`rotateInOut` 和 `MoveInOut`。通常，当你命名变量时，你希望尽可能使它们具有描述性，这样你就不必猜测它们的作用，并且可以立即识别它们，就像我们在这里做的那样。
+
+所有变量现在都已就绪，让我们继续查看动画的背景。
+
+# 实现背景颜色
+
+对于背景，我们将进入 `body` 计算属性。这是我们在屏幕上添加用户将看到的视图的地方。我们首先想要添加的是 `ZStack`；这是将要持有所有视图的主要堆叠：
+
+```swift
+var body: some View {
+      ZStack {
+             }
+      }
+```
+
+我们使用`ZStack`而不是`HStack`或`VStack`的原因是我们希望视图堆叠在一起，这样它们就只显示为一个视图，稍后我们将使用不同的修饰符分别对它们进行动画处理。
+
+在`ZStack`内部，让我们通过使用`.foregroundColor`修饰符为屏幕设置黑色背景，并指定要使用的颜色；在这种情况下，我们将使用黑色：
+
+```swift
+Rectangle() 
+.foregroundColor(Color.black)
+```
+
+以下图显示了该代码的结果：
+
+![图 3.1：添加黑色背景](img/B18674_03_01.jpg)
+
+图 3.1：添加黑色背景
+
+如您所见，在 SwiftUI 中添加背景时，它将覆盖 iPhone 屏幕的大部分区域，但 iPhone 上有一个称为“安全区域”的区域。这是为 iPhone 顶部（听筒区域）和手机底部预留的区域，那里彩色背景无法达到。
+
+SwiftUI 允许我们使用`.edgesIgnoringSafeArea`修饰符隐藏安全区域，然后传入值`.all`，这将黑色颜色扩展到 iPhone 屏幕的所有边缘。为此，只需在之前添加的`.fourgroundColor(Color.black)`行下面添加这一行代码：
+
+```swift
+.edgesIgnoringSafeArea(.all)
+```
+
+这会产生一个完全覆盖的 iPhone 屏幕，背景为黑色，如下所示：
+
+![图 3.2：使用 .edgesIgnoringSafeArea 修饰符](img/B18674_03_02.jpg)
+
+图 3.2：使用 .edgesIgnoringSafeArea 修饰符
+
+此外，还有`.vertical`、`.horizontal`、`.leading`和`.trailing`值，您可以使用这些值使`.edgesIgnoringSafeArea`修饰符更具体，取决于您想忽略设备的部分。
+
+因此，我们已经设置了动画的背景。现在，是时候添加圆圈了。
+
+# 添加圆圈
+
+让我们简要回顾一下这个项目的目标。我们希望使六个圆圈生长和收缩，同时旋转它们，并使它们进出。六个圆圈将相互重叠，这会给它们增添一种美观，因为它们将是部分透明的。
+
+要使这生效，我们需要更多的`ZStack`，然后将圆圈成对地放入其中。圆圈相对于彼此的对齐方式可以比作时钟上的数字。按照这个时钟类比，我们需要一个`ZStack`来容纳三对：
+
++   第一对圆圈将放置在 12 点和 6 点位置
+
++   第二对圆圈将放置在 2 点和 7 点位置
+
++   第三对圆圈将放置在 10 点和 4 点位置
+
+让我们看看如何添加这三对圆圈。
+
+## 添加第一对圆圈
+
+我们将添加的第一对圆圈将放置在 12 点和 6 点位置。以下是我们需要完成此操作的代码：
+
+```swift
+//MARK: - ZStack for the 12 and 6 O'clock circles
+            ZStack {
+                ZStack {
+                    Circle().fill(LinearGradient(gradient:                       Gradient(colors: [.green, .white]),                       startPoint: .top, endPoint: .bottom))
+                        .frame(width: 120, height: 120)
+                        .offset(y: moveInOut ? -60 : 0)
+
+                    Circle().fill(LinearGradient(gradient:                       Gradient(colors: [.green, .white]),                       startPoint: .bottom, endPoint: .top))
+                        .frame(width: 120, height: 120,                           alignment: .center)
+                        .offset(y: moveInOut ? 60 : 0)
+                }.opacity(0.5)
+```
+
+这段代码使用圆形状初始化器创建了两个圆圈。每个圆圈都获得了一种渐变色，使得它们在屏幕中心部分更亮，而在相反方向上更暗。渐变通过在两种颜色之间填充平滑过渡来工作。在这种情况下，渐变从绿色过渡到白色。`LinearGradient` 结构体用于创建渐变，它接受一个 `gradient` 参数，这是一个 `Gradient` 结构体的实例。
+
+`Gradient` 结构体接受一个名为 `colors` 的参数，它是一个颜色值的数组。在这种情况下，`colors` 参数被设置为 `[.green, .white]`，这意味着渐变将从绿色过渡到白色。
+
+`LinearGradient` 结构体的 `startPoint` 和 `endPoint` 参数决定了渐变的方向。`startPoint` 参数被设置为 `.top`，而 `endPoint` 参数被设置为 `.bottom`，对于第一个圆圈来说，这意味着渐变将从圆圈的顶部开始，向下延伸。对于第二个圆圈，`startPoint` 参数被设置为 `.bottom`，而 `endPoint` 参数被设置为 `.top`，这意味着渐变将从圆圈的底部开始，向上延伸。我们追求的效果是，在圆圈相互接触的部分呈现出更浅的绿色，而在圆圈的相对部分呈现出更深的绿色。
+
+所有的圆圈最初都将具有相同的大小，宽度为 120 点，高度也为 120 点，这是通过使用 `frame` 修改器来实现的。因为我们处于 `ZStack` 中，所以两个圆圈将堆叠在一起。如果你现在想同时看到这两个圆圈，那么请将 `moveInOut` 状态属性更改为 `true`。当我们在后面添加 `onAppear` 修改器代码时，`moveInOut` 属性将被设置为 `true`，但为了现在看到 UI 的形状，请将此属性更改为 `true`，你应该看到的是：
+
+![图 3.3：十二点和六点钟的圆圈](img/B18674_03_03.jpg)
+
+图 3.3：十二点和六点钟的圆圈
+
+现在我们来看看 `moveInOut` 变量。记得我提到过我们的变量命名应该是描述性的，并且应该与它们的功能相关吗？嗯，`moveInOut` 变量就是这种描述性命名的例子，因为它将使圆圈相互进入和退出。它通过控制包含在 `ZStack` 中的圆圈的垂直偏移来实现这一点。三元运算符负责通过在两个不同的数字之间进行选择来设置 `moveInOut` 的值。
+
+当`moveInOut`为`true`时，第一个圆圈有一个`y`偏移量为`-60`，这将其向上移动 60 点。第二个圆圈有一个`y`偏移量为`60`，这将其向下移动 60 点。这导致两个圆圈分别向`ZStack`的顶部和底部移动。当`moveInOut`为`false`时，第一个圆圈的`y`偏移量为`0`，这使其保持在`ZStack`的中心，第二个圆圈也有一个`y`偏移量为`0`，这也使其保持在`ZStack`的中心。这导致两个圆圈保持在中心，相互重叠。
+
+接下来，通过在`ZStack`末尾添加不透明度修饰符，两个圆圈都被设置为 50%的不透明度。这使得我们可以轻松地透过它们看到其他我们将要添加的圆圈，因为它们在动画过程中相互重叠，这也使得颜色在重叠期间混合并变暗，视觉效果很好。
+
+## 添加第二对圆圈
+
+现在，对于下一组圆圈，我们几乎要做完全相同的事情... 几乎。继续使用我们的时钟类比，我们需要在两点和七点钟位置放置圆圈。首先，我将向您展示代码，然后我将解释新的部分：
+
+```swift
+//MARK: - ZStack for the 2 and 7 o'clock circles
+                ZStack {
+                    Circle().fill(LinearGradient(gradient:                       Gradient(colors: [.green, .white]),                       startPoint: .top, endPoint: .bottom))
+                        .frame(width: 120, height: 120,                           alignment: .center)
+                        .offset(y: moveInOut ? -60 : 0)
+                    Circle().fill(LinearGradient(gradient:                       Gradient(colors: [.green, .white]),                       startPoint: .bottom, endPoint: .top))
+                        .frame(width: 120, height: 120,                           alignment: .center)
+                        .offset(y: moveInOut ? 60 : 0)
+                }.opacity(0.5)
+                    .rotationEffect(.degrees(60))
+```
+
+我们正在创建两个具有绿色和白色渐变的圆圈，它们的宽度和高度都是 120 点，并且它们通过动画变量`moveInOut`进行偏移。同样，根据`moveInOut`是`true`还是`false`，将决定圆圈的位置。如果是`true`，圆圈将分离，如果是`false`，它们将移动到中间，一个圆圈覆盖在另一个圆圈上。接下来，我们将这些圆圈的不透明度设置为 50%，就像我们为第一组圆圈所做的那样，使它们略微透明，这样我们就可以看到它们重叠。
+
+对于这组圆圈，不同之处在于我们需要在它们上使用`rotationEffect`修饰符。这个修饰符允许我们通过传递旋转量的值来旋转圆圈的位置。
+
+注意，这个修饰符放置在包含两个圆圈的`ZStack`的末尾。这种放置方式将使整个`ZStack`及其子元素旋转，因此它为我们节省了一些代码，因为我们不需要单独在每个子圆圈上放置修饰符。
+
+我使用`60`作为`.degrees`参数的值，这将使这个`ZStack`相对于前一对圆圈旋转 60 度。旋转的`60`值是 120 的一半，即每个圆圈的宽度，因此这种旋转将使圆圈相互重叠一半。
+
+再次，如果您想看到这两对圆圈的外观，将`moveInOut`属性更改为`true`，这就是结果：
+
+![图 3.4：两点和七点钟位置的圆圈](img/B18674_03_04.jpg)
+
+图 3.4：两点和七点钟位置的圆圈
+
+注意，我们不需要使用`rotationEffect`修饰符来旋转第一对圆圈；这是因为它们作为屏幕上的第一对圆圈，没有与其他圆圈重叠。如果我们在这里不使用`rotationEffect`修饰符，那么这第二对圆圈将正好放置在第一对圆圈上方，我们就看不到它们了。
+
+## 添加第三对圆圈
+
+最后，对于时钟上的最后一对圆圈，它们需要放置在十点和四点的位置。以下是代码：
+
+```swift
+  //MARK: - ZStack for the 10 and 4 o'clock circles
+                ZStack {
+                    Circle().fill(LinearGradient(gradient:                       Gradient(colors: [.green, .white]),                       startPoint: .top, endPoint: .bottom))
+                        .frame(width: 120, height: 120, alignment: .center)
+                        .offset(y: moveInOut ? -60 : 0)
+                    Circle().fill(LinearGradient(gradient:                       Gradient(colors: [.green, .white]),                       startPoint: .bottom, endPoint: .top))
+                        .frame(width: 120, height: 120,                           alignment: .center)
+                        .offset(y: moveInOut ? 60 : 0)
+                }.opacity(0.5)
+                    .rotationEffect(.degrees(120))
+```
+
+看着这段代码，我们可以再次看到它与其他圆圈集几乎没有区别。我们添加了两个带有绿色和白色渐变的圆圈，尺寸为 120 点。它们在`y`轴上向内或向外移动 60 点或-60 点，正如我们所看到的，但对于这对圆圈，我们旋转它们 120 度，将它们放置在十点和四点的位置，从而完成圆圈时钟。结果如下所示：
+
+![图 3.5：十点和四点圆圈——完整设计](img/B18674_03_05.jpg)
+
+图 3.5：十点和四点圆圈——完整设计
+
+好的，所以我们已经添加了所有的圆圈。现在到了添加有趣的部分——动画——并让它们移动的时候了。
+
+# 动画化圆圈
+
+现在我们已经将所有的圆圈对都放置好了，是时候开始动画化了。我将添加动画代码。一开始它可能看起来有点奇怪，但不用担心，我会逐行解释：
+
+```swift
+            //MARK: - Animations
+            .rotationEffect(.degrees(rotateInOut ? 90 : 0))
+            .scaleEffect(scaleUpDown ? 1 : 1/4)
+            .animation(Animation.easeInOut.              repeatForever(autoreverses: true).speed(1/8),               value: scaleInOut)
+            .onAppear() {
+                rotateInOut.toggle()
+                scaleUpDown.toggle()
+                moveInOut.toggle()
+            }
+        }
+    }
+}
+```
+
+第一行代码调用`rotationEffect`修饰符。对于其`.degrees`参数，我传递了`rotateInOut`变量，然后通过三元运算符进行检查。三元运算符有两个可选值，`90`或`0`。如果`rotateInOut`变量为`true`，则`rotationEffect`修饰符将旋转包含所有圆圈对的`ZStack`元素 90 度。当`rotateInOut`为`false`时，`rotationEffect`修饰符将`ZStack`旋转回`0`。因此，所有圆圈将同时旋转到 90 度或回到零，具体取决于`rotateInOut`包含的值。
+
+下一行代码是缩放效果动画。对于`scaleEffect`修饰符，我们传递另一个三元运算符，它有两个要设置的值，即`1`或`1/4`。当`scaleUpDown`属性为`true`时，所有圆圈都将处于全尺寸，这由值`1`反映出来；否则，当`scaleUpDown`属性为`false`时，所有圆圈将缩小到其尺寸的四分之一。
+
+下一行代码调用`.animation`函数。这是一个神奇的功能，可以将动画应用于我们放置的任何视图。我们将它放在包含所有圆圈的`ZStack`的末尾，所以当任何值发生变化时，例如，变量从`true`变为`false`或相反，新的值将被应用于视图，即`ZStack`及其子项。这些新值不会立即应用；它们是插值过的，所以动画可以平滑流畅地进行。
+
+我使用`easeInEaseOut`时间曲线类型，并添加了`.repeatForever`修饰符，这将使动画在应用运行期间持续进行。通过将`true`值传递给`autoreverses`参数，当动画完成一个方向的动画时，它会反转自身，因此它可以继续并在相反方向上动画化。
+
+我们还可以设置动画的速度。我在`.speed`修饰符内部使用`1/8`作为值，以实现相对较慢的动画。由于这个项目类似于熟悉的呼吸应用，我认为较慢的动画比快速的动画更合适，因为缓慢的节奏有助于集中注意力进行呼吸。
+
+`value`参数需要一个我们的`@State`变量，以便它可以监控其变化。我们使用的所有变量都是`@State`，它们将在某个时刻改变其值，所以任何一个都可以在这个参数中正常工作。
+
+项目的最后一部分是改变我们每个变量的值，以便动画可以工作。记住我们通过使用`.onAppear`修饰符查看动画的不同触发器。这将执行一个动作，当屏幕或视图首次出现时，然后触发动画。我们想要在应用启动时立即执行的操作是将每个变量切换到其相反的状态。我们给它们初始值`false`，但在`onAppear`内部，它们被切换到`true`，从而启动动画。
+
+注意
+
+如果你之前测试了应用并更改了`moveInOut`变量为`true`，请确保将其再次设置为`false`，这样动画就会在`onAppear`修饰符中被触发。
+
+现在我们有三个动画同时发生：
+
++   圆圈在彼此之间移动进出。当向内移动时，圆圈将完全重叠，当向外移动时，它们将分离，直到它们的边缘刚好接触。同样，这个动画由`moveInOut`状态变量监控。
+
++   第二个动画是通过使用`scaleEffect`修饰符来缩放圆圈。它接受一个参数，这是一个介于`0`和`1`之间的值，表示要应用的缩放量。在这种情况下，`scaleUpDown`变量被用来控制传递给`scaleEffect`修饰符的值。
+
++   当`rotateInOut`为`true`时，最终动画将使所有圆圈旋转 90 度，而当`rotateInOut`为`false`时，将它们旋转回 0 度。
+
+运行应用程序，并对其进行一些操作。以下图显示了动画将采取的序列：
+
+![图 3.6：动画序列](img/B18674_03_06.jpg)
+
+图 3.6：动画序列
+
+理解不同修饰符和函数如何工作的最佳方式是通过传递不同的值并进行实验。在所有事情上——对于参数、例如渐变的颜色、圆圈的大小、速度、位置、旋转量等等——始终可以自由发挥你的创造力。将参数值调整到你喜欢的样子，这将帮助你更好地理解每个修饰符是如何作用于视图的。
+
+在本书的后面部分，你将学习如何向项目中添加声音和音乐，以及如何添加按钮和滑动控件。当你知道如何做到这一点时，你可以回到这个项目，对其进行调整以包含一些音乐，也许还有一个滑动条来改变动画的速度。例如，由于这是一个呼吸应用，有些人可能希望通过深呼吸并保持几秒钟来放松，你可以调整动画以暂停任意长的时间来表示呼吸的保持，所有这些都可以通过使用你将在即将到来的项目中了解到的各种控件来完成。
+
+# 摘要
+
+在完成这个第一个项目方面做得很好！通过创建一个呼吸应用，你不得不探索如何使用 SwiftUI 直观的修饰符和设计工具来旋转、缩放和移动视图到另一个位置。我们还使用了一个特殊的修饰符，它在后台为我们做了很多工作，即`.animation`修饰符，它在定义起始点和终点后对值进行插值，并从这些值创建出平滑无缝的动画。
+
+在下一章中，我们将继续我们的动画之旅，并构建一个唱机。这个项目将探讨如何围绕视图的一个锚点进行动画，而不是从中心开始，以及添加声音和按钮以启动动画。

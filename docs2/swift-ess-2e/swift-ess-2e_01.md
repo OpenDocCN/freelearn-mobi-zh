@@ -1,0 +1,1150 @@
+# 第一章：探索 Swift
+
+苹果公司在 2014 年的 WWDC 上宣布 Swift 作为一种新的编程语言，它结合了 Objective-C 平台的经验以及过去几十年动态和静态类型语言的进步。在 Swift 之前，大多数为 iOS 和 OS X 应用程序编写的代码都是 Objective-C，它是 C 编程语言的面向对象扩展集。Swift 旨在建立在 Objective-C 的模式和框架之上，但具有更现代的运行时和自动内存管理。2015 年 12 月，苹果在 [`swift.org`](https://swift.org) 上开源了 Swift，并为 Linux 以及 OS X 提供了二进制文件。本章中的内容可以在 Linux 或 OS X 上运行，但本书的其余部分要么是 Xcode 特定的，要么依赖于非开源的 iOS 框架。开发 iOS 应用程序需要 Xcode 和 OS X。
+
+本章将介绍以下主题：
+
++   如何使用 Swift REPL 来评估 Swift 代码
+
++   Swift 文字字面量的不同类型
+
++   如何使用数组和字典
+
++   函数和不同类型的函数参数
+
++   从命令行编译和运行 Swift
+
+# 开源 Swift
+
+苹果公司在 2015 年 12 月将 Swift 作为开源项目发布，托管在 [`github.com/apple/swift/`](https://github.com/apple/swift/) 以及相关仓库中。有关 Swift 开源版本的信息可在 [`swift.org`](https://swift.org) 网站上找到。从运行时角度来看，Swift 的开源版本在 Linux 和 OS X 上相似；然而，两个平台可用的库集合不同。
+
+例如，Objective-C 运行时最初并未包含在 Swift for Linux 的初始版本中；因此，一些委托给 Objective-C 实现的方法不可用。"`hello".hasPrefix("he")` 在 OS X 和 iOS 上编译和运行成功，但在 Linux 的第一个 Swift 版本中是编译错误。除了缺少函数外，两个平台之间还有不同的模块（框架）。OS X 和 iOS 上的基本功能由 `Darwin` 模块提供，但在 Linux 上，基本功能由 `Glibc` 模块提供。`Foundation` 模块，它提供了许多在基础集合库之外的数据类型，在 OS X 和 iOS 上用 Objective-C 实现，但在 Linux 上是一个干净的 Swift 重实现。随着 Swift 在 Linux 上的发展，更多的这些功能将被填补，但如果有跨平台功能的需求，特别值得在 OS X 和 Linux 上进行测试。
+
+最后，尽管 Swift 语言和核心库已经开源，但这并不适用于 iOS 库或其他 Xcode 中的功能。因此，无法从 Linux 编译 iOS 或 OS X 应用程序，并且构建 iOS 应用程序和编辑用户界面必须在 OS X 上的 Xcode 中完成。
+
+# 开始使用 Swift
+
+Swift 提供了一个运行时解释器，用于执行语句和表达式。Swift 是开源的，可以从 [`swift.org/download/`](https://swift.org/download/) 下载针对 OS X 和 Linux 平台的预编译二进制文件。正在对其他平台和操作系统进行端口移植，但这些移植不受 Swift 开发团队的支持。
+
+Swift 解释器的名称为 *swift*，在 OS X 上可以通过在 `Terminal.app` 终端中运行 `xcrun` 命令来启动：
+
+```swift
+$ xcrun swift
+Welcome to Swift version 2.2!  Type :help for assistance.
+>
+
+```
+
+`xcrun` 命令允许执行工具链命令；在这种情况下，它找到 `/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift`。`swift` 命令与其他编译工具（如 `clang` 和 `ld`）并列，允许在同一台机器上使用多个版本的命令和库而不会冲突。
+
+在 Linux 上，只要 `swift` 二进制文件及其依赖库位于合适的位置，就可以执行 `swift` 二进制文件。
+
+Swift 提示符显示 `>` 用于新语句，显示 `.` 用于续行。输入到解释器的语句和表达式将被评估并显示。匿名值被赋予引用，以便随后使用：
+
+```swift
+> "Hello World"
+$R0: String = "Hello World"
+> 3 + 4
+$R1: Int = 7
+> $R0
+$R2: String = "Hello World"
+> $R1
+$R3: Int = 7
+```
+
+## 数值字面量
+
+Swift 中的数值类型可以表示大小为 8、16、32 或 64 位的有符号和无符号整数值，以及有符号的 32 或 64 位浮点值。数字可以包含下划线以提高可读性；因此，68_040 与 68040 相同：
+
+```swift
+> 3.141
+$R0: Double = 3.141
+> 299_792_458
+$R1: Int = 299792458
+> -1
+$R2: Int = -1
+> 1_800_123456
+$R3: Int = 1800123456
+```
+
+数字也可以用 **二进制**、**八进制** 或 **十六进制** 表示，使用前缀 `0b`、`0o`（零和字母 "o"）或 `0x`。请注意，Swift 不像 Java 和 JavaScript 那样继承 C 使用前导零 (`0`) 来表示八进制值。示例包括：
+
+```swift
+> 0b1010011
+$R0: Int = 83
+> 0o123
+$R1: Int = 83
+> 0123
+$R2: Int = 123
+> 0x7b
+$R3: Int = 123
+```
+
+## 浮点字面量
+
+Swift 中提供了三种使用 IEEE754 浮点标准的浮点类型。`Double` 类型表示 64 位数据，而 `Float` 存储了 32 位数据。此外，`Float80` 是一种特殊类型，存储了 80 位数据（`Float32` 和 `Float64` 分别作为 `Float` 和 `Double` 的别名，尽管在 Swift 程序中不常用）。
+
+一些 CPU 在内部使用 80 位精度进行数学运算，而 `Float80` 类型允许在 Swift 中使用这种精度。并非所有架构都原生支持 `Float80`，因此应谨慎使用。
+
+默认情况下，Swift 中的浮点值使用 `Double` 类型。由于浮点表示无法精确表示某些数字，一些值将显示为舍入误差；例如：
+
+```swift
+> 3.141
+$R0: Double = 3.141
+> Float(3.141)
+$R1: Float = 3.1400003
+```
+
+浮点值可以用十进制或十六进制指定。十进制浮点使用 `e` 作为 10 的底数的指数，而十六进制浮点使用 `p` 作为 2 的底数的指数。一个 `AeB` 的值是 `A*10^B`，而一个 `0xApB` 的值是 `A*2^B`。例如：
+
+```swift
+> 299.792458e6
+$R0: Double = 299792458
+> 299.792_458_e6
+$R1: Double = 299792458
+> 0x1p8
+$R2: Double = 256
+> 0x1p10
+$R3: Double = 1024
+> 0x4p10
+$R4: Double = 4096
+> 1e-1
+$R5: Double = 0.10000000000000001
+> 1e-2
+$R6: Double = 0.01> 0x1p-1
+$R7: Double = 0.5
+> 0x1p-2
+$R8: Double = 0.25
+> 0xAp-1
+$R9: Double = 5
+```
+
+## 字符串字面量
+
+字符串可以包含转义字符、Unicode 字符和插值表达式。转义字符以反斜杠 (\) 开头，可以是以下之一：
+
++   `\\`：这是一个文字斜杠 `\`
+
++   `\0`：这是一个空字符
+
++   `\'`：这是一个文字单引号 `'`
+
++   `\"`：这是一个文字双引号 `"`
+
++   `\t`：这是一个制表符
+
++   `\n`：这是一个换行符
+
++   `\r`：这是一个回车符
+
++   `\u{NNN}`：这是一个 Unicode 字符，例如欧元符号 `\u{20AC}` 或笑脸 `\u{1F600}`
+
+一个 *插值字符串* 包含一个嵌入的表达式，该表达式将被评估，转换为 `String` 并插入到结果中：
+
+```swift
+> "3+4 is \(3+4)"
+$R0: String = "3+4 is 7"
+> 3+4
+$R1: Int = 7
+> "7 x 2 is \($R1 * 2)"
+$R2: String = "7 x 2 is 14"
+```
+
+## 变量和常量
+
+Swift 区分变量（可以修改）和常量（赋值后不能更改）。标识符以下划线或字母字符开头，后跟下划线或字母数字字符。此外，还可以使用其他 Unicode 字符点（如表情符号），尽管不允许使用方框线和箭头；有关允许的 Unicode 字符的完整集合，请参阅 Swift 语言指南。通常，不允许使用 Unicode 私用区域，并且标识符不能以下划线字符（如重音符号）开头。
+
+变量使用 `var` 关键字定义，常量使用 `let` 关键字定义。如果未指定类型，则自动推断：
+
+```swift
+> let pi = 3.141
+pi: Double = 3.141
+> pi = 3
+
+error: cannot assign to value: 'pi' is a 'let' constant
+note: change 'let' to 'var' to make it mutable
+> var i = 0
+i: Int = 0
+> ++i
+$R0: Int = 1
+```
+
+可以显式指定类型。例如，要将 32 位浮点值存储，变量可以显式定义为 `Float`：
+
+```swift
+> let e:Float = 2.718
+e: Float = 2.71799994
+```
+
+类似地，要将值存储为无符号 8 位整数，显式声明类型为 `UInt8`：
+
+```swift
+> let ff:UInt8 = 255
+ff: UInt8 = 255
+```
+
+可以使用类型初始化器或分配给不同类型变量的文字将数字转换为不同类型，前提是它不会下溢或溢出：
+
+```swift
+> let ooff = UInt16(ff)
+ooff: UInt16 = 255
+> Int8(255)
+error: integer overflows when converted from 'Int' to 'Int8'
+Int8(255)
+^
+> UInt8(Int8(-1))
+error: negative integer cannot be converted to unsigned type 'UInt8'
+UInt8(Int8(-1))
+^
+```
+
+## 集合类型
+
+Swift 有三种集合类型：*数组*、*字典* 和 *集合*。它们是强类型和泛型的，这确保了分配给它们的类型值与元素类型兼容。使用 `var` 定义的集合是可变的；使用 `let` 定义的集合是不可变的。
+
+数组的文字语法使用 `[]` 来存储逗号分隔的列表：
+
+```swift
+> var shopping = [ "Milk", "Eggs", "Coffee", ]
+shopping: [String] = 3 values {
+  [0] = "Milk"
+  [1] = "Eggs"
+  [2] = "Coffee"
+}
+```
+
+文字字典使用逗号分隔的 `[key:value]` 格式定义条目：
+
+```swift
+> var costs = [ "Milk":1, "Eggs":2, "Coffee":3, ]
+costs: [String : Int] = {
+  [0] = { key = "Coffee" value = 3 }
+  [1] = { key = "Milk"   value = 1 }
+  [2] = { key = "Eggs"   value = 2 }
+}
+```
+
+### 提示
+
+为了可读性，数组和字典的文字可以有一个尾随逗号。这允许初始化跨越多行，并且如果最后一个元素以尾随逗号结尾，添加新项目不会导致与上一行的 SCM 差异。
+
+可以使用可重新分配和添加的下标运算符索引数组和字典：
+
+```swift
+> shopping[0]
+$R0: String = "Milk"
+> costs["Milk"]
+$R1: Int? = 1
+> shopping.count
+$R2: Int = 3
+> shopping += ["Tea"]
+> shopping.count
+$R3: Int = 4
+> costs.count
+$R4: Int = 3
+> costs["Tea"] = "String"
+error: cannot assign a value of type 'String' to a value of type 'Int?'
+> costs["Tea"] = 4
+> costs.count
+$R5: Int = 4
+```
+
+集合类似于字典；键是无序的，可以高效地查找。然而，与字典不同，键没有关联的值。因此，它们没有数组索引，但具有 `insert`、`remove` 和 `contains` 方法。它们还有高效的集合交集方法，如 `union` 和 `intersect`。如果类型已定义，可以从数组字面量创建它们，或者直接使用集合初始化器：
+
+```swift
+> var shoppingSet: Set = [ "Milk", "Eggs", "Coffee", ]
+> // same as: shoppingSet = Set( [ "Milk", "Eggs", "Coffee", ] )
+> shoppingSet.contains("Milk")
+$R6: Bool = true
+> shoppingSet.contains("Tea")
+$R7: Bool = false
+> shoppingSet.remove("Coffee")
+$R8: String? = "Coffee"
+> shoppingSet.remove("Tea")
+$R9: String? = nil
+> shoppingSet.insert("Tea")
+> shoppingSet.contains("Tea")
+$R10: Bool = true
+```
+
+### 小贴士
+
+在创建集合时，请使用显式的 `Set` 构造函数，否则类型将被推断为 `Array`，这将具有不同的性能特征。
+
+## 可选类型
+
+在前面的示例中，`costs["Milk"]` 的返回类型是 `Int?` 而不是 `Int`。这是一个 *可选类型*；可能有一个 `Int` 值，也可能为空。对于包含类型为 `T` 的元素的字典，对字典进行索引将具有 `Optional<T>` 类型，可以简写为 `T?`。如果字典中不存在该值，则返回的值将是 `nil`。其他面向对象的语言，如 Objective-C、C++、Java 和 C#，默认具有可选类型；任何对象值（或指针）都可以是 `null`。通过在类型系统中表示可选性，Swift 可以确定值是否确实存在或可能是 `nil`：
+
+```swift
+> var cannotBeNil: Int = 1
+cannotBeNil: Int = 1
+> cannotBeNil = nil
+error: cannot assign a value of type 'nil' to a value of type 'Int'
+cannotBeNil = nil
+              ^
+> var canBeNil: Int? = 1
+canBeNil: Int? = 1
+> canBeNil = nil
+$R0: Int? = nil
+```
+
+可选类型可以使用 `Optional` 构造函数显式创建。给定一个类型为 `X` 的值 `x`，可以使用 `Optional(x)` 创建一个可选 `X?` 值。可以通过将其与 `nil` 进行比较来测试值是否存在，然后使用 `opt!` 等展开它，例如：
+
+```swift
+> var opt = Optional(1)
+opt: Int? = 1
+> opt == nil
+$R1: Bool = false
+> opt!
+$R2: Int = 1
+```
+
+如果展开了一个 `nil` 值，将发生错误：
+
+```swift
+> opt = nil
+> opt!
+fatal error: unexpectedly found nil while unwrapping an Optional value
+Execution interrupted. Enter Swift code to recover and continue.
+Enter LLDB commands to investigate (type :help for assistance.)
+```
+
+尤其是在处理基于 Objective-C 的 API 时，通常会将值声明为可选，尽管始终期望它们返回一个值。可以将此类变量声明为 *隐式展开的可选值*；这些变量的行为类似于可选值（它们可能包含 `nil`），但在访问值时，它们会根据需要自动展开：
+
+```swift
+> var implicitlyUnwrappedOptional:Int! = 1
+implicitlyUnwrappedOptional: Int! = 1
+> implicitlyUnwrappedOptional + 2
+3
+> implicitlyUnwrappedOptional = nil
+> implicitlyUnwrappedOptional + 2
+fatal error: unexpectedly found nil while unwrapping an Optional value
+```
+
+### 小贴士
+
+通常应避免隐式展开的可选值，因为它们很可能会导致错误。它们主要用于与已知具有实例值的现有 Objective-C API 进行交互：
+
+## Nil 合并运算符
+
+Swift 有一个 *nil 合并运算符*，类似于 Groovy 的 `?:` 运算符或 C# 的 `??` 运算符。这提供了一种在表达式为 `nil` 时指定默认值的方法：
+
+```swift
+> 1 ?? 2
+$R0: Int = 1
+> nil ?? 2
+$R1: Int = 2
+```
+
+`nil` 合并运算符也可以用来展开可选值。如果可选值存在，它将被展开并返回；如果不存在，则返回表达式的右侧值。类似于 `||` 短路和 `&&` 运算符，除非必要，否则右侧不会进行评估：
+
+```swift
+> costs["Tea"] ?? 0
+$R2: Int = 4
+> costs["Sugar"] ?? 0
+$R3: Int = 0
+```
+
+# 条件逻辑
+
+Swift 中有三种主要的条件逻辑类型（在语法中称为分支语句）：`if`语句、`switch`语句和`guard`语句。与其他语言不同，`if`的主体必须用大括号`{}`包围；如果在使用解释器时输入，则大括号`{`必须与`if`语句在同一行上。`guard`语句是一个用于函数的特殊`if`语句，将在本章后面的函数部分介绍。
+
+## If 语句
+
+条件性地解包可选值如此常见，以至于 Swift 创建了一个特定的模式**可选绑定**来避免对表达式进行两次评估：
+
+```swift
+> var shopping = [ "Milk", "Eggs", "Coffee", "Tea", ]
+> var costs = [ "Milk":1, "Eggs":2, "Coffee":3, "Tea":4, ]
+> var cost = 0
+> if let cc = costs["Coffee"] {
+.   cost += cc
+. }
+> cost
+$R0: Int = 3
+```
+
+只有当可选值存在时，`if`块才会执行。`cc`常量的定义仅存在于`if`块的主体中，并且在该作用域之外不存在。此外，`cc`是一个非可选类型，因此它保证不会是`nil`。
+
+### 注意
+
+Swift 1 只允许在`if`块中有一个`let`赋值，导致嵌套的`if`语句形成金字塔。Swift 2 允许在单个`if`语句中使用多个以逗号分隔的`let`赋值。
+
+```swift
+> if let cm = costs["Milk"], let ct = costs["Tea"] {
+.   cost += cm + ct
+. }
+> cost
+$R1: Int = 8
+```
+
+如果找不到项目，可以使用`else`块来执行替代块：
+
+```swift
+> if let cb = costs["Bread"] {
+.   cost += cb
+. } else {
+.   print("Cannot find any Bread")
+. }
+Cannot find any Bread
+```
+
+其他布尔表达式可以包括`true`和`false`字面量，以及任何符合`BooleanType`协议的表达式，`==`和`!=`相等运算符，`===`和`!==`身份运算符，以及`<`、`<=`、`>`和`>=`比较运算符。`is type`运算符提供了一个测试，以查看元素是否为特定类型。
+
+### 小贴士
+
+等于运算符和身份运算符之间的区别对于类或其他引用类型是相关的。等于运算符询问“这两个值是否彼此等效？”，而身份运算符询问“这两个引用是否彼此相等？”
+
+Swift 有一个特定的布尔运算符，即`~=`**模式匹配运算符**。尽管名称如此，但这与正则表达式无关；相反，它是一种询问模式是否与特定值匹配的方法。这在`switch`块的实现中使用，下一节将介绍。
+
+除了`if`语句外，还有一个类似于其他语言的**三元 if 表达式**。在条件之后，使用一个问号(?)，然后是一个当条件为真时使用的表达式，然后是一个冒号(:)，后面是当条件为假时使用的表达式：
+
+```swift
+> var i = 17
+i: Int = 17
+> i % 2 == 0 ? "Even" : "Odd"
+$R0: String = "Odd"
+```
+
+## Switch 语句
+
+Swift 有一个类似于 C 和 Java 的 `switch` 语句。然而，它在两个方面有所不同。首先，`case` 语句不再有默认的穿透行为（因此不会因为缺少 `break` 语句而引入错误），其次，`case` 语句的值可以是表达式而不是值，进行类型和范围的模式匹配。在相应的 `case` 语句的末尾，评估将跳转到 `switch` 块的末尾，除非使用了 `fallthrough` 关键字。如果没有 `case` 语句匹配，则执行 `default` 语句。
+
+### 注意
+
+当情况列表不是详尽无遗的时候，需要有一个 `default` 语句。如果不是，编译器将给出错误，指出列表不是详尽无遗的，并且需要 `default` 语句。
+
+```swift
+> var position = 21
+position: Int = 21
+> switch position {
+.   case 1: print("First")
+.   case 2: print("Second")
+.   case 3: print("Third")
+.   case 4...20: print("\(position)th")
+.   case position where (position % 10) == 1:
+.     print("\(position)st")
+.   case let p where (p % 10) == 2:
+.     print("\(p)nd")
+.   case let p where (p % 10) == 3:
+.     print("\(p)rd")
+.   default: print("\(position)th")
+. }
+21st
+```
+
+在前面的例子中，如果位置是 `1`、`2` 或 `3`，表达式将分别打印出 `First`、`Second` 或 `Third`。对于 `4` 到 `20`（包含）之间的数字，它将打印出带有 `th` 后缀的位置。否则，对于以 `1` 结尾的数字，它将打印 `st`；对于以 `2` 结尾的数字，它将打印 `nd`；对于以 `3` 结尾的数字，它将打印 `rd`。对于所有其他数字，它将打印 `th`。
+
+`case` 语句中的 `4...20` 范围表达式代表一个模式。如果表达式的值与该模式匹配，则将执行相应的语句：
+
+```swift
+> 4...10 ~= 4
+$R0: Bool = true
+> 4...10 ~= 21
+$R1: Bool = false
+```
+
+Swift 中有两种范围运算符：包含或 *闭范围* 和排除或 *半开范围*。闭范围用三个点指定；因此 `1...12` 将给出介于 1 和 12 之间的整数列表。半开范围用两个点和小于运算符指定；因此 `1..<10` 将提供从 1 到 9 的整数，但不包括 10。
+
+`switch` 块中的 `where` 子句允许评估任意表达式，前提是模式匹配。这些表达式按顺序评估，即它们在源文件中的顺序。如果 `where` 子句评估为 `true`，则将执行相应的语句集。
+
+可以使用 `let` 变量语法来定义一个常量，该常量引用 `switch` 块中的值。这个局部常量可以在 `where` 子句或对应的具体情况的语句中使用。或者，也可以使用周围作用域中的变量。
+
+### 注意
+
+如果需要匹配多个 `case` 语句的相同模式，它们可以用逗号作为表达式列表分隔。或者，可以使用 `fallthrough` 关键字来允许为多个 `case` 语句使用相同的实现。
+
+# 迭代
+
+可以使用范围来迭代固定次数，例如，`for i in 1...12`。要打印这些数字，可以使用如下循环：
+
+```swift
+> for i in 1...12 {
+.   print("i is \(i)")
+. }
+```
+
+如果数字不是必需的，则可以使用下划线 (`_`) 作为占位符来充当废弃值。下划线可以被赋值但不能被读取：
+
+```swift
+> for _ in 1...12 {
+.   print("Looping...")
+. }
+```
+
+然而，更常见的是使用 `for in` 模式遍历集合的内容。这会遍历集合中的每个项目，并且 `for` 循环的主体会针对每个项目执行：
+
+```swift
+> var shopping = [ "Milk", "Eggs", "Coffee", "Tea", ]
+> var costs = [ "Milk":1, "Eggs":2, "Coffee":3, "Tea":4, ]
+> var cost = 0
+> for item in shopping {
+.   if let itemCost = costs[item] {
+.     cost += itemCost
+.   }
+. }
+> cost
+cost: Int = 10
+```
+
+要遍历字典，可以提取键或值并将它们作为数组处理：
+
+```swift
+> Array(costs.keys)
+$R0: [String] = 4 values {
+  [0] = "Coffee"
+  [1] = "Milk"
+  [2] = "Eggs"
+  [3] = "Tea"
+}
+> Array(costs.values)
+$R1: [Int] = 4 values {
+  [0] = 3
+  [1] = 1
+  [2] = 2
+  [3] = 4
+}
+```
+
+### 注意
+
+字典中键的顺序是不保证的；随着字典的变化，顺序可能会改变。
+
+将字典的值转换为数组将导致创建数据的副本，这可能导致性能不佳。由于底层 `keys` 和 `values` 是 `LazyMapCollection` 类型，它们可以直接遍历：
+
+```swift
+> costs.keys
+$R2: LazyMapCollection<[String : Int], String> = {
+  _base = {
+    _base = 4 key/value pairs {
+      [0] = { key = "Coffee" value = 3 }
+      [1] = { key = "Milk"   value = 1 }
+      [2] = { key = "Eggs"   value = 2 }
+      [3] = { key = "Tea"    value = 4 }
+    }
+  _transform =}
+}
+```
+
+要打印出字典中的所有键，可以使用 `keys` 属性与 `for in` 循环一起使用：
+
+```swift
+> for item in costs.keys {
+.   print(item)
+. }
+Coffee
+Milk
+Eggs
+Tea
+```
+
+## 遍历字典中的键和值
+
+遍历字典以获取所有键，然后随后查找值将导致在数据结构中搜索两次。相反，可以使用 *元组* 同时遍历键和值。元组类似于固定大小的数组，但它允许一次分配一对（或更多）值：
+
+```swift
+> var (a,b) = (1,2)
+a: Int = 1
+b: Int = 2
+```
+
+可以使用元组对字典的键和值进行成对迭代：
+
+```swift
+> for (item,cost) in costs {
+.   print("The \(item) costs \(cost)")
+. }
+The Coffee costs 3
+The Milk costs 1
+The Eggs costs 2
+The Tea costs 4
+```
+
+`Array` 和 `Dictionary` 都遵守 `SequenceType` 协议，这使得它们可以用 `for in` 循环进行迭代。实现 `SequenceType` 的集合（以及其他对象，如 `Range`）有一个 `generate` 方法，它返回一个 `GeneratorType`，允许遍历数据。自定义 Swift 对象可以实现 `SequenceType` 以允许它们在 `for in` 循环中使用。
+
+## 使用 for 循环进行迭代
+
+虽然在 Swift 中 `for` 运算符最常见的使用是在 `for in` 循环中，但在 Swift 1 和 2 中也可以使用更传统的 `for` 循环形式。这有一个初始化部分，一个在每个循环开始时测试的条件，以及一个在每个循环结束时评估的步进操作。虽然 `for` 循环周围的括号是可选的，但代码块的括号是强制性的。
+
+### 注意
+
+有提议说，传统的 `for` 循环和增量/减量运算符都应该从 Swift 3 中移除。建议尽可能避免这些循环形式。
+
+计算介于 1 和 10 之间的整数的和可以不使用范围运算符：
+
+```swift
+> var sum = 0
+. for var i=0; i<=10; ++i {
+.   sum += i
+. }
+sum: Int = 55
+```
+
+如果需要在 `for` 循环中更新多个变量，Swift 有一个 *表达式列表*，它是一组以逗号分隔的表达式。要遍历两个变量的集合，可以使用以下方法：
+
+```swift
+> for var i = 0,j = 10; i<=10 && j >= 0; ++i,--j {
+.   print("\(i), \(j)")
+. } 
+0, 10
+1, 9
+…
+9, 1
+10, 0
+```
+
+### 小贴士
+
+Apple 推荐使用 `++i` 而不是 `i++`（以及相反的，`--i` 而不是 `i--`），因为它们会在操作后返回 `i` 的值，这可能是预期的值。如前所述，这些运算符可能在 Swift 的未来版本中被移除。
+
+## 断言和继续
+
+`break`语句会提前退出最内层的循环，并将控制权跳转到循环的末尾。`continue`语句会将执行权带到最内层循环的顶部和下一个项目。
+
+要从嵌套循环中*跳出*或*继续*，可以使用一个*标签*。Swift 中的标签只能应用于循环语句，如`while`或`for`。标签通过一个标识符和一个冒号在循环语句之前引入：
+
+```swift
+> var deck = [1...13, 1...13, 1...13, 1...13]
+> suits: for suit in deck {
+.   for card in suit {
+.     if card == 3 {
+.       continue // go to next card in same suit
+.     }
+.     if card == 5 {
+.       continue suits // go to next suit
+.     } 
+.     if card == 7 {
+.       break // leave card loop
+.     }
+.     if card == 13 {
+.       break suits // leave suit loop
+.     }
+.   } 
+. }
+```
+
+# 函数
+
+可以使用`func`关键字创建函数，它包含一组参数和一组语句。可以使用`return`语句来退出函数：
+
+```swift
+> var shopping = [ "Milk", "Eggs", "Coffee", "Tea", ]
+> var costs = [ "Milk":1, "Eggs":2, "Coffee":3, "Tea":4, ]
+> func costOf(items:[String], _ costs:[String:Int]) -> Int {
+.   var cost = 0
+.   for item in items {
+.     if let ci = costs[item] {
+.       cost += ci
+.     }
+.   }
+.   return cost
+. }
+> costOf(shopping,costs)
+$R0: Int = 10
+```
+
+函数的返回类型在参数之后指定，后面跟着一个箭头（`->`）。如果省略，则函数不能返回值；如果存在，则函数必须返回该类型的值。
+
+### 注意
+
+在`costs`参数前面的下划线（`_`）是必需的，以避免它成为一个命名参数。Swift 函数中的第二个及以后的参数是隐式命名的。为了确保它被当作位置参数处理，需要在参数名称前加上下划线`_`。
+
+带有*位置参数*的函数可以通过括号调用，例如`costOf(shopping,costs)`调用。如果一个函数没有参数，则仍然需要括号。
+
+`foo()`表达式调用没有参数的`foo`函数。`foo`表达式代表函数本身，因此一个表达式，如`let copyOfFoo = foo`，会导致函数的一个副本；因此，`copyOfFoo()`和`foo()`具有相同的效果。
+
+## 命名参数
+
+Swift 还支持*命名参数*，可以使用变量的名称或使用*外部参数名称*定义。为了修改函数以支持使用`basket`和`prices`作为参数名称进行调用，可以执行以下操作：
+
+```swift
+> func costOf(basket items:[String], prices costs:[String:Int]) -> Int {
+.   var cost = 0
+.   for item in items {
+.     if let ci = costs[item] {
+.       cost += ci
+.     }
+.   }
+.   return cost
+. }
+> costOf(basket:shopping, prices:costs)
+$R1: Int = 10
+```
+
+此示例为函数定义了外部参数名称`basket`和`prices`。函数签名通常被称为`costOf(basket:prices:)`，当参数的作用不明确时（尤其是如果它们是同一类型）非常有用。
+
+## 可选参数和默认值
+
+Swift 函数可以通过在函数定义中指定*默认值*来具有*可选参数*。当函数被调用时，如果缺少可选参数，则使用该参数的默认值。
+
+### 注意
+
+可选参数是可以省略的函数调用参数，而不是必须的参数，它接受一个可选值。这种命名是不幸的。将其视为默认参数而不是可选参数可能会有所帮助。
+
+默认参数值在函数签名中的类型之后指定，后面跟着一个等号（`=`）然后是表达式。每次函数被调用而没有相应的参数时，此表达式都会重新评估。
+
+在`costOf`示例中，而不是每次传递`costs`的值，它可以定义为一个默认参数：
+
+```swift
+> func costOf(items items:[String], costs:[String:Int] = costs) -> Int {
+.   var cost = 0
+.   for item in items {
+.     if let ci = costs[item] {
+.       cost += ci
+.     }
+.   }
+.   return cost
+. }
+> costOf(items:shopping)
+$R2: Int = 10
+> costOf(items:shopping, costs:costs)
+$R3: Int = 10
+```
+
+请注意，捕获的`costs`变量在函数定义时被绑定。
+
+### 注意
+
+要在函数中将命名参数用作第一个参数，必须重复参数名称。Swift 1 使用哈希（`#`）来表示隐式参数名称，但这个特性在 Swift 2 中被移除。
+
+## 守卫
+
+函数通常需要满足某些条件的参数才能成功运行。例如，可选值必须有值，或者整型参数必须在某个范围内。
+
+通常，实现此模式的模式是有一系列`if`语句，在顶部跳出函数，或者有一个`if`块包裹整个方法主体：
+
+```swift
+if card < 1 || card > 13 {
+  // report error
+  return
+}
+
+// or alternatively:
+
+if card >= 1 && card <= 13 {
+  // do something with card
+} else {
+  // report error
+}
+```
+
+这两种方法都有缺点。在第一种情况下，条件已经被否定；不是寻找有效值，而是在检查无效值。这可能会导致微妙的错误悄悄出现；例如，`card < 1 && card > 13`永远不会成功，但它可能会无意中通过代码审查。还有如果块没有`return`或`break`会发生什么的问题；它可能是完全有效的 Swift 代码，但仍然包含错误。
+
+在第二种情况下，函数的主体在`if`语句的主体中至少缩进一个级别。当需要多个条件时，可能会有许多嵌套的`if`语句，每个都有自己的错误处理或清理要求。如果需要新的条件，则代码的主体可能需要进一步缩进，导致即使只有空白发生变化，仓库中的代码也会发生 churn。
+
+Swift 2 添加了`guard`语句，从概念上讲与`if`语句相同，但它只有一个`else`子句体。此外，编译器检查`else`块是否从函数返回，无论是通过返回还是抛出异常：
+
+```swift
+> func cardName(value:Int) -> String {
+.   guard value >= 1 && value <= 13 else {
+.     return "Unknown card"
+.   }
+.   let cardNames = [11:"Jack",12:"Queen",13:"King",1:"Ace",]
+.   return cardNames[value] ?? "\(value)"
+. }
+```
+
+Swift 编译器检查`guard``else`块是否离开函数，如果没有，则报告编译错误。在`guard`语句之后的代码可以保证值在`1...13`范围内，而无需进行进一步测试。
+
+`guard`块也可以用来执行*可选绑定*；如果`guard`条件是一个执行可选测试的`let`赋值，那么`guard`语句之后的代码可以使用该值而无需进一步展开：
+
+```swift
+> func firstElement(list:[Int]) -> String {
+.   guard let first = list.first else {
+.     return "List is empty"
+.   }
+.   return "Value is \(first)"
+. }
+```
+
+由于数组的第一元素是可选值，这里的`guard`测试获取了该值并展开了它。当它在函数的后续部分使用时，展开的值可用于使用，而无需进一步展开。
+
+## 多重返回值和参数
+
+到目前为止，函数的示例都只返回单一类型。如果一个函数有多个返回结果会发生什么？在面向对象的语言中，答案是返回一个类；然而，Swift 有元组，可以用来返回多个值。元组的类型是其组成部分的类型：
+
+```swift
+> var pair = (1,2)
+pair: (Int, Int) ...
+```
+
+这可以用来从函数中返回多个值；而不是只返回一个值，可以返回一个值的元组。
+
+### 注意
+
+Swift 还有输入输出参数，这将在第六章的*处理错误*部分中看到，*解析网络数据*。
+
+分别，也可以接受可变数量的参数。一个函数可以轻松地使用`[]`接受值数组，但 Swift 提供了一个机制，允许使用*可变参数*调用，这表示在类型后面的省略号（…）。然后可以将该值用作函数中的数组。
+
+### 注意
+
+Swift 1 只允许可变参数作为最后一个参数；Swift 2 放宽了这一限制，允许在函数参数中任何位置出现单个可变参数。
+
+结合这两个特性，可以创建一个`minmax`函数，它从整数列表中返回最小值和最大值：
+
+```swift
+> func minmax(numbers:Int…) -> (Int,Int) {
+.   var min = Int.max
+.   var max = Int.min
+.   for number in numbers {
+.     if number < min {
+.       min = number
+.     }
+.     if number > max {
+.       max = number
+.     }
+.   }
+.   return (min,max)
+. }
+> minmax(1,2,3,4)
+$R0: (Int, Int) = {
+  0 = 1
+  1 = 4
+}
+```
+
+`numbers:Int…`参数表示可以传递多个参数到函数中。在函数内部，它被处理为一个普通数组；在这种情况下，使用`for in`循环迭代。
+
+### 注意
+
+`Int.max`是一个表示最大`Int`值的常量，而`Int.min`是一个表示最小`Int`值的常量。对于其他整数类型，也存在类似的常量，例如`UInt8.max`和`Int64.min`。
+
+如果没有传入参数呢？如果在 64 位系统上运行，那么输出将是：
+
+```swift
+> minmax()
+$R1: (Int, Int) = {
+  0 = 9223372036854775807
+  1 = -9223372036854775808
+}
+```
+
+这可能对`minmax`函数没有意义。而不是返回错误值或默认值，可以使用类型系统。通过使元组为可选，如果不存在，则可以返回`nil`值，如果存在，则返回元组：
+
+```swift
+> func minmax(numbers:Int...) -> (Int,Int)? {
+.   var min = Int.max
+.   var max = Int.min
+.   if numbers.count == 0 {
+.     return nil
+.   } else {
+.     for number in numbers {
+.       if number < min {
+.         min = number
+.       }
+.       if number > max {
+.         max = number
+.       }
+.     }
+.     return(min,max)
+.   }
+. }
+> minmax()
+$R2: (Int, Int)? = nil
+> minmax(1,2,3,4)
+$R3: (Int, Int)? = (0 = 1, 1 = 4)
+> var (minimum,maximum) = minmax(1,2,3,4)!
+minimum: Int = 1
+maximum: Int = 4
+```
+
+返回一个可选值允许调用者确定在最大值和最小值不存在的情况下应该发生什么。
+
+### 小贴士
+
+如果一个函数不总是有一个有效的返回值，使用可选类型将这种可能性编码到类型系统中。
+
+## 返回结构化值
+
+元组是有序数据集。元组中的条目是有序的，但很快就会变得不清楚存储了哪些数据，尤其是如果它们是相同类型的话。在`minmax`元组中，不清楚哪个值是最小值，哪个值是最大值，这可能导致后续的微妙编程错误。
+
+结构体（`struct`）就像一个元组，但是具有命名值。这允许通过名称而不是位置来访问成员，从而减少错误并提高透明度。命名值也可以添加到元组中；本质上，具有命名值的元组是匿名结构体。
+
+### 小贴士
+
+结构体以值复制的方式传递，就像元组一样。如果两个变量被分配了相同的结构体或元组，那么对一个的更改不会影响另一个的值。
+
+使用 `struct` 关键字定义 `struct` 并在主体中包含变量或值：
+
+```swift
+> struct MinMax {
+.   var min:Int
+.   var max:Int
+. }
+```
+
+这定义了一个 `MinMax` 类型，它可以替代迄今为止看到的任何类型。它可以在 `minmax` 函数中使用来返回一个 `struct` 而不是元组：
+
+```swift
+> func minmax(numbers:Int...) -> MinMax? {
+.   var minmax = MinMax(min:Int.max, max:Int.min)
+.   if numbers.count == 0 {
+.     return nil
+.   } else {
+.     for number in numbers {
+.       if number < minmax.min {
+.         minmax.min = number
+.       }
+.       if number > minmax.max {
+.         minmax.max = number
+.       }
+.     }
+.     return minmax
+.   }
+. }
+```
+
+`struct` 使用类型初始化器进行初始化；如果使用 `MinMax()`，则每个结构类型默认值（基于结构定义）将被给出，但如果需要，可以使用 `MinMax(min:-10,max:11)` 明确覆盖这些值。例如，如果 `MinMax` 结构定义为 `struct MinMax { var min:Int = Int.max; var max:Int = Int.min }`，则 `MinMax()` 将返回一个填充了适当的最小和最大值的结构。
+
+### 注意
+
+当结构初始化时，所有非可选字段都必须被分配。它们可以作为命名参数传递给初始化器或在结构定义中指定。
+
+Swift 还具有类；这些将在下一章的 Swift 类部分中介绍。
+
+## 错误处理
+
+在 Swift 的原始版本中，错误处理由函数结果返回的 `Bool` 或可选值组成。这通常与 Objective-C 的工作不一致，Objective-C 在各种调用中使用可选 `NSError` 指针，如果发生条件，则设置该指针。
+
+Swift 2 添加了一个类似异常的错误模型，它允许以更紧凑的方式编写代码，同时确保错误得到相应处理。尽管这与 C++ 异常处理的方式不完全相同，但错误处理的语义非常相似。
+
+可以使用新的 `throw` 关键字创建错误，错误存储为 `ErrorType` 的子类型。尽管 Swift 的 `enum` 值（在第三章，*创建 iOS Swift 应用*）中经常用作错误类型，但也可以使用 `struct` 值。
+
+可以通过在类型名称后附加超类型来创建 `ErrorType` 的子类型作为异常类型：
+
+```swift
+> struct Oops:ErrorType {
+.   let message:String
+. }
+```
+
+使用 `throw` 关键字和创建异常类型实例来抛出异常：
+
+```swift
+> throw Oops(message:"Something went wrong")
+$E0: Oops = {
+  message = "Something went wrong"
+}
+```
+
+### 注意
+
+REPL 使用 `$E` 前缀显示异常结果；普通结果使用 `$R` 前缀显示。
+
+## 抛出错误
+
+函数可以使用返回类型前的 `throws` 关键字声明返回错误，如果有的话。之前的 `cardName` 函数，如果参数超出范围则返回一个虚拟值，可以通过在返回类型前添加 `throws` 关键字并将 `return` 改为 `throw` 来升级为抛出异常：
+
+```swift
+> func cardName(value:Int) throws -> String {
+.   guard value >= 1 && value <= 13 else {
+.     throw Oops(message:"Unknown card")
+.   }
+.   let cardNames = [11:"Jack",12:"Queen",13:"King",1:"Ace",]
+.   return cardNames[value] ?? "\(value)"
+. }
+```
+
+当函数使用实际值调用时，返回结果；当传递无效值时，将抛出异常：
+
+```swift
+> cardName(1)
+$R1: String = "Ace"
+> cardName(15)
+$E2: Oops = {
+  message = "Unknown card"
+}
+```
+
+当与 Objective-C 代码交互时，接受`NSError**`参数的方法在 Swift 中自动表示为抛出异常的方法。一般来说，任何参数以`NSError**`结尾的方法在 Swift 中都被视为抛出异常。
+
+### 注意
+
+在 C++和 Objective-C 中抛出异常的性能不如 Swift 中的异常处理，因为 Swift 不执行栈回溯。因此，从性能角度来看，Swift 中的异常抛出等同于处理返回值。预计 Swift 库在未来会朝着基于`throws`的错误检测方式发展，并远离 Objective-C 使用`**NSError`指针的方式。
+
+## 捕获错误
+
+异常处理的另一半是能够在错误发生时捕获错误。与其他语言一样，Swift 现在有一个`try/catch`块，可以用来处理错误条件。与其他语言不同，语法略有不同；没有`try/catch`块，而是有一个`do/catch`块，并且每个可能抛出错误的表达式都带有自己的`try`语句：
+
+```swift
+> do { 
+.   let name = try cardName(15)
+.   print("You chose \(name)")
+. } catch {
+.   print("You chose an invalid card")
+. }
+```
+
+当执行前面的代码时，它将打印出通用的错误消息。如果给出不同的选择，则将运行成功的路径。
+
+可以捕获错误对象并在`catch`块中使用它：
+
+```swift
+. } catch let e {
+.   print("There was a problem \(e)")
+. }
+```
+
+### 小贴士
+
+如果没有指定，默认的`catch`块将绑定到一个名为`error`的变量
+
+这两个先前的示例都将捕获从代码主体抛出的任何错误。
+
+### 注意
+
+如果类型是一个使用模式匹配的`enum`，则可以显式地基于类型来捕获错误，例如`catch Oops(let message)`。然而，由于这不能用于结构体值，因此在这里无法进行测试。第三章，*创建 iOS Swift 应用程序*介绍了`enum`类型。
+
+有时代码总是可以正常工作，并且没有失败的可能性。在这些情况下，如果已知问题永远不会发生，那么需要将代码包裹在`do/try/catch`块中是很麻烦的。Swift 提供了一个简短的快捷方式，使用`try!`语句来捕获和过滤异常：
+
+```swift
+> let ace = try! cardName(1)
+ace: String = "Ace"
+```
+
+如果表达式确实失败，那么它将转换为运行时错误并停止程序：
+
+```swift
+> let unknown = try! cardName(15)
+
+Fatal error: 'try!' expression unexpectedly raised an error: Oops(message: "Unknown card")
+```
+
+### 小贴士
+
+使用`try!`通常不推荐；如果发生错误，程序将崩溃。然而，它通常与用户界面代码一起使用，因为 Objective-C 有许多可选方法和值，传统上被认为是非`nil`的，例如对封装窗口的引用。
+
+更好的方法是使用`try?`，它将表达式转换为可选值：如果评估成功，则返回一个包含值的可选；如果评估失败，则返回一个`nil`值：
+
+```swift
+> let ace = try? cardName(1)
+ace: String? = "Ace"
+> let unknown = try? cardName(15)
+unknown: String? = nil
+```
+
+这在`if let`或`guard let`构造中使用时很方便，可以避免需要将代码包裹在`do/catch`块中：
+
+```swift
+> if let card = try? cardName(value) {
+.   print("You chose: \(card)")
+. }
+```
+
+## 清理错误后的代码
+
+通常，有一个需要在函数返回之前执行一些清理工作的函数，无论函数是否成功完成。一个例子是与文件一起工作；在函数开始时文件可能被打开，而在函数结束时应该再次关闭，无论是否发生错误。
+
+处理这种情况的传统方法是用可选值来持有文件引用，并在方法末尾如果它不是 `nil`，则关闭文件。然而，如果在方法执行过程中可能发生错误，则需要 `do/catch` 块来确保正确调用清理，或者一组嵌套的 `if` 语句，只有当文件成功时才会执行。
+
+这种方法的缺点是代码的实际主体通常在每个方法末尾都缩进几次，每次都有不同级别的错误处理和恢复。资源获取和清理之间的语法分离可能导致错误。
+
+Swift 有一个 `defer` 语句，可以用来注册一个在函数调用结束时运行的代码块。这个块无论函数是否正常返回（使用 `return` 语句）或发生错误（使用 `throw` 语句）都会运行。延迟块按执行顺序的相反顺序执行，例如：
+
+```swift
+> func deferExample() {
+.   defer { print("C") }
+.   print("A")
+.   defer { print("B") }
+. }
+> deferExample()
+A
+B
+C
+```
+
+请注意，如果 `defer` 语句未执行，则该块不会在方法末尾执行。这允许 `guard` 语句提前退出函数，同时执行已添加的 `defer` 语句：
+
+```swift
+> func deferEarly() { 
+.   defer { print("C") } 
+.   print("A") 
+.   return 
+.   defer { print("B") } // not executed
+. }    
+> deferEarly()
+A
+C
+```
+
+# 命令行 Swift
+
+由于 Swift 可以被解释，因此可以在 shell 脚本中使用它。通过使用 *hashbang* 将解释器设置为 `swift`，脚本可以执行而无需单独的编译步骤。或者，Swift 脚本可以编译成原生可执行文件，可以在没有解释器开销的情况下运行。
+
+## 解释型 Swift 脚本
+
+将以下内容保存为 `hello.swift`：
+
+```swift
+#!/usr/bin/env xcrun swift
+print("Hello World")
+```
+
+### 小贴士
+
+在 Linux 中，第一行应指向 `swift` 可执行文件的位置，例如 `#!/usr/bin/swift`。
+
+保存后，通过运行 `chmod a+x hello.swift` 使文件可执行。然后可以通过输入 `./hello.swift` 来运行程序，并看到传统的问候语：
+
+```swift
+Hello World
+```
+
+参数可以通过命令行传递，并在过程中使用 `Process` 类的 `arguments` 常量进行查询。与其他 Unix 命令一样，第一个元素（0）是进程可执行文件名；从命令行传递的参数从一（1）开始。
+
+可以使用 `exit` 函数来终止程序；然而，这个函数是在操作系统库中定义的，因此需要导入才能调用此函数。Swift 中的模块对应于 Objective-C 中的框架，并提供对模块中定义为公共 API 的所有函数的访问。从模块中导入所有元素的语法是 `import module`，尽管也可以使用 `import func module.functionName` 来导入单个函数。
+
+### 注意
+
+并非所有的基础库都在 Linux 上实现，这导致了一些行为上的差异。此外，iOS 和 OS X 上的基本功能的基础模块是 `Darwin`，而在 Linux 上是 `Glibc`。这些也可以通过 `import Foundation` 访问，这将包括适当的操作系统模块。
+
+一个用于将参数打印为大写的 Swift 程序可以作为一个脚本实现：
+
+```swift
+#!/usr/bin/env xcrun swift
+import func Darwin.exit
+# import func Glibc.exit # for Linux
+let args = Process.arguments[1..<Process.arguments.count]
+for arg in args {
+  print("\(arg.uppercaseString)")
+}
+exit(0)
+```
+
+使用 `hello world` 运行此代码的结果如下：
+
+```swift
+$ ./upper.swift hello world
+HELLO
+WORLD
+```
+
+通常，Swift 程序的入口点是名为 `main.swift` 的脚本。如果在 Xcode 中启动基于 Swift 的命令行应用程序项目，将自动创建一个 `main.swift` 文件。脚本不需要有 `.swift` 扩展名；例如，前面的示例可以命名为 `upper`，它仍然可以工作。
+
+## 编译后的 Swift 脚本
+
+虽然解释的 Swift 脚本对于实验和编写代码很有用，但每次启动脚本时，它都会使用 Swift 编译器进行解释，然后执行。对于简单的脚本（如将参数转换为大写），这可能占脚本执行时间的大部分。
+
+要将 Swift 脚本编译成原生可执行文件，请使用带有 `-o` 输出标志的 `swiftc` 命令来指定要写入的文件。这将生成一个与解释脚本完全相同的可执行文件，但运行速度要快得多。可以使用 `time` 命令来比较解释和编译版本的运行时间：
+
+```swift
+$ time ./upper.swift hello world    # Interpreted
+HELLO
+WORLD
+real  0m0.145s
+$ xcrun swiftc -o upper upper.swift # Compile step
+$ time ./upper hello world          # Compiled
+HELLO
+WORLD
+real  0m0.012s
+```
+
+当然，数字会有所不同，初始步骤只发生一次，但 Swift 的启动非常轻量级。这些数字并不是指它们的绝对值，而是指它们之间的相对值。
+
+编译步骤也可以用来将许多单独的 Swift 文件链接成一个可执行文件，这有助于创建一个更有组织的项目；Xcode 也会鼓励使用多个 Swift 文件。
+
+# 摘要
+
+Swift 解释器是学习 Swift 编程的绝佳方式。它允许创建和测试表达式、语句和函数，同时提供带有编辑支持的命令行历史记录。介绍了基本集合类型（如数组和集合）、标准数据类型（如字符串和数字）、可选值和结构体。还介绍了控制流和具有位置、命名和可变参数的函数，以及默认值。最后，还演示了如何编写 Swift 脚本并在命令行中运行它们。
+
+下一章将探讨在 OS X 上使用 Swift 代码的另一种工作方式，即通过 Xcode 演示场。
