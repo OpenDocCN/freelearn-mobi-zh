@@ -1,0 +1,923 @@
+<html><head></head><body><div class="chapter" title="Chapter&#xA0;3.&#xA0;Files and Data"><div class="titlepage"><div><div><h1 class="title"><a id="ch03"/>Chapter 3. Files and Data</h1></div></div></div><p>In this chapter, we will cover the following points:</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Reading PLIST data files</li><li class="listitem" style="list-style-type: disc">Reading JSON data files</li><li class="listitem" style="list-style-type: disc">Reading XML data files</li><li class="listitem" style="list-style-type: disc">Saving simple data using NSUserDefaults</li><li class="listitem" style="list-style-type: disc">Archiving objects into archive files</li><li class="listitem" style="list-style-type: disc">Mutating nested metadata</li><li class="listitem" style="list-style-type: disc">Saving data into a PLIST file</li><li class="listitem" style="list-style-type: disc">Saving data into a SQLite database</li><li class="listitem" style="list-style-type: disc">Saving data using Core Data</li></ul></div><div class="section" title="Introduction"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec01"/>Introduction</h1></div></div></div><p>Both simple and complex games<span class="strong"><strong> process and persist data</strong></span>. This includes hi-scores, player profiles, and saved game sessions to name a few. In this chapter, we will use a number of varied techniques to read and write data.
+</p></div></div>
+<div class="section" title="Reading PLIST data files"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec02"/>Reading PLIST data files</h1></div></div></div><p>This recipe, along with the other two that follow, shows us how to<span class="strong"><strong> read and parse</strong></span> simple data into Cocos2d scenes. Here we read a<span class="strong"><strong> PLIST</strong></span> file to create a scene that depicts a desert with a few cacti.<a id="id125" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_01.jpg" alt="Reading PLIST data files"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec01"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec02"/>How to do it...</h2></div></div></div><p>Execute the following code:<a id="id126" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">#import &lt;Foundation/Foundation.h&gt;
+/* This returns the full absolute path to a specified file in the bundle */
+NSString* getActualPath( NSString* file )
+{
+NSArray* path = [file componentsSeparatedByString: @"."];
+NSString* actualPath = [[NSBundle mainBundle] pathForResource: [path objectAtIndex: 0] ofType: [path objectAtIndex: 1]];
+return actualPath;
+}
+@implementation Ch2_ReadingPlistFiles
+-(CCLayer*) runRecipe {
+//Initialize a read-only dictionary from our file
+NSString *fileName = @"scene1.plist";
+NSDictionary *dict = [NSDictionary dictionaryWithContentsOfFile:getActualPath(fileName)];
+//Process this dictionary
+[self processMap:dict];
+return self;
+}
+-(void) processMap:(NSDictionary*)dict {
+//Loop through all dictionary nodes to process individual types
+NSArray *nodes = [dict objectForKey:@"nodes"];
+for (id node in nodes) {
+if([[node objectForKey:@"type"] isEqualToString:@"spriteFile"]){
+[self processSpriteFile:node];
+}else if([[node objectForKey:@"type"] isEqualToString:@"texturedPolygon"]){
+[self processTexturedPolygon:node];
+}
+}
+}
+/* Process the 'spriteFile' type */
+-(void) processSpriteFile:(NSDictionary*)nodeDict {
+//Init the sprite
+NSString *file = [nodeDict objectForKey:@"file"];
+CCSprite *sprite = [CCSprite spriteWithFile:file];
+//Set sprite position
+NSDictionary *posDict = [nodeDict objectForKey:@"position"];
+sprite.position = ccp([[posDict objectForKey:@"x"] floatValue], [[posDict objectForKey:@"y"] floatValue]);
+//Each numeric value is an NSString or NSNumber that must be cast into a float
+sprite.scale = [[nodeDict objectForKey:@"scale"] floatValue];
+//Set the anchor point so objects are positioned from the bottom-up
+sprite.anchorPoint = ccp(0.5,0);
+//We set the sprite Z according to its Y to produce an isometric perspective
+float z = [self getZFromY:[[posDict objectForKey:@"y"] floatValue]];
+if([nodeDict objectForKey:@"z"]){
+z = [[nodeDict objectForKey:@"z"] floatValue];
+}
+//Finally, add the sprite
+[self addChild:sprite z:z];
+}
+/* Process the 'texturedPolygon' type */
+-(void) processTexturedPolygon:(NSDictionary*)nodeDict {
+//Process vertices
+NSMutableArray *vertices = [[[NSMutableArray alloc] init] autorelease];
+NSArray *vertexData = [nodeDict objectForKey:@"vertices"];
+for(id vData in vertexData){
+float x = [[vData objectForKey:@"x"] floatValue];
+float y = [[vData objectForKey:@"y"] floatValue];
+[vertices addObject:[NSValue valueWithCGPoint:ccp(x,y)]];
+}
+//Init our textured polygon
+NSString *file = [nodeDict objectForKey:@"file"];
+ccTexParams params = {GL_NEAREST,GL_NEAREST_MIPMAP_NEAREST,GL_REPEAT,GL_REPEAT};
+TexturedPolygon *texturedPoly = [TexturedPolygon createWithFile:file withVertices:vertices];
+[texturedPoly.texture setTexParameters:&amp;params];
+[texturedPoly retain];
+//Set position
+NSDictionary *posDict = [nodeDict objectForKey:@"position"];
+texturedPoly.position = ccp([[posDict objectForKey:@"x"] floatValue], [[posDict objectForKey:@"y"] floatValue]);
+//Add the texturedPolygon behind any sprites
+[self addChild:texturedPoly z:0];
+}
+/* Our simple method used to order sprites by depth */
+-(float) getZFromY:(float)y {
+return 320-y;
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec03"/>How it works...</h2></div></div></div><p>Loading data from a PLIST file is a seamless way to create a complex structure of data in the memory of your program. Here we load<code class="literal"> scene1.plist</code>, which contains an array of dictionaries. This translates to an<code class="literal"> NSArray</code> of<code class="literal"> NSDictionary</code> values. Inside each dictionary we have a string value with a key of 'type'. This tells the application what kind of node it is looking at. The PLIST data format can house an infinitely deep combination of arrays and dictionaries that ultimately contain primitive data types including Boolean, Data, Date, Number, and String. Each one is easily converted into<code class="literal"> NSNumber, NSData, NSDate</code>, or<code class="literal"> NSString</code>. Here is what our PLIST file looks like:<a id="id127" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_02.jpg" alt="How it works..."/></div><p>A PLIST file is merely an XML file parsed using specific conventions. The previous figure is a graphical representation of the XML data. As you'll see in later examples, combinations of arrays and dictionaries are the standard for storing data.<a id="id128" class="indexterm"/>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Using<code class="literal"> getActualPath:</code><p>The<code class="literal"> getActualPath:</code> method provides a shortcut to obtaining the full file path of a bundle resource. This allows classes that require exact paths to manipulate files in the filesystem.
+<a id="id129" class="indexterm"/>
+</p></li><li class="listitem" style="list-style-type: disc">Isometric scenes:<p>As you can see, our scene has some depth and shadow. This technique is simulated isometric projection. This is simulated 3D space with no vanishing point. It is used in countless 2D games and will be a primary feature of many more recipes in this book.
+</p></li></ul></div></div></div>
+<div class="section" title="Reading JSON data files"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec03"/>Reading JSON data files</h1></div></div></div><p>
+<span class="strong"><strong>JSON</strong></span> stands for<span class="strong"><strong> JavaScript Object Notation</strong></span>. It is a very light and easily consumable way of packing your data. Thanks to the<code class="literal"> CJSONDeserializer</code> library, reading in JSON files is as simple as reading in PLIST files. In the following scene, we see a grassy field with a cat and a few trees:<a id="id130" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_03.jpg" alt="Reading JSON data files"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec04"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec05"/>How to do it...</h2></div></div></div><p>Execute the following code:</p><div class="informalexample"><pre class="programlisting">#import "ActualPath.h"
+@implementation Ch2_ReadingJsonFiles
+-(CCLayer*) runRecipe {
+//Initialize a read-only dictionary from our file
+NSString *fileName = @"scene2.json";
+NSString *jsonString = [[[NSString alloc] initWithContentsOfFile:getActualPath(fileName) encoding:NSUTF8StringEncoding error:nil] autorelease];
+NSData *jsonData = [jsonString dataUsingEncoding:NSUTF32BigEndianStringEncoding];
+NSDictionary *dict = [[CJSONDeserializer deserializer] deserializeAsDictionary:jsonData error:nil];
+//Process this dictionary
+[self processMap:dict];
+return self;
+}
+-(void) processMap:(NSDictionary*)dict {
+NSArray *nodes = [dict objectForKey:@"nodes"];
+for (id node in nodes) {
+if([[node objectForKey:@"type"] isEqualToString:@"spriteFile"]){
+[self processSpriteFile:node];
+}else if([[node objectForKey:@"type"] isEqualToString:@"texturedPolygon"]){
+[self processTexturedPolygon:node];
+}
+}
+}
+/* Process the 'spriteFile' type */
+-(void) processSpriteFile:(NSDictionary*)nodeDict {
+/* CODE OMITTED */
+}
+/* Process the 'texturedPolygon' type */
+-(void) processTexturedPolygon:(NSDictionary*)nodeDict {
+/* CODE OMITTED */
+}
+/* Our simple method used to order sprites by depth */
+-(float) getZFromY:(float)y {
+return 320-y;
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec06"/>How it works...</h2></div></div></div><p>Loading JSON into a read-only NSDictionary is fairly straightforward. Here is our JSON file with some lines omitted:<a id="id131" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">{ "nodes":
+[ { "type":"spriteFile", "file":"tree.png", "position":{"x":250,"y":50}, "scale":0.9 },
+{ "type":"spriteFile", "file":"tree_shadow.png", "position":{"x":195,"y":51}, "scale":0.9, "z":-100 },
+{ "type":"spriteFile", "file":"cheshire_cat.png", "position":{"x":120,"y":70}, "scale":0.3 },
+{ "type":"spriteFile", "file":"actor_shadow.png", "position":{"x":120,"y":65}, "scale":1.75, "z":-100 },
+{ "type":"texturedPolygon", "file":"grass_texture.png", "position":{"x":16,"y":16},
+"vertices":[{"x":0,"y":0},{"x":480,"y":0},{"x":480,"y":320},{"x":0,"y":320}] },
+{ "type":"rectangle", "position":{"x":0,"y":0}, "size":{"x":480,"y":320}, "meta": [{"type":"boundary"}] }
+]
+}
+</pre></div><p>As you can see the JSON format is very succinct. At a glance, it is much easier to understand than XML.</p></div></div>
+<div class="section" title="Reading XML data files"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec04"/>Reading XML data files</h1></div></div></div><p>Finally, we have everyone's favorite data format: basic unadulterated XML. For this recipe, we will use Google's<span class="strong"><strong> GDataXML</strong></span> library to read and parse a simple XML document. In the following scene, we see rocky terrain with some boulders and weeds:<a id="id132" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_04.jpg" alt="Reading XML data files"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec07"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec08"/>How to do it...</h2></div></div></div><p>The first thing we need to do is integrate Google's GData XML tools:<a id="id133" class="indexterm"/>
+</p><div class="orderedlist"><ol class="orderedlist"><li class="listitem"> Download and unzip the<code class="literal"> gdata-objectivec-client</code> from here:<a class="ulink" href="http://code.google.com/p/gdata-objectivec-client/downloads/list"> http://code.google.com/p/gdata-objectivec-client/downloads/list</a></li><li class="listitem"> In the folder<code class="literal"> Source\XMLSupport</code> find the files<code class="literal"> GDataXMLNode.h</code> and<code class="literal"> GDataXMLNode.m</code> and add them to your project.</li><li class="listitem"> In your<span class="strong"><strong> Project Navigator</strong></span> click on your<span class="strong"><strong> Project</strong></span>.</li><li class="listitem"> To the right of this, click on your<span class="strong"><strong> Target</strong></span>.</li><li class="listitem"> Go to the<span class="strong"><strong> Build Settings</strong></span> tab.</li><li class="listitem"> Find the<span class="strong"><strong> Search Paths\Header Search Paths</strong></span> setting.<div class="mediaobject"><img src="graphics/4002_03_05.jpg" alt="How to do it..."/></div></li><li class="listitem"> Add<code class="literal"> /usr/include/libxml2</code> to the list.<div class="mediaobject"><img src="graphics/4002_03_06.jpg" alt="How to do it..."/></div></li><li class="listitem"> Find the<span class="strong"><strong> Linking\Other Linker Flags</strong></span> section.<a id="id134" class="indexterm"/><div class="mediaobject"><img src="graphics/4002_03_07.jpg" alt="How to do it..."/></div></li><li class="listitem"> Add<code class="literal"> -lxml2</code> to the list.<div class="mediaobject"><img src="graphics/4002_03_08.jpg" alt="How to do it..."/></div></li><li class="listitem"> Import<code class="literal"> GDataXMLNode.h</code> into your code. If it compiles and runs, then you've integrated GDataXML successfully.<a id="id135" class="indexterm"/></li></ol></div><p>Now, execute the following code:</p><div class="informalexample"><pre class="programlisting">#import "GDataXMLNode.h"
+@implementation Ch2_ReadingXmlFiles
+-(CCLayer*) runRecipe {
+//Read our file in as an NSData object
+NSString *fileName = @"scene3.xml";
+NSString *xmlString = [[[NSString alloc] initWithContentsOfFile:getActualPath(fileName) encoding:NSUTF8StringEncoding error:nil] autorelease];
+NSData *xmlData = [xmlString dataUsingEncoding:NSUTF32BigEndianStringEncoding];
+//Initialize a new GDataXMLDocument with our data
+GDataXMLDocument *doc = [[[GDataXMLDocument alloc] initWithData:xmlData options:0 error:nil] autorelease];
+//Process that document
+[self processMap:doc];
+return self;
+}
+-(void) processMap:(GDataXMLDocument*)doc {
+//Find all elements of 'node' type
+NSArray *nodes = [doc.rootElement elementsForName:@"node"];
+//Loop through each element
+for (GDataXMLElement *node in nodes) {
+//Find the first (and assumed only) element with the name 'type' in this node
+NSString *type = [[[node elementsForName:@"type"] objectAtIndex:0] stringValue];
+//Process specific node types
+if([type isEqualToString:@"spriteFile"]){
+[self processSpriteFile:node];
+}else if([type isEqualToString:@"texturedPolygon"]){
+[self processTexturedPolygon:node];
+}
+}
+}
+/* Process the 'spriteFile' type */
+-(void) processSpriteFile:(GDataXMLElement*)node {
+//Init the sprite
+NSString *file = [[[node elementsForName:@"file"] objectAtIndex:0] stringValue];
+CCSprite *sprite = [CCSprite spriteWithFile:file];
+//Set sprite position
+GDataXMLElement *posElement = [[node elementsForName:@"position"] objectAtIndex:0];
+sprite.position = ccp( [[[[posElement elementsForName:@"x"] objectAtIndex:0] stringValue] floatValue],
+[[[[posElement elementsForName:@"y"] objectAtIndex:0] stringValue] floatValue]);
+//Each element is considered a string first
+sprite.scale = [[[[node elementsForName:@"scale"] objectAtIndex:0] stringValue] floatValue];
+//Set the anchor point
+sprite.anchorPoint = ccp(0.5,0);
+//We set the sprite Z according to its Y to produce an isometric perspective
+float z = [self getZFromY:sprite.position.y];
+if([node elementsForName:@"z"].count &gt; 0){
+z = [[[[node elementsForName:@"z"] objectAtIndex:0] stringValue] floatValue];
+}
+//Finally, add the sprite
+[self addChild:sprite z:z];
+}
+/* Process the 'texturedPolygon' type */
+-(void) processTexturedPolygon:(GDataXMLElement*)node {
+//Process vertices
+NSMutableArray *vertices = [[[NSMutableArray alloc] init] autorelease];
+NSArray *vertexData = [[[node elementsForName:@"vertices"] objectAtIndex:0] elementsForName:@"vertex"];
+for(id vData in vertexData){
+GDataXMLElement *vertexElement = (GDataXMLElement*)vData;
+float x = [[[[vertexElement elementsForName:@"x"] objectAtIndex:0] stringValue] floatValue];
+float y = [[[[vertexElement elementsForName:@"y"] objectAtIndex:0] stringValue] floatValue];
+[vertices addObject:[NSValue valueWithCGPoint:ccp(x,y)]];
+}
+//Init our textured polygon
+NSString *file = [[[node elementsForName:@"file"] objectAtIndex:0] stringValue];
+ccTexParams params = {GL_NEAREST,GL_NEAREST_MIPMAP_NEAREST,GL_REPEAT,GL_REPEAT};
+TexturedPolygon *texturedPoly = [TexturedPolygon createWithFile:file withVertices:vertices];
+[texturedPoly.texture setTexParameters:&amp;params];
+//Set position
+GDataXMLElement *posElement = [[node elementsForName:@"position"] objectAtIndex:0];
+texturedPoly.position = ccp( [[[[posElement elementsForName:@"x"] objectAtIndex:0] stringValue] floatValue],
+[[[[posElement elementsForName:@"y"] objectAtIndex:0] stringValue] floatValue]);
+//Add the texturedPolygon behind any sprites
+[self addChild:texturedPoly z:0];
+}
+/* Our simple method used to order sprites by depth */
+-(float) getZFromY:(float)y {
+return 320-y;
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec09"/>How it works...</h2></div></div></div><p>Reading and processing XML files is not too different from processing PLIST and JSON files. In this case, we use the classes<code class="literal"> GDataXMLDocument</code> and<code class="literal"> GDataXMLElement</code>. The latter implements the method<code class="literal"> (NSString*)stringValue</code>, which other values can be parsed out of. Here is an excerpt of the XML document we are working with:<a id="id136" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">&lt;?xml version="1.0" encoding="ISO-8859-1"?&gt;
+&lt;nodes&gt;
+&lt;node&gt;
+&lt;type&gt;spriteFile&lt;/type&gt;
+&lt;file&gt;boulder.png&lt;/file&gt;
+&lt;position&gt;&lt;x&gt;250&lt;/x&gt;&lt;y&gt;50&lt;/y&gt;&lt;/position&gt;
+&lt;scale&gt;0.9&lt;/scale&gt;
+&lt;/node&gt;
+&lt;node&gt;
+&lt;type&gt;texturedPolygon&lt;/type&gt;
+&lt;file&gt;cracked_earth_texture.png&lt;/file&gt;
+&lt;position&gt; &lt;x&gt;32&lt;/x&gt;&lt;y&gt;32&lt;/y&gt; &lt;/position&gt;
+&lt;vertices&gt;
+&lt;vertex&gt; &lt;x&gt;0&lt;/x&gt;&lt;y&gt;0&lt;/y&gt; &lt;/vertex&gt;
+&lt;vertex&gt; &lt;x&gt;480&lt;/x&gt;&lt;y&gt;0&lt;/y&gt; &lt;/vertex&gt;
+&lt;vertex&gt; &lt;x&gt;480&lt;/x&gt;&lt;y&gt;320&lt;/y&gt; &lt;/vertex&gt;
+&lt;vertex&gt; &lt;x&gt;0&lt;/x&gt;&lt;y&gt;320&lt;/y&gt; &lt;/vertex&gt;
+&lt;/vertices&gt;
+&lt;/node&gt;
+&lt;/nodes&gt;
+</pre></div><p>Pure XML is harder to read than a PLIST file and contains more markup language fluff than JSON. However, XML allows the use of two features missing from JSON:<span class="strong"><strong> Attributes</strong></span> and<span class="strong"><strong> Namespaces</strong></span>. Attributes can be used to provide additional information about an<span class="strong"><strong> Element</strong></span>. Namespaces can be used to help reduce the ambiguity between Elements.<a id="id137" class="indexterm"/>
+</p></div><div class="section" title="See also..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec10"/>See also...</h2></div></div></div><p>More information about the XML specification can be found at:<a class="ulink" href="http://www.w3.org/TR/xml/"> http://www.w3.org/TR/xml/</a>
+</p></div></div>
+<div class="section" title="Saving simple data using NSUserDefaults"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec05"/>Saving simple data using NSUserDefaults</h1></div></div></div><p>For the persistence of user settings and other small bits of data, the iOS framework provides the<code class="literal"> NSUserDefaults</code> class. In this example, we are saving the default difficulty level for our game.<a id="id138" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_09.jpg" alt="Saving simple data using NSUserDefaults"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec11"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec12"/>How to do it...</h2></div></div></div><p>Execute the following code:<a id="id139" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">@implementation Ch2_SavingSimpleData
+-(CCLayer*) runRecipe {
+//Set font size
+[CCMenuItemFont setFontSize:30];
+//Add main label
+CCLabelBMFont *chooseDifficultyLabel = [CCLabelBMFont labelWithString:@"CHOOSE DIFFICULTY:" fntFile:@"eurostile_30.fnt"];
+chooseDifficultyLabel.position = ccp(240,250);
+chooseDifficultyLabel.scale = 0.5f;
+[self addChild:chooseDifficultyLabel z:1];
+//Add difficulty choices
+easyMIF = [CCMenuItemFont itemFromString:@"Easy" target:self selector:@selector(chooseEasy)];
+/* CODE OMITTED */
+mainMenu = [CCMenu menuWithItems:easyMIF, mediumMIF, hardMIF, insaneMIF, nil];
+[mainMenu alignItemsVertically];
+mainMenu.position = ccp(240,140);
+[self addChild:mainMenu z:1];
+//Load any previously chosen difficulty
+[self loadDifficulty];
+return self;
+}
+-(void) loadDifficulty {
+//If a difficulty is set we use that, otherwise we choose Medium
+NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+if([defaults stringForKey:@"simple_data_difficulty"]){
+difficulty = [defaults stringForKey:@"simple_data_difficulty"];
+[self setDifficultyFromValue];
+}else{
+[self chooseMedium];
+}
+}
+-(void) saveDifficulty {
+//Save our difficulty
+NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+[defaults setObject:difficulty forKey:@"simple_data_difficulty"];
+[defaults synchronize];
+}
+-(void) setDifficultyFromValue {
+//More menu color management
+[self resetMenuColors];
+if([difficulty isEqualToString:@"Easy"]){
+[easyMIF setColor:ccc3(255,0,0)];
+}else if([difficulty isEqualToString:@"Medium"]){
+[mediumMIF setColor:ccc3(255,0,0)];
+}/* CODE OMITTED */
+[self saveDifficulty];
+}
+/* Shortcut callback methods */
+-(void) chooseEasy {
+difficulty = @"Easy";
+[self setDifficultyFromValue];
+}
+/* CODE OMITTED */
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec13"/>How it works...</h2></div></div></div><p>The<code class="literal"> NSUserDefaults</code> class uses a format that is similar to PLIST. It can accept the same type of objects including<code class="literal"> NSString, NSData, NSNumber</code>, and others. It can also accept arrays and dictionaries.<a id="id140" class="indexterm"/>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Loading data:<a id="id141" class="indexterm"/><p>These are the crucial lines to remember when loading <code class="literal">NSUserDefaults</code> data:
+</p><div class="informalexample"><pre class="programlisting">if([defaults stringForKey:@"simple_data_difficulty"]){
+difficulty = [defaults stringForKey:@"simple_data_difficulty"];
+}
+</pre></div><p>The <code class="literal">if</code> statement does a simple check to see if that entry exists yet.
+</p></li><li class="listitem" style="list-style-type: disc">Saving data:<a id="id142" class="indexterm"/><p>The procedure for saving data is also fairly straightforward:
+</p><div class="informalexample"><pre class="programlisting">NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+[defaults setObject:difficulty forKey:@"simple_data_difficulty"];
+[defaults synchronize];
+</pre></div></li></ul></div><div class="section" title="See also..."><div class="titlepage"><div><div><h3 class="title"><a id="ch03lvl2sec14"/>See also...</h3></div></div></div><p>We took a brief look at menu customization in this recipe. We will talk about this topic at length in<a class="link" href="ch04.html" title="Chapter 4. Physics"> Chapter 4</a>,<a id="id143" class="indexterm"/>
+</p></div></div></div>
+<div class="section" title="Archiving objects into archive files"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec06"/>Archiving objects into archive files</h1></div></div></div><p>The classes<code class="literal"> NSKeyedArchiver</code> and<code class="literal"> NSKeyedUnarchiver</code> allow us to persist data in a very<span class="strong"><strong> Object-oriented</strong></span> way. By conforming to the<code class="literal"> NSCoding</code> protocol, we can tell the archiver how to pack and unpack any of our classes. In this recipe, we will be packing up a character who has a number of Dungeons and Dragons style attributes.<a id="id144" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_10.jpg" alt="Archiving objects into archive files"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec15"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe. Also note that some of the following code has been omitted for brevity.<a id="id145" class="indexterm"/>
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec16"/>How to do it...</h2></div></div></div><p>Execute the following code:</p><div class="informalexample"><pre class="programlisting">//SimpleCharacter.h
+@interface SimpleCharacter : NSObject &lt;NSCoding&gt; {
+NSString *charColor; NSString *charClass;
+int strength; int dexterity; int constitution;
+int intelligence; int wisdom; int charisma;
+}
+@property (readwrite, assign) NSString *charColor;
+@property (readwrite, assign) NSString *charClass;
+@property (readwrite, assign) int strength;
+/* CODE OMITTED */
+@end
+@implementation SimpleCharacter
+@synthesize charColor, charClass, strength, dexterity, constitution, intelligence, wisdom, charisma;
+/* This merely adds this character with the proper color to a CCNode */
+-(void) addCharacterToNode:(CCNode *)node atPosition:(CGPoint)position {
+ccColor3B color;
+if([charColor isEqualToString:@"Red"]){
+color = ccc3(255,0,0);
+}else if([charColor isEqualToString:@"Blue"]){
+color = ccc3(0,0,255);
+}/* CODE OMITTED */
+CCSpriteFrameCache *cache = [CCSpriteFrameCache sharedSpriteFrameCache];
+[cache addSpriteFramesWithFile:@"dnd_characters.plist"];
+CCSprite *drawing = [CCSprite spriteWithSpriteFrame:[cache spriteFrameByName:[NSString stringWithFormat:@"dnd_%@_drawing.png",charClass]]];
+CCSprite *colors = [CCSprite spriteWithSpriteFrame:[cache spriteFrameByName:[NSString stringWithFormat:@"dnd_%@_colors.png",charClass]]];
+drawing.position = position; colors.position = position;
+drawing.scale = 1.5f; colors.scale = 1.5f;
+colors.color = color;
+[node addChild:colors z:0 tag:0];
+[node addChild:drawing z:1 tag:1];
+}
+/* This method determines how data is encoded into an NSCoder object */
+- (void) encodeWithCoder: (NSCoder *)coder {
+[coder encodeObject:charColor];
+[coder encodeObject:charClass];
+[coder encodeObject:[NSNumber numberWithInt:strength]];
+/* CODE OMITTED */
+}
+/* This method determines how data is read out from an NSCode object */
+-(id) initWithCoder: (NSCoder *) coder {
+[super init];
+charColor = [[coder decodeObject] retain];
+charClass = [[coder decodeObject] retain];
+strength = [[coder decodeObject] intValue];
+/* CODE OMITTED */
+return self;
+}
+/* Initialization */
+-(id) init {
+self = [super init];
+if (self) {
+charColor = @"Red"; charClass = @"Wizard";
+strength = 10; dexterity = 10; constitution = 10;
+intelligence = 10; wisdom = 10; charisma = 10;
+}
+return self;
+}
+/* All objects must be released here */
+- (void) dealloc {
+[charColor release]; [charClass release]; [super dealloc];
+}
+@end
+@implementation Ch2_ArchivingObjects
+-(CCLayer*) runRecipe {
+//Load our character
+[self loadCharacter];
+return self;
+}
+-(void) loadCharacter {
+//Our archive file name
+NSString *fileName = @"dnd_character.archive";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+if(![[NSFileManager defaultManager] fileExistsAtPath:filePath]){
+//If file doesn't exist in document directory create a new default character and save it
+character = [[SimpleCharacter alloc] init];
+[NSKeyedArchiver archiveRootObject:character toFile:filePath];
+}else{
+//If it does we load it
+character = [[NSKeyedUnarchiver unarchiveObjectWithFile:filePath] retain];
+}
+//Add character and reload HUD
+[character addCharacterToNode:self atPosition:ccp(300,180)];
+[self loadHUD];
+}
+-(void) saveCharacter {
+//Our archive file name
+NSString *fileName = @"dnd_character.archive";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+//Save character
+[NSKeyedArchiver archiveRootObject:character toFile:filePath];
+}
+-(void) deleteData {
+//Our archive file name
+NSString *fileName = @"dnd_character.archive";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+//Delete our file
+[[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+//Set removal message
+[message setString:@"Data deleted!"];
+//Remove character node and load a new default character
+[self removeCharacter];
+[self loadCharacter];
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec17"/>How it works...</h2></div></div></div><p>Properly<span class="strong"><strong> archiving</strong></span> an object requires a few steps.<a id="id146" class="indexterm"/>
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Conforming to the<code class="literal"> NSCoding</code> protocol:<a id="id147" class="indexterm"/><p>The <code class="literal">NSCoding</code> protocol requires that we implement the following two methods:
+</p><div class="informalexample"><pre class="programlisting">- (void) encodeWithCoder: (NSCoder *)coder;
+-(id) initWithCoder: (NSCoder *) coder;
+</pre></div><p>One method packs data into the <code class="literal">NSCoder</code> object and the other unpacks data out of it.
+</p></li><li class="listitem" style="list-style-type: disc">Using the<code class="literal"> Documents</code> directory:<a id="id148" class="indexterm"/><p>Your app has write access to areas specified by the iOS framework. These include the <code class="literal">Documents</code> and the <code class="literal">Library</code> directories. In this and future examples, we may read from a number of locations within the app bundle but we will usually only write to the <code class="literal">Documents</code> directory. Unlike other areas on the disk, files saved here will be maintained when an app is upgraded. Typically, we save pre-made templates in a read-only section, copy them into the <code class="literal">Documents</code> directory, load them into memory, and then save modified versions in the <code class="literal">Documents</code> directory. We usually locate a file inside the <code class="literal">Documents</code> directory with the following code:
+</p><div class="informalexample"><pre class="programlisting">NSString *fileName = @"my.file";
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+</pre></div><p>This returns the absolute file path.
+<a id="id149" class="indexterm"/>
+</p></li><li class="listitem" style="list-style-type: disc">Using<code class="literal"> NSFileManager:</code><a id="id150" class="indexterm"/><p>We also use <code class="literal">NSFileManager</code> to determine whether a file exists and also to remove files as necessary.
+</p><div class="informalexample"><pre class="programlisting">if([[NSFileManager defaultManager] fileExistsAtPath:filePath]){
+[[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+}
+</pre></div></li><li class="listitem" style="list-style-type: disc">Using<code class="literal"> NSKeyedArchiver</code> and<code class="literal"> NSKeyedUnarchiver:</code><a id="id151" class="indexterm"/><p>Finally, with all these tools at hand we can archive and unarchive objects using the classes <code class="literal">NSKeyedArchiver</code> and <code class="literal">NSKeyedUnarchiver</code>:
+</p><div class="informalexample"><pre class="programlisting">//Archive
+character = [[SimpleCharacter alloc] init];
+[NSKeyedArchiver archiveRootObject:character toFile:filePath];
+//Un-archive
+character = [[NSKeyedUnarchiver unarchiveObjectWithFile:filePath] retain];
+</pre></div></li></ul></div></div></div>
+<div class="section" title="Mutating nested metadata"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec07"/>Mutating nested metadata</h1></div></div></div><p>Data from data files is often loaded into a non-mutable, 'nested' structure of arrays and dictionaries. This non-mutable structure leaves the data un-editable. In this recipe, we will read in a nested JSON data structure and then recursively re-create the data using mutable data structures to allow the data to be edited.<a id="id152" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_11.jpg" alt="Mutating nested metadata"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec18"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec19"/>How to do it...</h2></div></div></div><p>Execute the following code:</p><div class="informalexample"><pre class="programlisting">#import "GameHelper.h"
+//Implementation
+@implementation Ch3_MutatingNestedMetadata
+-(CCLayer*) runRecipe {
+[super runRecipe];
+//Load JSON data
+NSString *fileName = @"data_to_mutate.json";
+NSString *jsonString = [[[NSString alloc] initWithContentsOfFile:getActualPath(fileName) encoding:NSUTF8StringEncoding error:nil] autorelease];
+NSData *jsonData = [jsonString dataUsingEncoding:NSUTF32BigEndianStringEncoding];
+NSDictionary *dict = [[CJSONDeserializer deserializer] deserializeAsDictionary:jsonData error:nil];
+//Create deep mutable copy
+dictMutable = [GameHelper makeRecMutableCopy:dict];
+[dictMutable retain];
+//Show JSON data
+[self showJsonData:dictMutable];
+//Add randomize button
+[CCMenuItemFont setFontSize:30];
+CCMenuItemFont *randomizeItem = [CCMenuItemFont itemFromString:@"Randomize Data" target:self selector:@selector(randomizeData)];
+CCMenu *menu = [CCMenu menuWithItems:randomizeItem, nil];
+menu.position = ccp(240,140);
+[self addChild:menu z:1];
+return self;
+}
+-(void) showJsonData:(NSDictionary*)dict {
+[self showMessage:@""];
+//Loop through all dictionary nodes to process individual types
+NSMutableDictionary *nodes = [dict objectForKey:@"people"];
+for (NSMutableDictionary* node in nodes) {
+float height = [[node objectForKey:@"height"] floatValue];
+float weight = [[node objectForKey:@"weight"] floatValue];
+NSString *name = [node objectForKey:@"name"];
+[self appendMessage:[NSString stringWithFormat:@"%@: %din %dlbs", name, (int)height, (int)weight]];
+}
+nested metadatamutating}
+-(void) randomizeData {
+//Randomize some data in 'dictMutable'
+NSMutableArray *nodes = [dictMutable objectForKey:@"people"];
+for (NSMutableDictionary* node in nodes) {
+[node setObject:[NSNumber numberWithFloat:(float)(arc4random()%48)+30.0f] forKey:@"height"];
+[node setObject:[NSNumber numberWithFloat:(float)(arc4random()%100)+100.0f] forKey:@"weight"];
+}
+[self showJsonData:dictMutable];
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec20"/>How it works...</h2></div></div></div><p>Just like in the previous section,<span class="emphasis"><em> Reading JSON data files</em></span>, here we first read in data from a JSON file. The data consists of a<code class="literal"> NSDictionary</code> object with nested arrays, dictionaries, and, finally, strings. To create a 'deep' mutable copy, we call the following method in our<code class="literal"> GameHelper</code> class:<a id="id154" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">+(NSMutableDictionary*) makeRecMutableCopy:(NSDictionary*)dict;
+</pre></div><p>This method assumes that the root node is a dictionary.</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">The<code class="literal"> makeRecMutableCopy</code> method:<a id="id155" class="indexterm"/><p>In this recipe, we've spared the gruesome details of this method. Put simply, it recursively goes through the nested structure turning <code class="literal">NSDictionary</code> objects into <code class="literal">NSMutableDictionary</code> objects and <code class="literal">NSArray</code> objects into <code class="literal">NSMutableArray</code> objects.
+</p></li><li class="listitem" style="list-style-type: disc">Modifying the data tree:<p>Once we have a nested mutable structure, we can access it and modify elements as necessary. Click the <span class="strong"><strong>Randomize Data</strong></span> button to randomly change some data in the structure.
+</p></li></ul></div></div></div>
+<div class="section" title="Saving data into a PLIST file"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec08"/>Saving data into a PLIST file</h1></div></div></div><p>For the next three recipes, we have three small games that need to have their hi-scores persisted. In this recipe, we see a whack-a-mole game that will use a PLIST file to maintain a list of hi-scores.<a id="id156" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_12.jpg" alt="Saving data into a PLIST file"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec21"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe. For the sake of brevity all game logic has been omitted from the following code.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec22"/>How to do it...</h2></div></div></div><p>Execute the following code:<a id="id157" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">#import "ActualPath.h"
+@implementation Ch2_SavingDataPlist
+-(CCLayer*) runRecipe {
+[self loadHiScores];
+return self;
+}
+-(void) loadHiScores {
+//Our template and file names
+NSString *templateName = @"whackamole_template.plist";
+NSString *fileName = @"whackamole.plist";
+//Our dictionary
+NSMutableDictionary *fileDict;
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+if(![[NSFileManager defaultManager] fileExistsAtPath:filePath]){
+//If file doesn't exist in document directory create a new one from the template
+fileDict = [NSMutableDictionary dictionaryWithContentsOfFile:getActualPath(templateName)];
+}else{
+//If it does we load it in the dict
+fileDict = [NSMutableDictionary dictionaryWithContentsOfFile:filePath];
+}
+//Load hi scores into our dictionary
+hiScores = [fileDict objectForKey:@"hiscores"];
+//Set the 'hiScore' variable (the highest score)
+for(id score in hiScores){
+int scoreNum = [[score objectForKey:@"score"] intValue];
+if(hiScore &lt; scoreNum){
+hiScore = scoreNum;
+}
+}
+//Write dict to file
+[fileDict writeToFile:filePath atomically:YES];
+}
+-(void) addHiScore {
+//Our template and file names
+NSString *templateName = @"whackamole_template.plist";
+NSString *fileName = @"whackamole.plist";
+//Our dictionary
+NSMutableDictionary *fileDict;
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+if(![[NSFileManager defaultManager] fileExistsAtPath:filePath]){
+//If file doesn't exist in document directory create a new one from the template
+fileDict = [NSMutableDictionary dictionaryWithContentsOfFile:getActualPath(templateName)];
+}else{
+//If it does we load it in the dict
+fileDict = [NSMutableDictionary dictionaryWithContentsOfFile:filePath];
+}
+//Load hi scores into our dictionary
+hiScores = [fileDict objectForKey:@"hiscores"];
+//Add hi score
+bool scoreRecorded = NO;
+//Add score if player's name already exists
+for(id score in hiScores){
+NSMutableDictionary *scoreDict = (NSMutableDictionary*)score;
+if([[scoreDict objectForKey:@"name"] isEqualToString:currentPlayerName]){
+if([[scoreDict objectForKey:@"score"] intValue] &lt; currentScore){
+[scoreDict setValue:[NSNumber numberWithInt:currentScore] forKey:@"score"];
+}
+scoreRecorded = YES;
+}
+}
+//Add new score if player's name doesn't exist
+if(!scoreRecorded){
+NSMutableDictionary *newScore = [[NSMutableDictionary alloc] init];
+[newScore setObject:currentPlayerName forKey:@"name"];
+[newScore setObject:[NSNumber numberWithInt:currentScore] forKey:@"score"];
+[hiScores addObject:newScore];
+}
+//Write dict to file
+[fileDict writeToFile:filePath atomically:YES];
+}
+-(void) deleteHiScores {
+//Our file name
+NSString *fileName = @"whackamole.plist";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+//Delete our file
+[[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+[message setString:@"Hi scores deleted!"];
+hiScore = 0;
+[self loadHiScores];
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec23"/>How it works...</h2></div></div></div><p>The first thing we do is check the<code class="literal"> Documents</code> directory for<code class="literal"> whackamole.plist</code> and we load that data into the<code class="literal"> fileDict dictionary</code>. If we don't find that file we open<code class="literal"> whackamole_template.plist</code> from the<code class="literal"> Resources/Data</code> folder. It looks like this:<a id="id158" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_13.jpg" alt="How it works..."/></div><p>Whichever file we load, the loading line looks like this:</p><div class="informalexample"><pre class="programlisting">fileDict = [NSMutableDictionary dictionaryWithContentsOfFile:filePath];
+</pre></div><p>After modifying the<code class="literal"> fileDict</code> dictionary we save it to<code class="literal"> whackamole.plist</code> in the<code class="literal"> Documents</code> directory:
+</p><div class="informalexample"><pre class="programlisting">[fileDict writeToFile:filePath atomically:YES];
+</pre></div><p>All things considered, this is a very simple way to persist data.<a id="id159" class="indexterm"/>
+</p></div></div>
+<div class="section" title="Saving data into an SQLite database"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec09"/>Saving data into an SQLite database</h1></div></div></div><p>The second game we have is a "skeet shooting" game where discs are fired in the air and the goal is to shoot as many down as possible within a certain time limit. For this game, we will persist hi-score data using a SQLite database. We will be using the<span class="strong"><strong> FMDB Objective-C SQLite wrapper</strong></span> to access the SQLite database within our code and the<span class="strong"><strong> Firefox plugin SQLite Manager</strong></span> to create an initial database file.<a id="id160" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_14.jpg" alt="Saving data into an SQLite database"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec24"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe. For the sake of brevity, all game logic has been omitted from the following code.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec25"/>How to do it...</h2></div></div></div><p>To use SQLite we first need to do a few things:<a id="id161" class="indexterm"/>
+</p><div class="orderedlist"><ol class="orderedlist"><li class="listitem"> First we need to add the<code class="literal"> libsqlite3.0.dylib</code> framework. You can do this by right clicking on your project and going to<span class="strong"><strong> Add &gt; Existing Frameworks</strong></span> and then, under<span class="strong"><strong> iOS 4.x SDK</strong></span>, selecting<code class="literal"> libsqlite3.0.dylib</code>.</li><li class="listitem"> Next, we need to add the FMDB Objective-C SQLite wrapper to our project. FMDB can be downloaded here:<a class="ulink" href="http://https://github.com/ccgus/fmdb"> https://github.com/ccgus/fmdb</a>.</li><li class="listitem"> Download and install the Firefox plugin SQLite Manager from here:<a class="ulink" href="http://https://addons.mozilla.org/en-US/firefox/addon/sqlite-manager/"> https://addons.mozilla.org/en-US/firefox/addon/sqlite-manager/</a></li></ol></div><p>Now we need to create a new SQLite database as our default database template. Go into<span class="strong"><strong> SQLite Manager</strong></span> and go to<span class="strong"><strong> Database &gt; New Database</strong></span>. For our project we created<code class="literal"> skeetshooter_template.sqlite</code> with a<span class="strong"><strong> hiscores</strong></span> table that has the fields<span class="strong"><strong> name</strong></span> and<span class="strong"><strong> score:</strong></span>
+</p><div class="mediaobject"><img src="graphics/4002_03_15.jpg" alt="How to do it..."/></div><p>Once we have our database template, execute the following code:</p><div class="informalexample"><pre class="programlisting">#import "ActualPath.h"
+#import &lt;Foundation/Foundation.h&gt;
+#import "FMDatabase.h"
+@implementation Ch2_SavingDataSQLite
+-(CCLayer*) runRecipe {
+[self loadHiScores];
+return self;
+}
+-(void) dealloc {
+//Release our database
+[db close]; [db release]; [super dealloc];
+}
+-(NSArray *) createDictionariesArrayFromFMResultSet:(FMResultSet *)rs fields:(NSString *)fields {
+//Parse field string into an array
+NSArray * listFields = [fields componentsSeparatedByString:@","];
+//Create an array of dictionaries from each field
+NSMutableArray * items = [NSMutableArray arrayWithCapacity:1];
+while ([rs next]) {
+NSMutableDictionary * item = [NSMutableDictionary dictionaryWithCapacity:1];
+for (int i = 0; i &lt; [listFields count]; i++) {
+NSString * key = [listFields objectAtIndex:i];
+NSString * value = [rs stringForColumn: key];
+if (value == NULL) value = @"";
+[item setObject:value forKey:key];
+}
+[items addObject:item];
+}
+[rs close];
+return items;
+}
+-(void) writeNewScore:(int)score forName:(NSString*)name {
+//Find the hi score with this name
+NSString *selectQuery = [NSString stringWithFormat:@"SELECT * FROM hiscores WHERE name = '%@'", name];
+FMResultSet *rs = [db executeQuery:selectQuery];
+//What is the score? Is there a score at all?
+int storedScore = -1;
+while([rs next]){
+storedScore = [[rs stringForColumn:@"score"] intValue];
+}
+[rs close];
+if(storedScore == -1){
+//Name doesn't exist, add it
+NSString *insertQuery = [NSString stringWithFormat:@"INSERT INTO hiscores (name, score) VALUES ('%@','%i')", name, score];
+rs = [db executeQuery:insertQuery];
+while([rs next]){};
+[rs close];
+}else if(score &gt; storedScore){
+//Write new score for existing name
+NSString *updateQuery = [NSString stringWithFormat:@"UPDATE hiscores SET score='%i' WHERE name='%@'", score, name];
+rs = [db executeQuery:updateQuery];
+while([rs next]){};
+[rs close];
+}
+}
+-(void) loadHiScores {
+//Our file and template names
+NSString *fileName = @"skeetshooter.sqlite";
+NSString *templateName = @"skeetshooter_template.sqlite";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+//If file doesn't exist in document directory create a new one from the template
+if(![[NSFileManager defaultManager] fileExistsAtPath:filePath]){
+[[NSFileManager defaultManager] copyItemAtPath:getActualPath(templateName)
+toPath:[NSString stringWithFormat:@"%@/%@", documentsDirectory, fileName] error:nil];
+}
+//Initialize the database
+if(!db){
+db = [FMDatabase databaseWithPath:filePath];
+[db setLogsErrors:YES];
+[db setTraceExecution:YES];
+[db retain];
+if(![db open]){ NSLog(@"Could not open db.");
+}else{ NSLog(@"DB opened successfully.");}
+}
+//Select all hi scores
+FMResultSet *rs = [db executeQuery:@"select * from hiscores"];
+//Load them into an array of dictionaries
+hiScores = [[NSMutableArray alloc] init];
+hiScores = [self createDictionariesArrayFromFMResultSet:rs fields:@"name,score"];
+//Set hi score
+for(id score in hiScores){
+int scoreNum = [[score objectForKey:@"score"] intValue];
+if(hiScore &lt; scoreNum){
+hiScore = scoreNum;
+}
+}
+}
+-(void) addHiScore {
+//Add hi score to db
+[self writeNewScore:currentScore forName:currentPlayerName];
+//Reset dictionary
+FMResultSet *rs = [db executeQuery:@"SELECT * FROM hiscores"];
+hiScores = [self createDictionariesArrayFromFMResultSet:rs fields:@"name,score"];
+}
+-(void) deleteHiScores {
+//Our file name
+NSString *fileName = @"skeetshooter.sqlite";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+//Delete our file
+[[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+[message setString:@"Hi scores deleted!"];
+hiScore = 0;
+//Close and release our db pointer
+[db close]; [db release]; db = nil;
+//Load new blank hi scores
+[self loadHiScores];
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec26"/>How it works...</h2></div></div></div><p>Saving and loading to a SQLite database is a little different than using a PLIST file. The main way to read and write to a SQLite database is through the following method:<a id="id162" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">- (FMResultSet *)executeQuery:(NSString*)sql;
+</pre></div><p>This returns a<code class="literal"> FMResultSet</code> object which can then be iterated through:<a id="id163" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">FMResultSet *rs = [db executeQuery:@"SELECT * FROM mytable"];
+while([rs next]){
+somevalue = [[rs stringForColumn:@"myfield"] intValue];
+}
+[rs close];
+</pre></div><p>Be sure to iterate through each<code class="literal"> FMResultSet</code> object you create and also call<code class="literal"> [rs close]</code> as well as SQLite will throw errors if you don't follow through each time.
+</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">Querying your SQLite database:<p>Using this simple but powerful interface you can perform any type of query normally allowed on a SQLite database. In this recipe, we have one table with two values. Feel free to experiment with more complex data models.
+</p></li></ul></div></div></div>
+<div class="section" title="Saving data using Core Data"><div class="titlepage"><div><div><h1 class="title"><a id="ch03lvl1sec10"/>Saving data using Core Data</h1></div></div></div><p>Our third game is a memory card game where you must flip over sets of cards. Flip over two matching cards and you get a point. Flip over two that don't match and you get a strike. Three strikes and you're out. For this game we persist hi-score data using Apple's<span class="strong"><strong> Core Data</strong></span> model pattern.<a id="id164" class="indexterm"/>
+</p><div class="mediaobject"><img src="graphics/4002_03_16.jpg" alt="Saving data using Core Data"/></div><div class="section" title="Getting ready"><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec27"/>Getting ready</h2></div></div></div><p>Please refer to the project<span class="emphasis"><em> RecipeCollection01</em></span> for full working code of this recipe. For the sake of brevity all game logic has been omitted from the following code.
+</p></div><div class="section" title="How to do it..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec28"/>How to do it...</h2></div></div></div><p>Setting up our Core Data based recipe requires a number of steps.<a id="id165" class="indexterm"/>
+</p><p>First we need to add the CoreData framework. You can do this by right clicking on your project and going to<span class="strong"><strong> Add &gt; Existing Frameworks</strong></span> and then, under<span class="strong"><strong> iOS 4.x SDK</strong></span>, select<code class="literal"> CoreData.framework</code>.
+</p><div class="orderedlist"><ol class="orderedlist"><li class="listitem"> Create a new folder inside your resources entitled<code class="literal"> Data Model</code>. Inside this folder, create a class entitled<code class="literal"> Hiscore</code>, which derives from<code class="literal"> ManagedObject:</code><div class="informalexample"><pre class="programlisting">//Hiscore.h
+#import &lt;CoreData/CoreData.h&gt;
+@interface Hiscore : NSManagedObject
+{}
+@property (nonatomic, retain) NSString * name;
+@property (nonatomic, retain) NSNumber * score;
+@end
+//Hiscore.m
+#import "Hiscore.h"
+@implementation Hiscore
+@dynamic name;
+@dynamic score;
+@end
+</pre></div></li><li class="listitem"> After adding this class right click on your project and select<span class="strong"><strong> Add &gt; New File</strong></span>. Under<span class="strong"><strong> iOS</strong></span> and under<span class="strong"><strong> Resource</strong></span> select and create a new<span class="strong"><strong> Data Model</strong></span>.<a id="id166" class="indexterm"/><div class="mediaobject"><img src="graphics/4002_03_17.jpg" alt="How to do it..."/></div></li><li class="listitem"> Name this data model<code class="literal"> hiscore</code> and add your existing<code class="literal"> Hiscore</code> class to this data model when you are prompted.<div class="mediaobject"><img src="graphics/4002_03_18.jpg" alt="How to do it..."/></div></li><li class="listitem"> Click on<code class="literal"> hiscores.xcdatamodel</code> in XCode. Click on the<code class="literal"> Hiscore</code> entity and then add two new properties to it which correspond to the two properties in your<code class="literal"> Hiscore</code> class:<a id="id167" class="indexterm"/></li></ol></div><div class="mediaobject"><img src="graphics/4002_03_19.jpg" alt="How to do it..."/></div><p>Now we're ready to get down to some code. Execute the following:</p><div class="informalexample"><pre class="programlisting">#import &lt;UIKit/UIKit.h&gt;
+#import "Hiscore.h"
+@interface Ch2_SavingDataCoreData : SimpleTimedGameRecipe &lt;NSFetchedResultsControllerDelegate&gt;
+{
+NSManagedObjectModel *managedObjectModel;
+NSManagedObjectContext *managedObjectContext;
+NSPersistentStoreCoordinator *persistentStoreCoordinator;
+}
+@property (nonatomic, retain, readonly) NSManagedObjectModel *managedObjectModel;
+@property (nonatomic, retain, readonly) NSManagedObjectContext *managedObjectContext;
+@property (nonatomic, retain, readonly) NSPersistentStoreCoordinator *persistentStoreCoordinator;
+@end
+@implementation Ch2_SavingDataCoreData
+-(CCLayer*) runRecipe {
+[self loadHiScores];
+return self;
+}
+/* Returns the managed object context for the application.
+If the context doesn't already exist, it is created and bound to the persistent store coordinator for the application. */
+- (NSManagedObjectContext *) managedObjectContext {
+//Return the managedObjectContext if it already exists
+if (managedObjectContext != nil) {
+return managedObjectContext;
+}
+//Init the managedObjectContext
+NSPersistentStoreCoordinator *coordinator = [self persistentStoreCoordinator];
+if (coordinator != nil) {
+managedObjectContext = [[NSManagedObjectContext alloc] init];
+[managedObjectContext setPersistentStoreCoordinator: coordinator];
+}
+return managedObjectContext;
+}
+/* Returns the managed object model for the application.
+If the model doesn't already exist, it is created by merging all of the models found in the application bundle. */
+- (NSManagedObjectModel *)managedObjectModel {
+//Return the managedObjectModel if it already exists
+if (managedObjectModel != nil) {
+return managedObjectModel;
+}
+//Init the managedObjectModel
+managedObjectModel = [[NSManagedObjectModel mergedModelFromBundles:nil] retain];
+return managedObjectModel;
+}
+/* Returns the persistent store coordinator for the application.
+If the coordinator doesn't already exist, it is created and the application's store added to it. */
+- (NSPersistentStoreCoordinator *)persistentStoreCoordinator {
+//Return the persistentStoreCoordinator if it already exists
+if (persistentStoreCoordinator != nil) {
+return persistentStoreCoordinator;
+}
+//Our file name
+NSString *fileName = @"memory.sqlite";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+NSURL *filePathURL = [NSURL fileURLWithPath:filePath];
+//Init the persistentStoreCoordinator
+persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+[persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:filePathURL options:nil error:nil];
+return persistentStoreCoordinator;
+}
+-(void) loadHiScores {
+//Initialization
+managedObjectContext = self.managedObjectContext;
+//Attempt to create SQLite database
+NSEntityDescription *entity;
+@try{
+//Define our table/entity to use
+entity = [NSEntityDescription entityForName:@"Hiscore" inManagedObjectContext:managedObjectContext];
+}@catch (NSException *exception){
+NSLog(@"Caught %@: %@", [exception name], [exception reason]);
+//Copy SQLite template because creation failed
+NSString *fileName = @"memory.sqlite";
+NSString *templateName = @"memory_template.sqlite";
+//File paths
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+if(![[NSFileManager defaultManager] fileExistsAtPath:filePath]){
+//If file doesn't exist in document directory create a new one from the template
+[[NSFileManager defaultManager] copyItemAtPath:getActualPath(templateName)
+toPath:[NSString stringWithFormat:@"%@/%@", documentsDirectory, fileName] error:nil];
+}
+//Finally define our table/entity to use
+entity = [NSEntityDescription entityForName:@"Hiscore" inManagedObjectContext:managedObjectContext];
+}
+//Set up the fetch request
+NSFetchRequest *request = [[NSFetchRequest alloc] init];
+[request setEntity:entity];
+//Define how we will sort the records with a descriptor
+NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"score" ascending:NO];
+NSArray *sortDescriptors = [NSArray arrayWithObject:sortDescriptor];
+[request setSortDescriptors:sortDescriptors];
+[sortDescriptor release];
+//Init hiScores
+hiScores = [[managedObjectContext executeFetchRequest:request error:nil] mutableCopy];
+//Add an intial score if necessary
+if(hiScores.count &lt; 1){
+currentScore = 0;
+currentPlayerName = @"Player1";
+[self addHiScore];
+hiScores = [[managedObjectContext executeFetchRequest:request error:nil] mutableCopy];
+}
+//Set the hi score
+Hiscore *highest = [hiScores objectAtIndex:0];
+hiScore = [highest.score intValue];
+}
+-(void) addHiScore {
+bool hasScore = NO;
+//Add score if player's name already exists
+for(id score in hiScores){
+Hiscore *hiscore = (Hiscore*)score;
+if([hiscore.name isEqualToString:currentPlayerName]){
+hasScore = YES;
+if(currentScore &gt; [hiscore.score intValue]){
+hiscore.score = [NSNumber numberWithInt:currentScore];
+}
+}
+}
+//Add new score if player's name doesn't exist
+if(!hasScore){
+Hiscore *hiscoreObj = (Hiscore *)[NSEntityDescription insertNewObjectForEntityForName:@"Hiscore" inManagedObjectContext:managedObjectContext];
+[hiscoreObj setName:currentPlayerName];
+[hiscoreObj setScore:[NSNumber numberWithInt:currentScore]];
+[hiScores addObject:hiscoreObj];
+}
+//Save managedObjectContext
+[managedObjectContext save:nil];
+}
+-(void) deleteHiScores {
+//Delete all Hi Score objects
+NSFetchRequest * allHiScores = [[NSFetchRequest alloc] init];
+[allHiScores setEntity:[NSEntityDescription entityForName:@"Hiscore" inManagedObjectContext:managedObjectContext]];
+[allHiScores setIncludesPropertyValues:NO]; //only fetch the managedObjectID
+NSArray * hs = [managedObjectContext executeFetchRequest:allHiScores error:nil];
+[allHiScores release];
+for (NSManagedObject *h in hs) {
+[managedObjectContext deleteObject:h];
+}
+//Our file name
+NSString *fileName = @"memory.sqlite";
+//We get our file path
+NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+NSString *documentsDirectory = [paths objectAtIndex:0];
+NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
+//Delete our file
+[[NSFileManager defaultManager] removeItemAtPath:filePath error:nil];
+[message setString:@"Hi scores deleted!"];
+hiScore = 0;
+[hiScores removeAllObjects];
+[hiScores release];
+hiScores = nil;
+//Finally, load clean hi scores
+[self loadHiScores];
+}
+@end
+</pre></div></div><div class="section" title="How it works..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec29"/>How it works...</h2></div></div></div><p>After some complex initialization, we are able to manipulate a simple array of<code class="literal"> Hiscore</code> objects using the following code:<a id="id168" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">NSFetchRequest *request = [[NSFetchRequest alloc] init];
+[request setEntity:entity];
+//Define how we will sort the records with a descriptor
+NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc] initWithKey:@"score" ascending:NO];
+NSArray *sortDescriptors = [NSArray arrayWithObject:sortDescriptor];
+[request setSortDescriptors:sortDescriptors];
+[sortDescriptor release];
+//Load hiScores
+hiScores = [[managedObjectContext executeFetchRequest:request error:nil] mutableCopy];
+</pre></div><p>After modifying any of these objects we can save them all with the following line:</p><div class="informalexample"><pre class="programlisting">[managedObjectContext save:nil];
+</pre></div><p>New entries can be added using the following code:</p><div class="informalexample"><pre class="programlisting">Hiscore *hiscoreObj = (Hiscore *)[NSEntityDescription insertNewObjectForEntityForName:@"Hiscore" inManagedObjectContext:managedObjectContext];
+[hiscoreObj setName:currentPlayerName];
+[hiscoreObj setScore:[NSNumber numberWithInt:currentScore]];
+[hiScores addObject:hiscoreObj];
+</pre></div><p>A more complex use or explanation of Core Data is outside the scope of this book. This example serves merely as a working introduction to using Core Data.</p></div><div class="section" title="There's more..."><div class="titlepage"><div><div><h2 class="title"><a id="ch03lvl2sec30"/>There's more...</h2></div></div></div><p>Getting Core Data to work properly in XCode can sometimes be somewhat tricky.</p><div class="itemizedlist"><ul class="itemizedlist"><li class="listitem" style="list-style-type: disc">SQLite database creation errors:<a id="id169" class="indexterm"/><p>Depending on the circumstances, Core Data may fail to create a SQLite database from the model you've created. To fix this problem make sure your xcdatamodel files and your NSManagedObject classes are located in the same folder on the disk as well as in the same XCode group. If this doesn't fix the problem delete these files from the project but not the disk then re-add them. If that doesn't work you can also create a SQLite database manually. This requires you to follow Core Data conventions. To help with this process, I've included the file memory_template.sqlite. This file has the correct Core Data database structure. The recipe will also use this file if it fails to create the SQLite database.
+<a id="id170" class="indexterm"/>
+</p></li><li class="listitem" style="list-style-type: disc">Handling errors:<p>In a number of examples we specify error:nil. To actually handle any of these errors do the following:
+<a id="id171" class="indexterm"/>
+</p><div class="informalexample"><pre class="programlisting">NSError *error = nil;
+if (![hiscore.managedObjectContext save:&amp;error]) {
+NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+exit(-1);
+}
+</pre></div></li></ul></div><p>Using Core Data can often seem like overkill. However, applications with complex underlying data structures</p></div></div></body></html>
