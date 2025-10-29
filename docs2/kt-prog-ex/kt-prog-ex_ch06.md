@@ -1,4 +1,4 @@
-# 构建 Messanger Android 应用程序 – 第二部分
+# 第六章：构建 Messanger Android 应用程序 – 第二部分
 
 在上一章中，我们全力以赴地开发了 Messanger Android 应用程序。通过这样做，我们深入研究了 Kotlin 和 Android 应用程序开发。我们探讨了**模型-视图-表示者**（**MVP**）模式以及如何使用它来构建强大且功能齐全的 Android 应用程序。除此之外，我们还介绍了响应式编程的基础，并学习了如何在我们的应用程序中使用 RxJava 和 RxAndroid。我们还了解了一些我们可以用来与远程服务器通信的方法。我们学习了 OkHttp 和 Retrofit，然后更进一步，通过实现一个功能齐全的 Retrofit 服务来促进与我们第四章中制作的 Messanger API 的通信，该章标题为*使用 Spring Boot 2.0 设计和实现 Messanger 后端*。将所有这些与 Android 和 Kotlin 相关的知识结合起来，我们为 Messanger 应用程序创建了登录和注册用户界面。
 
